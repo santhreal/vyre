@@ -402,10 +402,11 @@ impl PipelineCacheStore for InMemoryPipelineCache {
     }
 }
 
+// Inline: covers `metrics`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_helpers::tiny_artifact;
+    use crate::pipeline_cache::test_artifact_fixtures::tiny_artifact;
 
     #[test]
     fn in_memory_cache_roundtrip() {

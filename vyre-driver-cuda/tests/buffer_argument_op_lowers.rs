@@ -9,6 +9,8 @@
 //! These tests pin buffer-argument signature validation, canonical semantic
 //! resolution, and emitted PTX.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::DispatchConfig;
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

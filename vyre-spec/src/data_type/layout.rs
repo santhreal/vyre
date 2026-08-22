@@ -158,7 +158,7 @@ impl DataType {
 
     /// Checked packed byte count for `element_count` logical values.
     ///
-    /// This is the sizing helper CUDA and wire codecs should use for sub-byte
+    /// This is the sizing helper backends and wire codecs should use for sub-byte
     /// quantized storage. `I4`, `FP4`, and `NF4` pack two logical elements per
     /// byte, so `packed_size_bytes(3)` returns `Some(2)` instead of the
     /// conservative `size_bytes() * 3 == 3`. Variable-width types return

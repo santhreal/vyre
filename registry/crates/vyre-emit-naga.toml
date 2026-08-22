@@ -1,0 +1,5 @@
+name = "vyre-emit-naga"
+concern = "Consume verified lowering products and emit the primary text representation and related binary targets."
+pages = { spec = "vyre-emit-naga/SPEC.md", readme = "vyre-emit-naga/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-foundation", "vyre-lower"]

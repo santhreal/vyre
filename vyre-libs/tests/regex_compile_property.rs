@@ -1,4 +1,4 @@
-//! Property tests for `vyre_libs::scan::regex_compile`.
+//! Property tests for `vyre_libs::pattern::regex_compile`.
 //!
 //! Generated patterns exercise:
 //!
@@ -13,10 +13,10 @@
 //!   - The state cap is enforced (huge inputs return TooManyStates,
 //!     never panic).
 
-#![cfg(feature = "matching-regex")]
+#![cfg(feature = "pattern-regex")]
 
 use proptest::prelude::*;
-use vyre_libs::scan::{RegexCompileError, compile_regex_set};
+use vyre_libs::pattern::{compile_regex_set, RegexCompileError};
 
 /// Generate ASCII-safe literal strings in 1..=12 bytes. Bound keeps
 /// state counts well under the per-pipeline cap and shrinking quick.

@@ -9,7 +9,7 @@ pub struct MulDualReference;
 define_arith_dual_reference!(
     MulDualReference,
     u32::wrapping_mul,
-    super::super::common::wrapping_mul_shift_add_reference
+    super::super::bit_walk_reference::wrapping_mul_shift_add_reference
 );
 
 inventory::submit! {

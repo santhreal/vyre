@@ -3,7 +3,7 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-spirv
+./cargo_full test -p vyre-emit-spirv
 ```
 
 Consume verified lowering products and emit SPIR-V artifacts through the shared writer.
@@ -14,7 +14,7 @@ The crate lives at `vyre-emit-spirv`. The `spirv-emitter` owner maintains its
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-spirv
+./cargo_full test -p vyre-emit-spirv
 ```
 
 ## Feature sets
@@ -25,12 +25,15 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_emit_spirv_release_surface` | `vyre-emit-spirv/examples/vyre_emit_spirv_release_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-spirv --example vyre_emit_spirv_release_surface` |
-| `lib` | `vyre_emit_spirv` | `vyre-emit-spirv/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-spirv` |
-| `test` | `adversarial_emit_program_matrix` | `vyre-emit-spirv/tests/adversarial_emit_program_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-spirv --test adversarial_emit_program_matrix` |
-| `test` | `cross_emitter_parity` | `vyre-emit-spirv/tests/cross_emitter_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-spirv --test cross_emitter_parity` |
-| `test` | `generated_emit_descriptor_matrix` | `vyre-emit-spirv/tests/generated_emit_descriptor_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-spirv --test generated_emit_descriptor_matrix` |
-| `test` | `target_capabilities` | `vyre-emit-spirv/tests/target_capabilities.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-spirv --test target_capabilities` |
+| `example` | `vyre_emit_spirv_release_surface` | `vyre-emit-spirv/examples/vyre_emit_spirv_release_surface.rs` | None | `./cargo_full test -p vyre-emit-spirv --example vyre_emit_spirv_release_surface` |
+| `lib` | `vyre_emit_spirv` | `vyre-emit-spirv/src/lib.rs` | None | `./cargo_full test -p vyre-emit-spirv` |
+| `test` | `adversarial_emit_program_matrix` | `vyre-emit-spirv/tests/adversarial_emit_program_matrix.rs` | None | `./cargo_full test -p vyre-emit-spirv --test adversarial_emit_program_matrix` |
+| `test` | `cross_emitter_parity` | `vyre-emit-spirv/tests/cross_emitter_parity.rs` | None | `./cargo_full test -p vyre-emit-spirv --test cross_emitter_parity` |
+| `test` | `emit_contracts` | `vyre-emit-spirv/tests/emit_contracts.rs` | None | `./cargo_full test -p vyre-emit-spirv --test emit_contracts` |
+| `test` | `emitted_artifact_byte_stability` | `vyre-emit-spirv/tests/emitted_artifact_byte_stability.rs` | None | `./cargo_full test -p vyre-emit-spirv --test emitted_artifact_byte_stability` |
+| `test` | `generated_emit_descriptor_matrix` | `vyre-emit-spirv/tests/generated_emit_descriptor_matrix.rs` | None | `./cargo_full test -p vyre-emit-spirv --test generated_emit_descriptor_matrix` |
+| `test` | `pattern_analysis_contracts` | `vyre-emit-spirv/tests/pattern_analysis_contracts/mod.rs` | None | `./cargo_full test -p vyre-emit-spirv --test pattern_analysis_contracts` |
+| `test` | `target_capabilities` | `vyre-emit-spirv/tests/target_capabilities.rs` | None | `./cargo_full test -p vyre-emit-spirv --test target_capabilities` |
 
 ## Test classes
 

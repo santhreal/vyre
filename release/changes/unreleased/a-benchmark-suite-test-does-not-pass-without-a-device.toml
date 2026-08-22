@@ -1,0 +1,12 @@
+category = "Fixed"
+text = """
+Every `vyre-bench` integration test that calls `execute_suite` is behind \
+`device-tests`. `execute_suite` runs a real benchmark case and dispatches on \
+the device the case selects, so on a hosted runner with no CUDA driver the \
+thirteen of them split two ways, both wrong: `baseline_determinism` unwrapped a \
+metric and aborted inside cudarc, while the others asserted only that the \
+report was non-empty and passed a run in which every case had failed. \
+`gpu-parity.yml` enables the feature and runs the whole target set, so the \
+roster is derived from the feature rather than named test by test and a device \
+test added later is covered without editing the workflow.
+"""

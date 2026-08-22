@@ -21,6 +21,16 @@ impl ComputeCapability {
     pub const SM_89: Self = Self { major: 8, minor: 9 };
     /// Compute capability 9.0.
     pub const SM_90: Self = Self { major: 9, minor: 0 };
+    /// Compute capability 10.0.
+    pub const SM_100: Self = Self {
+        major: 10,
+        minor: 0,
+    };
+    /// Compute capability 12.0.
+    pub const SM_120: Self = Self {
+        major: 12,
+        minor: 0,
+    };
 
     /// Return whether the target supports asynchronous memory copies.
     #[must_use]

@@ -41,34 +41,29 @@
 //!   requirement, `verified-intentional` against fusion, whose disjointness
 //!   proof already covers those nodes' buffer operands.
 
+use super::collect_var_reads;
 use super::substitution::expr_contains_opaque;
-use super::{collect_var_reads, rename_var_in_expr};
-use crate::ir::{Ident, Node};
+use crate::ir::{Expr, Ident, Node};
+use crate::optimizer::rewrite::rewrite_expr;
+use crate::transform::rewrite_walk::{self, NodeRewrite};
 use rustc_hash::FxHashSet;
+use std::borrow::Cow;
 
-/// Collect every name `nodes` binds: `Let` and `Assign` targets plus nested
-/// `Loop` induction variables, recursing through every nested scope.
+/// Every name `nodes` binds, nested scopes included.
+///
+/// The per-variant answer is
+/// [`node_bound_name`](crate::visit::node_bound_name) and the descent
+/// is [`for_each_node`](crate::visit::for_each_node), both exhaustive.
+/// The walk this replaces named its own variants and ended in `_ => {}`, so a
+/// binding form it did not list read as binding nothing and
+/// [`bindings_flow_across`] then let fusion or fission reorder statements across
+/// a live binding.
 pub(super) fn collect_bound_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
-    for node in nodes {
-        match node {
-            Node::Let { name, .. } | Node::Assign { name, .. } => {
-                out.insert(name.clone());
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                collect_bound_names(then, out);
-                collect_bound_names(otherwise, out);
-            }
-            Node::Loop { var, body, .. } => {
-                out.insert(var.clone());
-                collect_bound_names(body, out);
-            }
-            Node::Block(body) => collect_bound_names(body, out),
-            Node::Region { body, .. } => collect_bound_names(body, out),
-            _ => {}
+    crate::visit::for_each_node(nodes, |node| {
+        if let Some(name) = crate::visit::node_bound_name(node) {
+            out.insert(name.clone());
         }
-    }
+    });
 }
 
 /// True iff a name bound by `binder` is read by `reader`, which makes moving
@@ -151,78 +146,66 @@ fn node_unsummarisable_effect(node: &Node) -> bool {
         | Node::AllGather { .. }
         | Node::ReduceScatter { .. }
         | Node::Broadcast { .. } => false,
-    }
-}
-
-/// Re-key `node` from induction variable `from` onto `to`, rewriting reads
-/// and binding occurrences alike so the rewrite leaves no reference behind.
-pub(super) fn rename_var_in_node(node: Node, from: &Ident, to: &Ident) -> Node {
-    match node {
-        Node::Let { name, value } => Node::Let {
-            name: if name == *from { to.clone() } else { name },
-            value: rename_var_in_expr(value, from, to),
-        },
-        Node::Assign { name, value } => Node::Assign {
-            name: if name == *from { to.clone() } else { name },
-            value: rename_var_in_expr(value, from, to),
-        },
-        Node::Store {
-            buffer,
-            index,
-            value,
-        } => Node::Store {
-            buffer,
-            index: rename_var_in_expr(index, from, to),
-            value: rename_var_in_expr(value, from, to),
-        },
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::If {
-            cond: rename_var_in_expr(cond, from, to),
-            then: rename_var_in_body(then, from, to),
-            otherwise: rename_var_in_body(otherwise, from, to),
-        },
-        Node::Loop {
-            var,
-            from: lo,
-            to: hi,
-            body,
-        } => Node::Loop {
-            var,
-            from: rename_var_in_expr(lo, from, to),
-            to: rename_var_in_expr(hi, from, to),
-            body: rename_var_in_body(body, from, to),
-        },
-        Node::Block(body) => Node::Block(rename_var_in_body(body, from, to)),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec = std::sync::Arc::try_unwrap(body).unwrap_or_else(|arc| (*arc).clone());
-            Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(rename_var_in_body(body_vec, from, to)),
-            }
+        Node::TileElementwise { body, .. } => unsummarisable_effect(body),
+        Node::TileLoad { origin, .. } | Node::TileStore { origin, .. } => {
+            origin.iter().any(expr_contains_opaque)
         }
-        other => other,
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => false,
     }
 }
 
-fn rename_var_in_body(body: Vec<Node>, from: &Ident, to: &Ident) -> Vec<Node> {
-    body.into_iter()
-        .map(|n| rename_var_in_node(n, from, to))
-        .collect()
+/// Re-key `node` from induction variable `from` onto `to`, rewriting reads and
+/// binding occurrences alike so the rewrite leaves no reference behind.
+///
+/// Which positions exist is [`rewrite_walk::rewrite_node`]'s decision, the one
+/// rewriting enumeration of `Node`. This function used to carry a second copy
+/// of that enumeration, and the copy had to be extended by hand every time a
+/// variant gained an operand: the async copy offset and size and the trap
+/// address were added long after the arithmetic positions, and until then a
+/// renamed loop read a variable that no longer bound. The copy also rewrote
+/// reads inside a nested loop that rebinds `from` without rewriting that
+/// loop's own induction variable, which left the inner body reading the outer
+/// name.
+///
+/// Stream tags reach [`NodeRewrite::tag`], which this policy leaves at its
+/// default: a tag that spells the induction variable names an in-flight
+/// transfer rather than a value, and renaming one end of a pair separates it
+/// from its wait. `Opaque` is the one payload this walk cannot enter, which is
+/// why [`unsummarisable_effect`] reports it and both callers refuse a body
+/// that holds one.
+pub(super) fn rename_var_in_node(node: Node, from: &Ident, to: &Ident) -> Node {
+    let mut rename = RenameVar { from, to };
+    rewrite_walk::rewrite_node(&node, &mut rename).unwrap_or(node)
+}
+
+/// Rewrites one value name wherever the walk offers a value position.
+struct RenameVar<'a> {
+    from: &'a Ident,
+    to: &'a Ident,
+}
+
+impl NodeRewrite for RenameVar<'_> {
+    fn operand(&mut self, expr: &Expr) -> Option<Expr> {
+        match rewrite_expr(expr, &mut |candidate| match candidate {
+            Expr::Var(name) if name == self.from => Some(Expr::Var(self.to.clone())),
+            _ => None,
+        }) {
+            Cow::Borrowed(_) => None,
+            Cow::Owned(rewritten) => Some(rewritten),
+        }
+    }
+
+    fn binding(&mut self, name: &Ident) -> Option<Ident> {
+        (name == self.from).then(|| self.to.clone())
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::test_fixtures::{loops_of, program};
     use super::*;
+    use crate::ir::{DataType, Expr, ExprNode, Node, NodeExtension};
     use crate::optimizer::passes::loops::{loop_fission::LoopFission, loop_fusion::LoopFusion};
-    use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, NodeExtension, Program};
 
     fn sorted(nodes: &[Node]) -> Vec<String> {
         let mut out = FxHashSet::default();
@@ -307,52 +290,77 @@ mod tests {
         );
     }
 
-    #[derive(Debug)]
-    struct OpaqueValue;
-
-    impl ExprNode for OpaqueValue {
-        fn extension_kind(&self) -> &'static str {
-            "test.legality.opaque_value"
-        }
-        fn debug_identity(&self) -> &str {
-            "opaque_value"
-        }
-        fn result_type(&self) -> Option<DataType> {
-            Some(DataType::U32)
-        }
-        fn cse_safe(&self) -> bool {
-            false
-        }
-        fn stable_fingerprint(&self) -> [u8; 32] {
-            [21; 32]
-        }
-        fn validate_extension(&self) -> std::result::Result<(), String> {
-            Ok(())
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
+    /// WHY: `rename_var_in_node` reaches every position through
+    /// `rewrite_walk`, which offers the value namespace and the tag namespace
+    /// through separate hooks. This pins that the rename takes only the value
+    /// one. A tag spelling the induction variable names an in-flight transfer,
+    /// and renaming the start without the wait leaves `validate::async_pipeline`
+    /// reading a copy nothing waits for (V132) and a wait for nothing (V133).
+    /// Reachable only through a body whose loop variable collides with a stream
+    /// tag, which nothing rejects: the two namespaces never see each other.
+    #[test]
+    fn rename_leaves_a_tag_that_spells_the_induction_variable_alone() {
+        let from = Ident::from("i");
+        let to = Ident::from("z");
+        assert_eq!(
+            rename_var_in_node(
+                Node::AsyncWait {
+                    tag: Ident::from("i"),
+                },
+                &from,
+                &to
+            ),
+            Node::AsyncWait {
+                tag: Ident::from("i"),
+            }
+        );
     }
 
-    #[derive(Debug)]
-    struct OpaqueStatement;
+    /// WHY: the hand-written rename this replaced rewrote reads inside a
+    /// nested loop that rebinds the renamed name without rewriting that loop's
+    /// own induction variable, so the inner body read the outer name and the
+    /// inner counter went unread. The validator rejects a body that rebinds
+    /// its own loop variable, so no accepted program reached it, but the
+    /// rewrite is now closed under its own recursion rather than by that
+    /// external argument.
+    #[test]
+    fn rename_rewrites_a_nested_loop_that_rebinds_the_same_name() {
+        let from = Ident::from("i");
+        let to = Ident::from("z");
+        assert_eq!(
+            rename_var_in_node(
+                Node::loop_for(
+                    "i",
+                    Expr::u32(0),
+                    Expr::u32(4),
+                    vec![Node::store("b", Expr::var("i"), Expr::u32(1))],
+                ),
+                &from,
+                &to
+            ),
+            Node::loop_for(
+                "z",
+                Expr::u32(0),
+                Expr::u32(4),
+                vec![Node::store("b", Expr::var("z"), Expr::u32(1))],
+            )
+        );
+    }
 
-    impl NodeExtension for OpaqueStatement {
-        fn extension_kind(&self) -> &'static str {
-            "test.legality.opaque_statement"
-        }
-        fn debug_identity(&self) -> &str {
-            "opaque_statement"
-        }
-        fn stable_fingerprint(&self) -> [u8; 32] {
-            [22; 32]
-        }
-        fn validate_extension(&self) -> std::result::Result<(), String> {
-            Ok(())
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
+    vyre_test_support::test_expr_extension! {
+        OpaqueValue,
+        kind: "test.legality.opaque_value",
+        identity: "opaque_value",
+        result_type: Some(DataType::U32),
+        cse_safe: false,
+        fingerprint: 21,
+    }
+
+    vyre_test_support::test_node_extension! {
+        OpaqueStatement,
+        kind: "test.legality.opaque_statement",
+        identity: "opaque_statement",
+        fingerprint: 22,
     }
 
     #[test]
@@ -394,32 +402,6 @@ mod tests {
     // these red. They pin the transformed IR, not just the `changed` flag,
     // so a rename defect is caught as well as a legality defect.
     // ----------------------------------------------------------------
-
-    fn buf(name: &str) -> BufferDecl {
-        BufferDecl::storage(name, 0, BufferAccess::ReadWrite, DataType::U32).with_count(8)
-    }
-
-    fn program(entry: Vec<Node>) -> Program {
-        Program::wrapped(
-            vec![buf("a"), buf("b"), buf("c")],
-            [1, 1, 1],
-            entry,
-        )
-    }
-
-    /// Flatten Region/Block wrappers so a test can index the real statements.
-    fn loops_of(nodes: &[Node]) -> Vec<&Node> {
-        let mut out = Vec::new();
-        for node in nodes {
-            match node {
-                Node::Loop { .. } => out.push(node),
-                Node::Region { body, .. } => out.extend(loops_of(body)),
-                Node::Block(body) => out.extend(loops_of(body)),
-                _ => {}
-            }
-        }
-        out
-    }
 
     /// `body_a` / `body_b` halves both passes must judge the same way: fission
     /// sees them concatenated inside one loop, fusion sees them as two sibling
@@ -497,7 +479,10 @@ mod tests {
         for (label, legal, body_a, body_b) in shared_fixtures() {
             let i = Ident::from("i");
             let j = Ident::from("j");
-            let body_b = rename_var_in_body(body_b, &i, &j);
+            let body_b: Vec<Node> = body_b
+                .into_iter()
+                .map(|node| rename_var_in_node(node, &i, &j))
+                .collect();
             let entry = vec![
                 Node::loop_for("i", Expr::u32(0), Expr::u32(8), body_a),
                 Node::loop_for("j", Expr::u32(0), Expr::u32(8), body_b),

@@ -1,4 +1,3 @@
-pub use super::depth::{DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH, DEFAULT_MAX_NODE_COUNT};
 use super::{ValidationCode, ValidationError, ValidationLocation, ValidationPhase};
 use std::borrow::Cow;
 
@@ -32,6 +31,9 @@ pub(crate) fn err(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::validate::depth::{
+        DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH, DEFAULT_MAX_NODE_COUNT,
+    };
 
     #[test]
     fn issue_preserves_typed_fields() {

@@ -3,7 +3,8 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::Program;
-use vyre_spec::data_type::DataType;
+use vyre_foundation::serial::wire::tags::data_type_tag;
+use vyre_spec::DataType;
 
 /// One specializable scalar attribute value.
 ///
@@ -23,7 +24,7 @@ pub enum SpecValue {
     F32(f32),
     /// Boolean flag.
     Bool(bool),
-    /// Element data type. ROADMAP F3  -  dtype-specialized kernel variants
+    /// Element data type. dtype-specialized kernel variants
     /// flow through the same `SpecMap` cache as tile-size and unroll
     /// choices, so the F1 specialization-cache key already separates
     /// (matmul, F32) from (matmul, F16) without any backend-specific
@@ -58,58 +59,29 @@ impl SpecValue {
     }
 }
 
-/// Stable u32 tag for each `DataType` variant. Used to seed
-/// `SpecValue::DType` into the F1 cache hash deterministically.
-/// Adding a new `DataType` variant must extend this table; the
-/// `dtype_tag_covers_every_data_type` test enforces it.
+/// The wire tag for `dtype`, widened for the cache-hash lane.
 ///
-/// Tags mirror the wire-format `data_type_tag` table so the cache
-/// key, the on-disk artifact, and the conformance metadata all
-/// agree. Parameterised variants (`Vec`, `TensorShaped`, `Array`,
-/// `Handle`, `Opaque`, `Sparse*`, `DeviceMesh`) hash by their
-/// outer-discriminant tag; consumers that need parameter-aware
-/// keys must extend `SpecValue` rather than collapsing distinct
-/// shapes here.
+/// The table is `vyre_foundation`'s `data_type_tag`, the wire-format owner.
+/// This file used to carry a second copy of it, described in its own doc
+/// comment as mirroring the wire table, and the mirror had already lost
+/// `DataType::Quantized`: every `Quantized` specialization fell through to the
+/// unknown-variant sentinel and shared one cache key with every other unmapped
+/// type, which is the wrong-shader-served bug that comment warned about.
+///
+/// Parameterised variants (`Vec`, `TensorShaped`, `Array`, `Handle`,
+/// `Opaque`, `Sparse*`, `DeviceMesh`, `Quantized`) hash by their outer
+/// discriminant, exactly as the wire format tags them; a consumer that needs a
+/// parameter-aware key extends `SpecValue` rather than widening this mapping.
+///
+/// [`SENTINEL_UNTAGGED_DTYPE`] is reachable only for a `DataType` variant that
+/// vyre-spec declares and the wire format has no tag for, which is already a
+/// serialization failure.
 fn dtype_tag(dtype: &DataType) -> u32 {
-    match dtype {
-        DataType::U32 => 0x01,
-        DataType::I32 => 0x02,
-        DataType::U64 => 0x03,
-        DataType::Vec2U32 => 0x04,
-        DataType::Vec4U32 => 0x05,
-        DataType::Bool => 0x06,
-        DataType::Bytes => 0x07,
-        DataType::Array { .. } => 0x08,
-        DataType::F16 => 0x09,
-        DataType::BF16 => 0x0A,
-        DataType::F32 => 0x0B,
-        DataType::F64 => 0x0C,
-        DataType::Tensor => 0x0D,
-        DataType::U8 => 0x0E,
-        DataType::U16 => 0x0F,
-        DataType::I8 => 0x10,
-        DataType::I16 => 0x11,
-        DataType::I64 => 0x12,
-        DataType::Handle(_) => 0x13,
-        DataType::Vec { .. } => 0x14,
-        DataType::TensorShaped { .. } => 0x15,
-        DataType::SparseCsr { .. } => 0x16,
-        DataType::SparseCoo { .. } => 0x17,
-        DataType::SparseBsr { .. } => 0x18,
-        DataType::F8E4M3 => 0x19,
-        DataType::F8E5M2 => 0x1A,
-        DataType::I4 => 0x1B,
-        DataType::FP4 => 0x1C,
-        DataType::NF4 => 0x1D,
-        DataType::DeviceMesh { .. } => 0x1E,
-        DataType::Opaque(_) => 0x80,
-        // Truly unknown variant  -  sentinel collision is a soundness
-        // bug at the spec-cache layer (different DType values would
-        // collapse onto one cache key and serve the wrong shader),
-        // so any future variant MUST get an explicit tag here.
-        _ => 0xFFFF_FFFF,
-    }
+    data_type_tag(dtype).map_or(SENTINEL_UNTAGGED_DTYPE, u32::from)
 }
+
+/// Cache-hash contribution for a `DataType` the wire format cannot tag.
+const SENTINEL_UNTAGGED_DTYPE: u32 = 0xFFFF_FFFF;
 
 /// Ordered specialization map.
 #[derive(Debug, Default, Clone)]
@@ -252,6 +224,7 @@ pub fn versioned_specialization_artifact_key(
     key
 }
 
+// Inline: covers `SENTINEL_UNTAGGED_DTYPE`, `dtype_tag`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -369,69 +342,47 @@ mod tests {
         );
     }
 
+    /// Every `DataType` the wire format tags reaches the cache key with that
+    /// same tag, and no two of them share one.
+    ///
+    /// Soundness gate. A specialization key that collapses two element types
+    /// serves one of them the other's compiled shader. This used to be checked
+    /// against a hand-copied twin of the wire table, which is not a check: two
+    /// copies of the same omission agree, and the copy here had already lost
+    /// `DataType::Quantized`.
+    ///
+    /// The fixture set comes from `vyre_test_support::data_type_variants`,
+    /// which holds itself to the `pub enum DataType` declaration in vyre-spec
+    /// at run time, so a new variant turns this RED until it has a fixture and
+    /// a wire tag.
     #[test]
-    fn dtype_tag_covers_every_data_type() {
-        // Soundness gate: any new DataType variant must extend dtype_tag
-        // explicitly. Every shipped variant returns a unique non-fallback
-        // (≠ 0xFFFF_FFFF) tag.
-        let known = [
-            DataType::U32,
-            DataType::I32,
-            DataType::U64,
-            DataType::Vec2U32,
-            DataType::Vec4U32,
-            DataType::Bool,
-            DataType::Bytes,
-            DataType::Array { element_size: 1 },
-            DataType::F16,
-            DataType::BF16,
-            DataType::F32,
-            DataType::F64,
-            DataType::Tensor,
-            DataType::U8,
-            DataType::U16,
-            DataType::I8,
-            DataType::I16,
-            DataType::I64,
-            DataType::Handle(vyre_spec::data_type::TypeId(0)),
-            DataType::Vec {
-                element: Box::new(DataType::U32),
-                count: 1,
-            },
-            DataType::TensorShaped {
-                element: Box::new(DataType::U32),
-                shape: smallvec::smallvec![1],
-            },
-            DataType::SparseCsr {
-                element: Box::new(DataType::U32),
-            },
-            DataType::SparseCoo {
-                element: Box::new(DataType::U32),
-            },
-            DataType::SparseBsr {
-                element: Box::new(DataType::U32),
-                block_rows: 1,
-                block_cols: 1,
-            },
-            DataType::F8E4M3,
-            DataType::F8E5M2,
-            DataType::I4,
-            DataType::FP4,
-            DataType::NF4,
-            DataType::DeviceMesh {
-                axes: smallvec::smallvec![1],
-            },
-        ];
-        let mut tags = std::collections::BTreeSet::new();
-        for dtype in known {
+    fn every_wire_tagged_data_type_reaches_the_cache_key_with_its_wire_tag() {
+        use vyre_test_support::data_type_variants::{
+            assert_covers_every_data_type_variant, data_type_variant_samples,
+        };
+
+        let samples = data_type_variant_samples();
+        assert_covers_every_data_type_variant(&samples);
+
+        let mut tags: std::collections::BTreeMap<u32, DataType> = std::collections::BTreeMap::new();
+        for dtype in samples {
+            let expected = u32::from(
+                data_type_tag(&dtype).expect("Fix: every declared DataType needs a VIR0 wire tag"),
+            );
             let tag = dtype_tag(&dtype);
+            assert_eq!(
+                tag, expected,
+                "Fix: the specialization cache key disagrees with the wire tag for {dtype:?}; \
+                 a key that names a different type than the artifact serves the wrong shader."
+            );
             assert_ne!(
-                tag, 0xFFFF_FFFF,
-                "Fix: dtype_tag missing arm for {dtype:?}  -  extend specialization.rs::dtype_tag."
+                tag, SENTINEL_UNTAGGED_DTYPE,
+                "Fix: {dtype:?} reached the untagged sentinel, so it shares one cache key with \
+                 every other untagged type."
             );
             assert!(
-                tags.insert(tag),
-                "Fix: dtype_tag returned duplicate tag {tag} for {dtype:?}."
+                tags.insert(tag, dtype.clone()).is_none(),
+                "Fix: {dtype:?} shares specialization tag {tag:#x} with another type."
             );
         }
     }

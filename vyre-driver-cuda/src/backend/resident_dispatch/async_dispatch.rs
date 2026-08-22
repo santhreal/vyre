@@ -2,27 +2,32 @@ use std::ffi::c_void;
 use std::sync::Arc;
 
 use smallvec::SmallVec;
-use vyre_driver::binding::BindingRole;
+use vyre_driver::BindingRole;
 use vyre_driver::{BackendError, DispatchConfig, PendingDispatch};
 use vyre_foundation::ir::Program;
 
-use crate::backend::allocations::{DispatchAllocations, HostTransferAllocations};
+use crate::backend::allocations::DispatchAllocations;
 use crate::backend::copy::aligned_async_copy_len;
 use crate::backend::dispatch::CudaBackend;
 use crate::backend::dispatch_phase_probe as probe;
+use crate::backend::enqueue_cleanup::EnqueueGuards;
 use crate::backend::launch_params::launch_param_byte_len;
 use crate::backend::module_cache::ModuleCacheKey;
 use crate::backend::ordering::sort_unstable_by_key_if_needed;
 use crate::backend::output_range::{cuda_output_readback_for_binding, CudaOutputReadback};
+use crate::backend::pinned_allocations::HostTransferAllocations;
 use crate::backend::plan::CudaDispatchPlan;
 use crate::backend::resident::{
     resident_bindings_from_handles, CudaDispatchBinding, CudaResidentBuffer, ResidentViewCache,
 };
-use crate::backend::resident_dispatch::helpers::{
-    enqueue_optional_resident_h2d_copy, enqueue_resident_h2d_copy, next_dispatch_binding,
-    resident_required_handles, validate_dense_resident_output_indices,
+use crate::backend::resident_dispatch::dense_index_validation::validate_dense_resident_output_indices;
+use crate::backend::resident_dispatch::descriptor_cursor::{
+    next_dispatch_binding, resident_required_handles,
 };
-use crate::backend::resident_dispatch_support::{
+use crate::backend::resident_dispatch::host_uploads::{
+    enqueue_optional_resident_h2d_copy, enqueue_resident_h2d_copy,
+};
+use crate::backend::resident_dispatch_accounting::{
     add_resident_dispatch_bytes, add_resident_dispatch_u64_count, CudaResidentDispatch,
 };
 use crate::backend::staging_reserve::{reserve_smallvec, reserved_vec};
@@ -211,24 +216,12 @@ impl CudaBackend {
                         &mut resident_view_cache,
                         "resident dispatch view cache",
                     )?;
-                    if let Some(expected) = binding.static_byte_len {
-                        if resident.byte_len < expected {
-                            return Err(BackendError::InvalidProgram {
-                                fix: format!(
-                                    "Fix: CUDA resident buffer `{}` expected at least {expected} bytes but handle {} has {} bytes.",
-                                    binding.name, handle.handle, resident.byte_len
-                                ),
-                            });
-                        }
-                    }
-                    if resident.ptr == 0 {
-                        return Err(BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: CUDA resident binding `{}` resolved to a null device pointer; resident launch arguments must preserve descriptor order.",
-                                binding.name
-                            ),
-                        });
-                    }
+                    resident.validate_binding(
+                        "resident dispatch",
+                        &binding.name,
+                        binding.static_byte_len,
+                        handle.handle,
+                    )?;
                     resident_handles.push(handle);
                     (resident.ptr, resident.byte_len, Some(handle))
                 }
@@ -380,25 +373,14 @@ impl CudaBackend {
             )?;
             borrowed_upload_copies.push((staged_ptr, host_ptr, copy_byte_len));
         }
-        let mut param_upload: Option<(u64, *const c_void, usize)> = None;
-        let params_ptr = match static_params_ptr {
-            Some(ptr) => ptr,
-            None if param_bytes == 0 => 0,
-            None => {
-                let (params_ptr, upload) = self.prepare_resident_param_upload(
-                    &prepared.launch.param_words,
-                    param_bytes,
-                    "CUDA resident dispatch parameter bytes",
-                    "CUDA resident dispatch parameter upload",
-                    "resident dispatch parameter allocation byte count",
-                    "resident dispatch parameter upload byte count",
-                    &mut allocations,
-                    &mut host_transfers,
-                )?;
-                param_upload = upload;
-                params_ptr
-            }
-        };
+        let (params_ptr, param_upload) = self.resolve_resident_params_ptr(
+            &prepared.launch.param_words,
+            param_bytes,
+            static_params_ptr,
+            "resident dispatch",
+            &mut allocations,
+            &mut host_transfers,
+        )?;
         if trace {
             tracing::debug!(
                 "[cuda-trace] +{}ms resident params ptr=0x{params_ptr:x} words={:?} grid={:?} workgroup={:?} element_count={}",
@@ -410,21 +392,21 @@ impl CudaBackend {
             );
         }
 
+        // Marked in-flight before the launch lease is taken: the lease blocks
+        // while another launch holds it, and a handle must already be pinned
+        // before this dispatch can wait behind one that reads it.
         let resident_use = self.resident_store.mark_inflight(&resident_handles)?;
-        let launch_resources = crate::stream::CudaLaunchResourceLease::acquire(
-            Arc::clone(&self.launch_resources),
-            capture_timing,
-        )?;
-        let mut launch_resources = Some(launch_resources);
-        let mut allocations = Some(allocations);
-        let mut resident_use = Some(resident_use);
-        let mut host_transfers = Some(host_transfers);
-        let stream_raw = launch_resources
-            .as_ref()
-            .ok_or_else(|| BackendError::InvalidProgram {
-                fix: "Fix: CUDA resident dispatch launch resources were consumed before enqueue; rebuild launch resource ownership before launching.".to_string(),
-            })?
-            .stream_raw()?;
+        let mut guards = EnqueueGuards::new(
+            "resident dispatch",
+            crate::stream::CudaLaunchResourceLease::acquire(
+                Arc::clone(&self.launch_resources),
+                capture_timing,
+            )?,
+            allocations,
+            host_transfers,
+            Some(resident_use),
+        );
+        let stream_raw = guards.stream_raw()?;
         if trace {
             tracing::debug!(
                 "[cuda-trace] +{}ms resident allocations/stream",
@@ -487,13 +469,7 @@ impl CudaBackend {
             }
 
             probe::charge_since(probe::Phase::Stage, start);
-            if let Some((start_event, _)) = launch_resources
-                .as_ref()
-                .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: "Fix: CUDA resident dispatch launch resources were consumed before timing-event record.".to_string(),
-                })?
-                .timing_events()?
-            {
+            if let Some((start_event, _)) = guards.timing_events()? {
                 start_event.record(stream_raw)?;
             }
             // Fixpoint loop  -  see dispatch_borrowed_async_with_ptx_concrete
@@ -516,103 +492,78 @@ impl CudaBackend {
             let mut params_ref = params_ptr;
             let mut kernel_args = Self::kernel_args(&mut launch_ptrs, &mut params_ref)?;
             probe::charge(probe::Phase::Resolve, resolve_started);
-            // Hold this module's grid-barrier counter across the launch sequence.
-            // The lease blocks while another cooperative launch of the same module
-            // is still in flight; see `GridBarrierGate`.
+            // Hold this module's module-scope globals across the launch sequence.
+            // The lease blocks while another launch of the same module is still in
+            // flight; see `ModuleGlobalsGate`.
             let lease_started = probe::mark();
-            let grid_barrier = self.lease_grid_barrier(program, prepared, ptx_src, module_key)?;
+            let module_globals =
+                self.lease_module_globals(program, prepared, ptx_src, module_key)?;
             probe::charge(probe::Phase::Lease, lease_started);
-            // `launch_then_release` runs the launches and ends the lease in the
-            // one safe order: the release synchronizes the stream before freeing
-            // the gate, so a launch failure cannot leave a grid spinning while the
-            // next sequence resets the counter underneath it.
+            // `launch_then_defer_release` runs the launches and hands the lease
+            // back instead of ending it. The module-scope globals are live for the
+            // kernel's whole EXECUTION, and this path returns before that, so
+            // ending the lease here would synchronize the stream: the one thing an
+            // asynchronous submission must not do. The pending handle owns the
+            // completion event, which makes it the only place that can prove the
+            // kernel finished, so it is what ends the lease.
+            //
+            // Everything that must still be enqueued under the lease goes INSIDE
+            // the closure. A failure there releases at enqueue, with the
+            // synchronize, because no pending handle will exist to await it.
             let launch_and_release_started = probe::mark();
-            grid_barrier.launch_then_release(
+            let (_, deferred_module_globals) = module_globals.launch_then_defer_release(
                 stream_raw,
-                "resident async dispatch grid-sync launch",
-                |grid_barrier| {
+                "resident async dispatch launch",
+                |module_globals| {
                     probe::measure(probe::Phase::LaunchLoop, || {
-                        for _ in 0..prepared.fixpoint_iterations {
-                            // SAFETY: stream_raw is the live resident dispatch
-                            // stream and outlives the memset enqueued ahead of
-                            // the launch.
-                            unsafe {
-                                grid_barrier.enqueue_reset(stream_raw)?;
-                            }
-                            self.launch_prevalidated_function(
-                                func,
-                                &mut kernel_args,
-                                &prepared.launch,
-                                stream_raw,
-                                false,
-                                prepared.cooperative,
-                            )?;
-                        }
-                        Ok::<(), BackendError>(())
+                        self.replay_fixpoint_launches(
+                            module_globals,
+                            func,
+                            &mut kernel_args,
+                            prepared,
+                            stream_raw,
+                        )
                     })?;
+                    if let Some((_, end_event)) = guards.timing_events()? {
+                        end_event.record(stream_raw)?;
+                    }
                     Ok(())
                 },
             )?;
+            // On this path the span covers the trap reset and the timing-event
+            // record. The release is paid by whoever awaits the pending handle.
             probe::charge_remainder(
                 probe::Phase::Release,
                 launch_and_release_started,
                 probe::Phase::LaunchLoop,
             );
-            if let Some((_, end_event)) = launch_resources
-                .as_ref()
-                .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: "Fix: CUDA resident dispatch launch resources were consumed before timing-event record.".to_string(),
-                })?
-                .timing_events()?
-            {
-                end_event.record(stream_raw)?;
-            }
             // Output copies are enqueued on the same stream after the kernel.
             // The completion event recorded below fences uploads, compute, and
             // D2H transfer without blocking this submission call.
-            Ok(())
+            Ok(deferred_module_globals)
         })();
-        if let Err(error) = enqueue_result {
-            let Some(launch_resources) = launch_resources.take() else {
-                return Err(error);
-            };
-            match crate::stream::synchronize_raw_stream(
-                stream_raw,
-                "cuStreamSynchronize (resident async error cleanup)",
-            ) {
-                Ok(()) => {
-                    self.telemetry.record_sync_point();
-                    return Err(error);
-                }
-                Err(sync_error) => {
-                    tracing::error!(
-                        "Fix: failed to synchronize CUDA resident dispatch stream after enqueue error: {sync_error}. In-flight resident dispatch resources will not be recycled."
-                    );
-                    std::mem::forget(launch_resources);
-                    if let Some(allocations) = allocations.take() {
-                        std::mem::forget(allocations);
-                    }
-                    if let Some(resident_use) = resident_use.take() {
-                        std::mem::forget(resident_use);
-                    }
-                    if let Some(host_transfers) = host_transfers.take() {
-                        std::mem::forget(host_transfers);
-                    }
-                    return Err(error);
-                }
+        // Every fallible step that runs under the lease is inside the closure
+        // above, so an error here means the lease was already ended: either it was
+        // never taken, or `launch_then_defer_release` released it with the
+        // synchronize a failed launch needs.
+        let deferred_module_globals = match enqueue_result {
+            Ok(lease) => lease,
+            Err(error) => {
+                return Err(guards.abandon(
+                    error,
+                    &self.telemetry,
+                    stream_raw,
+                    "cuStreamSynchronize (resident async error cleanup)",
+                    "enqueue",
+                ));
             }
-        }
+        };
 
         let pending = (|| {
             let mut staged_readback_bytes = 0_u64;
             let mut staged_readback_ops = 0_u64;
             {
-                let transfers =
-                    host_transfers
-                        .as_mut()
-                        .ok_or_else(|| BackendError::InvalidProgram {
-                            fix: "Fix: CUDA resident dispatch host staging was consumed before asynchronous output readback enqueue.".to_string(),
-                        })?;
+                let transfers = guards.recording()?.host_transfers;
                 for &(src_base_ptr, readback) in &output_stage_readbacks {
                     let dst = transfers.push_output(readback.byte_len)?;
                     if readback.byte_len == 0 {
@@ -670,27 +621,10 @@ impl CudaBackend {
                 self.launch_resources.release_event(event);
                 return Err(error);
             }
-            let (stream, timing_events) = launch_resources
-                .take()
-                .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: "Fix: CUDA resident dispatch launch resources were consumed before asynchronous pending ownership transfer.".to_string(),
-                })?
-                .into_parts()?;
-            let allocations = allocations.take().ok_or_else(|| BackendError::InvalidProgram {
-                fix: "Fix: CUDA resident dispatch allocations were consumed before asynchronous pending ownership transfer.".to_string(),
-            })?;
-            let resident_use =
-                resident_use
-                    .take()
-                    .ok_or_else(|| BackendError::InvalidProgram {
-                        fix: "Fix: CUDA resident dispatch use guard was consumed before asynchronous pending ownership transfer.".to_string(),
-                    })?;
-            let host_transfers =
-                host_transfers
-                    .take()
-                    .ok_or_else(|| BackendError::InvalidProgram {
-                        fix: "Fix: CUDA resident dispatch host staging was consumed before asynchronous pending ownership transfer.".to_string(),
-                    })?;
+            let (stream, timing_events) = guards.take_stream_and_timing()?;
+            let allocations = guards.take_allocations()?;
+            let resident_use = guards.take_resident_use()?;
+            let host_transfers = guards.take_host_transfers()?;
             let pending = match timing_events {
                 Some((timing_start, timing_end)) => {
                     crate::stream::CudaPendingDispatch::new_with_timing(
@@ -722,36 +656,21 @@ impl CudaBackend {
             Ok(pending)
         })();
         let pending = match pending {
-            Ok(pending) => pending,
+            Ok(pending) => pending.holding_module_globals(deferred_module_globals),
             Err(error) => {
-                let Some(launch_resources) = launch_resources.take() else {
-                    return Err(error);
-                };
-                match crate::stream::synchronize_raw_stream(
+                let abandoned = guards.abandon(
+                    error,
+                    &self.telemetry,
                     stream_raw,
                     "cuStreamSynchronize (resident async output enqueue cleanup)",
-                ) {
-                    Ok(()) => {
-                        self.telemetry.record_sync_point();
-                        return Err(error);
-                    }
-                    Err(sync_error) => {
-                        tracing::error!(
-                            "Fix: failed to synchronize CUDA resident dispatch stream after output enqueue error: {sync_error}. In-flight resident dispatch resources will not be recycled."
-                        );
-                        std::mem::forget(launch_resources);
-                        if let Some(allocations) = allocations.take() {
-                            std::mem::forget(allocations);
-                        }
-                        if let Some(resident_use) = resident_use.take() {
-                            std::mem::forget(resident_use);
-                        }
-                        if let Some(host_transfers) = host_transfers.take() {
-                            std::mem::forget(host_transfers);
-                        }
-                        return Err(error);
-                    }
-                }
+                    "output enqueue",
+                );
+                // Dropped AFTER the abandon synchronized the stream, so the gate is
+                // freed only once the grid cannot still be running. The trap record
+                // is not read: this dispatch produced no answer, and the failure
+                // worth reporting is the one that stopped the output enqueue.
+                drop(deferred_module_globals);
+                return Err(abandoned);
             }
         };
         if trace {

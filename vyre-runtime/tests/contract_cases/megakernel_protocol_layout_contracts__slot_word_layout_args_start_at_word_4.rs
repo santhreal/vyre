@@ -1,3 +1,5 @@
+use super::*;
+
 #[test]
 fn slot_word_layout_args_start_at_word_4() {
     let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();

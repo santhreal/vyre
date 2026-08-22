@@ -13,6 +13,11 @@ members = [
     "vyre-driver-spirv",
     "vyre-driver-cuda",
     "vyre-driver-reference",
+    # Sole owner of the inventory registry link anchors and the per-source floor
+    # every registry read is judged against. It is the one crate that names the
+    # registration-submitting crates, so a consumer reads a registry through it
+    # instead of naming those crates with imports that reference nothing.
+    "vyre-registry-link",
     "vyre-reference",
     "vyre-spec",
     "vyre-macros",
@@ -20,24 +25,25 @@ members = [
     # feature-gated per domain. See docs/lego-block-rule.md.
     "vyre-primitives",
     "vyre-test-support",
-    # Recursion-thesis layer: vyre using its own primitives on its own
-    # scheduler problems. Sits between vyre-primitives and vyre-driver.
-    # Extracted from `vyre-driver/src/self_substrate/` in audit cleanup
-    # A10 (2026-04-30).
-    "vyre-self-substrate",
+    # Executes the optimizer's own passes as Vyre Programs. Sits between
+    # vyre-primitives and vyre-driver.
+    "vyre-pass-engine",
     "conform/vyre-conform-spec",
     "conform/vyre-conform",
     "xtask",
+    # The two xtask crates that link vyre. `xtask` builds and runs one of these
+    # on demand for the subcommands that must observe the live operation
+    # registry or a measured benchmark probe, so a source edit no longer
+    # rebuilds the compiler before a text-reading gate can run.
+    "xtask-registry",
+    "xtask-evidence",
     # Workspace structural gate. Depends on no vyre crate on purpose: it reads
     # source text so it still runs while the workspace does not compile.
     "structure-gate",
     "vyre-runtime",
     "vyre-safetensors",
     "vyre-libs",
-    "vyre-intrinsics",
     "vyre-aot",
-    "vyre-frontend-c",
-    "vyre-frontend-rust",
     "vyre-bench",
     "vyre-lints",
     "vyre-lower",
@@ -46,29 +52,20 @@ members = [
     "vyre-emit-spirv",
     "vyre-emit-metal",
     "vyre-debug",
-    # Host-side C11 grammar-table generator for the vyre GPU C parser.
-    # Formerly `surgec-grammar-gen` in libs/shared, renamed + folded in so
-    # vyre owns its parser tables and depends on nothing surge-named.
-    "vyre-grammar-gen",
 ]
 
 exclude = [
+    "examples/external_backend_extension",
     "examples/external_ir_extension",
     "examples/libs-template",
-    "examples/wgpu_readwrite_count_repro",
     "vyre-foundation/fuzz",
 ]
-
-# The old `demos/rust_lexer_gpu` and `demos/rust_parser_gpu` workspace
-# members were removed with the WGSL-string dialects they depended on.
-# New parser demos must be added as normal workspace members backed by
-# pure-IR builders and their own tests.
 
 [workspace.package]
 edition = "2021"
 rust-version = "1.85"
 license = "MIT OR Apache-2.0"
-authors = ["Santh Project <contact@santh.dev>"]
+authors = ["Santh <64453045+santhreal@users.noreply.github.com>"]
 repository = "https://github.com/santhreal/vyre"
 homepage = "https://santh.dev"
 
@@ -165,19 +162,64 @@ manual_slice_size_calculation = "allow"
 manual_c_str_literals = "allow"
 erasing_op = "allow"
 identity_op = "allow"
+# Entries below arrived from crate-root `#![allow(...)]` blankets, one per
+# crate, that this table now owns. Only lints that warn by default were
+# promoted: the pedantic and restriction names those blankets also listed were
+# inert, because no member enables those groups, and a suppression of a lint
+# nothing raises reads as a rule.
+# A module reached from two parents is how a shared contract-case body is
+# compiled by two targets.
+duplicate_mod = "allow"
+# Generated operation wrappers replay the derive attributes of what they wrap.
+duplicated_attributes = "allow"
+# `mod x` inside `x.rs` is the module layout every dialect and sub-dialect uses.
+module_inception = "allow"
+# GPU buffer layout types (bind-group slot tuples) are inherently complex.
+type_complexity = "allow"
+# Internal helpers with stdlib-adjacent names read better than a trait impl
+# nobody calls through the trait.
+should_implement_trait = "allow"
+# Explicit clones on Copy values document ownership intent in serial layers.
+clone_on_copy = "allow"
+# A recursion parameter carried for the recursive call only is the shape of
+# every IR walk in the tree.
+only_used_in_recursion = "allow"
+# `Result<T, ()>` keeps a fallible internal API forward-compatible with the
+# error type it will carry.
+result_unit_err = "allow"
+# `&Vec<T>` in an internal signature matches the storage the caller holds.
+ptr_arg = "allow"
+# A contract-case module sits at the end of the file it tests, after the items
+# it drives.
+items_after_test_module = "allow"
+# Asserting a constant is how a shape contract is pinned beside the constant.
+assertions_on_constants = "allow"
+# Predicate-heavy admission checks are written for domain clarity.
+overly_complex_bool_expr = "allow"
+filter_map_bool_then = "allow"
+# `push_str` with a one-character literal keeps emitters symmetric with their
+# multi-character neighbours.
+single_char_add_str = "allow"
+# `for x in it { if let Some(y) = x }` documents the two conditions separately.
+manual_flatten = "allow"
+explicit_counter_loop = "allow"
+# `x.max(lo).min(hi)` keeps the bound order visible in dimension math.
+manual_clamp = "allow"
+# A blank line between a doc comment and its item separates prose from code.
+empty_line_after_doc_comments = "allow"
+# A named binding before the tail expression documents what is returned.
+let_and_return = "allow"
+# An FFI wrapper's safety contract is stated at the call site, beside the
+# invariant, rather than in a section on the wrapper.
+missing_safety_doc = "allow"
 
 [workspace.lints.rust]
 # `drop(perf_scope.finish())` documents measurement lifecycle intent. This is
 # a rustc lint, not a Clippy lint, on the supported toolchain.
 dropping_copy_types = "allow"
-# `external_ifds_engine` names the disabled bridge in
-# `vyre-libs/src/security/external_ifds.rs`. It cannot be a Cargo feature here:
-# the engine crate depends on the Vyre platform, and `xtask platform-boundary`
-# forbids the platform from depending back on a consumer. Moving the bridge to
-# the consumer side is BACKLOG R47.
-unexpected_cfgs = { level = "warn", check-cfg = [
-  'cfg(feature, values("external_ifds_engine"))',
-] }
+# Unknown feature cfgs delete code silently. Deny them instead of accepting
+# warning-only builds whose source and compiled feature surfaces disagree.
+unexpected_cfgs = "deny"
 unsafe_code = "deny"
 missing_docs = "deny"
 unreachable_pub = "warn"
@@ -195,41 +237,41 @@ private_intra_doc_links = "warn"
 # version (the `version` is required so a published crate can resolve its
 # workspace siblings from crates.io after publication).
 [workspace.dependencies]
-vyre = { version = "0.7.2", path = "vyre", default-features = false }
-vyre-foundation = { version = "0.7.2", path = "vyre-foundation" }
-vyre-megakernel = { version = "0.7.2", path = "vyre-megakernel" }
-vyre-driver = { version = "0.7.2", path = "vyre-driver" }
-vyre-driver-metal = { version = "0.7.2", path = "vyre-driver-metal" }
-vyre-driver-wgpu = { version = "0.7.2", path = "vyre-driver-wgpu" }
-vyre-driver-cuda = { version = "0.7.2", path = "vyre-driver-cuda" }
-vyre-driver-reference = { version = "0.7.2", path = "vyre-driver-reference" }
-vyre-driver-spirv = { version = "0.7.2", path = "vyre-driver-spirv" }
-vyre-reference = { version = "0.7.2", path = "vyre-reference" }
-vyre-spec = { version = "0.7.2", path = "vyre-spec" }
-vyre-macros = { version = "0.7.2", path = "vyre-macros" }
-vyre-primitives = { version = "0.7.2", path = "vyre-primitives", default-features = false }
+vyre = { version = "0.8.0", path = "vyre", default-features = false }
+vyre-foundation = { version = "0.8.0", path = "vyre-foundation" }
+vyre-megakernel = { version = "0.8.0", path = "vyre-megakernel" }
+vyre-driver = { version = "0.8.0", path = "vyre-driver" }
+vyre-driver-metal = { version = "0.8.0", path = "vyre-driver-metal" }
+vyre-driver-wgpu = { version = "0.8.0", path = "vyre-driver-wgpu" }
+vyre-driver-cuda = { version = "0.8.0", path = "vyre-driver-cuda" }
+vyre-driver-reference = { version = "0.8.0", path = "vyre-driver-reference" }
+vyre-driver-spirv = { version = "0.8.0", path = "vyre-driver-spirv" }
+# publish = false, so no version.
+vyre-registry-link = { path = "vyre-registry-link", default-features = false }
+vyre-reference = { version = "0.8.0", path = "vyre-reference" }
+vyre-spec = { version = "0.8.0", path = "vyre-spec" }
+vyre-macros = { version = "0.8.0", path = "vyre-macros" }
+vyre-primitives = { version = "0.8.0", path = "vyre-primitives", default-features = false }
 # Dev-only shared harness (publish = false). PATH-ONLY (no version): cargo strips
 # path-only dev-deps at publish, so this never joins/blocks the publish train.
 vyre-test-support = { path = "vyre-test-support" }
-vyre-runtime = { version = "0.7.2", path = "vyre-runtime" }
-vyre-safetensors = { version = "0.7.2", path = "vyre-safetensors" }
-vyre-libs = { version = "0.7.2", path = "vyre-libs" }
-vyre-self-substrate = { version = "0.7.2", path = "vyre-self-substrate" }
-vyre-intrinsics = { version = "0.7.2", path = "vyre-intrinsics" }
-vyre-aot = { version = "0.7.2", path = "vyre-aot" }
-vyre-bench = { version = "0.7.2", path = "vyre-bench" }
-vyre-conform = { version = "0.7.2", path = "conform/vyre-conform", default-features = false }
-vyre-lower = { version = "0.7.2", path = "vyre-lower" }
-vyre-emit-naga = { version = "0.7.2", path = "vyre-emit-naga" }
-vyre-emit-ptx = { version = "0.7.2", path = "vyre-emit-ptx" }
-vyre-emit-spirv = { version = "0.7.2", path = "vyre-emit-spirv" }
-vyre-emit-metal = { version = "0.7.2", path = "vyre-emit-metal" }
-vyre-frontend-c = { version = "0.7.2", path = "vyre-frontend-c" }
-vyre-frontend-rust = { version = "0.7.2", path = "vyre-frontend-rust" }
-vyre-lints = { version = "0.7.2", path = "vyre-lints" }
-vyre-debug = { version = "0.7.2", path = "vyre-debug" }
+vyre-runtime = { version = "0.8.0", path = "vyre-runtime" }
+vyre-safetensors = { version = "0.8.0", path = "vyre-safetensors" }
+vyre-libs = { version = "0.8.0", path = "vyre-libs" }
+vyre-pass-engine = { version = "0.8.0", path = "vyre-pass-engine" }
+vyre-aot = { version = "0.8.0", path = "vyre-aot" }
+# publish = false, so no version: a version requirement here is one a registry
+# can never satisfy, and any member writing `workspace = true` inherits it.
+vyre-bench = { path = "vyre-bench" }
+vyre-conform = { path = "conform/vyre-conform", default-features = false }
+vyre-lower = { version = "0.8.0", path = "vyre-lower" }
+vyre-emit-naga = { version = "0.8.0", path = "vyre-emit-naga" }
+vyre-emit-ptx = { version = "0.8.0", path = "vyre-emit-ptx" }
+vyre-emit-spirv = { version = "0.8.0", path = "vyre-emit-spirv" }
+vyre-emit-metal = { version = "0.8.0", path = "vyre-emit-metal" }
+vyre-lints = { version = "0.8.0", path = "vyre-lints" }
+vyre-debug = { version = "0.8.0", path = "vyre-debug" }
 vyre-conform-spec = { path = "conform/vyre-conform-spec" }
-c-grammar-gen = { package = "vyre-grammar-gen", version = "0.7.2", path = "vyre-grammar-gen" }
 
 # Shared third-party pins; every member agrees on versions.
 serde = { version = "=1.0.229", features = ["derive", "rc"] }
@@ -240,7 +282,6 @@ tempfile = "=3.27.0"
 proptest = "=1.11.0"
 rand = { version = "=0.10.2", features = ["std", "std_rng"] }
 rand_core = { version = "=0.6.4", features = ["getrandom"] }
-pollster = "=0.4.0"
 tokio = { version = "=1.53.1", features = ["rt", "fs", "time"] }
 wgpu = { version = "=25.0.2", features = ["wgsl", "naga-ir"] }
 metal = "=0.31.0"
@@ -256,12 +297,29 @@ aho-corasick = "=1.1.4"
 faer = { version = "=0.24.4", default-features = false, features = ["std", "rayon"] }
 memchr = "=2.8.3"
 regex-syntax = "=0.8.11"
-blake3 = "=1.8.5"
+# `pure` keeps blake3's C and assembly out of the build entirely. Its build
+# script picks a native path off the target triple - `c/blake3_neon.c` on
+# aarch64, `c/blake3_*_x86-64_unix.S` on x86_64 - and compiles it with the host
+# `cc`, so cross-compiling to any Apple or Windows target from Linux needed that
+# target's C toolchain. `no_neon` alone silenced only the aarch64 arm, which made
+# aarch64-apple-darwin and aarch64-apple-ios compile while x86_64-apple-darwin
+# and x86_64-pc-windows-msvc still failed on the identical mechanism, and hid
+# that they were failing. Every blake3 call here hashes program identity, cache
+# keys, and label/value fields - kilobytes of already canonical bytes on the host
+# compile path, never a device path and never bulk data - so the portable Rust
+# backend is not on any measured hot path, and a product graph that needs no C
+# compiler is what makes every declared target actually buildable.
+blake3 = { version = "=1.8.5", features = ["pure"] }
 sha2 = "=0.11.0"
 percent-encoding = "=2.3.2"
 ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["std"] }
 rustc-hash = "=2.1.3"
-im = "=15.1.0"
+# imbl is the maintained fork of im. im 15.1.0 carries RUSTSEC-2026-0248
+# (unmaintained) and pulls bitmaps 2.1.0 with RUSTSEC-2026-0247, and im's OrdSet
+# has an aliasing-violation advisory, RUSTSEC-2023-0126. The persistent HashSet
+# is what the DCE live set needs, so the fork replaces it rather than a std set
+# that would clone the whole set at every branch.
+imbl = "=7.0.1"
 rayon = "=1.12.0"
 wide = "=0.7.33"
 hex = "=0.4.3"
@@ -314,4 +372,13 @@ lto = "thin"
 codegen-units = 1
 
 [profile.dev]
-incremental = true
+# Incremental is OFF deliberately. Worktrees and agents build the same crates
+# under different absolute paths and different feature permutations, so
+# incremental state is never re-read: it grew debug/deps to 1.1T and produced a
+# measured 0.00% hit rate on 1310 cached compile requests. It is also what
+# makes any shared compilation cache impossible, because rustc refuses to
+# emit a cacheable artifact under -C incremental.
+incremental = false
+# Backtraces need line tables, not full DWARF. Cuts rlib bytes and link time.
+debug = "line-tables-only"
+split-debuginfo = "unpacked"

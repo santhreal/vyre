@@ -1,17 +1,21 @@
 //! Parity tests for vyre-primitives reduce::{gather, scatter, histogram,
 //! radix_sort, segment_reduce_sum}.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::reduce::gather::{cpu_ref as gather_cpu, gather};
-use vyre_primitives::reduce::histogram::{cpu_ref as hist_cpu, histogram};
-use vyre_primitives::reduce::radix_sort::{cpu_ref as radix_cpu, radix_sort};
-use vyre_primitives::reduce::scatter::{cpu_ref as scatter_cpu, scatter};
-use vyre_primitives::reduce::segment_reduce::{cpu_ref as seg_cpu, segment_reduce_sum};
+use vyre_libs::reduce::gather::gather;
+use vyre_libs::reduce::histogram::histogram;
+use vyre_libs::reduce::radix_sort::radix_sort;
+use vyre_libs::reduce::scatter::scatter;
+use vyre_libs::reduce::segment_reduce::segment_reduce_sum;
+use vyre_reference::composition_witness::{
+    gather_witness, histogram_witness, radix_sort_masked_witness, scatter_witness,
+    segment_reduce_sum_witness,
+};
 
 // ---------------------------------------------------------------------
 // gather
@@ -43,7 +47,7 @@ fn run_gather(src: &[u32], indices: &[u32]) -> Vec<u32> {
 fn cuda_gather_identity() {
     let src = vec![10u32, 20, 30, 40];
     let indices = vec![0u32, 1, 2, 3];
-    let cpu = gather_cpu(&src, &indices);
+    let cpu = gather_witness(&src, &indices);
     let gpu = run_gather(&src, &indices);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, src);
@@ -53,7 +57,7 @@ fn cuda_gather_identity() {
 fn cuda_gather_reverse() {
     let src = vec![10u32, 20, 30, 40];
     let indices = vec![3u32, 2, 1, 0];
-    let cpu = gather_cpu(&src, &indices);
+    let cpu = gather_witness(&src, &indices);
     let gpu = run_gather(&src, &indices);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![40, 30, 20, 10]);
@@ -89,7 +93,7 @@ fn run_scatter(src: &[u32], indices: &[u32]) -> Vec<u32> {
 fn cuda_scatter_inverse_of_gather() {
     let src = vec![10u32, 20, 30, 40];
     let indices = vec![3u32, 2, 1, 0];
-    let cpu = scatter_cpu(&src, &indices, src.len());
+    let cpu = scatter_witness(&src, &indices, src.len());
     let gpu = run_scatter(&src, &indices);
     assert_eq!(gpu, cpu);
     // Each src[i] is written to dst[indices[i]] → reversed source.
@@ -100,7 +104,7 @@ fn cuda_scatter_inverse_of_gather() {
 fn cuda_scatter_identity() {
     let src = vec![5u32, 6, 7, 8];
     let indices = vec![0u32, 1, 2, 3];
-    let cpu = scatter_cpu(&src, &indices, src.len());
+    let cpu = scatter_witness(&src, &indices, src.len());
     let gpu = run_scatter(&src, &indices);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, src);
@@ -132,7 +136,7 @@ fn run_histogram(input: &[u32], num_bins: u32) -> Vec<u32> {
 fn cuda_histogram_simple() {
     let input = vec![0u32, 1, 0, 2, 1, 0];
     let num_bins = 4u32;
-    let cpu = hist_cpu(&input, num_bins);
+    let cpu = histogram_witness(&input, num_bins);
     let gpu = run_histogram(&input, num_bins);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![3, 2, 1, 0]);
@@ -140,10 +144,10 @@ fn cuda_histogram_simple() {
 
 #[test]
 fn cuda_histogram_skips_out_of_range() {
-    // bin index 5 exceeds num_bins=4 → cpu_ref skips it.
+    // bin index 5 exceeds num_bins=4 → histogram_witness skips it.
     let input = vec![0u32, 5, 1, 5, 2];
     let num_bins = 4u32;
-    let cpu = hist_cpu(&input, num_bins);
+    let cpu = histogram_witness(&input, num_bins);
     let gpu = run_histogram(&input, num_bins);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![1, 1, 1, 0]);
@@ -174,7 +178,7 @@ fn run_radix_sort(input: &[u32], bits: u32) -> Vec<u32> {
 #[test]
 fn cuda_radix_sort_already_sorted() {
     let v = vec![1u32, 2, 3, 4, 5];
-    let cpu = radix_cpu(&v, 8);
+    let cpu = radix_sort_masked_witness(&v, 8);
     let gpu = run_radix_sort(&v, 8);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, v);
@@ -183,7 +187,7 @@ fn cuda_radix_sort_already_sorted() {
 #[test]
 fn cuda_radix_sort_reverse() {
     let v = vec![5u32, 4, 3, 2, 1];
-    let cpu = radix_cpu(&v, 8);
+    let cpu = radix_sort_masked_witness(&v, 8);
     let gpu = run_radix_sort(&v, 8);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![1, 2, 3, 4, 5]);
@@ -192,7 +196,7 @@ fn cuda_radix_sort_reverse() {
 #[test]
 fn cuda_radix_sort_with_duplicates() {
     let v = vec![3u32, 1, 4, 1, 5, 9, 2, 6, 5, 3];
-    let cpu = radix_cpu(&v, 8);
+    let cpu = radix_sort_masked_witness(&v, 8);
     let gpu = run_radix_sort(&v, 8);
     assert_eq!(gpu, cpu);
     let mut expected = v.clone();
@@ -231,7 +235,7 @@ fn cuda_segment_reduce_uniform_segments() {
     let input = vec![1u32, 2, 3, 4, 5, 6];
     // Segments [0..2), [2..4), [4..6).
     let segments = vec![0u32, 2, 4, 6];
-    let cpu = seg_cpu(&input, &segments);
+    let cpu = segment_reduce_sum_witness(&input, &segments);
     let gpu = run_segment_reduce(&input, &segments);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![3, 7, 11]);
@@ -241,7 +245,7 @@ fn cuda_segment_reduce_uniform_segments() {
 fn cuda_segment_reduce_uneven_segments() {
     let input = vec![10u32, 20, 30, 40, 50];
     let segments = vec![0u32, 1, 4, 5];
-    let cpu = seg_cpu(&input, &segments);
+    let cpu = segment_reduce_sum_witness(&input, &segments);
     let gpu = run_segment_reduce(&input, &segments);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![10, 90, 50]);

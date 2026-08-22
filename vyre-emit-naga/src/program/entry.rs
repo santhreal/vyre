@@ -8,14 +8,13 @@
 use std::sync::Arc;
 
 use naga::Module;
-use rustc_hash::FxHashSet;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Ident, MemoryKind, Program};
 use vyre_foundation::visit::visit_node_preorder;
 
-use super::atomic_scanner::scan_atomic_targets_into;
+use super::atomic_scanner::{scan_buffer_targets, BufferTargets};
 use super::trap_collector::TrapTagCollector;
-use super::types::{TrapTag, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
+use super::trap_sidecar::{TrapTag, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
 use super::{bind_group_for, LoweringError};
 
 /// Emit a validated Naga module for a vyre program.
@@ -93,10 +92,10 @@ fn emit_module_impl(
         ))
     })?;
     lowered.descriptor.dispatch.workgroup_size = workgroup_size;
-    if let Err(errors) = vyre_lower::verify::verify(&lowered.descriptor) {
+    if let Err(errors) = vyre_lower::verify(&lowered.descriptor) {
         return Err(LoweringError::invalid(format!(
             "KernelDescriptor verification failed after Naga Program compatibility workgroup override: {}. Fix: keep the requested workgroup size valid before emission.",
-            vyre_lower::verify::format_verify_errors(&errors)
+            vyre_lower::format_verify_errors(&errors)
         )));
     }
     let emitted = match target {
@@ -149,19 +148,16 @@ pub fn prepared_program(program: &Program) -> Result<Program, LoweringError> {
     // layout was built from BufferDecl.access (ReadWrite →
     // read_only=false) but the shader emitter saw only loads.
     // Naga validation rejected the mismatch.
-    let mut atomic_targets = FxHashSet::<Ident>::default();
-    let mut write_targets = FxHashSet::<Ident>::default();
-    for node in program.entry() {
-        scan_atomic_targets_into(node, &mut atomic_targets, &mut write_targets)?;
-    }
+    let mut targets = BufferTargets::default();
+    scan_buffer_targets(program.entry(), &mut targets)?;
     let new_buffers: Vec<BufferDecl> = program
         .buffers()
         .iter()
         .map(|buffer| {
             let buffer_name = Ident::from(buffer.name());
             if matches!(buffer.access, vyre_foundation::ir::BufferAccess::ReadWrite)
-                && !write_targets.contains(&buffer_name)
-                && !atomic_targets.contains(&buffer_name)
+                && !targets.writes.contains(&buffer_name)
+                && !targets.atomic.contains(&buffer_name)
             {
                 let mut downgraded = buffer.clone();
                 downgraded.access = vyre_foundation::ir::BufferAccess::ReadOnly;

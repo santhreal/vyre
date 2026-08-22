@@ -153,10 +153,11 @@ impl PipelineCacheStore for LayeredPipelineCache {
     }
 }
 
+// Inline: covers `metrics`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_helpers::tiny_artifact;
+    use crate::pipeline_cache::test_artifact_fixtures::tiny_artifact;
     use crate::pipeline_cache::InMemoryPipelineCache;
 
     #[test]

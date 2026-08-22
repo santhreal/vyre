@@ -1,6 +1,5 @@
 //! Shared-memory bank-conflict analysis for vyre kernels.
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B.3 item B13.
 //!
 //! Shared memory on modern GPUs is divided into N banks. Each bank can
 //! serve one read or write per cycle. When K threads in the same
@@ -28,12 +27,16 @@
 //! Caller can override the default bank count via
 //! `analyze_with_bank_count`.
 
-pub mod analysis;
-pub mod report;
+pub(crate) mod analysis;
+pub(crate) mod report;
+pub(crate) mod strategy;
 
 pub use analysis::{analyze, analyze_with_bank_count};
 pub use report::{BankAccessSite, BankConflictKind, BankConflictReport, ConflictSeverity};
-
+pub use strategy::{
+    evaluate_mitigation_candidate, select_bank_conflict_strategy, AccessPhase, AccessPhaseProfile,
+    BankConflictMitigation, MitigationEvaluation, PhaseConflictReport, TargetBankGeometry,
+};
 /// Default bank count. This is a reasonable pessimistic default for
 /// discrete GPU substrates.
 pub const DEFAULT_BANK_COUNT: u32 = 32;

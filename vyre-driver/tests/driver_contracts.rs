@@ -1,11 +1,12 @@
 //! Driver error, capability, validation, and fixture contracts.
 
 use std::collections::HashSet;
-use std::path::PathBuf;
 
-use vyre_driver::backend::{validate_program, BackendError, VyreBackend};
+use vyre_driver::{validate_program, BackendError, VyreBackend};
 use vyre_foundation::ir::{Node, OpId, Program};
-use vyre_foundation::program_caps::{check_backend_capabilities, RequiredCapabilities};
+use vyre_foundation::program_caps::{
+    check_backend_capabilities, BackendSupport, RequiredCapabilities,
+};
 
 // ---------------------------------------------------------------------------
 // Public validation errors remain actionable with Fix guidance
@@ -66,7 +67,7 @@ fn backend_error_new_preserves_complete_message() {
 fn empty_capability_set_rejects_any_program_with_nodes() {
     struct NoOpBackend;
 
-    impl vyre_driver::backend::private::Sealed for NoOpBackend {}
+    impl vyre_driver::sealed::Sealed for NoOpBackend {}
 
     impl VyreBackend for NoOpBackend {
         fn id(&self) -> &'static str {
@@ -76,10 +77,10 @@ fn empty_capability_set_rejects_any_program_with_nodes() {
             static EMPTY: std::sync::OnceLock<HashSet<OpId>> = std::sync::OnceLock::new();
             EMPTY.get_or_init(HashSet::new)
         }
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &vyre_driver::DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Ok(vec![])
@@ -106,18 +107,18 @@ fn capability_negotiation_lists_all_missing_bits() {
     required.bf16 = true;
     required.indirect_dispatch = true;
     required.trap = true;
-    let err = check_backend_capabilities(
-        "test",
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        [1, 1, 1],
-        &required,
-    )
-    .unwrap_err();
+    required.grid_sync = true;
+    let advertises_nothing = BackendSupport {
+        subgroup_ops: false,
+        half_precision: false,
+        brain_float: false,
+        indirect_dispatch: false,
+        trap_propagation: false,
+        distributed_collectives: false,
+        grid_sync: false,
+        max_workgroup_size: [1, 1, 1],
+    };
+    let err = check_backend_capabilities("test", &advertises_nothing, &required).unwrap_err();
     let missing = err.missing;
     let expected: HashSet<&str> = [
         "subgroup_ops",
@@ -125,6 +126,7 @@ fn capability_negotiation_lists_all_missing_bits() {
         "bf16",
         "indirect_dispatch",
         "trap_propagation",
+        "grid_sync",
     ]
     .iter()
     .copied()
@@ -149,7 +151,7 @@ fn capability_negotiation_lists_all_missing_bits() {
 fn validation_rejects_unsupported_operation() {
     struct UnsupportedOpsBackend;
 
-    impl vyre_driver::backend::private::Sealed for UnsupportedOpsBackend {}
+    impl vyre_driver::sealed::Sealed for UnsupportedOpsBackend {}
 
     impl VyreBackend for UnsupportedOpsBackend {
         fn id(&self) -> &'static str {
@@ -159,10 +161,10 @@ fn validation_rejects_unsupported_operation() {
             static EMPTY: std::sync::OnceLock<HashSet<OpId>> = std::sync::OnceLock::new();
             EMPTY.get_or_init(HashSet::new)
         }
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &vyre_driver::DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Ok(vec![])
@@ -186,8 +188,8 @@ fn validation_rejects_unsupported_operation() {
 /// This verifies the fixture directory exists and is readable.
 #[test]
 fn external_fixture_is_loadable() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let fixture = manifest.join("tests/fixtures/unsupported_op.txt");
+    let fixture = vyre_test_support::monorepo::vyre_workspace_root()
+        .join("vyre-driver/tests/fixtures/unsupported_op.txt");
     assert!(
         fixture.exists(),
         "external fixture must exist at {fixture:?}"
@@ -199,8 +201,8 @@ fn external_fixture_is_loadable() {
 /// A test that actually uses the external fixture to drive behavior.
 #[test]
 fn external_fixture_drives_validation_rejection() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let fixture = manifest.join("tests/fixtures/unsupported_op.txt");
+    let fixture = vyre_test_support::monorepo::vyre_workspace_root()
+        .join("vyre-driver/tests/fixtures/unsupported_op.txt");
     let op_id = std::fs::read_to_string(&fixture)
         .unwrap()
         .trim()
@@ -208,7 +210,7 @@ fn external_fixture_drives_validation_rejection() {
 
     struct DenyAllBackend;
 
-    impl vyre_driver::backend::private::Sealed for DenyAllBackend {}
+    impl vyre_driver::sealed::Sealed for DenyAllBackend {}
 
     impl VyreBackend for DenyAllBackend {
         fn id(&self) -> &'static str {
@@ -218,10 +220,10 @@ fn external_fixture_drives_validation_rejection() {
             static EMPTY: std::sync::OnceLock<HashSet<OpId>> = std::sync::OnceLock::new();
             EMPTY.get_or_init(HashSet::new)
         }
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &vyre_driver::DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Ok(vec![])

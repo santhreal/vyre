@@ -1,13 +1,14 @@
 //! Test crate.
 
+#![cfg(feature = "device-tests")]
 #![allow(deprecated)]
 use proptest::prelude::*;
 use std::collections::BTreeSet;
-use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_driver::DispatchConfig;
 use vyre_driver::VyreBackend;
 use vyre_foundation::optimizer::optimize;
-use vyre_libs::scan::{compact_hits_with_layout, emit_hit_with_layout};
+use vyre_libs::pattern::{compact_hits_with_layout, emit_hit_with_layout};
+use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_reference::value::Value;
 
 fn unpack_words(bytes: &[u8]) -> Vec<u32> {
@@ -34,12 +35,14 @@ fn run_emit_reference(
         rule_ids.len() as u32,
         max_hits,
     );
+    // One Value per buffer the reference accepts as an input. `out_hits` is
+    // backend-allocated, so it takes none: a placeholder for it is the extra
+    // Value the artifact ABI rejects on a device.
     let inputs = vec![
         Value::Bytes(pack_words(rule_ids).into()),
         Value::Bytes(pack_words(file_ids).into()),
         Value::Bytes(pack_words(span_starts).into()),
         Value::Bytes(pack_words(span_lens).into()),
-        Value::Bytes(vec![0u8; (max_hits * 4 * 4) as usize].into()),
         Value::Bytes(pack_words(&[0]).into()),
         Value::Bytes(pack_words(&[0]).into()),
     ];

@@ -58,7 +58,7 @@
 use super::is_invocation_id_eq_constant;
 use crate::ir::{Expr, Node, Program};
 use crate::optimizer::RefusalReason;
-use vyre_spec::op_contract::SideEffectClass;
+use vyre_spec::SideEffectClass;
 
 /// Memory-ordering tag carried by `ReadWriteAtomic`. Mirrors the wire-frozen
 /// `MemoryOrdering` in `vyre-foundation::memory_model` but reduced to the
@@ -333,6 +333,13 @@ pub fn node_effect_level(node: &Node) -> EffectLevel {
         | Node::ReduceScatter { .. }
         | Node::Broadcast { .. } => EffectLevel::Synchronized(SyncScope::Grid),
         // A pure control-flow terminator: no memory or synchronization effect.
+        Node::TileLoad { .. } => EffectLevel::ReadAtomic,
+        Node::TileStore { .. } => EffectLevel::ReadWriteAtomic(AtomicOrdering::SeqCst),
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {
+            EffectLevel::Pure
+        }
+        Node::TileElementwise { body, .. } => join_arms(body),
+        // A pure control-flow terminator: no memory or synchronization effect.
         Node::Return => EffectLevel::Pure,
         // Trap runs a host-side effect handler that may read or write any device
         // memory; Resume continues from it; an Opaque extension node carries a
@@ -361,7 +368,7 @@ fn join_arms<'a>(nodes: impl IntoIterator<Item = &'a Node>) -> EffectLevel {
 }
 
 fn expr_effect_level(expr: &Expr) -> EffectLevel {
-    use crate::visit::expr::{visit_preorder, ExprVisitor};
+    use crate::visit::expr_visitor::{visit_preorder, ExprVisitor};
     use std::ops::ControlFlow;
 
     // A shallow top-level match summarises an effectful VALUE expression as

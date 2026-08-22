@@ -1,6 +1,6 @@
 /// docs
-pub mod dfa;
+pub(crate) mod dfa;
 /// docs
-pub mod literal;
+pub(crate) mod literal;
 /// docs
-pub mod prefix;
+pub(crate) mod prefix;

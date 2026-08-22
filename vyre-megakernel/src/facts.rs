@@ -1,6 +1,11 @@
-use vyre_foundation::ir::ProgramGraph;
+use std::collections::BTreeMap;
 
-use crate::{ArtifactNodeId, ArtifactValueId, DependencyEdge, DependencyEndpoint, DependencyKind};
+use vyre_foundation::ir::{Ident, ProgramGraph};
+
+use crate::{
+    value_byte_count, workgroup_scratch_declarations, ArtifactNodeId, ArtifactValueId,
+    CompileError, DependencyEdge, DependencyEndpoint, DependencyKind,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct DataflowEdge {
@@ -9,18 +14,101 @@ pub(crate) struct DataflowEdge {
     pub(crate) value: ArtifactValueId,
 }
 
+/// Per-node and per-value measurements the cost model and the workgroup search
+/// read. Every field is derived from the graph, never from a candidate, so one
+/// derivation serves every candidate the search scores.
 #[derive(Debug)]
 pub(crate) struct PlanningFacts {
+    /// Semantic IR nodes in each node's program.
     pub(crate) node_work: Vec<u64>,
+    /// Simultaneously live values in each node's program, from the foundation
+    /// register-pressure estimate.
+    pub(crate) node_live_values: Vec<u64>,
+    /// Workgroup-scoped scratch each node declares, one entry per buffer.
+    ///
+    /// Held per buffer rather than as a total because fusion unions buffers by
+    /// name: two members that declare the same tile share it in the generated
+    /// kernel, and a total cannot say which bytes are the same bytes.
+    pub(crate) node_workgroup_scratch: Vec<Vec<(Ident, u64)>>,
+    /// Invocations per workgroup each node's program declares.
+    pub(crate) node_declared_invocations: Vec<u64>,
+    /// Workgroup dimensions each node's program declares.
+    pub(crate) node_declared_workgroup: Vec<[u32; 3]>,
+    /// Whether a node's program stays correct under a different launch width.
+    pub(crate) node_accepts_width: Vec<bool>,
+    /// Bytes of graph values each node produces or consumes.
+    ///
+    /// A value shared by two nodes counts for both, which is the traffic they
+    /// each move when they are not fused. The occupancy term prices a group's
+    /// traffic a second time when the group exceeds a device budget, so it reads
+    /// this rather than the whole-graph byte total.
+    pub(crate) node_touched_bytes: Vec<u64>,
+    /// Producer-consumer value edges the search may fuse.
     pub(crate) dataflow: Vec<DataflowEdge>,
+    /// Packed byte length of every graph value, keyed by artifact value id.
+    pub(crate) value_bytes: BTreeMap<u32, u64>,
 }
 
-pub(crate) fn derive(graph: &ProgramGraph, dependencies: &[DependencyEdge]) -> PlanningFacts {
-    let node_work = graph
-        .nodes()
-        .iter()
-        .map(|node| u64::try_from(node.program.stats().node_count).unwrap_or(u64::MAX))
-        .collect();
+pub(crate) fn derive(
+    graph: &ProgramGraph,
+    dependencies: &[DependencyEdge],
+    bindings: &BTreeMap<String, u64>,
+) -> Result<PlanningFacts, CompileError> {
+    let node_count = graph.nodes().len();
+    let mut node_work = Vec::with_capacity(node_count);
+    let mut node_live_values = Vec::with_capacity(node_count);
+    let mut node_workgroup_scratch = Vec::with_capacity(node_count);
+    let mut node_declared_invocations = Vec::with_capacity(node_count);
+    let mut node_declared_workgroup = Vec::with_capacity(node_count);
+    let mut node_accepts_width = Vec::with_capacity(node_count);
+    for node in graph.nodes() {
+        let program = &node.program;
+        let stats = program.stats();
+        node_work.push(u64::try_from(stats.node_count).unwrap_or(u64::MAX));
+        node_live_values.push(u64::from(stats.register_pressure_estimate));
+        let scratch: Vec<(Ident, u64)> = workgroup_scratch_declarations(program).collect();
+        let declared = program.workgroup_size;
+        let invocations = u64::from(declared[0])
+            .saturating_mul(u64::from(declared[1]))
+            .saturating_mul(u64::from(declared[2]));
+        // A launch width is safe to replace only when nothing in the program
+        // observes it. A workgroup-scoped buffer is sized for the declared
+        // width, a barrier orders invocations inside the declared group, a
+        // subgroup operation reads the group's lane layout, and any launch-geometry
+        // expression (InvocationId, LocalId, WorkgroupId, SubgroupLocalId, SubgroupSize)
+        // reads the group dimensions/indices, so each one pins the declared shape.
+        // A 2D or 3D declaration pins it too: the search only proposes 1D widths.
+        let observes_launch_geometry = program.entry().iter().any(|node| {
+            vyre_foundation::visit::any_descendant(node, &mut |n| {
+                vyre_foundation::visit::node_operands(n)
+                    .into_iter()
+                    .flatten()
+                    .any(|expr| {
+                        vyre_foundation::visit::any_subexpr(expr, &mut |sub| {
+                            matches!(
+                                sub,
+                                vyre_foundation::ir::Expr::InvocationId { .. }
+                                    | vyre_foundation::ir::Expr::WorkgroupId { .. }
+                                    | vyre_foundation::ir::Expr::LocalId { .. }
+                                    | vyre_foundation::ir::Expr::SubgroupLocalId
+                                    | vyre_foundation::ir::Expr::SubgroupSize
+                            )
+                        })
+                    })
+            })
+        });
+        let accepts_width = declared[1] == 1
+            && declared[2] == 1
+            && scratch.is_empty()
+            && !stats.has_node_barrier()
+            && !stats.subgroup_ops()
+            && !program.non_composable_with_self
+            && !observes_launch_geometry;
+        node_workgroup_scratch.push(scratch);
+        node_declared_invocations.push(invocations.max(1));
+        node_declared_workgroup.push(declared);
+        node_accepts_width.push(accepts_width);
+    }
     let dataflow = dependencies
         .iter()
         .filter_map(|edge| match (edge.from, edge.to, edge.kind, edge.value) {
@@ -33,8 +121,26 @@ pub(crate) fn derive(graph: &ProgramGraph, dependencies: &[DependencyEdge]) -> P
             _ => None,
         })
         .collect();
-    PlanningFacts {
-        node_work,
-        dataflow,
+    let mut value_bytes = BTreeMap::new();
+    let mut node_touched_bytes = vec![0_u64; node_count];
+    for value in graph.values() {
+        let bytes = value_byte_count(value, bindings)?;
+        value_bytes.insert(value.id.0, bytes);
+        for node in value.producer.iter().chain(value.consumers.iter()) {
+            if let Some(total) = node_touched_bytes.get_mut(node.0 as usize) {
+                *total = total.saturating_add(bytes);
+            }
+        }
     }
+    Ok(PlanningFacts {
+        node_work,
+        node_live_values,
+        node_workgroup_scratch,
+        node_declared_invocations,
+        node_declared_workgroup,
+        node_accepts_width,
+        node_touched_bytes,
+        dataflow,
+        value_bytes,
+    })
 }

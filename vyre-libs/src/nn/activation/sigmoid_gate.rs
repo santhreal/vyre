@@ -1,5 +1,6 @@
 //! Element-wise sigmoid output gate.
 
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use super::unary::typed_sigmoid_gate_program;
@@ -43,33 +44,28 @@ fn build_sigmoid_gate(
     dtype: DataType,
 ) -> Program {
     if n == 0 {
-        return crate::invalid_program(OP_ID, "Fix: sigmoid_gate requires n > 0");
+        return trap_program(OP_ID, None, "Fix: sigmoid_gate requires n > 0");
     }
     typed_sigmoid_gate_program(OP_ID, gate_logits, branch, output, n, dtype, false)
 }
+const EXPECTED_SIGMOID_GATE_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x80, 0x40, 0xA8, 0x26, 0xBB, 0x3F, 0xB0, 0xB2, 0x09, 0xBF, 0x00, 0x00, 0xE0, 0xC0,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(2),
-        id: OP_ID,
-        build: Some(|| sigmoid_gate("gate", "branch", "output", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || sigmoid_gate("gate", "branch", "output", 4),
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_f32_slice(&[0.0, 1.0, -1.0, 100.0]),
                 vyre_primitives::wire::pack_f32_slice(&[8.0, 2.0, -2.0, -7.0]),
             ]]
         }),
-        expected_output: Some(|| {
-            let gate = [0.0_f32, 1.0, -1.0, 100.0];
-            let branch = [8.0_f32, 2.0, -2.0, -7.0];
-            let output = std::array::from_fn::<_, 4, _>(|index| {
-                branch[index] / (1.0 + (-gate[index]).exp())
-            });
-            vec![vec![vyre_primitives::wire::pack_f32_slice(&output)]]
+        Some(|| {
+            vec![vec![EXPECTED_SIGMOID_GATE_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(2))
 }

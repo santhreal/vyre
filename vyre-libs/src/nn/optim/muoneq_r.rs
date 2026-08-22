@@ -4,7 +4,7 @@
 
 use vyre_foundation::ir::Program;
 
-use crate::nn::optim::muon_core::muon_step_program;
+use crate::nn::optim::muon_step::muon_step_program;
 
 const OP_ID: &str = "vyre-libs::optim::muoneq_r";
 
@@ -38,16 +38,18 @@ pub fn muoneq_r(
     )
 }
 
+const EXPECTED_MUONEQ_R_MOMENTUM_BYTES: [u8; 16] = [
+    0xCD, 0xCC, 0xCC, 0x3D, 0xCD, 0xCC, 0x4C, 0x3E, 0x9A, 0x99, 0x99, 0x3E, 0xCD, 0xCC, 0xCC, 0x3E,
+];
+const EXPECTED_MUONEQ_R_OUTPUT_BYTES: [u8; 16] = [
+    0x40, 0xEF, 0x7D, 0x3F, 0x40, 0xEF, 0xFD, 0x3F, 0x70, 0x73, 0x3E, 0x40, 0x40, 0xEF, 0x7D, 0x40,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(8),
-        id: OP_ID,
-        build: Some(|| muoneq_r("params", "grads", "momentum", "output", 4, 4, 2, 0.02, 0.95)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || muoneq_r("params", "grads", "momentum", "output", 4, 4, 2, 0.02, 0.95),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0, 3.0, 4.0]),
@@ -55,16 +57,13 @@ inventory::submit! {
                 to_f32(&[0.0, 0.0, 0.0, 0.0]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![
-                vec![
-                    205, 204, 204, 61, 205, 204, 76, 62, 154, 153, 153, 62, 205, 204, 204, 62,
-                ],
-                vec![
-                    64, 239, 125, 63, 64, 239, 253, 63, 112, 115, 62, 64, 64, 239, 125, 64,
-                ],
+                EXPECTED_MUONEQ_R_MOMENTUM_BYTES.to_vec(),
+                EXPECTED_MUONEQ_R_OUTPUT_BYTES.to_vec(),
             ]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(8))
 }

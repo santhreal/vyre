@@ -3,14 +3,13 @@
 //! Category A composition. One workgroup owns one token row and cooperatively
 //! reduces the vocabulary dimension with log-sum-exp stabilization.
 
+use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
-use crate::region::wrap_anonymous;
-use crate::tensor_ref::TensorRefError;
+use crate::plumbing::operand::tensor_ref::TensorRefError;
 
 const OP_ID: &str = "vyre-libs::nn::cross_entropy";
-const CROSS_ENTROPY_TILE: u32 = 256;
 
 /// Build a Program computing per-token cross-entropy loss.
 ///
@@ -30,10 +29,9 @@ pub fn cross_entropy(
     vocab_size: u32,
 ) -> Program {
     try_cross_entropy(logits, targets, loss_out, n, vocab_size).unwrap_or_else(|error| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             OP_ID,
-            loss_out,
-            DataType::F32,
+            Some((loss_out, DataType::F32)),
             format!("Fix: cross_entropy build failed: {error}"),
         )
     })
@@ -67,10 +65,10 @@ pub fn try_cross_entropy(
                 shape: vec![n, vocab_size],
             })?;
     let padded_output_count =
-        n.checked_mul(CROSS_ENTROPY_TILE)
+        n.checked_mul(256)
             .ok_or_else(|| TensorRefError::ElementCountOverflow {
                 name: loss_out.to_string(),
-                shape: vec![n, CROSS_ENTROPY_TILE],
+                shape: vec![n, 256],
             })?;
 
     let body = cross_entropy_body(logits, targets, loss_out, n, vocab_size);
@@ -80,15 +78,15 @@ pub fn try_cross_entropy(
             BufferDecl::storage(logits, 0, BufferAccess::ReadOnly, DataType::F32)
                 .with_count(logits_count),
             BufferDecl::storage(targets, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::workgroup("ce_scratch", CROSS_ENTROPY_TILE, DataType::F32),
+            BufferDecl::workgroup("ce_scratch", 256, DataType::F32),
             BufferDecl::workgroup("ce_max_logit", 1, DataType::F32),
             BufferDecl::workgroup("ce_target_logit", 1, DataType::F32),
             BufferDecl::output(loss_out, 2, DataType::F32)
                 .with_count(padded_output_count)
                 .with_output_byte_range(0..((n as usize) * core::mem::size_of::<f32>())),
         ],
-        [CROSS_ENTROPY_TILE, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        [256, 1, 1],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
 
@@ -99,7 +97,7 @@ fn cross_entropy_body(
     n: u32,
     vocab_size: u32,
 ) -> Vec<Node> {
-    let tile = CROSS_ENTROPY_TILE;
+    let tile = 256_u32;
     let chunks = vocab_size.div_ceil(tile);
     let local = Expr::var("local");
     let token = Expr::var("token");
@@ -258,36 +256,14 @@ fn cross_entropy_body(
     body
 }
 
-fn reference_cross_entropy_bytes(logits: &[f32], targets: &[u32], vocab_size: usize) -> Vec<u8> {
-    let mut out = Vec::with_capacity(targets.len() * core::mem::size_of::<f32>());
-    for (token, &target) in targets.iter().enumerate() {
-        let row = &logits[token * vocab_size..(token + 1) * vocab_size];
-        let max_logit = row
-            .iter()
-            .copied()
-            .fold(f32::MIN, |acc, value| acc.max(value));
-        let sum = row
-            .iter()
-            .copied()
-            .map(|value| libm::expf(value - max_logit))
-            .sum::<f32>();
-        let target_logit = row.get(target as usize).copied().unwrap_or(0.0);
-        let loss = max_logit + libm::logf(sum) - target_logit;
-        vyre_primitives::wire::append_f32_slice_le_bytes(&[loss], &mut out);
-    }
-    out
-}
+const EXPECTED_CROSS_ENTROPY_OUTPUT_BYTES: [u8; 8] =
+    [0x81, 0xEA, 0xEB, 0x3E, 0xCE, 0x71, 0xC5, 0x3F];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| cross_entropy("logits", "targets", "loss", 2, 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || cross_entropy("logits", "targets", "loss", 2, 4),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             let to_u32 = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
@@ -297,19 +273,41 @@ inventory::submit! {
                 to_u32(&[2, 0]),
             ]]
         }),
-        expected_output: Some(|| {
-            let logits = [1.0_f32, 2.0, 3.0, 0.5, 0.1, 0.2, 0.3, 0.4];
-            let targets = [2_u32, 0];
-            vec![vec![reference_cross_entropy_bytes(&logits, &targets, 4)]]
+        Some(|| {
+            vec![vec![EXPECTED_CROSS_ENTROPY_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]
 mod tests {
+    fn reference_cross_entropy_bytes(
+        logits: &[f32],
+        targets: &[u32],
+        vocab_size: usize,
+    ) -> Vec<u8> {
+        let mut out = Vec::with_capacity(targets.len() * core::mem::size_of::<f32>());
+        for (token, &target) in targets.iter().enumerate() {
+            let row = &logits[token * vocab_size..(token + 1) * vocab_size];
+            let max_logit = row
+                .iter()
+                .copied()
+                .fold(f32::MIN, |acc, value| acc.max(value));
+            let sum = row
+                .iter()
+                .copied()
+                .map(|value| libm::expf(value - max_logit))
+                .sum::<f32>();
+            let target_logit = row.get(target as usize).copied().unwrap_or(0.0);
+            let loss = max_logit + libm::logf(sum) - target_logit;
+            vyre_primitives::wire::append_f32_slice_le_bytes(&[loss], &mut out);
+        }
+        out
+    }
+
     use super::*;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_bytes;
 
     #[test]
     fn cross_entropy_matches_logsumexp_reference() {
@@ -317,14 +315,13 @@ mod tests {
         let targets = [2_u32, 0];
         let program = cross_entropy("logits", "targets", "loss", 2, 4);
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_f32_slice(&logits)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&targets)),
-            Value::from(vec![0u8; 4 * 2 * CROSS_ENTROPY_TILE as usize]),
+            vyre_primitives::wire::pack_f32_slice(&logits),
+            vyre_primitives::wire::pack_u32_slice(&targets),
+            vec![0u8; 4 * 2 * 256],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: cross_entropy must execute in the reference interpreter.");
+        let outputs = eval_bytes("cross_entropy", &program, inputs.clone());
         assert_eq!(
-            outputs[0].to_bytes(),
+            outputs[0].clone(),
             reference_cross_entropy_bytes(&logits, &targets, 4)
         );
     }
@@ -333,11 +330,11 @@ mod tests {
     fn try_cross_entropy_rejects_zero_and_overflow_dimensions() {
         assert!(matches!(
             try_cross_entropy("logits", "targets", "loss", 0, 4),
-            Err(crate::tensor_ref::TensorRefError::ShapeMismatch { .. })
+            Err(crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch { .. })
         ));
         assert!(matches!(
             try_cross_entropy("logits", "targets", "loss", u32::MAX, 2),
-            Err(crate::tensor_ref::TensorRefError::ElementCountOverflow { .. })
+            Err(crate::plumbing::operand::tensor_ref::TensorRefError::ElementCountOverflow { .. })
         ));
     }
 
@@ -347,13 +344,12 @@ mod tests {
         let targets = [0u32];
         let program = cross_entropy("logits", "targets", "loss", 1, 4);
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_f32_slice(&logits)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&targets)),
-            Value::from(vec![0u8; 4 * CROSS_ENTROPY_TILE as usize]),
+            vyre_primitives::wire::pack_f32_slice(&logits),
+            vyre_primitives::wire::pack_u32_slice(&targets),
+            vec![0u8; 4 * 256],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: cross_entropy must not panic on NaN logits");
-        let loss = f32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("cross_entropy", &program, inputs.clone());
+        let loss = f32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert!(
             loss.is_nan(),
             "cross_entropy with NaN logits must produce NaN loss, got {loss}"
@@ -368,13 +364,12 @@ mod tests {
         let targets = [0u32];
         let program = cross_entropy("logits", "targets", "loss", 1, 4);
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_f32_slice(&logits)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&targets)),
-            Value::from(vec![0u8; 4 * CROSS_ENTROPY_TILE as usize]),
+            vyre_primitives::wire::pack_f32_slice(&logits),
+            vyre_primitives::wire::pack_u32_slice(&targets),
+            vec![0u8; 4 * 256],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: cross_entropy must not panic on +Inf logits");
-        let loss = f32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("cross_entropy", &program, inputs.clone());
+        let loss = f32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert!(
             loss.is_nan() || loss.is_infinite(),
             "cross_entropy with +Inf logits must produce NaN or Inf, got {loss}"
@@ -387,13 +382,12 @@ mod tests {
         let targets = [0u32];
         let program = cross_entropy("logits", "targets", "loss", 1, 4);
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_f32_slice(&logits)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&targets)),
-            Value::from(vec![0u8; 4 * CROSS_ENTROPY_TILE as usize]),
+            vyre_primitives::wire::pack_f32_slice(&logits),
+            vyre_primitives::wire::pack_u32_slice(&targets),
+            vec![0u8; 4 * 256],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: cross_entropy all-zeros must execute");
-        let loss = f32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("cross_entropy", &program, inputs.clone());
+        let loss = f32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         let expected = (4.0f32).ln();
         assert!(
             (loss - expected).abs() <= 1.0e-4,
@@ -408,13 +402,12 @@ mod tests {
         let _targets = [1u32];
         let program = cross_entropy("logits", "targets", "loss", 1, 4);
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_f32_slice(&logits)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&[1u32])),
-            Value::from(vec![0u8; 4 * CROSS_ENTROPY_TILE as usize]),
+            vyre_primitives::wire::pack_f32_slice(&logits),
+            vyre_primitives::wire::pack_u32_slice(&[1u32]),
+            vec![0u8; 4 * 256],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: cross_entropy all-ones must execute");
-        let loss = f32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("cross_entropy", &program, inputs.clone());
+        let loss = f32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         let expected = (4.0f32).ln();
         assert!(
             (loss - expected).abs() <= 1.0e-4,
@@ -428,13 +421,12 @@ mod tests {
         let targets = [0u32];
         let program = cross_entropy("logits", "targets", "loss", 1, 1);
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_f32_slice(&logits)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&targets)),
-            Value::from(vec![0u8; 4 * CROSS_ENTROPY_TILE as usize]),
+            vyre_primitives::wire::pack_f32_slice(&logits),
+            vyre_primitives::wire::pack_u32_slice(&targets),
+            vec![0u8; 4 * 256],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: cross_entropy single token must execute");
-        let loss = f32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("cross_entropy", &program, inputs);
+        let loss = f32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert!(
             loss.abs() <= 1.0e-4,
             "cross_entropy single token single vocab must be 0.0, got {loss}"

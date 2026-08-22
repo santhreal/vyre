@@ -9,13 +9,13 @@
 //! Downstream DMA / `AsyncLoad` is the scheduler's job  -  this op only
 //! tells the scheduler which pages to fetch.
 
-use crate::region::{wrap_anonymous, wrap_child};
-use vyre_foundation::ir::model::expr::GeneratorRef;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::nn::quest_paging_passes::{
+use crate::nn::quest_paging_passes::{
     quest_score_pages_body, quest_select_top_k_body, quest_zero_fill_body, QUEST_SCORE_PAGES_OP_ID,
     QUEST_SELECT_TOP_K_OP_ID, QUEST_ZERO_FILL_OP_ID,
 };
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::nn::attention::quest_paging";
 
@@ -48,22 +48,20 @@ pub fn quest_paging(
     // regardless of backend. `num_pages` is small (typically ≤ 512 in
     // the KV-paging regime) so the O(num_pages · k) top-k is fine.
     let t = Expr::InvocationId { axis: 0 };
-    let parent = GeneratorRef {
-        name: OP_ID.to_string(),
-    };
+    let parent = Ident::from(OP_ID);
     let body = vec![
-        wrap_child(
+        wrap_child_region(
             QUEST_ZERO_FILL_OP_ID,
             parent.clone(),
             quest_zero_fill_body(io_queue, num_pages),
         ),
-        wrap_child(
+        wrap_child_region(
             QUEST_SCORE_PAGES_OP_ID,
             parent.clone(),
             quest_score_pages_body(query, page_metadata, scores, num_pages, d_head),
         ),
         Node::barrier(),
-        wrap_child(
+        wrap_child_region(
             QUEST_SELECT_TOP_K_OP_ID,
             parent,
             vec![Node::if_then(
@@ -84,20 +82,22 @@ pub fn quest_paging(
                 .with_count(num_pages),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
+const EXPECTED_QUEST_SCORES_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x7F, 0xFF, 0xFF, 0xFF, 0x7F, 0xFF, 0x00, 0x00, 0x00, 0x3F,
+];
+const EXPECTED_QUEST_IO_QUEUE_BYTES: [u8; 16] = [
+    0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| quest_paging("q", "meta", "scores", "io", 4, 2, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || quest_paging("q", "meta", "scores", "io", 4, 2, 2),
+        Some(|| {
             let to_f32_bytes =
                 |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             // num_pages=4, d_head=2, k=2.
@@ -113,21 +113,14 @@ inventory::submit! {
                 vec![0u8; 4 * 4],
             ]]
         }),
-        expected_output: Some(|| {
-            let to_f32_bytes =
-                |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-
-            // scores after selection: only slots that were picked
-            // (indices 2 and 1) are overwritten with SCORE_SENTINEL.
-            // Indices 0 and 3 retain their pass-1 dot-product scores.
-            let scores = [0.0, SCORE_SENTINEL, SCORE_SENTINEL, 0.5];
-            // io_queue[0..2] = [2, 1] (top-2 in descending score).
-            // io_queue[2..4] = [0, 0] (zero-filled on pass 1).
-            let io_queue = [2u32, 1, 0, 0];
-            vec![vec![to_f32_bytes(&scores), crate::fixture_bytes::u32_bytes(&io_queue)]]
+        Some(|| {
+            vec![vec![
+                EXPECTED_QUEST_SCORES_BYTES.to_vec(),
+                EXPECTED_QUEST_IO_QUEUE_BYTES.to_vec(),
+            ]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]
@@ -135,25 +128,25 @@ mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn quest_paging_nan_in_query_produces_nan_scores() {
         let query = [f32::NAN, 0.0];
         let meta = [0.0f32, 0.0, 1.0, 0.0];
         let program = quest_paging("q", "meta", "scores", "io", 2, 1, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "quest",
             &program,
-            &[
-                Value::from(f32_bytes(&query)),
-                Value::from(f32_bytes(&meta)),
-                Value::from(vec![0u8; 8]),
-                Value::from(vec![0u8; 8]),
+            vec![
+                f32_bytes(&query),
+                f32_bytes(&meta),
+                vec![0u8; 8],
+                vec![0u8; 8],
             ],
-        )
-        .expect("Fix: quest_paging must not panic on NaN query");
-        let scores = decode_f32(&outputs[0].to_bytes());
+        );
+        let scores = decode_f32(&outputs[0]);
         assert!(
             scores.iter().any(|v| v.is_nan()),
             "quest_paging NaN query must produce at least one NaN score"
@@ -164,18 +157,13 @@ mod tests {
     fn quest_paging_zero_pages() {
         let query = [1.0f32, 0.0];
         let program = quest_paging("q", "meta", "scores", "io", 0, 0, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "quest",
             &program,
-            &[
-                Value::from(f32_bytes(&query)),
-                Value::from(vec![]),
-                Value::from(vec![]),
-                Value::from(vec![]),
-            ],
-        )
-        .expect("Fix: quest_paging num_pages=0 must not panic");
-        assert!(outputs[0].to_bytes().is_empty());
-        assert!(outputs[1].to_bytes().is_empty());
+            vec![f32_bytes(&query), vec![], vec![], vec![]],
+        );
+        assert!(outputs[0].clone().is_empty());
+        assert!(outputs[1].clone().is_empty());
     }
 
     #[test]
@@ -183,17 +171,17 @@ mod tests {
         let query = [1.0f32, 0.0];
         let meta = [2.0f32, 0.0];
         let program = quest_paging("q", "meta", "scores", "io", 1, 1, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "quest",
             &program,
-            &[
-                Value::from(f32_bytes(&query)),
-                Value::from(f32_bytes(&meta)),
-                Value::from(vec![0u8; 4]),
-                Value::from(vec![0u8; 4]),
+            vec![
+                f32_bytes(&query),
+                f32_bytes(&meta),
+                vec![0u8; 4],
+                vec![0u8; 4],
             ],
-        )
-        .expect("Fix: quest_paging single page must execute");
-        let io_queue = decode_u32(&outputs[1].to_bytes());
+        );
+        let io_queue = decode_u32(&outputs[1]);
         assert_eq!(io_queue[0], 0, "single page top-1 must be index 0");
     }
 
@@ -202,17 +190,17 @@ mod tests {
         let query = [1.0f32, 0.0];
         let meta = [1.0f32, 0.0, 2.0, 0.0];
         let program = quest_paging("q", "meta", "scores", "io", 2, 0, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "quest",
             &program,
-            &[
-                Value::from(f32_bytes(&query)),
-                Value::from(f32_bytes(&meta)),
-                Value::from(vec![0u8; 8]),
-                Value::from(vec![0u8; 8]),
+            vec![
+                f32_bytes(&query),
+                f32_bytes(&meta),
+                vec![0u8; 8],
+                vec![0u8; 8],
             ],
-        )
-        .expect("Fix: quest_paging k=0 must not panic");
-        let io_queue = decode_u32(&outputs[1].to_bytes());
+        );
+        let io_queue = decode_u32(&outputs[1]);
         assert_eq!(io_queue, vec![0, 0], "k=0 must zero-fill io_queue");
     }
 }

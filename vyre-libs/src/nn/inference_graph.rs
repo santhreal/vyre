@@ -3,6 +3,7 @@
 //! Builds the forward pass as a sequence of [`Program`]s, one per layer type.
 //! Each Program is a Category-A composition over existing `vyre-libs` primitives.
 
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::Program;
 
 use super::{
@@ -118,8 +119,9 @@ pub fn build_forward_graph(config: &Ds4FlashConfig) -> Vec<Program> {
         qk_rope_head_dim,
     )
     .unwrap_or_else(|e| {
-        crate::invalid_program(
+        trap_program(
             "vyre-libs::nn::mla_prefill",
+            None,
             format!("Fix: mla_prefill build failed: {e}"),
         )
     });
@@ -139,8 +141,9 @@ pub fn build_forward_graph(config: &Ds4FlashConfig) -> Vec<Program> {
         qk_rope_head_dim,
     )
     .unwrap_or_else(|e| {
-        crate::invalid_program(
+        trap_program(
             "vyre-libs::nn::mla_decode",
+            None,
             format!("Fix: mla_decode build failed: {e}"),
         )
     });
@@ -163,8 +166,9 @@ pub fn build_forward_graph(config: &Ds4FlashConfig) -> Vec<Program> {
         moe_top_k,
     )
     .unwrap_or_else(|e| {
-        crate::invalid_program(
+        trap_program(
             "vyre-libs::nn::moe_layer",
+            None,
             format!("Fix: moe_layer build failed: {e}"),
         )
     });
@@ -184,8 +188,9 @@ pub fn build_forward_graph(config: &Ds4FlashConfig) -> Vec<Program> {
         hidden_dim,
     )
     .unwrap_or_else(|e| {
-        crate::invalid_program(
+        trap_program(
             "vyre-libs::nn::shared_expert",
+            None,
             format!("Fix: shared_expert build failed: {e}"),
         )
     });
@@ -203,8 +208,9 @@ pub fn build_forward_graph(config: &Ds4FlashConfig) -> Vec<Program> {
         vocab_size,
     )
     .unwrap_or_else(|e| {
-        crate::invalid_program(
+        trap_program(
             "vyre-libs::nn::lm_head",
+            None,
             format!("Fix: lm_head build failed: {e}"),
         )
     });

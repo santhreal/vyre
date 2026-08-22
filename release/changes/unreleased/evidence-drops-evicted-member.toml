@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`release/evidence/metadata/metadata-matrix.json` and `feature-matrix.json` still listed `vyre-frontend-rust` after the workspace evicted it. An artifact naming a crate the workspace does not have shifts every row after it, so one deleted member reports as a whole tail of drift."

@@ -19,18 +19,18 @@
 #![cfg(feature = "go-parser")]
 #![allow(deprecated)]
 
-mod common;
-use common::decode_u32_words;
-use common::go::{pack_source as pack, run, tokenize, zeroed_u32_words as zeroed};
+mod wire_words;
+use wire_words::decode_u32_words;
+use wire_words::go::{pack_source as pack, run, tokenize, zeroed_u32_words as zeroed};
 
 use vyre::ir::Expr;
-use vyre_libs::parsing::go::lex::{TOK_ARROW, TOK_ASSIGN, TOK_IDENTIFIER, TOK_NEWLINE, TOK_STRING};
 use vyre_libs::parsing::go::parse::ast_ops::{
     go_extract_channel_receives, go_extract_channel_sends,
 };
 use vyre_libs::parsing::go::parse::structure::{
     go_extract_packages_and_imports, GO_SPAN_RECORD_WORDS,
 };
+use vyre_spec::go_token::{TOK_ARROW, TOK_ASSIGN, TOK_IDENTIFIER, TOK_NEWLINE, TOK_STRING};
 
 /// One dense token: its kind and the source text it covers.
 #[derive(Debug, Clone, PartialEq, Eq)]

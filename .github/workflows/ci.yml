@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   matrix:
     name: ${{ matrix.os }} / ${{ matrix.rust-toolchain }}
@@ -17,6 +21,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Reclaim runner disk
+        if: matrix.os == 'ubuntu-latest'
+        uses: ./.github/actions/reclaim-runner-disk
+
       - name: Install Rust
         shell: bash
         run: |
@@ -26,7 +34,58 @@ jobs:
             --component rustfmt
           rustup default "${{ matrix.rust-toolchain }}"
 
+      # cc-rs and openssl-src both invoke `cl` by bare name on the MSVC target,
+      # and `cl` is only on PATH inside a Visual Studio developer environment.
+      # Without this step every C dependency in the tree (pcre2-sys,
+      # libsqlite3-sys, openssl-src) fails with `failed to find tool "cl"`.
+      - name: Enter the MSVC developer environment
+        if: matrix.os == 'windows-latest'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      # Git for Windows ships a coreutils `link.exe` in `usr/bin`, and that
+      # directory sits ahead of the MSVC toolchain on the PATH every `shell:
+      # bash` step inherits. rustc spawns the linker by bare name, so it gets
+      # the coreutils one, which rejects the object list with `extra operand`
+      # and fails the build script of the first C-adjacent dependency it
+      # reaches. Deleting the shadow is the only fix that survives PATH being
+      # rebuilt per step. The resolution is asserted, so an image that changes
+      # where the shadow lives fails here rather than in a linker error.
+      - name: Remove the coreutils link.exe that shadows the MSVC linker
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          rm -f "/c/Program Files/Git/usr/bin/link.exe"
+          resolved="$(command -v link || true)"
+          case "$resolved" in
+            *MSVC*) echo "link resolves to $resolved" ;;
+            *) echo "link resolves to '${resolved:-nothing}', not the MSVC linker" >&2; exit 1 ;;
+          esac
+
+      # The AES-CTR baseline vendors OpenSSL, whose Configure script needs a perl
+      # that provides Locale::Maketext::Simple. The perl first on PATH on
+      # windows-latest is the Git for Windows MSYS build, which does not ship that
+      # module. Select a perl by loading the module rather than by naming an install
+      # path, so an image that moves or drops the Strawberry install still resolves,
+      # and fail loudly when no perl on the image can configure OpenSSL.
+      - name: Select the perl that configures vendored OpenSSL
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          for candidate in \
+            /c/Strawberry/perl/bin/perl.exe \
+            /c/hostedtoolcache/windows/strawberry-perl/*/x64/perl/bin/perl.exe \
+            "$(command -v perl || true)"; do
+            [ -x "$candidate" ] || continue
+            "$candidate" -MLocale::Maketext::Simple -e 1 >/dev/null 2>&1 || continue
+            echo "OPENSSL_SRC_PERL=$(cygpath -w "$candidate")" >> "$GITHUB_ENV"
+            echo "CC=cl" >> "$GITHUB_ENV"
+            exit 0
+          done
+          echo "no perl on this image provides Locale::Maketext::Simple; vendored OpenSSL cannot be configured" >&2
+          exit 1
+
       - name: cargo_full fmt
+        if: matrix.os != 'windows-latest'
         shell: bash
         run: ./cargo_full fmt --check
 
@@ -39,24 +98,56 @@ jobs:
         continue-on-error: true
         run: ./cargo_full clippy --workspace
 
+      # Run the suite one package at a time and drop each package's test
+      # executables before the next. This workspace declares 1219 integration
+      # test files, each of which links its own binary at roughly 56 MiB, so a
+      # single `test --workspace` leaves well over 100 GiB behind and the runner
+      # dies mid-compile reporting only that it received a shutdown signal. No
+      # test binary is shared between packages, so nothing is rebuilt; rlibs and
+      # build-script outputs are kept.
       - name: cargo_full test
         shell: bash
-        run: ./cargo_full test --workspace
+        run: |
+          # `tr -d '\r'` because jq on windows-latest terminates each line with
+          # CRLF, and IFS does not split on CR: the loop variable then carried a
+          # trailing carriage return and cargo rejected `structure-gate\r` as a
+          # package name containing an invalid character.
+          metadata="$(./cargo_full metadata --format-version 1 --no-deps)"
+          target_dir="$(printf '%s' "$metadata" | jq -r .target_directory | tr -d '\r')"
+          for package in $(printf '%s' "$metadata" | jq -r '.packages[].name' | tr -d '\r' | sort); do
+            ./cargo_full test -p "$package"
+            # A test executable is the only artifact in deps/ with no file
+            # extension (or `.exe` on Windows). Every rlib, rmeta and depfile
+            # carries one and is kept, and build scripts are excluded by name so
+            # cargo does not re-run them.
+            find "$target_dir/debug/deps" -maxdepth 1 -type f \
+              \( ! -name '*.*' -o -name '*.exe' \) ! -name 'build_script_*' -delete
+          done
 
-
-      - name: self-substrate CPU-parity oracle tests (cpu-parity)
+      # The only Metal device in this fleet is the macOS leg of this matrix, so
+      # this is the lane that turns the admission on. The other legs leave it
+      # off and never link a test that would ask a Linux runner for a Metal
+      # queue.
+      - name: Metal driver device tests
+        if: runner.os == 'macOS'
         shell: bash
-        # vyre-self-substrate is `default = []`, so the `--workspace` default-feature
-        # run above compiles NONE of its `cpu-parity`-gated tests, the CSR/graph CPU
-        # oracle matrices AND the `_via` end-to-end reference-parity suites (which run
-        # each production dispatch form through a reference-eval dispatcher against its
-        # CPU oracle: do-calculus surgery, functor_apply, hypervector xor-bind, and the
-        # Mori-Zwanzig fixed-point projection). Wire the specific integration binaries so
-        # a substrate parity regression fails the main PR check, not only the slower
-        # --all-features job. (Scoped to `--test` targets rather than `-p` so this step
-        # is not coupled to unrelated `--lib` release-evidence state.)
+        run: ./cargo_full test -p vyre-driver-metal --features device-tests
+
+
+      - name: composition-library reference-parity tests
+        shell: bash
+        # The `--workspace` default-feature run above compiles NONE of the
+        # `_via` end-to-end reference-parity suites (which run each production
+        # dispatch form through a reference-eval dispatcher against its
+        # direct vyre-reference witness: do-calculus surgery, functor_apply,
+        # hypervector xor-bind, and the Mori-Zwanzig fixed-point projection).
+        # Wire the specific integration binaries so a composition parity
+        # regression fails the main PR check, not only the slower --all-features job.
+        # (Scoped to `--test` targets rather than `-p` so this step is not coupled
+        # to unrelated `--lib` release-evidence state.)
         run: >-
-          ./cargo_full test -p vyre-self-substrate --features cpu-parity
+          ./cargo_full test -p vyre-libs
+          --features analysis,encoding,graph-dispatch,reasoning,scheduling,solvers,test-fixtures
           --test sweep_graph_cpu_oracle_matrix
           --test do_calculus_surgery_via_reference_parity
           --test functor_apply_via_reference_parity
@@ -97,6 +188,14 @@ jobs:
           --test reconstruct_path_via_reference_parity
           --test match_motif_via_reference_parity
           --test smooth_matroid_flow_via_reference_parity
+
+      - name: pass-engine reference-parity tests
+        shell: bash
+        # The pass engine's own reference-parity suite is gated on all-solvers and
+        # is likewise invisible to the default-feature workspace run.
+        run: >-
+          ./cargo_full test -p vyre-pass-engine --features all-solvers
+          --test optimizer_bfs_and_softmax_parity
 
       - name: cargo_full doc
         shell: bash

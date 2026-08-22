@@ -1,6 +1,6 @@
 [package]
 name = "vyre-reference"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -15,26 +15,25 @@ documentation = "https://docs.rs/vyre-reference"
 exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [dependencies]
-rayon = { workspace = true }
 inventory.workspace = true
 vyre-foundation.workspace = true
-vyre-primitives = { workspace = true, features = ["hash", "matching"] }
+vyre-primitives.workspace = true
 
 vyre-spec.workspace = true
 blake3.workspace = true
-bytemuck.workspace = true
 rustc-hash.workspace = true
 smallvec.workspace = true
-im.workspace = true
+imbl.workspace = true
 libm.workspace = true
+regex.workspace = true
 
 [dev-dependencies]
 vyre-test-support.workspace = true
+# Byte-stability golden harness (`artifact_golden`) shared with the emitter
+# crates, so the reference-output corpus is pinned the same way emitted
+# artifacts are instead of growing a second comparison spelling.
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
 proptest.workspace = true
-criterion.workspace = true
-regex-automata.workspace = true
-hex.workspace = true
-fnv.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
@@ -84,3 +83,7 @@ path = "tests/sweep_dual_compare_eq_volume_oracle_matrix.rs"
 [[test]]
 name = "sweep_dual_compare_lt_volume_oracle_matrix"
 path = "tests/sweep_dual_compare_lt_volume_oracle_matrix.rs"
+
+[[test]]
+name = "core_contracts"
+path = "tests/core_contracts/mod.rs"

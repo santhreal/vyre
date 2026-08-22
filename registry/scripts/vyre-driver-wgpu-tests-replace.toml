@@ -1,0 +1,3 @@
+path = "vyre-driver-wgpu/tests/replace.py"
+state = "retired"
+reason = "a one-off fixture rewrite over a hardcoded absolute path, left in a test directory"

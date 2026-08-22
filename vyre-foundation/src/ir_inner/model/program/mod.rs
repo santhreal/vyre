@@ -17,18 +17,17 @@ mod buffer_decl;
 mod builder;
 mod cache_digest;
 mod canonical;
-mod core;
+mod definition;
 #[allow(clippy::expect_used)]
 mod meta;
 mod scope;
 /// Per-node-kind bitset constants for `ProgramStats`.
-pub mod stats;
+pub(crate) mod stats;
 
 #[cfg(test)]
-mod stats_test {
-    include!("stats_test.rs");
-}
+mod stats_test;
 #[cfg(test)]
+#[path = "../../../../tests/internal/ir_inner/model/program/mod.rs"]
 mod tests;
 
 #[cfg(test)]
@@ -43,7 +42,7 @@ fn record_digest_computation() {}
 
 pub use self::buffer_decl::{BufferDecl, LinearType, ShapePredicate};
 pub use self::cache_digest::NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION;
-pub use self::core::Program;
+pub use self::definition::{Program, PORTABLE_WORKGROUP_INVOCATIONS};
 pub use self::scope::Scope;
 pub use self::stats::ProgramStats;
 pub use self::stats::{
@@ -52,7 +51,8 @@ pub use self::stats::{
     NODE_KIND_BROADCAST, NODE_KIND_EXPRESSION_BEARING_MASK, NODE_KIND_IF,
     NODE_KIND_INDIRECT_DISPATCH, NODE_KIND_LET, NODE_KIND_LOOP, NODE_KIND_OPAQUE,
     NODE_KIND_REDUCE_SCATTER, NODE_KIND_REGION, NODE_KIND_RESUME, NODE_KIND_RETURN,
-    NODE_KIND_STORE, NODE_KIND_TRAP,
+    NODE_KIND_STORE, NODE_KIND_TILE_DECL, NODE_KIND_TILE_ELEMENTWISE, NODE_KIND_TILE_LOAD,
+    NODE_KIND_TILE_MATMUL, NODE_KIND_TILE_REDUCE, NODE_KIND_TILE_STORE, NODE_KIND_TRAP,
 };
 
 /// Memory tier requested for a declared program region.

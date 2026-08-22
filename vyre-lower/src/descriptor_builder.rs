@@ -34,11 +34,12 @@
 //! assert_eq!(desc.body.ops.len(), 4);
 //! ```
 
-use vyre_foundation::ir::DataType;
+use vyre_foundation::ir::{BinOp, DataType};
 
 use crate::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor, KernelOp,
-    KernelOpKind, LiteralValue, MemoryClass,
+    BindingLayout, BindingSlot, BindingVisibility, Dispatch, EmissionTargetCapabilities,
+    KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement,
+    MatrixMmaLayout, MatrixMmaShape, MemoryClass, SubgroupCapabilities, WorkgroupLimits,
 };
 
 /// An op that produces `result`.
@@ -48,6 +49,23 @@ pub fn op(kind: KernelOpKind, operands: impl Into<Vec<u32>>, result: u32) -> Ker
         kind,
         operands: operands.into(),
         result: Some(result),
+    }
+}
+
+/// The `m16n8k16` MMA op kind every emitter fixture uses: row-major A,
+/// column-major B, f16 inputs accumulating in f32.
+///
+/// Six coupled fields that only mean anything together, so one copy states
+/// them for every backend that has to build the same op.
+#[must_use]
+pub fn mma_f16_m16n8k16() -> KernelOpKind {
+    KernelOpKind::MatrixMma {
+        shape: MatrixMmaShape::M16N8K16,
+        a_layout: MatrixMmaLayout::RowMajor,
+        b_layout: MatrixMmaLayout::ColMajor,
+        a_type: MatrixMmaElement::F16,
+        b_type: MatrixMmaElement::F16,
+        accum_type: MatrixMmaElement::F32,
     }
 }
 
@@ -65,6 +83,81 @@ pub fn effect(kind: KernelOpKind, operands: impl Into<Vec<u32>>) -> KernelOp {
 #[must_use]
 pub fn lit(pool_index: u32, result: u32) -> KernelOp {
     op(KernelOpKind::Literal, [pool_index], result)
+}
+
+/// A binary-arithmetic op over two value ids.
+#[must_use]
+pub fn binop(kind: BinOp, lhs: u32, rhs: u32, result: u32) -> KernelOp {
+    op(KernelOpKind::BinOpKind(kind), [lhs, rhs], result)
+}
+
+/// A load of `slot` at element `index`.
+#[must_use]
+pub fn load_global(slot: u32, index: u32, result: u32) -> KernelOp {
+    op(KernelOpKind::LoadGlobal, [slot, index], result)
+}
+
+/// A store of `value` into `slot` at element `index`.
+#[must_use]
+pub fn store_global(slot: u32, index: u32, value: u32) -> KernelOp {
+    effect(KernelOpKind::StoreGlobal, [slot, index, value])
+}
+/// A vector load of `slot` at element `index` of width `width`.
+#[must_use]
+pub fn vector_load_global(slot: u32, index: u32, width: u8, result: u32) -> KernelOp {
+    op(
+        KernelOpKind::VectorLoadGlobal { width },
+        [slot, index],
+        result,
+    )
+}
+
+/// A vector store of `values` into `slot` at element `index`.
+#[must_use]
+pub fn vector_store_global(slot: u32, index: u32, width: u8, values: &[u32]) -> KernelOp {
+    let mut operands = Vec::with_capacity(2 + values.len());
+    operands.push(slot);
+    operands.push(index);
+    operands.extend_from_slice(values);
+    effect(KernelOpKind::VectorStoreGlobal { width }, operands)
+}
+
+/// Extract a scalar lane `lane` from vector `vector_id`.
+#[must_use]
+pub fn extract_lane(vector_id: u32, lane: u8, result: u32) -> KernelOp {
+    op(KernelOpKind::ExtractLane { lane }, [vector_id], result)
+}
+
+/// A [`KernelOpKind::StructuredIfThen`] op guarding child body `then_body` on
+/// `cond`.
+///
+/// The three structured constructors below exist because which operand
+/// position names a child body is one decision, and a fixture that spells the
+/// operand vector out by hand states it again. `analyses::child_body_operands`
+/// owns that decision on the reading side; these own it on the writing side.
+#[must_use]
+pub fn if_then(cond: u32, then_body: u32) -> KernelOp {
+    effect(KernelOpKind::StructuredIfThen, [cond, then_body])
+}
+
+/// A [`KernelOpKind::StructuredIfThenElse`] op over two child bodies.
+#[must_use]
+pub fn if_then_else(cond: u32, then_body: u32, otherwise_body: u32) -> KernelOp {
+    effect(
+        KernelOpKind::StructuredIfThenElse,
+        [cond, then_body, otherwise_body],
+    )
+}
+
+/// A [`KernelOpKind::StructuredForLoop`] op over child body `loop_body`.
+#[must_use]
+pub fn for_loop(loop_var: &str, lo: u32, hi: u32, loop_body: u32) -> KernelOp {
+    effect(
+        KernelOpKind::StructuredForLoop {
+            loop_var: loop_var.into(),
+        },
+        [lo, hi, loop_body],
+    )
 }
 
 /// A binding slot with every field named.
@@ -108,6 +201,14 @@ pub fn global_ro(index: u32, element_type: DataType, name: &str) -> BindingSlot 
         BindingVisibility::ReadOnly,
         name,
     )
+}
+
+/// A fixed-size read-only global binding.
+#[must_use]
+pub fn fixed_global_ro(index: u32, element_type: DataType, count: u32, name: &str) -> BindingSlot {
+    let mut s = global_ro(index, element_type, name);
+    s.element_count = Some(count);
+    s
 }
 
 /// A runtime-sized write-only global binding.
@@ -303,93 +404,58 @@ impl From<KernelDescriptorBuilder> for KernelDescriptor {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Invocation ceiling used by [`permissive_workgroup_limits`].
+const PERMISSIVE_MAX_INVOCATIONS: u32 = 1024;
 
-    #[test]
-    fn builder_output_matches_the_struct_literal_it_replaces() {
-        let built = descriptor("k")
-            .slot(global_rw(0, DataType::U32, "buf"))
-            .dispatch(64, 1, 1)
-            .body(
-                body()
-                    .literals([LiteralValue::U32(0), LiteralValue::U32(7)])
-                    .op(lit(0, 0))
-                    .op(lit(1, 1))
-                    .op(effect(KernelOpKind::StoreGlobal, [0, 0, 1])),
-            )
-            .build();
+/// Per-axis ceiling used by [`permissive_workgroup_limits`].
+const PERMISSIVE_MAX_SIZE: [u32; 3] = [1024, 1024, 64];
 
-        let literal = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "buf".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(7)],
-            },
-        };
-
-        assert_eq!(built, literal);
+/// Workgroup limits with every axis and the invocation product named.
+#[must_use]
+pub fn workgroup_limits(max_size: [u32; 3], max_invocations: u32) -> WorkgroupLimits {
+    WorkgroupLimits {
+        max_size,
+        max_invocations,
     }
+}
 
-    #[test]
-    fn child_body_index_is_the_append_order() {
-        let built = descriptor("nested")
-            .body(
-                body()
-                    .op(effect(KernelOpKind::StructuredIfThenElse, [0, 0, 1]))
-                    .child(body().op(lit(0, 10)))
-                    .child(body().op(lit(0, 20))),
-            )
-            .build();
-        assert_eq!(built.body.child_bodies.len(), 2);
-        assert_eq!(built.body.child_bodies[0].ops[0].result, Some(10));
-        assert_eq!(built.body.child_bodies[1].ops[0].result, Some(20));
-    }
+/// Workgroup limits wide enough that an ordinary fixture dispatch does not
+/// violate them, so a test that is not about limits does not have to pick any.
+#[must_use]
+pub fn permissive_workgroup_limits() -> WorkgroupLimits {
+    workgroup_limits(PERMISSIVE_MAX_SIZE, PERMISSIVE_MAX_INVOCATIONS)
+}
 
-    #[test]
-    fn defaults_are_empty_body_no_bindings_single_invocation() {
-        let built = descriptor("empty").build();
-        assert!(built.bindings.slots.is_empty());
-        assert!(built.body.ops.is_empty());
-        assert!(built.body.child_bodies.is_empty());
-        assert!(built.body.literals.is_empty());
-        assert_eq!(built.dispatch, Dispatch::new(1, 1, 1));
+/// Every subgroup feature supported.
+#[must_use]
+pub fn all_subgroup_capabilities() -> SubgroupCapabilities {
+    SubgroupCapabilities {
+        basic: true,
+        ballot: true,
+        shuffle: true,
+        arithmetic: true,
     }
+}
 
-    #[test]
-    fn shared_slot_carries_its_element_count() {
-        let s = shared_rw(1, DataType::F32, 64, "tile");
-        assert_eq!(s.element_count, Some(64));
-        assert_eq!(s.memory_class, MemoryClass::Shared);
-        assert_eq!(global_ro(0, DataType::F32, "g").element_count, None);
+/// Emission target capabilities from explicit workgroup limits and subgroup
+/// support.
+#[must_use]
+pub fn emission_target(
+    workgroup: WorkgroupLimits,
+    subgroup: SubgroupCapabilities,
+) -> EmissionTargetCapabilities {
+    EmissionTargetCapabilities {
+        workgroup,
+        subgroup,
     }
+}
+
+/// A target that admits any ordinary dispatch but supports no subgroup
+/// feature, which is the shape a subgroup-rejection test needs.
+#[must_use]
+pub fn target_without_subgroups() -> EmissionTargetCapabilities {
+    emission_target(
+        permissive_workgroup_limits(),
+        SubgroupCapabilities::default(),
+    )
 }

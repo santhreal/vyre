@@ -12,22 +12,10 @@ use vyre_reference::{dual_op_ids, resolve_dual};
 
 const CASES_PER_FAMILY: u32 = 512;
 
-fn binary_input(left: u32, right: u32) -> Vec<u8> {
-    let mut input = Vec::with_capacity(8);
-    input.extend_from_slice(&left.to_le_bytes());
-    input.extend_from_slice(&right.to_le_bytes());
-    input
-}
+#[path = "support/dual_operands.rs"]
+mod dual_operands;
 
-fn hostile_pair(seed: u32) -> (u32, u32) {
-    let left = seed
-        .wrapping_mul(0x85eb_ca6b)
-        .rotate_left((seed ^ 0x13) & 31);
-    let right = seed
-        .wrapping_mul(0xc2b2_ae35)
-        .rotate_right((seed ^ 0x29) & 31);
-    (left, right)
-}
+use dual_operands::{binary_input, hostile_pair};
 
 #[test]
 fn sweep_dual_arith_add_oracle_matrix_matches_independent_wrapping_add() {

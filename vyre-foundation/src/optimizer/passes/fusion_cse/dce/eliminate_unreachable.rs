@@ -66,7 +66,7 @@ pub(crate) fn eliminate_unreachable(nodes: Vec<Node>) -> Vec<Node> {
                 offset,
                 size,
                 tag,
-            } => out.push(Node::async_load_ext(
+            } => out.push(Node::async_load_gpu_driven(
                 source,
                 destination,
                 *offset,
@@ -94,6 +94,22 @@ pub(crate) fn eliminate_unreachable(nodes: Vec<Node>) -> Vec<Node> {
                     body: std::sync::Arc::new(eliminate_unreachable(body_nodes)),
                 });
             }
+            Node::TileElementwise {
+                out: name,
+                inputs,
+                body,
+            } => {
+                out.push(Node::TileElementwise {
+                    out: name,
+                    inputs,
+                    body: eliminate_unreachable(body),
+                });
+            }
+            Node::TileLoad { .. }
+            | Node::TileStore { .. }
+            | Node::TileMatmul { .. }
+            | Node::TileReduce { .. }
+            | Node::TileDecl { .. } => out.push(node),
             Node::Trap { .. } | Node::Resume { .. } => out.push(node.clone()),
             Node::Opaque(extension) => out.push(Node::Opaque(extension.clone())),
         }

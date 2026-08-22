@@ -2,13 +2,12 @@
 //!
 //! Category A composition. Fused linear + activation without scratch buffer.
 
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::region::{wrap_anonymous, wrap_child};
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::Ident;
 
 const OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq";
-const MLP_WORKGROUP: u32 = 256;
 const HIDDEN_SCRATCH: &str = "__mlp_4x_leaky_sq_hidden";
 const HIDDEN_PROJECTION_OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq::hidden_projection";
 const OUTPUT_PROJECTION_OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq::output_projection";
@@ -16,11 +15,11 @@ const OUTPUT_PROJECTION_OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq::output_pr
 /// Build MLP with fused leaky_relu_sq activation (F32).
 ///
 /// This is a cooperative SINGLE-WORKGROUP kernel. Both projections walk their
-/// extent in fixed `MLP_WORKGROUP`-wide strides off the GLOBAL invocation id,
+/// extent in fixed 256-wide strides off the GLOBAL invocation id,
 /// so the work is confined to the first workgroup and every lane at or above
 /// that width retires without touching memory. Coverage stays complete for any
 /// `model_dim` and `hidden_dim`, because the strided walk runs
-/// `ceil(extent / MLP_WORKGROUP)` iterations.
+/// `ceil(extent / 256)` iterations.
 ///
 /// The gate is load-bearing and its absence is a silent wrong answer, not a
 /// crash. The span is not the caller's to choose: `HIDDEN_SCRATCH` is a
@@ -30,14 +29,14 @@ const OUTPUT_PROJECTION_OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq::output_pr
 /// `model_dim * hidden_dim`, never the `model_dim` the body walks, so any
 /// realistic weight matrix already yields a many-workgroup grid.
 ///
-/// Ungated, group `g` would index `(chunk + g) * MLP_WORKGROUP + local`, a
-/// window shifted up by `g * MLP_WORKGROUP`. It would never write
-/// `HIDDEN_SCRATCH[0 .. g * MLP_WORKGROUP)` in its own private copy of that
+/// Ungated, group `g` would index `(chunk + g) * 256 + local`, a
+/// window shifted up by `g * 256`. It would never write
+/// `HIDDEN_SCRATCH[0 .. g * 256)` in its own private copy of that
 /// workgroup buffer, then read the full hidden range anyway and, for
 /// `model_dim` above the width, overwrite the correct output group 0 had
 /// already stored.
 ///
-/// Note the resulting ceiling: this kernel uses at most `MLP_WORKGROUP` lanes
+/// Note the resulting ceiling: this kernel uses at most 256 lanes
 /// however large the input or the device. Prefer a grid-scaled projection when
 /// the dimensions are large enough to want every SM.
 ///
@@ -56,12 +55,10 @@ pub fn mlp_4x_leaky_sq(
     if model_dim == 0 || hidden_dim == 0 {
         return Err("Fix: mlp requires non-zero dimensions".into());
     }
-    let parent = GeneratorRef {
-        name: OP_ID.to_string(),
-    };
+    let parent = Ident::from(OP_ID);
     // Confine the strided walk to the first workgroup. `lane` is the GLOBAL
     // invocation id, so without this gate group `g` covers a window shifted up
-    // by `g * MLP_WORKGROUP`, missing the low end of its own workgroup-private
+    // by `g * 256`, missing the low end of its own workgroup-private
     // `HIDDEN_SCRATCH` while still storing to `output`.
     //
     // `Node::barrier()` stays OUTSIDE the gate on purpose, and the obvious
@@ -78,8 +75,8 @@ pub fn mlp_4x_leaky_sq(
     let body = vec![
         Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
         Node::if_then(
-            Expr::lt(Expr::var("lane"), Expr::u32(MLP_WORKGROUP)),
-            vec![wrap_child(
+            Expr::lt(Expr::var("lane"), Expr::u32(256)),
+            vec![wrap_child_region(
                 HIDDEN_PROJECTION_OP_ID,
                 parent.clone(),
                 hidden_projection_body(x, w1, b1, model_dim, hidden_dim),
@@ -87,8 +84,8 @@ pub fn mlp_4x_leaky_sq(
         ),
         Node::barrier(),
         Node::if_then(
-            Expr::lt(Expr::var("lane"), Expr::u32(MLP_WORKGROUP)),
-            vec![wrap_child(
+            Expr::lt(Expr::var("lane"), Expr::u32(256)),
+            vec![wrap_child_region(
                 OUTPUT_PROJECTION_OP_ID,
                 parent,
                 output_projection_body(w2, b2, output, model_dim, hidden_dim),
@@ -109,8 +106,8 @@ pub fn mlp_4x_leaky_sq(
             BufferDecl::output(output, 5, DataType::F32).with_count(model_dim),
             BufferDecl::workgroup(HIDDEN_SCRATCH, hidden_dim, DataType::F32),
         ],
-        [MLP_WORKGROUP, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        [256, 1, 1],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
 
@@ -124,12 +121,12 @@ fn hidden_projection_body(
     vec![Node::loop_for(
         "hidden_chunk",
         Expr::u32(0),
-        Expr::u32(hidden_dim.div_ceil(MLP_WORKGROUP)),
+        Expr::u32(hidden_dim.div_ceil(256)),
         vec![
             Node::let_bind(
                 "j",
                 Expr::add(
-                    Expr::mul(Expr::var("hidden_chunk"), Expr::u32(MLP_WORKGROUP)),
+                    Expr::mul(Expr::var("hidden_chunk"), Expr::u32(256)),
                     Expr::var("lane"),
                 ),
             ),
@@ -183,12 +180,12 @@ fn output_projection_body(
     vec![Node::loop_for(
         "out_chunk",
         Expr::u32(0),
-        Expr::u32(model_dim.div_ceil(MLP_WORKGROUP)),
+        Expr::u32(model_dim.div_ceil(256)),
         vec![
             Node::let_bind(
                 "i",
                 Expr::add(
-                    Expr::mul(Expr::var("out_chunk"), Expr::u32(MLP_WORKGROUP)),
+                    Expr::mul(Expr::var("out_chunk"), Expr::u32(256)),
                     Expr::var("lane"),
                 ),
             ),
@@ -224,19 +221,21 @@ fn output_projection_body(
     )]
 }
 
+const EXPECTED_MLP_OUTPUT_BYTES: [u8; 8] = [0x33, 0x33, 0x83, 0x40, 0x52, 0xB8, 0xBE, 0x40];
+const EXPECTED_HIDDEN_PROJECTION_OUTPUT_BYTES: [u8; 16] = [
+    0x48, 0xE1, 0x9A, 0x3F, 0x48, 0xE1, 0xFA, 0x3F, 0xC3, 0xF5, 0x38, 0x40, 0x00, 0x00, 0x80, 0x40,
+];
+const EXPECTED_OUTPUT_PROJECTION_OUTPUT_BYTES: [u8; 8] =
+    [0x33, 0x33, 0x83, 0x40, 0x52, 0xB8, 0xBE, 0x40];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || {
             mlp_4x_leaky_sq("x", "w1", "b1", "w2", "b2", "out", 2, 4)
-                .unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: mlp_4x_leaky_sq fixture must build: {error}")))
-        }),
-        test_inputs: Some(|| {
+                .unwrap_or_else(|error| trap_program(OP_ID, None, format!("Fix: mlp_4x_leaky_sq fixture must build: {error}")))
+        },
+        Some(|| {
             let f = vyre_primitives::wire::pack_f32_slice;
             vec![vec![
                 f(&[1.0, 2.0]),
@@ -245,35 +244,11 @@ inventory::submit! {
                 f(&[0.0, 0.0]),
             ]]
         }),
-        expected_output: Some(|| {
-            // model_dim=2, hidden_dim=4
-            // x=[1,2], w1=[0.1,0.2,0.3,0.4, 0.5,0.6,0.7,0.8], b1=[0;4]
-            // w2=[1,0,0,1, 1,0,0,1], b2=[0,0]
-            let x = [1.0_f32, 2.0];
-            let w1 = [0.1_f32, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
-            let b1 = [0.0_f32; 4];
-            let w2 = [1.0_f32, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
-            let b2 = [0.0_f32; 2];
-            let model_dim = 2usize;
-            let hidden_dim = 4usize;
-            // h[j] = b1[j] + sum_k x[k]*w1[k*hid+j]
-            let h: Vec<f32> = (0..hidden_dim).map(|j| {
-                b1[j] + (0..model_dim).map(|k| x[k] * w1[k * hidden_dim + j]).sum::<f32>()
-            }).collect();
-            // act[j] = max(0.5*h, h)^2 = h^2 (all positive)
-            let act: Vec<f32> = h.iter().map(|v| {
-                let lk = v.max(0.5 * v);
-                lk * lk
-            }).collect();
-            // out[i] = b2[i] + sum_j act[j]*w2[j*model+i]
-            let out: Vec<f32> = (0..model_dim).map(|i| {
-                b2[i] + (0..hidden_dim).map(|j| act[j] * w2[j * model_dim + i]).sum::<f32>()
-            }).collect();
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+        Some(|| {
+            vec![vec![EXPECTED_MLP_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 fn f32_fixture(values: &[f32]) -> Vec<u8> {
@@ -288,13 +263,13 @@ fn hidden_projection_program() -> Program {
             BufferDecl::storage("b1", 2, BufferAccess::ReadOnly, DataType::F32).with_count(4),
             BufferDecl::output(HIDDEN_SCRATCH, 3, DataType::F32).with_count(4),
         ],
-        [MLP_WORKGROUP, 1, 1],
-        vec![wrap_anonymous(
+        [256, 1, 1],
+        vec![wrap_anonymous_region(
             HIDDEN_PROJECTION_OP_ID,
             vec![
                 Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
                 Node::if_then(
-                    Expr::lt(Expr::var("lane"), Expr::u32(MLP_WORKGROUP)),
+                    Expr::lt(Expr::var("lane"), Expr::u32(256)),
                     hidden_projection_body("x", "w1", "b1", 2, 4),
                 ),
             ],
@@ -311,13 +286,13 @@ fn output_projection_program() -> Program {
                 .with_count(4),
             BufferDecl::output("out", 3, DataType::F32).with_count(2),
         ],
-        [MLP_WORKGROUP, 1, 1],
-        vec![wrap_anonymous(
+        [256, 1, 1],
+        vec![wrap_anonymous_region(
             OUTPUT_PROJECTION_OP_ID,
             vec![
                 Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
                 Node::if_then(
-                    Expr::lt(Expr::var("lane"), Expr::u32(MLP_WORKGROUP)),
+                    Expr::lt(Expr::var("lane"), Expr::u32(256)),
                     output_projection_body("w2", "b2", "out", 2, 4),
                 ),
             ],
@@ -326,93 +301,58 @@ fn output_projection_program() -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: HIDDEN_PROJECTION_OP_ID,
-        build: Some(hidden_projection_program),
-        test_inputs: Some(|| vec![vec![
+    vyre_foundation::operation::OperationRegistration::library(
+        HIDDEN_PROJECTION_OP_ID,
+        hidden_projection_program,
+        Some(|| vec![vec![
             f32_fixture(&[1.0, 2.0]),
             f32_fixture(&[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]),
             f32_fixture(&[0.0; 4]),
         ]]),
-        expected_output: Some(|| {
-            let x = [1.0_f32, 2.0];
-            let w1 = [0.1_f32, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
-            let mut out = [0.0_f32; 4];
-            for j in 0..4 {
-                let h = x[0] * w1[j] + x[1] * w1[4 + j];
-                let lk = h.max(0.5 * h);
-                out[j] = lk * lk;
-            }
-            vec![vec![f32_fixture(&out)]]
+        Some(|| {
+            vec![vec![EXPECTED_HIDDEN_PROJECTION_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OUTPUT_PROJECTION_OP_ID,
-        build: Some(output_projection_program),
-        test_inputs: Some(|| vec![vec![
+    vyre_foundation::operation::OperationRegistration::library(
+        OUTPUT_PROJECTION_OP_ID,
+        output_projection_program,
+        Some(|| vec![vec![
             f32_fixture(&[1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0]),
             f32_fixture(&[0.0, 0.0]),
             f32_fixture(&[1.21, 1.96, 2.89, 4.0]),
         ]]),
-        expected_output: Some(|| {
-            let hidden = [1.21_f32, 1.96, 2.89, 4.0];
-            let w2 = [1.0_f32, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
-            let mut out = [0.0_f32; 2];
-            for i in 0..2 {
-                for j in 0..4 {
-                    out[i] += hidden[j] * w2[j * 2 + i];
-                }
-            }
-            vec![vec![f32_fixture(&out)]]
+        Some(|| {
+            vec![vec![EXPECTED_OUTPUT_PROJECTION_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
     #[test]
     fn mlp_materializes_hidden_once_and_matches_reference() {
         let program = mlp_4x_leaky_sq("x", "w1", "b1", "w2", "b2", "out", 2, 4)
             .expect("Fix: fixture dimensions must build.");
-        assert_eq!(program.workgroup_size(), [MLP_WORKGROUP, 1, 1]);
+        assert_eq!(program.workgroup_size(), [256, 1, 1]);
         let x = [1.0_f32, 2.0];
         let w1 = [0.1_f32, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
         let b1 = [0.0_f32; 4];
         let w2 = [1.0_f32, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
         let b2 = [0.0_f32, 0.0];
-        let outputs = vyre_reference::reference_eval(
+        let actual = eval_f32(
+            "mlp_4x_leaky_sq",
             &program,
-            &[
-                Value::from(f32_bytes(&x)),
-                Value::from(f32_bytes(&w1)),
-                Value::from(f32_bytes(&b1)),
-                Value::from(f32_bytes(&w2)),
-                Value::from(f32_bytes(&b2)),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: mlp_4x_leaky_sq must execute in the reference interpreter.");
-        let actual = decode_f32(&outputs[0].to_bytes());
+            &[&x[..], &w1[..], &b1[..], &w2[..], &b2[..]],
+            2,
+        );
         let hidden = (0..4)
             .map(|j| {
                 let h = b1[j] + (0..2).map(|k| x[k] * w1[k * 4 + j]).sum::<f32>();

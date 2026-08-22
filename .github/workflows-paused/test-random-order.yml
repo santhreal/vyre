@@ -3,6 +3,10 @@ name: Random-Order Tests
 on:
   pull_request:
 
+concurrency:
+  group: test-random-order-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

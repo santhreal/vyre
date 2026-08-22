@@ -1,12 +1,42 @@
 //! Parity test: GPU bellman_tn_order matches the reference oracle.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
-use vyre_primitives::math::bellman_shortest_path::cpu_ref as reference_bellman_shortest_path;
-use vyre_self_substrate::bellman_tn_order::bellman_tn_order_via;
+use harness::with_cuda_optimizer_dispatcher;
+use vyre_libs::solvers::bellman_tn_order::bellman_tn_order_via;
+fn reference_bellman_shortest_path(
+    src: &[u32],
+    dst: &[u32],
+    weight: &[u32],
+    dist_init: &[u32],
+    nodes: u32,
+    max_iters: u32,
+) -> (Vec<u32>, u32) {
+    let mut dist = dist_init.to_vec();
+    let mut iters = 0;
+    for _ in 0..max_iters {
+        let mut changed = false;
+        for i in 0..src.len() {
+            let u = src[i] as usize;
+            let v = dst[i] as usize;
+            let w = weight[i];
+            if u < nodes as usize && v < nodes as usize && dist[u] != u32::MAX {
+                let new_dist = dist[u].saturating_add(w);
+                if new_dist < dist[v] {
+                    dist[v] = new_dist;
+                    changed = true;
+                }
+            }
+        }
+        iters += 1;
+        if !changed {
+            break;
+        }
+    }
+    (dist, iters)
+}
 
 fn assert_bellman_tn_order_matches_reference(
     label: &str,

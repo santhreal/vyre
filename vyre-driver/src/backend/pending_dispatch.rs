@@ -1,6 +1,6 @@
 //! Handle to a dispatch in flight.
 
-use crate::backend::{private, BackendError, OutputBuffers, TimedDispatchResult};
+use crate::backend::{sealed, BackendError, OutputBuffers, TimedDispatchResult};
 
 /// Handle to a dispatch in flight. Returned by
 /// [`crate::backend::VyreBackend::dispatch_async`].
@@ -25,7 +25,7 @@ use crate::backend::{private, BackendError, OutputBuffers, TimedDispatchResult};
 /// trivially-ready handle built by the default
 /// [`crate::backend::VyreBackend::dispatch_async`] implementation  -  the consumer code
 /// above still works, just without the overlap.
-pub trait PendingDispatch: private::Sealed + Send + Sync {
+pub trait PendingDispatch: sealed::Sealed + Send + Sync {
     /// Non-blocking probe. Returns `true` when
     /// [`PendingDispatch::await_result`] would complete without
     /// blocking the caller thread.
@@ -58,16 +58,10 @@ pub trait PendingDispatch: private::Sealed + Send + Sync {
     fn await_timed_result(self: Box<Self>) -> Result<TimedDispatchResult, BackendError> {
         let started = std::time::Instant::now();
         let outputs = self.await_result()?;
-        Ok(TimedDispatchResult {
+        Ok(TimedDispatchResult::host_timed(
             outputs,
-            wall_ns: crate::backend::checked_elapsed_wall_ns(
-                started,
-                "pending dispatch retirement",
-            )?,
-            device_ns: None,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+            crate::backend::checked_elapsed_wall_ns(started, "pending dispatch retirement")?,
+        ))
     }
 
     /// Consume the handle and write output buffers into caller-owned storage.
@@ -112,7 +106,7 @@ pub(crate) struct ReadyPending {
     pub(crate) outputs: Vec<Vec<u8>>,
 }
 
-impl private::Sealed for ReadyPending {}
+impl sealed::Sealed for ReadyPending {}
 
 impl PendingDispatch for ReadyPending {
     fn is_ready(&self) -> bool {
@@ -123,6 +117,7 @@ impl PendingDispatch for ReadyPending {
     }
 }
 
+// Inline: covers `ReadyPending`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -123,10 +123,12 @@ fn remote_metadata_allows(
     true
 }
 
+// Inline: covers `RemoteMetadataExpectation`, `remote_metadata_allows`, which no integration test
+// can name.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_helpers::tiny_artifact;
+    use crate::pipeline_cache::test_artifact_fixtures::tiny_artifact;
 
     #[test]
     fn remote_cache_owns_reusable_http_agent() {
@@ -142,14 +144,14 @@ mod tests {
         let fp_hex = fp.hex();
         let expectation = RemoteMetadataExpectation {
             expected_source_provenance: Some("git:abc123"),
-            expected_device_compatibility: Some("cuda-sm90"),
+            expected_device_compatibility: Some("device-profile-a"),
         };
 
         assert!(remote_metadata_allows(
             &fp,
             Some(&fp_hex),
             Some("git:abc123"),
-            Some("cuda-sm90"),
+            Some("device-profile-a"),
             expectation,
         ));
     }
@@ -163,21 +165,21 @@ mod tests {
         let other_hex = other.hex();
         let expectation = RemoteMetadataExpectation {
             expected_source_provenance: Some("git:abc123"),
-            expected_device_compatibility: Some("cuda-sm90"),
+            expected_device_compatibility: Some("device-profile-a"),
         };
 
         assert!(!remote_metadata_allows(
             &fp,
             Some(&other_hex),
             Some("git:abc123"),
-            Some("cuda-sm90"),
+            Some("device-profile-a"),
             expectation,
         ));
         assert!(!remote_metadata_allows(
             &fp,
             Some(&fp_hex),
             Some("git:stale"),
-            Some("cuda-sm90"),
+            Some("device-profile-a"),
             expectation,
         ));
         assert!(!remote_metadata_allows(
@@ -191,7 +193,7 @@ mod tests {
             &fp,
             Some(&fp_hex),
             None,
-            Some("cuda-sm90"),
+            Some("device-profile-a"),
             expectation,
         ));
     }

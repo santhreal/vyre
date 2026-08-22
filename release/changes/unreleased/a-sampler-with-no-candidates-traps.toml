@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "nucleus_select built a program that read below the start of its candidate buffer when it was given no candidates. The prefix walk kept nothing, the fallback set the kept count to the candidate count, and the draw indexed one element before that, so a zero count addressed u32::MAX. It now returns a trap program naming the parameter, which is the shape the other count-taking sampler stages already used."

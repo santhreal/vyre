@@ -1,9 +1,9 @@
 //! Mixture-of-Experts (MoE) sub-dialect.
-pub mod expert_mlp;
-pub mod gating;
-pub mod moe_layer;
-pub mod softmax_top_k;
-pub mod top_k;
+pub(crate) mod expert_mlp;
+pub(crate) mod gating;
+pub(crate) mod moe_layer;
+pub(crate) mod softmax_top_k;
+pub(crate) mod top_k;
 mod topk_selection;
 
 pub use expert_mlp::expert_mlp;

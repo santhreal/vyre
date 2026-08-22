@@ -12,9 +12,7 @@ use smallvec::SmallVec;
 use vyre_driver::accounting::checked_add_usize_lazy;
 use vyre_driver::{BackendError, OutputBuffers};
 
-pub(crate) use crate::input_identity::{
-    exact_input_key as materialized_input_key, ExactInputKey as MaterializedInputKey,
-};
+use vyre_driver::input_identity::{exact_input_key, ExactInputKey};
 
 use super::MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE;
 
@@ -43,14 +41,14 @@ impl MaterializedPipelineOutputCache {
         &self,
         inputs: &[&[u8]],
     ) -> Result<Option<MaterializedOutputSnapshot>, BackendError> {
-        let input_key = materialized_input_key(inputs)?;
+        let input_key = exact_input_key(inputs)?;
         Ok(self.snapshot_with_key(inputs, &input_key))
     }
 
     pub(crate) fn snapshot_with_key(
         &self,
         inputs: &[&[u8]],
-        input_key: &MaterializedInputKey,
+        input_key: &ExactInputKey,
     ) -> Option<MaterializedOutputSnapshot> {
         for entry in self.entries.iter().rev() {
             if entry.input_key() == input_key && entry.matches_inputs(inputs) {
@@ -122,7 +120,7 @@ impl MaterializedPipelineOutputCache {
 
 #[derive(Debug)]
 pub(crate) struct MaterializedPipelineOutputCacheEntry {
-    input_key: MaterializedInputKey,
+    input_key: ExactInputKey,
     inputs: SmallVec<[Vec<u8>; 4]>,
     outputs: Arc<[Vec<u8>]>,
     byte_len: usize,
@@ -133,7 +131,7 @@ impl MaterializedPipelineOutputCacheEntry {
         inputs: &[&[u8]],
         outputs: &[Vec<u8>],
     ) -> Result<Option<Self>, BackendError> {
-        let input_key = materialized_input_key(inputs)?;
+        let input_key = exact_input_key(inputs)?;
         let Some(byte_len) = materialized_cache_entry_byte_len_if_admissible(inputs, outputs)?
         else {
             return Ok(None);
@@ -145,7 +143,7 @@ impl MaterializedPipelineOutputCacheEntry {
 
     pub(crate) fn new_with_key_if_cacheable(
         inputs: &[&[u8]],
-        input_key: &MaterializedInputKey,
+        input_key: &ExactInputKey,
         outputs: &[Vec<u8>],
     ) -> Result<Option<Self>, BackendError> {
         let Some(byte_len) = materialized_cache_entry_byte_len_if_admissible(inputs, outputs)?
@@ -158,13 +156,13 @@ impl MaterializedPipelineOutputCacheEntry {
     }
 
     pub(crate) fn new(inputs: &[&[u8]], outputs: &[Vec<u8>]) -> Result<Self, BackendError> {
-        let input_key = materialized_input_key(inputs)?;
+        let input_key = exact_input_key(inputs)?;
         Self::new_with_key(inputs, &input_key, outputs)
     }
 
     pub(crate) fn new_with_key(
         inputs: &[&[u8]],
-        input_key: &MaterializedInputKey,
+        input_key: &ExactInputKey,
         outputs: &[Vec<u8>],
     ) -> Result<Self, BackendError> {
         let byte_len = materialized_cache_entry_byte_len(inputs, outputs)?;
@@ -173,7 +171,7 @@ impl MaterializedPipelineOutputCacheEntry {
 
     fn new_with_key_and_byte_len(
         inputs: &[&[u8]],
-        input_key: MaterializedInputKey,
+        input_key: ExactInputKey,
         outputs: &[Vec<u8>],
         byte_len: usize,
     ) -> Result<Self, BackendError> {
@@ -201,7 +199,7 @@ impl MaterializedPipelineOutputCacheEntry {
         })
     }
 
-    pub(crate) fn input_key(&self) -> &MaterializedInputKey {
+    pub(crate) fn input_key(&self) -> &ExactInputKey {
         &self.input_key
     }
 
@@ -262,13 +260,11 @@ fn copy_materialized_outputs_into(
         .take(existing_slots_to_copy)
         .zip(outputs.iter())
     {
-        if source.len() > target.capacity() {
-            target
-                .try_reserve_exact(source.len() - target.capacity())
-                .map_err(|error| {
-                    materialized_cache_allocation_failed("output destination bytes", error)
-                })?;
-        }
+        // The clear-and-refill happens in the loop below, after `truncate`, so
+        // this pre-pass must not clear: use the contents-preserving owner.
+        vyre_foundation::allocation::try_reserve_vec_to_capacity(target, source.len()).map_err(
+            |error| materialized_cache_allocation_failed("output destination bytes", error),
+        )?;
     }
 
     let mut appended_outputs = Vec::new();

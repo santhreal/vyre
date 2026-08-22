@@ -1,21 +1,70 @@
-use crate::facts::DataflowEdge;
+use serde::{Deserialize, Serialize};
+
+use crate::facts::{DataflowEdge, PlanningFacts};
+
+/// Spatial and concurrency execution topology of a candidate plan.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum ExecutionTopology {
+    /// Sequential stage execution on a single queue (the baseline topology).
+    Sequential,
+    /// Concurrent execution of independent stages/arms across concurrent hardware queues/streams.
+    ConcurrentQueue {
+        /// Number of concurrent queues utilized.
+        queues: u32,
+    },
+    /// Resident spatial partition across compute units.
+    ResidentPartition {
+        /// Number of spatial partitions / compute-unit domains allocated.
+        partitions: u32,
+        /// How spatial placement and progress are enforced.
+        mode: ResidentPartitionMode,
+    },
+}
+
+impl Default for ExecutionTopology {
+    fn default() -> Self {
+        Self::Sequential
+    }
+}
+
+/// Mode governing spatial placement and forward progress for resident partitions.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum ResidentPartitionMode {
+    /// Fixed hardware-enforceable spatial mask across compute units.
+    /// Only legal when the target exposes an enforceable spatial partitioning capability.
+    FixedSpatialMask,
+    /// Bounded resident work queue whose scheduler preserves forward progress.
+    /// Requires cooperative launch capability to ensure all resident blocks make progress without deadlock.
+    BoundedWorkQueue,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct CandidatePlan {
     pub(crate) node_groups: Vec<u32>,
     pub(crate) fused_edges: Vec<DataflowEdge>,
+    /// Launch width this candidate proposes for every group whose members all
+    /// tolerate one, or `None` to launch every group at its declared width.
+    pub(crate) workgroup_width: Option<u32>,
+    /// Execution topology proposed for this candidate.
+    pub(crate) topology: ExecutionTopology,
 }
 
 impl CandidatePlan {
+    #[must_use]
     pub(crate) fn baseline(node_count: usize) -> Self {
         Self {
             node_groups: (0..node_count)
                 .map(|index| u32::try_from(index).unwrap_or(u32::MAX))
                 .collect(),
             fused_edges: Vec::new(),
+            workgroup_width: None,
+            topology: ExecutionTopology::Sequential,
         }
     }
 
+    #[must_use]
     pub(crate) fn from_edges(node_count: usize, edges: &[DataflowEdge]) -> Self {
         let mut parent: Vec<usize> = (0..node_count).collect();
         for edge in edges {
@@ -52,15 +101,89 @@ impl CandidatePlan {
         Self {
             node_groups,
             fused_edges,
+            workgroup_width: None,
+            topology: ExecutionTopology::Sequential,
         }
     }
 
+    /// Same grouping launched at `width` instead of the declared widths.
+    #[must_use]
+    pub(crate) fn with_workgroup_width(&self, width: Option<u32>) -> Self {
+        Self {
+            node_groups: self.node_groups.clone(),
+            fused_edges: self.fused_edges.clone(),
+            workgroup_width: width,
+            topology: self.topology,
+        }
+    }
+
+    /// Same grouping executed with `topology`.
+    #[must_use]
+    pub(crate) fn with_topology(&self, topology: ExecutionTopology) -> Self {
+        Self {
+            node_groups: self.node_groups.clone(),
+            fused_edges: self.fused_edges.clone(),
+            workgroup_width: self.workgroup_width,
+            topology,
+        }
+    }
+
+    #[must_use]
+    pub(crate) fn topology(&self) -> ExecutionTopology {
+        self.topology
+    }
+
+    #[must_use]
     pub(crate) fn group_count(&self) -> usize {
         self.node_groups
             .iter()
             .copied()
             .max()
             .map_or(0, |group| group as usize + 1)
+    }
+
+    /// Nodes belonging to one fusion group, in node order.
+    pub(crate) fn group_members(&self, group: u32) -> impl Iterator<Item = usize> + '_ {
+        self.node_groups
+            .iter()
+            .enumerate()
+            .filter(move |(_, member)| **member == group)
+            .map(|(node, _)| node)
+    }
+
+    /// Workgroup dimensions this candidate launches one group with.
+    ///
+    /// A proposed width applies only when every member of the group tolerates
+    /// one; a single member that observes its launch width holds the whole group
+    /// at the declared shape, because the group emits one module.
+    #[must_use]
+    pub(crate) fn group_workgroup(&self, group: u32, facts: &PlanningFacts) -> [u32; 3] {
+        let declared = self
+            .group_members(group)
+            .filter_map(|node| facts.node_declared_workgroup.get(node).copied())
+            .next()
+            .unwrap_or([1, 1, 1]);
+        let Some(width) = self.workgroup_width else {
+            return declared;
+        };
+        let uniform = self
+            .group_members(group)
+            .all(|node| facts.node_accepts_width.get(node).copied().unwrap_or(false));
+        if uniform {
+            [width, 1, 1]
+        } else {
+            declared
+        }
+    }
+
+    /// Invocations per workgroup this candidate launches one group with.
+    #[must_use]
+    pub(crate) fn group_invocations(&self, group: u32, facts: &PlanningFacts) -> u64 {
+        let workgroup = self.group_workgroup(group, facts);
+        u64::from(workgroup[0])
+            .saturating_mul(u64::from(workgroup[1]))
+            .saturating_mul(u64::from(workgroup[2]))
+            .max(1)
     }
 }
 

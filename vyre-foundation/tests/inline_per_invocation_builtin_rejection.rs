@@ -10,9 +10,9 @@
 //!                  `Err(IrError::Lowering { .. })` whose message names the
 //!                  built-in and contains the string "Fix:".
 
-use vyre_foundation::error::IrError;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::transform::inline::inline_calls_with_resolver;
+use vyre_foundation::IrError;
 
 /// Build a callee program whose store index uses `built_in_expr`.
 fn callee_with_builtin(built_in_expr: Expr) -> Program {

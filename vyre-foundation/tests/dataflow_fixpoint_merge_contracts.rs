@@ -1,6 +1,6 @@
 //! Generated contracts for shared dataflow-fixpoint merge kernels.
 
-use vyre_foundation::pass_substrate::dataflow_fixpoint::{merge_min_changed, merge_or_changed};
+use vyre_foundation::pass_substrate::semiring_closure::{merge_min_changed, merge_or_changed};
 
 fn generated_word(seed: u32, index: u32) -> u32 {
     let mixed =

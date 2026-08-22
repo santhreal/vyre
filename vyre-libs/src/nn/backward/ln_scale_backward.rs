@@ -4,9 +4,8 @@
 //! Backward: `grad_x[i] = grad_out[i] * scale[i]`
 //!           `grad_scale[i] = grad_out[i] * x[i]`
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program};
 
 const OP_ID: &str = "vyre-libs::nn::ln_scale_backward";
 
@@ -22,79 +21,53 @@ pub fn ln_scale_backward(
     grad_scale: &str,
     n: u32,
 ) -> Program {
-    let i = Expr::var("i");
-    let x = Expr::load(input, i.clone());
-    let s = Expr::load(scale, i.clone());
-    let dy = Expr::load(grad_out, i.clone());
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![
-                Node::Store {
-                    buffer: grad_x.into(),
-                    index: i.clone(),
-                    value: Expr::mul(dy.clone(), s),
-                },
-                Node::Store {
-                    buffer: grad_scale.into(),
-                    index: i,
-                    value: Expr::mul(dy, x),
-                },
-            ],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(scale, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(grad_out, 2, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(grad_x, 3, DataType::F32).with_count(n),
-            BufferDecl::storage(grad_scale, 4, BufferAccess::ReadWrite, DataType::F32)
-                .with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
-    )
+    ElementwiseComposer::new(OP_ID, n)
+        .add_input(input, DataType::F32, n)
+        .add_input(scale, DataType::F32, n)
+        .add_input(grad_out, DataType::F32, n)
+        .add_output(grad_x, DataType::F32, n)
+        .add_output_storage(grad_scale, BufferAccess::WriteOnly, DataType::F32, n)
+        .build_pointwise_multi(&[grad_x, grad_scale], |i| {
+            let x = Expr::load(input, i.clone());
+            let s = Expr::load(scale, i.clone());
+            let dy = Expr::load(grad_out, i);
+            vec![Expr::mul(dy.clone(), s), Expr::mul(dy, x)]
+        })
 }
 
+const EXPECTED_LN_SCALE_BACKWARD_GRAD_X_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x80, 0x3F, 0xCD, 0xCC, 0xCC, 0x3D,
+];
+const EXPECTED_LN_SCALE_BACKWARD_GRAD_SCALE_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x40, 0x40, 0x00, 0x00, 0x80, 0x40,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| ln_scale_backward("input", "scale", "grad_out", "grad_x", "grad_scale", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || ln_scale_backward("input", "scale", "grad_out", "grad_x", "grad_scale", 4),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0, 3.0, 4.0]),  // input
                 to_f32(&[0.5, 2.0, 1.0, 0.1]),  // scale
                 to_f32(&[1.0, 1.0, 1.0, 1.0]),  // grad_out
-                vec![0u8; 4 * 4],                 // grad_scale
             ]]
         }),
-        expected_output: Some(|| {
-            // grad_x = dy * scale = [0.5, 2.0, 1.0, 0.1]
-            // grad_scale = dy * input = [1.0, 2.0, 3.0, 4.0]
-            let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
+        Some(|| {
             vec![vec![
-                to_f32(&[0.5, 2.0, 1.0, 0.1]),
-                to_f32(&[1.0, 2.0, 3.0, 4.0]),
+                EXPECTED_LN_SCALE_BACKWARD_GRAD_X_BYTES.to_vec(),
+                EXPECTED_LN_SCALE_BACKWARD_GRAD_SCALE_BYTES.to_vec(),
             ]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]
 mod tests {
     use super::ln_scale_backward;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_bytes;
 
     fn f32_bytes(values: &[f32]) -> Vec<u8> {
         vyre_primitives::wire::pack_f32_slice(values)
@@ -103,19 +76,18 @@ mod tests {
     #[test]
     fn reference_outputs_grad_x_and_grad_scale_liveouts() {
         let program = ln_scale_backward("input", "scale", "grad_out", "grad_x", "grad_scale", 4);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "ln_scale_backward",
             &program,
-            &[
-                Value::from(f32_bytes(&[1.0, 2.0, 3.0, 4.0])),
-                Value::from(f32_bytes(&[0.5, 2.0, 1.0, 0.1])),
-                Value::from(f32_bytes(&[1.0, 1.0, 1.0, 1.0])),
-                Value::from(vec![0_u8; 16]),
+            vec![
+                f32_bytes(&[1.0, 2.0, 3.0, 4.0]),
+                f32_bytes(&[0.5, 2.0, 1.0, 0.1]),
+                f32_bytes(&[1.0, 1.0, 1.0, 1.0]),
             ],
-        )
-        .expect("Fix: ln_scale_backward must satisfy the one-output plus ReadWrite live-out IR contract.");
+        );
 
         assert_eq!(outputs.len(), 2);
-        assert_eq!(outputs[0].to_bytes(), f32_bytes(&[0.5, 2.0, 1.0, 0.1]));
-        assert_eq!(outputs[1].to_bytes(), f32_bytes(&[1.0, 2.0, 3.0, 4.0]));
+        assert_eq!(outputs[0].clone(), f32_bytes(&[0.5, 2.0, 1.0, 0.1]));
+        assert_eq!(outputs[1].clone(), f32_bytes(&[1.0, 2.0, 3.0, 4.0]));
     }
 }

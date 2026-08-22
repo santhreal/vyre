@@ -1,14 +1,21 @@
 # vyre-primitives  -  architecture
 
-The lowest tier of compositional ops. Each primitive is a
-single-file `fn(...) -> Program` that lowers via existing
-`vyre::ir` constructors only  -  no hardware emission, no
+Two kinds of operation live here. Category C hardware intrinsics own a
+dedicated emitter arm and a dedicated reference arm. Every other module
+is a single-file `fn(...) -> Program` that lowers via existing
+`vyre::ir` constructors only, with no hardware emission and no
 self-substrate.
 
 This crate is the substrate `vyre-libs` and downstream predicate
 systems compose on top of.
 
 ## Modules (one folder per family)
+
+### `hardware/`
+Category C intrinsics, one hardware instruction each: subgroup add,
+ballot and shuffle, workgroup and storage barriers, bit reverse,
+popcount, fma, inverse sqrt. Each carries a keyed lowering facet per
+target and a byte-exact reference arm. Gated on the `hardware` feature.
 
 ### `bitset/`
 Per-word bitwise ops + per-bitset higher-level (and, or, xor,
@@ -27,7 +34,7 @@ via the persistence contract).
 
 ### `reduce/`
 Cross-lane reductions (sum, max, min, any, all). Composes the
-subgroup-ops from `vyre-intrinsics` when present.
+subgroup intrinsics from `hardware/` when present.
 
 ### `matching/`
 Match-result building blocks. The full pattern engines live in
@@ -79,10 +86,6 @@ Mathematical optimizers (gradient step, projected gradient).
 ### `topology/`
 Topology-aware partitioning helpers  -  the substrate the megakernel
 scaling layer reaches into.
-
-### `vfs/`
-Virtual-filesystem-style buffer addressing (multi-buffer offsets +
-permissions table). Used by the megakernel's IO queue.
 
 ### `markers.rs`
 Algebraic-law marker registrations (Commutative / Associative /

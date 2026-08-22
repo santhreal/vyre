@@ -38,6 +38,39 @@ fn identity_rules_cover_bool_and_integer_absorbers() {
     );
 }
 
+/// WHY: ordinary float addition and subtraction use different signed-zero
+/// identities. A value comparison treats both zeros as equal and silently
+/// changes the sign of a runtime `-0.0`.
+#[test]
+fn float_signed_zero_identity_contracts() {
+    for (literal, expected) in [
+        (ScalarLiteral::F32(-0.0), Some(IdentityReplacement::Left)),
+        (ScalarLiteral::F32(0.0), None),
+    ] {
+        assert_eq!(
+            binop_identity_replacement(BinOp::Add, false, None, Some(literal)),
+            expected
+        );
+    }
+    for (literal, expected) in [
+        (ScalarLiteral::F32(-0.0), Some(IdentityReplacement::Right)),
+        (ScalarLiteral::F32(0.0), None),
+    ] {
+        assert_eq!(
+            binop_identity_replacement(BinOp::Add, false, Some(literal), None),
+            expected
+        );
+    }
+    assert_eq!(
+        binop_identity_replacement(BinOp::Sub, false, None, Some(ScalarLiteral::F32(0.0))),
+        Some(IdentityReplacement::Left)
+    );
+    assert_eq!(
+        binop_identity_replacement(BinOp::Sub, false, None, Some(ScalarLiteral::F32(-0.0))),
+        None
+    );
+}
+
 #[test]
 fn strength_reduce_power_of_two_excludes_one_and_zero() {
     assert_eq!(strength_reduce_power_of_two_shift(0), None);

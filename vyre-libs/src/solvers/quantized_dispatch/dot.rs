@@ -1,0 +1,96 @@
+//! Device dispatch of the packed INT4 scaled dot product.
+//!
+//! The result is bit-exact with the CPU oracle for the same lane order and
+//! scales, which is what makes the oracle usable as a parity reference.
+
+use super::*;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+/// Compute a packed signed INT4 scaled dot product through the dispatch backend.
+///
+/// `lhs_packed` and `rhs_packed` store eight signed 4-bit lanes per u32 word.
+/// The returned scalar is bit-exact with the primitive CPU oracle for the same
+/// lane order and scale factors.
+///
+/// # Errors
+///
+/// Returns [`DispatchError`] when lane count is zero, packed input shape is
+/// wrong, dispatch fails, or backend readback is malformed.
+pub fn i4x8_dot_f32_scaled_via(
+    dispatcher: &impl ProgramDispatcher,
+    lhs_packed: &[u32],
+    rhs_packed: &[u32],
+    lhs_scale: f32,
+    rhs_scale: f32,
+    lane_count: u32,
+) -> Result<f32, DispatchError> {
+    let mut scratch = QuantizedDotGpuScratch::default();
+    let mut out = Vec::new();
+    i4x8_dot_f32_scaled_via_with_scratch_into(
+        dispatcher,
+        lhs_packed,
+        rhs_packed,
+        lhs_scale,
+        rhs_scale,
+        lane_count,
+        &mut scratch,
+        &mut out,
+    )?;
+    Ok(out[0])
+}
+
+/// Compute a packed signed INT4 scaled dot product through caller-owned scratch.
+///
+/// On success, `out` contains exactly one f32 scalar.
+///
+/// # Errors
+///
+/// Returns [`DispatchError`] under the same conditions as
+/// [`i4x8_dot_f32_scaled_via`].
+pub fn i4x8_dot_f32_scaled_via_with_scratch_into(
+    dispatcher: &impl ProgramDispatcher,
+    lhs_packed: &[u32],
+    rhs_packed: &[u32],
+    lhs_scale: f32,
+    rhs_scale: f32,
+    lane_count: u32,
+    scratch: &mut QuantizedDotGpuScratch,
+    out: &mut Vec<f32>,
+) -> Result<(), DispatchError> {
+    if lane_count == 0 {
+        return Err(DispatchError::BadInputs(
+            "Fix: i4x8_dot_f32_scaled_via requires lane_count > 0.".to_string(),
+        ));
+    }
+    let expected_words = i4_packed_words(lane_count) as usize;
+    if lhs_packed.len() != expected_words || rhs_packed.len() != expected_words {
+        return Err(DispatchError::BadInputs(format!(
+            "Fix: i4x8_dot_f32_scaled_via requires lhs/rhs packed lengths == i4_packed_words(lane_count), got lhs={} rhs={} expected={expected_words} for lane_count={lane_count}.",
+            lhs_packed.len(),
+            rhs_packed.len()
+        )));
+    }
+
+    let QuantizedDotGpuScratch {
+        inputs,
+        program_cache,
+    } = scratch;
+    let program = program_cache.get_or_insert_with(lane_count, || {
+        i4x8_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", lane_count)
+    });
+    // Four input-consuming buffers: lhs/rhs/lhs_scale/rhs_scale ReadOnly(0-3). `out` is
+    // `BufferDecl::output`(4) (backend-allocated, so it consumes NO dispatch input).
+    ensure_input_slots(inputs, 4);
+    write_u32_slice_le_bytes(&mut inputs[0], lhs_packed);
+    write_u32_slice_le_bytes(&mut inputs[1], rhs_packed);
+    write_f32_slice_le_bytes(&mut inputs[2], &[lhs_scale]);
+    write_f32_slice_le_bytes(&mut inputs[3], &[rhs_scale]);
+
+    let outputs = dispatcher.dispatch(program, &inputs[..4], Some([1, 1, 1]))?;
+    decode_f32_output_exact(
+        expect_one_output("i4x8_dot_f32_scaled_via", &outputs)?,
+        1,
+        "i4x8_dot_f32_scaled_via",
+        out,
+    )
+}

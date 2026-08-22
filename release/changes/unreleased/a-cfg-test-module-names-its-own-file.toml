@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A test-only module whose file is named by a path attribute is now read as test-scoped. The resolver searched for the conventional file names only, so five vyre-libs test modules declared with an explicit path were analyzed as production code and their host reference helpers were reported as shipped host oracles."

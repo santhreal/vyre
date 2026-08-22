@@ -30,8 +30,77 @@ fn pass_result_unchanged_reports_no_change() {
 #[test]
 fn pass_result_from_programs_identical() {
     let p = trivial_program();
-    let result = PassResult::from_programs(&p, p.clone());
+    let result = PassResult::from_programs(p.clone(), p);
     assert!(!result.changed);
+}
+
+/// A pass reports change by structure, and buffer declaration order is not
+/// structure. The canonical fingerprint this comparison replaced deliberately
+/// equated declaration-order-only differences so that a reordering pass could
+/// not spin the fixpoint loop; tightening the comparison would resurrect that.
+#[test]
+fn pass_result_from_programs_ignores_buffer_declaration_order() {
+    let entry = vec![Node::store(
+        "out",
+        Expr::u32(0),
+        Expr::load("input", Expr::u32(0)),
+    )];
+    let before = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(4),
+            BufferDecl::output("out", 1, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        entry.clone(),
+    );
+    let reordered = Program::wrapped(
+        vec![
+            BufferDecl::output("out", 1, DataType::U32).with_count(1),
+            BufferDecl::read("input", 0, DataType::U32).with_count(4),
+        ],
+        [1, 1, 1],
+        entry,
+    );
+    assert!(!PassResult::from_programs(before, reordered).changed);
+}
+
+/// An unchanged pass hands back the program it received, not the copy its
+/// engine rebuilt. The rebuilt copy carries no fingerprint, statistics or shape
+/// memo, so returning it makes every downstream fact lookup recompute a full
+/// canonical wire encode and BLAKE3 digest.
+#[test]
+fn pass_result_from_programs_keeps_the_program_it_was_given() {
+    let before = trivial_program();
+    let rebuilt = trivial_program();
+    assert!(
+        !std::ptr::eq(before.entry().as_ptr(), rebuilt.entry().as_ptr()),
+        "the two programs must own separate entry allocations for this to prove anything"
+    );
+    let kept = before.entry().as_ptr();
+    let result = PassResult::from_programs(before, rebuilt);
+    assert!(!result.changed);
+    assert!(std::ptr::eq(result.program.entry().as_ptr(), kept));
+}
+
+/// A rewritten body is a change, and the rewrite is what comes out.
+#[test]
+fn pass_result_from_programs_reports_a_rewritten_body() {
+    let before = trivial_program();
+    let rewritten = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(4),
+            BufferDecl::output("out", 1, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
+    );
+    let rewritten_entry = rewritten.entry().as_ptr();
+    let result = PassResult::from_programs(before, rewritten);
+    assert!(result.changed);
+    assert!(std::ptr::eq(
+        result.program.entry().as_ptr(),
+        rewritten_entry
+    ));
 }
 
 #[test]
@@ -108,13 +177,13 @@ fn refusal_reason_kind_tags_are_stable() {
 
     let effect = RefusalReason::EffectLatticeViolation {
         producer: "vyre-libs::dataflow::reaching",
-        consumer: "vyre-primitives::reduce::scan",
+        consumer: "vyre-libs::reduce::scan",
         suggested_fix: "insert MemoryOrdering::GridSync between arms",
     };
     assert_eq!(effect.kind(), "effect_lattice_violation");
 
     let wire = RefusalReason::WireContractViolation {
-        detail: "op_id drift detected: vyre-primitives::math::add became vyre::add",
+        detail: "op_id drift detected: vyre-libs::math::add became vyre::add",
     };
     assert_eq!(wire.kind(), "wire_contract_violation");
 
@@ -152,7 +221,7 @@ fn try_transform_default_delegates_to_transform_for_every_builtin() {
     let passes = registered_passes()
         .expect("Fix: registered_passes should succeed; restore this invariant before continuing.");
     for pass in passes {
-        let result = pass.try_transform(p.clone());
+        let result = pass.try_transform(p.clone(), &crate::optimizer::AdapterCaps::conservative());
         let _optimized = result.unwrap_or_else(|e| {
             panic!(
                 "built-in pass `{}` unexpectedly returned a refusal: {e:?}",

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A workspace manifest string array has one reader. structure_gate::workspace_manifest::string_list resolves a TOML array of strings, and the workspace path reader and the shipped-library build test call it instead of repeating the same and_then chain."

@@ -2,7 +2,7 @@
 
 #![cfg(feature = "nn-attention")]
 
-use vyre_libs::nn::attention::qk_gain::qk_gain;
+use vyre_libs::nn::attention::qk_gain;
 use vyre_reference::value::Value;
 
 fn evaluate_empty_shape(num_heads: u32, seq_len: u32, head_dim: u32) -> Vec<u8> {
@@ -10,7 +10,6 @@ fn evaluate_empty_shape(num_heads: u32, seq_len: u32, head_dim: u32) -> Vec<u8> 
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
-            Value::from(Vec::<u8>::new()),
             Value::from(Vec::<u8>::new()),
             Value::from(vec![0_u8; num_heads as usize * size_of::<f32>()]),
         ],

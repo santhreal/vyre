@@ -57,6 +57,7 @@ pub fn count_ops<R>(f: impl FnOnce() -> R) -> (R, u64) {
     (result, count)
 }
 
+// Inline: covers the crate-private `count_ops` and `record_op`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

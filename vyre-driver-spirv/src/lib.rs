@@ -20,11 +20,9 @@
 // `unsafe_code = "deny"` while this backend wraps ash properly with
 // per-call Safety: comments.
 #![allow(unsafe_code)]
-#![deny(rust_2018_idioms)]
-#![deny(missing_docs)]
 
 /// Canonical lowering and emitter adapter.
-pub mod backend;
+pub(crate) mod backend;
 mod materializer;
 mod target_compiler;
 /// Vulkan compute dispatch implementation.
@@ -68,7 +66,7 @@ impl SpirvBackendRegistration {
     }
 }
 
-impl vyre_driver::backend::private::Sealed for SpirvBackendRegistration {}
+impl vyre_driver::sealed::Sealed for SpirvBackendRegistration {}
 
 fn spirv_device_buffer_unsupported() -> BackendError {
     BackendError::UnsupportedFeature {
@@ -87,16 +85,6 @@ impl VyreBackend for SpirvBackendRegistration {
 
     fn version(&self) -> &'static str {
         env!("CARGO_PKG_VERSION")
-    }
-
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-        self.dispatch_borrowed(program, &borrowed, config)
     }
 
     fn dispatch_borrowed(
@@ -192,69 +180,19 @@ impl VyreBackend for SpirvBackendRegistration {
         self.device.properties.limits.max_storage_buffer_range as u64
     }
 
-    fn supports_grid_sync(&self) -> bool {
-        false
-    }
-
-    fn supports_subgroup_ops(&self) -> bool {
-        false
-    }
-
-    fn supports_f16(&self) -> bool {
-        false
-    }
-
-    fn supports_bf16(&self) -> bool {
-        false
-    }
-
-    fn supports_tensor_cores(&self) -> bool {
-        false
-    }
-
-    fn supports_async_compute(&self) -> bool {
-        false
-    }
-
-    fn supports_indirect_dispatch(&self) -> bool {
-        false
-    }
-
+    /// The Vulkan compute path probes four limits and claims nothing else.
+    ///
+    /// Every remaining field restated `DeviceProfile::conservative`, which is the
+    /// driver's own owner for "this backend has not probed that capability". The
+    /// copy meant a new capability field had to be answered here by hand, and the
+    /// answer was always the conservative one.
     fn device_profile(&self) -> vyre_driver::DeviceProfile {
-        let max_workgroup_size = self.max_workgroup_size();
         vyre_driver::DeviceProfile {
-            backend: self.id(),
-            supports_subgroup_ops: false,
-            supports_indirect_dispatch: false,
-            supports_distributed_collectives: false,
-            supports_specialization_constants: false,
-            supports_f16: false,
-            supports_bf16: false,
-            supports_trap_propagation: false,
-            supports_tensor_cores: false,
-            has_mul_high: false,
-            has_dual_issue_fp32_int32: false,
-            has_subgroup_shuffle: false,
-            has_shared_memory: false,
-            max_native_int_width: 32,
-            max_workgroup_size,
+            max_workgroup_size: self.max_workgroup_size(),
             max_invocations_per_workgroup: self.max_compute_invocations_per_workgroup(),
             max_shared_memory_bytes: self.device.properties.limits.max_compute_shared_memory_size,
             max_storage_buffer_binding_size: self.max_storage_buffer_bytes(),
-            subgroup_size: 0,
-            compute_units: 0,
-            regs_per_thread_max: 0,
-            l1_cache_bytes: 0,
-            l2_cache_bytes: 0,
-            mem_bw_gbps: 0,
-            timing_quality: vyre_driver::DeviceTimingQuality::HostOnly,
-            supports_device_timestamps: false,
-            supports_hardware_counters: false,
-            ideal_unroll_depth: 0,
-            ideal_vector_pack_bits: 0,
-            ideal_workgroup_tile: [0, 0, 0],
-            shared_memory_bank_count: 0,
-            shared_memory_bank_width_bytes: 0,
+            ..vyre_driver::DeviceProfile::conservative(self.id())
         }
     }
 }
@@ -273,7 +211,20 @@ pub fn spirv_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
 /// all SPIRV dispatch even when the op is supported, silently degrading to a
 /// lower-precedence backend.
 pub fn spirv_supported_ops() -> &'static std::collections::HashSet<vyre_foundation::ir::OpId> {
-    vyre_driver::backend::core_supported_ops()
+    vyre_driver::core_supported_ops()
+}
+
+/// Backend id this crate submits into the backend registry on this target.
+///
+/// WHY: the registration below lives in this crate's object file, and a linker
+/// keeps that object only when a symbol inside it is referenced. Naming the
+/// crate with `use vyre_driver_spirv as _;` references nothing, and reading
+/// [`SPIRV_BACKEND_ID`] is a `const` that inlines at the use site, so neither
+/// keeps the registration. Calling this function does, which is why the backend
+/// registry owner calls it instead of importing the crate for effect.
+#[must_use]
+pub fn registered_backend_id() -> Option<&'static str> {
+    Some(SPIRV_BACKEND_ID)
 }
 
 inventory::submit! {
@@ -284,7 +235,7 @@ inventory::submit! {
         reference_oracle: false,
         factory: spirv_factory,
         supported_ops: spirv_supported_ops,
-        semantic_operations: vyre_driver::backend::dialect_only_supported_ops,
+        semantic_operations: vyre_driver::dialect_only_supported_ops,
         target_compiler: Some(target_compiler::target_compiler_factory),
         materializer: Some(materializer::materializer_factory),
     }
@@ -311,14 +262,14 @@ mod tests {
 
 // V7-EXT-021: declare router precedence inline. SPIR-V is rank 30.
 inventory::submit! {
-    vyre_driver::backend::BackendPrecedence {
+    vyre_driver::BackendPrecedence {
         id: SPIRV_BACKEND_ID,
         rank: 30,
     }
 }
 
 inventory::submit! {
-    vyre_driver::backend::BackendCapability {
+    vyre_driver::BackendCapability {
         id: SPIRV_BACKEND_ID,
         dispatches: true,
     }

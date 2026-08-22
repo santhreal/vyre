@@ -5,7 +5,7 @@
 //! output tile and cooperatively stages A/B k-tiles through workgroup
 //! memory before accumulating one output element per lane.
 //!
-//! ROADMAP S10: this module was a single 960-LOC file before splitting.
+//! this module was a single 960-LOC file before splitting.
 //! The cuts are:
 //!
 //! - [`plain`]  -  `MatmulTiled` builder + `matmul_tiled` Cat-A wrapper
@@ -23,9 +23,9 @@
 
 mod body;
 mod mma_body;
-mod mma_fragment;
+pub(crate) mod mma_fragment;
 mod ops;
-mod program;
+pub(crate) mod program;
 mod shape;
 mod tensor_core_policy;
 mod tile_coords;

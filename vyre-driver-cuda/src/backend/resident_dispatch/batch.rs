@@ -3,23 +3,26 @@ use std::sync::Arc;
 
 use rustc_hash::FxHashSet;
 use smallvec::SmallVec;
-use vyre_driver::binding::BindingRole;
+use vyre_driver::BindingRole;
 use vyre_driver::{BackendError, DispatchConfig, ResidentHandle};
 use vyre_foundation::ir::Program;
 
-use crate::backend::allocations::{DispatchAllocations, HostTransferAllocations};
+use crate::backend::allocations::DispatchAllocations;
 use crate::backend::dispatch::CudaBackend;
+use crate::backend::enqueue_cleanup::EnqueueGuards;
 use crate::backend::launch_params::launch_param_byte_len;
 use crate::backend::module_cache::ModuleCacheKey;
 use crate::backend::ordering::sort_unstable_by_key_if_needed;
 use crate::backend::output_range::{cuda_output_readback_for_binding, CudaOutputReadback};
+use crate::backend::pinned_allocations::HostTransferAllocations;
 use crate::backend::plan::CudaDispatchPlan;
 use crate::backend::resident::{CudaResidentBuffer, ResidentViewCache};
-use crate::backend::resident_dispatch::helpers::{
-    enqueue_optional_resident_h2d_copy, next_resident_handle, resident_required_handles,
-    validate_dense_resident_output_indices,
+use crate::backend::resident_dispatch::dense_index_validation::validate_dense_resident_output_indices;
+use crate::backend::resident_dispatch::descriptor_cursor::{
+    next_resident_handle, resident_required_handles,
 };
-use crate::backend::resident_dispatch_support::{
+use crate::backend::resident_dispatch::host_uploads::enqueue_optional_resident_h2d_copy;
+use crate::backend::resident_dispatch_accounting::{
     checked_resident_dispatch_capacity_mul, CudaResidentBatchDispatch,
 };
 use crate::backend::staging_reserve::{reserve_hash_set, reserve_smallvec};
@@ -77,25 +80,14 @@ impl CudaBackend {
             usize::from(static_params_ptr.is_none() && param_bytes != 0),
             0,
         )?;
-        let mut param_upload: Option<(u64, *const c_void, usize)> = None;
-        let params_ptr = match static_params_ptr {
-            Some(ptr) => ptr,
-            None if param_bytes == 0 => 0,
-            None => {
-                let (params_ptr, upload) = self.prepare_resident_param_upload(
-                    &prepared.launch.param_words,
-                    param_bytes,
-                    "CUDA resident batch dispatch parameter bytes",
-                    "CUDA resident batch dispatch parameter upload",
-                    "resident batch dispatch parameter allocation byte count",
-                    "resident batch dispatch parameter upload byte count",
-                    &mut allocations,
-                    &mut host_transfers,
-                )?;
-                param_upload = upload;
-                params_ptr
-            }
-        };
+        let (params_ptr, param_upload) = self.resolve_resident_params_ptr(
+            &prepared.launch.param_words,
+            param_bytes,
+            static_params_ptr,
+            "resident batch dispatch",
+            &mut allocations,
+            &mut host_transfers,
+        )?;
 
         let func = self.resolve_launch_function(
             ptx_src,
@@ -183,24 +175,12 @@ impl CudaBackend {
                     &mut resident_view_cache,
                     "resident batch dispatch view cache",
                 )?;
-                if let Some(expected) = binding.static_byte_len {
-                    if resident.byte_len < expected {
-                        return Err(BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: CUDA resident batch dispatch item {batch_index} binding `{}` expected at least {expected} bytes but handle {} has {} bytes.",
-                                binding.name, handle.handle, resident.byte_len
-                            ),
-                        });
-                    }
-                }
-                if resident.ptr == 0 {
-                    return Err(BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident batch dispatch item {batch_index} binding `{}` resolved to a null device pointer; resident launch arguments must preserve descriptor order.",
-                            binding.name
-                        ),
-                    });
-                }
+                resident.validate_binding(
+                    &format!("resident batch dispatch item {batch_index}"),
+                    &binding.name,
+                    binding.static_byte_len,
+                    handle.handle,
+                )?;
                 launch_ptrs.push(resident.ptr);
                 if let Some(output_index) = binding.output_index {
                     let full_byte_len = match binding.static_byte_len {
@@ -297,86 +277,82 @@ impl CudaBackend {
             output_readbacks_by_batch.push(output_readbacks);
         }
 
+        // Marked in-flight before the launch lease is taken: the lease blocks
+        // while another launch holds it, and a handle must already be pinned
+        // before this dispatch can wait behind one that reads it.
         let resident_use = self.resident_store.mark_inflight(&all_handles)?;
-        let launch_resources = crate::stream::CudaLaunchResourceLease::acquire(
-            Arc::clone(&self.launch_resources),
-            false,
-        )?;
-        let mut launch_resources = Some(launch_resources);
-        let mut allocations = Some(allocations);
-        let mut resident_use = Some(resident_use);
-        let mut host_transfers = Some(host_transfers);
-        let stream_raw = launch_resources
-            .as_ref()
-            .ok_or_else(|| BackendError::InvalidProgram {
-                fix: "Fix: CUDA resident batch launch resources were consumed before enqueue; rebuild pending dispatch ownership before launching.".to_string(),
-            })?
-            .stream_raw()?;
-        let pending = (|| {
+        let mut guards = EnqueueGuards::new(
+            "resident batch",
+            crate::stream::CudaLaunchResourceLease::acquire(
+                Arc::clone(&self.launch_resources),
+                false,
+            )?,
+            allocations,
+            host_transfers,
+            Some(resident_use),
+        );
+        let stream_raw = guards.stream_raw()?;
+        let enqueue_result = (|| {
             enqueue_optional_resident_h2d_copy(param_upload, stream_raw)?;
 
             // One lease covers every batch element: they all enqueue on this one
-            // stream, so stream order already separates their barrier counts.
-            let grid_barrier = self.lease_grid_barrier(program, prepared, ptx_src, module_key)?;
+            // stream, so stream order already separates their barrier counts, and
+            // the trap record is claimed by the first element that traps.
+            let module_globals =
+                self.lease_module_globals(program, prepared, ptx_src, module_key)?;
             let mut kernel_args = SmallVec::<[*mut c_void; 8]>::new();
-            // `launch_then_release` runs the launches and ends the lease in the
-            // one safe order: the release synchronizes the stream before freeing
-            // the gate, so a launch failure cannot leave a grid spinning while the
-            // next sequence resets the counter underneath it.
-            grid_barrier.launch_then_release(
+            // `launch_then_defer_release` runs the launches and hands the lease
+            // back instead of ending it. The module-scope globals are live for the
+            // kernel's whole EXECUTION, and this path returns before that, so
+            // ending the lease here would synchronize the stream: the one thing an
+            // asynchronous submission must not do. The pending handle owns the
+            // completion event, so it is what ends the lease.
+            let (_, deferred_module_globals) = module_globals.launch_then_defer_release(
                 stream_raw,
-                "resident batch grid-sync launch",
-                |grid_barrier| {
+                "resident batch launch",
+                |module_globals| {
                     for launch_ptrs in launch_ptrs_by_batch.iter_mut() {
                         let mut params_ref = params_ptr;
                         Self::kernel_args_into(launch_ptrs, &mut params_ref, &mut kernel_args)?;
-                        for _ in 0..prepared.fixpoint_iterations {
-                            // SAFETY: stream_raw is the live batch stream and
-                            // outlives the memset enqueued ahead of each launch.
-                            unsafe {
-                                grid_barrier.enqueue_reset(stream_raw)?;
-                            }
-                            self.launch_prevalidated_function(
-                                func,
-                                &mut kernel_args,
-                                &prepared.launch,
-                                stream_raw,
-                                false,
-                                prepared.cooperative,
-                            )?;
-                        }
+                        self.replay_fixpoint_launches(
+                            module_globals,
+                            func,
+                            &mut kernel_args,
+                            prepared,
+                            stream_raw,
+                        )?;
                     }
                     Ok(())
                 },
             )?;
-
+            Ok(deferred_module_globals)
+        })();
+        // Every fallible step that runs under the lease is inside the closure
+        // above, so an error here means the lease was already ended: either it was
+        // never taken, or `launch_then_defer_release` released it with the
+        // synchronize a failed launch needs.
+        let deferred_module_globals = match enqueue_result {
+            Ok(lease) => lease,
+            Err(error) => {
+                return Err(guards.abandon(
+                    error,
+                    &self.telemetry,
+                    stream_raw,
+                    "cuStreamSynchronize (resident batch error cleanup)",
+                    "enqueue",
+                ));
+            }
+        };
+        let pending = (|| {
             let event = self.launch_resources.acquire_event()?;
             if let Err(error) = event.record(stream_raw) {
                 self.launch_resources.release_event(event);
                 return Err(error);
             }
-            let (stream, _) = launch_resources
-                .take()
-                .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: "Fix: CUDA resident batch launch resources were consumed before pending dispatch ownership transfer.".to_string(),
-                })?
-                .into_parts()?;
-            let allocations = allocations
-                .take()
-                .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: "Fix: CUDA resident batch allocations were consumed before pending dispatch ownership transfer.".to_string(),
-                })?;
-            let resident_use = resident_use
-                .take()
-                .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: "Fix: CUDA resident batch use guard was consumed before pending dispatch ownership transfer.".to_string(),
-                })?;
-            let host_transfers =
-                host_transfers
-                    .take()
-                    .ok_or_else(|| BackendError::InvalidProgram {
-                        fix: "Fix: CUDA resident batch host staging was consumed before pending dispatch ownership transfer.".to_string(),
-                    })?;
+            let (stream, _) = guards.take_stream_and_timing()?;
+            let allocations = guards.take_allocations()?;
+            let resident_use = guards.take_resident_use()?;
+            let host_transfers = guards.take_host_transfers()?;
             Ok(
                 crate::stream::CudaPendingDispatch::new_resident_batch_pending(
                     Arc::clone(&self.ctx),
@@ -391,36 +367,21 @@ impl CudaBackend {
             )
         })();
         let pending = match pending {
-            Ok(pending) => pending,
+            Ok(pending) => pending.holding_module_globals(deferred_module_globals),
             Err(error) => {
-                let Some(launch_resources) = launch_resources.take() else {
-                    return Err(error);
-                };
-                match crate::stream::synchronize_raw_stream(
+                let abandoned = guards.abandon(
+                    error,
+                    &self.telemetry,
                     stream_raw,
-                    "cuStreamSynchronize (resident batch error cleanup)",
-                ) {
-                    Ok(()) => {
-                        self.telemetry.record_sync_point();
-                        return Err(error);
-                    }
-                    Err(sync_error) => {
-                        tracing::error!(
-                            "Fix: failed to synchronize CUDA resident batch stream after enqueue error: {sync_error}. In-flight resident batch resources will not be recycled."
-                        );
-                        std::mem::forget(launch_resources);
-                        if let Some(allocations) = allocations.take() {
-                            std::mem::forget(allocations);
-                        }
-                        if let Some(resident_use) = resident_use.take() {
-                            std::mem::forget(resident_use);
-                        }
-                        if let Some(host_transfers) = host_transfers.take() {
-                            std::mem::forget(host_transfers);
-                        }
-                        return Err(error);
-                    }
-                }
+                    "cuStreamSynchronize (resident batch handle cleanup)",
+                    "pending handle",
+                );
+                // Dropped AFTER the abandon synchronized the stream, so the gate is
+                // freed only once the grid cannot still be running. The trap record
+                // is not read: this dispatch produced no answer, and the failure
+                // worth reporting is the one that stopped the handoff.
+                drop(deferred_module_globals);
+                return Err(abandoned);
             }
         };
         Ok(CudaResidentBatchDispatch {

@@ -19,9 +19,12 @@
 //!
 //! # How resolution works
 //!
-//! [`vyre_workspace_root`] is always available: this crate is a direct child of
-//! the vyre workspace root, so its own `CARGO_MANIFEST_DIR` fixes the answer
-//! whatever the tree sits inside.
+//! [`vyre_workspace_root`] delegates to [`structure_gate::workspace_root`],
+//! which walks up from the working directory to the manifest that declares the
+//! workspace. It is deliberately not this crate's `CARGO_MANIFEST_DIR`: a
+//! target directory shared by several checkouts computes the same unit hash for
+//! this crate, so cargo hands one checkout a binary another one built, and a
+//! compiled-in path then names the wrong tree.
 //!
 //! [`santh_root`] takes the first of these that works:
 //!
@@ -54,17 +57,162 @@ const SANTH_ROOT_MARKER: &str = "tools/vyrec/src";
 /// Path, relative to the monorepo root, holding the dataflow crates.
 const DATAFLOW_RELATIVE: &str = "libs/dataflow";
 
-/// Root of the vyre cargo workspace.
+/// Root of the vyre cargo workspace, resolved from the working directory.
 ///
-/// This crate lives at `<workspace root>/vyre-test-support`, so the answer is
-/// the parent of its manifest directory. It does not depend on where the
-/// workspace itself sits.
+/// Delegates to [`structure_gate::workspace_root`], the one owner of "which
+/// checkout am I reporting on". Never compiled in: every checkout of this
+/// repository shares one cargo target directory, cargo hashes a member by its
+/// path relative to the workspace root and checks freshness by mtime, so two
+/// checkouts compute the same unit hash and hand each other compiled binaries.
+/// A path fixed at compile time then names whichever tree built last, and a
+/// test that reads docs, pins, fixtures or golden files through it audits that
+/// tree while claiming to describe this one.
+///
+/// # Panics
+///
+/// Panics when no ancestor of the working directory declares a `[workspace]`.
 #[must_use]
 pub fn vyre_workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("vyre-test-support must live directly under the vyre workspace root")
-        .to_path_buf()
+    structure_gate::workspace_root()
+}
+
+/// Directory of the workspace member that declares `package`, in this checkout.
+///
+/// A gate needing its own crate directory calls this with `CARGO_PKG_NAME`
+/// rather than joining a compiled-in manifest path: the package name is stable
+/// across checkouts, the directory is not, and a member's directory is not
+/// always its package name.
+///
+/// # Panics
+///
+/// Panics when no workspace member declares `package`.
+#[must_use]
+pub fn vyre_crate_directory(package: &str) -> PathBuf {
+    structure_gate::member_directory(&vyre_workspace_root(), package)
+}
+
+/// The one source file in this checkout that declares `marker`.
+///
+/// A roster test derives its member set by reading the file that publishes the
+/// family, and naming that file by a crate plus a relative path pins the layout
+/// the test was written against. The file then moves, the read fails with
+/// `NotFound`, and the failure describes a missing path rather than the roster
+/// the test claims to check. Searching for the declaration instead follows the
+/// file wherever it goes, across crates as well as directories.
+///
+/// The search covers every source file the workspace holds, from
+/// [`structure_gate::scan`], which is the same roster the structure gate walks.
+/// `marker` must be the opening text of the declaration, such as
+/// `pub fn fnv1a64_program`, and a file matches when some line begins with it
+/// once indentation is trimmed. Matching a line prefix rather than any
+/// occurrence keeps the caller's own copy of the marker, which is a string
+/// literal in the middle of a line, from answering as a second home.
+///
+/// Exactly one file must match. Zero means the declaration was renamed or
+/// deleted, and a roster derived from nothing proves nothing. Two or more means
+/// the family has a second home, which is the duplication these contracts exist
+/// to catch, so it is reported rather than silently resolved to the first hit.
+///
+/// # Panics
+///
+/// Panics when the number of matching files is not exactly one.
+#[must_use]
+pub fn declaring_source_file(marker: &str) -> PathBuf {
+    let root = vyre_workspace_root();
+    let matches: Vec<String> = structure_gate::scan(&root)
+        .source_files
+        .into_iter()
+        .filter(|relative| {
+            std::fs::read_to_string(root.join(relative)).is_ok_and(|source| {
+                source
+                    .lines()
+                    .any(|line| line.trim_start().starts_with(marker))
+            })
+        })
+        .collect();
+    match matches.as_slice() {
+        [only] => root.join(only),
+        [] => panic!(
+            "no source file in this workspace declares `{marker}`. Fix: the declaration was \
+             renamed or deleted, so update the marker to the name the family publishes now."
+        ),
+        several => panic!(
+            "`{marker}` is declared in {} files: {}. Fix: the family has more than one home, \
+             so collapse it onto one owner.",
+            several.len(),
+            several.join(", ")
+        ),
+    }
+}
+
+/// Workspace member paths and excluded paths from the root manifest, in this
+/// checkout.
+///
+/// Delegates to [`structure_gate`], which owns the root-manifest parse. A
+/// contract that reads `Cargo.toml` itself to answer "is this directory in the
+/// workspace" grows a second roster, and the two disagree the first time a
+/// path is written in a shape only one of them recognizes.
+///
+/// # Panics
+///
+/// Panics when the root manifest cannot be read or parsed.
+#[must_use]
+pub fn vyre_workspace_rosters() -> WorkspaceRosters {
+    let root = vyre_workspace_root();
+    WorkspaceRosters {
+        members: structure_gate::workspace_members(&root)
+            .into_iter()
+            .collect(),
+        excluded: structure_gate::workspace_excludes(&root)
+            .into_iter()
+            .collect(),
+    }
+}
+
+/// What the root manifest says the workspace holds and keeps out.
+pub struct WorkspaceRosters {
+    /// Paths declared as workspace members.
+    pub members: std::collections::BTreeSet<String>,
+    /// Paths declared in `workspace.exclude`.
+    pub excluded: std::collections::BTreeSet<String>,
+}
+
+fn cargo_target_ancestor(executable: &Path) -> Option<PathBuf> {
+    executable
+        .ancestors()
+        .find(|directory| {
+            directory.join("CACHEDIR.TAG").is_file() || directory.join(".rustc_info.json").is_file()
+        })
+        .map(Path::to_path_buf)
+}
+
+/// Directory cargo is writing this run's build artifacts into.
+///
+/// A test that has to build a scratch crate of its own puts it under here
+/// rather than under [`std::env::temp_dir`]. A temp filesystem is small, shared
+/// and capped: one fixture that compiled a dependency graph into it filled the
+/// filesystem and failed unrelated builds with no space left on device. Build
+/// artifacts belong in the build directory, which every host of this workspace
+/// already points at a disk sized for them.
+///
+/// Resolved from the running test binary, which cargo placed inside the target
+/// directory, by finding the nearest ancestor carrying cargo's cache marker or
+/// rustc-info cache. A test therefore never reads or sets `CARGO_TARGET_DIR`:
+/// the location is declared once in host cargo configuration, and this reports
+/// where that declaration actually put the artifacts.
+///
+/// # Panics
+///
+/// Panics when the test binary sits outside any cargo target directory.
+#[must_use]
+pub fn cargo_target_directory() -> PathBuf {
+    let executable = std::env::current_exe().expect("Fix: the test binary path must be readable");
+    cargo_target_ancestor(&executable).unwrap_or_else(|| {
+        panic!(
+            "Fix: no ancestor of `{}` is a cargo target directory; run this test through cargo",
+            executable.display()
+        )
+    })
 }
 
 /// Root of the monorepo hosting vyre and its sibling products, if there is one.
@@ -234,5 +382,136 @@ mod tests {
         assert!(rendered.starts_with("SKIP example contract:"), "{rendered}");
         assert!(rendered.contains(SANTH_ROOT_ENV), "{rendered}");
         assert!(rendered.contains(SANTH_ROOT_MARKER), "{rendered}");
+    }
+
+    /// A resolved declaring file must actually declare what was asked for.
+    ///
+    /// The failure this closes: a roster test named its source by a crate plus
+    /// a relative path, the file moved crates, and the read failed with
+    /// `NotFound`. The resolver answers with a file that exists and holds the
+    /// declaration, so a rehome is followed instead of reported as missing.
+    /// The marker is this function's own signature, which is present exactly
+    /// once and moves with this file, so the test cannot go stale against a
+    /// path written into it.
+    #[test]
+    fn a_resolved_declaring_file_holds_the_declaration_it_searched_for() {
+        let marker = "pub fn declaring_source_file";
+        let resolved = declaring_source_file(marker);
+        assert!(
+            resolved.is_absolute(),
+            "{} must be absolute so a caller can read it from any directory",
+            resolved.display()
+        );
+        let source = std::fs::read_to_string(&resolved)
+            .unwrap_or_else(|error| panic!("{} must be readable: {error}", resolved.display()));
+        assert!(
+            source
+                .lines()
+                .any(|line| line.trim_start().starts_with(marker)),
+            "{} does not declare `{marker}`",
+            resolved.display()
+        );
+    }
+
+    /// Only a declaration counts, never a mention.
+    ///
+    /// A caller stores its marker as a string literal, so a substring search
+    /// finds the caller too and reports the family as having two homes. That
+    /// turns a working resolver into a false duplication report, so the match
+    /// is anchored at the start of a line.
+    #[test]
+    fn a_marker_quoted_inside_a_line_is_not_a_declaration() {
+        // This very line mentions the marker mid-line, and this file still
+        // resolves as the single declaring home above.
+        let quoted = "pub fn declaring_source_file";
+        assert_eq!(
+            declaring_source_file(quoted),
+            vyre_workspace_root()
+                .join("vyre-test-support")
+                .join("src")
+                .join("monorepo.rs")
+        );
+    }
+
+    /// A marker nothing declares must say so rather than resolve to anything.
+    ///
+    /// Returning a first hit or an empty path would let a roster test derive
+    /// its member set from the wrong file, or from nothing, and still pass.
+    #[test]
+    #[should_panic(expected = "no source file in this workspace declares")]
+    fn a_marker_no_file_declares_is_reported_rather_than_guessed() {
+        let _ = declaring_source_file("pub fn no_such_declaration_exists_anywhere");
+    }
+
+    /// A cargo target remains discoverable when its optional cache tag is absent.
+    ///
+    /// Some host-owned target directories predate cargo's `CACHEDIR.TAG`; cargo
+    /// still writes `.rustc_info.json` at their root. This closes the class where
+    /// a valid cargo-run test cannot allocate a nested fixture solely because
+    /// that optional tag is missing. It does not accept an unmarked directory:
+    /// at least one cargo-owned marker must exist.
+    #[test]
+    fn rustc_info_identifies_a_markerless_cargo_target_directory() {
+        let root = std::env::temp_dir().join(format!(
+            "vyre-markerless-target-directory-{}",
+            std::process::id()
+        ));
+        let executable = root.join("debug").join("deps").join("contract");
+        std::fs::create_dir_all(executable.parent().expect("the fixture has a parent"))
+            .expect("the markerless target fixture must be creatable");
+        std::fs::write(root.join(".rustc_info.json"), b"{}")
+            .expect("the cargo rustc-info marker must be writable");
+
+        assert_eq!(cargo_target_ancestor(&executable), Some(root.clone()));
+
+        std::fs::remove_dir_all(root).expect("the markerless target fixture must be removable");
+    }
+
+    /// An unmarked directory is never guessed to be a cargo target.
+    ///
+    /// Executable layout alone is not proof because arbitrary tools also use
+    /// `debug/deps`. This negative case keeps the fallback tied to cargo-owned
+    /// state rather than widening it to a path-shape heuristic.
+    #[test]
+    fn an_unmarked_debug_deps_layout_is_not_a_cargo_target_directory() {
+        let root = std::env::temp_dir().join(format!(
+            "vyre-unmarked-target-directory-{}",
+            std::process::id()
+        ));
+        let executable = root.join("debug").join("deps").join("contract");
+        std::fs::create_dir_all(executable.parent().expect("the fixture has a parent"))
+            .expect("the unmarked target fixture must be creatable");
+
+        assert_ne!(cargo_target_ancestor(&executable), Some(root.clone()));
+
+        std::fs::remove_dir_all(root).expect("the unmarked target fixture must be removable");
+    }
+
+    /// The nearest cargo-owned marker wins across nested cache directories.
+    ///
+    /// Scratch builds can live below a larger target cache. Returning the outer
+    /// cache would make independent fixtures collide, so this adversarial shape
+    /// pins the nearest-ancestor boundary.
+    #[test]
+    fn the_nearest_cargo_target_marker_owns_the_executable() {
+        let outer = std::env::temp_dir().join(format!(
+            "vyre-nested-target-directory-{}",
+            std::process::id()
+        ));
+        let inner = outer.join("scratch");
+        let executable = inner.join("debug").join("deps").join("contract");
+        std::fs::create_dir_all(executable.parent().expect("the fixture has a parent"))
+            .expect("the nested target fixture must be creatable");
+        std::fs::write(outer.join(".rustc_info.json"), b"{}")
+            .expect("the outer cargo marker must be writable");
+        std::fs::write(
+            inner.join("CACHEDIR.TAG"),
+            b"Signature: 8a477f597d28d172789f06886806bc55",
+        )
+        .expect("the inner cargo marker must be writable");
+
+        assert_eq!(cargo_target_ancestor(&executable), Some(inner));
+
+        std::fs::remove_dir_all(outer).expect("the nested target fixture must be removable");
     }
 }

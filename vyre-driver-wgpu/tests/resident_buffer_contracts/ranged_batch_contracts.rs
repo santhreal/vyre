@@ -3,12 +3,7 @@ use super::*;
 #[test]
 fn wgpu_backend_ranged_batch_upload_updates_multiple_resources() {
     let backend = backend();
-    let first = backend
-        .allocate_resident(16)
-        .expect("WGPU backend must allocate first resident buffer");
-    let second = backend
-        .allocate_resident(16)
-        .expect("WGPU backend must allocate second resident buffer");
+    let (first, second) = alloc_pair(&backend, 16);
     backend
         .upload_resident_many(&[(&first, &[0x10; 16]), (&second, &[0x20; 16])])
         .expect("initial resident uploads must succeed");
@@ -34,23 +29,13 @@ fn wgpu_backend_ranged_batch_upload_updates_multiple_resources() {
         "ranged batch upload must update only the second resource range"
     );
 
-    backend
-        .free_resident(first)
-        .expect("first resident buffer must free cleanly");
-    backend
-        .free_resident(second)
-        .expect("second resident buffer must free cleanly");
+    free_pair(&backend, first, second);
 }
 
 #[test]
 fn wgpu_backend_ranged_batch_download_reads_multiple_resources() {
     let backend = backend();
-    let first = backend
-        .allocate_resident(16)
-        .expect("WGPU backend must allocate first resident buffer");
-    let second = backend
-        .allocate_resident(16)
-        .expect("WGPU backend must allocate second resident buffer");
+    let (first, second) = alloc_pair(&backend, 16);
     backend
         .upload_resident_many(&[
             (&first, &[0, 1, 2, 3, 4, 5, 6, 7]),
@@ -73,12 +58,7 @@ fn wgpu_backend_ranged_batch_download_reads_multiple_resources() {
         "resident ranged batch download must preserve caller scratch capacity"
     );
 
-    backend
-        .free_resident(first)
-        .expect("first resident buffer must free cleanly");
-    backend
-        .free_resident(second)
-        .expect("second resident buffer must free cleanly");
+    free_pair(&backend, first, second);
 }
 
 #[test]

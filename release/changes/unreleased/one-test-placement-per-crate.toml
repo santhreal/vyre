@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Test suites that reach only a crate's public API now live in that crate's tests/ directory. A suite that stays beside the code it exercises states which crate-private item it covers. Shared test fixtures that had been copied per target now have one owner. Test counts are unchanged."

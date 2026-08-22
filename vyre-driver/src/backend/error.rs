@@ -57,7 +57,85 @@ impl ErrorCode {
             Self::Unknown => 1999,
         }
     }
+
+    /// Every variant, ordered by [`Self::stable_id`].
+    ///
+    /// Catalog renderers and conformance tests walk this instead of a
+    /// hand-maintained list. `Self::catalog_index` and the const assertion
+    /// below make a variant that is missing here a compile error rather than
+    /// a silently uncatalogued code.
+    pub const ALL: &'static [Self] = &[
+        Self::DeviceOutOfMemory,
+        Self::UnsupportedFeature,
+        Self::PoisonedLock,
+        Self::KernelCompileFailed,
+        Self::DispatchFailed,
+        Self::InvalidProgram,
+        Self::CooperativeResidencyExceeded,
+        Self::DeviceLost,
+        Self::Unknown,
+    ];
+
+    /// Position of this code in [`Self::ALL`].
+    ///
+    /// Exhaustive on purpose: a new variant must add an arm, and the arm must
+    /// name a position that exists and is not already taken, or the const
+    /// assertion below fails to evaluate.
+    const fn catalog_index(self) -> usize {
+        match self {
+            Self::DeviceOutOfMemory => 0,
+            Self::UnsupportedFeature => 1,
+            Self::PoisonedLock => 2,
+            Self::KernelCompileFailed => 3,
+            Self::DispatchFailed => 4,
+            Self::InvalidProgram => 5,
+            Self::CooperativeResidencyExceeded => 6,
+            Self::DeviceLost => 7,
+            Self::Unknown => 8,
+        }
+    }
+
+    /// One-line description carried into the generated catalog.
+    ///
+    /// Exhaustive for the same reason as `Self::catalog_index`: a new
+    /// variant cannot reach the catalog without a description.
+    #[must_use]
+    pub const fn summary(self) -> &'static str {
+        match self {
+            Self::DeviceOutOfMemory => "Backend device reported insufficient memory.",
+            Self::UnsupportedFeature => "The backend does not support a required feature.",
+            Self::PoisonedLock => {
+                "A lock used by the backend failed to unlock safely, indicating an \
+                 internal synchronization bug in process state."
+            }
+            Self::KernelCompileFailed => "Kernel-source or kernel-binary compilation failed.",
+            Self::DispatchFailed => "Command dispatch or queue submission failed.",
+            Self::InvalidProgram => "The program itself is invalid for this backend.",
+            Self::CooperativeResidencyExceeded => {
+                "A whole-grid-sync launch could not fit every block co-resident on the \
+                 device; the orchestrator falls back loudly to a recall-identical \
+                 non-cooperative path."
+            }
+            Self::DeviceLost => "Acquired device generation was lost or invalidated.",
+            Self::Unknown => {
+                "The backend reported a failure it could not classify, produced by \
+                 BackendError::new. A code that stays Unknown across releases is a \
+                 missing variant, not a category."
+            }
+        }
+    }
 }
+
+const _: () = {
+    let mut index = 0;
+    while index < ErrorCode::ALL.len() {
+        assert!(
+            ErrorCode::ALL[index].catalog_index() == index,
+            "ErrorCode::ALL and ErrorCode::catalog_index disagree"
+        );
+        index += 1;
+    }
+};
 
 /// Actionable backend dispatch failure.
 ///

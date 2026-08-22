@@ -7,11 +7,11 @@ use smallvec::SmallVec;
 use vyre_driver::BackendError;
 
 use super::allocations::cuda_check;
-use super::cuda_graph::{CachedCudaGraph, GraphExecGuard, StreamGuard};
+use super::cuda_graph_lifecycle::{CachedCudaGraph, GraphExecGuard, StreamGuard};
 use super::dispatch::CudaBackend;
 use super::ordering::{classify_dense_permutation, DensePermutationDefect};
 use super::staging_reserve::{reserve_smallvec, reserve_vec, reserved_vec, resize_vec_slots};
-use crate::input_identity::{exact_input_key, ExactInputKey};
+use vyre_driver::input_identity::{exact_input_key, ExactInputKey};
 
 impl CachedCudaGraph {
     pub(crate) fn input_shape_matches(&self, inputs: &[&[u8]]) -> bool {
@@ -302,12 +302,8 @@ impl CudaBackend {
 
     /// Replay a cached CUDA graph with CUDA event timing.
     ///
-    /// Returns `Some(device_ns)` when a kernel was actually dispatched and CUDA
-    /// event timing measured its device execution time.  Returns `None` when the
-    /// materialized output cache was served directly (no kernel launched, no
-    /// device timing available).  Callers must route `None` to
-    /// `timed_dispatches_missing_device_time` rather than treating it as a
-    /// 0-nanosecond measurement.
+    /// Dispatches the graph on the GPU and measures device execution time via
+    /// CUDA timing events. Returns `Some(device_ns)` of measured device time.
     pub(crate) fn dispatch_via_cuda_graph_timed_into(
         &self,
         cached: &mut CachedCudaGraph,
@@ -333,18 +329,13 @@ impl CudaBackend {
         if self.try_cuda_graph_materialized_cache_with_input_state_into(
             cached,
             inputs,
-            &input_state,
+            input_state,
             outputs,
         )? {
-            // Materialized output cache hit: outputs were copied from host-side
-            // cache without launching any kernel.  Zero kernels launched means
-            // the device performed exactly zero work, so report Some(0) -- the
-            // exact, non-fabricated device time for a hit.  None would mean
-            // "device time unknown" and route this to
-            // timed_dispatches_missing_device_time, which is wrong: we know the
-            // device did nothing.  Some(0) also lets the release perf gate see
-            // the cache eliminate device work (0 ns) rather than an ambiguous
-            // missing measurement.
+            // The outputs the graph would produce are already on the host for
+            // exactly these inputs, so the launch is skipped and the device
+            // time it would have measured is zero rather than absent: the
+            // caller still gets a measurement, and it is the true one.
             return Ok(Some(0));
         }
         self.warmup()?;
@@ -389,13 +380,9 @@ impl CudaBackend {
             .elapsed_nanos_u64(started, "timed cuda graph replay wall latency")?;
         self.telemetry
             .record_timed_dispatch(wall_ns, device_ns, None, None);
-        Ok(vyre_driver::TimedDispatchResult {
-            outputs,
-            wall_ns,
-            device_ns,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+        Ok(vyre_driver::TimedDispatchResult::device_timed(
+            outputs, wall_ns, device_ns,
+        ))
     }
 
     /// Convenience wrapper that allocates the output `Vec` internally.
@@ -723,6 +710,8 @@ impl CudaBackend {
     }
 }
 
+// Inline: covers `cached_graph_input`, `validate_cached_graph_input_index_map`,
+// `validate_cached_graph_output_index_map`, which no integration test can name.
 #[cfg(test)]
 mod source_contract_tests {
     use super::{

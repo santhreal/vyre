@@ -1,7 +1,7 @@
 //! Backend-neutral resident-resource reuse telemetry.
 //!
-//! Resident graph reuse is a cross-backend performance invariant, not a CUDA
-//! detail. CUDA planners, WGPU resident caches, and higher-level users need
+//! Resident graph reuse is a cross-backend performance invariant, not one
+//! backend's detail. Backend planners, resident caches, and higher-level users need
 //! to report cold uploads and warm resident reuses with the same vocabulary
 //! so upload pressure can be compared without backend-specific adapters.
 
@@ -227,6 +227,8 @@ impl std::fmt::Display for ResidentGraphReuseTelemetryError {
 
 impl std::error::Error for ResidentGraphReuseTelemetryError {}
 
+// Inline: `vyre_driver::residency` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use super::{ResidentGraphReuseTelemetry, ResidentGraphReuseTelemetryError};

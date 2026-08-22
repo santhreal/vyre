@@ -1,3 +1,5 @@
+use super::*;
+
 // ───────────────────────────────────────────────────────────────────
 // Budget constants
 // ───────────────────────────────────────────────────────────────────
@@ -97,23 +99,6 @@ fn no_op_reinvents_another_registered_op() {
 
     let mut collisions = Vec::new();
 
-    // Known-equivalent op pairs that share IR shape by mathematical
-    // identity, not by accidental copy-paste:
-    //   logical::and ≡ math::algebra::meet  (bitwise AND is the meet
-    //   logical::or  ≡ math::algebra::join   on the boolean lattice)
-    // Both halves are correctly registered under their domain-specific
-    // names so callers can `use` the one that matches their abstraction;
-    // collapsing them to a single op would break boolean-lattice consumers
-    // that read `meet`/`join` semantically.
-    fn known_equivalent_pair(a: &str, b: &str) -> bool {
-        let (lo, hi) = if a < b { (a, b) } else { (b, a) };
-        matches!(
-            (lo, hi),
-            ("vyre-libs::logical::and", "vyre-libs::math::algebra::meet")
-                | ("vyre-libs::logical::or", "vyre-libs::math::algebra::join")
-        )
-    }
-
     for (i, (id_a, fp_a)) in fingerprints.iter().enumerate() {
         for (j, (id_b, fp_b)) in fingerprints.iter().enumerate().skip(i + 1) {
             if fp_a == fp_b {
@@ -127,9 +112,6 @@ fn no_op_reinvents_another_registered_op() {
                     continue;
                 }
                 if same_canonical_generators(&programs[i].1, &programs[j].1) {
-                    continue;
-                }
-                if known_equivalent_pair(id_a, id_b) {
                     continue;
                 }
                 collisions.push(format!(
@@ -158,13 +140,9 @@ fn same_canonical_generators(a: &Program, b: &Program) -> bool {
 fn collect_region_generators<'a>(nodes: &'a [Node], out: &mut Vec<&'a str>) {
     for node in nodes {
         match node {
-            Node::Region {
-                generator,
-                source_region,
-                body,
-            } => {
-                if is_child_composition(source_region.as_ref().map(|r| r.name.as_str())) {
-                    out.push(generator.as_str());
+            Node::Region { body, .. } => {
+                if let Some(generator) = exempt_child_generator(node) {
+                    out.push(generator);
                 }
                 collect_region_generators(body, out);
             }
@@ -189,7 +167,7 @@ fn every_op_has_test_fixtures() {
     let mut missing = Vec::new();
 
     for entry in vyre_libs::operation_catalog::fixture_entries() {
-        // CRITIQUE_CONFORM_2026-04-23 M7: the original gate required
+        // The original gate required
         // BOTH fixtures to be missing before failing. An op that
         // shipped only one half (test_inputs without expected_output
         // or vice versa) passed the gate despite being incomplete,

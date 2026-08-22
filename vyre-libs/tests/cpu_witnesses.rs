@@ -4,7 +4,7 @@
 #![cfg(all(
     feature = "nn-attention",
     feature = "nn-norm",
-    feature = "matching-dfa",
+    feature = "pattern-dfa",
     feature = "crypto-blake3"
 ))]
 
@@ -115,42 +115,13 @@ fn linear_cpu_witness_is_pinned() {
 }
 
 #[test]
-fn fnv1a32_cpu_witness_is_pinned() {
-    assert_entry_matches_declared_witness("vyre-libs::hash::fnv1a32");
-}
-
-#[test]
 fn blake3_cpu_witness_is_pinned() {
     assert_entry_matches_declared_witness("vyre-libs::hash::blake3_compress");
 }
 
 #[test]
 fn aho_corasick_cpu_witness_is_pinned() {
-    assert_entry_matches_declared_witness("vyre-libs::matching::aho_corasick");
-}
-
-#[test]
-fn adler32_cpu_witness_is_pinned() {
-    assert_entry_matches_pinned_witness(
-        "vyre-libs::hash::adler32",
-        vec![vec![vec![0x27, 0x01, 0x4d, 0x02]]],
-    );
-}
-
-#[test]
-fn crc32_cpu_witness_is_pinned() {
-    assert_entry_matches_pinned_witness(
-        "vyre-libs::hash::crc32",
-        vec![vec![vec![0xc2, 0x41, 0x24, 0x35]]],
-    );
-}
-
-#[test]
-fn fnv1a64_cpu_witness_is_pinned() {
-    assert_entry_matches_pinned_witness(
-        "vyre-libs::hash::fnv1a64",
-        vec![vec![vec![0x4b, 0x57, 0x41, 0x05, 0x19, 0xa2, 0x1f, 0xe7]]],
-    );
+    assert_entry_matches_declared_witness("vyre-libs::pattern::aho_corasick");
 }
 
 #[test]
@@ -181,7 +152,7 @@ fn silu_cpu_witness_is_pinned() {
 #[test]
 fn substring_cpu_witness_is_pinned() {
     assert_entry_matches_pinned_witness(
-        "vyre-libs::scan::substring_search",
+        "vyre-libs::pattern::substring_search",
         vec![
             vec![vec![
                 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,

@@ -33,15 +33,15 @@
 //! enough that the back edge is crossed many times per dispatch, since each
 //! crossing is an independent chance for the race.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
-use vyre_primitives::fixpoint::persistent_fixpoint::{
+use vyre_libs::fixpoint::persistent_fixpoint::{
     persistent_fixpoint, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
 };
 

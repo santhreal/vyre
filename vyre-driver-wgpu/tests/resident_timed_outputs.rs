@@ -1,24 +1,29 @@
-//! Resident timed-dispatch output contract tests for the WGPU backend.
+//! Resident timed-dispatch output contracts for the WGPU backend.
+//!
+//! The asynchronous overlap statement is the shared contract in
+//! `tests/support/resident_async_overlap_contract.rs`. The timed readback below
+//! is WGPU's own: it pins that a resident timed dispatch returns exactly the
+//! public read-write outputs and attributes GPU time to the WGPU timestamp query.
+
+#![cfg(feature = "device-tests")]
 
 use vyre_driver::VyreBackend;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
+#[path = "../../tests/support/resident_async_overlap_contract.rs"]
+mod resident_async_overlap_contract;
+use resident_async_overlap_contract::{
+    add_program, assert_resident_async_slots_retire_independently, DeviceTiming,
+};
+
+fn acquire() -> vyre_driver_wgpu::WgpuBackend {
+    vyre_driver_wgpu::WgpuBackend::acquire()
+        .expect("Fix: WGPU resident regression tests require a live GPU backend.")
+}
 
 #[test]
 fn resident_timed_dispatch_returns_public_readwrite_outputs() {
-    let backend = vyre_driver_wgpu::WgpuBackend::acquire()
-        .expect("Fix: WGPU resident-output regression test requires a live GPU backend.");
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-            BufferDecl::storage("input", 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::add(Expr::load("input", Expr::u32(0)), Expr::u32(5)),
-        )],
-    );
+    let backend = acquire();
+    let program = add_program();
 
     let out = backend
         .allocate_resident(4)
@@ -53,78 +58,7 @@ fn resident_timed_dispatch_returns_public_readwrite_outputs() {
     free_input.expect("Fix: WGPU resident input cleanup must succeed.");
 }
 
-/// WHY: resident callers need independent mutable slots to overlap queue work.
-/// Both submissions must stay live before either result is retired, and timed
-/// retirement must preserve device-owned attribution.
 #[test]
 fn resident_async_dispatch_retires_two_independent_slots() {
-    let backend = vyre_driver_wgpu::WgpuBackend::acquire()
-        .expect("Fix: WGPU resident-async regression test requires a live GPU backend.");
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-            BufferDecl::storage("input", 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::add(Expr::load("input", Expr::u32(0)), Expr::u32(5)),
-        )],
-    );
-    let out_a = backend
-        .allocate_resident(4)
-        .expect("Fix: WGPU must allocate the first resident output.");
-    let input_a = backend
-        .allocate_resident(4)
-        .expect("Fix: WGPU must allocate the first resident input.");
-    let out_b = backend
-        .allocate_resident(4)
-        .expect("Fix: WGPU must allocate the second resident output.");
-    let input_b = backend
-        .allocate_resident(4)
-        .expect("Fix: WGPU must allocate the second resident input.");
-
-    let result = (|| {
-        backend.upload_resident(&out_a, &[0; 4])?;
-        backend.upload_resident(&input_a, &37u32.to_le_bytes())?;
-        backend.upload_resident(&out_b, &[0; 4])?;
-        backend.upload_resident(&input_b, &91u32.to_le_bytes())?;
-        let pending_a = backend.dispatch_resident_async(
-            &program,
-            &[out_a.clone(), input_a.clone()],
-            &vyre_driver::DispatchConfig::default(),
-        )?;
-        let pending_b = backend.dispatch_resident_async(
-            &program,
-            &[out_b.clone(), input_b.clone()],
-            &vyre_driver::DispatchConfig::default(),
-        )?;
-
-        let timed_a = pending_a.await_timed_result()?;
-        let timed_b = pending_b.await_timed_result()?;
-        assert_eq!(timed_a.outputs, vec![42u32.to_le_bytes()]);
-        assert_eq!(timed_b.outputs, vec![96u32.to_le_bytes()]);
-        for timed in [timed_a, timed_b] {
-            assert!(
-                timed.device_ns.unwrap_or_default() > 0,
-                "native asynchronous retirement must preserve WGPU timestamp attribution"
-            );
-            assert!(
-                timed.enqueue_ns.is_some() && timed.wait_ns.is_some(),
-                "native asynchronous retirement must separate enqueue and wait time"
-            );
-        }
-        Ok::<(), vyre_driver::BackendError>(())
-    })();
-
-    let free_out_a = backend.free_resident(out_a);
-    let free_input_a = backend.free_resident(input_a);
-    let free_out_b = backend.free_resident(out_b);
-    let free_input_b = backend.free_resident(input_b);
-    result.expect("Fix: both resident async slots must retire with exact outputs.");
-    free_out_a.expect("Fix: first WGPU resident output cleanup must succeed.");
-    free_input_a.expect("Fix: first WGPU resident input cleanup must succeed.");
-    free_out_b.expect("Fix: second WGPU resident output cleanup must succeed.");
-    free_input_b.expect("Fix: second WGPU resident input cleanup must succeed.");
+    assert_resident_async_slots_retire_independently(&acquire(), "WGPU", DeviceTiming::Reported);
 }

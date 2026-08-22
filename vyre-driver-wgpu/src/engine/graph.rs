@@ -1,4 +1,4 @@
-//! GPU-resident dispatch graph execution (Innovation I.14).
+//! GPU-resident dispatch graph execution.
 //!
 //! A graph records many dependent pipeline dispatches into one command buffer
 //! and submits it once. This gives callers one CPU-to-GPU launch while the GPU
@@ -8,7 +8,7 @@ use crate::buffer::GpuBufferHandle;
 use crate::pipeline::compound::CompoundResource;
 use crate::pipeline::WgpuPipeline;
 use smallvec::SmallVec;
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_driver::{BackendError, BatchOutputs, DispatchConfig};
 
 /// A GPU-resident or host-side resource.
 #[derive(Clone)]
@@ -77,10 +77,10 @@ impl GpuDispatchGraph {
     /// # Errors
     ///
     /// Returns a backend error if any pipeline binding, dispatch, or readback
-    /// fails. Empty graphs return an empty output vector.
-    pub fn dispatch(&self, config: &DispatchConfig) -> Result<Vec<Vec<Vec<u8>>>, BackendError> {
+    /// fails. An empty graph returns an empty batch.
+    pub fn dispatch(&self, config: &DispatchConfig) -> Result<BatchOutputs, BackendError> {
         if self.ops.is_empty() {
-            return Ok(Vec::new());
+            return Ok(BatchOutputs::default());
         }
 
         // V7-PERF-021: Zero-copy graph execution (I.14).

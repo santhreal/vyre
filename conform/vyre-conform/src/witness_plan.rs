@@ -43,9 +43,8 @@ impl WitnessInputPlan {
         let mut fixture_index = 0usize;
         for (buffer_index, buffer) in program.buffers().iter().enumerate() {
             if buffer.kind() == MemoryKind::Shared
-                || buffer.is_output()
-                || (buffer.is_pipeline_live_out()
-                    && matches!(buffer.access(), BufferAccess::ReadWrite))
+                || buffer.access() == BufferAccess::Workgroup
+                || buffer.is_backend_allocated_output()
             {
                 continue;
             }
@@ -92,6 +91,19 @@ impl WitnessInputPlan {
     pub fn zeroed_input_count(&self) -> usize {
         self.zeroed_inputs.len()
     }
+
+    /// Program buffer index behind each planned input slice, in stream order.
+    ///
+    /// The adversarial ULP companions rewrite one input at a time and need the
+    /// buffer declaration behind each slice to know its element type. The plan
+    /// skips outputs, shared memory and pipeline live-outs, so a stream
+    /// position is not a `Program::buffers` position.
+    pub fn buffer_indices(&self) -> impl Iterator<Item = usize> + '_ {
+        self.sources.iter().map(|source| match source {
+            WitnessInputSource::Fixture { buffer_index, .. }
+            | WitnessInputSource::ReadWriteOrZero { buffer_index, .. } => *buffer_index,
+        })
+    }
 }
 
 fn fixture_backed_byte_len(buffer: &BufferDecl, role: &str) -> Result<Option<usize>, String> {
@@ -135,9 +147,20 @@ pub fn plan_witness_inputs_into<'a>(
                 buffer_index,
                 byte_len,
             } => {
-                if let Some(bytes) =
-                    matching_fixture_bytes(fixture_inputs, *buffer_index, *fixture_index, *byte_len)
-                {
+                if let Some(bytes) = matching_fixture_bytes(
+                    fixture_inputs,
+                    *buffer_index,
+                    *fixture_index,
+                    plan.sources.len(),
+                ) {
+                    if let Some(expected) = byte_len {
+                        if bytes.len() != *expected {
+                            return Err(format!(
+                                "witness input buffer at fixture index `{fixture_index}` / program index `{buffer_index}` expected {expected} bytes from its static buffer declaration but received {} bytes. Fix: provide exact fixture byte lengths matching the Program declaration.",
+                                bytes.len()
+                            ));
+                        }
+                    }
                     backend_inputs.push(bytes);
                     continue;
                 }
@@ -151,9 +174,20 @@ pub fn plan_witness_inputs_into<'a>(
                 zero_index,
                 byte_len,
             } => {
-                if let Some(bytes) =
-                    matching_fixture_bytes(fixture_inputs, *buffer_index, *fixture_index, *byte_len)
-                {
+                if let Some(bytes) = matching_fixture_bytes(
+                    fixture_inputs,
+                    *buffer_index,
+                    *fixture_index,
+                    plan.sources.len(),
+                ) {
+                    if let Some(expected) = byte_len {
+                        if bytes.len() != *expected {
+                            return Err(format!(
+                                "witness input buffer at fixture index `{fixture_index}` / program index `{buffer_index}` expected {expected} bytes from its static buffer declaration but received {} bytes. Fix: provide exact fixture byte lengths matching the Program declaration.",
+                                bytes.len()
+                            ));
+                        }
+                    }
                     backend_inputs.push(bytes);
                     continue;
                 }
@@ -175,110 +209,34 @@ pub fn plan_witness_inputs_into<'a>(
     Ok(())
 }
 
-fn matching_fixture_bytes<'a>(
-    fixture_inputs: &'a [Vec<u8>],
-    buffer_index: usize,
-    fixture_index: usize,
-    byte_len: Option<usize>,
-) -> Option<&'a [u8]> {
-    if let Some(byte_len) = byte_len {
-        return fixture_inputs
-            .get(buffer_index)
-            .filter(|bytes| bytes.len() == byte_len)
-            .or_else(|| {
-                fixture_inputs
-                    .get(fixture_index)
-                    .filter(|bytes| bytes.len() == byte_len)
-            })
-            .or_else(|| fixture_inputs.get(fixture_index))
-            .or_else(|| fixture_inputs.get(buffer_index))
-            .map(Vec::as_slice);
-    }
-    fixture_inputs
-        .get(fixture_index)
-        .or_else(|| fixture_inputs.get(buffer_index))
-        .map(Vec::as_slice)
+/// Expand logical fixture bytes into owned copies of the planned input stream.
+///
+/// A caller that mutates the stream cannot borrow it from the fixture. The ULP
+/// adversarial companions overwrite every f32 input in place, so they need one
+/// owned buffer per planned slice.
+pub fn plan_witness_inputs_owned_into(
+    fixture_inputs: &[Vec<u8>],
+    plan: &WitnessInputPlan,
+    owned_inputs: &mut Vec<Vec<u8>>,
+) -> Result<(), String> {
+    let mut borrowed = Vec::with_capacity(plan.sources.len());
+    plan_witness_inputs_into(fixture_inputs, plan, &mut borrowed)?;
+    owned_inputs.clear();
+    owned_inputs.reserve(borrowed.len());
+    owned_inputs.extend(borrowed.into_iter().map(<[u8]>::to_vec));
+    Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use vyre::ir::{BufferDecl, DataType, Node};
-
-    #[test]
-    fn witness_input_plan_accepts_fixture_backed_runtime_sized_read_input() {
-        let program = Program::wrapped(
-            vec![
-                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32),
-                BufferDecl::output("out", 1, DataType::U32).with_count(1),
-            ],
-            [1, 1, 1],
-            Vec::<Node>::new(),
-        );
-        let plan = WitnessInputPlan::for_program(&program)
-            .expect("Fix: runtime-sized read-only buffers must be fixture-backed, not rejected.");
-        let case = vec![vec![0xA5; 12]];
-        let mut backend_inputs = Vec::new();
-
-        plan_witness_inputs_into(&case, &plan, &mut backend_inputs)
-            .expect("Fix: concrete fixture bytes must satisfy a runtime-sized input buffer.");
-
-        assert_eq!(
-            backend_inputs,
-            vec![case[0].as_slice()],
-            "Fix: dynamic fixture-backed inputs must be passed through byte-exactly."
-        );
-    }
-
-    #[test]
-    fn witness_input_plan_uses_zeroed_static_read_write_inputs() {
-        let program = Program::wrapped(
-            vec![
-                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(1),
-                BufferDecl::storage("scratch", 1, BufferAccess::ReadWrite, DataType::U32)
-                    .with_count(1),
-            ],
-            [1, 1, 1],
-            Vec::<Node>::new(),
-        );
-        let plan = WitnessInputPlan::for_program(&program)
-            .expect("Fix: static read-write zero-fill planning must succeed.");
-        let case = vec![1u32.to_le_bytes().to_vec()];
-        let mut backend_inputs = Vec::new();
-
-        plan_witness_inputs_into(&case, &plan, &mut backend_inputs)
-            .expect("Fix: static read-write buffers may be omitted and zero-filled.");
-
-        assert_eq!(
-            backend_inputs,
-            vec![case[0].as_slice(), &[0, 0, 0, 0][..]],
-            "Fix: backend dispatch input stream must append zero-filled static read-write buffers."
-        );
-    }
-
-    #[test]
-    fn witness_input_plan_rejects_omitted_runtime_sized_read_write_input() {
-        let program = Program::wrapped(
-            vec![BufferDecl::storage(
-                "scratch",
-                0,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )],
-            [1, 1, 1],
-            Vec::<Node>::new(),
-        );
-        let plan = WitnessInputPlan::for_program(&program)
-            .expect("Fix: dynamic read-write buffers may be fixture-backed per case.");
-        let mut backend_inputs = Vec::new();
-
-        let error = plan_witness_inputs_into(&[], &plan, &mut backend_inputs)
-            .expect_err("Fix: omitted dynamic read-write input must not be silently zeroed.");
-
-        assert!(
-            error.contains("runtime-sized read-write buffer"),
-            "Fix: error must explain that dynamic read-write buffers need concrete fixture bytes, got: {error}"
-        );
-    }
+fn matching_fixture_bytes(
+    fixture_inputs: &[Vec<u8>],
+    buffer_index: usize,
+    fixture_index: usize,
+    total_sources: usize,
+) -> Option<&[u8]> {
+    let index = if fixture_inputs.len() > total_sources {
+        buffer_index
+    } else {
+        fixture_index
+    };
+    fixture_inputs.get(index).map(Vec::as_slice)
 }

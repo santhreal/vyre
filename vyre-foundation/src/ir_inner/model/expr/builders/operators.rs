@@ -1,6 +1,6 @@
 use super::ops::{binary, unary};
 use crate::ir_inner::model::expr::Expr;
-use crate::ir_inner::model::types::{BinOp, UnOp};
+use crate::ir_inner::model::op_signature::{BinOp, UnOp};
 
 macro_rules! binary_builders {
     ($($(#[$meta:meta])* $name:ident => $op:expr;)*) => {
@@ -153,8 +153,8 @@ impl Expr {
     /// Emits `BinOp::SaturatingSub` (wire tag `0x17`) directly so that
     /// canonical fingerprints, optimizer identity rules, and the reference
     /// evaluator all see the same opcode regardless of how the expression was
-    /// constructed. The WGSL lowering (`a - min(a, b)`) is the backend's
-    /// concern, not the IR builder's.
+    /// constructed. How a target spells the clamp is the emitter's concern,
+    /// not the IR builder's.
     #[must_use]
     #[inline]
     pub fn saturating_sub(left: Expr, right: Expr) -> Expr {
@@ -166,8 +166,8 @@ impl Expr {
     ///
     /// Emits `BinOp::SaturatingAdd` (wire tag `0x16`) directly so the builder
     /// form and the direct-opcode form share one canonical fingerprint, the
-    /// same first-class-opcode contract as [`Expr::saturating_sub`]. The WGSL
-    /// lowering (overflow-detect `select`) is the backend's concern.
+    /// same first-class-opcode contract as [`Expr::saturating_sub`]. How a
+    /// target spells the overflow detection is the emitter's concern.
     #[must_use]
     #[inline]
     pub fn saturating_add(left: Expr, right: Expr) -> Expr {

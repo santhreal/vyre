@@ -4,13 +4,13 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::execution_plan::SchedulingPolicy;
 use crate::ir::{BufferAccess, BufferDecl, Ident, Node, Program};
+use crate::visit::any_descendant;
 
 use super::alpha_rename::{multiply_declared_names, push_alpha_renamed_arm_entry_node, ArmRenamer};
 use super::collectors::collect_buffer_targets;
 use super::divergence::{
     has_divergent_invocation_gated_store, has_launch_geometry_dependent_write,
 };
-use super::helpers::{fallback_composition_key, upgrade_buffer_access};
 use super::{
     FusionError, FusionOverDispatchError, FusionSelfAliasingError, FusionWorkgroupGeometryError,
 };
@@ -323,6 +323,7 @@ fn classify_and_merge_arm_buffers(
         }
         if let Some(&idx) = name_to_index.get(&name) {
             let existing = &mut merged_buffers[idx];
+            let initialized_before_use = existing.is_backend_allocated_output();
             let access = buf.access();
             upgrade_buffer_access(existing, &access);
             if buf.count > existing.count {
@@ -330,6 +331,12 @@ fn classify_and_merge_arm_buffers(
             }
             if buf.is_output() {
                 existing.is_output = true;
+                existing.pipeline_live_out = true;
+            }
+            if initialized_before_use && existing.access() == BufferAccess::ReadWrite {
+                // A prior arm produced the storage before a later arm read it.
+                // Keep that first-write fact after access widening so launch
+                // planning allocates the carrier instead of demanding host bytes.
                 existing.pipeline_live_out = true;
             }
         } else {
@@ -415,16 +422,15 @@ fn reject_workgroup_geometry_change(
 }
 
 /// Is there a barrier anywhere in this node sequence?
+///
+/// Descent comes from [`any_descendant`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => false`, and a
+/// barrier hidden inside an unrecognised nesting variant makes a fused arm look
+/// unsynchronized when it is not.
 fn has_barrier(nodes: &[Node]) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Barrier { .. } => true,
-        Node::Region { body, .. } => has_barrier(body),
-        Node::Block(body) | Node::Loop { body, .. } => has_barrier(body),
-        Node::If {
-            then, otherwise, ..
-        } => has_barrier(then) || has_barrier(otherwise),
-        _ => false,
-    })
+    nodes
+        .iter()
+        .any(|node| any_descendant(node, &mut |n| matches!(n, Node::Barrier { .. })))
 }
 
 fn flatten_arm_entries(
@@ -475,4 +481,41 @@ fn reject_overdispatch(fused_workgroup: [u32; 3], max_arm_threads: u64) -> Resul
         fused_threads,
         fix: "split the batch or use per-arm dispatch; axis-wise max exceeds the shared over-dispatch policy",
     }))
+}
+
+pub(super) fn fallback_composition_key(prog: &Program) -> String {
+    let mut hasher = blake3::Hasher::new();
+    for buf in prog.buffers() {
+        hasher.update(buf.name().as_bytes());
+        hasher.update(&[0]);
+    }
+    for dim in prog.workgroup_size() {
+        hasher.update(&dim.to_le_bytes());
+    }
+    hasher.update(&(prog.entry().len() as u64).to_le_bytes());
+    format!("{}", hasher.finalize().to_hex())
+}
+
+/// Upgrade `buffer.access` to the more permissive of the two modes.
+pub(super) fn upgrade_buffer_access(buffer: &mut BufferDecl, other: &BufferAccess) {
+    let current = buffer.access();
+    buffer.access = match (&current, &other) {
+        (BufferAccess::ReadWrite, _)
+        | (_, BufferAccess::ReadWrite)
+        | (BufferAccess::WriteOnly, BufferAccess::ReadOnly | BufferAccess::Uniform)
+        | (BufferAccess::ReadOnly | BufferAccess::Uniform, BufferAccess::WriteOnly) => {
+            BufferAccess::ReadWrite
+        }
+        (BufferAccess::WriteOnly, BufferAccess::WriteOnly) => BufferAccess::WriteOnly,
+        (BufferAccess::Uniform, _) | (_, BufferAccess::Uniform) => BufferAccess::Uniform,
+        (BufferAccess::Workgroup, _) | (_, BufferAccess::Workgroup) => BufferAccess::Workgroup,
+        _ => BufferAccess::ReadOnly,
+    };
+    // Keep kind in sync with the upgraded access.
+    buffer.kind = match buffer.access {
+        BufferAccess::ReadOnly => crate::ir::MemoryKind::Readonly,
+        BufferAccess::Uniform => crate::ir::MemoryKind::Uniform,
+        BufferAccess::Workgroup => crate::ir::MemoryKind::Shared,
+        _ => crate::ir::MemoryKind::Global,
+    };
 }

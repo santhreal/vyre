@@ -1,19 +1,37 @@
 //! Parity test: GPU iterated forward closure matches CPU iterated closure.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_cuda_optimizer_dispatcher, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_cuda_optimizer_dispatcher, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::graph::csr_forward_or_changed::{
+use vyre_libs::graph::csr_forward_or_changed::{
     csr_forward_or_changed_parallel, csr_forward_or_changed_parallel_batch,
-    csr_forward_or_changed_parallel_batch_grid, csr_forward_or_changed_parallel_grid,
+    csr_forward_or_changed_parallel_grid,
 };
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_self_substrate::csr_forward_or_changed::{
-    forward_closure_via_change_flag_gpu, reference_forward_closure_via_change_flag,
-};
+use vyre_libs::graph::dispatch::csr_forward_or_changed::forward_closure_via_change_flag_gpu;
+
+const fn csr_forward_or_changed_parallel_batch_grid(node_count: u32, query_count: u32) -> [u32; 3] {
+    let [groups, _, _] = csr_forward_or_changed_parallel_grid(node_count);
+    [groups, if query_count == 0 { 1 } else { query_count }, 1]
+}
+fn reference_forward_closure_via_change_flag(
+    inputs: CsrClosureInputs<'_>,
+    seed: &[u32],
+) -> Vec<u32> {
+    vyre_reference::composition_witness::csr_forward_or_changed_closure_witness(
+        inputs.graph.node_count,
+        inputs.graph.edge_offsets,
+        inputs.graph.edge_targets,
+        inputs.graph.edge_kind_mask,
+        seed,
+        inputs.allow_mask,
+        inputs.max_iters,
+    )
+}
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 fn set_bit(words: &mut [u32], node: u32) {
     let word = (node / 32) as usize;
@@ -31,10 +49,33 @@ fn assert_forward_closure_matches(
     allow: u32,
     max_iters: u32,
 ) -> Vec<u32> {
-    let cpu = reference_forward_closure_via_change_flag(n, off, tgt, msk, seed, allow, max_iters);
+    let cpu = reference_forward_closure_via_change_flag(
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: n,
+                edge_offsets: off,
+                edge_targets: tgt,
+                edge_kind_mask: msk,
+            },
+            allow_mask: allow,
+            max_iters,
+        },
+        seed,
+    );
     with_cuda_optimizer_dispatcher(label, |dispatcher| {
         let gpu = forward_closure_via_change_flag_gpu(
-            dispatcher, n, off, tgt, msk, seed, allow, max_iters,
+            dispatcher,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: n,
+                    edge_offsets: off,
+                    edge_targets: tgt,
+                    edge_kind_mask: msk,
+                },
+                allow_mask: allow,
+                max_iters,
+            },
+            seed,
         )
         .expect("dispatch");
         assert_eq!(gpu, cpu, "{label}: closure divergence");

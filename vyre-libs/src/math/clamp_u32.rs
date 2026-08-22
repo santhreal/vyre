@@ -9,92 +9,64 @@
 //!
 //! CPU reference: `u32::clamp` bit-exact.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{DataType, Expr, Program};
 
 const OP_ID: &str = "vyre-libs::math::clamp_u32";
 
 /// Map `out[i] = input[i].clamp(lo[i], hi[i])` over n elements.
 #[must_use]
 pub fn clamp_u32(input: &str, lo: &str, hi: &str, out: &str, n: u32) -> Program {
-    let body = vec![crate::region::wrap_anonymous(
+    ElementwiseComposer::ternary(
         OP_ID,
-        vec![
-            Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(n)),
-                vec![Node::store(
-                    out,
-                    Expr::var("idx"),
-                    Expr::min(
-                        Expr::max(
-                            Expr::load(input, Expr::var("idx")),
-                            Expr::load(lo, Expr::var("idx")),
-                        ),
-                        Expr::load(hi, Expr::var("idx")),
-                    ),
-                )],
-            ),
-        ],
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage(lo, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage(hi, 2, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::output(out, 3, DataType::U32).with_count(n),
-        ],
-        [64, 1, 1],
-        body,
+        input,
+        lo,
+        hi,
+        DataType::U32,
+        out,
+        DataType::U32,
+        n,
+        |x, l, h| Expr::min(Expr::max(x, l), h),
     )
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| clamp_u32("input", "lo", "hi", "out", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || clamp_u32("input", "lo", "hi", "out", 4),
+        Some(|| {
             let input = [0u32, 5, 10, u32::MAX];
             let lo = [3u32, 3, 3, 100];
             let hi = [8u32, 8, 8, 200];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&input), to_bytes(&lo), to_bytes(&hi)]]
         }),
-        expected_output: Some(|| {
-            // u32::clamp per-element. The 4th lane (u32::MAX) clamps
-            // down to hi=200; the first three clamp up to lo=3 or
-            // pass through unchanged.
-            let expected = [3u32, 5, 8, 200];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+        Some(|| {
+            // [3, 5, 8, 200]
+            vec![vec![vec![
+                0x03, 0x00, 0x00, 0x00, // 3
+                0x05, 0x00, 0x00, 0x00, // 5
+                0x08, 0x00, 0x00, 0x00, // 8
+                0xc8, 0x00, 0x00, 0x00, // 200
+            ]]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_u32;
 
-    fn run(input: &[u32], lo: &[u32], hi: &[u32]) -> Vec<u32> {
-        let n = input.len() as u32;
-        let program = clamp_u32("input", "lo", "hi", "out", n.max(1));
-        let to_bytes = vyre_primitives::wire::pack_u32_slice;
-        let inputs = vec![
-            Value::Bytes(to_bytes(input).into()),
-            Value::Bytes(to_bytes(lo).into()),
-            Value::Bytes(to_bytes(hi).into()),
-            Value::Bytes(vec![0u8; (n.max(1) * 4) as usize].into()),
-        ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: clamp_u32 must run; restore this invariant before continuing.");
-        let raw = outputs[0].to_bytes();
-        vyre_primitives::wire::decode_u32_le_bytes_all(&raw)
+    fn clamped(input: &[u32], lo: &[u32], hi: &[u32]) -> Vec<u32> {
+        let n = (input.len() as u32).max(1);
+        eval_u32(
+            "clamp_u32",
+            &clamp_u32("input", "lo", "hi", "out", n),
+            &[input, lo, hi],
+            n as usize,
+        )
     }
 
     #[test]
@@ -102,7 +74,7 @@ mod tests {
         let input = [0u32, 5, 10, u32::MAX];
         let lo = [3u32, 3, 3, 100];
         let hi = [8u32, 8, 8, 200];
-        let got = run(&input, &lo, &hi);
+        let got = clamped(&input, &lo, &hi);
         let expected: Vec<u32> = input
             .iter()
             .zip(lo.iter())
@@ -117,6 +89,6 @@ mod tests {
         let input = [5u32];
         let lo = [0u32];
         let hi = [10u32];
-        assert_eq!(run(&input, &lo, &hi), vec![5]);
+        assert_eq!(clamped(&input, &lo, &hi), vec![5]);
     }
 }

@@ -1,12 +1,12 @@
 //! Generated live CUDA parity for resident adaptive sparse-queue traversal.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::live_dispatcher;
-use vyre_driver_cuda::{CudaBackend, CudaOptimizerDispatcher};
-use vyre_self_substrate::adaptive_traverse::{
+use harness::{frontier_has_node, live_dispatcher, mix32_value, set_frontier_node};
+use vyre_driver_cuda::{CudaBackend, CudaProgramDispatcher};
+use vyre_libs::graph::dispatch::adaptive_traverse::{
     adaptive_traverse_resident_sparse_queue_step_with_scratch_into,
     upload_resident_adaptive_sparse_queue_graph, AdaptiveTraversalPlanCacheSnapshot,
     AdaptiveTraversalResidentScratch,
@@ -18,7 +18,7 @@ const ALLOW_MASKS: [u32; 8] = [0, 1, 2, 4, 3, 5, 6, 7];
 #[test]
 fn generated_resident_adaptive_sparse_queue_atomic_matrix_matches_csr_oracle_on_live_cuda() {
     let backend = live_dispatcher();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     run_generated_sparse_queue_matrix(&backend, &dispatcher, 512, "atomic-node-scan", 3);
 }
@@ -26,14 +26,14 @@ fn generated_resident_adaptive_sparse_queue_atomic_matrix_matches_csr_oracle_on_
 #[test]
 fn generated_resident_adaptive_sparse_queue_word_prefix_matrix_matches_csr_oracle_on_live_cuda() {
     let backend = live_dispatcher();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     run_generated_sparse_queue_matrix(&backend, &dispatcher, 8_193, "word-prefix", 4);
 }
 
 fn run_generated_sparse_queue_matrix(
     backend: &CudaBackend,
-    dispatcher: &CudaOptimizerDispatcher<'_>,
+    dispatcher: &CudaProgramDispatcher<'_>,
     node_count: u32,
     materializer_name: &str,
     kernels_per_case: u64,
@@ -157,23 +157,23 @@ fn generated_sparse_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
 
 fn generated_frontier(node_count: u32, case_index: u32) -> Vec<u32> {
     let mut frontier = vec![0_u32; bitset_words(node_count) as usize];
-    let salt = mix32(case_index ^ node_count.rotate_left(7));
+    let salt = mix32_value(case_index ^ node_count.rotate_left(7));
     let period = 19 + (case_index % 29);
     for node in 0..node_count {
-        let h = mix32(node.wrapping_mul(0x9e37_79b1) ^ salt);
+        let h = mix32_value(node.wrapping_mul(0x9e37_79b1) ^ salt);
         if h % period == 0 {
-            set_node(&mut frontier, node);
+            set_frontier_node(&mut frontier, node);
         }
     }
-    set_node(&mut frontier, salt % node_count);
+    set_frontier_node(&mut frontier, salt % node_count);
     if case_index % 16 == 0 {
-        set_node(&mut frontier, 0);
+        set_frontier_node(&mut frontier, 0);
     }
     if case_index % 31 == 0 {
-        set_node(&mut frontier, node_count - 1);
+        set_frontier_node(&mut frontier, node_count - 1);
     }
     if node_count > 32 && case_index % 17 == 0 {
-        set_node(&mut frontier, 32);
+        set_frontier_node(&mut frontier, 32);
     }
     frontier
 }
@@ -195,25 +195,9 @@ fn csr_sparse_queue_oracle(
         let edge_end = edge_offsets[src as usize + 1] as usize;
         for edge_index in edge_start..edge_end {
             if edge_kind_mask[edge_index] & allow_mask != 0 {
-                set_node(&mut out, edge_targets[edge_index]);
+                set_frontier_node(&mut out, edge_targets[edge_index]);
             }
         }
     }
     out
-}
-
-fn frontier_has_node(frontier: &[u32], node: u32) -> bool {
-    frontier[node as usize / 32] & (1_u32 << (node & 31)) != 0
-}
-
-fn set_node(frontier: &mut [u32], node: u32) {
-    frontier[node as usize / 32] |= 1_u32 << (node & 31);
-}
-
-fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7feb_352d);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846c_a68b);
-    value ^ (value >> 16)
 }

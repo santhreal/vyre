@@ -1,17 +1,18 @@
 //! Multi-block word-prefix CUDA parity for resident CSR frontier queues.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, live_backend};
-use vyre_driver_cuda::{CudaBackend, CudaOptimizerDispatcher};
-use vyre_primitives::bitset::bitset_words;
-use vyre_primitives::graph::csr_frontier_queue::{
-    csr_queue_forward_traverse_cpu, frontier_to_queue_cpu,
+use harness::{bytes_u32, live_backend, mix32_value, set_frontier_node};
+use vyre_driver_cuda::{CudaBackend, CudaProgramDispatcher};
+use vyre_libs::bitset::bitset_words;
+use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
+    resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
 };
-use vyre_self_substrate::csr_frontier_queue_resident::{
-    run_resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
+use vyre_reference::composition_witness::{
+    csr_queue_strided_forward_witness as csr_queue_forward_traverse_cpu,
+    frontier_to_queue_witness as frontier_to_queue_cpu,
 };
 
 const NODE_COUNT: u32 = 32_897;
@@ -23,7 +24,7 @@ const ALLOW_MASKS: [u32; 8] = [0, 1, 2, 4, 3, 5, 6, 7];
 #[test]
 fn generated_resident_csr_queue_word_prefix_multiblock_matches_cpu_oracle_on_live_cuda() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     assert!(
         bitset_words(NODE_COUNT) > 1024,
         "Fix: this test must exercise more than one word-prefix scan block."
@@ -56,7 +57,7 @@ fn generated_resident_csr_queue_word_prefix_multiblock_matches_cpu_oracle_on_liv
             allow_mask,
         );
 
-        run_resident_csr_queue_query_into(
+        resident_csr_queue_query_into(
             &dispatcher,
             &graph,
             &mut scratch,
@@ -116,7 +117,7 @@ fn assert_multi_case_telemetry(backend: &CudaBackend) {
 #[test]
 fn generated_resident_csr_queue_many_block_word_prefix_uses_block_offset_scan_on_live_cuda() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     assert!(
         bitset_words(MANY_BLOCK_NODE_COUNT) > 8 * 1024,
         "Fix: this test must exercise the many-block word-prefix offset-scan path."
@@ -149,7 +150,7 @@ fn generated_resident_csr_queue_many_block_word_prefix_uses_block_offset_scan_on
             allow_mask,
         );
 
-        run_resident_csr_queue_query_into(
+        resident_csr_queue_query_into(
             &dispatcher,
             &graph,
             &mut scratch,
@@ -211,35 +212,23 @@ fn generated_csr_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
 
 fn generated_frontier(node_count: u32, case_index: u32) -> Vec<u32> {
     let mut frontier = vec![0_u32; bitset_words(node_count) as usize];
-    let salt = mix32(case_index ^ node_count.rotate_left(11));
+    let salt = mix32_value(case_index ^ node_count.rotate_left(11));
     let period = 23 + (case_index % 37);
     for node in 0..node_count {
-        let h = mix32(node.wrapping_mul(0x85eb_ca6b) ^ salt);
+        let h = mix32_value(node.wrapping_mul(0x85eb_ca6b) ^ salt);
         if h % period == 0 {
-            set_node(&mut frontier, node);
+            set_frontier_node(&mut frontier, node);
         }
     }
-    set_node(&mut frontier, salt % node_count);
+    set_frontier_node(&mut frontier, salt % node_count);
     if case_index % 19 == 0 {
-        set_node(&mut frontier, 0);
+        set_frontier_node(&mut frontier, 0);
     }
     if case_index % 23 == 0 {
-        set_node(&mut frontier, 32_768);
+        set_frontier_node(&mut frontier, 32_768);
     }
     if case_index % 29 == 0 {
-        set_node(&mut frontier, node_count - 1);
+        set_frontier_node(&mut frontier, node_count - 1);
     }
     frontier
-}
-
-fn set_node(frontier: &mut [u32], node: u32) {
-    frontier[node as usize / 32] |= 1_u32 << (node & 31);
-}
-
-fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7feb_352d);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846c_a68b);
-    value ^ (value >> 16)
 }

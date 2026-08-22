@@ -25,20 +25,19 @@
 //! caller is responsible for the fixpoint loop, which is the same
 //! contract every other reachability primitive in this module honours.
 
+use crate::graph::program_graph::ProgramGraphShape;
+use crate::predicate::edge_kind;
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
-use vyre_spec::{
-    analysis::AnalysisFactKind,
-    soundness::{DynamicPrimitiveSoundness, Soundness},
-};
+#[cfg(test)]
+use vyre_spec::soundness::DynamicPrimitiveSoundness;
+use vyre_spec::{analysis::AnalysisFactKind, soundness::Soundness};
 
 #[cfg(test)]
 use vyre_spec::soundness::{validate_dynamic_pipeline, PrecisionContract};
 
-#[cfg(test)]
-use crate::security::flow_composition::sanitized_dataflow_hit_cpu_ref;
-use crate::security::flow_composition::sanitized_dataflow_hit_program;
+use crate::security::flow_composition::{
+    security_flow_program, SanitizerProjection, SecurityFlowOptions, SinkProjection,
+};
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::flows_to_with_sanitizer";
 /// Stable primitive id for a converged sanitizer-gated source-to-sink fixpoint.
@@ -109,6 +108,7 @@ impl SanitizedFlowExecutionMode {
 
 impl SanitizedFlowSoundnessContract {
     /// Convert this contract into serializable primitive evidence for findings.
+    #[cfg(test)]
     #[must_use]
     pub fn primitive_soundness(&self) -> DynamicPrimitiveSoundness {
         let evidence = DynamicPrimitiveSoundness::new(self.op_id, self.soundness);
@@ -175,6 +175,7 @@ pub fn sanitized_flow_final_soundness_contract(
 ///
 /// Returns [`SanitizedFlowContractViolation`] when `mode` is not a converged
 /// fixpoint.
+#[cfg(test)]
 pub fn sanitized_flow_final_finding_soundness(
     mode: SanitizedFlowExecutionMode,
 ) -> Result<DynamicPrimitiveSoundness, SanitizedFlowContractViolation> {
@@ -203,87 +204,61 @@ pub fn flows_to_with_sanitizer(
     hits_buf: &str,
     out_scalar_buf: &str,
 ) -> Program {
-    sanitized_dataflow_hit_program(
+    security_flow_program(SecurityFlowOptions::sanitized_hit(
         OP_ID,
         shape,
         source_buf,
-        sink_buf,
-        sanitizer_buf,
-        clean_buf,
         reach_buf,
-        alive_buf,
-        hits_buf,
-        out_scalar_buf,
-    )
+        SanitizerProjection {
+            sanitizer: sanitizer_buf,
+            clean: clean_buf,
+            alive: alive_buf,
+        },
+        SinkProjection {
+            sink: sink_buf,
+            hits: hits_buf,
+            out_scalar: out_scalar_buf,
+        },
+    ))
 }
 
-/// CPU oracle: full one-step semantic for differential testing
-/// against the GPU emit.
-#[must_use]
 #[cfg(test)]
-pub(crate) fn cpu_ref(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    source: &[u32],
-    sink: &[u32],
-    sanitizer: &[u32],
-) -> u32 {
-    sanitized_dataflow_hit_cpu_ref(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        source,
-        sink,
-        sanitizer,
-    )
+pub(crate) use crate::security::flow_composition::sanitized_dataflow_hit_cpu_ref as cpu_ref;
+
+pub(crate) fn flows_to_with_sanitizer_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
+    let to_bytes = vyre_primitives::wire::pack_u32_slice;
+    vec![vec![
+        to_bytes(&[0b0001]),        // source = {0}
+        to_bytes(&[0b0000]),        // sanitizer = {}
+        to_bytes(&[0, 0, 0, 0]),    // pg_nodes
+        to_bytes(&[0, 1, 2, 3, 3]), // pg_edge_offsets
+        to_bytes(&[1, 2, 3]),       // pg_edge_targets
+        to_bytes(&[
+            edge_kind::ASSIGNMENT,
+            edge_kind::ASSIGNMENT,
+            edge_kind::ASSIGNMENT,
+        ]), // pg_edge_kind_mask
+        to_bytes(&[0, 0, 0, 0]),    // pg_node_tags
+        to_bytes(&[0b0001]),        // reach = {0}
+        to_bytes(&[0b0010]),        // sink = {1}
+    ]]
 }
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| flows_to_with_sanitizer(ProgramGraphShape::new(4, 3), "source", "sink", "sanitizer", "clean", "reach", "alive", "hits", "out_scalar")),
-        test_inputs: Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            vec![vec![
-                to_bytes(&[0b0001]),              // source = {0}
-                to_bytes(&[0b0000]),              // sanitizer = {}
-                to_bytes(&[0b0001]),              // clean = {0}
-                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
-                to_bytes(&[0, 1, 2, 3, 3]),       // pg_edge_offsets
-                to_bytes(&[1, 2, 3]),             // pg_edge_targets
-                to_bytes(&[
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                ]),                               // pg_edge_kind_mask
-                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
-                to_bytes(&[0b0001]),              // reach = {0}
-                to_bytes(&[0b0000]),              // alive
-                to_bytes(&[0b0010]),              // sink = {1}
-                to_bytes(&[0b0000]),              // hits
-                to_bytes(&[0b0000]),              // out_scalar
-            ]]
-        }),
-        expected_output: Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            vec![vec![
-                to_bytes(&[0b0001]),              // clean = {0}
-                to_bytes(&[0b0011]),              // reach = {0,1}
-                to_bytes(&[0b0011]),              // alive = {0,1}
-                to_bytes(&[0b0010]),              // hits = {1}
-                to_bytes(&[0b0001]),              // out_scalar = 1
-            ]]
-        }),
-        category: Some("security"),
-    }
+pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_CLEAN_BYTES: [u8; 4] = [1, 0, 0, 0];
+pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_REACH_BYTES: [u8; 4] = [3, 0, 0, 0];
+pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_ALIVE_BYTES: [u8; 4] = [3, 0, 0, 0];
+pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_HITS_BYTES: [u8; 4] = [2, 0, 0, 0];
+pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES: [u8; 4] = [1, 0, 0, 0];
+
+#[cfg(test)]
+pub(crate) fn flows_to_with_sanitizer_fixture_expected() -> Vec<Vec<Vec<u8>>> {
+    vec![vec![
+        EXPECTED_FLOWS_TO_WITH_SANITIZER_CLEAN_BYTES.to_vec(),
+        EXPECTED_FLOWS_TO_WITH_SANITIZER_REACH_BYTES.to_vec(),
+        EXPECTED_FLOWS_TO_WITH_SANITIZER_ALIVE_BYTES.to_vec(),
+        EXPECTED_FLOWS_TO_WITH_SANITIZER_HITS_BYTES.to_vec(),
+        EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES.to_vec(),
+    ]]
 }
 
 #[cfg(test)]
@@ -294,6 +269,20 @@ mod tests {
         AnalysisSourceSpan, FactId, FactKind, SourceToSinkFindingRequest,
     };
     use crate::security::flow_composition::linear_dataflow;
+
+    #[test]
+    fn test_flows_to_with_sanitizer_expected_bytes_identity() {
+        assert_eq!(
+            flows_to_with_sanitizer_fixture_expected(),
+            vec![vec![
+                EXPECTED_FLOWS_TO_WITH_SANITIZER_CLEAN_BYTES.to_vec(),
+                EXPECTED_FLOWS_TO_WITH_SANITIZER_REACH_BYTES.to_vec(),
+                EXPECTED_FLOWS_TO_WITH_SANITIZER_ALIVE_BYTES.to_vec(),
+                EXPECTED_FLOWS_TO_WITH_SANITIZER_HITS_BYTES.to_vec(),
+                EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES.to_vec(),
+            ]]
+        );
+    }
 
     #[test]
     fn sanitizer_flow_contract_labels_one_step_and_external_fixpoint_distinctly() {

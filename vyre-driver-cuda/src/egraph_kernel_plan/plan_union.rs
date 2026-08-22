@@ -3,9 +3,9 @@ use crate::backend::staging_reserve::reserved_typed_vec;
 use rustc_hash::FxHashMap;
 use vyre_foundation::optimizer::eqsat_gpu::Equivalence;
 
-use super::helpers::usize_to_u64;
+use super::launch_waves::usize_to_u64;
 use super::{
-    helpers::{ceil_div_u64, wave_count_for},
+    launch_waves::{ceil_div_u64, wave_count_for},
     CudaEGraphCanonicalRewrite, CudaEGraphCanonicalRewriteDeviceImage,
     CudaEGraphKernelLaunchConfig, CudaEGraphKernelPlanError, CudaEGraphUnionCompactionPass,
     CudaEGraphUnionCompactionPlan, CudaEGraphUnionCompactionWave,

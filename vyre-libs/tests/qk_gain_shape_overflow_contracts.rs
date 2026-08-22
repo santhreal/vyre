@@ -2,7 +2,7 @@
 
 #![cfg(feature = "nn-attention")]
 
-use vyre_libs::nn::attention::qk_gain::qk_gain;
+use vyre_libs::nn::attention::qk_gain;
 
 fn rejected_shape_message(num_heads: u32, seq_len: u32, head_dim: u32) -> String {
     let program = qk_gain("q_in", "q_out", "gain", num_heads, seq_len, head_dim);

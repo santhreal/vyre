@@ -18,7 +18,7 @@
 //! to validate a proposed “run treatment before outcome” ordering.
 use crate::ir::{BufferDecl, Expr, Node};
 use crate::ir_inner::model::program::Program;
-use crate::optimizer::{registered_passes, OptimizerError, ProgramPassKind};
+use crate::optimizer::{registered_passes, AdapterCaps, OptimizerError, ProgramPassKind};
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::OnceLock;
 
@@ -37,6 +37,15 @@ pub struct PassScheduler {
     /// so tests and diagnostics still surface `UnsatisfiedRequirement`.
     requirements_prevalidated: bool,
     max_iterations: usize,
+    /// Device facts every pass in this scheduler compiles against.
+    ///
+    /// A scheduler built without one carries [`AdapterCaps::conservative`],
+    /// which states "no adapter was supplied" at the place that decided it.
+    /// The passes themselves must not choose: a pass that picks a profile
+    /// inside its own `transform` compiles for a device nobody named, which
+    /// is what `decode_scan_fuse` and `autotune` did for every program that
+    /// ever went through the standard pipeline.
+    adapter: AdapterCaps,
     invalidation_adjacency_cache: OnceLock<Vec<u32>>,
     invalidation_closure_cache: OnceLock<FxHashMap<&'static str, FxHashSet<&'static str>>>,
     /// Tag → pass indices that should be re-marked dirty when the tag is
@@ -212,15 +221,6 @@ pub struct PassRunMetric {
     /// Analyses/capability tags this pass declares invalid when it lands a
     /// rewrite.
     pub declared_invalidations: &'static [&'static str],
-    /// Whether the scheduler-owned fact substrate was reused for this dirty
-    /// pass analysis.
-    pub fact_substrate_reused: bool,
-    /// Whether the scheduler-owned fact substrate was recomputed for this
-    /// dirty pass analysis.
-    pub fact_substrate_recomputed: bool,
-    /// Whether this pass landed a rewrite and invalidated the scheduler-owned
-    /// fact substrate.
-    pub fact_substrate_invalidated: bool,
     /// Program effect-row bits before the pass when effect-handler
     /// enforcement is enabled; otherwise zero.
     pub effect_bits_before: u32,
@@ -400,7 +400,18 @@ fn estimate_node_allocations(node: &Node, estimate: &mut IrAllocationEstimate) {
         | Node::AsyncWait { .. }
         | Node::Resume { .. }
         | Node::Return
-        | Node::Barrier { .. } => {}
+        | Node::Barrier { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. } => {}
+        Node::TileElementwise { body, .. } => {
+            estimate.add_container::<Node>(body.len());
+            for node in body {
+                estimate_node_allocations(node, estimate);
+            }
+        }
     }
 }
 
@@ -510,6 +521,7 @@ impl PassScheduler {
             execution_order,
             requirements_prevalidated: true,
             max_iterations: DEFAULT_MAX_ITERATIONS,
+            adapter: AdapterCaps::conservative(),
             invalidation_adjacency_cache: OnceLock::new(),
             invalidation_closure_cache: OnceLock::new(),
             dirty_trigger_index_cache: OnceLock::new(),
@@ -636,4 +648,5 @@ mod research_trace_contract_tests {
 }
 
 #[cfg(test)]
+#[path = "../../../tests/internal/optimizer/scheduler/mod.rs"]
 mod tests;

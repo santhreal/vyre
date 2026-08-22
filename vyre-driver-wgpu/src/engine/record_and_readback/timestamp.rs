@@ -1,6 +1,7 @@
 use super::pool_backend_error;
 use crate::buffer::{BufferPool, GpuBufferHandle};
 use crate::numeric::WGPU_NUMERIC;
+use crate::runtime::readback_ring::MapResult;
 use crossbeam_channel::Receiver;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -8,8 +9,6 @@ use std::sync::{
 };
 use std::time::Instant;
 use vyre_driver::BackendError;
-
-type MapResult = Result<(), wgpu::BufferAsyncError>;
 
 const TIMESTAMP_QUERY_COUNT: u32 = 4;
 const TIMESTAMP_READBACK_BYTES: u64 = 32;
@@ -83,6 +82,29 @@ impl TimestampRecorder {
             host_upload_us,
             timestamp_period_ns: queue.get_timestamp_period(),
         }))
+    }
+
+    /// Query indices that bracket the compute pass itself.
+    ///
+    /// Queries 0 and 1 are the device-side pass boundary; 2 and 3 are the host
+    /// bracket written into the encoder. Every recording path used to spell the
+    /// pair out, so the query layout was decided in four places.
+    pub(crate) fn pass_writes(&self) -> wgpu::ComputePassTimestampWrites<'_> {
+        wgpu::ComputePassTimestampWrites {
+            query_set: &self.query_set,
+            beginning_of_pass_write_index: Some(0),
+            end_of_pass_write_index: Some(1),
+        }
+    }
+
+    /// Close the host bracket around a fully recorded encoder and resolve.
+    pub(crate) fn finish_and_resolve(
+        &self,
+        encoder: &mut wgpu::CommandEncoder,
+    ) -> Result<(), BackendError> {
+        encoder.write_timestamp(&self.query_set, 2);
+        encoder.write_timestamp(&self.query_set, 3);
+        self.resolve(encoder)
     }
 
     pub(crate) fn resolve(&self, encoder: &mut wgpu::CommandEncoder) -> Result<(), BackendError> {

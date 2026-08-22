@@ -1,12 +1,10 @@
-fn main() {
-    let manifest = external_backend_extension::manifest();
-    let wire = external_backend_extension::probe_wire()
-        .unwrap_or_else(|error| panic!("Fix: external backend probe must encode: {error}"));
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let words = external_backend_extension::dispatch_probe(&[1, 2, 3, 4])?;
+    let backend = vyre_driver::acquire(external_backend_extension::BACKEND_ID)?;
     println!(
-        "{} {} targets {}; probe wire bytes={}",
-        manifest.id,
-        manifest.version,
-        manifest.target,
-        wire.len()
+        "acquired {} {} out of tree; probe output {words:?}",
+        backend.id(),
+        backend.version()
     );
+    Ok(())
 }

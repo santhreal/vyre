@@ -4,9 +4,9 @@ use std::collections::{BTreeMap, HashSet};
 use std::sync::LazyLock;
 
 use vyre::compiler::{
-    self, compile_selected_modules, CompileRequest, Digest, EmittedTargetModule, ExternalFacts,
-    SearchBudget, TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat,
-    TargetProfile,
+    self, compile_selected_modules, CompileRequest, DeviceFacts, Digest, EmittedTargetModule,
+    ExternalFacts, SearchBudget, TargetCompileError, TargetCompiler, TargetPayload,
+    TargetPayloadFormat, TargetProfile,
 };
 use vyre::ir::{BufferDecl, DataType, Expr, Node, OpId, Program, ProgramGraph};
 use vyre_driver::{BackendError, BackendRegistration};
@@ -51,10 +51,7 @@ impl TargetCompiler for ExternalTargetCompiler {
         &self.profile
     }
 
-    fn compile(
-        &self,
-        artifact: &compiler::Artifact,
-    ) -> Result<TargetPayload, TargetCompileError> {
+    fn compile(&self, artifact: &compiler::Artifact) -> Result<TargetPayload, TargetCompileError> {
         compile_selected_modules(
             artifact,
             self.format.clone(),
@@ -108,39 +105,54 @@ inventory::submit! {
     }
 }
 
-fn main() {
-    let operation = OperationRegistry::global()
-        .get(OPERATION_ID)
-        .expect("linked extension operation");
-    let program = operation.program().expect("neutral operation body");
-    let graph = ProgramGraph::from_program("extension", program).expect("valid extension graph");
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let operation = OperationRegistry::global().get(OPERATION_ID).ok_or_else(|| {
+        format!("{OPERATION_ID} is not in the global operation registry. Fix: keep the `inventory::submit!` registration in this binary; a linker that drops the section drops the operation with it.")
+    })?;
+    let program = operation.program().ok_or_else(|| {
+        format!("{OPERATION_ID} carries no neutral body. Fix: give the registration a program builder so a backend has IR to compile.")
+    })?;
+    let graph = ProgramGraph::from_program("extension", program)
+        .map_err(|error| format!("{OPERATION_ID} does not form a program graph: {error}"))?;
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
         1_000_000,
     )
     .validate()
-    .expect("valid extension compile request");
-    let artifact = compiler::compile(&request).expect("neutral extension artifact");
-    let target = vyre_driver::backend::backend_registration(TARGET_NAME)
-        .expect("linked extension target");
-    let compiler = target.target_compiler().expect("extension target compiler");
-    let envelope =
-        compiler::attach_target(artifact, compiler.as_ref()).expect("authenticated target payload");
+    .map_err(|error| format!("the extension compile request is invalid: {error}"))?;
+    let artifact = compiler::compile(&request)
+        .map_err(|error| format!("the extension program did not compile: {error}"))?;
+    let target = vyre_driver::backend_registration(TARGET_NAME).map_err(|error| {
+        format!("{TARGET_NAME} is not a usable registered backend: {error}. Fix: keep the `BackendRegistration` submission in this binary.")
+    })?;
+    let compiler = target.target_compiler().map_err(|error| {
+        format!("{TARGET_NAME} exposes no target compiler: {error}. Fix: set `target_compiler` in its `BackendRegistration`.")
+    })?;
+    let envelope = compiler::attach_target(artifact, compiler.as_ref())
+        .map_err(|error| format!("the target payload was not authenticated: {error}"))?;
     let payload = envelope
         .require_target_payload(compiler.format())
-        .expect("attached extension payload");
-    assert!(
-        vyre_driver::backend::registered_target_operation_facets()
-            .expect("valid target facet registry")
-            .iter()
-            .any(|facet| facet.operation_id == OPERATION_ID && facet.target_id == TARGET_ID)
-    );
+        .map_err(|error| format!("the envelope carries no payload for {TARGET_NAME}: {error}"))?;
+    let facets = vyre_driver::registered_target_operation_facets()
+        .map_err(|error| format!("the target facet registry is invalid: {error}"))?;
+    if !facets
+        .iter()
+        .any(|facet| facet.operation_id == OPERATION_ID && facet.target_id == TARGET_ID)
+    {
+        return Err(format!(
+            "no facet pairs {OPERATION_ID} with target {}. Fix: register the operation for that target so an external IR extension is reachable from it.",
+            TARGET_ID.as_str()
+        )
+        .into());
+    }
 
     println!(
         "registered {OPERATION_ID} for target {} with {} payload bytes",
         TARGET_ID.as_str(),
         payload.bytes().len()
     );
+    Ok(())
 }

@@ -12,61 +12,19 @@
 //! V1 op coverage: literals + BinOp::{Add, Sub, Mul, BitAnd, BitOr,
 //! BitXor} on u32. Other arithmetic / typed ops extend mechanically.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
-use common::acquire_live_backend as live_backend;
+mod harness;
+use harness::acquire_live_backend as live_backend;
+use harness::self_optimizer::{first_let_value, wrapped, WgpuProgramDispatcher};
 
-use vyre::ir::{Expr, Node, Program};
-use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_driver_wgpu::WgpuBackend;
-use vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold;
-use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
-
-struct WgpuOptimizerDispatcher<'a> {
-    backend: &'a WgpuBackend,
-}
-
-impl<'a> WgpuOptimizerDispatcher<'a> {
-    fn new(backend: &'a WgpuBackend) -> Self {
-        Self { backend }
-    }
-}
-
-impl<'a> OptimizerDispatcher for WgpuOptimizerDispatcher<'a> {
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let mut config = DispatchConfig::default();
-        config.grid_override = grid_override;
-        VyreBackend::dispatch(self.backend, program, inputs, &config)
-            .map_err(|err| DispatchError::BackendError(err.to_string()))
-    }
-}
-
-fn wrapped(entry: Vec<Node>) -> Program {
-    Program::wrapped(Vec::new(), [1, 1, 1], entry)
-}
-
-/// Find the let-bound value Expr in a single-Let entry. Helper that
-/// peels the Region wrapper Program::wrapped adds.
-fn first_let_value(p: &Program) -> Expr {
-    match p.entry() {
-        [Node::Region { body, .. }] => match body.as_slice() {
-            [Node::Let { value, .. }] => value.clone(),
-            _ => panic!("expected single Let in body, got {:?}", body),
-        },
-        _ => panic!("expected wrapped Program with single Region"),
-    }
-}
+use vyre::ir::{Expr, Node};
+use vyre_pass_engine::optimizer::const_fold_via_encoded::gpu_const_fold;
 
 #[test]
 fn const_fold_two_plus_three_yields_lit_five_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     // let x = 2 + 3
     let p = wrapped(vec![Node::let_bind(
@@ -84,7 +42,7 @@ fn const_fold_two_plus_three_yields_lit_five_on_real_gpu() {
 #[test]
 fn const_fold_chained_arithmetic_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     // let x = (2 + 3) * 4   →   20
     let p = wrapped(vec![Node::let_bind(
@@ -102,7 +60,7 @@ fn const_fold_chained_arithmetic_on_real_gpu() {
 #[test]
 fn const_fold_subtraction_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     // let x = 10 - 7   →   3
     let p = wrapped(vec![Node::let_bind(
@@ -117,7 +75,7 @@ fn const_fold_subtraction_on_real_gpu() {
 #[test]
 fn const_fold_bitwise_ops_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     // (0xFF | 0x100) & 0x1FF   →   0x1FF
     let p = wrapped(vec![Node::let_bind(
@@ -135,7 +93,7 @@ fn const_fold_bitwise_ops_on_real_gpu() {
 #[test]
 fn const_fold_unfoldable_var_passes_through_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     // let x = a + 2  →  unchanged (a is not foldable).
     let p = wrapped(vec![Node::let_bind(

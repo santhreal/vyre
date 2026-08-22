@@ -1,18 +1,25 @@
 //! Parity test: GPU IFDS exploded supergraph builder matches CPU oracle.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
-use vyre_primitives::graph::exploded::build_cpu_reference;
-use vyre_self_substrate::exploded::{build_ifds_csr_via, reference_canonicalize_csr_within_rows};
+use harness::with_cuda_optimizer_dispatcher;
+use vyre_libs::graph::dispatch::exploded::build_ifds_csr_via;
+use vyre_reference::composition_witness::exploded_ifds_csr_witness;
 
 fn assert_csr_equiv(cpu: &(Vec<u32>, Vec<u32>), gpu: &(Vec<u32>, Vec<u32>), label: &str) {
-    let (cpu_row, cpu_col) = reference_canonicalize_csr_within_rows(&cpu.0, &cpu.1);
-    let (gpu_row, gpu_col) = (gpu.0.clone(), gpu.1.clone());
+    let mut cpu_col = cpu.1.clone();
+    for window in cpu.0.windows(2) {
+        let start = window[0] as usize;
+        let end = window[1] as usize;
+        if start <= end && end <= cpu_col.len() {
+            cpu_col[start..end].sort_unstable();
+        }
+    }
+    let (cpu_row, gpu_row, gpu_col) = (&cpu.0, &gpu.0, &gpu.1);
     assert_eq!(cpu_row, gpu_row, "{label}: row_ptr divergence");
-    assert_eq!(cpu_col, gpu_col, "{label}: col_idx divergence");
+    assert_eq!(&cpu_col, gpu_col, "{label}: col_idx divergence");
 }
 
 fn assert_ifds_matches_reference(
@@ -25,7 +32,7 @@ fn assert_ifds_matches_reference(
     flow_gen: &[(u32, u32, u32)],
     kill: &[(u32, u32, u32)],
 ) {
-    let cpu = build_cpu_reference(procs, blocks, facts, intra, inter, flow_gen, kill);
+    let cpu = exploded_ifds_csr_witness(procs, blocks, facts, intra, inter, flow_gen, kill);
     with_cuda_optimizer_dispatcher(label, |dispatcher| {
         let gpu = build_ifds_csr_via(
             dispatcher, procs, blocks, facts, intra, inter, flow_gen, kill,

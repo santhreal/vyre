@@ -11,12 +11,13 @@ use crate::reference_eval;
 use crate::value::Value;
 /// Execute a program from a concatenated single-case byte payload.
 ///
-/// Fixed-width input buffers consume exactly their declared static element
-/// count from `input` (`count == 0` is treated as one element for legacy
-/// runtime-sized flat cases). Read-write output buffers are initialized to the
-/// same declared fixed-width storage size and appended to `output` after
-/// interpretation. Extra or truncated input bytes are rejected so malformed
-/// conformance vectors cannot be hidden by padding or ignored suffixes.
+/// Every buffer accepted by [`crate::is_reference_input`] consumes exactly its
+/// declared static element count from `input` (`count == 0` is treated as one
+/// element for runtime-sized flat cases). A backend-allocated output takes no
+/// payload bytes; the interpreter zero-fills it and its result is appended to
+/// `output` after interpretation. Extra or truncated input bytes are rejected
+/// so malformed conformance vectors cannot be hidden by padding or ignored
+/// suffixes.
 ///
 /// # Errors
 ///
@@ -36,34 +37,28 @@ pub fn run_flat(
     let mut offset = 0usize;
     let mut values = Vec::new();
     for buffer in program.buffers() {
-        match buffer.access() {
-            BufferAccess::ReadOnly | BufferAccess::Uniform => {
-                let width = buffer_flat_width(buffer.name(), buffer.element(), buffer.count())?;
-                let remaining = input.len().saturating_sub(offset);
-                if remaining < width {
-                    return Err(crate::ReferenceError::new(format!(
-                        "flat CPU input for buffer `{}` is truncated: expected {width} byte(s), got {remaining}. Fix: provide the declared fixed-width element count for every ReadOnly/Uniform buffer before invoking the reference backend.",
-                        buffer.name()
-                    )));
-                }
-                let mut bytes = vec![0; width];
-                bytes.copy_from_slice(&input[offset..offset + width]);
-                offset += width;
-                values.push(Value::from(bytes));
-            }
-            BufferAccess::ReadWrite => {
-                values.push(Value::from(vec![
-                    0;
-                    buffer_flat_width(
-                        buffer.name(),
-                        buffer.element(),
-                        buffer.count()
-                    )?
-                ]));
-            }
-            BufferAccess::Workgroup => {}
-            _ => {}
+        if buffer.access() == BufferAccess::Workgroup {
+            continue;
         }
+        // Every declared buffer must have a fixed width, whoever allocates it:
+        // a variable-width output has no size for the readback either.
+        let width = buffer_flat_width(buffer.name(), buffer.element(), buffer.count())?;
+        // Only a buffer the artifact ABI reads consumes payload bytes. A
+        // backend-allocated output is zero-filled by the interpreter.
+        if !crate::is_reference_input(buffer) {
+            continue;
+        }
+        let remaining = input.len().saturating_sub(offset);
+        if remaining < width {
+            return Err(crate::ReferenceError::new(format!(
+                "flat CPU input for buffer `{}` is truncated: expected {width} byte(s), got {remaining}. Fix: provide the declared fixed-width element count for every buffer accepted by `vyre_reference::is_reference_input` before invoking the reference backend.",
+                buffer.name()
+            )));
+        }
+        let mut bytes = vec![0; width];
+        bytes.copy_from_slice(&input[offset..offset + width]);
+        offset += width;
+        values.push(Value::from(bytes));
     }
     if offset != input.len() {
         let trailing = input.len() - offset;

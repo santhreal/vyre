@@ -31,7 +31,7 @@
 //!   comparison is *unsound* for float operands: a float `x` that is
 //!   `NaN` at runtime makes `x == x` false and `x != x` true under
 //!   IEEE-754, which the reference oracle (`vyre-reference`
-//!   `binop_f32`) and the SPIR-V emitter (`OpFOrdEqual`) both honor.
+//!   `binop_f32`) and every target emitter honor.
 //!   Folding it to a bool literal here would (a) miscompile NaN checks
 //!   and (b) corrupt the content-addressed cache by giving the
 //!   genuinely-distinct programs `x == x` and `true` the same
@@ -403,7 +403,7 @@ mod tests {
             E::add(E::u32(3), E::var("a")),
         )]);
         let canonical = run(p);
-        let body = crate::test_util::region_body(&canonical);
+        let body = crate::test_ir_inspect::region_body(&canonical);
         match &body[0] {
             Node::Store { value, .. } => match value {
                 Expr::BinOp { left, right, .. } => {
@@ -461,7 +461,7 @@ mod tests {
                 _ => {}
             }
         }
-        let entry_body = crate::test_util::region_body(&canonical);
+        let entry_body = crate::test_ir_inspect::region_body(&canonical);
         match &entry_body[0] {
             Node::Store { value, .. } => find_mul_and_check(value),
             other => panic!("expected Store, got {other:?}"),
@@ -473,14 +473,14 @@ mod tests {
         // canonicalize must NOT fold `a == a` to `true`. The pass is
         // type-blind, and for a float `a` that is NaN at runtime
         // `a == a` is *false* under IEEE-754 (the reference oracle's
-        // `binop_f32` and the SPIR-V `OpFOrdEqual` emitter both agree).
+        // `binop_f32` and every target emitter agree).
         // Folding it to a bool literal would miscompile NaN checks and
         // collide distinct programs in the content-addressed cache.
         // The Eq node is preserved verbatim (operand order unchanged
         // because both operands are the same Var).
         let p = scalar_out_prog(vec![Node::let_bind("t", E::eq(E::var("a"), E::var("a")))]);
         let canonical = run(p);
-        let entry_body = crate::test_util::region_body(&canonical);
+        let entry_body = crate::test_ir_inspect::region_body(&canonical);
         match &entry_body[0] {
             Node::Let { value, .. } => match value {
                 Expr::BinOp {
@@ -504,7 +504,7 @@ mod tests {
         // not fold it to a bool literal. The Ne node is preserved.
         let p = scalar_out_prog(vec![Node::let_bind("t", E::ne(E::var("a"), E::var("a")))]);
         let canonical = run(p);
-        let entry_body = crate::test_util::region_body(&canonical);
+        let entry_body = crate::test_ir_inspect::region_body(&canonical);
         match &entry_body[0] {
             Node::Let { value, .. } => match value {
                 Expr::BinOp {
@@ -577,7 +577,7 @@ mod tests {
     fn eq_different_vars_unchanged() {
         let p = scalar_out_prog(vec![Node::let_bind("t", E::eq(E::var("a"), E::var("b")))]);
         let canonical = run(p);
-        let entry_body = crate::test_util::region_body(&canonical);
+        let entry_body = crate::test_ir_inspect::region_body(&canonical);
         match &entry_body[0] {
             Node::Let { value, .. } => match value {
                 Expr::BinOp {

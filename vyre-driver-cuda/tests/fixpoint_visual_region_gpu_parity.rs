@@ -1,17 +1,17 @@
 //! Parity tests for fixpoint::bitset_fixpoint, visual::packed_rgba_map,
 //! and matching::region::dedup_regions_flag_program.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::fixpoint::bitset_fixpoint::bitset_fixpoint;
-use vyre_primitives::matching::region::{
+use vyre_libs::fixpoint::bitset_fixpoint::bitset_fixpoint;
+use vyre_libs::pattern::{
     dedup_regions_cluster_program, dedup_regions_flag_program, region_dedup_dispatch_grid,
 };
-use vyre_primitives::visual::packed_rgba_map::packed_rgba_map;
+use vyre_libs::visual::packed_rgba_map::packed_rgba_map;
 
 // ---------------------------------------------------------------------
 // bitset_fixpoint: changed=1 iff current[w] != next[w] for any w.

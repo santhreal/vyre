@@ -233,6 +233,7 @@ fn decode_pod_output_into<T: Pod>(
     Ok(())
 }
 
+// Inline: covers `decode_pod_outputs`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -240,11 +241,11 @@ mod tests {
     use vyre_foundation::ir::{OpId, Program};
 
     use super::*;
-    use crate::backend::private;
+    use crate::backend::sealed;
 
     struct EchoBackend;
 
-    impl private::Sealed for EchoBackend {}
+    impl sealed::Sealed for EchoBackend {}
 
     impl VyreBackend for EchoBackend {
         fn id(&self) -> &'static str {
@@ -256,13 +257,13 @@ mod tests {
             OPS.get_or_init(HashSet::new)
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            inputs: &[Vec<u8>],
+            inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
-            Ok(inputs.to_vec())
+            Ok(inputs.iter().map(|row| row.to_vec()).collect())
         }
     }
 

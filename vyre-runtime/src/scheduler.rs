@@ -1,4 +1,4 @@
-//! Multi-GPU work stealing scheduler (Innovation I.7).
+//! Multi-GPU work stealing scheduler.
 //!
 //! Partitions a large Program or batch of Programs across all
 //! registered physical devices.
@@ -153,6 +153,8 @@ fn partition_ranges(total_len: usize, backend_count: usize) -> Vec<Range<usize>>
     ranges
 }
 
+// Inline: the suite drives the `#[cfg(test)]` `partition_ranges`, which an integration test does
+// not compile.
 #[cfg(test)]
 mod tests {
     use super::{partition_ranges, WorkStealingScheduler};

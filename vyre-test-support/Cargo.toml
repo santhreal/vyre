@@ -1,6 +1,6 @@
 [package]
 name = "vyre-test-support"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -13,8 +13,72 @@ keywords = ["vyre", "testing", "harness", "coverage", "registry"]
 categories = ["development-tools::testing"]
 publish = false
 
+[features]
+# Empty by default: `ir-fixtures` is the only feature and it is opt-in, so a
+# consumer that does not name it never pulls vyre-foundation into its dev graph.
+default = []
+# Fixtures over the IR statement enum. Opt-in because it pulls vyre-foundation
+# into the dev graph of whichever crate enables it, and most consumers of this
+# crate only want the source-text closure enumerator or the flat element list.
+# The fixtures build inline shapes with smallvec, so it joins the graph too.
+ir-fixtures = ["dep:vyre-foundation", "dep:smallvec", "dep:vyre-reference"]
+
+[dependencies]
+# The one owner of "which checkout am I reporting on". Resolved from the working
+# directory at run time, never compiled in, so `monorepo` delegates to
+# `structure_gate::workspace_root` rather than resolving a second time.
+structure-gate = { path = "../structure-gate" }
+vyre-foundation = { workspace = true, optional = true }
+# Not optional, and not behind `ir-fixtures`: `data_type_elements` states which
+# flat DataType forms exist, and `vyre-spec` declares DataType. Gating it forced
+# every consumer of that one list to enable `ir-fixtures`, which drags
+# vyre-foundation into the dev graph of a leaf spec crate to read a list of
+# discriminants. vyre-spec itself depends on serde and smallvec and nothing
+# else, so the cost of carrying it unconditionally is nil.
+vyre-spec = { workspace = true }
+smallvec = { workspace = true, optional = true }
+vyre-reference = { workspace = true, optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+inventory = { workspace = true }
+
 [dev-dependencies]
 tempfile.workspace = true
 
 [lints]
 workspace = true
+
+# The binop and cast parity tables live behind `ir-fixtures`, because both name
+# IR data types, so their well-formedness gates compile only when that feature
+# selects them.
+[[test]]
+name = "binop_parity_tables"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "cast_parity_tables"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "expr_variant_coverage"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "memory_order_coverage"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "extension_variant_coverage"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "adversarial_and_mutation_contracts"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "differential_matrix_contracts"
+required-features = ["ir-fixtures"]
+
+[[test]]
+name = "registry_nets_fire"
+required-features = ["ir-fixtures"]

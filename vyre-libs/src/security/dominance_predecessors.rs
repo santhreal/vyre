@@ -4,14 +4,15 @@
 //! dominator tree or a transitive dominance closure. Exact strict-dominance
 //! checks use the independent `cpu_dominator_sets` test oracle.
 
+use crate::graph::program_graph::ProgramGraphShape;
+use crate::predicate::edge_kind;
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::csr_backward_traverse::csr_backward_traverse;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
 
-use crate::region::{reparent_program_children, wrap_anonymous};
+use crate::security::flow_composition::{
+    security_flow_program, FlowPredicate, SecurityFlowOptions,
+};
 
-const OP_ID: &str = "vyre-libs::security::dominance_predecessors";
+pub(crate) const OP_ID: &str = "vyre-libs::security::dominance_predecessors";
 
 /// Build one reverse-traversal step along dominance and block-membership edges.
 ///
@@ -23,25 +24,13 @@ pub fn dominance_predecessors(
     frontier_in: &str,
     frontier_out: &str,
 ) -> Program {
-    crate::security::assert_security_inputs(
+    security_flow_program(SecurityFlowOptions::reach(
         OP_ID,
-        shape.node_count,
-        &[("frontier_in", frontier_in), ("frontier_out", frontier_out)],
-    );
-    let primitive = csr_backward_traverse(
         shape,
+        FlowPredicate::backward(edge_kind::DOMINANCE | edge_kind::BLOCK_MEMBER),
         frontier_in,
         frontier_out,
-        edge_kind::DOMINANCE | edge_kind::BLOCK_MEMBER,
-    );
-    Program::wrapped(
-        primitive.buffers().to_vec(),
-        primitive.workgroup_size(),
-        vec![wrap_anonymous(
-            OP_ID,
-            reparent_program_children(&primitive, OP_ID),
-        )],
-    )
+    ))
 }
 
 /// CPU reference oracle for strict dominator sets.
@@ -55,72 +44,17 @@ pub(crate) fn cpu_dominator_sets(
     entry: u32,
     edges: &[(u32, u32)],
 ) -> Vec<Vec<u32>> {
-    let idoms = vyre_primitives::graph::dominator_tree::cpu_ref(num_nodes, entry, edges);
-    vyre_primitives::graph::dominator_tree::idoms_to_dominator_sets(&idoms, num_nodes)
-}
-
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| dominance_predecessors(ProgramGraphShape::new(4, 4), "fin", "fout")),
-        test_inputs: Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            // Diamond dominance tree: 0 dominates 1 and 2; both dominate 3.
-            // Backward from {3} reaches {1, 2} in one step.
-            vec![vec![
-                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
-                to_bytes(&[0, 2, 3, 4, 4]),       // pg_edge_offsets: 0→{1,2}, 1→{3}, 2→{3}, 3→{}
-                to_bytes(&[1, 2, 3, 3]),          // pg_edge_targets
-                to_bytes(&[
-                    edge_kind::DOMINANCE,
-                    edge_kind::DOMINANCE,
-                    edge_kind::DOMINANCE,
-                    edge_kind::DOMINANCE,
-                ]),                               // pg_edge_kind_mask  -  all DOMINANCE
-                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
-                to_bytes(&[0b1000]),              // fin = {3}
-                to_bytes(&[0b1000]),              // fout accumulator seed = {3}
-            ]]
-        }),
-        expected_output: Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            // One backward step from {3}: nodes 1 and 2 have edges to 3,
-            // so they light up. Accumulator preserves seed {3}.
-            vec![vec![to_bytes(&[0b1110])]]
-        }),
-        category: Some("security"),
-    }
-}
-
-inventory::submit! {
-    // AUDIT_2026-04-24 F-DT-01: raised from 64 to 4096 so deep
-    // dominance trees (Linux kernel-scale CFGs routinely 500+ deep)
-    // don't silently truncate at the 64th step and produce false
-    // negatives. Fixpoint drivers exit early when the frontier
-    // stops growing, so a higher ceiling has no cost on flat graphs.
-    crate::operation_catalog::ConvergenceContract {
-        op_id: OP_ID,
-        max_iterations: 4096,
-    }
+    let idoms =
+        vyre_reference::composition_witness::dominator_sets_idoms_witness(num_nodes, entry, edges);
+    vyre_reference::composition_witness::idoms_to_dominator_sets_witness(&idoms, num_nodes)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_primitives::graph::csr_backward_traverse::cpu_ref;
-
-    fn diamond_dominance_tree() -> (u32, Vec<u32>, Vec<u32>, Vec<u32>) {
-        let node_count = 4;
-        let edge_offsets = vec![0, 2, 3, 4, 4];
-        let edge_targets = vec![1, 2, 3, 3];
-        let edge_kind_mask = vec![edge_kind::DOMINANCE; 4];
-        (node_count, edge_offsets, edge_targets, edge_kind_mask)
-    }
+    use crate::fixture_bytes::eval_bytes;
+    use crate::security::flow_composition::diamond_dominance_tree;
+    use vyre_reference::composition_witness::csr_backward_traverse_witness as cpu_ref;
 
     #[test]
     fn cpu_dominator_sets_linear_chain() {
@@ -156,16 +90,15 @@ mod tests {
     }
 
     #[test]
-    fn dominance_predecessor_step_reaches_immediate_ancestors() {
+    fn dominance_predecessors_step_reaches_immediate_ancestors() {
         let (node_count, offsets, targets, masks) = diamond_dominance_tree();
-        let frontier_in = vec![0b1000]; // {3}
         let out = cpu_ref(
             node_count,
             &offsets,
             &targets,
             &masks,
-            &frontier_in,
-            edge_kind::DOMINANCE,
+            &[0b1000],
+            edge_kind::DOMINANCE | edge_kind::BLOCK_MEMBER,
         );
         assert_eq!(out[0], 0b0110, "backward from 3 must reach 1 and 2");
     }
@@ -206,12 +139,8 @@ mod tests {
             to_bytes(&[0b1000]),     // fin = {3}
             to_bytes(&[0b1000]),     // fout seed = {3}
         ];
-        let values: Vec<vyre_reference::value::Value> = inputs
-            .into_iter()
-            .map(vyre_reference::value::Value::from)
-            .collect();
-        let outputs = vyre_reference::reference_eval(&p, &values).unwrap();
-        let gpu_out = u32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("dominance_predecessors", &p, inputs);
+        let gpu_out = u32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
 
         let dom = cpu_dominator_sets(4, 0, &[(0, 1), (0, 2), (1, 3), (2, 3)]);
         let true_dom_bitset: u32 = dom[3].iter().map(|&n| 1u32 << n).sum();

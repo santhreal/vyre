@@ -6,13 +6,12 @@
 //! kernel body.  It is **not** the expression-level fusion pass
 //! (`optimizer::passes::fusion`)  -  that pass lives inside one Program.
 //!
-//! Audit-fix A31 split this module into:
+//! The module splits into:
 //!  - `mod.rs`: crate-level attribute + error types + module decls/re-exports
 //!  - `fuse.rs`: `fuse_programs` family + multi-program implementation
 //!  - `collectors.rs`: `collect_*_targets_*` walkers
 //!  - `divergence.rs`: divergence + invocation-gate analysis
-//!  - `helpers.rs`: misc small helpers
-//!  - `tests.rs`: full proptest + unit-test suite
+//!  - `tests/`: full proptest + unit-test suite
 //!
 //! # Safety invariants
 //!
@@ -29,9 +28,9 @@ mod alpha_rename;
 mod collectors;
 mod divergence;
 mod fuse;
-mod helpers;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/execution_plan/fusion/mod.rs"]
 mod tests;
 
 pub use fuse::{fuse_programs, fuse_programs_vec, merge_programs_shared};

@@ -4,6 +4,15 @@
 //! sparse, dense, hybrid, or fused execution topology before allocating device
 //! scratch. The policy is deterministic, allocation-free, and validates byte
 //! pressure before a backend reaches an API-specific allocation path.
+//!
+//! One rule used to live only in one backend's copy of this policy: a `FusedWave`
+//! runs dependency-ordered waves inside a single launch, so it needs a barrier
+//! across every resident block, and a device without one cannot run the plan at
+//! all. The neutral policy did not know that, so for the same wave it answered
+//! `FusedWave` where that fork answered a per-launch topology, and any
+//! backend that had not written the check itself would have been handed an
+//! unlaunchable plan. The check is a property of the device, not of one backend, so it
+//! is [`crate::megakernel_execution::MegakernelDeviceCapabilities`] here and every backend inherits it.
 
 const WARP_SPARSE_DENSITY: f64 = 0.03125;
 const SPARSE_DENSITY: f64 = 0.125;
@@ -19,6 +28,37 @@ const LAUNCH_HYSTERESIS_BPS: u32 = 250;
 const FUSION_READBACK_BYTES: u64 = 4_096;
 const DENSE_AVERAGE_DEGREE_BPS: u64 = 20_000;
 const WARP_SPARSE_AVERAGE_DEGREE_BPS: u64 = 80_000;
+
+/// Device capabilities that constrain which wave topologies are launchable.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MegakernelDeviceCapabilities {
+    /// Whether every resident block can synchronize inside one launch.
+    pub supports_device_wide_barrier: bool,
+}
+
+impl MegakernelDeviceCapabilities {
+    /// Device that can host a fused wave.
+    pub const FUSION_CAPABLE: Self = Self {
+        supports_device_wide_barrier: true,
+    };
+    /// Device that must keep every wave in its own launch.
+    pub const FUSION_INCAPABLE: Self = Self {
+        supports_device_wide_barrier: false,
+    };
+
+    /// Fusion pressure this device can act on.
+    ///
+    /// Without a device-wide barrier the fused plan is unlaunchable, so the
+    /// measured pressure toward it is zero however high the caller observed it.
+    #[must_use]
+    pub fn admissible_fusion_pressure(self, fusion_pressure: f64) -> f64 {
+        if self.supports_device_wide_barrier {
+            fusion_pressure
+        } else {
+            0.0
+        }
+    }
+}
 
 /// Per-candidate telemetry used to bias megakernel fusion.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -196,6 +236,7 @@ pub fn select_megakernel_topology(
     memory: MegakernelMemoryBudget,
     launch_overhead_ns: f64,
     fusion_pressure: f64,
+    capabilities: MegakernelDeviceCapabilities,
 ) -> MegakernelTopologyDecision {
     let memory_pressure_bps = pressure_bps(memory.required_bytes, memory.budget_bytes);
     let average_degree_bps = pressure_bps_u64(graph.edge_count, graph.node_count);
@@ -210,7 +251,7 @@ pub fn select_megakernel_topology(
             )
         };
     let density = finite_unit(sample.frontier_density);
-    let fusion = finite_unit(fusion_pressure);
+    let fusion = finite_unit(capabilities.admissible_fusion_pressure(fusion_pressure));
     let topology = if memory_pressure_bps >= MEMORY_RED_ZONE_BPS {
         MegakernelExecutionTopology::SparseFrontier
     } else if fusion >= FUSION_PRESSURE
@@ -249,10 +290,22 @@ pub fn select_megakernel_topology_stable(
     launch_overhead_ns: f64,
     fusion_pressure: f64,
     previous_topology: MegakernelExecutionTopology,
+    capabilities: MegakernelDeviceCapabilities,
 ) -> MegakernelTopologyDecision {
-    let mut decision =
-        select_megakernel_topology(sample, graph, memory, launch_overhead_ns, fusion_pressure);
-    decision.topology = stabilize_topology(decision, sample, fusion_pressure, previous_topology);
+    let mut decision = select_megakernel_topology(
+        sample,
+        graph,
+        memory,
+        launch_overhead_ns,
+        fusion_pressure,
+        capabilities,
+    );
+    decision.topology = stabilize_topology(
+        decision,
+        sample,
+        capabilities.admissible_fusion_pressure(fusion_pressure),
+        previous_topology,
+    );
     decision
 }
 
@@ -342,46 +395,81 @@ fn stabilize_topology(
     }
 }
 
+/// Resident bytes a graph layout occupies before any wave state.
+///
+/// # Errors
+///
+/// Returns [`MegakernelMemoryError::ByteCountOverflow`] when the node or edge
+/// layout does not fit `u64`.
+pub fn megakernel_resident_graph_bytes(
+    graph: MegakernelGraphShape,
+    bytes_per_node: u64,
+    bytes_per_edge: u64,
+) -> Result<u64, MegakernelMemoryError> {
+    let node_bytes = checked_mul(graph.node_count, bytes_per_node, "node layout bytes")?;
+    let edge_bytes = checked_mul(graph.edge_count, bytes_per_edge, "edge layout bytes")?;
+    checked_add(node_bytes, edge_bytes, "graph layout bytes")
+}
+
+/// The byte accounting for one megakernel wave.
+///
+/// The resident layout and the approved cap always travel together, from the
+/// caller that measures them through every planning hop. They are one value
+/// because a positional list of six `u64` counts transposes silently at a call
+/// site and named fields cannot.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct MegakernelByteLayout {
+    /// Resident bytes per graph node.
+    pub bytes_per_node: u64,
+    /// Resident bytes per graph edge.
+    pub bytes_per_edge: u64,
+    /// Frontier-state bytes for the wave.
+    pub frontier_bytes: u64,
+    /// Base scratch bytes before the topology multiplier.
+    pub scratch_bytes: u64,
+    /// Final compact output bytes.
+    pub output_bytes: u64,
+    /// Caller-approved device-memory budget.
+    pub budget_bytes: u64,
+}
+
 /// Compute and validate a megakernel device-memory plan.
 pub fn plan_megakernel_memory_budget(
     topology: MegakernelExecutionTopology,
     graph: MegakernelGraphShape,
-    bytes_per_node: u64,
-    bytes_per_edge: u64,
-    frontier_bytes: u64,
-    scratch_bytes: u64,
-    output_bytes: u64,
-    budget_bytes: u64,
+    bytes: MegakernelByteLayout,
 ) -> Result<MegakernelMemoryPlan, MegakernelMemoryError> {
-    let node_bytes = checked_mul(graph.node_count, bytes_per_node, "node layout bytes")?;
-    let edge_bytes = checked_mul(graph.edge_count, bytes_per_edge, "edge layout bytes")?;
-    let graph_bytes = checked_add(node_bytes, edge_bytes, "graph layout bytes")?;
-    let topology_scratch_bytes = topology_scratch_bytes(topology, scratch_bytes)?;
-    let required_without_output =
-        checked_add(graph_bytes, frontier_bytes, "graph plus frontier bytes")?;
+    let graph_bytes =
+        megakernel_resident_graph_bytes(graph, bytes.bytes_per_node, bytes.bytes_per_edge)?;
+    let topology_scratch_bytes = topology_scratch_bytes(topology, bytes.scratch_bytes)?;
+    let required_without_output = checked_add(
+        graph_bytes,
+        bytes.frontier_bytes,
+        "graph plus frontier bytes",
+    )?;
     let required_without_output = checked_add(
         required_without_output,
         topology_scratch_bytes,
         "scratch bytes",
     )?;
-    let required_bytes = checked_add(required_without_output, output_bytes, "output bytes")?;
-    if required_bytes > budget_bytes {
+    let required_bytes = checked_add(required_without_output, bytes.output_bytes, "output bytes")?;
+    if required_bytes > bytes.budget_bytes {
         return Err(MegakernelMemoryError::OverBudget {
             topology,
             required_bytes,
-            budget_bytes,
+            budget_bytes: bytes.budget_bytes,
             node_count: graph.node_count,
             edge_count: graph.edge_count,
         });
     }
     Ok(MegakernelMemoryPlan {
         graph_bytes,
-        frontier_bytes,
+        frontier_bytes: bytes.frontier_bytes,
         scratch_bytes: topology_scratch_bytes,
-        output_bytes,
+        output_bytes: bytes.output_bytes,
         required_bytes,
-        budget_bytes,
-        memory_pressure_bps: pressure_bps(required_bytes, budget_bytes),
+        budget_bytes: bytes.budget_bytes,
+        memory_pressure_bps: pressure_bps(required_bytes, bytes.budget_bytes),
     })
 }
 
@@ -389,45 +477,25 @@ pub fn plan_megakernel_memory_budget(
 pub fn plan_megakernel_execution(
     sample: MegakernelExecutionSample,
     graph: MegakernelGraphShape,
-    bytes_per_node: u64,
-    bytes_per_edge: u64,
-    frontier_bytes: u64,
-    scratch_bytes: u64,
-    output_bytes: u64,
-    budget_bytes: u64,
+    bytes: MegakernelByteLayout,
     launch_overhead_ns: f64,
     fusion_pressure: f64,
+    capabilities: MegakernelDeviceCapabilities,
 ) -> Result<MegakernelExecutionPlan, MegakernelMemoryError> {
-    let sparse_memory = plan_megakernel_memory_budget(
-        MegakernelExecutionTopology::SparseFrontier,
-        graph,
-        bytes_per_node,
-        bytes_per_edge,
-        frontier_bytes,
-        scratch_bytes,
-        output_bytes,
-        budget_bytes,
-    )?;
+    let sparse_memory =
+        plan_megakernel_memory_budget(MegakernelExecutionTopology::SparseFrontier, graph, bytes)?;
     let decision = select_megakernel_topology(
         sample,
         graph,
         MegakernelMemoryBudget {
             required_bytes: sparse_memory.required_bytes,
-            budget_bytes,
+            budget_bytes: bytes.budget_bytes,
         },
         launch_overhead_ns,
         fusion_pressure,
+        capabilities,
     );
-    match plan_megakernel_memory_budget(
-        decision.topology,
-        graph,
-        bytes_per_node,
-        bytes_per_edge,
-        frontier_bytes,
-        scratch_bytes,
-        output_bytes,
-        budget_bytes,
-    ) {
+    match plan_megakernel_memory_budget(decision.topology, graph, bytes) {
         Ok(memory) => Ok(MegakernelExecutionPlan {
             topology: decision.topology,
             memory,
@@ -443,6 +511,64 @@ pub fn plan_megakernel_execution(
             })
         }
         Err(error) => Err(error),
+    }
+}
+
+/// Every input one candidate wave needs to reach an execution plan.
+///
+/// This is the argument list of [`plan_megakernel_execution`] as one value so a
+/// backend can memoize the decision without restating it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct MegakernelExecutionRequest {
+    /// Runtime telemetry for the candidate wave.
+    pub sample: MegakernelExecutionSample,
+    /// Static graph shape.
+    pub graph: MegakernelGraphShape,
+    /// Byte accounting for the wave, including the approved cap.
+    pub bytes: MegakernelByteLayout,
+    /// Per-launch overhead observed for this device.
+    pub launch_overhead_ns: f64,
+    /// Caller-measured pressure toward fusing adjacent waves.
+    pub fusion_pressure: f64,
+    /// Capabilities of the device that will run the wave.
+    pub capabilities: MegakernelDeviceCapabilities,
+}
+
+/// Source of memory-validated megakernel execution plans.
+///
+/// The decision itself is [`plan_megakernel_execution`]. A backend implements
+/// this trait only to put a device-local cache in front of that decision, never
+/// to make a different one.
+pub trait MegakernelExecutionPlanner {
+    /// Plan one candidate wave.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MegakernelMemoryError`] when the request overflows byte
+    /// accounting or cannot fit the approved budget.
+    fn plan_execution(
+        &mut self,
+        request: MegakernelExecutionRequest,
+    ) -> Result<MegakernelExecutionPlan, MegakernelMemoryError>;
+}
+
+/// The neutral policy with no memoization, for backends without a plan cache.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct NeutralMegakernelExecutionPlanner;
+
+impl MegakernelExecutionPlanner for NeutralMegakernelExecutionPlanner {
+    fn plan_execution(
+        &mut self,
+        request: MegakernelExecutionRequest,
+    ) -> Result<MegakernelExecutionPlan, MegakernelMemoryError> {
+        plan_megakernel_execution(
+            request.sample,
+            request.graph,
+            request.bytes,
+            request.launch_overhead_ns,
+            request.fusion_pressure,
+            request.capabilities,
+        )
     }
 }
 
@@ -530,245 +656,4 @@ fn checked_add(lhs: u64, rhs: u64, field: &'static str) -> Result<u64, Megakerne
 fn checked_mul(lhs: u64, rhs: u64, field: &'static str) -> Result<u64, MegakernelMemoryError> {
     lhs.checked_mul(rhs)
         .ok_or(MegakernelMemoryError::ByteCountOverflow { field })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{
-        plan_megakernel_execution, plan_megakernel_memory_budget, select_megakernel_topology,
-        select_megakernel_topology_stable, MegakernelExecutionSample, MegakernelExecutionTopology,
-        MegakernelGraphShape, MegakernelMemoryBudget, MegakernelMemoryError,
-    };
-
-    #[test]
-    fn topology_selector_uses_sparse_dense_hybrid_and_fused_bands() {
-        let graph = MegakernelGraphShape {
-            node_count: 1_000,
-            edge_count: 4_000,
-        };
-        let memory = MegakernelMemoryBudget {
-            required_bytes: 1_000,
-            budget_bytes: 10_000,
-        };
-        let warp_sparse = select_megakernel_topology(
-            MegakernelExecutionSample {
-                dispatch_cost_ns: 1_000.0,
-                frontier_density: 0.01,
-                readback_bytes: 256,
-            },
-            graph,
-            memory,
-            100.0,
-            0.0,
-        );
-        assert_eq!(
-            warp_sparse.topology,
-            MegakernelExecutionTopology::WarpSparseFrontier
-        );
-        assert_eq!(
-            warp_sparse.stable_explanation(),
-            "megakernel-topology-v1|topology=WarpSparseFrontier|memory_pressure_bps=1000|average_degree_bps=40000|launch_pressure_bps=1000|reason=ultra_sparse_warp_specialized"
-        );
-
-        let block_dense = select_megakernel_topology(
-            MegakernelExecutionSample {
-                dispatch_cost_ns: 1_000.0,
-                frontier_density: 0.90,
-                readback_bytes: 512,
-            },
-            graph,
-            memory,
-            100.0,
-            0.0,
-        );
-        assert_eq!(
-            block_dense.topology,
-            MegakernelExecutionTopology::BlockDenseFrontier
-        );
-
-        let hybrid = select_megakernel_topology(
-            MegakernelExecutionSample {
-                dispatch_cost_ns: 1_000.0,
-                frontier_density: 0.35,
-                readback_bytes: 512,
-            },
-            graph,
-            memory,
-            100.0,
-            0.0,
-        );
-        assert_eq!(hybrid.topology, MegakernelExecutionTopology::HybridFrontier);
-
-        let fused = select_megakernel_topology(
-            MegakernelExecutionSample {
-                dispatch_cost_ns: 1_000.0,
-                frontier_density: 0.50,
-                readback_bytes: 1 << 20,
-            },
-            graph,
-            memory,
-            250.0,
-            0.90,
-        );
-        assert_eq!(fused.topology, MegakernelExecutionTopology::FusedWave);
-        assert_eq!(fused.launch_pressure_bps, 2_500);
-    }
-
-    #[test]
-    fn stable_topology_selector_prevents_variant_flapping_near_thresholds() {
-        let graph = MegakernelGraphShape {
-            node_count: 1_000,
-            edge_count: 4_000,
-        };
-        let memory = MegakernelMemoryBudget {
-            required_bytes: 1_000,
-            budget_bytes: 10_000,
-        };
-        let sparse_to_hybrid = select_megakernel_topology_stable(
-            MegakernelExecutionSample {
-                dispatch_cost_ns: 1_000.0,
-                frontier_density: 0.14,
-                readback_bytes: 512,
-            },
-            graph,
-            memory,
-            100.0,
-            0.0,
-            MegakernelExecutionTopology::SparseFrontier,
-        );
-        assert_eq!(
-            sparse_to_hybrid.topology,
-            MegakernelExecutionTopology::SparseFrontier
-        );
-    }
-
-    #[test]
-    fn memory_planner_bounds_peak_bytes_by_topology() {
-        let graph = MegakernelGraphShape {
-            node_count: 1_000,
-            edge_count: 4_000,
-        };
-        let plan = plan_megakernel_memory_budget(
-            MegakernelExecutionTopology::FusedWave,
-            graph,
-            16,
-            8,
-            4_096,
-            2_048,
-            512,
-            128 * 1024,
-        )
-        .expect("Fix: valid fused plan should fit the explicit device-memory budget");
-
-        assert_eq!(plan.graph_bytes, 48_000);
-        assert_eq!(plan.scratch_bytes, 8_192);
-        assert_eq!(plan.required_bytes, 60_800);
-        assert!(plan.memory_pressure_bps > 0);
-    }
-
-    #[test]
-    fn memory_planner_rejects_budget_and_overflow_failures() {
-        let graph = MegakernelGraphShape {
-            node_count: 1_000,
-            edge_count: 4_000,
-        };
-        let err = plan_megakernel_memory_budget(
-            MegakernelExecutionTopology::DenseFrontier,
-            graph,
-            16,
-            8,
-            4_096,
-            2_048,
-            512,
-            32 * 1024,
-        )
-        .expect_err("over-budget dense plan must fail before allocation");
-        assert!(matches!(
-            err,
-            MegakernelMemoryError::OverBudget {
-                topology: MegakernelExecutionTopology::DenseFrontier,
-                ..
-            }
-        ));
-        assert!(err.to_string().contains("Fix: choose a sparse topology"));
-
-        let overflow = plan_megakernel_memory_budget(
-            MegakernelExecutionTopology::SparseFrontier,
-            MegakernelGraphShape {
-                node_count: u64::MAX,
-                edge_count: 0,
-            },
-            2,
-            0,
-            0,
-            0,
-            0,
-            u64::MAX,
-        )
-        .expect_err("overflowing graph byte count must be rejected");
-        assert!(matches!(
-            overflow,
-            MegakernelMemoryError::ByteCountOverflow {
-                field: "node layout bytes"
-            }
-        ));
-    }
-
-    #[test]
-    fn generated_execution_plans_never_exceed_budget_or_hide_overflow() {
-        let mut state = 0x4d59_5df4_d0f3_3173_u64;
-        for case_index in 0..1024usize {
-            let node_count = 1 + next_u64(&mut state) % 8_192;
-            let edge_count = node_count + next_u64(&mut state) % 65_536;
-            let bytes_per_node = 1 + next_u64(&mut state) % 64;
-            let bytes_per_edge = 1 + next_u64(&mut state) % 32;
-            let frontier_bytes = next_u64(&mut state) % 65_536;
-            let scratch_bytes = next_u64(&mut state) % 16_384;
-            let output_bytes = next_u64(&mut state) % 8_192;
-            let budget_bytes = 64 * 1024 + next_u64(&mut state) % (4 * 1024 * 1024);
-            let sample = MegakernelExecutionSample {
-                dispatch_cost_ns: 100.0 + (next_u64(&mut state) % 10_000) as f64,
-                frontier_density: (next_u64(&mut state) % 10_001) as f64 / 10_000.0,
-                readback_bytes: next_u64(&mut state) % (1 << 20),
-            };
-
-            let result = plan_megakernel_execution(
-                sample,
-                MegakernelGraphShape {
-                    node_count,
-                    edge_count,
-                },
-                bytes_per_node,
-                bytes_per_edge,
-                frontier_bytes,
-                scratch_bytes,
-                output_bytes,
-                budget_bytes,
-                250.0,
-                0.85,
-            );
-            match result {
-                Ok(plan) => {
-                    assert!(
-                        plan.memory.required_bytes <= plan.memory.budget_bytes,
-                        "case {case_index}"
-                    );
-                    assert!(plan.memory.memory_pressure_bps <= 10_000);
-                }
-                Err(MegakernelMemoryError::OverBudget {
-                    required_bytes,
-                    budget_bytes,
-                    ..
-                }) => assert!(required_bytes > budget_bytes, "case {case_index}"),
-                Err(MegakernelMemoryError::ByteCountOverflow { .. }) => {}
-            }
-        }
-    }
-
-    fn next_u64(state: &mut u64) -> u64 {
-        *state = state
-            .wrapping_mul(6_364_136_223_846_793_005)
-            .wrapping_add(1_442_695_040_888_963_407);
-        *state
-    }
 }

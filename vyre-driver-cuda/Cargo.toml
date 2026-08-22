@@ -1,6 +1,6 @@
 [package]
 name = "vyre-driver-cuda"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -22,19 +22,25 @@ workspace = true
 
 [features]
 default = []
+# A test that acquires a real device is compiled only where the device is.
+# The lanes that own hardware turn this on; a hosted runner leaves it off and
+# never links a test whose first line would abort inside the driver.
+device-tests = []
 cuda = []
 
 [dependencies]
 vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
-vyre-spec = { workspace = true }
 vyre-lower.workspace = true
 vyre-emit-ptx.workspace = true
 # `optimizer` module dispatches the self-hosted optimizer passes
 # (DCE/CSE/const-fold) on CUDA. Lives in [dependencies] (not dev-deps)
 # because src/optimizer.rs is shipped lib code.
-vyre-self-substrate = { workspace = true, features = ["graph-solvers", "scheduling"] }
+vyre-pass-engine = { workspace = true }
+# Device-boundary contracts and the composition trees the CUDA adapters plan
+# against, now owned by the composition crate.
+vyre-libs = { workspace = true, features = ["device", "scheduling", "graph-dispatch"] }
 inventory.workspace = true
 tracing.workspace = true
 blake3.workspace = true
@@ -47,14 +53,21 @@ dashmap.workspace = true
 libc.workspace = true
 
 [dev-dependencies]
-vyre-test-support.workspace = true
+# `ir-fixtures` carries the shared u32 binop parity tables the live-GPU
+# parity suites read their operands and pinned oracle answers from.
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
+# Byte-stability golden harness (`artifact_golden`) shared with the emitter
+# crates, so the emitted-PTX corpus is pinned the same way emitted artifacts
+# are instead of growing a second comparison spelling.
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
+# Elementwise parity-gate scaffolding, so the live-device parity tests state
+# their case tables and references and nothing else.
+vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # Integration tests and benchmarks assert against the lower-layer libraries they
-# exercise. The canonical scan product is a direct dev dependency.
-vyre-libs = { path = "../vyre-libs", features = ["full", "c-parser"] }
-vyre-frontend-rust = { path = "../vyre-frontend-rust" }
+# exercise. `full` owns the published composition surface; live parity tests also
+# exercise the compiler-owned analysis, encoding, and solver domains directly.
+vyre-libs = { path = "../vyre-libs", features = ["full", "analysis", "encoding", "solvers"] }
 tempfile.workspace = true
-serde_json.workspace = true
-pollster.workspace = true
 # Required by tests/common/mod.rs (`vyre::ir`, `vyre_driver::DispatchConfig`) and by
 # many live CUDA integration tests. `vyre` optionally depends on
 # vyre-driver-cuda behind `features = ["cuda"]`; adding it here as a dev-dep
@@ -65,13 +78,53 @@ vyre = { path = "../vyre", default-features = false }
 # vyre_reference::reference_eval) and by differential tests.
 vyre-reference = { path = "../vyre-reference" }
 # Required by several _gpu_parity tests that import vyre_primitives::*.
-# `cpu-parity` exposes the CPU reference oracles (hex_decode_reference_packed, …)
-# these parity tests diff the GPU output against; gated out of production builds.
-vyre-primitives = { path = "../vyre-primitives", features = ["cpu-parity"], default-features = false }
-# Required by tests/union_find_gpu_parity.rs, which imports the CPU union-find
-# reference oracles `union_find_emit::{canonicalize_parent_to_roots,
-# reference_union_find_alias}`. Those are `#[cfg(any(test, feature = "cpu-parity"))]`
-# in vyre-self-substrate, so a downstream test build must enable `cpu-parity`
-# explicitly (the `test` cfg only applies to that crate's own tests, not ours).
+# `hardware` is the one domain this crate declares. The composition domains the
+# parity tests reach into (bitset, decode, fixpoint, graph, hash, math,
+# matching, parsing, reduce, text, visual) come from the vyre-libs dev-dependency
+# above on `full`, which is why naming them here is no longer possible or needed.
+vyre-primitives = { path = "../vyre-primitives", features = [
+    "hardware",
+], default-features = false }
+# Required by self_optimizer_* e2e and differential tests.
 # Dev-dep only -> gated out of the production lib build keyhog links.
-vyre-self-substrate = { path = "../vyre-self-substrate", features = ["cpu-parity"] }
+vyre-pass-engine = { path = "../vyre-pass-engine" }
+
+[[test]]
+name = "cuda_graph_dispatch_parity"
+path = "tests/cuda_graph_dispatch_parity/mod.rs"
+
+[[test]]
+name = "generated_resident_sequence_cuda_reference_matrix"
+path = "tests/generated_resident_sequence_cuda_reference_matrix/mod.rs"
+
+[[test]]
+name = "self_optimizer_pattern_match_extended"
+path = "tests/self_optimizer_pattern_match_extended/mod.rs"
+
+[[test]]
+name = "resident_dispatch_contracts"
+path = "tests/resident_dispatch_contracts/mod.rs"
+
+[[test]]
+name = "egraph_device_image_upload"
+path = "tests/egraph_device_image_upload/mod.rs"
+
+[[test]]
+name = "csr_frontier_queue_gpu_parity"
+path = "tests/csr_frontier_queue_gpu_parity/mod.rs"
+
+[[test]]
+name = "resident_buffer_contracts"
+path = "tests/resident_buffer_contracts/mod.rs"
+
+[[test]]
+name = "generated_resident_cuda_reference_matrix"
+path = "tests/generated_resident_cuda_reference_matrix/mod.rs"
+
+[[test]]
+name = "adaptive_traverse_vast_walk_gpu_parity"
+path = "tests/adaptive_traverse_vast_walk_gpu_parity/mod.rs"
+
+[[test]]
+name = "int4_quantized_gpu_parity"
+path = "tests/int4_quantized_gpu_parity/mod.rs"

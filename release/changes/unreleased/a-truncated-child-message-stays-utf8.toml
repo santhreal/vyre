@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The tail of a failed child command is cut at a character boundary. A cut that landed inside a multibyte character fell back to the whole stream, so the byte bound did not hold for the output it exists to bound."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The conformance CI lane now rejects a generated conformance matrix that differs from the committed release evidence."

@@ -1,0 +1,2 @@
+category = "Added"
+text = "`the_optimizer_expression_rewrite_reaches_every_operand_slot` puts the optimizer's expression rewrite inside the owner-closure suite that previously checked only the three reference-mode walks. It plants a uniquely-bound literal read in one operand slot at a time, taking the slot set from the variant registry rather than from a list in the test, and requires the registered propagating pass to fold it. Reintroducing the pre-collapse private walk fails it at the async-copy offset, which is the position the two copies actually disagreed about."

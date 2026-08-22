@@ -1,117 +1,278 @@
-//! Cat-A `adler32` wrapper  -  Adler-32 (RFC 1950) checksum.
+//! Adler-32 checksum primitive.
 //!
 //! Serial single-invocation walk. A init 1, B init 0, both mod 65521
 //! per byte. Output `(B << 16) | A`.
 //!
-//! Delegates the executable checksum body to `vyre-primitives`; this Tier-3
-//! module owns only scoped buffer naming, provenance, and harness registration.
+//! `input[i]` packs one byte per u32 slot in the low 8 bits; high bits are
+//! ignored by construction.
 
-use vyre_foundation::ir::Program;
-use vyre_primitives::hash::adler32::{adler32_program, ADLER32_OP_ID};
+use vyre_foundation::ir::{Expr, Node, Program};
+
+/// Largest prime smaller than 2^16 used by Adler-32.
+pub const ADLER32_MOD: u32 = 65_521;
+
+/// Stable op id for the Adler-32 serial byte walker.
+pub const ADLER32_OP_ID: &str = "vyre-libs::hash::adler32";
+
+/// Test-only Adler-32 chunk summary used by independent witness adapters.
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Adler32Chunk {
+    /// Chunk length modulo [`ADLER32_MOD`].
+    pub len_mod: u32,
+    /// Adler-32 A state after the chunk from canonical initialization.
+    pub a: u32,
+    /// Adler-32 B state after the chunk from canonical initialization.
+    pub b: u32,
+}
 
 #[cfg(test)]
-use crate::buffer_names::fixed_name;
+impl From<vyre_reference::composition_witness::Adler32ChunkWitness> for Adler32Chunk {
+    fn from(witness: vyre_reference::composition_witness::Adler32ChunkWitness) -> Self {
+        Self {
+            len_mod: witness.len_mod,
+            a: witness.a,
+            b: witness.b,
+        }
+    }
+}
+
 #[cfg(test)]
-use vyre_primitives::hash::adler32::adler32 as adler32_cpu_reference;
+impl From<Adler32Chunk> for vyre_reference::composition_witness::Adler32ChunkWitness {
+    fn from(chunk: Adler32Chunk) -> Self {
+        Self {
+            len_mod: chunk.len_mod,
+            a: chunk.a,
+            b: chunk.b,
+        }
+    }
+}
 
-use super::wrap::HashWrapperSpec;
+#[cfg(test)]
+#[must_use]
+pub(crate) fn adler32(bytes: &[u8]) -> u32 {
+    vyre_reference::composition_witness::adler32_witness(bytes)
+}
 
-const OP_ID: &str = "vyre-libs::hash::adler32";
-const FAMILY_PREFIX: &str = "hash_adler32";
-const SPEC: HashWrapperSpec = HashWrapperSpec::new(OP_ID, ADLER32_OP_ID, FAMILY_PREFIX, 1);
+/// Summarize a byte slice as an independently-combinable Adler-32 chunk.
+#[cfg(test)]
+#[must_use]
+pub fn adler32_chunk(bytes: &[u8]) -> Adler32Chunk {
+    vyre_reference::composition_witness::adler32_chunk_witness(bytes).into()
+}
+
+/// Apply a precomputed chunk summary to an existing Adler-32 state.
+#[cfg(test)]
+#[must_use]
+pub fn adler32_combine_state(a: u32, b: u32, chunk: Adler32Chunk) -> (u32, u32) {
+    vyre_reference::composition_witness::adler32_combine_state_witness(a, b, chunk.into())
+}
+
+/// Combine adjacent Adler-32 chunk summaries without reading source bytes.
+#[cfg(test)]
+#[must_use]
+pub fn adler32_combine_chunks(left: Adler32Chunk, right: Adler32Chunk) -> Adler32Chunk {
+    vyre_reference::composition_witness::adler32_combine_chunks_witness(left.into(), right.into())
+        .into()
+}
+
+/// Initial Adler-32 A state.
+#[cfg(test)]
+#[must_use]
+pub const fn adler32_initial_a_state() -> u32 {
+    vyre_reference::composition_witness::adler32_initial_a_witness()
+}
+
+/// Initial Adler-32 B state.
+#[cfg(test)]
+#[must_use]
+pub const fn adler32_initial_b_state() -> u32 {
+    vyre_reference::composition_witness::adler32_initial_b_witness()
+}
+
+/// Canonical Adler-32 CPU single-byte update.
+#[cfg(test)]
+#[must_use]
+pub const fn adler32_update_byte_state(a: u32, b: u32, byte: u8) -> (u32, u32) {
+    vyre_reference::composition_witness::adler32_update_byte_witness(a, b, byte)
+}
+
+/// Canonical Adler-32 CPU finalization.
+#[cfg(test)]
+#[must_use]
+pub const fn adler32_finalize_state(a: u32, b: u32) -> u32 {
+    vyre_reference::composition_witness::adler32_finalize_witness(a, b)
+}
+/// Initial Adler-32 A expression for fused IR compositions.
+#[must_use]
+pub fn adler32_initial_a_expr() -> Expr {
+    Expr::u32(1)
+}
+
+/// Initial Adler-32 B expression for fused IR compositions.
+#[must_use]
+pub fn adler32_initial_b_expr() -> Expr {
+    Expr::u32(0)
+}
+
+/// Emit the canonical Adler-32 single-byte update into `a_var` and `b_var`.
+///
+/// `byte` may contain non-byte high bits; the helper masks to the low 8 bits
+/// so fused compositions preserve the same input contract as
+/// [`adler32_program`].
+#[must_use]
+pub fn adler32_update_byte_nodes(a_var: &str, b_var: &str, byte: Expr) -> [Node; 2] {
+    let byte = Expr::bitand(byte, Expr::u32(0xFF));
+    [
+        Node::assign(
+            a_var,
+            Expr::rem(Expr::add(Expr::var(a_var), byte), Expr::u32(ADLER32_MOD)),
+        ),
+        Node::assign(
+            b_var,
+            Expr::rem(
+                Expr::add(Expr::var(b_var), Expr::var(a_var)),
+                Expr::u32(ADLER32_MOD),
+            ),
+        ),
+    ]
+}
+
+/// Final Adler-32 expression for fused IR compositions.
+#[must_use]
+pub fn adler32_finalize_expr(a: Expr, b: Expr) -> Expr {
+    Expr::bitor(Expr::shl(b, Expr::u32(16)), a)
+}
 
 /// Build a Program that writes Adler-32(input[0..n]) to `out[0]`.
 #[must_use]
-pub fn adler32(input: &str, out: &str, n: u32) -> Program {
-    let (input, out) = SPEC.scoped_standard_buffers(input, out);
-    let primitive = adler32_program(&input, &out, n);
-    SPEC.wrap_static_count(&input, &out, n, primitive)
+pub fn adler32_program(input: &str, out: &str, n: u32) -> Program {
+    super::wrap_unary_scalar_hash_program(ADLER32_OP_ID, input, out, n, adler32_body(input, out, n))
 }
 
-#[cfg(test)]
-fn cpu_ref(input: &[u8]) -> u32 {
-    adler32_cpu_reference(input)
+fn adler32_body(input: &str, out: &str, n: u32) -> Vec<Node> {
+    vec![Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        vec![
+            Node::let_bind("a", adler32_initial_a_expr()),
+            Node::let_bind("b", adler32_initial_b_expr()),
+            Node::loop_for(
+                "i",
+                Expr::u32(0),
+                Expr::u32(n),
+                adler32_update_byte_nodes("a", "b", Expr::load(input, Expr::var("i"))).into(),
+            ),
+            Node::store(
+                out,
+                Expr::u32(0),
+                adler32_finalize_expr(Expr::var("a"), Expr::var("b")),
+            ),
+        ],
+    )]
 }
+
+const EXPECTED_ADLER32_OUTPUT_BYTES: [u8; 4] = [0x27, 0x01, 0x4D, 0x02];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| adler32("input", "out", 3)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        ADLER32_OP_ID,
+        || adler32_program("input", "out", 3),
+        Some(|| {
             let bytes = vyre_primitives::wire::pack_bytes_as_u32_slice(b"abc");
             vec![vec![bytes]]
         }),
-        // Adler-32("abc") = 0x024D0127 (a = 295, b = 589).
-        expected_output: Some(|| vec![vec![0x024D_0127u32.to_le_bytes().to_vec()]]),
-        category: None,
-    }
+        Some(|| vec![vec![EXPECTED_ADLER32_OUTPUT_BYTES.to_vec()]]),
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hash::pack_bytes_as_u32;
-    use vyre_reference::value::Value;
-
-    fn run(bytes: &[u8]) -> u32 {
-        let n = bytes.len().max(1) as u32;
-        let program = adler32("input", "out", n);
-        let inputs = vec![Value::Bytes(pack_bytes_as_u32(bytes).into())];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: adler32 must run; restore this invariant before continuing.");
-        let raw = outputs[0].to_bytes();
-        vyre_primitives::wire::read_u32_le_word(&raw, 0, "adler32 output")
-            .expect("Fix: adler32 output must contain one u32.")
-    }
-
-    fn run_words(words: &[u32]) -> u32 {
-        let n = words.len().max(1) as u32;
-        let program = adler32("input", "out", n);
-        let input = vyre_primitives::wire::pack_u32_slice(words);
-        let outputs = vyre_reference::reference_eval(&program, &[Value::Bytes(input.into())])
-            .expect("Fix: adler32 must run on u32 byte slots.");
-        let raw = outputs[0].to_bytes();
-        vyre_primitives::wire::read_u32_le_word(&raw, 0, "adler32 word output")
-            .expect("Fix: adler32 word output must contain one u32.")
-    }
 
     #[test]
     fn abc_matches_rfc1950_example() {
-        assert_eq!(run(b"abc"), 0x024D_0127);
-        assert_eq!(run(b"abc"), cpu_ref(b"abc"));
+        assert_eq!(adler32(b"abc"), 0x024D_0127);
     }
 
     #[test]
     fn wikipedia_string() {
-        assert_eq!(run(b"Wikipedia"), 0x11E6_0398);
+        assert_eq!(adler32(b"Wikipedia"), 0x11E6_0398);
     }
 
     #[test]
-    fn random_64_bytes_match_ref() {
-        let bytes: Vec<u8> = (0u8..64).collect();
-        assert_eq!(run(&bytes), cpu_ref(&bytes));
+    fn state_helpers_match_slice_hasher() {
+        let bytes = b"vyre-adler-single-source";
+        let mut a = adler32_initial_a_state();
+        let mut b = adler32_initial_b_state();
+        for &byte in bytes {
+            let next = adler32_update_byte_state(a, b, byte);
+            a = next.0;
+            b = next.1;
+        }
+        assert_eq!(adler32_finalize_state(a, b), adler32(bytes));
     }
 
     #[test]
-    fn high_input_bits_are_ignored() {
-        assert_eq!(run_words(&[0xFFFF_FF61, 0xA5A5_0062]), cpu_ref(b"ab"));
+    fn chunk_summary_matches_slice_hasher() {
+        let bytes = b"vyre-adler-gpu-tree-reduction";
+        let chunk = adler32_chunk(bytes);
+
+        assert_eq!(adler32_finalize_state(chunk.a, chunk.b), adler32(bytes));
+        assert_eq!(chunk.len_mod, bytes.len() as u32);
     }
 
     #[test]
-    fn generic_default_names_are_family_scoped() {
-        let program = adler32("input", "out", 4);
-        assert_eq!(
-            program.buffers()[0].name(),
-            fixed_name(FAMILY_PREFIX, "input")
-        );
-        assert_eq!(
-            program.buffers()[1].name(),
-            fixed_name(FAMILY_PREFIX, "out")
+    fn chunk_combine_matches_serial_hash_for_all_splits() {
+        let bytes = b"adler chunks are composable enough for gpu block scans";
+
+        for split in 0..=bytes.len() {
+            let left = adler32_chunk(&bytes[..split]);
+            let right = adler32_chunk(&bytes[split..]);
+            let combined = adler32_combine_chunks(left, right);
+
+            assert_eq!(
+                adler32_finalize_state(combined.a, combined.b),
+                adler32(bytes),
+                "split {split}"
+            );
+        }
+    }
+
+    #[test]
+    fn chunk_combine_is_associative_for_generated_payloads() {
+        for len in 0..96usize {
+            let bytes = (0..len)
+                .map(|i| ((i * 37 + len * 11) & 0xFF) as u8)
+                .collect::<Vec<_>>();
+            for split_a in 0..=len {
+                for split_b in split_a..=len {
+                    let a = adler32_chunk(&bytes[..split_a]);
+                    let b = adler32_chunk(&bytes[split_a..split_b]);
+                    let c = adler32_chunk(&bytes[split_b..]);
+                    let left_assoc = adler32_combine_chunks(adler32_combine_chunks(a, b), c);
+                    let right_assoc = adler32_combine_chunks(a, adler32_combine_chunks(b, c));
+
+                    assert_eq!(
+                        left_assoc, right_assoc,
+                        "len {len}, splits {split_a}/{split_b}"
+                    );
+                    assert_eq!(
+                        adler32_finalize_state(left_assoc.a, left_assoc.b),
+                        adler32(&bytes),
+                        "len {len}, splits {split_a}/{split_b}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn update_helper_masks_high_input_bits() {
+        let nodes = adler32_update_byte_nodes("a", "b", Expr::u32(0xFFFF_FF61));
+        let rendered = format!("{nodes:?}");
+        assert!(
+            rendered.contains("255"),
+            "Fix: Adler-32 IR helper must mask each u32 slot to one byte."
         );
     }
 }

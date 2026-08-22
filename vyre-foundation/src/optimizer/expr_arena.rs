@@ -1,4 +1,4 @@
-//! ROADMAP A1  -  hash-consed Expr arena.
+//! hash-consed Expr arena.
 //!
 //! Op id: `vyre-foundation::optimizer::expr_arena`. Soundness: read-only
 //! over the input `Expr`; produces an additive side-table that does not
@@ -58,7 +58,7 @@
 //!   extensions needs an `ExprNode::content_hash` API that does not
 //!   exist today.
 
-use crate::ir::model::expr::ExprNode;
+use crate::ir::ExprNode;
 use crate::ir::{AtomicOp, BinOp, DataType, Expr, Ident, MemoryOrdering, SubgroupReduceOp, UnOp};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
@@ -577,8 +577,8 @@ mod tests {
     fn opaque_expr_interning_via_arc_identity() {
         // Build two `Arc`s pointing at the same allocation; their
         // OpaqueIds must collapse.
-        use crate::ir::model::expr::ExprNode;
         use crate::ir::DataType;
+        use crate::ir::ExprNode;
         use std::any::Any;
 
         #[derive(Debug)]

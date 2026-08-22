@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The `CollectiveOp` proptest generator in `vyre-spec` has one owner, `vyre-spec/tests/spec_variants/mod.rs`, replacing the copy in the op-wire sweep and the copy in the collective sweep. The frozen collective wire-tag table now appears only in `vyre-spec/tests/collective_op_contracts.rs`, which owns the round trip, the unassigned-tag rejection and the world comm-group constant; the subset copy in the extension-category test is gone."

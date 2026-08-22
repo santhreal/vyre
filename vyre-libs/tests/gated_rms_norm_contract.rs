@@ -2,28 +2,17 @@
 
 #![forbid(unsafe_code)]
 
+mod wire_words;
+use wire_words::{f32_bytes, f32_words as decode_f32};
+
 use vyre::ir::DataType;
 use vyre_libs::nn::norm::{gated_rms_norm, gated_rms_norm_with_weight_dtype, GatedRmsNormError};
 use vyre_reference::value::Value;
-
-fn f32_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
 
 fn u16_bytes(values: &[u16]) -> Vec<u8> {
     values
         .iter()
         .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode_f32(bytes: &[u8]) -> Vec<f32> {
-    bytes
-        .chunks_exact(4)
-        .map(|word| f32::from_le_bytes(word.try_into().expect("Fix: exact f32 word")))
         .collect()
 }
 
@@ -52,7 +41,6 @@ fn execute(
             Value::from(f32_bytes(input)),
             Value::from(f32_bytes(weight)),
             Value::from(f32_bytes(gate)),
-            Value::from(vec![0; input.len() * 4]),
         ],
     )
     .expect("Fix: gated RMSNorm must execute in the reference evaluator");
@@ -194,7 +182,6 @@ fn low_precision_programs_execute_with_exact_source_dtype_rounding() {
                 Value::from(u16_bytes(&input)),
                 Value::from(u16_bytes(&weight)),
                 Value::from(u16_bytes(&gate)),
-                Value::from(vec![0; 4]),
             ],
         )
         .expect("Fix: low-precision gated RMSNorm must execute");
@@ -227,7 +214,6 @@ fn bf16_activations_with_f32_weights_execute_exactly() {
             Value::from(u16_bytes(&[0x3f80, 0xc000])),
             Value::from(f32_bytes(&[1.0, 0.5])),
             Value::from(u16_bytes(&[0x3f80, 0xbf80])),
-            Value::from(vec![0; 4]),
         ],
     )
     .expect("Fix: mixed-weight gated RMSNorm must execute");

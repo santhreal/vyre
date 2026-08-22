@@ -6,10 +6,7 @@
 #![allow(deprecated)]
 use blake3::Hash;
 use vyre::ir::Program;
-use vyre_driver::{
-    backend::{backend_dispatches, registered_backends},
-    BackendRegistration, DispatchConfig,
-};
+use vyre_driver::{backend_dispatches, registered_backends, BackendRegistration, DispatchConfig};
 use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::optimizer::optimize;
 use vyre_foundation::validate::{BackendCapabilities, ValidationOptions};
@@ -81,6 +78,7 @@ fn assert_valid(program: &Program, id: &str) {
             has_transcendental_polynomial_emit: true,
             supports_distributed_collectives: true,
             max_native_int_width: 64,
+            ..Default::default()
         }),
     )
     .errors;

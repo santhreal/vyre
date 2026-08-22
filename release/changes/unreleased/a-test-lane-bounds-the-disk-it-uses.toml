@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "This workspace declares 1219 integration test files and each one links its own binary at roughly 56 MiB, so a single whole-workspace test run outgrew every hosted runner disk. The lane now runs one package at a time and drops that package's test executables before the next, keeping every rlib and build-script output so nothing is rebuilt."

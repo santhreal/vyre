@@ -1,17 +1,24 @@
 //! WGPU contract coverage for composed persistent Sinkhorn iteration.
 
-mod common;
-use common::u32_bytes;
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::u32_bytes;
 
 use vyre_driver::VyreBackend;
-use vyre_primitives::math::sinkhorn_iterate::sinkhorn_iterate;
+use vyre_libs::math::sinkhorn_iterate::{sinkhorn_iterate, SinkhornBuffers, SinkhornExtents};
 
 #[test]
 fn sinkhorn_iterate_matches_registered_fixture() {
     let backend = vyre_driver_wgpu::WgpuBackend::acquire()
         .expect("Fix: WGPU sinkhorn contract requires a live GPU backend.");
     let program = sinkhorn_iterate(
-        "k", "kt", "a", "b", "uc", "un", "v", "kv", "ktu", "c", 2, 2, 5,
+        SinkhornBuffers::CANONICAL,
+        SinkhornExtents {
+            m: 2,
+            n: 2,
+            max_iterations: 5,
+        },
     );
     let inputs = [
         u32_bytes(&[65_536, 65_536]),

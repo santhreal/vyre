@@ -11,11 +11,14 @@ mod stats;
 
 pub use report::print_report;
 
+use crate::api::metric::elapsed_ns;
+#[cfg(test)]
+pub(crate) use run_case::evaluate_contract;
 use run_case::run_case;
 
 use crate::api::case::{BenchContext, BenchError, Correctness, PerformanceContract};
 use crate::api::suite::SuiteKind;
-use crate::probes::environment::{capture_environment, EnvironmentData};
+use crate::probes::environment::{build_profile, capture_environment, EnvironmentData};
 use crate::registry::BenchRegistry;
 use crate::report::json::{
     benchmark_held_out_corpus_id, CaseReport, ReportBackendProfile, ReportSchema, ReportSummary,
@@ -78,11 +81,33 @@ pub fn run_suite(registry: &BenchRegistry, suite: &SuiteKind, format: &str) {
     }
 }
 
+/// Refuse to measure the release suite with a build that carries debug checks.
+///
+/// The release suite is the one whose numbers are published, and an unoptimized
+/// harness inflates every speedup it reports: the CPU baseline runs the scan
+/// without optimization while device time is set by the device. A run that
+/// cannot be published must not produce a document that looks publishable, so
+/// it fails before the first sample.
+pub fn refuse_unoptimized_release_measurement(suite: &SuiteKind) -> anyhow::Result<()> {
+    if matches!(suite, SuiteKind::Release) && build_profile() != "release" {
+        anyhow::bail!(
+            "the release suite measures published numbers and this harness is a {} build. Fix: \
+             rerun with `--release`.",
+            build_profile()
+        );
+    }
+    Ok(())
+}
+
 pub fn execute_suite(
     registry: &BenchRegistry,
     suite: &SuiteKind,
     config: &RunConfig,
 ) -> ReportSchema {
+    if let Err(error) = refuse_unoptimized_release_measurement(suite) {
+        eprintln!("vyre-bench fatal error: {error}");
+        std::process::exit(1);
+    }
     let environment = capture_environment().unwrap_or_else(|error| {
         eprintln!(
             "vyre-bench fatal error: benchmark environment probe failed: {error}. Fix: repair GPU/NVIDIA provenance before collecting performance evidence."
@@ -134,20 +159,20 @@ pub fn execute_suite(
                     continue;
                 }
             };
-        let preferred_registration =
-            match vyre_driver::backend::backend_registration(preferred_backend.id()) {
-                Ok(registration) => registration,
-                Err(error) => {
-                    failed += 1;
-                    cases_report.push(case_failure(
-                        case,
-                        None,
-                        format!("Backend registration error: {error}"),
-                        case.performance_contract(),
-                    ));
-                    continue;
-                }
-            };
+        let preferred_registration = match vyre_driver::backend_registration(preferred_backend.id())
+        {
+            Ok(registration) => registration,
+            Err(error) => {
+                failed += 1;
+                cases_report.push(case_failure(
+                    case,
+                    None,
+                    format!("Backend registration error: {error}"),
+                    case.performance_contract(),
+                ));
+                continue;
+            }
+        };
         let materializer = match preferred_registration.materializer() {
             Ok(materializer) => Arc::from(materializer),
             Err(error) => {
@@ -277,7 +302,7 @@ pub fn execute_suite(
             total_cases: selected_cases.len(),
             passed,
             failed,
-            total_time_ns: started.elapsed().as_nanos() as u64,
+            total_time_ns: elapsed_ns(started),
             cache_hit_rate,
         },
         blockers,
@@ -370,9 +395,9 @@ fn acquire_backend(
     }
 
     let backend: Arc<dyn vyre_driver::VyreBackend> = match backend_id {
-        Some(id) => vyre_driver::backend::acquire(id)
+        Some(id) => vyre_driver::acquire(id)
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
-        None => vyre_driver::backend::acquire_preferred_dispatch_backend()
+        None => vyre_driver::acquire_preferred_dispatch_backend()
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
     }
     .into();
@@ -439,7 +464,7 @@ pub fn evaluate_candidate_headless(
     let preferred_backend: Arc<dyn vyre_driver::VyreBackend> =
         acquire_backend(config.backend_id.as_deref())
             .map_err(|error| format!("Backend error: {}", error))?;
-    let preferred_registration = vyre_driver::backend::backend_registration(preferred_backend.id())
+    let preferred_registration = vyre_driver::backend_registration(preferred_backend.id())
         .map_err(|error| format!("Backend registration error: {error}"))?;
     let materializer = Arc::from(
         preferred_registration
@@ -475,4 +500,50 @@ pub fn evaluate_candidate_headless(
     }
 
     run_case(case, &mut ctx, &mut prepared, &SuiteKind::Evolve, config)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The release suite is refused unless the harness is optimized, and every
+    /// other suite is unaffected.
+    ///
+    /// The generator that writes `release/evidence/benchmarks` spawned this
+    /// harness without `--release`, so it published a CPU baseline that was
+    /// mostly missing optimization. The refusal lives at the runner entry point
+    /// every path passes through, so a caller that does not go through the CLI
+    /// cannot measure the release suite in a debug build. One assertion per
+    /// branch: the refusal fires exactly when the profile is not `release`, and
+    /// never for another suite.
+    #[test]
+    fn only_an_optimized_build_may_measure_the_release_suite() {
+        let release = refuse_unoptimized_release_measurement(&SuiteKind::Release);
+        if build_profile() == "release" {
+            assert!(
+                release.is_ok(),
+                "Fix: an optimized build must be allowed to measure the release suite."
+            );
+        } else {
+            let error = release.expect_err(
+                "Fix: a debug build must be refused before it writes release evidence.",
+            );
+            assert!(
+                error.to_string().contains("--release"),
+                "Fix: the refusal must name the flag that repairs it, got `{error}`."
+            );
+        }
+        for suite in [
+            SuiteKind::Smoke,
+            SuiteKind::Deep,
+            SuiteKind::Gpu,
+            SuiteKind::Sweep,
+        ] {
+            assert!(
+                refuse_unoptimized_release_measurement(&suite).is_ok(),
+                "Fix: only the release suite publishes numbers; `{suite:?}` must run under any \
+                 profile."
+            );
+        }
+    }
 }

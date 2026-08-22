@@ -1,0 +1,44 @@
+[package]
+name = "xtask-evidence"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "xtask subcommands that read benchmark and release evidence provenance."
+# Internal build-task crate, never published.
+publish = false
+
+[lints]
+workspace = true
+
+# `vyre-bench` owns the source-provenance probes that decide whether a recorded
+# benchmark measurement still describes this tree. That is the only reason the
+# benchmark harness is linked here, and it is why these subcommands live apart
+# from the ones that link nothing.
+[dependencies]
+xtask = { path = "../xtask" }
+vyre-bench.workspace = true
+vyre-driver.workspace = true
+# `vyre-foundation` owns the optimizer whose release corpus these subcommands
+# grade, so the set of pass families a gate demands is read from the generator
+# rather than restated here.
+vyre-foundation.workspace = true
+# The backend matrix judges every driver this binary links, and `vyre-bench`
+# links all of them, so the declared set is all of them. `vyre-registry-link`
+# owns the anchors and asserts that each one reached the registry.
+vyre-registry-link = { workspace = true, features = [
+    "cuda",
+    "metal",
+    "reference",
+    "spirv",
+    "wgpu",
+] }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+tempfile = { workspace = true }

@@ -12,8 +12,8 @@ pub enum BankConflictKind {
     /// Full single-cycle throughput.
     NoConflict,
     /// Threads access addresses that map to the same bank but for
-    /// reads where hardware broadcast is supported (CUDA: same
-    /// 32-bit word). Single cycle.
+    /// reads where hardware broadcast is supported, the same
+    /// 32-bit word. Single cycle.
     BroadcastSafe,
     /// All N threads in a warp hit the same bank with N distinct
     /// addresses. Worst case  -  N-way serialization.
@@ -104,6 +104,7 @@ impl BankConflictReport {
     }
 }
 
+// Inline: covers the crate-private `critical_count` and `problematic_count`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

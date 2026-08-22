@@ -16,19 +16,36 @@ pub fn enforce_actual_output_budget(
     config: &DispatchConfig,
     outputs: &[Vec<u8>],
 ) -> Result<(), BackendError> {
-    let Some(limit) = config.max_output_bytes else {
+    if config.max_output_bytes.is_none() {
         return Ok(());
-    };
+    }
     let actual = outputs.iter().try_fold(0usize, |sum, output| {
         sum.checked_add(output.len()).ok_or_else(|| {
             BackendError::new(
-                "actual readback size overflows usize. Fix: split the Program output before dispatch.",
+                "readback size overflows usize. Fix: split the Program output before dispatch.",
             )
         })
     })?;
+    enforce_output_budget(config, actual)
+}
+
+/// Enforces [`DispatchConfig::max_output_bytes`] against an already-summed
+/// readback total.
+///
+/// Batched paths keep their rows in one contiguous buffer whose length is the
+/// total, so they state the total here rather than re-summing per row through a
+/// second copy of this policy.
+///
+/// # Errors
+///
+/// Returns when `actual` exceeds the configured cap.
+pub fn enforce_output_budget(config: &DispatchConfig, actual: usize) -> Result<(), BackendError> {
+    let Some(limit) = config.max_output_bytes else {
+        return Ok(());
+    };
     if actual > limit {
         return Err(BackendError::new(format!(
-            "actual readback size {actual} exceeds DispatchConfig.max_output_bytes {limit}. Fix: narrow BufferDecl::output_byte_range or raise max_output_bytes."
+            "readback size {actual} exceeds DispatchConfig.max_output_bytes {limit}. Fix: narrow BufferDecl::output_byte_range or raise max_output_bytes."
         )));
     }
     Ok(())
@@ -260,6 +277,7 @@ pub fn element_size_bytes(data_type: &DataType) -> Result<usize, BackendError> {
     })
 }
 
+// Inline: covers `align_up_to_u32_word`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "gpu_sequential_three_pass is the one spelling of the canonicalize, const-fold, dead-code sequence every backend's borrowed dispatch surface supports. gpu_optimize runs it as the first half of its non-resident route and the cross-backend scaling bench runs exactly it, so the two backends' columns describe the same work instead of each bench carrying its own copy."

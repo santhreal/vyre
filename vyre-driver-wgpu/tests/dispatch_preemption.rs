@@ -1,46 +1,13 @@
-//! Pre-emption / deadline cancellation.
-//!
-//! See `contracts/release.md`. `DispatchConfig.timeout` must be enforced
-//! as a dispatch deadline and leave the GPU in a recoverable state.
+//! Cancellation deadline and post-cancellation device usability contracts.
+
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::long_running_program;
 
 use std::time::{Duration, Instant};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-
-/// Build a program the GPU needs at least 2 seconds to finish. The
-/// exact shape depends on the vyre IR surface; this shape uses a dense loop
-/// per invocation. Keep it calibrated against the CI reference hardware.
-fn long_running_program() -> Program {
-    const OUTPUT_WORDS: u32 = 16 * 1024 * 1024;
-    let mut body = Vec::with_capacity(515);
-    body.push(Node::let_bind("idx", Expr::gid_x()));
-    body.push(Node::let_bind("acc", Expr::var("idx")));
-    for round in 0..512u32 {
-        body.push(Node::assign(
-            "acc",
-            Expr::bitxor(
-                Expr::mul(Expr::var("acc"), Expr::u32(1_664_525)),
-                Expr::add(
-                    Expr::var("idx"),
-                    Expr::u32(1_013_904_223u32.wrapping_add(round)),
-                ),
-            ),
-        ));
-    }
-    body.push(Node::if_then(
-        Expr::lt(Expr::var("idx"), Expr::buf_len("out")),
-        vec![Node::store("out", Expr::var("idx"), Expr::var("acc"))],
-    ));
-    Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32)
-            .with_count(OUTPUT_WORDS)
-            .with_output_byte_range(0..4)],
-        [256, 1, 1],
-        body,
-    )
-}
-
 #[test]
 fn dispatch_cancels_within_deadline() {
     let backend = WgpuBackend::acquire().expect("Fix: GPU required for pre-emption test");

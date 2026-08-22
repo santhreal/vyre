@@ -1,15 +1,30 @@
 //! Parity test: GPU bidirectional CSR step matches the reference oracle.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
-use vyre_self_substrate::csr_bidirectional::{
-    bidirectional_closure_via, bidirectional_step_via, reference_bidirectional_closure,
-    reference_bidirectional_step,
+use harness::with_cuda_optimizer_dispatcher;
+use vyre_libs::graph::dispatch::csr_bidirectional::{
+    bidirectional_closure_via, bidirectional_step_via,
+};
+use vyre_reference::composition_witness::{
+    csr_bidirectional_closure_witness,
+    csr_bidirectional_step_witness as reference_bidirectional_step,
 };
 
+fn reference_bidirectional_closure(inputs: CsrClosureInputs<'_>, seed: &[u32]) -> Vec<u32> {
+    csr_bidirectional_closure_witness(
+        inputs.graph.node_count,
+        inputs.graph.edge_offsets,
+        inputs.graph.edge_targets,
+        inputs.graph.edge_kind_mask,
+        seed,
+        inputs.allow_mask,
+        inputs.max_iters,
+    )
+}
 fn linear_chain() -> (u32, Vec<u32>, Vec<u32>, Vec<u32>) {
     // 0 -> 1 -> 2 -> 3
     (4, vec![0, 1, 2, 3, 3], vec![1, 2, 3], vec![1, 1, 1])
@@ -43,11 +58,35 @@ fn assert_bidirectional_closure_matches_reference(
     allow_mask: u32,
     max_iters: u32,
 ) {
-    let reference = reference_bidirectional_closure(n, off, tgt, msk, seed, allow_mask, max_iters);
+    let reference = reference_bidirectional_closure(
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: n,
+                edge_offsets: off,
+                edge_targets: tgt,
+                edge_kind_mask: msk,
+            },
+            allow_mask,
+            max_iters,
+        },
+        seed,
+    );
     with_cuda_optimizer_dispatcher(label, |dispatcher| {
-        let gpu =
-            bidirectional_closure_via(dispatcher, n, off, tgt, msk, seed, allow_mask, max_iters)
-                .expect("dispatch");
+        let gpu = bidirectional_closure_via(
+            dispatcher,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: n,
+                    edge_offsets: off,
+                    edge_targets: tgt,
+                    edge_kind_mask: msk,
+                },
+                allow_mask,
+                max_iters,
+            },
+            seed,
+        )
+        .expect("dispatch");
         assert_eq!(gpu, reference, "{label}: bidirectional closure divergence");
     });
 }

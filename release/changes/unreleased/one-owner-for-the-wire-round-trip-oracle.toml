@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The VIR0 wire round trip is held to one oracle: every suite now asserts non-empty bytes, an equal decode, and byte identity across a re-encode, instead of three partial readings of the same contract."

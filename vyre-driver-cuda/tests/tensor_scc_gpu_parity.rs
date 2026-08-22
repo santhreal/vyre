@@ -1,12 +1,13 @@
 //! Parity test: vyre-primitives tensor_scc_fixpoint matches CPU oracle.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::math::tensor_scc::{cpu_ref, tensor_scc_fixpoint};
+use vyre_libs::math::tensor_scc::tensor_scc_fixpoint;
+use vyre_reference::composition_witness::tensor_scc_witness;
 
 fn run(matrix_rows: &[u32], seed_mask: u32, group_mask: u32, iteration_limit: u32) -> u32 {
     let program = tensor_scc_fixpoint(
@@ -36,7 +37,7 @@ fn run(matrix_rows: &[u32], seed_mask: u32, group_mask: u32, iteration_limit: u3
 #[test]
 fn cuda_tensor_scc_closes_cycle_inside_group() {
     let rows = [0b0010, 0b0100, 0b0001, 0b1000];
-    let cpu = cpu_ref(&rows, 0b0001, 0b0111, 8);
+    let cpu = tensor_scc_witness(&rows, 0b0001, 0b0111, 8);
     let gpu = run(&rows, 0b0001, 0b0111, 8);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 0b0111);
@@ -45,7 +46,7 @@ fn cuda_tensor_scc_closes_cycle_inside_group() {
 #[test]
 fn cuda_tensor_scc_smaller_group_caps_closure() {
     let rows = [0b0010, 0b0100, 0b0001, 0b1000];
-    let cpu = cpu_ref(&rows, 0b0001, 0b0011, 8);
+    let cpu = tensor_scc_witness(&rows, 0b0001, 0b0011, 8);
     let gpu = run(&rows, 0b0001, 0b0011, 8);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 0b0011);
@@ -54,7 +55,7 @@ fn cuda_tensor_scc_smaller_group_caps_closure() {
 #[test]
 fn cuda_tensor_scc_no_seed_yields_zero() {
     let rows = [0b0010, 0b0100, 0b0001, 0b1000];
-    let cpu = cpu_ref(&rows, 0, 0b1111, 4);
+    let cpu = tensor_scc_witness(&rows, 0, 0b1111, 4);
     let gpu = run(&rows, 0, 0b1111, 4);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 0);

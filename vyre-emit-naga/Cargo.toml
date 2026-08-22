@@ -1,6 +1,6 @@
 [package]
 name = "vyre-emit-naga"
-version = "0.7.2"
+version = "0.8.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Naga IR emitter for vyre KernelDescriptor. Produces wgpu-compatible compute shaders."
@@ -27,17 +27,31 @@ vyre-foundation.workspace = true
 rustc-hash = { workspace = true }
 inventory = { workspace = true }
 serde_json.workspace = true
-blake3 = { workspace = true }
 tracing = { workspace = true }
+smallvec.workspace = true
+
+# build.rs stamps a digest of this package's own source; the walk, the hash, and
+# the rerun triggers live in vyre-foundation so the two emitter build scripts
+# read one implementation.
+[build-dependencies]
+vyre-foundation.workspace = true
 
 [dev-dependencies]
-vyre-test-support.workspace = true
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
+# `ir-fixtures` carries the per-Node-variant fixture set the atomic-scanner
+# descent gate derives its variant space from at run time.
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # integration tests/benches assert against these crates' public APIs.
-# `c-parser` is required by carrier_scope_regression::dump_c11_lexer_naga, which
-# builds the real `vyre_libs::parsing::c::lex::lexer::c11_lexer` megakernel and
-# drives it through lower_verified → vyre_emit_naga::emit to regression-test
-# loop-carrier scope handling on a real-world program. `parsing::c` is gated
-# behind `c-parser` (vyre-libs/Cargo.toml), so without this the test binary
-# fails to compile (E0433: no `c` in `parsing`).
-vyre-libs = { path = "../vyre-libs", features = ["c-parser"] }
+# `python-parser` is required by
+# carrier_scope_regression::dump_python312_lexer_naga, which builds the real
+# `vyre_libs::parsing::python::lex::python312_lexer` megakernel and drives it
+# through lower_verified into vyre_emit_naga::emit to regression-test
+# loop-carrier scope handling on a real-world program. `parsing::python` is
+# gated behind `python-parser` (vyre-libs/Cargo.toml), so without this the test
+# binary fails to compile (E0433: no `python` in `parsing`).
+vyre-libs = { path = "../vyre-libs", features = ["python-parser"] }
 proptest.workspace = true
+
+[[test]]
+name = "emit_contracts"
+path = "tests/emit_contracts/mod.rs"

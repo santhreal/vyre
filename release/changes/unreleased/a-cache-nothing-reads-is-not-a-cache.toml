@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The scheduler-owned fact cache is gone, along with the `fact_cache_reused`, `fact_cache_recomputed` and `fact_cache_invalidated` fields on `PassRunMetric` and `PassExplanation`. The scheduler derived a `FactCache` per dirty pass and stored it where nothing read it, so the three fields reported hit rates for work no pass consumed. `PassCtx` is also gone: it was exported and snapshotted with no construction site in the workspace. Passes reach the real fact cache through `FactCache::derive_use_only_cached` and its siblings."

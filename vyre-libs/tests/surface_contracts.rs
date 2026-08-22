@@ -8,8 +8,8 @@
     feature = "math-linalg",
     feature = "nn-norm",
     feature = "nn-attention",
-    feature = "matching-substring",
-    feature = "matching-dfa",
+    feature = "pattern-substring",
+    feature = "pattern-dfa",
     feature = "crypto-blake3",
 ))]
 
@@ -102,7 +102,7 @@ fn contract_nn_attention_small_shapes_unroll_directly() {
 
 #[test]
 fn contract_matching_aho_corasick_exists() {
-    use vyre_libs::scan::aho_corasick;
+    use vyre_libs::pattern::aho_corasick;
     let p = aho_corasick("haystack", "transitions", "accept", "matches", 16, 8);
     assert_eq!(p.buffers().len(), 4);
 }
@@ -125,7 +125,7 @@ fn contract_crypto_blake3_exists() {
 #[test]
 fn contract_substring_real_byte_compare() {
     use vyre::ir::{Expr, Node};
-    use vyre_libs::scan::substring_search;
+    use vyre_libs::pattern::substring_search;
 
     let program = substring_search("haystack", "needle", "matches", 5, 2);
 
@@ -187,12 +187,7 @@ fn contract_substring_real_byte_compare() {
         .bytes()
         .flat_map(|b| u32::from(b).to_le_bytes())
         .collect();
-    let matches_bytes = vec![0u8; 5 * 4];
-    let inputs = [
-        Value::from(haystack_bytes),
-        Value::from(needle_bytes),
-        Value::from(matches_bytes),
-    ];
+    let inputs = [Value::from(haystack_bytes), Value::from(needle_bytes)];
     let outputs =
         vyre_reference::reference_eval(&program, &inputs).expect("execute substring_search");
     assert_eq!(outputs.len(), 1, "only matches buffer is ReadWrite");

@@ -1,6 +1,6 @@
 [package]
 name = "vyre-driver-reference"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -19,12 +19,12 @@ vyre-foundation.workspace = true
 vyre-reference.workspace = true
 inventory.workspace = true
 
-[dev-dependencies]
-vyre-frontend-c = { path = "../vyre-frontend-c" }
-
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+vyre-driver = { workspace = true, features = ["test-fixtures"] }

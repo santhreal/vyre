@@ -3,10 +3,10 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask
+./cargo_full test -p xtask
 ```
 
-Generate evidence and enforce repository, release, documentation, and architecture contracts.
+Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence, linking no vyre crate.
 
 The crate lives at `xtask`. The `release-tooling` owner maintains its
 `tooling` testing contract.
@@ -14,11 +14,11 @@ The crate lives at `xtask`. The `release-tooling` owner maintains its
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask
+./cargo_full test -p xtask
 ```
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run --bin xtask -- vyre-release-gate --prepublish
+./cargo_full run --bin xtask -- vyre-release-gate
 ```
 
 ## Feature sets
@@ -29,20 +29,13 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `bin` | `audit_rule_contracts` | `xtask/src/bin/audit_rule_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --bin audit_rule_contracts` |
-| `bin` | `scaffold_rule` | `xtask/src/bin/scaffold_rule.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --bin scaffold_rule` |
-| `bin` | `xtask` | `xtask/src/main.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --bin xtask` |
-| `test` | `architecture_docs` | `xtask/tests/architecture_docs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test architecture_docs` |
-| `test` | `canonical_first_workgroup_guard` | `xtask/tests/canonical_first_workgroup_guard.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test canonical_first_workgroup_guard` |
-| `test` | `cli_docs` | `xtask/tests/cli_docs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test cli_docs` |
-| `test` | `crate_ownership_registry` | `xtask/tests/crate_ownership_registry.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test crate_ownership_registry` |
-| `test` | `crate_readmes` | `xtask/tests/crate_readmes.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test crate_readmes` |
-| `test` | `docs_references` | `xtask/tests/docs_references.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test docs_references` |
-| `test` | `operation_schema` | `xtask/tests/operation_schema.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test operation_schema` |
-| `test` | `public_api_snapshot_inventory` | `xtask/tests/public_api_snapshot_inventory.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test public_api_snapshot_inventory` |
-| `test` | `relation_import_certificates` | `xtask/tests/relation_import_certificates.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test relation_import_certificates` |
-| `test` | `release_docs` | `xtask/tests/release_docs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test release_docs` |
-| `test` | `testing_guides` | `xtask/tests/testing_guides.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test testing_guides` |
+| `bin` | `audit_rule_contracts` | `xtask/src/bin/audit_rule_contracts.rs` | None | `./cargo_full test -p xtask --bin audit_rule_contracts` |
+| `bin` | `publishable_packages` | `xtask/src/bin/publishable_packages.rs` | None | `./cargo_full test -p xtask --bin publishable_packages` |
+| `bin` | `scaffold_rule` | `xtask/src/bin/scaffold_rule.rs` | None | `./cargo_full test -p xtask --bin scaffold_rule` |
+| `bin` | `xtask` | `xtask/src/main.rs` | None | `./cargo_full test -p xtask --bin xtask` |
+| `lib` | `xtask` | `xtask/src/lib.rs` | None | `./cargo_full test -p xtask` |
+| `test` | `docs_references` | `xtask/tests/docs_references.rs` | None | `./cargo_full test -p xtask --test docs_references` |
+| `test` | `release_docs` | `xtask/tests/release_docs.rs` | None | `./cargo_full test -p xtask --test release_docs` |
 
 ## Test classes
 
@@ -52,7 +45,7 @@ This crate declares no Cargo features.
 
 ## Hardware requirements
 
-Most policy tests are host-only. Commands that generate backend evidence inherit the hardware contract of the selected backend and must fail on an unavailable requested device.
+Most policy tests are host-only. Commands that generate backend evidence inherit the hardware contract of the selected backend on the execution host (axiomexec) and must fail on an unavailable requested device.
 
 ## Evidence outputs
 

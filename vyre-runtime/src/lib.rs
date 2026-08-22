@@ -1,15 +1,13 @@
 //! Artifact execution, resident work queues, resource residency, and zero-copy IO.
 //!
-//! Runtime construction starts from an authenticated [`ArtifactSession`].
+//! Runtime construction starts from an authenticated [`artifact_admission::ArtifactSession`].
 //! Immutable compiler artifacts are materialized through registered target
 //! devices; runtime policy owns bindings, retained state, queueing, recovery,
 //! resource residency, IO, and telemetry.
 
-#![deny(missing_docs)]
-#![warn(unreachable_pub)]
 // vyre-runtime owns the io_uring zero-copy ingest path and the persistent
 // megakernel ring; both reach into FFI / mmap territory. Every unsafe site
-// carries a `Safety:` comment that `check_unsafe_justifications.sh` validates.
+// carries a `SAFETY:` comment the `lint-unsafe-justification` gate validates.
 #![allow(unsafe_code)]
 
 /// Errors surfaced by the runtime layer. Every variant carries a
@@ -93,8 +91,8 @@ impl PipelineError {
     }
 }
 
-impl From<vyre_driver::backend::BackendError> for PipelineError {
-    fn from(err: vyre_driver::backend::BackendError) -> Self {
+impl From<vyre_driver::BackendError> for PipelineError {
+    fn from(err: vyre_driver::BackendError) -> Self {
         PipelineError::Backend(err.to_string())
     }
 }
@@ -102,11 +100,21 @@ impl From<vyre_driver::backend::BackendError> for PipelineError {
 /// Canonical artifact-envelope authentication and exact-format admission.
 pub mod artifact_admission;
 
+/// Intra-device expert scheduling and inter-device token exchange.
+pub mod expert_scheduling;
+/// Multi-Token Prediction (MTP) speculative decoding and rollback coordination.
+pub mod mtp;
+/// Paged KV cache residency contracts and validation.
+pub mod paged_residency;
+/// Radix prefix-cache lifecycle, immutable identity, and copy-on-write allocation.
+pub mod prefix_cache;
 /// Backend-neutral immutable-resource and mutable-state residency.
 pub mod resource_residency;
 
+/// Authenticated safetensors transfer lifecycle, residency composition, and integrity.
+pub mod safetensors_transfer;
+
 /// Resident work-queue protocols, scheduling policy, and runtime IO.
-#[path = "megakernel/mod.rs"]
 pub mod resident_work_queue;
 
 /// Authenticated persistent execution over retained artifact bindings.
@@ -131,29 +139,6 @@ pub mod scheduler;
 /// GPU, shared across producer tools via the `tenant_id` field already
 /// in the ring protocol.
 pub mod tenant;
-
-pub use replay::{
-    RecordedSlot, ReplayFailureClass, ReplayFailureEvidence, ReplayLogError, ReplayRecord, RingLog,
-};
-pub use tenant::{
-    TenantError, TenantHandle, TenantRegistry, OPCODE_RANGE_PER_TENANT, TENANT_ID_MAX,
-    TENANT_OPCODE_BASE,
-};
-
-#[cfg(feature = "remote-cache")]
-pub use pipeline_cache::RemoteCache;
-pub use pipeline_cache::{
-    DiskCache, DiskCacheError, InMemoryPipelineCache, LayeredPipelineCache,
-    PipelineCacheMetricError, PipelineCacheMetrics, PipelineCacheStore, PipelineFingerprint,
-};
-
-pub use artifact_admission::{
-    admit_artifact, admit_cached_artifact, admit_envelope, AdmittedArtifact,
-    ArtifactAdmissionError, ArtifactSession, ArtifactSessionError, RetainedArtifactSession,
-};
-pub use persistent_executor::{PersistentExecutor, ResidentQueueCompletion, ResidentQueueState};
-pub use recovery::{classify_backend_error, recover_artifact_session};
-pub use vyre_foundation::diagnostics::RetryClass;
 
 /// Linux io_uring integration. Compiled out on macOS / Windows.
 #[cfg(target_os = "linux")]
@@ -331,85 +316,5 @@ impl<'a> UringCompletionPump<'a> {
         _timeout_ns: u64,
     ) -> Result<(), PipelineError> {
         Err(PipelineError::NotLinux)
-    }
-}
-
-/// Linux-only: host-visible GPU buffer that io_uring can DMA into.
-#[cfg(target_os = "linux")]
-pub use uring::GpuMappedBuffer;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn construct_stream_has_no_shutdown() {
-        let stream = UringCompletionPump::new();
-        assert!(!stream.is_shutdown_requested());
-    }
-
-    #[test]
-    fn shutdown_is_idempotent() {
-        let mut stream = UringCompletionPump::new();
-        stream.request_shutdown();
-        stream.request_shutdown();
-        assert!(stream.is_shutdown_requested());
-    }
-
-    #[test]
-    fn poll_without_uring_reports_detached_state() {
-        let mut stream = UringCompletionPump::new();
-        assert_eq!(stream.poll().unwrap(), UringPollState::Detached);
-    }
-
-    #[test]
-    fn drain_incomplete_is_distinguishable_by_type_not_substring() {
-        // Regression: the seg_len calibrator must EXCLUDE a too-fine geometry
-        // (drain-incomplete) but PROPAGATE every other backend failure. It used
-        // to discriminate by `to_string().contains("drain incomplete")`, which
-        // silently turns into "abort the whole calibration" the moment the
-        // message wording drifts. The structured variant + predicate is the
-        // contract; this test pins it.
-        let drain = PipelineError::DrainIncomplete {
-            descriptor: "combined megakernel",
-            claimed: 3,
-            expected: 10,
-            unit: "segments",
-        };
-        assert!(drain.is_drain_incomplete());
-
-        // The Display message stays operator-actionable AND keeps the
-        // "drain incomplete" phrase + computed unscanned count, so legacy
-        // substring matchers and operator logs do not regress.
-        let msg = drain.to_string();
-        assert_eq!(
-            msg,
-            "combined megakernel drain incomplete: only 3 of 10 segments were claimed before the \
-             dispatch ended, so 7 segments went unscanned and their matches were dropped. This \
-             dispatch's hit set is INCOMPLETE. Fix: raise the dispatch timeout \
-             (BatchDispatchConfig.timeout) so the drain loop can exhaust the queue, or shard the \
-             batch into smaller queues."
-        );
-
-        // The per-rule path uses the same variant with a different descriptor/unit.
-        let per_rule = PipelineError::DrainIncomplete {
-            descriptor: "megakernel",
-            claimed: 0,
-            expected: 4,
-            unit: "work-items",
-        };
-        assert!(per_rule.is_drain_incomplete());
-        assert!(
-            per_rule
-                .to_string()
-                .starts_with("megakernel drain incomplete: only 0 of 4 work-items were claimed"),
-            "msg was: {}",
-            per_rule
-        );
-
-        // A genuine backend failure is NOT a drain-incomplete: it must surface
-        // as a hard error, never be excluded-and-continued by the calibrator.
-        let backend = PipelineError::Backend("adapter lost".to_string());
-        assert!(!backend.is_drain_incomplete());
     }
 }

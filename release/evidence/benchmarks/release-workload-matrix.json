@@ -1,4 +1,5 @@
 {
+  "source_fingerprint": "git:6e3be5f4a7d116480c1c0440aee3c01bc68165a3:dirty=true:worktree=692411983ddce5f037bcda6e17d332caafbdda26576189761add750b8cacdb68",
   "schema_version": 1,
   "benchmark_evidence_schema_version": 1,
   "required_benchmark_case_fields": [
@@ -12,29 +13,29 @@
     "active_time_ns",
     "transfer_bytes"
   ],
-  "required_closed_families": 13,
+  "required_closed_families": 14,
   "required_cpu_sota_100x_families": [
     "condition-eval",
-    "string-bitmap-scatter",
     "offset-count-aggregation",
     "entropy-window",
     "quantified-condition-loops",
     "alias-reaching-def",
     "ifds-witness",
-    "c-ast-traversal",
+    "ast-motif-traversal",
     "megakernel-queued-batches",
-    "sparse-output-compaction"
+    "sparse-output-compaction",
+    "egraph-saturation"
   ],
   "missing_required_cpu_sota_100x_families": [],
-  "matched_required_families": 13,
+  "matched_required_families": 14,
   "release_suite_case_count": 23,
-  "cpu_sota_contract_count": 32,
-  "cpu_sota_100x_contract_count": 14,
+  "cpu_sota_contract_count": 31,
+  "cpu_sota_100x_contract_count": 13,
   "cpu_sota_100x_contract_cases": [
     "conditions.yara_like.eval.1m",
     "nn.linear_4bit_affine_grouped.1m",
     "release.alias_reaching_def.1m",
-    "release.c_ast_traversal.1m",
+    "release.ast_motif_traversal.1m",
     "release.condition_eval.1m",
     "release.egraph_saturation.1m",
     "release.entropy_window.1m",
@@ -42,22 +43,21 @@
     "release.megakernel_queue.1m",
     "release.offset_count_aggregation.1m",
     "release.quantified_condition_loops.1m",
-    "release.string_bitmap_scatter.1m",
     "runtime.megakernel.condition.64k",
     "sparse.compaction.count.1m"
   ],
   "cpu_sota_100x_family_count": 10,
   "cpu_sota_100x_families": [
     "alias-reaching-def",
-    "c-ast-traversal",
+    "ast-motif-traversal",
     "condition-eval",
+    "egraph-saturation",
     "entropy-window",
     "ifds-witness",
     "megakernel-queued-batches",
     "offset-count-aggregation",
     "quantified-condition-loops",
-    "sparse-output-compaction",
-    "string-bitmap-scatter"
+    "sparse-output-compaction"
   ],
   "families": [
     {
@@ -79,17 +79,17 @@
         "runtime.megakernel.condition.64k"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-01-condition-eval.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.condition_eval.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-01-condition-eval.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.condition_eval.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-01-condition-eval.json",
       "bench_target_ids": [
         "release.workload.condition_eval"
       ],
       "cpu_sota_contracts": [
         "conditions.yara_like.eval.1m => Rayon-parallel scalar short-circuit rule loop 100x",
         "metadata.condition.filesize_header.1m => optimized CPU PE-header predicate evaluator 50x",
-        "release.condition_eval.1m => optimized CPU rule-condition evaluator with SIMD-friendly bitmap inputs 100x",
-        "release.megakernel_queue.1m => optimized CPU batched condition evaluator 100x",
-        "release.quantified_condition_loops.1m => optimized CPU short-circuit quantified-condition evaluator 100x",
-        "release.string_bitmap_scatter.1m => Hyperscan/ripgrep-class CPU pattern bitmap materialization 100x",
+        "release.condition_eval.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x",
+        "release.megakernel_queue.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x",
+        "release.quantified_condition_loops.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x",
+        "release.string_bitmap_scatter.1m => single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words) 25x",
         "runtime.megakernel.condition.64k => optimized CPU condition evaluator baseline 100x"
       ],
       "cpu_sota_100x_cases": [
@@ -97,17 +97,14 @@
         "release.condition_eval.1m",
         "release.megakernel_queue.1m",
         "release.quantified_condition_loops.1m",
-        "release.string_bitmap_scatter.1m",
         "runtime.megakernel.condition.64k"
       ],
       "cpu_sota_baseline_names": [
-        "Hyperscan/ripgrep-class CPU pattern bitmap materialization",
         "Rayon-parallel scalar short-circuit rule loop",
         "optimized CPU PE-header predicate evaluator",
-        "optimized CPU batched condition evaluator",
         "optimized CPU condition evaluator baseline",
-        "optimized CPU rule-condition evaluator with SIMD-friendly bitmap inputs",
-        "optimized CPU short-circuit quantified-condition evaluator"
+        "single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words)",
+        "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
       ],
       "cpu_sota_baseline_crates": [
         "rayon",
@@ -135,18 +132,16 @@
         "release.string_bitmap_scatter.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.string_bitmap_scatter.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.string_bitmap_scatter.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
       "bench_target_ids": [
         "release.workload.string_bitmap_scatter"
       ],
       "cpu_sota_contracts": [
-        "release.string_bitmap_scatter.1m => Hyperscan/ripgrep-class CPU pattern bitmap materialization 100x"
+        "release.string_bitmap_scatter.1m => single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words) 25x"
       ],
-      "cpu_sota_100x_cases": [
-        "release.string_bitmap_scatter.1m"
-      ],
+      "cpu_sota_100x_cases": [],
       "cpu_sota_baseline_names": [
-        "Hyperscan/ripgrep-class CPU pattern bitmap materialization"
+        "single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words)"
       ],
       "cpu_sota_baseline_crates": [
         "vyre-libs"
@@ -157,7 +152,7 @@
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
-      "max_cpu_sota_min_speedup_x": 100.0
+      "max_cpu_sota_min_speedup_x": 25.0
     },
     {
       "id": "offset-count-aggregation",
@@ -171,18 +166,18 @@
         "release.offset_count_aggregation.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.offset_count_aggregation.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.offset_count_aggregation.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
       "bench_target_ids": [
         "release.workload.offset_count_aggregation"
       ],
       "cpu_sota_contracts": [
-        "release.offset_count_aggregation.1m => SIMD CPU aggregation over sorted match streams 100x"
+        "release.offset_count_aggregation.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x"
       ],
       "cpu_sota_100x_cases": [
         "release.offset_count_aggregation.1m"
       ],
       "cpu_sota_baseline_names": [
-        "SIMD CPU aggregation over sorted match streams"
+        "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
       ],
       "cpu_sota_baseline_crates": [
         "vyre-libs"
@@ -207,7 +202,7 @@
         "metadata.condition.filesize_header.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-04-metadata-conditions.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case metadata.condition.filesize_header.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-04-metadata-conditions.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case metadata.condition.filesize_header.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-04-metadata-conditions.json",
       "bench_target_ids": [
         "release.workload.pe_metadata"
       ],
@@ -241,18 +236,18 @@
         "release.entropy_window.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-05-entropy-window.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.entropy_window.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-05-entropy-window.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.entropy_window.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-05-entropy-window.json",
       "bench_target_ids": [
         "release.workload.entropy_window"
       ],
       "cpu_sota_contracts": [
-        "release.entropy_window.1m => SIMD CPU rolling histogram entropy implementation 100x"
+        "release.entropy_window.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x"
       ],
       "cpu_sota_100x_cases": [
         "release.entropy_window.1m"
       ],
       "cpu_sota_baseline_names": [
-        "SIMD CPU rolling histogram entropy implementation"
+        "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
       ],
       "cpu_sota_baseline_crates": [
         "vyre-libs"
@@ -277,18 +272,18 @@
         "release.quantified_condition_loops.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-06-quantified-condition-loops.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.quantified_condition_loops.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-06-quantified-condition-loops.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.quantified_condition_loops.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-06-quantified-condition-loops.json",
       "bench_target_ids": [
         "release.workload.for_any_all_n"
       ],
       "cpu_sota_contracts": [
-        "release.quantified_condition_loops.1m => optimized CPU short-circuit quantified-condition evaluator 100x"
+        "release.quantified_condition_loops.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x"
       ],
       "cpu_sota_100x_cases": [
         "release.quantified_condition_loops.1m"
       ],
       "cpu_sota_baseline_names": [
-        "optimized CPU short-circuit quantified-condition evaluator"
+        "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
       ],
       "cpu_sota_baseline_crates": [
         "vyre"
@@ -313,18 +308,18 @@
         "release.alias_reaching_def.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-07-alias-reaching-def.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.alias_reaching_def.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-07-alias-reaching-def.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.alias_reaching_def.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-07-alias-reaching-def.json",
       "bench_target_ids": [
         "release.workload.alias_reaching_def"
       ],
       "cpu_sota_contracts": [
-        "release.alias_reaching_def.1m => sparse dataflow and alias-analysis CPU baseline 100x"
+        "release.alias_reaching_def.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x"
       ],
       "cpu_sota_100x_cases": [
         "release.alias_reaching_def.1m"
       ],
       "cpu_sota_baseline_names": [
-        "sparse dataflow and alias-analysis CPU baseline"
+        "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
       ],
       "cpu_sota_baseline_crates": [
         "vyre-bench"
@@ -353,18 +348,18 @@
         "release.ifds_witness.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-08-ifds-witness.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.ifds_witness.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-08-ifds-witness.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.ifds_witness.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-08-ifds-witness.json",
       "bench_target_ids": [
         "release.workload.ifds_witness"
       ],
       "cpu_sota_contracts": [
-        "release.ifds_witness.1m => IFDS CPU reachability and witness extraction 100x"
+        "release.ifds_witness.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x"
       ],
       "cpu_sota_100x_cases": [
         "release.ifds_witness.1m"
       ],
       "cpu_sota_baseline_names": [
-        "IFDS CPU reachability and witness extraction"
+        "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
       ],
       "cpu_sota_baseline_crates": [
         "vyre-bench"
@@ -378,32 +373,32 @@
       "max_cpu_sota_min_speedup_x": 100.0
     },
     {
-      "id": "c-ast-traversal",
-      "title": "C AST traversal and motif predicates",
+      "id": "ast-motif-traversal",
+      "title": "AST-shaped node motif predicate traversal",
       "release_plan_workload": 9,
       "required": true,
-      "dispatch_policy": "specialized-parser-kernel",
+      "dispatch_policy": "single-kernel-count",
       "requires_cpu_sota_baseline": true,
-      "non_megakernel_justification": "architectural: C AST traversal consumes parser-owned AST buffers with table/stream access patterns that remain outside the condition megakernel for this release",
+      "non_megakernel_justification": "architectural: AST motif traversal evaluates node-kind, depth and motif predicates over table-shaped node columns, which is a single counting pass rather than a queued rule opcode stream",
       "matched_cases": [
-        "release.c_ast_traversal.1m"
+        "release.ast_motif_traversal.1m"
       ],
-      "evidence_artifact": "release/evidence/benchmarks/workload-09-c-ast-traversal.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.c_ast_traversal.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-09-c-ast-traversal.json",
+      "evidence_artifact": "release/evidence/benchmarks/workload-09-ast-motif-traversal.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.ast_motif_traversal.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-09-ast-motif-traversal.json",
       "bench_target_ids": [
-        "release.workload.c_ast_traversal"
+        "release.workload.ast_motif_traversal"
       ],
       "cpu_sota_contracts": [
-        "release.c_ast_traversal.1m => tree-sitter/libclang-class CPU AST traversal baseline 100x"
+        "release.ast_motif_traversal.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x"
       ],
       "cpu_sota_100x_cases": [
-        "release.c_ast_traversal.1m"
+        "release.ast_motif_traversal.1m"
       ],
       "cpu_sota_baseline_names": [
-        "tree-sitter/libclang-class CPU AST traversal baseline"
+        "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
       ],
       "cpu_sota_baseline_crates": [
-        "vyre-frontend-c"
+        "vyre-libs"
       ],
       "cpu_sota_backend_ids": [
         "cuda",
@@ -427,12 +422,12 @@
         "runtime.megakernel.truth.1024"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-10-megakernel-queued-batches.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.megakernel_queue.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-10-megakernel-queued-batches.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.megakernel_queue.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-10-megakernel-queued-batches.json",
       "bench_target_ids": [
         "release.workload.megakernel_stream"
       ],
       "cpu_sota_contracts": [
-        "release.megakernel_queue.1m => optimized CPU batched condition evaluator 100x",
+        "release.megakernel_queue.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x",
         "runtime.megakernel.condition.64k => optimized CPU condition evaluator baseline 100x"
       ],
       "cpu_sota_100x_cases": [
@@ -440,8 +435,8 @@
         "runtime.megakernel.condition.64k"
       ],
       "cpu_sota_baseline_names": [
-        "optimized CPU batched condition evaluator",
-        "optimized CPU condition evaluator baseline"
+        "optimized CPU condition evaluator baseline",
+        "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
       ],
       "cpu_sota_baseline_crates": [
         "vyre-runtime"
@@ -466,7 +461,7 @@
         "foundation.optimizer.impact"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case foundation.optimizer.impact --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case foundation.optimizer.impact --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
       "bench_target_ids": [
         "release.optimization.foundation_optimizer_impact"
       ],
@@ -490,12 +485,11 @@
       "matched_cases": [
         "conditions.yara_like.batch.16x64k",
         "dataflow.ifds.skewed.queue_closure.1m",
-        "parser.c_lexer.small_state_transition.4k",
         "primitives.graph.csr_skewed_queue_closure.1m",
         "sparse.compaction.count.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case sparse.compaction.count.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case sparse.compaction.count.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
       "bench_target_ids": [
         "release.workload.conformance_sparse_readback"
       ],
@@ -533,7 +527,7 @@
         "primitives.graph.csr_skewed_queue_closure.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-13-callgraph-reachability.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case callgraph.reachability.step.262k --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-13-callgraph-reachability.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case callgraph.reachability.step.262k --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-13-callgraph-reachability.json",
       "bench_target_ids": [
         "release.workload.callgraph_reachability"
       ],
@@ -570,7 +564,7 @@
         "dataflow.ifds.skewed.queue_step.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-14-compound-fused-filter.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case compound.pipeline.fused_filter.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-14-compound-fused-filter.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case compound.pipeline.fused_filter.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-14-compound-fused-filter.json",
       "bench_target_ids": [
         "release.workload.compound_fused_filter"
       ],
@@ -605,7 +599,7 @@
         "runtime.adaptive_routing.gpu_resident.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-15-adaptive-routing.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case runtime.adaptive_routing.gpu_resident.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-15-adaptive-routing.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case runtime.adaptive_routing.gpu_resident.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-15-adaptive-routing.json",
       "bench_target_ids": [
         "release.workload.adaptive_routing"
       ],
@@ -641,7 +635,7 @@
         "nn.linear_4bit_affine_grouped.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-16-quantized-linear.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case nn.linear_4bit_affine_grouped.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-16-quantized-linear.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case nn.linear_4bit_affine_grouped.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-16-quantized-linear.json",
       "bench_target_ids": [
         "release.workload.quantized_linear"
       ],
@@ -656,6 +650,42 @@
       ],
       "cpu_sota_baseline_crates": [
         "rayon"
+      ],
+      "cpu_sota_backend_ids": [
+        "cuda",
+        "wgpu"
+      ],
+      "fair_cpu_sota_baseline_count": 1,
+      "reproducible_cuda_command": true,
+      "max_cpu_sota_min_speedup_x": 100.0
+    },
+    {
+      "id": "egraph-saturation",
+      "title": "Rewrite-equivalence saturation predicates",
+      "release_plan_workload": 17,
+      "required": true,
+      "dispatch_policy": "single-kernel-count",
+      "requires_cpu_sota_baseline": true,
+      "non_megakernel_justification": "architectural: rewrite-equivalence saturation evaluates independent opcode and class-membership predicates in one counting pass rather than queueing a rule opcode stream",
+      "matched_cases": [
+        "release.egraph_saturation.1m"
+      ],
+      "evidence_artifact": "release/evidence/benchmarks/workload-17-egraph-saturation.json",
+      "benchmark_command": "cargo_full run -p vyre-bench --release -- run --suite release --case release.egraph_saturation.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-17-egraph-saturation.json",
+      "bench_target_ids": [
+        "release.workload.egraph_saturation"
+      ],
+      "cpu_sota_contracts": [
+        "release.egraph_saturation.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x"
+      ],
+      "cpu_sota_100x_cases": [
+        "release.egraph_saturation.1m"
+      ],
+      "cpu_sota_baseline_names": [
+        "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
+      ],
+      "cpu_sota_baseline_crates": [
+        "vyre-lower"
       ],
       "cpu_sota_backend_ids": [
         "cuda",

@@ -1,12 +1,14 @@
 //! Adapter from substrate frontier-typed IR plans to CUDA frontier waves.
 
-use crate::backend::accounting::{checked_mul_u64_count as checked_mul, CudaArithmeticOverflow};
 use crate::backend::staging_reserve::{
     reserve_typed_vec as reserve_vec, CudaStorageReserveFailure,
 };
+use vyre_driver::accounting::{checked_mul_u64_count as checked_mul, ArithmeticOverflow};
 use vyre_driver::megakernel_barrier::MegakernelWaveDependency;
 use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
-use vyre_self_substrate::frontier_typed_ir::FrontierTypedPlan;
+use vyre_libs::scheduling::frontier_typed_ir::FrontierTypedPlan;
+#[cfg(test)]
+use vyre_libs::scheduling::frontier_typed_ir::{FrontierDomain, FrontierWave};
 
 /// CUDA-ready frontier wave input derived from a frontier-typed IR plan.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -80,7 +82,7 @@ pub enum CudaFrontierTypedIrAdapterError {
     },
 }
 
-impl CudaArithmeticOverflow for CudaFrontierTypedIrAdapterError {
+impl ArithmeticOverflow for CudaFrontierTypedIrAdapterError {
     fn arithmetic_overflow(field: &'static str) -> Self {
         Self::ByteCountOverflow { field }
     }
@@ -182,35 +184,31 @@ const fn dependency_capacity(wave_count: usize) -> usize {
     }
 }
 
+// Inline: `vyre_driver_cuda::frontier_typed_ir_adapter` is `pub(crate)`, so no integration test can
+// reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;
     use vyre_driver::megakernel_barrier::plan_megakernel_barriers;
-    use vyre_self_substrate::frontier_typed_ir::{
-        plan_frontier_typed_ir, FrontierDependency, FrontierDomain, FrontierNode,
-    };
 
     #[test]
     fn adapter_converts_frontier_waves_to_cuda_byte_envelopes() {
-        let plan = plan_frontier_typed_ir(
-            &[
-                FrontierNode {
-                    id: 0,
-                    domain: FrontierDomain::Parser,
+        let plan = FrontierTypedPlan {
+            waves: vec![
+                FrontierWave {
+                    index: 0,
+                    domains: vec![FrontierDomain::Parser],
+                    node_ids: vec![0],
                     active_items: 4,
                 },
-                FrontierNode {
-                    id: 1,
-                    domain: FrontierDomain::Semantic,
+                FrontierWave {
+                    index: 1,
+                    domains: vec![FrontierDomain::Semantic],
+                    node_ids: vec![1],
                     active_items: 6,
                 },
             ],
-            &[FrontierDependency {
-                before: 0,
-                after: 1,
-            }],
-        )
-        .expect("Fix: frontier plan should build");
+        };
 
         let cuda = adapt_frontier_typed_ir_to_cuda(&plan, 8, 16, 32)
             .expect("Fix: frontier plan should adapt to CUDA");
@@ -252,7 +250,7 @@ mod tests {
     #[test]
     fn adapter_rejects_overflowing_wave_bytes() {
         let plan = FrontierTypedPlan {
-            waves: vec![vyre_self_substrate::frontier_typed_ir::FrontierWave {
+            waves: vec![vyre_libs::scheduling::frontier_typed_ir::FrontierWave {
                 index: 0,
                 domains: vec![FrontierDomain::Dataflow],
                 node_ids: vec![7],
@@ -268,6 +266,32 @@ mod tests {
                 field: "frontier bytes",
             }
         );
+
+        let err_scratch = adapt_frontier_typed_ir_to_cuda(&plan, 1, 2, 0)
+            .expect_err("overflowing scratch bytes should fail");
+        assert_eq!(
+            err_scratch,
+            CudaFrontierTypedIrAdapterError::ByteCountOverflow {
+                field: "scratch bytes",
+            }
+        );
+    }
+
+    #[test]
+    fn adapter_error_display() {
+        let err = CudaFrontierTypedIrAdapterError::ByteCountOverflow {
+            field: "scratch bytes",
+        };
+        assert!(err
+            .to_string()
+            .contains("overflowed while computing scratch bytes"));
+
+        let err = CudaFrontierTypedIrAdapterError::StorageReserveFailed {
+            field: "waves",
+            requested: 16,
+            message: "out of memory".to_string(),
+        };
+        assert!(err.to_string().contains("could not reserve 16 waves"));
     }
 
     #[test]
@@ -277,25 +301,22 @@ mod tests {
         let initial_wave_capacity = out.waves.capacity();
         let initial_active_capacity = out.active_items.capacity();
         let initial_dependency_capacity = out.dependencies.capacity();
-        let plan = plan_frontier_typed_ir(
-            &[
-                FrontierNode {
-                    id: 0,
-                    domain: FrontierDomain::Parser,
+        let plan = FrontierTypedPlan {
+            waves: vec![
+                FrontierWave {
+                    index: 0,
+                    domains: vec![FrontierDomain::Parser],
+                    node_ids: vec![0],
                     active_items: 4,
                 },
-                FrontierNode {
-                    id: 1,
-                    domain: FrontierDomain::Semantic,
+                FrontierWave {
+                    index: 1,
+                    domains: vec![FrontierDomain::Semantic],
+                    node_ids: vec![1],
                     active_items: 6,
                 },
             ],
-            &[FrontierDependency {
-                before: 0,
-                after: 1,
-            }],
-        )
-        .expect("Fix: frontier plan should build");
+        };
 
         adapt_frontier_typed_ir_to_cuda_into(&plan, 8, 16, 32, &mut out)
             .expect("Fix: frontier plan should adapt into reused CUDA storage");

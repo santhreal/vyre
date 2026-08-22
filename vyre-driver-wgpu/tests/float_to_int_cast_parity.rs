@@ -20,8 +20,10 @@
 //! This test dispatches the cast on the live GPU and asserts byte-for-byte
 //! equality with the saturating reference, NaN included.
 
-mod common;
-use common::u32_bytes;
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;

@@ -1,13 +1,12 @@
 //! Parity test: GPU K-FAC block inverse matches CPU oracle.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
-use vyre_primitives::math::kfac_block_inverse::cpu_ref;
-use vyre_self_substrate::kfac_autotune_step::kfac_autotune_step_via;
-
+use harness::with_cuda_optimizer_dispatcher;
+use vyre_libs::solvers::kfac_autotune_step::kfac_autotune_step_via;
+use vyre_reference::composition_witness::kfac_block_inverse_witness;
 fn approx_eq(a: f32, b: f32) -> bool {
     (a - b).abs() < 1e-3 * (1.0 + a.abs() + b.abs())
 }
@@ -25,7 +24,7 @@ fn assert_kfac_autotune_step_matches_reference(
     blocks: u32,
     dim: u32,
 ) {
-    let cpu = cpu_ref(blocks_in, blocks, dim);
+    let cpu = kfac_block_inverse_witness(blocks_in, blocks, dim);
     with_cuda_optimizer_dispatcher(label, |dispatcher| {
         let gpu = kfac_autotune_step_via(dispatcher, blocks_in, blocks, dim).expect("dispatch");
         approx_slice_eq(&gpu, &cpu);

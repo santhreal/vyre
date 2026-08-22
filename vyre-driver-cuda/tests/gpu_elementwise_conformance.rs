@@ -1,7 +1,9 @@
 //! Live CUDA elementwise dispatch conformance.
 
-mod common;
-use common::{bytes_u32, u32_bytes};
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::{bytes_u32, u32_bytes};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferDecl, CommGroup, DataType, Expr, Node, Program};
@@ -161,7 +163,7 @@ fn cuda_artifact_executes_world_reduce_scatter_as_single_rank_copy() {
             group: CommGroup::WORLD,
         }],
     );
-    let outputs = common::compiled_cuda_outputs(
+    let outputs = harness::compiled_cuda_outputs(
         &backend,
         &program,
         &[u32_bytes(&[8, 6, 7, 5])],
@@ -224,7 +226,7 @@ fn cuda_artifact_executes_world_broadcast_root_zero_as_identity() {
             },
         ],
     );
-    let outputs = common::compiled_cuda_outputs(
+    let outputs = harness::compiled_cuda_outputs(
         &backend,
         &program,
         &[u32_bytes(&[0, 1, u32::MAX - 1, u32::MAX])],

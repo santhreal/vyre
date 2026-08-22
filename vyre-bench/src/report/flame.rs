@@ -1,4 +1,4 @@
-//! ROADMAP M0  -  per-stage flame-graph emitter for the warm-batch corpus.
+//! per-stage flame-graph emitter for the warm-batch corpus.
 //!
 //! Lane: `bench_harness`. Op id:
 //! `vyre-bench::report::flame`. Soundness: read-only over a finished
@@ -94,20 +94,28 @@ pub fn write_collapsed<W: io::Write>(report: &ReportSchema, writer: &mut W) -> i
     Ok(lines)
 }
 
+/// Walk the recorded, non-zero stages of one case in pipeline order, yielding
+/// the display name (the key without its `_ns` suffix) and the p50 nanoseconds.
+///
+/// Both emitters below select stages the same way. A stage with no sample and a
+/// stage that recorded zero are equally absent from the visualization: neither
+/// says anything about where time went.
+fn recorded_stages(
+    metrics: &BTreeMap<String, crate::api::metric::MetricStats>,
+) -> impl Iterator<Item = (&str, u64)> {
+    STAGE_KEYS_ORDERED.iter().filter_map(|stage| {
+        let stats = metrics.get(*stage)?;
+        (stats.p50 != 0).then(|| (stage.strip_suffix("_ns").unwrap_or(stage), stats.p50))
+    })
+}
+
 fn write_case_stacks(
     out: &mut String,
     case_id: &str,
     metrics: &BTreeMap<String, crate::api::metric::MetricStats>,
 ) {
-    for stage in STAGE_KEYS_ORDERED {
-        let Some(stats) = metrics.get(*stage) else {
-            continue;
-        };
-        if stats.p50 == 0 {
-            continue;
-        }
-        let display_stage = stage.strip_suffix("_ns").unwrap_or(stage);
-        let _ = writeln!(out, "vyre;{};{} {}", case_id, display_stage, stats.p50);
+    for (stage, p50) in recorded_stages(metrics) {
+        let _ = writeln!(out, "vyre;{case_id};{stage} {p50}");
     }
 }
 
@@ -117,18 +125,11 @@ fn write_case_stacks(
 pub fn collapse_report_json(report: &ReportSchema) -> String {
     let mut entries = Vec::new();
     for case in &report.cases {
-        for stage in STAGE_KEYS_ORDERED {
-            let Some(stats) = case.metrics.get(*stage) else {
-                continue;
-            };
-            if stats.p50 == 0 {
-                continue;
-            }
-            let display_stage = stage.strip_suffix("_ns").unwrap_or(stage);
+        for (stage, p50) in recorded_stages(&case.metrics) {
             entries.push(serde_json::json!({
                 "case": case.id,
-                "stage": display_stage,
-                "p50_ns": stats.p50
+                "stage": stage,
+                "p50_ns": p50
             }));
         }
     }
@@ -138,104 +139,21 @@ pub fn collapse_report_json(report: &ReportSchema) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::case::Correctness;
-    use crate::api::metric::MetricStats;
-    use crate::probes::environment::EnvironmentData;
-    use crate::report::{CaseReport, ReportSchema, ReportSummary};
-
-    fn stat(p50: u64) -> MetricStats {
-        MetricStats {
-            min: p50,
-            p50,
-            p90: p50,
-            p95: p50,
-            p99: p50,
-            p999: p50,
-            p9999: p50,
-            max: p50,
-            mean: p50 as f64,
-            stddev: 0.0,
-            samples: 30,
-            determinism_cv: None,
-        }
-    }
-
-    fn case(id: &str, stages: &[(&str, u64)]) -> CaseReport {
-        let mut metrics = BTreeMap::new();
-        for (k, v) in stages {
-            metrics.insert((*k).to_string(), stat(*v));
-        }
-        CaseReport {
-            id: id.to_string(),
-            workload_fingerprint: format!("bench-case:{id}"),
-            name: id.to_string(),
-            owner_crate: "vyre-bench-test".to_string(),
-            workload_class: "Micro".to_string(),
-            tags: Vec::new(),
-            backend_id: Some("test".to_string()),
-            device_signature: Some("device-profile-v1:test".to_string()),
-            held_out_corpus_id: Some(format!("heldout:bench-case:{id}")),
-            needs_gpu: false,
-            min_vram_bytes: None,
-            min_input_bytes: None,
-            required_features: Vec::new(),
-            status: "ok".to_string(),
-            wall_ns: None,
-            correctness: Correctness::Exact,
-            contract: None,
-            performance: None,
-            metrics,
-            optimization_passes_applied: Vec::new(),
-            artifacts: Vec::new(),
-        }
-    }
-
-    fn schema(cases: Vec<CaseReport>) -> ReportSchema {
-        ReportSchema {
-            schema: "vyre-bench/v1".to_string(),
-            run_id: "test".to_string(),
-            suite: "flame_test".to_string(),
-            selected_backend: Some("test".to_string()),
-            backend_profile: None,
-            git: BTreeMap::new(),
-            source_fingerprint: "test-source".to_string(),
-            source_tree_fingerprint: "test-source-tree".to_string(),
-            environment: EnvironmentData {
-                os: "test".to_string(),
-                architecture: "x86_64".to_string(),
-                cpu_model: Some("test-cpu".to_string()),
-                cpu_cores: 1,
-                has_gpu: true,
-                gpu_devices: vec![crate::probes::environment::GpuDeviceInfo {
-                    name: "NVIDIA GeForce RTX 5090".to_string(),
-                    driver_version: "test-driver".to_string(),
-                    memory_total_mib: Some(32_768),
-                    compute_capability_major: Some(12),
-                    compute_capability_minor: Some(0),
-                }],
-                nvidia_driver_version: Some("test-driver".to_string()),
-                nvidia_cuda_version: Some("test-cuda".to_string()),
-                features: vec!["gpu.nvidia_smi".to_string()],
-            },
-            features: Vec::new(),
-            cases,
-            summary: ReportSummary {
-                total_cases: 0,
-                passed: 0,
-                failed: 0,
-                total_time_ns: 0,
-                cache_hit_rate: None,
-            },
-            blockers: Vec::new(),
-        }
-    }
+    use crate::report::fixture::{case, schema};
 
     #[test]
     fn collapse_report_emits_one_line_per_recorded_stage() {
-        let report = schema(vec![case(
-            "vyre-libs::nn::softmax",
-            &[("optimize_ns", 100), ("lower_ns", 200), ("dispatch_ns", 50)],
-        )]);
+        let report = schema(
+            "flame_test",
+            vec![case(
+                "vyre-libs::nn::softmax",
+                &[
+                    ("optimize_ns", 100, 100),
+                    ("lower_ns", 200, 200),
+                    ("dispatch_ns", 50, 50),
+                ],
+            )],
+        );
         let out = collapse_report(&report);
         // Stage order follows STAGE_KEYS_ORDERED, so optimize before
         // lower before dispatch.
@@ -249,17 +167,23 @@ vyre;vyre-libs::nn::softmax;dispatch 50
 
     #[test]
     fn collapse_report_skips_stages_with_zero_p50() {
-        let report = schema(vec![case(
-            "vyre-libs::nn::softmax",
-            &[("optimize_ns", 0), ("lower_ns", 200)],
-        )]);
+        let report = schema(
+            "flame_test",
+            vec![case(
+                "vyre-libs::nn::softmax",
+                &[("optimize_ns", 0, 0), ("lower_ns", 200, 200)],
+            )],
+        );
         let out = collapse_report(&report);
         assert_eq!(out, "vyre;vyre-libs::nn::softmax;lower 200\n");
     }
 
     #[test]
     fn collapse_report_skips_stages_with_no_sample() {
-        let report = schema(vec![case("vyre-libs::nn::softmax", &[("optimize_ns", 50)])]);
+        let report = schema(
+            "flame_test",
+            vec![case("vyre-libs::nn::softmax", &[("optimize_ns", 50, 50)])],
+        );
         let out = collapse_report(&report);
         // Only recorded stages emit flame-graph stacks; absent metrics
         // are intentionally absent from this visualization.
@@ -268,27 +192,33 @@ vyre;vyre-libs::nn::softmax;dispatch 50
 
     #[test]
     fn collapse_report_handles_multiple_cases_in_input_order() {
-        let report = schema(vec![
-            case("a", &[("optimize_ns", 10)]),
-            case("b", &[("optimize_ns", 20)]),
-        ]);
+        let report = schema(
+            "flame_test",
+            vec![
+                case("a", &[("optimize_ns", 10, 10)]),
+                case("b", &[("optimize_ns", 20, 20)]),
+            ],
+        );
         let out = collapse_report(&report);
         assert_eq!(out, "vyre;a;optimize 10\nvyre;b;optimize 20\n");
     }
 
     #[test]
     fn collapse_report_emits_no_lines_for_empty_metrics() {
-        let report = schema(vec![case("empty", &[])]);
+        let report = schema("flame_test", vec![case("empty", &[])]);
         let out = collapse_report(&report);
         assert!(out.is_empty(), "no stages → no flame-graph stack");
     }
 
     #[test]
     fn write_collapsed_returns_line_count_and_writes_same_bytes() {
-        let report = schema(vec![case(
-            "vyre-libs::nn::softmax",
-            &[("optimize_ns", 100), ("lower_ns", 200)],
-        )]);
+        let report = schema(
+            "flame_test",
+            vec![case(
+                "vyre-libs::nn::softmax",
+                &[("optimize_ns", 100, 100), ("lower_ns", 200, 200)],
+            )],
+        );
         let mut buf = Vec::new();
         let lines = write_collapsed(&report, &mut buf).expect("Fix: write must not fail");
         assert_eq!(lines, 2);
@@ -297,10 +227,13 @@ vyre;vyre-libs::nn::softmax;dispatch 50
 
     #[test]
     fn collapse_report_json_multi_case() {
-        let report = schema(vec![
-            case("a", &[("optimize_ns", 10)]),
-            case("b", &[("optimize_ns", 20)]),
-        ]);
+        let report = schema(
+            "flame_test",
+            vec![
+                case("a", &[("optimize_ns", 10, 10)]),
+                case("b", &[("optimize_ns", 20, 20)]),
+            ],
+        );
         let out = collapse_report_json(&report);
         let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
         assert!(parsed.is_array());
@@ -315,10 +248,17 @@ vyre;vyre-libs::nn::softmax;dispatch 50
 
     #[test]
     fn collapse_report_json_single_case() {
-        let report = schema(vec![case(
-            "vyre-libs::nn::softmax",
-            &[("optimize_ns", 100), ("lower_ns", 200), ("dispatch_ns", 50)],
-        )]);
+        let report = schema(
+            "flame_test",
+            vec![case(
+                "vyre-libs::nn::softmax",
+                &[
+                    ("optimize_ns", 100, 100),
+                    ("lower_ns", 200, 200),
+                    ("dispatch_ns", 50, 50),
+                ],
+            )],
+        );
         let out = collapse_report_json(&report);
         let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
         let arr = parsed.as_array().unwrap();
@@ -330,14 +270,17 @@ vyre;vyre-libs::nn::softmax;dispatch 50
 
     #[test]
     fn collapse_report_json_empty() {
-        let report = schema(vec![case("empty", &[])]);
+        let report = schema("flame_test", vec![case("empty", &[])]);
         let out = collapse_report_json(&report);
         assert_eq!(out, "[]");
     }
 
     #[test]
     fn collapse_report_json_missing_stage() {
-        let report = schema(vec![case("vyre-libs::nn::softmax", &[("optimize_ns", 50)])]);
+        let report = schema(
+            "flame_test",
+            vec![case("vyre-libs::nn::softmax", &[("optimize_ns", 50, 50)])],
+        );
         let out = collapse_report_json(&report);
         let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
         let arr = parsed.as_array().unwrap();

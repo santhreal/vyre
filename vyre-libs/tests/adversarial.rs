@@ -11,10 +11,23 @@
 //! This file is the canonical `--test adversarial` entry so `tests/SKILL.md` and
 //! `../../.internals/skills/testing/SKILL.md` align with a named binary.
 
+use vyre_libs::math::linalg::Matmul;
+use vyre_libs::TensorRef;
+
+/// The named aggregate always executes a hostile boundary even when the
+/// feature-focused sibling binaries are filtered by their own contracts.
 #[test]
-fn adversarial_test_layout_smoke() {
-    // If this test runs, the adversarial test binary is wired. Keep a trivial
-    // pass so `cargo test -p vyre-libs --test adversarial` is green; real
-    // adversarial cases live in the modules above.
-    assert_eq!(0_u32, 0_u32);
+fn adversarial_entry_rejects_matrix_element_count_overflow() {
+    let error = Matmul::new(
+        TensorRef::u32_2d("a", 1 << 16, 1 << 16),
+        TensorRef::u32_2d("b", 1 << 16, 1),
+        TensorRef::u32_2d("out", 1 << 16, 1),
+    )
+    .build()
+    .expect_err("Fix: matrix element-count overflow must be rejected before program creation");
+
+    assert_eq!(
+        error.to_string(),
+        "TensorRef `a` element-count overflows u32 for shape [65536, 65536]. Fix: reduce dimensions below the u32 boundary."
+    );
 }

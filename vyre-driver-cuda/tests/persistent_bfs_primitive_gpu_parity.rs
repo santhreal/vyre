@@ -1,18 +1,18 @@
 //! Parity test: vyre-primitives persistent_bfs Program matches CPU oracle.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::BufferAccess;
-use vyre_primitives::graph::persistent_bfs::{
+use vyre_libs::graph::persistent_bfs::{
     persistent_bfs, persistent_bfs_batch, persistent_bfs_batch_dispatch_grid,
-    persistent_bfs_single_dispatch_grid, try_cpu_ref_converged,
-    validate_persistent_bfs_converged_flag,
+    persistent_bfs_single_dispatch_grid, validate_persistent_bfs_converged_flag,
 };
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
+use vyre_reference::composition_witness::csr_persistent_closure_detailed_witness;
 
 fn run(
     node_count: u32,
@@ -70,15 +70,15 @@ fn run(
     (frontier_out, changed, converged)
 }
 
-/// CPU oracle for the single-query persistent-BFS program.
+/// Expected outcome for the single-query persistent-BFS program.
 ///
 /// The program writes three outputs since 0.7.0: the accumulated frontier, the
 /// sticky `changed` flag, and `converged`. This test used to compare only the
 /// first two, so a device that reported a fixpoint it never reached, or one
 /// that never wrote the flag at all, would still pass. Comparing the flag
-/// against the CPU source of truth is what makes an under-approximated closure
+/// against the reference source of truth is what makes an under-approximated closure
 /// a test failure instead of a silently truncated answer.
-fn cpu_ref_single(
+fn expected_persistent_bfs_single(
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -87,7 +87,7 @@ fn cpu_ref_single(
     allow_mask: u32,
     max_iters: u32,
 ) -> (Vec<u32>, u32, u32) {
-    let (frontier, outcome) = try_cpu_ref_converged(
+    let result = csr_persistent_closure_detailed_witness(
         node_count,
         edge_offsets,
         edge_targets,
@@ -95,9 +95,8 @@ fn cpu_ref_single(
         frontier_in,
         allow_mask,
         max_iters,
-    )
-    .expect("Fix: CPU persistent BFS oracle must accept the single-query shape");
-    (frontier, outcome.changed, u32::from(outcome.converged))
+    );
+    (result.frontier, result.changed, u32::from(result.converged))
 }
 
 fn run_batch(
@@ -154,7 +153,7 @@ fn run_batch(
     (frontier_out, changed, converged)
 }
 
-fn cpu_ref_batch(
+fn expected_persistent_bfs_batch(
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -171,7 +170,7 @@ fn cpu_ref_batch(
     for query in 0..query_count as usize {
         let start = query * words;
         let end = start + words;
-        let (frontier, outcome) = try_cpu_ref_converged(
+        let result = csr_persistent_closure_detailed_witness(
             node_count,
             edge_offsets,
             edge_targets,
@@ -179,11 +178,10 @@ fn cpu_ref_batch(
             &frontiers[start..end],
             allow_mask,
             max_iters,
-        )
-        .expect("Fix: CPU persistent BFS batch oracle must accept the query shape");
-        frontier_out.extend_from_slice(&frontier);
-        changed_out.push(outcome.changed);
-        converged_out.push(u32::from(outcome.converged));
+        );
+        frontier_out.extend_from_slice(&result.frontier);
+        changed_out.push(result.changed);
+        converged_out.push(u32::from(result.converged));
     }
     (frontier_out, changed_out, converged_out)
 }
@@ -195,7 +193,7 @@ fn cuda_persistent_bfs_chain_converges_changed_set() {
     let edge_targets = vec![1u32, 2, 3];
     let edge_kind_mask = vec![1u32; 3];
     let frontier = vec![0b0001u32];
-    let cpu = cpu_ref_single(
+    let cpu = expected_persistent_bfs_single(
         n,
         &edge_offsets,
         &edge_targets,
@@ -230,7 +228,7 @@ fn cuda_persistent_bfs_diamond_converges() {
     let edge_targets = vec![1u32, 2, 3, 3];
     let edge_kind_mask = vec![1u32; 4];
     let frontier = vec![0b0001u32];
-    let cpu = cpu_ref_single(
+    let cpu = expected_persistent_bfs_single(
         n,
         &edge_offsets,
         &edge_targets,
@@ -262,7 +260,7 @@ fn cuda_persistent_bfs_isolated_seed_unchanged() {
     let padded_edge_targets = vec![0u32; 1];
     let padded_edge_kind_mask = vec![0u32; 1];
     let frontier = vec![0b001u32];
-    let cpu = cpu_ref_single(
+    let cpu = expected_persistent_bfs_single(
         n,
         &edge_offsets,
         &edge_targets,
@@ -302,7 +300,7 @@ fn cuda_persistent_bfs_large_no_edges_converges_without_changed() {
     let mut frontier = vec![0u32; words];
     frontier[8] = 1;
 
-    let cpu = cpu_ref_single(
+    let cpu = expected_persistent_bfs_single(
         n,
         &edge_offsets,
         &edge_targets,
@@ -346,7 +344,7 @@ fn cuda_persistent_bfs_large_graph_crosses_workgroup_boundary() {
     let mut frontier = vec![0u32; ((n + 31) / 32) as usize];
     frontier[8] = 1;
 
-    let cpu = cpu_ref_single(
+    let cpu = expected_persistent_bfs_single(
         n,
         &edge_offsets,
         &edge_targets,
@@ -389,7 +387,7 @@ fn cuda_persistent_bfs_large_chain_honors_one_step_cap() {
     let mut frontier = vec![0u32; ((n + 31) / 32) as usize];
     frontier[0] = 1;
 
-    let cpu = cpu_ref_single(
+    let cpu = expected_persistent_bfs_single(
         n,
         &edge_offsets,
         &edge_targets,
@@ -443,7 +441,7 @@ fn cuda_persistent_bfs_batch_large_chain_honors_one_step_cap_per_query() {
     frontiers[0] = 1;
     frontiers[words + 8] = 1;
 
-    let cpu = cpu_ref_batch(
+    let cpu = expected_persistent_bfs_batch(
         n,
         &edge_offsets,
         &edge_targets,

@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -21,15 +25,19 @@ jobs:
 
       - name: Save baseline from main
         run: |
+          set -euo pipefail
           git fetch origin main
           git checkout origin/main
-          ./cargo_full bench -p vyre-libs -- --save-baseline main
-          git checkout -
+          git checkout - -- vyre-foundation/benches
+          if ! grep -q 'name = "optimizer_pipeline"' vyre-foundation/Cargo.toml; then
+            printf '\n[[bench]]\nname = "optimizer_pipeline"\nharness = false\n' >> vyre-foundation/Cargo.toml
+          fi
+          ./cargo_full bench -p vyre-foundation --bench optimizer_pipeline -- --save-baseline main
+          git checkout -f -
 
       - name: Compare PR against baseline
         run: |
-          ./cargo_full bench -p vyre-libs -- --baseline main --save-baseline pr 2>&1 | tee bench.log
-
+          ./cargo_full bench -p vyre-foundation --bench optimizer_pipeline -- --baseline main 2>&1 | tee bench.log
       - name: Check for regressions > 5%
         shell: bash
         run: |
@@ -38,8 +46,12 @@ jobs:
             echo "FAIL: no Criterion comparison lines found; benchmark target is not exercising Criterion"
             exit 1
           fi
-          worst="$(grep -oE 'change: \[[^]]+\]' bench.log \
-            | awk -F'[][% ]+' '{print $4}' \
-            | sort -g | tail -1)"
-          echo "Worst median change: ${worst}%"
-          awk -v w="$worst" 'BEGIN { if (w+0 > 5) { print "FAIL: criterion regression > 5% (worst " w "%)"; exit 1 } print "PASS: no criterion regressions > 5%" }'
+          # Criterion prints `change: [lower median upper]`. The gate reads the
+          # upper bound of the confidence interval, not the point estimate, so a
+          # noisy run has to clear the threshold at its worst credible value.
+          changes="$(grep -oE 'change: \[[^]]+\]' bench.log)"
+          worst_median="$(printf '%s\n' "$changes" | awk -F'[][% ]+' '{print $3}' | sort -g | tail -1)"
+          worst="$(printf '%s\n' "$changes" | awk -F'[][% ]+' '{print $4}' | sort -g | tail -1)"
+          echo "Worst median change: ${worst_median}%"
+          echo "Worst upper-bound change: ${worst}%"
+          awk -v w="$worst" 'BEGIN { if (w+0 > 5) { print "FAIL: criterion regression > 5% at the upper confidence bound (worst " w "%)"; exit 1 } print "PASS: no criterion regressions > 5%" }'

@@ -1,0 +1,2 @@
+category = "Added"
+text = "The inclusive u32 scan is benchmarked against `cub::DeviceScan::InclusiveSum` on the same device and the same input, so the scan has a vendor-tuned number to be measured against rather than only a previous run of itself. The CUB baseline is compiled at measurement time and cached by source digest and device architecture, and the run is rejected when the cached binary reports a compute capability the host does not have."

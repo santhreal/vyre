@@ -13,21 +13,49 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   COVERAGE_FLOOR_LINES: '85'
-  COVERAGE_FLOOR_BRANCHES: '75'
 
 jobs:
   llvm-cov:
-    runs-on: ubuntu-latest
+    # --all-features enables the CUDA and WGPU backends, so the workspace suite
+    # dispatches real device work and fails closed on a probe with no adapter.
+    # A hosted runner therefore measures a panic, not coverage.
+    runs-on: [self-hosted, gpu-5090]
+    env:
+      RUSTUP_TOOLCHAIN: stable
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
+      # One `--workspace --all-features` build links every test binary in the
+      # tree at once. On this host the build governor sends it SIGTERM long
+      # before it finishes, so the lane never measured anything. Instrumenting
+      # one package at a time produces the same profile set: `--no-report`
+      # accumulates raw profiles and `report` merges them, so the floor is
+      # still applied to the whole workspace.
       - name: Run coverage
+        shell: bash
         run: |
-          cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info --fail-under-lines "$COVERAGE_FLOOR_LINES"
+          set -euo pipefail
+          ./cargo_full llvm-cov clean --workspace
+          packages=$(./cargo_full metadata --no-deps --format-version 1 \
+            | python3 -c 'import json,sys; print("\n".join(p["name"] for p in json.load(sys.stdin)["packages"]))')
+          # cargo-llvm-cov selects `--tests`. Naming `--examples` alongside it
+          # does not help: every explicit target selection compiles an example
+          # as a test harness named `<example>-<hash>`, never the plain binary
+          # `wire_harness_smoke_test` spawns. That test now builds the example
+          # itself when the selected targets did not, so this lane needs no
+          # target flags of its own.
+          for package in $packages; do
+            echo "::group::coverage $package"
+            ./cargo_full llvm-cov --no-report --locked --all-features -p "$package"
+            echo "::endgroup::"
+          done
+          ./cargo_full llvm-cov report --lcov --output-path lcov.info \
+            --fail-under-lines "$COVERAGE_FLOOR_LINES"
       - name: Upload
         uses: codecov/codecov-action@v4
         with:

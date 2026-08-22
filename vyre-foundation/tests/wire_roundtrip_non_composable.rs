@@ -1,4 +1,3 @@
-//! Regression test for FIX-REVIEW Finding #1:
 //! Wire format must preserve `non_composable_with_self` on round-trip.
 
 use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};

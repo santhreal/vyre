@@ -1,0 +1,2799 @@
+# Emitted-artifact byte-stability golden.
+#
+# One section per shared success-corpus case, in corpus order. Regenerate with
+# the `bless_*` test in the file that reads this golden, then review the diff:
+# a change here is a change in what the backend emits.
+===== constant_store
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = 7u;
+        let _e9 = vyre_block_scope_0_;
+        let _e13 = vyre_block_scope_1_;
+        let _e15 = vyre_block_scope_0_;
+        if (_e15 < arrayLength((&out))) {
+            out[_e9] = _e13;
+        }
+        vyre_block_scope_2_ = 1u;
+        vyre_block_scope_3_ = 0u;
+        let _e28 = vyre_block_scope_2_;
+        let _e32 = vyre_block_scope_3_;
+        let _e34 = vyre_block_scope_2_;
+        if (_e34 < arrayLength((&out))) {
+            out[_e28] = _e32;
+        }
+        vyre_block_scope_4_ = 2u;
+        vyre_block_scope_5_ = 4294967295u;
+        let _e47 = vyre_block_scope_4_;
+        let _e51 = vyre_block_scope_5_;
+        let _e53 = vyre_block_scope_4_;
+        if (_e53 < arrayLength((&out))) {
+            out[_e47] = _e51;
+        }
+    }
+}
+===== elementwise_add
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+@group(0) @binding(2) 
+var<storage> b: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: u32;
+    var vyre_block_scope_11_: u32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: u32;
+    var vyre_block_scope_14_: u32;
+    var vyre_block_scope_15_: u32;
+    var vyre_block_scope_16_: u32;
+    var vyre_block_scope_17_: u32;
+    var vyre_block_scope_18_: u32;
+    var vyre_block_scope_19_: u32;
+    var vyre_block_scope_20_: u32;
+    var vyre_block_scope_21_: u32;
+    var vyre_block_scope_22_: u32;
+    var vyre_block_scope_23_: u32;
+    var vyre_block_scope_24_: u32;
+    var vyre_block_scope_25_: u32;
+    var vyre_block_scope_26_: u32;
+    var vyre_block_scope_27_: u32;
+    var vyre_block_scope_28_: u32;
+    var vyre_block_scope_29_: u32;
+    var vyre_block_scope_30_: u32;
+    var vyre_block_scope_31_: u32;
+    var vyre_block_scope_32_: u32;
+    var vyre_block_scope_33_: u32;
+    var vyre_block_scope_34_: u32;
+    var vyre_block_scope_35_: u32;
+    var vyre_block_scope_36_: u32;
+    var vyre_block_scope_37_: u32;
+    var vyre_block_scope_38_: u32;
+    var vyre_block_scope_39_: u32;
+    var vyre_block_scope_40_: u32;
+    var vyre_block_scope_41_: u32;
+    var vyre_block_scope_42_: u32;
+    var vyre_block_scope_43_: u32;
+    var vyre_block_scope_44_: u32;
+    var vyre_block_scope_45_: u32;
+    var vyre_block_scope_46_: u32;
+    var vyre_block_scope_47_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = 0u;
+        let _e9 = vyre_block_scope_1_;
+        let _e12 = a[_e9];
+        vyre_block_scope_2_ = _e12;
+        vyre_block_scope_3_ = 0u;
+        let _e21 = vyre_block_scope_3_;
+        let _e24 = b[_e21];
+        vyre_block_scope_4_ = _e24;
+        let _e29 = vyre_block_scope_2_;
+        let _e31 = vyre_block_scope_4_;
+        vyre_block_scope_5_ = (_e29 + _e31);
+        let _e37 = vyre_block_scope_0_;
+        let _e41 = vyre_block_scope_5_;
+        let _e43 = vyre_block_scope_0_;
+        if (_e43 < arrayLength((&out))) {
+            out[_e37] = _e41;
+        }
+        vyre_block_scope_6_ = 1u;
+        vyre_block_scope_7_ = 1u;
+        let _e56 = vyre_block_scope_7_;
+        let _e59 = a[_e56];
+        vyre_block_scope_8_ = _e59;
+        vyre_block_scope_9_ = 1u;
+        let _e68 = vyre_block_scope_9_;
+        let _e71 = b[_e68];
+        vyre_block_scope_10_ = _e71;
+        let _e76 = vyre_block_scope_8_;
+        let _e78 = vyre_block_scope_10_;
+        vyre_block_scope_11_ = (_e76 + _e78);
+        let _e84 = vyre_block_scope_6_;
+        let _e88 = vyre_block_scope_11_;
+        let _e90 = vyre_block_scope_6_;
+        if (_e90 < arrayLength((&out))) {
+            out[_e84] = _e88;
+        }
+        vyre_block_scope_12_ = 2u;
+        vyre_block_scope_13_ = 2u;
+        let _e103 = vyre_block_scope_13_;
+        let _e106 = a[_e103];
+        vyre_block_scope_14_ = _e106;
+        vyre_block_scope_15_ = 2u;
+        let _e115 = vyre_block_scope_15_;
+        let _e118 = b[_e115];
+        vyre_block_scope_16_ = _e118;
+        let _e123 = vyre_block_scope_14_;
+        let _e125 = vyre_block_scope_16_;
+        vyre_block_scope_17_ = (_e123 + _e125);
+        let _e131 = vyre_block_scope_12_;
+        let _e135 = vyre_block_scope_17_;
+        let _e137 = vyre_block_scope_12_;
+        if (_e137 < arrayLength((&out))) {
+            out[_e131] = _e135;
+        }
+        vyre_block_scope_18_ = 3u;
+        vyre_block_scope_19_ = 3u;
+        let _e150 = vyre_block_scope_19_;
+        let _e153 = a[_e150];
+        vyre_block_scope_20_ = _e153;
+        vyre_block_scope_21_ = 3u;
+        let _e162 = vyre_block_scope_21_;
+        let _e165 = b[_e162];
+        vyre_block_scope_22_ = _e165;
+        let _e170 = vyre_block_scope_20_;
+        let _e172 = vyre_block_scope_22_;
+        vyre_block_scope_23_ = (_e170 + _e172);
+        let _e178 = vyre_block_scope_18_;
+        let _e182 = vyre_block_scope_23_;
+        let _e184 = vyre_block_scope_18_;
+        if (_e184 < arrayLength((&out))) {
+            out[_e178] = _e182;
+        }
+        vyre_block_scope_24_ = 4u;
+        vyre_block_scope_25_ = 4u;
+        let _e197 = vyre_block_scope_25_;
+        let _e200 = a[_e197];
+        vyre_block_scope_26_ = _e200;
+        vyre_block_scope_27_ = 4u;
+        let _e209 = vyre_block_scope_27_;
+        let _e212 = b[_e209];
+        vyre_block_scope_28_ = _e212;
+        let _e217 = vyre_block_scope_26_;
+        let _e219 = vyre_block_scope_28_;
+        vyre_block_scope_29_ = (_e217 + _e219);
+        let _e225 = vyre_block_scope_24_;
+        let _e229 = vyre_block_scope_29_;
+        let _e231 = vyre_block_scope_24_;
+        if (_e231 < arrayLength((&out))) {
+            out[_e225] = _e229;
+        }
+        vyre_block_scope_30_ = 5u;
+        vyre_block_scope_31_ = 5u;
+        let _e244 = vyre_block_scope_31_;
+        let _e247 = a[_e244];
+        vyre_block_scope_32_ = _e247;
+        vyre_block_scope_33_ = 5u;
+        let _e256 = vyre_block_scope_33_;
+        let _e259 = b[_e256];
+        vyre_block_scope_34_ = _e259;
+        let _e264 = vyre_block_scope_32_;
+        let _e266 = vyre_block_scope_34_;
+        vyre_block_scope_35_ = (_e264 + _e266);
+        let _e272 = vyre_block_scope_30_;
+        let _e276 = vyre_block_scope_35_;
+        let _e278 = vyre_block_scope_30_;
+        if (_e278 < arrayLength((&out))) {
+            out[_e272] = _e276;
+        }
+        vyre_block_scope_36_ = 6u;
+        vyre_block_scope_37_ = 6u;
+        let _e291 = vyre_block_scope_37_;
+        let _e294 = a[_e291];
+        vyre_block_scope_38_ = _e294;
+        vyre_block_scope_39_ = 6u;
+        let _e303 = vyre_block_scope_39_;
+        let _e306 = b[_e303];
+        vyre_block_scope_40_ = _e306;
+        let _e311 = vyre_block_scope_38_;
+        let _e313 = vyre_block_scope_40_;
+        vyre_block_scope_41_ = (_e311 + _e313);
+        let _e319 = vyre_block_scope_36_;
+        let _e323 = vyre_block_scope_41_;
+        let _e325 = vyre_block_scope_36_;
+        if (_e325 < arrayLength((&out))) {
+            out[_e319] = _e323;
+        }
+        vyre_block_scope_42_ = 7u;
+        vyre_block_scope_43_ = 7u;
+        let _e338 = vyre_block_scope_43_;
+        let _e341 = a[_e338];
+        vyre_block_scope_44_ = _e341;
+        vyre_block_scope_45_ = 7u;
+        let _e350 = vyre_block_scope_45_;
+        let _e353 = b[_e350];
+        vyre_block_scope_46_ = _e353;
+        let _e358 = vyre_block_scope_44_;
+        let _e360 = vyre_block_scope_46_;
+        vyre_block_scope_47_ = (_e358 + _e360);
+        let _e366 = vyre_block_scope_42_;
+        let _e370 = vyre_block_scope_47_;
+        let _e372 = vyre_block_scope_42_;
+        if (_e372 < arrayLength((&out))) {
+            out[_e366] = _e370;
+        }
+    }
+}
+===== arith_binops
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+@group(0) @binding(2) 
+var<storage> b: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: u32;
+    var vyre_block_scope_11_: u32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: u32;
+    var vyre_block_scope_14_: u32;
+    var vyre_block_scope_15_: u32;
+    var vyre_block_scope_16_: u32;
+    var vyre_block_scope_17_: u32;
+    var vyre_block_scope_18_: u32;
+    var vyre_block_scope_19_: u32;
+    var vyre_block_scope_20_: u32;
+    var vyre_block_scope_21_: u32;
+    var vyre_block_scope_22_: u32;
+    var vyre_block_scope_23_: u32;
+    var vyre_block_scope_24_: u32;
+    var vyre_block_scope_25_: u32;
+    var vyre_block_scope_26_: u32;
+    var vyre_block_scope_27_: u32;
+    var vyre_block_scope_28_: u32;
+    var vyre_block_scope_29_: u32;
+    var vyre_block_scope_30_: u32;
+    var vyre_block_scope_31_: u32;
+    var vyre_block_scope_32_: u32;
+    var vyre_block_scope_33_: u32;
+    var vyre_block_scope_34_: u32;
+    var vyre_block_scope_35_: u32;
+    var vyre_block_scope_36_: u32;
+    var vyre_block_scope_37_: u32;
+    var vyre_block_scope_38_: u32;
+    var vyre_block_scope_39_: u32;
+    var vyre_block_scope_40_: u32;
+    var vyre_block_scope_41_: u32;
+    var vyre_block_scope_42_: u32;
+    var vyre_block_scope_43_: u32;
+    var vyre_block_scope_44_: u32;
+    var vyre_block_scope_45_: u32;
+    var vyre_block_scope_46_: u32;
+    var vyre_block_scope_47_: u32;
+    var vyre_block_scope_48_: u32;
+    var vyre_block_scope_49_: u32;
+    var vyre_block_scope_50_: u32;
+    var vyre_block_scope_51_: u32;
+    var vyre_block_scope_52_: u32;
+    var vyre_block_scope_53_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        let _e10 = vyre_block_scope_1_;
+        let _e13 = a[_e10];
+        vyre_block_scope_2_ = _e13;
+        vyre_block_scope_3_ = _vyre_global_id.x;
+        let _e23 = vyre_block_scope_3_;
+        let _e26 = b[_e23];
+        vyre_block_scope_4_ = _e26;
+        let _e31 = vyre_block_scope_2_;
+        let _e33 = vyre_block_scope_4_;
+        vyre_block_scope_5_ = (_e31 + _e33);
+        let _e39 = vyre_block_scope_0_;
+        let _e43 = vyre_block_scope_5_;
+        let _e45 = vyre_block_scope_0_;
+        if (_e45 < arrayLength((&out))) {
+            out[_e39] = _e43;
+        }
+        vyre_block_scope_6_ = 1u;
+        vyre_block_scope_7_ = _vyre_global_id.x;
+        let _e59 = vyre_block_scope_7_;
+        let _e62 = a[_e59];
+        vyre_block_scope_8_ = _e62;
+        vyre_block_scope_9_ = _vyre_global_id.x;
+        let _e72 = vyre_block_scope_9_;
+        let _e75 = b[_e72];
+        vyre_block_scope_10_ = _e75;
+        let _e80 = vyre_block_scope_8_;
+        let _e82 = vyre_block_scope_10_;
+        vyre_block_scope_11_ = (_e80 - _e82);
+        let _e88 = vyre_block_scope_6_;
+        let _e92 = vyre_block_scope_11_;
+        let _e94 = vyre_block_scope_6_;
+        if (_e94 < arrayLength((&out))) {
+            out[_e88] = _e92;
+        }
+        vyre_block_scope_12_ = 2u;
+        vyre_block_scope_13_ = _vyre_global_id.x;
+        let _e108 = vyre_block_scope_13_;
+        let _e111 = a[_e108];
+        vyre_block_scope_14_ = _e111;
+        vyre_block_scope_15_ = _vyre_global_id.x;
+        let _e121 = vyre_block_scope_15_;
+        let _e124 = b[_e121];
+        vyre_block_scope_16_ = _e124;
+        let _e129 = vyre_block_scope_14_;
+        let _e131 = vyre_block_scope_16_;
+        vyre_block_scope_17_ = (_e129 * _e131);
+        let _e137 = vyre_block_scope_12_;
+        let _e141 = vyre_block_scope_17_;
+        let _e143 = vyre_block_scope_12_;
+        if (_e143 < arrayLength((&out))) {
+            out[_e137] = _e141;
+        }
+        vyre_block_scope_18_ = 3u;
+        vyre_block_scope_19_ = _vyre_global_id.x;
+        let _e157 = vyre_block_scope_19_;
+        let _e160 = a[_e157];
+        vyre_block_scope_20_ = _e160;
+        vyre_block_scope_21_ = _vyre_global_id.x;
+        let _e170 = vyre_block_scope_21_;
+        let _e173 = b[_e170];
+        vyre_block_scope_22_ = _e173;
+        let _e178 = vyre_block_scope_20_;
+        let _e180 = vyre_block_scope_22_;
+        vyre_block_scope_23_ = select((_e178 / _e180), 4294967295u, (_e180 == 0u));
+        let _e190 = vyre_block_scope_18_;
+        let _e194 = vyre_block_scope_23_;
+        let _e196 = vyre_block_scope_18_;
+        if (_e196 < arrayLength((&out))) {
+            out[_e190] = _e194;
+        }
+        vyre_block_scope_24_ = 4u;
+        vyre_block_scope_25_ = _vyre_global_id.x;
+        let _e210 = vyre_block_scope_25_;
+        let _e213 = a[_e210];
+        vyre_block_scope_26_ = _e213;
+        vyre_block_scope_27_ = _vyre_global_id.x;
+        let _e223 = vyre_block_scope_27_;
+        let _e226 = b[_e223];
+        vyre_block_scope_28_ = _e226;
+        let _e231 = vyre_block_scope_26_;
+        let _e233 = vyre_block_scope_28_;
+        vyre_block_scope_29_ = select((_e231 % _e233), 0u, (_e233 == 0u));
+        let _e242 = vyre_block_scope_24_;
+        let _e246 = vyre_block_scope_29_;
+        let _e248 = vyre_block_scope_24_;
+        if (_e248 < arrayLength((&out))) {
+            out[_e242] = _e246;
+        }
+        vyre_block_scope_30_ = 5u;
+        vyre_block_scope_31_ = _vyre_global_id.x;
+        let _e262 = vyre_block_scope_31_;
+        let _e265 = a[_e262];
+        vyre_block_scope_32_ = _e265;
+        vyre_block_scope_33_ = _vyre_global_id.x;
+        let _e275 = vyre_block_scope_33_;
+        let _e278 = b[_e275];
+        vyre_block_scope_34_ = _e278;
+        let _e283 = vyre_block_scope_32_;
+        let _e285 = vyre_block_scope_34_;
+        vyre_block_scope_35_ = min(_e283, _e285);
+        let _e291 = vyre_block_scope_30_;
+        let _e295 = vyre_block_scope_35_;
+        let _e297 = vyre_block_scope_30_;
+        if (_e297 < arrayLength((&out))) {
+            out[_e291] = _e295;
+        }
+        vyre_block_scope_36_ = 6u;
+        vyre_block_scope_37_ = _vyre_global_id.x;
+        let _e311 = vyre_block_scope_37_;
+        let _e314 = a[_e311];
+        vyre_block_scope_38_ = _e314;
+        vyre_block_scope_39_ = _vyre_global_id.x;
+        let _e324 = vyre_block_scope_39_;
+        let _e327 = b[_e324];
+        vyre_block_scope_40_ = _e327;
+        let _e332 = vyre_block_scope_38_;
+        let _e334 = vyre_block_scope_40_;
+        vyre_block_scope_41_ = max(_e332, _e334);
+        let _e340 = vyre_block_scope_36_;
+        let _e344 = vyre_block_scope_41_;
+        let _e346 = vyre_block_scope_36_;
+        if (_e346 < arrayLength((&out))) {
+            out[_e340] = _e344;
+        }
+        vyre_block_scope_42_ = 7u;
+        vyre_block_scope_43_ = _vyre_global_id.x;
+        let _e360 = vyre_block_scope_43_;
+        let _e363 = a[_e360];
+        vyre_block_scope_44_ = _e363;
+        vyre_block_scope_45_ = _vyre_global_id.x;
+        let _e373 = vyre_block_scope_45_;
+        let _e376 = b[_e373];
+        vyre_block_scope_46_ = _e376;
+        let _e381 = vyre_block_scope_44_;
+        let _e383 = vyre_block_scope_46_;
+        let _e386 = (_e381 & 65535u);
+        let _e387 = (_e381 >> 16u);
+        let _e388 = (_e383 & 65535u);
+        let _e389 = (_e383 >> 16u);
+        let _e391 = (_e387 * _e388);
+        let _e392 = (_e386 * _e389);
+        vyre_block_scope_47_ = ((((_e387 * _e389) + (_e391 >> 16u)) + (_e392 >> 16u)) + (((((_e386 * _e388) >> 16u) + (_e391 & 65535u)) + (_e392 & 65535u)) >> 16u));
+        let _e409 = vyre_block_scope_42_;
+        let _e413 = vyre_block_scope_47_;
+        let _e415 = vyre_block_scope_42_;
+        if (_e415 < arrayLength((&out))) {
+            out[_e409] = _e413;
+        }
+        vyre_block_scope_48_ = 8u;
+        vyre_block_scope_49_ = _vyre_global_id.x;
+        let _e429 = vyre_block_scope_49_;
+        let _e432 = a[_e429];
+        vyre_block_scope_50_ = _e432;
+        vyre_block_scope_51_ = _vyre_global_id.x;
+        let _e442 = vyre_block_scope_51_;
+        let _e445 = b[_e442];
+        vyre_block_scope_52_ = _e445;
+        let _e450 = vyre_block_scope_50_;
+        let _e452 = vyre_block_scope_52_;
+        let _e453 = (_e450 < _e452);
+        vyre_block_scope_53_ = (select(_e450, _e452, _e453) - select(_e452, _e450, _e453));
+        let _e461 = vyre_block_scope_48_;
+        let _e465 = vyre_block_scope_53_;
+        let _e467 = vyre_block_scope_48_;
+        if (_e467 < arrayLength((&out))) {
+            out[_e461] = _e465;
+        }
+    }
+}
+===== bitwise_binops
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+@group(0) @binding(2) 
+var<storage> b: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: u32;
+    var vyre_block_scope_11_: u32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: u32;
+    var vyre_block_scope_14_: u32;
+    var vyre_block_scope_15_: u32;
+    var vyre_block_scope_16_: u32;
+    var vyre_block_scope_17_: u32;
+    var vyre_block_scope_18_: u32;
+    var vyre_block_scope_19_: u32;
+    var vyre_block_scope_20_: u32;
+    var vyre_block_scope_21_: u32;
+    var vyre_block_scope_22_: u32;
+    var vyre_block_scope_23_: u32;
+    var vyre_block_scope_24_: u32;
+    var vyre_block_scope_25_: u32;
+    var vyre_block_scope_26_: u32;
+    var vyre_block_scope_27_: u32;
+    var vyre_block_scope_28_: u32;
+    var vyre_block_scope_29_: u32;
+    var vyre_block_scope_30_: u32;
+    var vyre_block_scope_31_: u32;
+    var vyre_block_scope_32_: u32;
+    var vyre_block_scope_33_: u32;
+    var vyre_block_scope_34_: u32;
+    var vyre_block_scope_35_: u32;
+    var vyre_block_scope_36_: u32;
+    var vyre_block_scope_37_: u32;
+    var vyre_block_scope_38_: u32;
+    var vyre_block_scope_39_: u32;
+    var vyre_block_scope_40_: u32;
+    var vyre_block_scope_41_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        let _e10 = vyre_block_scope_1_;
+        let _e13 = b[_e10];
+        vyre_block_scope_2_ = _e13;
+        vyre_block_scope_3_ = _vyre_global_id.x;
+        let _e23 = vyre_block_scope_3_;
+        let _e26 = a[_e23];
+        vyre_block_scope_4_ = _e26;
+        let _e31 = vyre_block_scope_2_;
+        let _e33 = vyre_block_scope_4_;
+        vyre_block_scope_5_ = (_e31 & _e33);
+        let _e39 = vyre_block_scope_0_;
+        let _e43 = vyre_block_scope_5_;
+        let _e45 = vyre_block_scope_0_;
+        if (_e45 < arrayLength((&out))) {
+            out[_e39] = _e43;
+        }
+        vyre_block_scope_6_ = 1u;
+        vyre_block_scope_7_ = _vyre_global_id.x;
+        let _e59 = vyre_block_scope_7_;
+        let _e62 = b[_e59];
+        vyre_block_scope_8_ = _e62;
+        vyre_block_scope_9_ = _vyre_global_id.x;
+        let _e72 = vyre_block_scope_9_;
+        let _e75 = a[_e72];
+        vyre_block_scope_10_ = _e75;
+        let _e80 = vyre_block_scope_8_;
+        let _e82 = vyre_block_scope_10_;
+        vyre_block_scope_11_ = (_e80 | _e82);
+        let _e88 = vyre_block_scope_6_;
+        let _e92 = vyre_block_scope_11_;
+        let _e94 = vyre_block_scope_6_;
+        if (_e94 < arrayLength((&out))) {
+            out[_e88] = _e92;
+        }
+        vyre_block_scope_12_ = 2u;
+        vyre_block_scope_13_ = _vyre_global_id.x;
+        let _e108 = vyre_block_scope_13_;
+        let _e111 = b[_e108];
+        vyre_block_scope_14_ = _e111;
+        vyre_block_scope_15_ = _vyre_global_id.x;
+        let _e121 = vyre_block_scope_15_;
+        let _e124 = a[_e121];
+        vyre_block_scope_16_ = _e124;
+        let _e129 = vyre_block_scope_14_;
+        let _e131 = vyre_block_scope_16_;
+        vyre_block_scope_17_ = (_e129 ^ _e131);
+        let _e137 = vyre_block_scope_12_;
+        let _e141 = vyre_block_scope_17_;
+        let _e143 = vyre_block_scope_12_;
+        if (_e143 < arrayLength((&out))) {
+            out[_e137] = _e141;
+        }
+        vyre_block_scope_18_ = 3u;
+        vyre_block_scope_19_ = _vyre_global_id.x;
+        let _e157 = vyre_block_scope_19_;
+        let _e160 = a[_e157];
+        vyre_block_scope_20_ = _e160;
+        vyre_block_scope_21_ = _vyre_global_id.x;
+        let _e170 = vyre_block_scope_21_;
+        let _e173 = b[_e170];
+        vyre_block_scope_22_ = _e173;
+        let _e178 = vyre_block_scope_20_;
+        let _e180 = vyre_block_scope_22_;
+        vyre_block_scope_23_ = (_e178 << (_e180 & 31u));
+        let _e188 = vyre_block_scope_18_;
+        let _e192 = vyre_block_scope_23_;
+        let _e194 = vyre_block_scope_18_;
+        if (_e194 < arrayLength((&out))) {
+            out[_e188] = _e192;
+        }
+        vyre_block_scope_24_ = 4u;
+        vyre_block_scope_25_ = _vyre_global_id.x;
+        let _e208 = vyre_block_scope_25_;
+        let _e211 = a[_e208];
+        vyre_block_scope_26_ = _e211;
+        vyre_block_scope_27_ = _vyre_global_id.x;
+        let _e221 = vyre_block_scope_27_;
+        let _e224 = b[_e221];
+        vyre_block_scope_28_ = _e224;
+        let _e229 = vyre_block_scope_26_;
+        let _e231 = vyre_block_scope_28_;
+        vyre_block_scope_29_ = (_e229 >> (_e231 & 31u));
+        let _e239 = vyre_block_scope_24_;
+        let _e243 = vyre_block_scope_29_;
+        let _e245 = vyre_block_scope_24_;
+        if (_e245 < arrayLength((&out))) {
+            out[_e239] = _e243;
+        }
+        vyre_block_scope_30_ = 5u;
+        vyre_block_scope_31_ = _vyre_global_id.x;
+        let _e259 = vyre_block_scope_31_;
+        let _e262 = a[_e259];
+        vyre_block_scope_32_ = _e262;
+        vyre_block_scope_33_ = _vyre_global_id.x;
+        let _e272 = vyre_block_scope_33_;
+        let _e275 = b[_e272];
+        vyre_block_scope_34_ = _e275;
+        let _e280 = vyre_block_scope_32_;
+        let _e282 = vyre_block_scope_34_;
+        let _e284 = (_e282 & 31u);
+        vyre_block_scope_35_ = ((_e280 << _e284) | (_e280 >> ((32u - _e284) & 31u)));
+        let _e295 = vyre_block_scope_30_;
+        let _e299 = vyre_block_scope_35_;
+        let _e301 = vyre_block_scope_30_;
+        if (_e301 < arrayLength((&out))) {
+            out[_e295] = _e299;
+        }
+        vyre_block_scope_36_ = 6u;
+        vyre_block_scope_37_ = _vyre_global_id.x;
+        let _e315 = vyre_block_scope_37_;
+        let _e318 = a[_e315];
+        vyre_block_scope_38_ = _e318;
+        vyre_block_scope_39_ = _vyre_global_id.x;
+        let _e328 = vyre_block_scope_39_;
+        let _e331 = b[_e328];
+        vyre_block_scope_40_ = _e331;
+        let _e336 = vyre_block_scope_38_;
+        let _e338 = vyre_block_scope_40_;
+        let _e340 = (_e338 & 31u);
+        vyre_block_scope_41_ = ((_e336 << ((32u - _e340) & 31u)) | (_e336 >> _e340));
+        let _e351 = vyre_block_scope_36_;
+        let _e355 = vyre_block_scope_41_;
+        let _e357 = vyre_block_scope_36_;
+        if (_e357 < arrayLength((&out))) {
+            out[_e351] = _e355;
+        }
+    }
+}
+===== saturating_binops
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+@group(0) @binding(2) 
+var<storage> b: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: u32;
+    var vyre_block_scope_11_: u32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: u32;
+    var vyre_block_scope_14_: u32;
+    var vyre_block_scope_15_: u32;
+    var vyre_block_scope_16_: u32;
+    var vyre_block_scope_17_: u32;
+    var vyre_block_scope_18_: u32;
+    var vyre_block_scope_19_: u32;
+    var vyre_block_scope_20_: u32;
+    var vyre_block_scope_21_: u32;
+    var vyre_block_scope_22_: u32;
+    var vyre_block_scope_23_: u32;
+    var vyre_block_scope_24_: u32;
+    var vyre_block_scope_25_: u32;
+    var vyre_block_scope_26_: u32;
+    var vyre_block_scope_27_: u32;
+    var vyre_block_scope_28_: u32;
+    var vyre_block_scope_29_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        let _e10 = vyre_block_scope_1_;
+        let _e13 = a[_e10];
+        vyre_block_scope_2_ = _e13;
+        vyre_block_scope_3_ = _vyre_global_id.x;
+        let _e23 = vyre_block_scope_3_;
+        let _e26 = b[_e23];
+        vyre_block_scope_4_ = _e26;
+        let _e31 = vyre_block_scope_2_;
+        let _e33 = vyre_block_scope_4_;
+        let _e34 = (_e31 + _e33);
+        vyre_block_scope_5_ = select(_e34, 4294967295u, (_e34 < _e31));
+        let _e42 = vyre_block_scope_0_;
+        let _e46 = vyre_block_scope_5_;
+        let _e48 = vyre_block_scope_0_;
+        if (_e48 < arrayLength((&out))) {
+            out[_e42] = _e46;
+        }
+        vyre_block_scope_6_ = 1u;
+        vyre_block_scope_7_ = _vyre_global_id.x;
+        let _e62 = vyre_block_scope_7_;
+        let _e65 = a[_e62];
+        vyre_block_scope_8_ = _e65;
+        vyre_block_scope_9_ = _vyre_global_id.x;
+        let _e75 = vyre_block_scope_9_;
+        let _e78 = b[_e75];
+        vyre_block_scope_10_ = _e78;
+        let _e83 = vyre_block_scope_8_;
+        let _e85 = vyre_block_scope_10_;
+        vyre_block_scope_11_ = select((_e83 - _e85), 0u, (_e83 < _e85));
+        let _e94 = vyre_block_scope_6_;
+        let _e98 = vyre_block_scope_11_;
+        let _e100 = vyre_block_scope_6_;
+        if (_e100 < arrayLength((&out))) {
+            out[_e94] = _e98;
+        }
+        vyre_block_scope_12_ = 2u;
+        vyre_block_scope_13_ = _vyre_global_id.x;
+        let _e114 = vyre_block_scope_13_;
+        let _e117 = a[_e114];
+        vyre_block_scope_14_ = _e117;
+        vyre_block_scope_15_ = _vyre_global_id.x;
+        let _e127 = vyre_block_scope_15_;
+        let _e130 = b[_e127];
+        vyre_block_scope_16_ = _e130;
+        let _e135 = vyre_block_scope_14_;
+        let _e137 = vyre_block_scope_16_;
+        let _e142 = (_e135 & 65535u);
+        let _e143 = (_e135 >> 16u);
+        let _e144 = (_e137 & 65535u);
+        let _e145 = (_e137 >> 16u);
+        let _e147 = (_e143 * _e144);
+        let _e148 = (_e142 * _e145);
+        vyre_block_scope_17_ = select((_e135 * _e137), 4294967295u, (((((_e143 * _e145) + (_e147 >> 16u)) + (_e148 >> 16u)) + (((((_e142 * _e144) >> 16u) + (_e147 & 65535u)) + (_e148 & 65535u)) >> 16u)) != 0u));
+        let _e168 = vyre_block_scope_12_;
+        let _e172 = vyre_block_scope_17_;
+        let _e174 = vyre_block_scope_12_;
+        if (_e174 < arrayLength((&out))) {
+            out[_e168] = _e172;
+        }
+        vyre_block_scope_18_ = 3u;
+        vyre_block_scope_19_ = _vyre_global_id.x;
+        let _e188 = vyre_block_scope_19_;
+        let _e191 = a[_e188];
+        vyre_block_scope_20_ = _e191;
+        vyre_block_scope_21_ = _vyre_global_id.x;
+        let _e201 = vyre_block_scope_21_;
+        let _e204 = b[_e201];
+        vyre_block_scope_22_ = _e204;
+        let _e209 = vyre_block_scope_20_;
+        let _e211 = vyre_block_scope_22_;
+        vyre_block_scope_23_ = (_e209 + _e211);
+        let _e217 = vyre_block_scope_18_;
+        let _e221 = vyre_block_scope_23_;
+        let _e223 = vyre_block_scope_18_;
+        if (_e223 < arrayLength((&out))) {
+            out[_e217] = _e221;
+        }
+        vyre_block_scope_24_ = 4u;
+        vyre_block_scope_25_ = _vyre_global_id.x;
+        let _e237 = vyre_block_scope_25_;
+        let _e240 = a[_e237];
+        vyre_block_scope_26_ = _e240;
+        vyre_block_scope_27_ = _vyre_global_id.x;
+        let _e250 = vyre_block_scope_27_;
+        let _e253 = b[_e250];
+        vyre_block_scope_28_ = _e253;
+        let _e258 = vyre_block_scope_26_;
+        let _e260 = vyre_block_scope_28_;
+        vyre_block_scope_29_ = (_e258 - _e260);
+        let _e266 = vyre_block_scope_24_;
+        let _e270 = vyre_block_scope_29_;
+        let _e272 = vyre_block_scope_24_;
+        if (_e272 < arrayLength((&out))) {
+            out[_e266] = _e270;
+        }
+    }
+}
+===== comparison_binops
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+@group(0) @binding(2) 
+var<storage> b: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: bool;
+    var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: u32;
+    var vyre_block_scope_11_: u32;
+    var vyre_block_scope_12_: bool;
+    var vyre_block_scope_13_: u32;
+    var vyre_block_scope_14_: u32;
+    var vyre_block_scope_15_: u32;
+    var vyre_block_scope_16_: u32;
+    var vyre_block_scope_17_: u32;
+    var vyre_block_scope_18_: u32;
+    var vyre_block_scope_19_: bool;
+    var vyre_block_scope_20_: u32;
+    var vyre_block_scope_21_: u32;
+    var vyre_block_scope_22_: u32;
+    var vyre_block_scope_23_: u32;
+    var vyre_block_scope_24_: u32;
+    var vyre_block_scope_25_: u32;
+    var vyre_block_scope_26_: bool;
+    var vyre_block_scope_27_: u32;
+    var vyre_block_scope_28_: u32;
+    var vyre_block_scope_29_: u32;
+    var vyre_block_scope_30_: u32;
+    var vyre_block_scope_31_: u32;
+    var vyre_block_scope_32_: u32;
+    var vyre_block_scope_33_: bool;
+    var vyre_block_scope_34_: u32;
+    var vyre_block_scope_35_: u32;
+    var vyre_block_scope_36_: u32;
+    var vyre_block_scope_37_: u32;
+    var vyre_block_scope_38_: u32;
+    var vyre_block_scope_39_: u32;
+    var vyre_block_scope_40_: bool;
+    var vyre_block_scope_41_: u32;
+    var vyre_block_scope_42_: u32;
+    var vyre_block_scope_43_: u32;
+    var vyre_block_scope_44_: u32;
+    var vyre_block_scope_45_: u32;
+    var vyre_block_scope_46_: u32;
+    var vyre_block_scope_47_: bool;
+    var vyre_block_scope_48_: u32;
+    var vyre_block_scope_49_: u32;
+    var vyre_block_scope_50_: u32;
+    var vyre_block_scope_51_: bool;
+    var vyre_block_scope_52_: bool;
+    var vyre_block_scope_53_: u32;
+    var vyre_block_scope_54_: u32;
+    var vyre_block_scope_55_: u32;
+    var vyre_block_scope_56_: u32;
+    var vyre_block_scope_57_: u32;
+    var vyre_block_scope_58_: u32;
+    var vyre_block_scope_59_: bool;
+    var vyre_block_scope_60_: u32;
+    var vyre_block_scope_61_: u32;
+    var vyre_block_scope_62_: u32;
+    var vyre_block_scope_63_: bool;
+    var vyre_block_scope_64_: bool;
+    var vyre_block_scope_65_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        let _e10 = vyre_block_scope_1_;
+        let _e13 = b[_e10];
+        vyre_block_scope_2_ = _e13;
+        vyre_block_scope_3_ = _vyre_global_id.x;
+        let _e23 = vyre_block_scope_3_;
+        let _e26 = a[_e23];
+        vyre_block_scope_4_ = _e26;
+        let _e31 = vyre_block_scope_2_;
+        let _e33 = vyre_block_scope_4_;
+        vyre_block_scope_5_ = (_e31 == _e33);
+        let _e39 = vyre_block_scope_5_;
+        vyre_block_scope_6_ = u32(_e39);
+        let _e45 = vyre_block_scope_0_;
+        let _e49 = vyre_block_scope_6_;
+        let _e51 = vyre_block_scope_0_;
+        if (_e51 < arrayLength((&out))) {
+            out[_e45] = _e49;
+        }
+        vyre_block_scope_7_ = 1u;
+        vyre_block_scope_8_ = _vyre_global_id.x;
+        let _e65 = vyre_block_scope_8_;
+        let _e68 = b[_e65];
+        vyre_block_scope_9_ = _e68;
+        vyre_block_scope_10_ = _vyre_global_id.x;
+        let _e78 = vyre_block_scope_10_;
+        let _e81 = a[_e78];
+        vyre_block_scope_11_ = _e81;
+        let _e86 = vyre_block_scope_9_;
+        let _e88 = vyre_block_scope_11_;
+        vyre_block_scope_12_ = (_e86 != _e88);
+        let _e94 = vyre_block_scope_12_;
+        vyre_block_scope_13_ = u32(_e94);
+        let _e100 = vyre_block_scope_7_;
+        let _e104 = vyre_block_scope_13_;
+        let _e106 = vyre_block_scope_7_;
+        if (_e106 < arrayLength((&out))) {
+            out[_e100] = _e104;
+        }
+        vyre_block_scope_14_ = 2u;
+        vyre_block_scope_15_ = _vyre_global_id.x;
+        let _e120 = vyre_block_scope_15_;
+        let _e123 = a[_e120];
+        vyre_block_scope_16_ = _e123;
+        vyre_block_scope_17_ = _vyre_global_id.x;
+        let _e133 = vyre_block_scope_17_;
+        let _e136 = b[_e133];
+        vyre_block_scope_18_ = _e136;
+        let _e141 = vyre_block_scope_16_;
+        let _e143 = vyre_block_scope_18_;
+        vyre_block_scope_19_ = (_e141 < _e143);
+        let _e149 = vyre_block_scope_19_;
+        vyre_block_scope_20_ = u32(_e149);
+        let _e155 = vyre_block_scope_14_;
+        let _e159 = vyre_block_scope_20_;
+        let _e161 = vyre_block_scope_14_;
+        if (_e161 < arrayLength((&out))) {
+            out[_e155] = _e159;
+        }
+        vyre_block_scope_21_ = 3u;
+        vyre_block_scope_22_ = _vyre_global_id.x;
+        let _e175 = vyre_block_scope_22_;
+        let _e178 = a[_e175];
+        vyre_block_scope_23_ = _e178;
+        vyre_block_scope_24_ = _vyre_global_id.x;
+        let _e188 = vyre_block_scope_24_;
+        let _e191 = b[_e188];
+        vyre_block_scope_25_ = _e191;
+        let _e196 = vyre_block_scope_23_;
+        let _e198 = vyre_block_scope_25_;
+        vyre_block_scope_26_ = (_e196 <= _e198);
+        let _e204 = vyre_block_scope_26_;
+        vyre_block_scope_27_ = u32(_e204);
+        let _e210 = vyre_block_scope_21_;
+        let _e214 = vyre_block_scope_27_;
+        let _e216 = vyre_block_scope_21_;
+        if (_e216 < arrayLength((&out))) {
+            out[_e210] = _e214;
+        }
+        vyre_block_scope_28_ = 4u;
+        vyre_block_scope_29_ = _vyre_global_id.x;
+        let _e230 = vyre_block_scope_29_;
+        let _e233 = a[_e230];
+        vyre_block_scope_30_ = _e233;
+        vyre_block_scope_31_ = _vyre_global_id.x;
+        let _e243 = vyre_block_scope_31_;
+        let _e246 = b[_e243];
+        vyre_block_scope_32_ = _e246;
+        let _e251 = vyre_block_scope_30_;
+        let _e253 = vyre_block_scope_32_;
+        vyre_block_scope_33_ = (_e251 > _e253);
+        let _e259 = vyre_block_scope_33_;
+        vyre_block_scope_34_ = u32(_e259);
+        let _e265 = vyre_block_scope_28_;
+        let _e269 = vyre_block_scope_34_;
+        let _e271 = vyre_block_scope_28_;
+        if (_e271 < arrayLength((&out))) {
+            out[_e265] = _e269;
+        }
+        vyre_block_scope_35_ = 5u;
+        vyre_block_scope_36_ = _vyre_global_id.x;
+        let _e285 = vyre_block_scope_36_;
+        let _e288 = a[_e285];
+        vyre_block_scope_37_ = _e288;
+        vyre_block_scope_38_ = _vyre_global_id.x;
+        let _e298 = vyre_block_scope_38_;
+        let _e301 = b[_e298];
+        vyre_block_scope_39_ = _e301;
+        let _e306 = vyre_block_scope_37_;
+        let _e308 = vyre_block_scope_39_;
+        vyre_block_scope_40_ = (_e306 >= _e308);
+        let _e314 = vyre_block_scope_40_;
+        vyre_block_scope_41_ = u32(_e314);
+        let _e320 = vyre_block_scope_35_;
+        let _e324 = vyre_block_scope_41_;
+        let _e326 = vyre_block_scope_35_;
+        if (_e326 < arrayLength((&out))) {
+            out[_e320] = _e324;
+        }
+        vyre_block_scope_42_ = 6u;
+        vyre_block_scope_43_ = _vyre_global_id.x;
+        let _e340 = vyre_block_scope_43_;
+        let _e343 = a[_e340];
+        vyre_block_scope_44_ = _e343;
+        vyre_block_scope_45_ = _vyre_global_id.x;
+        let _e353 = vyre_block_scope_45_;
+        let _e356 = b[_e353];
+        vyre_block_scope_46_ = _e356;
+        let _e361 = vyre_block_scope_44_;
+        let _e363 = vyre_block_scope_46_;
+        vyre_block_scope_47_ = (_e361 < _e363);
+        vyre_block_scope_48_ = _vyre_global_id.x;
+        let _e374 = vyre_block_scope_48_;
+        let _e377 = a[_e374];
+        vyre_block_scope_49_ = _e377;
+        vyre_block_scope_50_ = 0u;
+        let _e386 = vyre_block_scope_49_;
+        let _e388 = vyre_block_scope_50_;
+        vyre_block_scope_51_ = (_e386 > _e388);
+        let _e394 = vyre_block_scope_47_;
+        let _e396 = vyre_block_scope_51_;
+        vyre_block_scope_52_ = (_e394 & _e396);
+        let _e402 = vyre_block_scope_52_;
+        vyre_block_scope_53_ = u32(_e402);
+        let _e408 = vyre_block_scope_42_;
+        let _e412 = vyre_block_scope_53_;
+        let _e414 = vyre_block_scope_42_;
+        if (_e414 < arrayLength((&out))) {
+            out[_e408] = _e412;
+        }
+        vyre_block_scope_54_ = 7u;
+        vyre_block_scope_55_ = _vyre_global_id.x;
+        let _e428 = vyre_block_scope_55_;
+        let _e431 = a[_e428];
+        vyre_block_scope_56_ = _e431;
+        vyre_block_scope_57_ = _vyre_global_id.x;
+        let _e441 = vyre_block_scope_57_;
+        let _e444 = b[_e441];
+        vyre_block_scope_58_ = _e444;
+        let _e449 = vyre_block_scope_56_;
+        let _e451 = vyre_block_scope_58_;
+        vyre_block_scope_59_ = (_e449 < _e451);
+        vyre_block_scope_60_ = _vyre_global_id.x;
+        let _e462 = vyre_block_scope_60_;
+        let _e465 = a[_e462];
+        vyre_block_scope_61_ = _e465;
+        vyre_block_scope_62_ = 0u;
+        let _e474 = vyre_block_scope_61_;
+        let _e476 = vyre_block_scope_62_;
+        vyre_block_scope_63_ = (_e474 > _e476);
+        let _e482 = vyre_block_scope_59_;
+        let _e484 = vyre_block_scope_63_;
+        vyre_block_scope_64_ = (_e482 | _e484);
+        let _e490 = vyre_block_scope_64_;
+        vyre_block_scope_65_ = u32(_e490);
+        let _e496 = vyre_block_scope_54_;
+        let _e500 = vyre_block_scope_65_;
+        let _e502 = vyre_block_scope_54_;
+        if (_e502 < arrayLength((&out))) {
+            out[_e496] = _e500;
+        }
+    }
+}
+===== integer_unops
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: u32;
+    var vyre_block_scope_11_: u32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: u32;
+    var vyre_block_scope_14_: u32;
+    var vyre_block_scope_15_: u32;
+    var vyre_block_scope_16_: u32;
+    var vyre_block_scope_17_: u32;
+    var vyre_block_scope_18_: u32;
+    var vyre_block_scope_19_: u32;
+    var vyre_block_scope_20_: u32;
+    var vyre_block_scope_21_: u32;
+    var vyre_block_scope_22_: u32;
+    var vyre_block_scope_23_: u32;
+    var vyre_block_scope_24_: bool;
+    var vyre_block_scope_25_: u32;
+    var vyre_block_scope_26_: u32;
+    var vyre_block_scope_27_: u32;
+    var vyre_block_scope_28_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        let _e10 = vyre_block_scope_1_;
+        let _e13 = a[_e10];
+        vyre_block_scope_2_ = _e13;
+        let _e18 = vyre_block_scope_2_;
+        vyre_block_scope_3_ = ~(_e18);
+        let _e24 = vyre_block_scope_0_;
+        let _e28 = vyre_block_scope_3_;
+        let _e30 = vyre_block_scope_0_;
+        if (_e30 < arrayLength((&out))) {
+            out[_e24] = _e28;
+        }
+        vyre_block_scope_4_ = 1u;
+        vyre_block_scope_5_ = _vyre_global_id.x;
+        let _e44 = vyre_block_scope_5_;
+        let _e47 = a[_e44];
+        vyre_block_scope_6_ = _e47;
+        let _e52 = vyre_block_scope_6_;
+        vyre_block_scope_7_ = reverseBits(_e52);
+        let _e58 = vyre_block_scope_4_;
+        let _e62 = vyre_block_scope_7_;
+        let _e64 = vyre_block_scope_4_;
+        if (_e64 < arrayLength((&out))) {
+            out[_e58] = _e62;
+        }
+        vyre_block_scope_8_ = 2u;
+        vyre_block_scope_9_ = _vyre_global_id.x;
+        let _e78 = vyre_block_scope_9_;
+        let _e81 = a[_e78];
+        vyre_block_scope_10_ = _e81;
+        let _e86 = vyre_block_scope_10_;
+        vyre_block_scope_11_ = countOneBits(_e86);
+        let _e92 = vyre_block_scope_8_;
+        let _e96 = vyre_block_scope_11_;
+        let _e98 = vyre_block_scope_8_;
+        if (_e98 < arrayLength((&out))) {
+            out[_e92] = _e96;
+        }
+        vyre_block_scope_12_ = 3u;
+        vyre_block_scope_13_ = _vyre_global_id.x;
+        let _e112 = vyre_block_scope_13_;
+        let _e115 = a[_e112];
+        vyre_block_scope_14_ = _e115;
+        let _e120 = vyre_block_scope_14_;
+        vyre_block_scope_15_ = countLeadingZeros(_e120);
+        let _e126 = vyre_block_scope_12_;
+        let _e130 = vyre_block_scope_15_;
+        let _e132 = vyre_block_scope_12_;
+        if (_e132 < arrayLength((&out))) {
+            out[_e126] = _e130;
+        }
+        vyre_block_scope_16_ = 4u;
+        vyre_block_scope_17_ = _vyre_global_id.x;
+        let _e146 = vyre_block_scope_17_;
+        let _e149 = a[_e146];
+        vyre_block_scope_18_ = _e149;
+        let _e154 = vyre_block_scope_18_;
+        vyre_block_scope_19_ = countTrailingZeros(_e154);
+        let _e160 = vyre_block_scope_16_;
+        let _e164 = vyre_block_scope_19_;
+        let _e166 = vyre_block_scope_16_;
+        if (_e166 < arrayLength((&out))) {
+            out[_e160] = _e164;
+        }
+        vyre_block_scope_20_ = 5u;
+        vyre_block_scope_21_ = _vyre_global_id.x;
+        let _e180 = vyre_block_scope_21_;
+        let _e183 = a[_e180];
+        vyre_block_scope_22_ = _e183;
+        vyre_block_scope_23_ = 0u;
+        let _e192 = vyre_block_scope_22_;
+        let _e194 = vyre_block_scope_23_;
+        vyre_block_scope_24_ = (_e192 == _e194);
+        vyre_block_scope_25_ = 1u;
+        vyre_block_scope_26_ = _vyre_global_id.x;
+        let _e209 = vyre_block_scope_26_;
+        let _e212 = a[_e209];
+        vyre_block_scope_27_ = _e212;
+        let _e217 = vyre_block_scope_24_;
+        let _e219 = vyre_block_scope_25_;
+        let _e221 = vyre_block_scope_27_;
+        vyre_block_scope_28_ = select(_e221, _e219, _e217);
+        let _e227 = vyre_block_scope_20_;
+        let _e231 = vyre_block_scope_28_;
+        let _e233 = vyre_block_scope_20_;
+        if (_e233 < arrayLength((&out))) {
+            out[_e227] = _e231;
+        }
+    }
+}
+===== transcendental_unops
+@group(0) @binding(0) 
+var<storage, read_write> out: array<f32>;
+@group(0) @binding(1) 
+var<storage> a: array<f32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: f32;
+    var vyre_block_scope_3_: f32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: f32;
+    var vyre_block_scope_7_: f32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: f32;
+    var vyre_block_scope_11_: f32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: u32;
+    var vyre_block_scope_14_: f32;
+    var vyre_block_scope_15_: f32;
+    var vyre_block_scope_16_: u32;
+    var vyre_block_scope_17_: u32;
+    var vyre_block_scope_18_: f32;
+    var vyre_block_scope_19_: f32;
+    var vyre_block_scope_20_: u32;
+    var vyre_block_scope_21_: u32;
+    var vyre_block_scope_22_: f32;
+    var vyre_block_scope_23_: f32;
+    var vyre_block_scope_24_: u32;
+    var vyre_block_scope_25_: u32;
+    var vyre_block_scope_26_: f32;
+    var vyre_block_scope_27_: f32;
+    var vyre_block_scope_28_: u32;
+    var vyre_block_scope_29_: u32;
+    var vyre_block_scope_30_: f32;
+    var vyre_block_scope_31_: f32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = 0u;
+        let _e9 = vyre_block_scope_1_;
+        let _e12 = a[_e9];
+        vyre_block_scope_2_ = _e12;
+        let _e17 = vyre_block_scope_2_;
+        vyre_block_scope_3_ = sin(_e17);
+        let _e23 = vyre_block_scope_0_;
+        let _e27 = vyre_block_scope_3_;
+        let _e29 = vyre_block_scope_0_;
+        if (_e29 < arrayLength((&out))) {
+            out[_e23] = _e27;
+        }
+        vyre_block_scope_4_ = 1u;
+        vyre_block_scope_5_ = 1u;
+        let _e42 = vyre_block_scope_5_;
+        let _e45 = a[_e42];
+        vyre_block_scope_6_ = _e45;
+        let _e50 = vyre_block_scope_6_;
+        vyre_block_scope_7_ = cos(_e50);
+        let _e56 = vyre_block_scope_4_;
+        let _e60 = vyre_block_scope_7_;
+        let _e62 = vyre_block_scope_4_;
+        if (_e62 < arrayLength((&out))) {
+            out[_e56] = _e60;
+        }
+        vyre_block_scope_8_ = 2u;
+        vyre_block_scope_9_ = 2u;
+        let _e75 = vyre_block_scope_9_;
+        let _e78 = a[_e75];
+        vyre_block_scope_10_ = _e78;
+        let _e83 = vyre_block_scope_10_;
+        vyre_block_scope_11_ = tan(_e83);
+        let _e89 = vyre_block_scope_8_;
+        let _e93 = vyre_block_scope_11_;
+        let _e95 = vyre_block_scope_8_;
+        if (_e95 < arrayLength((&out))) {
+            out[_e89] = _e93;
+        }
+        vyre_block_scope_12_ = 3u;
+        vyre_block_scope_13_ = 3u;
+        let _e108 = vyre_block_scope_13_;
+        let _e111 = a[_e108];
+        vyre_block_scope_14_ = _e111;
+        let _e116 = vyre_block_scope_14_;
+        vyre_block_scope_15_ = asin(_e116);
+        let _e122 = vyre_block_scope_12_;
+        let _e126 = vyre_block_scope_15_;
+        let _e128 = vyre_block_scope_12_;
+        if (_e128 < arrayLength((&out))) {
+            out[_e122] = _e126;
+        }
+        vyre_block_scope_16_ = 4u;
+        vyre_block_scope_17_ = 4u;
+        let _e141 = vyre_block_scope_17_;
+        let _e144 = a[_e141];
+        vyre_block_scope_18_ = _e144;
+        let _e149 = vyre_block_scope_18_;
+        vyre_block_scope_19_ = acos(_e149);
+        let _e155 = vyre_block_scope_16_;
+        let _e159 = vyre_block_scope_19_;
+        let _e161 = vyre_block_scope_16_;
+        if (_e161 < arrayLength((&out))) {
+            out[_e155] = _e159;
+        }
+        vyre_block_scope_20_ = 5u;
+        vyre_block_scope_21_ = 5u;
+        let _e174 = vyre_block_scope_21_;
+        let _e177 = a[_e174];
+        vyre_block_scope_22_ = _e177;
+        let _e182 = vyre_block_scope_22_;
+        vyre_block_scope_23_ = atan(_e182);
+        let _e188 = vyre_block_scope_20_;
+        let _e192 = vyre_block_scope_23_;
+        let _e194 = vyre_block_scope_20_;
+        if (_e194 < arrayLength((&out))) {
+            out[_e188] = _e192;
+        }
+        vyre_block_scope_24_ = 6u;
+        vyre_block_scope_25_ = 6u;
+        let _e207 = vyre_block_scope_25_;
+        let _e210 = a[_e207];
+        vyre_block_scope_26_ = _e210;
+        let _e215 = vyre_block_scope_26_;
+        vyre_block_scope_27_ = sinh(_e215);
+        let _e221 = vyre_block_scope_24_;
+        let _e225 = vyre_block_scope_27_;
+        let _e227 = vyre_block_scope_24_;
+        if (_e227 < arrayLength((&out))) {
+            out[_e221] = _e225;
+        }
+        vyre_block_scope_28_ = 7u;
+        vyre_block_scope_29_ = 7u;
+        let _e240 = vyre_block_scope_29_;
+        let _e243 = a[_e240];
+        vyre_block_scope_30_ = _e243;
+        let _e248 = vyre_block_scope_30_;
+        vyre_block_scope_31_ = cosh(_e248);
+        let _e254 = vyre_block_scope_28_;
+        let _e258 = vyre_block_scope_31_;
+        let _e260 = vyre_block_scope_28_;
+        if (_e260 < arrayLength((&out))) {
+            out[_e254] = _e258;
+        }
+    }
+}
+===== numeric_unops
+@group(0) @binding(0) 
+var<storage, read_write> out: array<f32>;
+@group(0) @binding(1) 
+var<storage> a: array<f32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: f32;
+    var vyre_block_scope_3_: f32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: f32;
+    var vyre_block_scope_7_: f32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: f32;
+    var vyre_block_scope_11_: f32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: u32;
+    var vyre_block_scope_14_: f32;
+    var vyre_block_scope_15_: f32;
+    var vyre_block_scope_16_: u32;
+    var vyre_block_scope_17_: u32;
+    var vyre_block_scope_18_: f32;
+    var vyre_block_scope_19_: f32;
+    var vyre_block_scope_20_: u32;
+    var vyre_block_scope_21_: u32;
+    var vyre_block_scope_22_: f32;
+    var vyre_block_scope_23_: f32;
+    var vyre_block_scope_24_: u32;
+    var vyre_block_scope_25_: u32;
+    var vyre_block_scope_26_: f32;
+    var vyre_block_scope_27_: f32;
+    var vyre_block_scope_28_: u32;
+    var vyre_block_scope_29_: u32;
+    var vyre_block_scope_30_: f32;
+    var vyre_block_scope_31_: f32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = 0u;
+        let _e9 = vyre_block_scope_1_;
+        let _e12 = a[_e9];
+        vyre_block_scope_2_ = _e12;
+        let _e17 = vyre_block_scope_2_;
+        vyre_block_scope_3_ = exp(_e17);
+        let _e23 = vyre_block_scope_0_;
+        let _e27 = vyre_block_scope_3_;
+        let _e29 = vyre_block_scope_0_;
+        if (_e29 < arrayLength((&out))) {
+            out[_e23] = _e27;
+        }
+        vyre_block_scope_4_ = 1u;
+        vyre_block_scope_5_ = 1u;
+        let _e42 = vyre_block_scope_5_;
+        let _e45 = a[_e42];
+        vyre_block_scope_6_ = _e45;
+        let _e50 = vyre_block_scope_6_;
+        vyre_block_scope_7_ = exp2(_e50);
+        let _e56 = vyre_block_scope_4_;
+        let _e60 = vyre_block_scope_7_;
+        let _e62 = vyre_block_scope_4_;
+        if (_e62 < arrayLength((&out))) {
+            out[_e56] = _e60;
+        }
+        vyre_block_scope_8_ = 2u;
+        vyre_block_scope_9_ = 2u;
+        let _e75 = vyre_block_scope_9_;
+        let _e78 = a[_e75];
+        vyre_block_scope_10_ = _e78;
+        let _e83 = vyre_block_scope_10_;
+        vyre_block_scope_11_ = log(_e83);
+        let _e89 = vyre_block_scope_8_;
+        let _e93 = vyre_block_scope_11_;
+        let _e95 = vyre_block_scope_8_;
+        if (_e95 < arrayLength((&out))) {
+            out[_e89] = _e93;
+        }
+        vyre_block_scope_12_ = 3u;
+        vyre_block_scope_13_ = 3u;
+        let _e108 = vyre_block_scope_13_;
+        let _e111 = a[_e108];
+        vyre_block_scope_14_ = _e111;
+        let _e116 = vyre_block_scope_14_;
+        vyre_block_scope_15_ = log2(_e116);
+        let _e122 = vyre_block_scope_12_;
+        let _e126 = vyre_block_scope_15_;
+        let _e128 = vyre_block_scope_12_;
+        if (_e128 < arrayLength((&out))) {
+            out[_e122] = _e126;
+        }
+        vyre_block_scope_16_ = 4u;
+        vyre_block_scope_17_ = 4u;
+        let _e141 = vyre_block_scope_17_;
+        let _e144 = a[_e141];
+        vyre_block_scope_18_ = _e144;
+        let _e149 = vyre_block_scope_18_;
+        vyre_block_scope_19_ = abs(_e149);
+        let _e155 = vyre_block_scope_16_;
+        let _e159 = vyre_block_scope_19_;
+        let _e161 = vyre_block_scope_16_;
+        if (_e161 < arrayLength((&out))) {
+            out[_e155] = _e159;
+        }
+        vyre_block_scope_20_ = 5u;
+        vyre_block_scope_21_ = 5u;
+        let _e174 = vyre_block_scope_21_;
+        let _e177 = a[_e174];
+        vyre_block_scope_22_ = _e177;
+        let _e182 = vyre_block_scope_22_;
+        vyre_block_scope_23_ = sqrt(_e182);
+        let _e188 = vyre_block_scope_20_;
+        let _e192 = vyre_block_scope_23_;
+        let _e194 = vyre_block_scope_20_;
+        if (_e194 < arrayLength((&out))) {
+            out[_e188] = _e192;
+        }
+        vyre_block_scope_24_ = 6u;
+        vyre_block_scope_25_ = 6u;
+        let _e207 = vyre_block_scope_25_;
+        let _e210 = a[_e207];
+        vyre_block_scope_26_ = _e210;
+        let _e215 = vyre_block_scope_26_;
+        vyre_block_scope_27_ = inverseSqrt(_e215);
+        let _e221 = vyre_block_scope_24_;
+        let _e225 = vyre_block_scope_27_;
+        let _e227 = vyre_block_scope_24_;
+        if (_e227 < arrayLength((&out))) {
+            out[_e221] = _e225;
+        }
+        vyre_block_scope_28_ = 7u;
+        vyre_block_scope_29_ = 7u;
+        let _e240 = vyre_block_scope_29_;
+        let _e243 = a[_e240];
+        vyre_block_scope_30_ = _e243;
+        let _e248 = vyre_block_scope_30_;
+        vyre_block_scope_31_ = (1f / _e248);
+        let _e255 = vyre_block_scope_28_;
+        let _e259 = vyre_block_scope_31_;
+        let _e261 = vyre_block_scope_28_;
+        if (_e261 < arrayLength((&out))) {
+            out[_e255] = _e259;
+        }
+    }
+}
+===== rounding_and_predicate_unops
+@group(0) @binding(0) 
+var<storage, read_write> out: array<f32>;
+@group(0) @binding(1) 
+var<storage> a: array<f32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: f32;
+    var vyre_block_scope_3_: f32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: f32;
+    var vyre_block_scope_7_: f32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: f32;
+    var vyre_block_scope_11_: f32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: u32;
+    var vyre_block_scope_14_: f32;
+    var vyre_block_scope_15_: f32;
+    var vyre_block_scope_16_: u32;
+    var vyre_block_scope_17_: u32;
+    var vyre_block_scope_18_: f32;
+    var vyre_block_scope_19_: f32;
+    var vyre_block_scope_20_: u32;
+    var vyre_block_scope_21_: u32;
+    var vyre_block_scope_22_: f32;
+    var vyre_block_scope_23_: f32;
+    var vyre_block_scope_24_: u32;
+    var vyre_block_scope_25_: u32;
+    var vyre_block_scope_26_: f32;
+    var vyre_block_scope_27_: bool;
+    var vyre_block_scope_28_: f32;
+    var vyre_block_scope_29_: f32;
+    var vyre_block_scope_30_: f32;
+    var vyre_block_scope_31_: u32;
+    var vyre_block_scope_32_: u32;
+    var vyre_block_scope_33_: f32;
+    var vyre_block_scope_34_: bool;
+    var vyre_block_scope_35_: f32;
+    var vyre_block_scope_36_: f32;
+    var vyre_block_scope_37_: f32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        let _e10 = vyre_block_scope_1_;
+        let _e13 = a[_e10];
+        vyre_block_scope_2_ = _e13;
+        let _e18 = vyre_block_scope_2_;
+        vyre_block_scope_3_ = floor(_e18);
+        let _e24 = vyre_block_scope_0_;
+        let _e28 = vyre_block_scope_3_;
+        let _e30 = vyre_block_scope_0_;
+        if (_e30 < arrayLength((&out))) {
+            out[_e24] = _e28;
+        }
+        vyre_block_scope_4_ = 1u;
+        vyre_block_scope_5_ = _vyre_global_id.x;
+        let _e44 = vyre_block_scope_5_;
+        let _e47 = a[_e44];
+        vyre_block_scope_6_ = _e47;
+        let _e52 = vyre_block_scope_6_;
+        vyre_block_scope_7_ = ceil(_e52);
+        let _e58 = vyre_block_scope_4_;
+        let _e62 = vyre_block_scope_7_;
+        let _e64 = vyre_block_scope_4_;
+        if (_e64 < arrayLength((&out))) {
+            out[_e58] = _e62;
+        }
+        vyre_block_scope_8_ = 2u;
+        vyre_block_scope_9_ = _vyre_global_id.x;
+        let _e78 = vyre_block_scope_9_;
+        let _e81 = a[_e78];
+        vyre_block_scope_10_ = _e81;
+        let _e86 = vyre_block_scope_10_;
+        vyre_block_scope_11_ = round(_e86);
+        let _e92 = vyre_block_scope_8_;
+        let _e96 = vyre_block_scope_11_;
+        let _e98 = vyre_block_scope_8_;
+        if (_e98 < arrayLength((&out))) {
+            out[_e92] = _e96;
+        }
+        vyre_block_scope_12_ = 3u;
+        vyre_block_scope_13_ = _vyre_global_id.x;
+        let _e112 = vyre_block_scope_13_;
+        let _e115 = a[_e112];
+        vyre_block_scope_14_ = _e115;
+        let _e120 = vyre_block_scope_14_;
+        vyre_block_scope_15_ = trunc(_e120);
+        let _e126 = vyre_block_scope_12_;
+        let _e130 = vyre_block_scope_15_;
+        let _e132 = vyre_block_scope_12_;
+        if (_e132 < arrayLength((&out))) {
+            out[_e126] = _e130;
+        }
+        vyre_block_scope_16_ = 4u;
+        vyre_block_scope_17_ = _vyre_global_id.x;
+        let _e146 = vyre_block_scope_17_;
+        let _e149 = a[_e146];
+        vyre_block_scope_18_ = _e149;
+        let _e154 = vyre_block_scope_18_;
+        vyre_block_scope_19_ = sign(_e154);
+        let _e160 = vyre_block_scope_16_;
+        let _e164 = vyre_block_scope_19_;
+        let _e166 = vyre_block_scope_16_;
+        if (_e166 < arrayLength((&out))) {
+            out[_e160] = _e164;
+        }
+        vyre_block_scope_20_ = 5u;
+        vyre_block_scope_21_ = _vyre_global_id.x;
+        let _e180 = vyre_block_scope_21_;
+        let _e183 = a[_e180];
+        vyre_block_scope_22_ = _e183;
+        let _e188 = vyre_block_scope_22_;
+        vyre_block_scope_23_ = tanh(_e188);
+        let _e194 = vyre_block_scope_20_;
+        let _e198 = vyre_block_scope_23_;
+        let _e200 = vyre_block_scope_20_;
+        if (_e200 < arrayLength((&out))) {
+            out[_e194] = _e198;
+        }
+        vyre_block_scope_24_ = 6u;
+        vyre_block_scope_25_ = _vyre_global_id.x;
+        let _e214 = vyre_block_scope_25_;
+        let _e217 = a[_e214];
+        vyre_block_scope_26_ = _e217;
+        let _e222 = vyre_block_scope_26_;
+        vyre_block_scope_27_ = (_e222 != _e222);
+        vyre_block_scope_28_ = 1f;
+        vyre_block_scope_29_ = 0f;
+        let _e236 = vyre_block_scope_27_;
+        let _e238 = vyre_block_scope_28_;
+        let _e240 = vyre_block_scope_29_;
+        vyre_block_scope_30_ = select(_e240, _e238, _e236);
+        let _e246 = vyre_block_scope_24_;
+        let _e250 = vyre_block_scope_30_;
+        let _e252 = vyre_block_scope_24_;
+        if (_e252 < arrayLength((&out))) {
+            out[_e246] = _e250;
+        }
+        vyre_block_scope_31_ = 7u;
+        vyre_block_scope_32_ = _vyre_global_id.x;
+        let _e266 = vyre_block_scope_32_;
+        let _e269 = a[_e266];
+        vyre_block_scope_33_ = _e269;
+        let _e274 = vyre_block_scope_33_;
+        vyre_block_scope_34_ = (abs(_e274) > 340282350000000000000000000000000000000f);
+        vyre_block_scope_35_ = 1f;
+        vyre_block_scope_36_ = 0f;
+        let _e290 = vyre_block_scope_34_;
+        let _e292 = vyre_block_scope_35_;
+        let _e294 = vyre_block_scope_36_;
+        vyre_block_scope_37_ = select(_e294, _e292, _e290);
+        let _e300 = vyre_block_scope_31_;
+        let _e304 = vyre_block_scope_37_;
+        let _e306 = vyre_block_scope_31_;
+        if (_e306 < arrayLength((&out))) {
+            out[_e300] = _e304;
+        }
+    }
+}
+===== casts
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: i32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_block_scope_8_: f32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: u32;
+    var vyre_block_scope_11_: u32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: i32;
+    var vyre_block_scope_14_: f32;
+    var vyre_block_scope_15_: u32;
+    var vyre_block_scope_16_: u32;
+    var vyre_block_scope_17_: u32;
+    var vyre_block_scope_18_: u32;
+    var vyre_block_scope_19_: bool;
+    var vyre_block_scope_20_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        let _e10 = vyre_block_scope_1_;
+        let _e13 = a[_e10];
+        vyre_block_scope_2_ = _e13;
+        let _e18 = vyre_block_scope_2_;
+        vyre_block_scope_3_ = i32(_e18);
+        let _e24 = vyre_block_scope_3_;
+        vyre_block_scope_4_ = u32(_e24);
+        let _e30 = vyre_block_scope_0_;
+        let _e34 = vyre_block_scope_4_;
+        let _e36 = vyre_block_scope_0_;
+        if (_e36 < arrayLength((&out))) {
+            out[_e30] = _e34;
+        }
+        vyre_block_scope_5_ = 1u;
+        vyre_block_scope_6_ = _vyre_global_id.x;
+        let _e50 = vyre_block_scope_6_;
+        let _e53 = a[_e50];
+        vyre_block_scope_7_ = _e53;
+        let _e58 = vyre_block_scope_7_;
+        vyre_block_scope_8_ = f32(_e58);
+        let _e64 = vyre_block_scope_8_;
+        vyre_block_scope_9_ = select(0u, select(u32(_e64), 4294967295u, (_e64 >= 4294967300f)), (_e64 == _e64));
+        let _e77 = vyre_block_scope_5_;
+        let _e81 = vyre_block_scope_9_;
+        let _e83 = vyre_block_scope_5_;
+        if (_e83 < arrayLength((&out))) {
+            out[_e77] = _e81;
+        }
+        vyre_block_scope_10_ = 2u;
+        vyre_block_scope_11_ = _vyre_global_id.x;
+        let _e97 = vyre_block_scope_11_;
+        let _e100 = a[_e97];
+        vyre_block_scope_12_ = _e100;
+        let _e105 = vyre_block_scope_12_;
+        vyre_block_scope_13_ = i32(_e105);
+        let _e111 = vyre_block_scope_13_;
+        vyre_block_scope_14_ = f32(_e111);
+        let _e117 = vyre_block_scope_14_;
+        vyre_block_scope_15_ = select(0u, select(u32(_e117), 4294967295u, (_e117 >= 4294967300f)), (_e117 == _e117));
+        let _e130 = vyre_block_scope_10_;
+        let _e134 = vyre_block_scope_15_;
+        let _e136 = vyre_block_scope_10_;
+        if (_e136 < arrayLength((&out))) {
+            out[_e130] = _e134;
+        }
+        vyre_block_scope_16_ = 3u;
+        vyre_block_scope_17_ = _vyre_global_id.x;
+        let _e150 = vyre_block_scope_17_;
+        let _e153 = a[_e150];
+        vyre_block_scope_18_ = _e153;
+        let _e158 = vyre_block_scope_18_;
+        vyre_block_scope_19_ = bool(_e158);
+        let _e164 = vyre_block_scope_19_;
+        vyre_block_scope_20_ = u32(_e164);
+        let _e170 = vyre_block_scope_16_;
+        let _e174 = vyre_block_scope_20_;
+        let _e176 = vyre_block_scope_16_;
+        if (_e176 < arrayLength((&out))) {
+            out[_e170] = _e174;
+        }
+    }
+}
+===== select_and_fma
+@group(0) @binding(0) 
+var<storage, read_write> out: array<f32>;
+@group(0) @binding(1) 
+var<storage> a: array<f32>;
+@group(0) @binding(2) 
+var<storage> b: array<f32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: f32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: f32;
+    var vyre_block_scope_5_: bool;
+    var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: f32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: f32;
+    var vyre_block_scope_10_: f32;
+    var vyre_block_scope_11_: u32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: f32;
+    var vyre_block_scope_14_: u32;
+    var vyre_block_scope_15_: f32;
+    var vyre_block_scope_16_: f32;
+    var vyre_block_scope_17_: f32;
+    var vyre_block_scope_18_: u32;
+    var vyre_block_scope_19_: u32;
+    var vyre_block_scope_20_: f32;
+    var vyre_block_scope_21_: u32;
+    var vyre_block_scope_22_: f32;
+    var vyre_block_scope_23_: u32;
+    var vyre_block_scope_24_: f32;
+    var vyre_block_scope_25_: f32;
+    var vyre_block_scope_26_: u32;
+    var vyre_block_scope_27_: f32;
+    var vyre_block_scope_28_: u32;
+    var vyre_block_scope_29_: f32;
+    var vyre_block_scope_30_: f32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        let _e10 = vyre_block_scope_1_;
+        let _e13 = a[_e10];
+        vyre_block_scope_2_ = _e13;
+        vyre_block_scope_3_ = _vyre_global_id.x;
+        let _e23 = vyre_block_scope_3_;
+        let _e26 = b[_e23];
+        vyre_block_scope_4_ = _e26;
+        let _e31 = vyre_block_scope_2_;
+        let _e33 = vyre_block_scope_4_;
+        vyre_block_scope_5_ = (_e31 < _e33);
+        vyre_block_scope_6_ = _vyre_global_id.x;
+        let _e44 = vyre_block_scope_6_;
+        let _e47 = a[_e44];
+        vyre_block_scope_7_ = _e47;
+        vyre_block_scope_8_ = _vyre_global_id.x;
+        let _e57 = vyre_block_scope_8_;
+        let _e60 = b[_e57];
+        vyre_block_scope_9_ = _e60;
+        let _e65 = vyre_block_scope_5_;
+        let _e67 = vyre_block_scope_7_;
+        let _e69 = vyre_block_scope_9_;
+        vyre_block_scope_10_ = select(_e69, _e67, _e65);
+        let _e75 = vyre_block_scope_0_;
+        let _e79 = vyre_block_scope_10_;
+        let _e81 = vyre_block_scope_0_;
+        if (_e81 < arrayLength((&out))) {
+            out[_e75] = _e79;
+        }
+        vyre_block_scope_11_ = 1u;
+        vyre_block_scope_12_ = _vyre_global_id.x;
+        let _e95 = vyre_block_scope_12_;
+        let _e98 = a[_e95];
+        vyre_block_scope_13_ = _e98;
+        vyre_block_scope_14_ = _vyre_global_id.x;
+        let _e108 = vyre_block_scope_14_;
+        let _e111 = b[_e108];
+        vyre_block_scope_15_ = _e111;
+        vyre_block_scope_16_ = 0.5f;
+        let _e120 = vyre_block_scope_13_;
+        let _e122 = vyre_block_scope_15_;
+        let _e124 = vyre_block_scope_16_;
+        vyre_block_scope_17_ = fma(_e120, _e122, _e124);
+        let _e130 = vyre_block_scope_11_;
+        let _e134 = vyre_block_scope_17_;
+        let _e136 = vyre_block_scope_11_;
+        if (_e136 < arrayLength((&out))) {
+            out[_e130] = _e134;
+        }
+        vyre_block_scope_18_ = 2u;
+        vyre_block_scope_19_ = _vyre_global_id.x;
+        let _e150 = vyre_block_scope_19_;
+        let _e153 = a[_e150];
+        vyre_block_scope_20_ = _e153;
+        vyre_block_scope_21_ = _vyre_global_id.x;
+        let _e163 = vyre_block_scope_21_;
+        let _e166 = b[_e163];
+        vyre_block_scope_22_ = _e166;
+        vyre_block_scope_23_ = _vyre_global_id.x;
+        let _e176 = vyre_block_scope_23_;
+        let _e179 = a[_e176];
+        vyre_block_scope_24_ = _e179;
+        let _e184 = vyre_block_scope_20_;
+        let _e186 = vyre_block_scope_22_;
+        let _e188 = vyre_block_scope_24_;
+        vyre_block_scope_25_ = fma(_e184, _e186, _e188);
+        vyre_block_scope_26_ = _vyre_global_id.x;
+        let _e199 = vyre_block_scope_26_;
+        let _e202 = b[_e199];
+        vyre_block_scope_27_ = _e202;
+        vyre_block_scope_28_ = _vyre_global_id.x;
+        let _e212 = vyre_block_scope_28_;
+        let _e215 = b[_e212];
+        vyre_block_scope_29_ = _e215;
+        let _e220 = vyre_block_scope_25_;
+        let _e222 = vyre_block_scope_27_;
+        let _e224 = vyre_block_scope_29_;
+        vyre_block_scope_30_ = fma(_e220, _e222, _e224);
+        let _e230 = vyre_block_scope_18_;
+        let _e234 = vyre_block_scope_30_;
+        let _e236 = vyre_block_scope_18_;
+        if (_e236 < arrayLength((&out))) {
+            out[_e230] = _e234;
+        }
+    }
+}
+===== if_else_branch
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: bool;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: u32;
+    var vyre_block_scope_11_: u32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: u32;
+
+    {
+        vyre_block_scope_0_ = _vyre_global_id.x;
+        let _e6 = vyre_block_scope_0_;
+        let _e9 = a[_e6];
+        vyre_block_scope_1_ = _e9;
+        vyre_block_scope_2_ = 4u;
+        let _e18 = vyre_block_scope_1_;
+        let _e20 = vyre_block_scope_2_;
+        vyre_block_scope_3_ = (_e18 < _e20);
+        let _e26 = vyre_block_scope_3_;
+        if _e26 {
+            vyre_block_scope_4_ = _vyre_global_id.x;
+            vyre_block_scope_5_ = _vyre_global_id.x;
+            let _e38 = vyre_block_scope_5_;
+            let _e41 = a[_e38];
+            vyre_block_scope_6_ = _e41;
+            vyre_block_scope_7_ = 1u;
+            let _e50 = vyre_block_scope_6_;
+            let _e52 = vyre_block_scope_7_;
+            vyre_block_scope_8_ = (_e50 << (_e52 & 31u));
+            let _e60 = vyre_block_scope_4_;
+            let _e64 = vyre_block_scope_8_;
+            let _e66 = vyre_block_scope_4_;
+            if (_e66 < arrayLength((&out))) {
+                out[_e60] = _e64;
+            }
+        } else {
+            vyre_block_scope_9_ = _vyre_global_id.x;
+            vyre_block_scope_10_ = _vyre_global_id.x;
+            let _e81 = vyre_block_scope_10_;
+            let _e84 = a[_e81];
+            vyre_block_scope_11_ = _e84;
+            vyre_block_scope_12_ = 4u;
+            let _e93 = vyre_block_scope_11_;
+            let _e95 = vyre_block_scope_12_;
+            vyre_block_scope_13_ = (_e93 - _e95);
+            let _e101 = vyre_block_scope_9_;
+            let _e105 = vyre_block_scope_13_;
+            let _e107 = vyre_block_scope_9_;
+            if (_e107 < arrayLength((&out))) {
+                out[_e101] = _e105;
+            }
+        }
+    }
+}
+===== loop_accumulate
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_named_carry_acc: u32;
+    var i_end: u32;
+    var i: u32;
+    var vyre_loop_carry_3_: u32;
+    var vyre_named_carry_snapshot_4_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+    var vyre_named_carry_snapshot_7_: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_named_carry_snapshot_8_: u32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = 0u;
+        vyre_block_scope_2_ = 8u;
+        let _e13 = vyre_block_scope_0_;
+        vyre_named_carry_acc = _e13;
+        let _e16 = vyre_block_scope_1_;
+        let _e18 = vyre_block_scope_2_;
+        i_end = _e18;
+        i = _e16;
+        loop {
+            let _e22 = i;
+            let _e24 = i_end;
+            if (_e22 >= _e24) {
+                break;
+            }
+            let _e27 = i;
+            vyre_loop_carry_3_ = _e27;
+            let _e32 = vyre_named_carry_acc;
+            vyre_named_carry_snapshot_4_ = _e32;
+            let _e35 = vyre_named_carry_snapshot_4_;
+            vyre_block_scope_4_ = _e35;
+            let _e40 = vyre_loop_carry_3_;
+            let _e43 = a[_e40];
+            vyre_block_scope_5_ = _e43;
+            let _e48 = vyre_block_scope_4_;
+            let _e50 = vyre_block_scope_5_;
+            vyre_block_scope_6_ = (_e48 + _e50);
+            let _e56 = vyre_block_scope_6_;
+            vyre_named_carry_acc = _e56;
+            let _e59 = vyre_named_carry_acc;
+            vyre_named_carry_snapshot_7_ = _e59;
+            let _e62 = vyre_named_carry_snapshot_7_;
+            vyre_block_scope_7_ = _e62;
+            continuing {
+                let _e67 = i;
+                i = (_e67 + 1u);
+                let _e71 = i;
+                let _e73 = i_end;
+                break if (_e71 >= _e73);
+            }
+        }
+        let _e78 = vyre_named_carry_acc;
+        vyre_named_carry_snapshot_8_ = _e78;
+        let _e81 = vyre_named_carry_snapshot_8_;
+        vyre_block_scope_8_ = _e81;
+        vyre_block_scope_9_ = 0u;
+        let _e90 = vyre_block_scope_9_;
+        let _e94 = vyre_block_scope_8_;
+        let _e96 = vyre_block_scope_9_;
+        if (_e96 < arrayLength((&out))) {
+            out[_e90] = _e94;
+        }
+    }
+}
+===== nested_loop_in_branch
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: bool;
+    var vyre_named_carry_acc: u32;
+    var vyre_named_carry_snapshot_4_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+    var i_end: u32;
+    var i: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_named_carry_snapshot_8_: u32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: u32;
+    var j_end: u32;
+    var j: u32;
+    var vyre_block_scope_11_: u32;
+    var vyre_named_carry_snapshot_12_: u32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: u32;
+    var vyre_block_scope_14_: u32;
+    var vyre_named_carry_snapshot_15_: u32;
+    var vyre_block_scope_15_: u32;
+    var vyre_named_carry_snapshot_16_: u32;
+    var vyre_block_scope_16_: u32;
+    var vyre_named_carry_snapshot_17_: u32;
+    var vyre_block_scope_17_: u32;
+    var vyre_named_carry_snapshot_18_: u32;
+    var vyre_block_scope_18_: u32;
+    var vyre_block_scope_19_: u32;
+    var vyre_named_carry_snapshot_20_: u32;
+    var vyre_block_scope_20_: u32;
+    var vyre_named_carry_snapshot_21_: u32;
+    var vyre_block_scope_21_: u32;
+    var vyre_block_scope_22_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        vyre_block_scope_2_ = 8u;
+        let _e14 = vyre_block_scope_1_;
+        let _e16 = vyre_block_scope_2_;
+        vyre_block_scope_3_ = (_e14 < _e16);
+        let _e22 = vyre_block_scope_0_;
+        vyre_named_carry_acc = _e22;
+        let _e25 = vyre_block_scope_3_;
+        if _e25 {
+            let _e27 = vyre_named_carry_acc;
+            vyre_named_carry_snapshot_4_ = _e27;
+            let _e30 = vyre_named_carry_snapshot_4_;
+            vyre_block_scope_4_ = _e30;
+            vyre_block_scope_5_ = 0u;
+            vyre_block_scope_6_ = 4u;
+            let _e43 = vyre_block_scope_4_;
+            vyre_named_carry_acc = _e43;
+            let _e46 = vyre_block_scope_5_;
+            let _e48 = vyre_block_scope_6_;
+            i_end = _e48;
+            i = _e46;
+            loop {
+                let _e52 = i;
+                let _e54 = i_end;
+                if (_e52 >= _e54) {
+                    break;
+                }
+                let _e57 = i;
+                vyre_block_scope_7_ = _e57;
+                let _e62 = vyre_named_carry_acc;
+                vyre_named_carry_snapshot_8_ = _e62;
+                let _e65 = vyre_named_carry_snapshot_8_;
+                vyre_block_scope_8_ = _e65;
+                vyre_block_scope_9_ = 0u;
+                vyre_block_scope_10_ = 2u;
+                let _e78 = vyre_block_scope_8_;
+                vyre_named_carry_acc = _e78;
+                let _e81 = vyre_block_scope_9_;
+                let _e83 = vyre_block_scope_10_;
+                j_end = _e83;
+                j = _e81;
+                loop {
+                    let _e87 = j;
+                    let _e89 = j_end;
+                    if (_e87 >= _e89) {
+                        break;
+                    }
+                    let _e92 = j;
+                    vyre_block_scope_11_ = _e92;
+                    let _e97 = vyre_named_carry_acc;
+                    vyre_named_carry_snapshot_12_ = _e97;
+                    let _e100 = vyre_named_carry_snapshot_12_;
+                    vyre_block_scope_12_ = _e100;
+                    let _e105 = vyre_block_scope_7_;
+                    let _e107 = vyre_block_scope_11_;
+                    vyre_block_scope_13_ = (_e105 * _e107);
+                    let _e113 = vyre_block_scope_12_;
+                    let _e115 = vyre_block_scope_13_;
+                    vyre_block_scope_14_ = (_e113 + _e115);
+                    let _e121 = vyre_block_scope_14_;
+                    vyre_named_carry_acc = _e121;
+                    let _e124 = vyre_named_carry_acc;
+                    vyre_named_carry_snapshot_15_ = _e124;
+                    let _e127 = vyre_named_carry_snapshot_15_;
+                    vyre_block_scope_15_ = _e127;
+                    continuing {
+                        let _e132 = j;
+                        j = (_e132 + 1u);
+                        let _e136 = j;
+                        let _e138 = j_end;
+                        break if (_e136 >= _e138);
+                    }
+                }
+                let _e141 = vyre_named_carry_acc;
+                vyre_named_carry_snapshot_16_ = _e141;
+                let _e144 = vyre_named_carry_snapshot_16_;
+                vyre_block_scope_16_ = _e144;
+                continuing {
+                    let _e149 = i;
+                    i = (_e149 + 1u);
+                    let _e153 = i;
+                    let _e155 = i_end;
+                    break if (_e153 >= _e155);
+                }
+            }
+            let _e158 = vyre_named_carry_acc;
+            vyre_named_carry_snapshot_17_ = _e158;
+            let _e161 = vyre_named_carry_snapshot_17_;
+            vyre_block_scope_17_ = _e161;
+        } else {
+            let _e166 = vyre_named_carry_acc;
+            vyre_named_carry_snapshot_18_ = _e166;
+            let _e169 = vyre_named_carry_snapshot_18_;
+            vyre_block_scope_18_ = _e169;
+            vyre_block_scope_19_ = 1u;
+            let _e178 = vyre_block_scope_19_;
+            vyre_named_carry_acc = _e178;
+            let _e181 = vyre_named_carry_acc;
+            vyre_named_carry_snapshot_20_ = _e181;
+            let _e184 = vyre_named_carry_snapshot_20_;
+            vyre_block_scope_20_ = _e184;
+        }
+        let _e189 = vyre_named_carry_acc;
+        vyre_named_carry_snapshot_21_ = _e189;
+        let _e192 = vyre_named_carry_snapshot_21_;
+        vyre_block_scope_21_ = _e192;
+        vyre_block_scope_22_ = _vyre_global_id.x;
+        let _e202 = vyre_block_scope_22_;
+        let _e206 = vyre_block_scope_21_;
+        let _e208 = vyre_block_scope_22_;
+        if (_e208 < arrayLength((&out))) {
+            out[_e202] = _e206;
+        }
+    }
+}
+===== buffer_length
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = arrayLength((&out));
+        let _e10 = vyre_block_scope_0_;
+        let _e14 = vyre_block_scope_1_;
+        let _e16 = vyre_block_scope_0_;
+        if (_e16 < arrayLength((&out))) {
+            out[_e10] = _e14;
+        }
+        vyre_block_scope_2_ = 1u;
+        vyre_block_scope_3_ = arrayLength((&out));
+        vyre_block_scope_4_ = 1u;
+        let _e34 = vyre_block_scope_3_;
+        let _e36 = vyre_block_scope_4_;
+        vyre_block_scope_5_ = (_e34 - _e36);
+        let _e42 = vyre_block_scope_2_;
+        let _e46 = vyre_block_scope_5_;
+        let _e48 = vyre_block_scope_2_;
+        if (_e48 < arrayLength((&out))) {
+            out[_e42] = _e46;
+        }
+        vyre_block_scope_6_ = 2u;
+        vyre_block_scope_7_ = _vyre_global_id.x;
+        vyre_block_scope_8_ = arrayLength((&out));
+        let _e67 = vyre_block_scope_7_;
+        let _e69 = vyre_block_scope_8_;
+        vyre_block_scope_9_ = min(_e67, _e69);
+        let _e75 = vyre_block_scope_6_;
+        let _e79 = vyre_block_scope_9_;
+        let _e81 = vyre_block_scope_6_;
+        if (_e81 < arrayLength((&out))) {
+            out[_e75] = _e79;
+        }
+    }
+}
+===== invocation_ids
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: u32;
+    var vyre_block_scope_11_: u32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: u32;
+    var vyre_block_scope_14_: u32;
+    var vyre_block_scope_15_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        let _e10 = vyre_block_scope_0_;
+        let _e14 = vyre_block_scope_1_;
+        let _e16 = vyre_block_scope_0_;
+        if (_e16 < arrayLength((&out))) {
+            out[_e10] = _e14;
+        }
+        vyre_block_scope_2_ = 1u;
+        vyre_block_scope_3_ = _vyre_global_id.y;
+        let _e30 = vyre_block_scope_2_;
+        let _e34 = vyre_block_scope_3_;
+        let _e36 = vyre_block_scope_2_;
+        if (_e36 < arrayLength((&out))) {
+            out[_e30] = _e34;
+        }
+        vyre_block_scope_4_ = 2u;
+        vyre_block_scope_5_ = _vyre_global_id.z;
+        let _e50 = vyre_block_scope_4_;
+        let _e54 = vyre_block_scope_5_;
+        let _e56 = vyre_block_scope_4_;
+        if (_e56 < arrayLength((&out))) {
+            out[_e50] = _e54;
+        }
+        vyre_block_scope_6_ = 3u;
+        vyre_block_scope_7_ = _vyre_workgroup_id.x;
+        let _e70 = vyre_block_scope_6_;
+        let _e74 = vyre_block_scope_7_;
+        let _e76 = vyre_block_scope_6_;
+        if (_e76 < arrayLength((&out))) {
+            out[_e70] = _e74;
+        }
+        vyre_block_scope_8_ = 4u;
+        vyre_block_scope_9_ = _vyre_workgroup_id.y;
+        let _e90 = vyre_block_scope_8_;
+        let _e94 = vyre_block_scope_9_;
+        let _e96 = vyre_block_scope_8_;
+        if (_e96 < arrayLength((&out))) {
+            out[_e90] = _e94;
+        }
+        vyre_block_scope_10_ = 5u;
+        vyre_block_scope_11_ = _vyre_workgroup_id.z;
+        let _e110 = vyre_block_scope_10_;
+        let _e114 = vyre_block_scope_11_;
+        let _e116 = vyre_block_scope_10_;
+        if (_e116 < arrayLength((&out))) {
+            out[_e110] = _e114;
+        }
+        vyre_block_scope_12_ = 6u;
+        vyre_block_scope_13_ = _vyre_local_id.x;
+        let _e130 = vyre_block_scope_12_;
+        let _e134 = vyre_block_scope_13_;
+        let _e136 = vyre_block_scope_12_;
+        if (_e136 < arrayLength((&out))) {
+            out[_e130] = _e134;
+        }
+        vyre_block_scope_14_ = 7u;
+        vyre_block_scope_15_ = _vyre_local_id.y;
+        let _e150 = vyre_block_scope_14_;
+        let _e154 = vyre_block_scope_15_;
+        let _e156 = vyre_block_scope_14_;
+        if (_e156 < arrayLength((&out))) {
+            out[_e150] = _e154;
+        }
+    }
+}
+===== atomic_rmw
+@group(0) @binding(0) 
+var<storage, read_write> out: array<atomic<u32>>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: u32;
+    var vyre_block_scope_11_: u32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: u32;
+    var vyre_block_scope_14_: u32;
+    var vyre_block_scope_15_: u32;
+    var vyre_block_scope_16_: u32;
+    var vyre_block_scope_17_: u32;
+    var vyre_block_scope_18_: u32;
+    var vyre_block_scope_19_: u32;
+    var vyre_block_scope_20_: u32;
+    var vyre_block_scope_21_: u32;
+    var vyre_block_scope_22_: u32;
+    var vyre_block_scope_23_: u32;
+    var vyre_block_scope_24_: u32;
+    var vyre_block_scope_25_: u32;
+    var vyre_block_scope_26_: u32;
+    var vyre_block_scope_27_: u32;
+    var vyre_block_scope_28_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        let _e10 = vyre_block_scope_1_;
+        let _e13 = a[_e10];
+        vyre_block_scope_2_ = _e13;
+        let _e18 = vyre_block_scope_0_;
+        let _e22 = vyre_block_scope_2_;
+        let _e23 = atomicAdd((&out[_e18]), _e22);
+        vyre_block_scope_3_ = _e23;
+        vyre_block_scope_4_ = 0u;
+        vyre_block_scope_5_ = _vyre_global_id.x;
+        let _e37 = vyre_block_scope_5_;
+        let _e40 = a[_e37];
+        vyre_block_scope_6_ = _e40;
+        let _e45 = vyre_block_scope_4_;
+        let _e49 = vyre_block_scope_6_;
+        let _e50 = atomicOr((&out[_e45]), _e49);
+        vyre_block_scope_7_ = _e50;
+        vyre_block_scope_8_ = 0u;
+        vyre_block_scope_9_ = _vyre_global_id.x;
+        let _e64 = vyre_block_scope_9_;
+        let _e67 = a[_e64];
+        vyre_block_scope_10_ = _e67;
+        let _e72 = vyre_block_scope_8_;
+        let _e76 = vyre_block_scope_10_;
+        let _e77 = atomicAnd((&out[_e72]), _e76);
+        vyre_block_scope_11_ = _e77;
+        vyre_block_scope_12_ = 0u;
+        vyre_block_scope_13_ = _vyre_global_id.x;
+        let _e91 = vyre_block_scope_13_;
+        let _e94 = a[_e91];
+        vyre_block_scope_14_ = _e94;
+        let _e99 = vyre_block_scope_12_;
+        let _e103 = vyre_block_scope_14_;
+        let _e104 = atomicXor((&out[_e99]), _e103);
+        vyre_block_scope_15_ = _e104;
+        vyre_block_scope_16_ = 0u;
+        vyre_block_scope_17_ = _vyre_global_id.x;
+        let _e118 = vyre_block_scope_17_;
+        let _e121 = a[_e118];
+        vyre_block_scope_18_ = _e121;
+        let _e126 = vyre_block_scope_16_;
+        let _e130 = vyre_block_scope_18_;
+        let _e131 = atomicMin((&out[_e126]), _e130);
+        vyre_block_scope_19_ = _e131;
+        vyre_block_scope_20_ = 0u;
+        vyre_block_scope_21_ = _vyre_global_id.x;
+        let _e145 = vyre_block_scope_21_;
+        let _e148 = a[_e145];
+        vyre_block_scope_22_ = _e148;
+        let _e153 = vyre_block_scope_20_;
+        let _e157 = vyre_block_scope_22_;
+        let _e158 = atomicMax((&out[_e153]), _e157);
+        vyre_block_scope_23_ = _e158;
+        vyre_block_scope_24_ = 0u;
+        vyre_block_scope_25_ = _vyre_global_id.x;
+        let _e172 = vyre_block_scope_25_;
+        let _e175 = a[_e172];
+        vyre_block_scope_26_ = _e175;
+        let _e180 = vyre_block_scope_24_;
+        let _e184 = vyre_block_scope_26_;
+        let _e185 = atomicExchange((&out[_e180]), _e184);
+        vyre_block_scope_27_ = _e185;
+        vyre_block_scope_28_ = 1u;
+        let _e194 = vyre_block_scope_28_;
+        let _e198 = vyre_block_scope_27_;
+        let _e200 = vyre_block_scope_28_;
+        if (_e200 < arrayLength((&out))) {
+            atomicStore((&out[_e194]), _e198);
+        }
+    }
+}
+===== atomic_compare_exchange
+@group(0) @binding(0) 
+var<storage, read_write> out: array<atomic<u32>>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        let _e10 = vyre_block_scope_1_;
+        let _e13 = a[_e10];
+        vyre_block_scope_2_ = _e13;
+        vyre_block_scope_3_ = 0u;
+        let _e22 = vyre_block_scope_3_;
+        let _e24 = vyre_block_scope_0_;
+        let _e28 = vyre_block_scope_2_;
+        let _e29 = atomicCompareExchangeWeak((&out[_e24]), _e22, _e28);
+        vyre_block_scope_4_ = _e29.old_value;
+        vyre_block_scope_5_ = 1u;
+        let _e39 = vyre_block_scope_5_;
+        let _e43 = vyre_block_scope_4_;
+        let _e45 = vyre_block_scope_5_;
+        if (_e45 < arrayLength((&out))) {
+            atomicStore((&out[_e39]), _e43);
+        }
+    }
+}
+===== uniform_binding
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+@group(1) @binding(1) 
+var<storage> scale: array<u32>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+
+    {
+        vyre_block_scope_0_ = _vyre_global_id.x;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        vyre_block_scope_2_ = 0u;
+        let _e15 = vyre_block_scope_2_;
+        let _e18 = scale[_e15];
+        vyre_block_scope_3_ = _e18;
+        let _e23 = vyre_block_scope_1_;
+        let _e25 = vyre_block_scope_3_;
+        vyre_block_scope_4_ = (_e23 * _e25);
+        let _e31 = vyre_block_scope_0_;
+        let _e35 = vyre_block_scope_4_;
+        let _e37 = vyre_block_scope_0_;
+        if (_e37 < arrayLength((&out))) {
+            out[_e31] = _e35;
+        }
+    }
+}
+===== explicit_workgroup
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+
+@compute @workgroup_size(64, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+
+    {
+        vyre_block_scope_0_ = _vyre_global_id.x;
+        vyre_block_scope_1_ = _vyre_global_id.x;
+        let _e11 = vyre_block_scope_0_;
+        let _e15 = vyre_block_scope_1_;
+        let _e17 = vyre_block_scope_0_;
+        if (_e17 < arrayLength((&out))) {
+            out[_e11] = _e15;
+        }
+    }
+}
+===== trap_guard
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+@group(0) @binding(2) 
+var<storage, read_write> vyre_wgpu_trap_sidecar: array<atomic<u32>>;
+
+@compute @workgroup_size(1, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: bool;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+
+    {
+        vyre_block_scope_0_ = _vyre_global_id.x;
+        vyre_block_scope_1_ = arrayLength((&out));
+        let _e11 = vyre_block_scope_0_;
+        let _e13 = vyre_block_scope_1_;
+        vyre_block_scope_2_ = (_e11 >= _e13);
+        let _e19 = vyre_block_scope_2_;
+        if _e19 {
+            vyre_block_scope_3_ = _vyre_global_id.x;
+            let _e26 = vyre_block_scope_3_;
+            let _e32 = atomicCompareExchangeWeak((&vyre_wgpu_trap_sidecar[0u]), 0u, 1u);
+            if (_e32.old_value == 0u) {
+                let _e39 = atomicExchange((&vyre_wgpu_trap_sidecar[1u]), _e26);
+                let _e44 = atomicExchange((&vyre_wgpu_trap_sidecar[2u]), 1u);
+                let _e50 = atomicExchange((&vyre_wgpu_trap_sidecar[3u]), _vyre_global_id.x);
+            }
+            return;
+        }
+        vyre_block_scope_4_ = _vyre_global_id.x;
+        vyre_block_scope_5_ = _vyre_global_id.x;
+        let _e62 = vyre_block_scope_5_;
+        let _e65 = a[_e62];
+        vyre_block_scope_6_ = _e65;
+        let _e70 = vyre_block_scope_4_;
+        let _e74 = vyre_block_scope_6_;
+        let _e76 = vyre_block_scope_4_;
+        if (_e76 < arrayLength((&out))) {
+            out[_e70] = _e74;
+        }
+    }
+}
+===== workgroup_override_config
+@group(0) @binding(0) 
+var<storage, read_write> out: array<u32>;
+@group(0) @binding(1) 
+var<storage> a: array<u32>;
+@group(0) @binding(2) 
+var<storage> b: array<u32>;
+
+@compute @workgroup_size(32, 1, 1) 
+fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(workgroup_id) _vyre_workgroup_id: vec3<u32>, @builtin(local_invocation_id) _vyre_local_id: vec3<u32>) {
+    var vyre_block_scope_0_: u32;
+    var vyre_block_scope_1_: u32;
+    var vyre_block_scope_2_: u32;
+    var vyre_block_scope_3_: u32;
+    var vyre_block_scope_4_: u32;
+    var vyre_block_scope_5_: u32;
+    var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: u32;
+    var vyre_block_scope_8_: u32;
+    var vyre_block_scope_9_: u32;
+    var vyre_block_scope_10_: u32;
+    var vyre_block_scope_11_: u32;
+    var vyre_block_scope_12_: u32;
+    var vyre_block_scope_13_: u32;
+    var vyre_block_scope_14_: u32;
+    var vyre_block_scope_15_: u32;
+    var vyre_block_scope_16_: u32;
+    var vyre_block_scope_17_: u32;
+    var vyre_block_scope_18_: u32;
+    var vyre_block_scope_19_: u32;
+    var vyre_block_scope_20_: u32;
+    var vyre_block_scope_21_: u32;
+    var vyre_block_scope_22_: u32;
+    var vyre_block_scope_23_: u32;
+    var vyre_block_scope_24_: u32;
+    var vyre_block_scope_25_: u32;
+    var vyre_block_scope_26_: u32;
+    var vyre_block_scope_27_: u32;
+    var vyre_block_scope_28_: u32;
+    var vyre_block_scope_29_: u32;
+    var vyre_block_scope_30_: u32;
+    var vyre_block_scope_31_: u32;
+    var vyre_block_scope_32_: u32;
+    var vyre_block_scope_33_: u32;
+    var vyre_block_scope_34_: u32;
+    var vyre_block_scope_35_: u32;
+    var vyre_block_scope_36_: u32;
+    var vyre_block_scope_37_: u32;
+    var vyre_block_scope_38_: u32;
+    var vyre_block_scope_39_: u32;
+    var vyre_block_scope_40_: u32;
+    var vyre_block_scope_41_: u32;
+    var vyre_block_scope_42_: u32;
+    var vyre_block_scope_43_: u32;
+    var vyre_block_scope_44_: u32;
+    var vyre_block_scope_45_: u32;
+    var vyre_block_scope_46_: u32;
+    var vyre_block_scope_47_: u32;
+
+    {
+        vyre_block_scope_0_ = 0u;
+        vyre_block_scope_1_ = 0u;
+        let _e9 = vyre_block_scope_1_;
+        let _e12 = a[_e9];
+        vyre_block_scope_2_ = _e12;
+        vyre_block_scope_3_ = 0u;
+        let _e21 = vyre_block_scope_3_;
+        let _e24 = b[_e21];
+        vyre_block_scope_4_ = _e24;
+        let _e29 = vyre_block_scope_2_;
+        let _e31 = vyre_block_scope_4_;
+        vyre_block_scope_5_ = (_e29 * _e31);
+        let _e37 = vyre_block_scope_0_;
+        let _e41 = vyre_block_scope_5_;
+        let _e43 = vyre_block_scope_0_;
+        if (_e43 < arrayLength((&out))) {
+            out[_e37] = _e41;
+        }
+        vyre_block_scope_6_ = 1u;
+        vyre_block_scope_7_ = 1u;
+        let _e56 = vyre_block_scope_7_;
+        let _e59 = a[_e56];
+        vyre_block_scope_8_ = _e59;
+        vyre_block_scope_9_ = 1u;
+        let _e68 = vyre_block_scope_9_;
+        let _e71 = b[_e68];
+        vyre_block_scope_10_ = _e71;
+        let _e76 = vyre_block_scope_8_;
+        let _e78 = vyre_block_scope_10_;
+        vyre_block_scope_11_ = (_e76 * _e78);
+        let _e84 = vyre_block_scope_6_;
+        let _e88 = vyre_block_scope_11_;
+        let _e90 = vyre_block_scope_6_;
+        if (_e90 < arrayLength((&out))) {
+            out[_e84] = _e88;
+        }
+        vyre_block_scope_12_ = 2u;
+        vyre_block_scope_13_ = 2u;
+        let _e103 = vyre_block_scope_13_;
+        let _e106 = a[_e103];
+        vyre_block_scope_14_ = _e106;
+        vyre_block_scope_15_ = 2u;
+        let _e115 = vyre_block_scope_15_;
+        let _e118 = b[_e115];
+        vyre_block_scope_16_ = _e118;
+        let _e123 = vyre_block_scope_14_;
+        let _e125 = vyre_block_scope_16_;
+        vyre_block_scope_17_ = (_e123 * _e125);
+        let _e131 = vyre_block_scope_12_;
+        let _e135 = vyre_block_scope_17_;
+        let _e137 = vyre_block_scope_12_;
+        if (_e137 < arrayLength((&out))) {
+            out[_e131] = _e135;
+        }
+        vyre_block_scope_18_ = 3u;
+        vyre_block_scope_19_ = 3u;
+        let _e150 = vyre_block_scope_19_;
+        let _e153 = a[_e150];
+        vyre_block_scope_20_ = _e153;
+        vyre_block_scope_21_ = 3u;
+        let _e162 = vyre_block_scope_21_;
+        let _e165 = b[_e162];
+        vyre_block_scope_22_ = _e165;
+        let _e170 = vyre_block_scope_20_;
+        let _e172 = vyre_block_scope_22_;
+        vyre_block_scope_23_ = (_e170 * _e172);
+        let _e178 = vyre_block_scope_18_;
+        let _e182 = vyre_block_scope_23_;
+        let _e184 = vyre_block_scope_18_;
+        if (_e184 < arrayLength((&out))) {
+            out[_e178] = _e182;
+        }
+        vyre_block_scope_24_ = 4u;
+        vyre_block_scope_25_ = 4u;
+        let _e197 = vyre_block_scope_25_;
+        let _e200 = a[_e197];
+        vyre_block_scope_26_ = _e200;
+        vyre_block_scope_27_ = 4u;
+        let _e209 = vyre_block_scope_27_;
+        let _e212 = b[_e209];
+        vyre_block_scope_28_ = _e212;
+        let _e217 = vyre_block_scope_26_;
+        let _e219 = vyre_block_scope_28_;
+        vyre_block_scope_29_ = (_e217 * _e219);
+        let _e225 = vyre_block_scope_24_;
+        let _e229 = vyre_block_scope_29_;
+        let _e231 = vyre_block_scope_24_;
+        if (_e231 < arrayLength((&out))) {
+            out[_e225] = _e229;
+        }
+        vyre_block_scope_30_ = 5u;
+        vyre_block_scope_31_ = 5u;
+        let _e244 = vyre_block_scope_31_;
+        let _e247 = a[_e244];
+        vyre_block_scope_32_ = _e247;
+        vyre_block_scope_33_ = 5u;
+        let _e256 = vyre_block_scope_33_;
+        let _e259 = b[_e256];
+        vyre_block_scope_34_ = _e259;
+        let _e264 = vyre_block_scope_32_;
+        let _e266 = vyre_block_scope_34_;
+        vyre_block_scope_35_ = (_e264 * _e266);
+        let _e272 = vyre_block_scope_30_;
+        let _e276 = vyre_block_scope_35_;
+        let _e278 = vyre_block_scope_30_;
+        if (_e278 < arrayLength((&out))) {
+            out[_e272] = _e276;
+        }
+        vyre_block_scope_36_ = 6u;
+        vyre_block_scope_37_ = 6u;
+        let _e291 = vyre_block_scope_37_;
+        let _e294 = a[_e291];
+        vyre_block_scope_38_ = _e294;
+        vyre_block_scope_39_ = 6u;
+        let _e303 = vyre_block_scope_39_;
+        let _e306 = b[_e303];
+        vyre_block_scope_40_ = _e306;
+        let _e311 = vyre_block_scope_38_;
+        let _e313 = vyre_block_scope_40_;
+        vyre_block_scope_41_ = (_e311 * _e313);
+        let _e319 = vyre_block_scope_36_;
+        let _e323 = vyre_block_scope_41_;
+        let _e325 = vyre_block_scope_36_;
+        if (_e325 < arrayLength((&out))) {
+            out[_e319] = _e323;
+        }
+        vyre_block_scope_42_ = 7u;
+        vyre_block_scope_43_ = 7u;
+        let _e338 = vyre_block_scope_43_;
+        let _e341 = a[_e338];
+        vyre_block_scope_44_ = _e341;
+        vyre_block_scope_45_ = 7u;
+        let _e350 = vyre_block_scope_45_;
+        let _e353 = b[_e350];
+        vyre_block_scope_46_ = _e353;
+        let _e358 = vyre_block_scope_44_;
+        let _e360 = vyre_block_scope_46_;
+        vyre_block_scope_47_ = (_e358 * _e360);
+        let _e366 = vyre_block_scope_42_;
+        let _e370 = vyre_block_scope_47_;
+        let _e372 = vyre_block_scope_42_;
+        if (_e372 < arrayLength((&out))) {
+            out[_e366] = _e370;
+        }
+    }
+}

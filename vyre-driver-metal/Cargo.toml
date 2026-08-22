@@ -1,6 +1,6 @@
 [package]
 name = "vyre-driver-metal"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -21,28 +21,29 @@ path = "src/lib.rs"
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
-[lints.rust]
-unsafe_code = "allow"
-missing_docs = "deny"
-unreachable_pub = "warn"
-nonstandard_style = { level = "warn", priority = -1 }
-rust_2018_idioms = { level = "warn", priority = -1 }
+[lints]
+workspace = true
 
-[lints.rustdoc]
-broken_intra_doc_links = "deny"
-private_intra_doc_links = "warn"
+[features]
+default = []
+# A test that acquires a real device is compiled only where the device is.
+# The lanes that own hardware turn this on; a hosted runner leaves it off and
+# never links a test whose first line would abort inside the driver.
+device-tests = []
 
 [dependencies]
 vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-lower = { workspace = true }
-vyre-emit-metal = { workspace = true }
 inventory.workspace = true
 tracing.workspace = true
 serde_json.workspace = true
 
+# Every module that names the Metal artifact types is gated on an Apple target,
+# so the emitter is a dependency only where those modules compile.
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
+vyre-emit-metal = { workspace = true }
 metal.workspace = true
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dev-dependencies]

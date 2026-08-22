@@ -1,10 +1,10 @@
 # Authoring a Cat-A op in vyre-libs
 
-This document is the canonical recipe for landing a new Category-A
-composition inside `vyre-libs`. A Cat-A op produces a `Program`
-assembled from vyre primitives  -  no raw shader source, no
-backend-specific code. Every backend that implements `VyreBackend`
-runs the same Program with byte-identical output.
+The recipe for landing a new composition in `vyre-libs`. A composition
+produces a `Program` assembled from existing IR: no raw shader source, no
+backend-specific code. Consumer dialects and compiler-internal domains use the
+same recipe. Every production backend runs the same program.
+`docs/lego-block-rule.md` is the placement rule.
 
 Follow the 5-step recipe below. Every step has a test or a lint
 protecting it; skipping a step fails CI.
@@ -17,20 +17,22 @@ Every composition is a slice of vyre IR nodes ending in a
 [`Node::Region`](https://docs.rs/vyre-foundation) wrapper. The wrapper
 is a **debug marker**: it carries the generator name and optional
 source-region metadata so conformance certificates and tracing spans
-can name where the IR came from. Region is semantically transparent
-(see `docs/ir-semantics.md`), so the wrapper never affects execution.
+can name where the IR came from. Region is semantically transparent,
+so the wrapper never affects execution.
 
 Skeleton:
 
 ```rust
-use vyre_libs::prelude::*;
+use vyre_foundation::ir::{DataType, Program};
+use vyre_foundation::composition::wrap_region;
+use vyre_libs::{check_tensors, TensorRef, TensorRefError};
 
 fn my_op(input: TensorRef, output: TensorRef) -> Result<Program, TensorRefError> {
     check_tensors(
         "vyre-libs::dialect::my_op",
         &[(&input, DataType::F32), (&output, DataType::F32)],
     )?;
-    // ... build `body: Vec<Node>` using the primitives in vyre-ops ...
+    // ... build `body: Vec<Node>` using vyre-primitives kernels ...
     let body = vec![/* ... */];
 
     Ok(Program::wrapped(
@@ -41,7 +43,7 @@ fn my_op(input: TensorRef, output: TensorRef) -> Result<Program, TensorRefError>
                 .with_count(output.element_count().expect("checked above")),
         ],
         [64, 1, 1],
-        vec![wrap("vyre-libs::dialect::my_op", body, None)],
+        vec![wrap_region("vyre-libs::dialect::my_op", body, None)],
     ))
 }
 ```
@@ -52,7 +54,7 @@ fn my_op(input: TensorRef, output: TensorRef) -> Result<Program, TensorRefError>
 - Product overflows (m·k, s·d, etc.) must be guarded with
   `checked_mul` or routed through `TensorRef::element_count()`.
 - No raw WGSL, WGSL-like strings, or any backend-specific code
-  (`scripts/check_no_string_wgsl.sh`).
+  (the `shader-source` gate).
 
 ## 2. Ship a typed builder
 
@@ -184,21 +186,20 @@ round-trip, optimization, conformance, and generated catalog checks.
 
 | Dialect | Path | Feature flag |
 | --- | --- | --- |
-| Linear algebra | `src/math/*.rs` | `math-linalg` |
-| Scans + reductions | `src/math/scan.rs` | `math-scan` |
-| Broadcasting | `src/math/broadcast.rs` | `math-broadcast` |
-| NN activation | `src/nn/*.rs` | `nn-activation` |
-| NN linear layers | `src/nn/linear.rs` | `nn-linear` |
-| NN normalization | `src/nn/layer_norm.rs` | `nn-norm` |
-| NN attention | `src/nn/attention.rs`, `src/nn/softmax.rs` | `nn-attention` |
-| Substring search | `src/matching/substring.rs` | `matching-substring` |
-| DFA / Aho-Corasick | `src/matching/aho_corasick.rs`, `src/matching/dfa_compile.rs` | `matching-dfa` |
-| FNV hash | `src/crypto/fnv1a.rs` | `crypto-fnv` |
-| BLAKE3 | `src/crypto/blake3.rs` | `crypto-blake3` |
+| Linear algebra | `src/math/linalg/mod.rs` | `math-linalg` |
+| Scans + reductions | `src/math/scan/mod.rs` | `math-scan` |
+| Broadcasting | `src/math/broadcast/mod.rs` | `math-broadcast` |
+| NN activation | `src/nn/activation/mod.rs` | `nn-activation` |
+| NN linear layers | `src/nn/linear/mod.rs` | `nn-linear` |
+| NN normalization | `src/nn/norm/mod.rs` | `nn-norm` |
+| NN attention | `src/nn/attention/mod.rs` | `nn-attention` |
+| Substring search | `src/pattern/substring/mod.rs` | `pattern-substring` |
+| DFA / Aho-Corasick | `src/pattern/dfa/mod.rs`, `src/pattern/classic_ac/mod.rs` | `pattern-dfa` |
+| BLAKE3 compression | `src/hash/blake3_compress.rs` | `crypto-blake3` |
 
 Add a new dialect by creating `src/<dialect>/mod.rs` + registering a
-feature flag in `Cargo.toml`. Re-export the op from `src/lib.rs`'s
-`prelude` module so `use vyre_libs::prelude::*;` still works.
+feature flag in `Cargo.toml`. The op is published at one path: the
+module that builds it. Callers name that module.
 
 ## What gets checked before merge
 
@@ -209,7 +210,7 @@ feature flag in `Cargo.toml`. Re-export the op from `src/lib.rs`'s
   lifetime regressions).
 - `cargo doc --workspace --all-features --no-deps` (all intra-doc
   links resolve).
-- `scripts/check_parity_testing_not_leaked.sh`.
+- The `parity-testing-isolated` gate.
 - (WIP P3.7) op fingerprint unchanged vs. last release unless a
   CHANGELOG entry documents the break.
 

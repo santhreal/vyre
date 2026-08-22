@@ -4,16 +4,16 @@
 //! all four passes share GPU state) on real CUDA hardware and
 //! compares against the foundation CPU pipeline.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::live_backend;
+use harness::live_backend;
 use std::{thread, time::Instant};
 
 use vyre::ir::{Expr, Node, Program};
-use vyre_driver_cuda::CudaOptimizerDispatcher;
-use vyre_self_substrate::optimizer::pipeline_resident::gpu_pipeline_resident;
+use vyre_driver_cuda::CudaProgramDispatcher;
+use vyre_pass_engine::optimizer::pipeline_resident::gpu_pipeline_resident;
 
 fn synthetic_chain_program(n: usize) -> Program {
     let mut entry: Vec<Node> = Vec::with_capacity(n + 1);
@@ -72,7 +72,7 @@ fn synthetic_tree_program(n: usize) -> Program {
 
 fn run_cpu_pipeline(p: Program) -> Program {
     use vyre_foundation::optimizer::passes::algebraic::canonicalize_engine::run as cpu_canonicalize;
-    use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as cpu_dce;
+    use vyre_foundation::optimizer::passes::fusion_cse::dce::dce as cpu_dce;
     let p = cpu_canonicalize(p);
     let p = vyre_foundation::optimizer::optimize(p).expect("registered optimizer must converge");
     cpu_dce(p)
@@ -83,7 +83,7 @@ fn cuda_persistent_pipeline_correctness() {
     // Smoke test: a simple program goes through the persistent path
     // and produces a correct result.
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     // let dead = 99
     // let live = 1 + 2     // foldable to 3
@@ -135,7 +135,7 @@ fn cuda_persistent_pipeline_correctness() {
 #[test]
 fn cuda_persistent_pipeline_reuses_static_buffers_on_warm_run() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let p = synthetic_wide_program(1_000);
 
     backend.reset_telemetry();
@@ -172,7 +172,7 @@ fn cuda_persistent_pipeline_scaling_bench() {
 
 fn cuda_persistent_pipeline_scaling_bench_body() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     println!("\n=== CUDA persistent-pipeline scaling vs CPU ===");
     println!(

@@ -1,0 +1,2599 @@
+# Generated from the live vyre-foundation optimizer registry by `./cargo_full run --bin xtask -- optimization-docs --write`.
+# Edit the pass registration metadata, not this file. The optimizer has one semantic layer
+# before verified lowering; concrete target strategy is not registered in this catalog.
+schema_version = 1
+
+[[pass]]
+id = "atomic_minimize"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Sync"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.sync"
+
+[[pass]]
+id = "autotune"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+
+[[pass]]
+id = "barrier_coalesce"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+
+[[pass]]
+id = "branch_coalesce"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Cleanup"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.fusion"
+
+[[pass]]
+id = "branch_value_hoist"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Cleanup"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.fusion"
+
+[[pass]]
+id = "buffer_decl_sort"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+
+[[pass]]
+id = "canonicalize"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Canonicalization"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = ["fusion"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.scalar"
+
+[[pass]]
+id = "const_fold"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = ["value_numbering"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.scalar"
+
+[[pass]]
+id = "cse"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "FusionCse"
+boundary_class = "AbiPreserving"
+requires = ["canonicalize"]
+invalidates = ["fusion"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.fusion"
+
+[[pass]]
+id = "dce"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "FusionCse"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = ["region_inline"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.fusion"
+
+[[pass]]
+id = "dead_store_elim"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Memory"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.memory"
+
+[[pass]]
+id = "decode_scan_fuse"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = []
+invalidates = ["buffer_layout", "fusion"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+
+[[pass]]
+id = "empty_block_collapse"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+
+[[pass]]
+id = "fusion"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "FusionCse"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = ["region_inline", "canonicalize", "const_fold", "cse", "dce"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.fusion"
+
+[[pass]]
+id = "dead_buffer_elim"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Memory"
+boundary_class = "AbiChanging"
+requires = ["fusion"]
+invalidates = ["buffer_layout"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "requires explicit caller opt-in before changing public buffer ABI"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.memory"
+
+[[pass]]
+id = "if_constant_branch_eliminate"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Cleanup"
+boundary_class = "AbiPreserving"
+requires = ["const_fold"]
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.scalar"
+
+[[pass]]
+id = "loop_bound_tighten"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.loop"
+
+[[pass]]
+id = "loop_fission"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+
+[[pass]]
+id = "loop_fusion"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.loop"
+
+[[pass]]
+id = "loop_licm"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.loop"
+
+[[pass]]
+id = "loop_lower_bound_normalize"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = ["const_fold"]
+invalidates = ["loop_unroll", "loop_strip_mine"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+
+[[pass]]
+id = "loop_peel"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = ["const_fold"]
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+
+[[pass]]
+id = "loop_redundant_bound_check_elide"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+
+[[pass]]
+id = "loop_software_pipeline"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = ["const_fold"]
+invalidates = ["loop_unroll", "loop_strip_mine"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.loop"
+
+[[pass]]
+id = "loop_strip_mine"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = ["const_fold"]
+invalidates = ["loop_unroll", "vectorization"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.loop"
+
+[[pass]]
+id = "loop_trip_zero_eliminate"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = ["const_fold"]
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+
+[[pass]]
+id = "loop_unroll"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = ["const_fold"]
+invalidates = ["const_fold", "value_numbering", "fusion"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.loop"
+
+[[pass]]
+id = "loop_var_range_fold"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = ["const_fold"]
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+
+[[pass]]
+id = "noop_assign_eliminate"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+
+[[pass]]
+id = "normalize_atomics"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Sync"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = ["fusion"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.sync"
+
+[[pass]]
+id = "reaching_def_propagate"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = ["const_fold"]
+invalidates = ["const_fold", "cse", "dce"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.scalar"
+
+[[pass]]
+id = "read_only_load_hoist"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Memory"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.memory"
+
+[[pass]]
+id = "region_fusion_hint"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Cleanup"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.fusion"
+
+[[pass]]
+id = "region_inline"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Cleanup"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = ["cse", "dce"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.scalar"
+
+[[pass]]
+id = "region_promote_singleton_block"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+
+[[pass]]
+id = "rematerialize_cheap_let"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Cleanup"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = ["region_inline", "canonicalize", "const_fold", "cse", "dce"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.scalar"
+
+[[pass]]
+id = "store_to_load_forward"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Memory"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.memory"
+
+[[pass]]
+id = "strength_reduce"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = ["const_fold"]
+invalidates = ["const_fold", "reaching_def_propagate", "value_numbering"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.scalar"
+
+[[pass]]
+id = "tail_duplication"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Cleanup"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.fusion"
+
+[[pass]]
+id = "vectorization"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Memory"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = ["buffer_layout"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.memory"
+
+[[pass]]
+id = "const_fold.unary.logical_not_involution"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.negate_involution"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.reverse_bits_involution"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.bitnot_involution"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.negate_sub_flip"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.abs_neg"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.abs_idempotent"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.floor_idempotent"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.ceil_idempotent"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.round_idempotent"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.trunc_idempotent"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.sign_idempotent"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.floor_trunc_subsumption"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.ceil_trunc_subsumption"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.round_trunc_subsumption"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.inverse_sqrt_one"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.reciprocal_one"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.sqrt_one"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.sqrt_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.sin_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.cos_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.tan_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.exp_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.exp2_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.log_one"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.log2_one"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.asin_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.acos_one"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.atan_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.tanh_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.sinh_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.cosh_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.popcount_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.clz_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.ctz_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.reverse_bits_zero"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.popcount_literal"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.clz_literal"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.ctz_literal"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.reverse_bits_literal"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.bitnot_literal"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.negate_i32_literal"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.abs_u32_literal"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.unary.abs_i32_literal"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.select.bool_true"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.select.bool_false"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.select.u32_zero_false"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.select.u32_nonzero_true"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.select.identical_branches"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.select.logical_not_swap"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.select.bool_to_u32_cast"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.select.inverted_bool_to_u32_cast"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.select.true_branch_select_fusion"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.select.false_branch_select_fusion"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.fma.literal"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.fma.left_identity_multiplier"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.fma.right_identity_multiplier"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.fma.left_zero_multiplier"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.fma.right_zero_multiplier"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.add_fma_left"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.add_fma_right"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.sub_fma_left"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.sub_fma_right"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.add_zero_left"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.add_zero_right"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.sub_self"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.sub_zero_right"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.add_reassociate_right_literal"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.add_reassociate_left_literal"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.distribute_add_u32"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.distribute_add_i32"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.distribute_sub_u32"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "const_fold.binop.distribute_sub_i32"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.horner_polynomial_int"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.shift_add_decompose_plus"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.shift_add_decompose_minus"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.naf_shift_add_chain"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.mul_power_of_two_shift"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.mul_negative_const_negate"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.div_power_of_two_shift"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.float_div_reciprocal"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.self_inverse_select"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.shift_negation_fma"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.complement_bounds"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.div_constant_multiply_shift"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.mod_power_of_two_mask"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "strength_reduce.mod_constant_subtract_quotient"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "ScalarAlgebra"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves scalar expression value while reducing redundant GPU work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.scalar.rules"
+
+[[pass]]
+id = "loop.trip_zero_eliminate"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves loop iteration semantics while reducing loop or index overhead"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.loop.rules"
+
+[[pass]]
+id = "loop.lower_bound_normalize"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves loop iteration semantics while reducing loop or index overhead"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.loop.rules"
+
+[[pass]]
+id = "loop.bound_tighten"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves loop iteration semantics while reducing loop or index overhead"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.loop.rules"
+
+[[pass]]
+id = "loop.var_range_fold"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves loop iteration semantics while reducing loop or index overhead"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.loop.rules"
+
+[[pass]]
+id = "loop.peel"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves loop iteration semantics while reducing loop or index overhead"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.loop.rules"
+
+[[pass]]
+id = "loop.unroll"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves loop iteration semantics while reducing loop or index overhead"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.loop.rules"
+
+[[pass]]
+id = "loop.strip_mine"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves loop iteration semantics while reducing loop or index overhead"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.loop.rules"
+
+[[pass]]
+id = "loop.fission"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves loop iteration semantics while reducing loop or index overhead"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.loop.rules"
+
+[[pass]]
+id = "loop.fusion"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves loop iteration semantics while reducing loop or index overhead"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.loop.rules"
+
+[[pass]]
+id = "loop.licm"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves loop iteration semantics while reducing loop or index overhead"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.loop.rules"
+
+[[pass]]
+id = "loop.software_pipeline"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves loop iteration semantics while reducing loop or index overhead"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.loop.rules"
+
+[[pass]]
+id = "loop.redundant_bound_check_elide"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves loop iteration semantics while reducing loop or index overhead"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.loop.rules"
+
+[[pass]]
+id = "memory.const_buffer_fold"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Memory"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves memory-visible behavior while reducing traffic or redundant storage"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.memory.rules"
+
+[[pass]]
+id = "memory.dead_buffer_elim"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Memory"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves memory-visible behavior while reducing traffic or redundant storage"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.memory.rules"
+
+[[pass]]
+id = "memory.dead_store_elim"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Memory"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves memory-visible behavior while reducing traffic or redundant storage"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.memory.rules"
+
+[[pass]]
+id = "memory.decode_scan_fuse"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Memory"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves memory-visible behavior while reducing traffic or redundant storage"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.memory.rules"
+
+[[pass]]
+id = "memory.read_only_load_hoist"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Memory"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves memory-visible behavior while reducing traffic or redundant storage"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.memory.rules"
+
+[[pass]]
+id = "memory.store_to_load_forward"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Memory"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves memory-visible behavior while reducing traffic or redundant storage"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.memory.rules"
+
+[[pass]]
+id = "memory.vectorization"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "Memory"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves memory-visible behavior while reducing traffic or redundant storage"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.memory.rules"
+
+[[pass]]
+id = "fusion.cse.structural_expr_dedup"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "FusionCse"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves visible effects while eliminating duplicate computation or launches"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.fusion.rules"
+
+[[pass]]
+id = "fusion.dce.dead_let_eliminate"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "FusionCse"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves visible effects while eliminating duplicate computation or launches"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.fusion.rules"
+
+[[pass]]
+id = "fusion.dce.unreachable_eliminate"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "FusionCse"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves visible effects while eliminating duplicate computation or launches"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.fusion.rules"
+
+[[pass]]
+id = "fusion.dce.const_loop_empty"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "FusionCse"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves visible effects while eliminating duplicate computation or launches"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.fusion.rules"
+
+[[pass]]
+id = "fusion.dce.const_truth"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "FusionCse"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves visible effects while eliminating duplicate computation or launches"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.fusion.rules"
+
+[[pass]]
+id = "fusion.region_fusion_hint"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "FusionCse"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves visible effects while eliminating duplicate computation or launches"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.fusion.rules"
+
+[[pass]]
+id = "fusion.cross_rule_cse"
+kind = "supplemental rule"
+owner = "vyre-foundation-rules"
+phase = "FusionCse"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves visible effects while eliminating duplicate computation or launches"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "foundation.optimizer.fusion.rules"
+
+[[pass]]
+id = "dataflow.layout_normalization"
+kind = "supplemental rule"
+owner = "dataflow-rules"
+phase = "Dataflow"
+boundary_class = "DomainSpecific"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves dataflow fixed-point semantics while reducing frontier or lattice work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "dataflow.optimizer.rules"
+
+[[pass]]
+id = "dataflow.frontier_density_switch"
+kind = "supplemental rule"
+owner = "dataflow-rules"
+phase = "Dataflow"
+boundary_class = "DomainSpecific"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves dataflow fixed-point semantics while reducing frontier or lattice work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "dataflow.optimizer.rules"
+
+[[pass]]
+id = "dataflow.sparse_frontier_expand"
+kind = "supplemental rule"
+owner = "dataflow-rules"
+phase = "Dataflow"
+boundary_class = "DomainSpecific"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves dataflow fixed-point semantics while reducing frontier or lattice work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "dataflow.optimizer.rules"
+
+[[pass]]
+id = "dataflow.dense_bitset_propagate"
+kind = "supplemental rule"
+owner = "dataflow-rules"
+phase = "Dataflow"
+boundary_class = "DomainSpecific"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves dataflow fixed-point semantics while reducing frontier or lattice work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "dataflow.optimizer.rules"
+
+[[pass]]
+id = "dataflow.bitset_compression"
+kind = "supplemental rule"
+owner = "dataflow-rules"
+phase = "Dataflow"
+boundary_class = "DomainSpecific"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves dataflow fixed-point semantics while reducing frontier or lattice work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "dataflow.optimizer.rules"
+
+[[pass]]
+id = "dataflow.fixed_point_buffer_reuse"
+kind = "supplemental rule"
+owner = "dataflow-rules"
+phase = "Dataflow"
+boundary_class = "DomainSpecific"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves dataflow fixed-point semantics while reducing frontier or lattice work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "dataflow.optimizer.rules"
+
+[[pass]]
+id = "dataflow.resident_csr_reuse"
+kind = "supplemental rule"
+owner = "dataflow-rules"
+phase = "Dataflow"
+boundary_class = "DomainSpecific"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves dataflow fixed-point semantics while reducing frontier or lattice work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "dataflow.optimizer.rules"
+
+[[pass]]
+id = "dataflow.multi_query_batch"
+kind = "supplemental rule"
+owner = "dataflow-rules"
+phase = "Dataflow"
+boundary_class = "DomainSpecific"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves dataflow fixed-point semantics while reducing frontier or lattice work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "dataflow.optimizer.rules"
+
+[[pass]]
+id = "dataflow.lattice_join_idempotence_skip"
+kind = "supplemental rule"
+owner = "dataflow-rules"
+phase = "Dataflow"
+boundary_class = "DomainSpecific"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves dataflow fixed-point semantics while reducing frontier or lattice work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "dataflow.optimizer.rules"
+
+[[pass]]
+id = "dataflow.delta_frontier_prune"
+kind = "supplemental rule"
+owner = "dataflow-rules"
+phase = "Dataflow"
+boundary_class = "DomainSpecific"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves dataflow fixed-point semantics while reducing frontier or lattice work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "dataflow.optimizer.rules"
+
+[[pass]]
+id = "megakernel.allocation_reuse"
+kind = "supplemental rule"
+owner = "vyre-runtime-rules"
+phase = "Megakernel"
+boundary_class = "RuntimeAware"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves resident megakernel execution semantics while reducing launches, readback, or queue work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "vyre.megakernel.optimizer.rules"
+
+[[pass]]
+id = "megakernel.launch_fusion"
+kind = "supplemental rule"
+owner = "vyre-runtime-rules"
+phase = "Megakernel"
+boundary_class = "RuntimeAware"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves resident megakernel execution semantics while reducing launches, readback, or queue work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "vyre.megakernel.optimizer.rules"
+
+[[pass]]
+id = "megakernel.readback_minimization"
+kind = "supplemental rule"
+owner = "vyre-runtime-rules"
+phase = "Megakernel"
+boundary_class = "RuntimeAware"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves resident megakernel execution semantics while reducing launches, readback, or queue work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "vyre.megakernel.optimizer.rules"
+
+[[pass]]
+id = "megakernel.queue_no_conflict_fast_path"
+kind = "supplemental rule"
+owner = "vyre-runtime-rules"
+phase = "Megakernel"
+boundary_class = "RuntimeAware"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves resident megakernel execution semantics while reducing launches, readback, or queue work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "vyre.megakernel.optimizer.rules"
+
+[[pass]]
+id = "megakernel.frontier_density_worker_shed"
+kind = "supplemental rule"
+owner = "vyre-runtime-rules"
+phase = "Megakernel"
+boundary_class = "RuntimeAware"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves resident megakernel execution semantics while reducing launches, readback, or queue work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "vyre.megakernel.optimizer.rules"
+
+[[pass]]
+id = "megakernel.device_side_convergence"
+kind = "supplemental rule"
+owner = "vyre-runtime-rules"
+phase = "Megakernel"
+boundary_class = "RuntimeAware"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves resident megakernel execution semantics while reducing launches, readback, or queue work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "vyre.megakernel.optimizer.rules"
+
+[[pass]]
+id = "megakernel.plan_cache_reuse"
+kind = "supplemental rule"
+owner = "vyre-runtime-rules"
+phase = "Megakernel"
+boundary_class = "RuntimeAware"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves resident megakernel execution semantics while reducing launches, readback, or queue work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "vyre.megakernel.optimizer.rules"
+
+[[pass]]
+id = "megakernel.barrier_wave_grouping"
+kind = "supplemental rule"
+owner = "vyre-runtime-rules"
+phase = "Megakernel"
+boundary_class = "RuntimeAware"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves resident megakernel execution semantics while reducing launches, readback, or queue work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "vyre.megakernel.optimizer.rules"
+
+[[pass]]
+id = "megakernel.zero_copy_result_compaction"
+kind = "supplemental rule"
+owner = "vyre-runtime-rules"
+phase = "Megakernel"
+boundary_class = "RuntimeAware"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves resident megakernel execution semantics while reducing launches, readback, or queue work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "vyre.megakernel.optimizer.rules"
+
+[[pass]]
+id = "megakernel.resident_graph_reuse"
+kind = "supplemental rule"
+owner = "vyre-runtime-rules"
+phase = "Megakernel"
+boundary_class = "RuntimeAware"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves resident megakernel execution semantics while reducing launches, readback, or queue work"
+termination = "bounded by its owning executable pass"
+proof = "owning pass differential and invariant fixtures"
+benchmark = "vyre.megakernel.optimizer.rules"

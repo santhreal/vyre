@@ -1,18 +1,9 @@
-use std::{
-    borrow::Cow,
-    collections::BTreeMap,
-    sync::{Arc, Mutex},
-    time::Instant,
-};
-
 use serde::{Deserialize, Serialize};
-use vyre_driver::{BackendError, BackendRegistration};
-use vyre_driver::{DispatchConfig, VyreBackend};
 pub use vyre_spec::DeterminismClass;
 
+pub use super::context::*;
 use super::metric::BenchMetrics;
 use super::suite::SuiteKind;
-
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct BenchId(pub String);
 
@@ -160,375 +151,6 @@ pub enum Correctness {
     },
 }
 
-pub struct ScratchPool {
-    pub buffer: Vec<u8>,
-}
-
-pub struct OptimizerPipeline {}
-
-pub struct CpuReference {}
-
-impl CpuReference {
-    pub fn dispatch(
-        &self,
-        prog: &vyre::ir::Program,
-        inputs: &[Vec<u8>],
-        _config: &vyre_driver::DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, String> {
-        let ref_inputs: Vec<vyre_reference::value::Value> = inputs
-            .iter()
-            .map(|b| vyre_reference::value::Value::Bytes(std::sync::Arc::from(b.clone())))
-            .collect();
-        vyre_reference::reference_eval(prog, &ref_inputs)
-            .map(|values| values.iter().map(|v| v.to_bytes()).collect())
-            .map_err(|e| format!("{:?}", e))
-    }
-}
-
-#[derive(Default)]
-pub(crate) struct CachedArtifactSessions {
-    sessions: BTreeMap<[u8; 32], Arc<vyre_runtime::ArtifactSession>>,
-    last_fingerprint: Option<[u8; 32]>,
-}
-
-pub struct BenchContext {
-    pub preferred_backend: Arc<dyn VyreBackend>,
-    pub preferred_registration: &'static BackendRegistration,
-    pub materializer: Arc<dyn vyre_driver::ArtifactMaterializer>,
-    pub(crate) artifact_sessions: Mutex<CachedArtifactSessions>,
-    pub reference: CpuReference,
-    pub optimizer: OptimizerPipeline,
-    pub scratch: ScratchPool,
-    pub rng: rand::rngs::StdRng,
-    pub dispatch_config: DispatchConfig,
-    pub evolve_candidate: Option<vyre::ir::Program>,
-    pub include_baseline_outputs: bool,
-}
-
-impl BenchContext {
-    pub(crate) fn artifact_session_for(
-        &self,
-        prog: &vyre::ir::Program,
-    ) -> Result<Arc<vyre_runtime::ArtifactSession>, vyre_driver::BackendError> {
-        let fingerprint = prog.fingerprint();
-        let mut cached = self.artifact_sessions.lock().map_err(|error| {
-            vyre_driver::BackendError::new(format!(
-                "benchmark artifact session cache is poisoned: {error}. Fix: restart the benchmark process after the panic that poisoned compilation state."
-            ))
-        })?;
-        cached.last_fingerprint = Some(fingerprint);
-        if let Some(session) = cached.sessions.get(&fingerprint) {
-            return Ok(Arc::clone(session));
-        }
-
-        let graph = vyre::ir::ProgramGraph::from_program("benchmark", prog.clone())
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        let request = vyre::compiler::CompileRequest::new(
-            graph,
-            vyre::compiler::ExternalFacts::new(vyre::compiler::Digest([0; 32]), BTreeMap::new()),
-            vyre::compiler::SearchBudget::new(256, 100_000, 1, 0, 1_000_000_000),
-            64 * 1024 * 1024,
-        )
-        .validate()
-        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        let session = Arc::new(
-            vyre_runtime::ArtifactSession::compile_with_materializer(
-                self.preferred_registration,
-                &request,
-                Arc::clone(&self.materializer),
-            )
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?,
-        );
-        cached.sessions.insert(fingerprint, Arc::clone(&session));
-        Ok(session)
-    }
-    pub(crate) fn take_artifact_session(
-        &self,
-    ) -> Result<Option<[u8; 32]>, vyre_driver::BackendError> {
-        let mut cached = self.artifact_sessions.lock().map_err(|error| {
-            vyre_driver::BackendError::new(format!(
-                "benchmark artifact session cache is poisoned: {error}. Fix: restart the benchmark process after the panic that poisoned compilation state."
-            ))
-        })?;
-        let fingerprint = cached.last_fingerprint.take();
-        cached.sessions.clear();
-        Ok(fingerprint)
-    }
-
-    /// Compile and materialize the benchmark artifact outside measured submissions.
-    pub fn prepare_artifact(
-        &self,
-        prog: &vyre::ir::Program,
-    ) -> Result<(), vyre_driver::BackendError> {
-        self.artifact_session_for(prog).map(|_| ())
-    }
-
-    pub fn dispatch(
-        &self,
-        prog: &vyre::ir::Program,
-        inputs: &[Vec<u8>],
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
-        let _ = dispatch_config_with_inferred_grid(prog, inputs, config)?;
-        let session = self.artifact_session_for(prog)?;
-        let borrowed_inputs = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
-        let completion = session
-            .submit_host_inputs(&borrowed_inputs)
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        session
-            .ordered_outputs(&completion)
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))
-    }
-
-    pub fn dispatch_timed(
-        &self,
-        prog: &vyre::ir::Program,
-        inputs: &[Vec<u8>],
-        config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
-        let _ = dispatch_config_with_inferred_grid(prog, inputs, config)?;
-        let session = self.artifact_session_for(prog)?;
-        let borrowed_inputs = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
-        let start = Instant::now();
-        let completion = session
-            .submit_host_inputs(&borrowed_inputs)
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        let outputs = session
-            .ordered_outputs(&completion)
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        Ok(vyre_driver::TimedDispatchResult {
-            outputs,
-            wall_ns: u64::try_from(start.elapsed().as_nanos()).unwrap_or(u64::MAX),
-            device_ns: completion.device_ns,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
-    }
-    pub fn dispatch_resident_timed(
-        &self,
-        prog: &vyre::ir::Program,
-        resources: &[vyre_driver::Resource],
-        config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
-        let session = self.artifact_session_for(prog)?;
-        let mut bindings = session
-            .resident_bindings(resources)
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        if let Some(grid) = config.grid_override {
-            bindings.set_invocation_grid(grid)?;
-        }
-        let start = Instant::now();
-        let completion = session
-            .submit_and_wait(bindings)
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        let outputs = session
-            .ordered_outputs(&completion)
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        Ok(vyre_driver::TimedDispatchResult {
-            outputs,
-            wall_ns: u64::try_from(start.elapsed().as_nanos()).unwrap_or(u64::MAX),
-            device_ns: completion.device_ns,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
-    }
-
-    pub fn dispatch_resident_sequence_read_ranges_into(
-        &self,
-        steps: &[vyre_driver::ResidentDispatchStep<'_>],
-        read_ranges: &[vyre_driver::ResidentReadRange<'_>],
-        outputs: &mut [&mut Vec<u8>],
-    ) -> Result<(), vyre_driver::BackendError> {
-        let (_, bindings, completion) = self.submit_resident_steps(steps)?;
-        copy_typed_read_ranges(&bindings, &completion, read_ranges, outputs)
-    }
-
-    pub fn dispatch_resident_sequence_read_ranges_timed_into(
-        &self,
-        steps: &[vyre_driver::ResidentDispatchStep<'_>],
-        read_ranges: &[vyre_driver::ResidentReadRange<'_>],
-        outputs: &mut [&mut Vec<u8>],
-    ) -> Result<vyre_driver::ResidentSequenceTiming, vyre_driver::BackendError> {
-        let started = Instant::now();
-        let (device_ns, bindings, completion) = self.submit_resident_steps(steps)?;
-        copy_typed_read_ranges(&bindings, &completion, read_ranges, outputs)?;
-        Ok(vyre_driver::ResidentSequenceTiming {
-            wall_ns: u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX),
-            device_ns,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
-    }
-
-    pub fn dispatch_resident_repeated_sequence_read_ranges_into(
-        &self,
-        prefix_steps: &[vyre_driver::ResidentDispatchStep<'_>],
-        repeated_steps: &[vyre_driver::ResidentDispatchStep<'_>],
-        repeat_count: u32,
-        read_ranges: &[vyre_driver::ResidentReadRange<'_>],
-        outputs: &mut [&mut Vec<u8>],
-    ) -> Result<(), vyre_driver::BackendError> {
-        let mut last = None;
-        for step in prefix_steps {
-            last = Some(self.submit_resident_step(step)?);
-        }
-        for _ in 0..repeat_count {
-            for step in repeated_steps {
-                last = Some(self.submit_resident_step(step)?);
-            }
-        }
-        let (bindings, completion) = last.ok_or_else(|| {
-            vyre_driver::BackendError::new(
-                "resident artifact sequence contains no submissions. Fix: provide a prefix step or a positive repeat count with at least one repeated step.",
-            )
-        })?;
-        copy_typed_read_ranges(&bindings, &completion, read_ranges, outputs)
-    }
-
-    fn submit_resident_steps(
-        &self,
-        steps: &[vyre_driver::ResidentDispatchStep<'_>],
-    ) -> Result<
-        (
-            Option<u64>,
-            vyre_driver::BindingSet,
-            vyre_driver::Completion,
-        ),
-        vyre_driver::BackendError,
-    > {
-        let mut device_ns = Some(0_u64);
-        let mut last = None;
-        for step in steps {
-            let (bindings, completion) = self.submit_resident_step(step)?;
-            device_ns = sum_optional_device_ns(device_ns, completion.device_ns)?;
-            last = Some((bindings, completion));
-        }
-        let (bindings, completion) = last.ok_or_else(|| {
-            vyre_driver::BackendError::new(
-                "resident artifact sequence contains no submissions. Fix: provide at least one resident dispatch step.",
-            )
-        })?;
-        Ok((device_ns, bindings, completion))
-    }
-
-    fn submit_resident_step(
-        &self,
-        step: &vyre_driver::ResidentDispatchStep<'_>,
-    ) -> Result<(vyre_driver::BindingSet, vyre_driver::Completion), vyre_driver::BackendError> {
-        if let Some(workgroup) = step.workgroup_override {
-            if workgroup != step.program.workgroup_size {
-                return Err(vyre_driver::BackendError::new(format!(
-                    "resident artifact step requested workgroup {workgroup:?}, but its immutable program declares {:?}. Fix: compile the requested workgroup into the program before artifact creation.",
-                    step.program.workgroup_size
-                )));
-            }
-        }
-        let session = self.artifact_session_for(step.program)?;
-        let mut bindings = session
-            .resident_bindings(step.resources)
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        if let Some(grid) = step.grid_override {
-            bindings.set_invocation_grid(grid)?;
-        }
-        let completion = session
-            .submit_and_wait(bindings.clone())
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        Ok((bindings, completion))
-    }
-}
-
-fn sum_optional_device_ns(
-    total: Option<u64>,
-    sample: Option<u64>,
-) -> Result<Option<u64>, vyre_driver::BackendError> {
-    match (total, sample) {
-        (Some(total), Some(sample)) => total
-            .checked_add(sample)
-            .map(Some)
-            .ok_or_else(|| {
-                vyre_driver::BackendError::new(
-                    "resident artifact sequence device timing overflowed u64. Fix: split the benchmark sequence into smaller measured batches.",
-                )
-            }),
-        _ => Ok(None),
-    }
-}
-
-fn copy_typed_read_ranges(
-    bindings: &vyre_driver::BindingSet,
-    completion: &vyre_driver::Completion,
-    read_ranges: &[vyre_driver::ResidentReadRange<'_>],
-    outputs: &mut [&mut Vec<u8>],
-) -> Result<(), vyre_driver::BackendError> {
-    if read_ranges.len() != outputs.len() {
-        return Err(vyre_driver::BackendError::new(format!(
-            "resident artifact readback requested {} range(s) for {} output slot(s). Fix: provide exactly one output slot per read range.",
-            read_ranges.len(),
-            outputs.len()
-        )));
-    }
-    for (range, output) in read_ranges.iter().zip(outputs.iter_mut()) {
-        let value = bindings
-            .resources()
-            .iter()
-            .find_map(|(value, bound)| match bound {
-                vyre_driver::BoundResource::Resident(resource)
-                    if resource == range.resource =>
-                {
-                    Some(value)
-                }
-                _ => None,
-            })
-            .ok_or_else(|| {
-                vyre_driver::BackendError::new(
-                    "resident artifact readback resource is not bound by the final submission. Fix: read a resource present in the final artifact ABI.",
-                )
-            })?;
-        let bytes = completion
-            .outputs
-            .get(value)
-            .or_else(|| completion.retained.get(value))
-            .ok_or_else(|| {
-                vyre_driver::BackendError::new(format!(
-                    "resident artifact completion omitted value {}. Fix: declare the requested value as output or retained state.",
-                    value.0
-                ))
-            })?;
-        let end = range
-            .byte_offset
-            .checked_add(range.byte_len)
-            .filter(|end| *end <= bytes.len())
-            .ok_or_else(|| {
-                vyre_driver::BackendError::new(format!(
-                    "resident artifact readback range {}..{} exceeds {} bytes. Fix: constrain the range to the completed value.",
-                    range.byte_offset,
-                    range.byte_offset.saturating_add(range.byte_len),
-                    bytes.len()
-                ))
-            })?;
-        output.clear();
-        output.extend_from_slice(&bytes[range.byte_offset..end]);
-    }
-    Ok(())
-}
-
-/// Return a dispatch config with the benchmark's backend-neutral grid inference applied.
-pub fn dispatch_config_with_inferred_grid<'a>(
-    prog: &vyre::ir::Program,
-    inputs: &[Vec<u8>],
-    config: &'a DispatchConfig,
-) -> Result<Cow<'a, DispatchConfig>, BackendError> {
-    if config.grid_override.is_some() {
-        return Ok(Cow::Borrowed(config));
-    }
-
-    let mut inferred_config = config.clone();
-    inferred_config.grid_override = Some(vyre_driver::program_walks::infer_dispatch_grid(
-        prog, inputs, config,
-    )?);
-    Ok(Cow::Owned(inferred_config))
-}
-
 pub type PreparedCase = Box<dyn std::any::Any>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -630,6 +252,34 @@ pub fn prepared_program(prepared: &PreparedCase) -> Result<&vyre::ir::Program, B
     })
 }
 
+/// Borrow a case's prepared payload as its own type.
+///
+/// Sixteen cases hand-rolled this downcast with the same error wording, each
+/// naming itself in the message. `case` is that name, and it is the only thing
+/// that varied.
+pub fn prepared_as<'a, T: 'static>(
+    prepared: &'a PreparedCase,
+    case: &str,
+) -> Result<&'a T, BenchError> {
+    prepared.downcast_ref::<T>().ok_or_else(|| {
+        BenchError::ExecutionFailed(format!("{case} prepared payload type mismatch"))
+    })
+}
+
+/// Borrow a case's prepared payload mutably as its own type.
+///
+/// The mutable half of `prepared_as`. Splitting the two is what left five
+/// cases still hand-rolling the downcast after the read-only ones were
+/// collapsed, so both flavours are named here and the wording is shared.
+pub fn prepared_as_mut<'a, T: 'static>(
+    prepared: &'a mut PreparedCase,
+    case: &str,
+) -> Result<&'a mut T, BenchError> {
+    prepared.downcast_mut::<T>().ok_or_else(|| {
+        BenchError::ExecutionFailed(format!("{case} prepared payload type mismatch"))
+    })
+}
+
 fn first_output_difference(outputs: &[Vec<u8>], baseline: &[Vec<u8>]) -> String {
     if outputs.len() != baseline.len() {
         return format!(
@@ -706,6 +356,18 @@ pub enum BenchError {
 pub trait BenchCase: Send + Sync {
     fn id(&self) -> BenchId;
     fn metadata(&self) -> BenchMetadata;
+    /// The declaration owner this case was built by.
+    ///
+    /// A benchmark case is workload data plus the few operations data cannot
+    /// carry. The trait itself is implemented by the handful of declaration
+    /// owners in `cases`, each serving several cases, never once per case: the
+    /// per-case copies of the suite list, the metadata record and the measured
+    /// loop had already drifted apart by the time they were collapsed. The
+    /// default is empty, so a case that open-codes the trait declares no owner
+    /// and the declaration gate names it.
+    fn declaration_owner(&self) -> &'static str {
+        ""
+    }
     fn suites(&self) -> &'static [SuiteKind] {
         &[]
     }
@@ -713,7 +375,19 @@ pub trait BenchCase: Send + Sync {
         let suites = self.suites();
         suites.is_empty() || suites.contains(suite)
     }
-    fn requirements(&self) -> BenchRequirements;
+    /// GPU micro-benchmark defaults: needs a device, no network, no size floor.
+    ///
+    /// A case overrides this only when it has a VRAM floor, an input floor, a
+    /// feature set, or no device need at all.
+    fn requirements(&self) -> BenchRequirements {
+        BenchRequirements {
+            needs_gpu: true,
+            needs_network: false,
+            min_vram_bytes: None,
+            min_input_bytes: None,
+            feature_set: vec![],
+        }
+    }
     fn performance_contract(&self) -> Option<PerformanceContract> {
         None
     }
@@ -737,7 +411,8 @@ pub trait BenchCase: Send + Sync {
     }
 }
 
-fn static_program_bytes_touched(program: &vyre::ir::Program) -> (u64, u64) {
+/// Bytes a case reads and writes per sample, from the program's buffer sizes.
+pub(crate) fn static_program_bytes_touched(program: &vyre::ir::Program) -> (u64, u64) {
     let mut read_bytes = 0_u64;
     let mut write_bytes = 0_u64;
     for buffer in program.buffers() {
@@ -784,74 +459,6 @@ mod tests {
             );
         }
     }
-
-    #[test]
-    fn dispatch_config_infers_grid_from_input_bindings_not_sparse_outputs() {
-        let program = vyre::ir::Program::wrapped(
-            vec![
-                vyre::ir::BufferDecl::output("out_count", 0, vyre::ir::DataType::U32).with_count(1),
-                vyre::ir::BufferDecl::storage(
-                    "records",
-                    1,
-                    vyre::ir::BufferAccess::ReadOnly,
-                    vyre::ir::DataType::U32,
-                )
-                .with_count(1024),
-            ],
-            [256, 1, 1],
-            vec![vyre::ir::Node::let_bind(
-                "_slot",
-                vyre::ir::Expr::atomic_add(
-                    "out_count",
-                    vyre::ir::Expr::u32(0),
-                    vyre::ir::Expr::load("records", vyre::ir::Expr::InvocationId { axis: 0 }),
-                ),
-            )],
-        );
-        let inputs = vec![vec![0u8; 1024 * 4]];
-        let default_config = DispatchConfig::default();
-
-        let inferred = dispatch_config_with_inferred_grid(&program, &inputs, &default_config)
-            .expect("Fix: benchmark dispatch grid inference must handle sparse-output cases.");
-
-        assert_eq!(
-            inferred.grid_override,
-            Some([4, 1, 1]),
-            "Fix: resident sparse-output benchmarks must launch over input records, not the one-word output counter."
-        );
-    }
-
-    /// WHY: sequence readback must follow canonical artifact value identity rather
-    /// than the raw resource's position in one benchmark-specific buffer list.
-    #[test]
-    fn resident_sequence_readback_uses_typed_artifact_binding() {
-        let artifact = vyre::compiler::Digest([7; 32]);
-        let value = vyre::compiler::ArtifactValueId(3);
-        let resource = vyre_driver::Resource::Borrowed(vec![0; 8]);
-        let mut bindings = vyre_driver::BindingSet::new(artifact);
-        bindings.insert(
-            value,
-            vyre_driver::BoundResource::Resident(resource.clone()),
-        );
-        let completion = vyre_driver::Completion {
-            artifact,
-            outputs: BTreeMap::from([(value, vec![10, 11, 12, 13, 14])]),
-            retained: BTreeMap::new(),
-            device_ns: Some(9),
-        };
-        let range = vyre_driver::ResidentReadRange {
-            resource: &resource,
-            byte_offset: 1,
-            byte_len: 3,
-        };
-        let mut output = vec![99];
-
-        copy_typed_read_ranges(&bindings, &completion, &[range], &mut [&mut output])
-            .expect("typed resident range must resolve through the artifact binding");
-
-        assert_eq!(output, [11, 12, 13]);
-    }
-
     #[test]
     fn f32_ulp_verifier_accepts_budgeted_difference() {
         let one = 1.0f32;

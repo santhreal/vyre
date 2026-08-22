@@ -4,11 +4,12 @@
 // max-size stress, opaque-payload cap symmetry, and text-format resilience
 // that are either uncovered or only lightly covered by the existing suite.
 
+#[path = "wire_adversarial__opaque_malformed_payload_decoder_survives.rs"]
+mod wire_adversarial_opaque_malformed_payload_decoder_survives;
+
 use std::sync::Arc;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::extension::{OpaqueExprResolver, OpaqueNodeResolver};
-use vyre_foundation::ir::{ExprNode, NodeExtension};
 use vyre_foundation::serial::wire::MAX_OPAQUE_PAYLOAD_LEN;
 
 // ---------------------------------------------------------------------------
@@ -81,100 +82,10 @@ fn put_leb_u64(out: &mut Vec<u8>, mut value: u64) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Test-only opaque resolvers
-// ---------------------------------------------------------------------------
+#[path = "../support/opaque_echo_extension.rs"]
+mod opaque_echo_extension;
 
-const TEST_KIND: &str = "test.adversarial.echo";
-
-#[derive(Debug)]
-struct TestExprExt {
-    payload: Vec<u8>,
-}
-
-impl ExprNode for TestExprExt {
-    fn extension_kind(&self) -> &'static str {
-        TEST_KIND
-    }
-    fn debug_identity(&self) -> &str {
-        "test-expr"
-    }
-    fn result_type(&self) -> Option<DataType> {
-        Some(DataType::U32)
-    }
-    fn cse_safe(&self) -> bool {
-        true
-    }
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        *blake3::hash(&self.payload).as_bytes()
-    }
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    fn wire_payload(&self) -> Vec<u8> {
-        self.payload.clone()
-    }
-}
-
-fn deserialize_expr(bytes: &[u8]) -> Result<Arc<dyn ExprNode>, String> {
-    Ok(Arc::new(TestExprExt {
-        payload: bytes.to_vec(),
-    }))
-}
-
-inventory::submit! {
-    OpaqueExprResolver {
-        kind: TEST_KIND,
-        deserialize: deserialize_expr,
-    }
-}
-
-#[derive(Debug)]
-struct TestNodeExt {
-    payload: Vec<u8>,
-}
-
-impl NodeExtension for TestNodeExt {
-    fn extension_kind(&self) -> &'static str {
-        TEST_KIND
-    }
-    fn debug_identity(&self) -> &str {
-        "test-node"
-    }
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        *blake3::hash(&self.payload).as_bytes()
-    }
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    fn wire_payload(&self) -> Vec<u8> {
-        self.payload.clone()
-    }
-}
-
-fn deserialize_node(bytes: &[u8]) -> Result<Arc<dyn NodeExtension>, String> {
-    if bytes.starts_with(&[0xDE, 0xAD]) {
-        return Err(
-            "Fix: test resolver rejects payloads starting with 0xDE 0xAD as malformed".into(),
-        );
-    }
-    Ok(Arc::new(TestNodeExt {
-        payload: bytes.to_vec(),
-    }))
-}
-
-inventory::submit! {
-    OpaqueNodeResolver {
-        kind: TEST_KIND,
-        deserialize: deserialize_node,
-    }
-}
+use opaque_echo_extension::{EchoExpr, EchoNode};
 
 // ---------------------------------------------------------------------------
 // 1. Truncated / malformed wire payloads
@@ -393,7 +304,7 @@ fn opaque_node_empty_payload_roundtrips() {
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
-        vec![Node::Opaque(Arc::new(TestNodeExt { payload: vec![] }))],
+        vec![Node::Opaque(Arc::new(EchoNode { payload: vec![] }))],
     );
     let wire = program.to_wire().unwrap();
     let decoded = Program::from_wire(&wire).unwrap();
@@ -408,7 +319,7 @@ fn opaque_expr_empty_payload_roundtrips() {
         vec![Node::store(
             "out",
             Expr::u32(0),
-            Expr::Opaque(Arc::new(TestExprExt { payload: vec![] })),
+            Expr::Opaque(Arc::new(EchoExpr { payload: vec![] })),
         )],
     );
     let wire = program.to_wire().unwrap();
@@ -425,7 +336,7 @@ fn opaque_payload_encoder_decoder_cap_symmetry() {
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
-        vec![Node::Opaque(Arc::new(TestNodeExt { payload: oversized }))],
+        vec![Node::Opaque(Arc::new(EchoNode { payload: oversized }))],
     );
     let error = program
         .to_wire()

@@ -18,11 +18,13 @@
 //! These tests assert real counter values and real dispatch outcomes. A
 //! `!is_empty()` style check would pass for an audit that never ran.
 
-mod common;
+#![cfg(feature = "device-tests")]
 
-use common::{
-    cross_block_grid_sync_expected, cross_block_grid_sync_inputs, cross_block_grid_sync_program,
-    CROSS_BLOCK_GRID_SYNC_WORKGROUP,
+mod harness;
+
+use harness::{
+    bytes_u32, cross_block_grid_sync_expected, cross_block_grid_sync_inputs,
+    cross_block_grid_sync_program, CROSS_BLOCK_GRID_SYNC_WORKGROUP,
 };
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
@@ -34,13 +36,6 @@ const LANES: u32 = 4 * CROSS_BLOCK_GRID_SYNC_WORKGROUP;
 fn backend() -> CudaBackend {
     CudaBackend::acquire()
         .expect("Fix: CUDA backend acquisition must succeed on the GPU-required test host.")
-}
-
-fn bytes_u32(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-        .collect()
 }
 
 fn cooperative() -> DispatchConfig {

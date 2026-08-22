@@ -24,8 +24,8 @@ test_classes = ["Reference execution semantics", "Exact oracle and witness contr
 [profile.primitives]
 test_classes = ["Primitive builder semantics", "Reference and backend parity", "Boundary, property, and composition contracts"]
 
-[profile.scheduler]
-test_classes = ["Scheduler and graph semantics", "Self-consumer composition contracts", "Determinism and boundary tests"]
+[profile.pass-engine]
+test_classes = ["Encoded-pass Program semantics", "Reference-parity of every dispatched pass", "Determinism and boundary tests"]
 
 [profile.conformance]
 test_classes = ["Case and certificate schema contracts", "Generator determinism", "Cross-backend semantic conformance"]
@@ -36,14 +36,11 @@ test_classes = ["Execution planning and cache contracts", "Persistent runtime st
 [profile.libraries]
 test_classes = ["Product-library exact behavior", "Primitive-to-library composition", "Reference and backend parity"]
 
-[profile.intrinsics]
-test_classes = ["Intrinsic registration and contract semantics", "Reference oracle parity", "Backend lowering and algebraic laws"]
+[profile.registry-link]
+test_classes = ["Link-anchor and registration-source contracts", "Per-source floors derived from the tree", "Registry closure against a partial link"]
 
 [profile.packaging]
 test_classes = ["Artifact planning and serialization", "Package compatibility", "Invalid artifact and boundary rejection"]
-
-[profile.frontend]
-test_classes = ["Parser and lowering behavior", "Source diagnostics and unsupported-language rejection", "Generated program execution parity"]
 
 [profile.lowering]
 test_classes = ["Backend-neutral lowering transforms", "Pre-emission invariants", "Invalid IR and target rejection"]
@@ -54,6 +51,9 @@ test_classes = ["Target artifact emission", "Instruction and layout lowering", "
 [profile.tooling]
 test_classes = ["Command and policy behavior", "Evidence schema and regeneration contracts", "Failure diagnostics and repository boundaries"]
 
+[profile.standalone-tooling]
+test_classes = ["Repository contract scans", "Checkout resolution and path boundaries", "Failure diagnostics that name the correction"]
+
 [profile.test-tooling]
 test_classes = ["Fixture determinism", "Harness execution and comparison behavior", "Failure propagation and diagnostic contracts"]
 
@@ -61,73 +61,61 @@ test_classes = ["Fixture determinism", "Harness execution and comparison behavio
 test_classes = ["Megakernel artifact compilation contracts", "Static and persistent plan validation", "Invalid program and boundary rejection"]
 
 [package.vyre]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --all-features"]
+commands = ["./cargo_full test -p vyre --all-features"]
 hardware = "The default suite is host-only. Tests that execute concrete GPU features require the corresponding device and driver, and a requested acquisition failure is an error."
 
 [package.vyre-safetensors]
 failure_behavior = "Malformed framing, oversized metadata, invalid tensor ranges, unsafe shard paths, incomplete mappings, requirement drift, or digest mismatch returns a typed SafetensorError before runtime admission."
 
 [package.vyre-driver-cuda]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-cuda", "CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-cuda -- --ignored --nocapture"]
-hardware = "You need an NVIDIA GPU and a working CUDA driver for device, dispatch, graph, and ignored physical-adapter tests. Probe failure is a configuration failure, not a skip."
-expected_skips = "The default command omits only tests marked `#[ignore]`. Run the ignored-test command on an NVIDIA host. An ignored hardware test must fail if CUDA was requested but cannot be acquired."
+commands = ["./cargo_full test -p vyre-driver-cuda", "./cargo_full test -p vyre-driver-cuda -- --ignored --nocapture"]
+hardware = "You need an NVIDIA GPU and a working CUDA driver on the execution host (axiomexec) for device, dispatch, graph, and ignored physical-adapter tests. Probe failure is a configuration failure, not a skip."
+expected_skips = "The default command omits only tests marked `#[ignore]`. Run the ignored-test command on the designated GPU host (axiomexec). An ignored hardware test must fail if CUDA was requested but cannot be acquired."
 evidence_outputs = ["release/evidence/conformance/release-all-backends-certificate.json", "release/evidence/benchmarks/cuda-release-suite.json", "Command status and exact backend parity assertions"]
 
 [package.vyre-driver-wgpu]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-wgpu", "CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-wgpu -- --ignored --nocapture"]
-hardware = "You need a supported physical GPU adapter for device dispatch and ignored physical-adapter tests. A requested adapter that cannot initialize is an error."
-expected_skips = "The default command omits only tests marked `#[ignore]`. Run the ignored-test command on a configured GPU host. Backend initialization failures must remain visible."
+commands = ["./cargo_full test -p vyre-driver-wgpu", "./cargo_full test -p vyre-driver-wgpu -- --ignored --nocapture"]
+hardware = "You need a supported physical GPU adapter on the execution host (axiomexec) for device dispatch and ignored physical-adapter tests. A requested adapter that cannot initialize is an error."
+expected_skips = "The default command omits only tests marked `#[ignore]`. Run the ignored-test command on a configured GPU host (axiomexec). Backend initialization failures must remain visible."
 evidence_outputs = ["release/evidence/conformance/release-all-backends-certificate.json", "Command status and exact portable-backend parity assertions"]
 
 [package.vyre-driver-metal]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-metal", "CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-metal -- --ignored --nocapture"]
+commands = ["./cargo_full test -p vyre-driver-metal", "./cargo_full test -p vyre-driver-metal -- --ignored --nocapture"]
 hardware = "Native device execution requires macOS or iOS with a Metal-capable device. Other targets must prove the explicit unsupported error instead of silently substituting another backend."
 expected_skips = "The default command omits only tests marked `#[ignore]`. Run physical device tests on Apple hardware; non-Apple contract tests must execute and assert the unsupported result."
 
 [package.vyre-driver-spirv]
-hardware = "The default suite validates lowering without a device. Physical Vulkan-style execution tests require a compatible adapter and must report acquisition failure."
+hardware = "The default suite validates lowering without a device. Physical Vulkan-style execution tests require a compatible adapter on the execution host (axiomexec) and must report acquisition failure."
 
 [package.vyre-driver-reference]
 hardware = "No accelerator is required. This backend must remain executable on the host reference path."
 
 [package.vyre-conform]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --all-features", "CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --all-features -- --ignored --nocapture"]
-hardware = "Cross-backend certificates require every selected physical backend. Missing selected hardware is a failed conformance run."
-expected_skips = "The default command omits tests marked `#[ignore]`. The ignored command is the explicit physical-backend run and cannot silently skip a selected backend."
+commands = ["./cargo_full test -p vyre-conform --all-features", "./cargo_full test -p vyre-conform --all-features -- --ignored --nocapture"]
+hardware = "Cross-backend certificates require every selected physical backend on the execution host (axiomexec). Missing selected hardware is a failed conformance run."
+expected_skips = "The default command omits tests marked `#[ignore]`. The ignored command is the explicit physical-backend run on the execution host (axiomexec) and cannot silently skip a selected backend."
 evidence_outputs = ["release/evidence/conformance/release-all-backends-certificate.json", "Command status and exact cross-backend results"]
 
 [package.vyre-bench]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --all-features", "CARGO_BUILD_JOBS=1 ./cargo_full run --bin xtask -- release-benchmarks --backend cuda"]
-hardware = "Benchmark unit tests are host-capable. Release measurements require the backend and device named by the benchmark command; probe failure invalidates the run."
-expected_skips = "Ignored physical benchmarks are absent from the default test command. A release benchmark command must execute its requested device and preserve raw samples; it cannot report a synthetic or skipped result."
+commands = ["./cargo_full test -p vyre-bench --all-features", "./cargo_full run --bin xtask -- release-benchmarks --backend cuda --measured-samples 30 --write", "./cargo_full run --bin xtask -- release-benchmarks --backend wgpu --measured-samples 30 --write"]
+hardware = "Benchmark unit tests are host-capable. Release measurements require the backend and device named by the benchmark command on the execution host (axiomexec); probe failure invalidates the run."
+expected_skips = "Ignored physical benchmarks are absent from the default test command. A release benchmark command must execute its requested device on the execution host (axiomexec) and preserve raw samples; it cannot report a synthetic or skipped result."
 evidence_outputs = ["release/evidence/benchmarks/", "Raw per-sample benchmark records", "Generated suite summaries and source-tree fingerprints"]
 
 [package.xtask]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask", "CARGO_BUILD_JOBS=1 ./cargo_full run --bin xtask -- vyre-release-gate --prepublish"]
-hardware = "Most policy tests are host-only. Commands that generate backend evidence inherit the hardware contract of the selected backend and must fail on an unavailable requested device."
+commands = ["./cargo_full test -p xtask", "./cargo_full run --bin xtask -- vyre-release-gate"]
+hardware = "Most policy tests are host-only. Commands that generate backend evidence inherit the hardware contract of the selected backend on the execution host (axiomexec) and must fail on an unavailable requested device."
 evidence_outputs = ["release/evidence/", "Generated documentation and matrices named by each command", "Command status and exact semantic blocker diagnostics"]
 
-[package.vyre-frontend-c]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-c --all-features"]
-hardware = "Parser and lowering tests are host-capable. End-to-end backend execution requires the explicitly selected device and fails if that backend cannot initialize."
-evidence_outputs = ["release/evidence/parser/", "Command status, exact diagnostics, and generated-program parity assertions"]
-
-[package.vyre-frontend-rust]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --all-features"]
-hardware = "Host parser and lowering tests require no accelerator. Feature-selected backend execution requires its physical device and reports acquisition failure."
 
 [package.vyre-runtime]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --all-features"]
-hardware = "Backend-neutral runtime tests are host-capable. Device integration tests require the selected concrete backend and treat unavailable requested hardware as an error."
-
-[package.vyre-intrinsics]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-intrinsics --all-features"]
-hardware = "Registration and reference-oracle tests are host-capable. Concrete lowering parity requires the selected backend device and must surface unsupported hardware."
+commands = ["./cargo_full test -p vyre-runtime --all-features"]
+hardware = "Backend-neutral runtime tests are host-capable. Device integration tests require the selected concrete backend on the execution host (axiomexec) and treat unavailable requested hardware as an error."
 
 [package.vyre-libs]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --all-features"]
-hardware = "Reference and builder suites are host-capable. Tests that request concrete backend parity require that device and fail visibly when unavailable."
+commands = ["./cargo_full test -p vyre-libs --all-features"]
+hardware = "Reference and builder suites are host-capable. Tests that request concrete backend parity require that device on the execution host (axiomexec) and fail visibly when unavailable."
 
 [package.vyre-primitives]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --all-features"]
-hardware = "Builder and reference suites are host-capable. Concrete backend parity tests require the selected device and fail visibly when unavailable."
+commands = ["./cargo_full test -p vyre-primitives --all-features"]
+hardware = "Builder and reference suites are host-capable. Concrete backend parity tests require the selected device on the execution host (axiomexec) and fail visibly when unavailable."

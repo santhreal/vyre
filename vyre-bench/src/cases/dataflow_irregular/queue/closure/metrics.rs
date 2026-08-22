@@ -1,13 +1,11 @@
 use crate::api::metric::MetricPoint;
 
-use super::{
-    ifds_queue_closure_delta_lanes_per_source, DataflowIfdsSkewedQueueClosurePrepared,
-    QUEUE_CLOSURE_WORKGROUP_SIZE,
-};
+use super::DataflowIfdsSkewedQueueClosurePrepared;
 use crate::cases::dataflow_irregular::closure::CLOSURE_MAX_ITERS;
 use crate::cases::dataflow_irregular::metrics::{
     ifds_closure_baseline_metric_points, ifds_closure_metric_points,
 };
+use crate::cases::queue_closure::{delta_lanes_per_source, QUEUE_CLOSURE_WORKGROUP_SIZE};
 use crate::cases::queue_closure_profile::{
     queue_closure_launch_lanes_per_wave, QueueClosureLaneProfile,
 };
@@ -94,7 +92,7 @@ fn append_queue_closure_points(
     let lane_profile = QueueClosureLaneProfile::from_wave_lengths_with_launch_lanes(
         prepared.queue_capacity,
         &prepared.wave_queue_lengths,
-        ifds_queue_closure_delta_lanes_per_source(prepared.row_strided_delta),
+        delta_lanes_per_source(prepared.row_strided_delta),
         launch_lanes_per_wave,
     );
     metrics.push(MetricPoint {

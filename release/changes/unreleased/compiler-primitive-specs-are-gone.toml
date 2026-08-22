@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`vyre_foundation::transform::compiler` is deleted, with the `dataflow_fixpoint`, `recursive_descent`, `string_interner`, `typed_arena` and `visitor_walk` specs it held. Each published a workgroup size, an algebraic-law list and a Program builder that no backend lowered and no operation registered, so the module was 1736 lines of spec whose only reader was the gate that checked the specs against each other. The `security_dataflow` optimization lane no longer claims write scope over the deleted fixpoint file."

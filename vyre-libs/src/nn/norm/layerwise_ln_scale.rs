@@ -13,26 +13,22 @@ pub fn layerwise_ln_scale(input: &str, scale: &str, output: &str, n: u32) -> Pro
     f32_elementwise_mul(OP_ID, input, F32MulRhs::Buffer(scale), output, n)
 }
 
+const EXPECTED_LAYERWISE_LN_SCALE_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x3F, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x40, 0x40, 0xCD, 0xCC, 0xCC, 0x3E,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| layerwise_ln_scale("input", "scale", "output", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || layerwise_ln_scale("input", "scale", "output", 4),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0, 3.0, 4.0]),  // input (post-LN)
                 to_f32(&[0.5, 2.0, 1.0, 0.1]),  // scale
             ]]
         }),
-        expected_output: Some(|| {
-            let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![to_f32(&[0.5, 4.0, 3.0, 0.4])]]
-        }),
-        category: Some("nn"),
-    }
+        Some(|| vec![vec![EXPECTED_LAYERWISE_LN_SCALE_OUTPUT_BYTES.to_vec()]]),
+    )
+    .with_category("nn")
 }

@@ -4,7 +4,7 @@ use vyre::ir::Node;
 use vyre_libs::math::square;
 use vyre_libs::nn::activation::parallel_residual_block;
 
-const INDEXED_MAP_OP_ID: &str = "vyre-libs::substrate::indexed_map";
+const INDEXED_MAP_OP_ID: &str = "vyre-libs::builder::indexed_map";
 
 fn count_indexed_map_regions(nodes: &[Node]) -> usize {
     nodes

@@ -1,7 +1,7 @@
 //! Wire decode payload readers for typed memory-region metadata.
 
 use super::{LebReader, Reader};
-use crate::ir::{CacheLocality, DataType, MemoryHints, MemoryKind};
+use crate::ir::{CacheLocality, MemoryHints, MemoryKind};
 
 pub(super) fn read_dense_quantization_scale(
     reader: &mut Reader<'_>,
@@ -116,40 +116,6 @@ pub(super) fn memory_kind_from_tag(tag: u8) -> Result<MemoryKind, String> {
         6 => Ok(MemoryKind::Persistent),
         value => Err(format!(
             "InvalidDiscriminant: field kind has value {value}. Fix: use a defined MemoryKind discriminant."
-        )),
-    }
-}
-
-pub(super) fn data_type_from_tag(tag: u8) -> Result<DataType, String> {
-    match tag {
-        0x01 => Ok(DataType::U32),
-        0x02 => Ok(DataType::I32),
-        0x03 => Ok(DataType::U64),
-        0x04 => Ok(DataType::Vec2U32),
-        0x05 => Ok(DataType::Vec4U32),
-        0x06 => Ok(DataType::Bool),
-        0x07 => Ok(DataType::Bytes),
-        0x08 => Err("InvalidDiscriminant: Array element tag requires shape payload. Fix: include array element_size in the Dense shape payload.".to_string()),
-        0x09 => Ok(DataType::F16),
-        0x0A => Ok(DataType::BF16),
-        0x0B => Ok(DataType::F32),
-        0x0C => Ok(DataType::F64),
-        0x0D => Ok(DataType::Tensor),
-        0x0E => Ok(DataType::U8),
-        0x0F => Ok(DataType::U16),
-        0x10 => Ok(DataType::I8),
-        0x11 => Ok(DataType::I16),
-        0x12 => Ok(DataType::I64),
-        0x13 => Err("InvalidDiscriminant: Handle element tag requires shape payload. Fix: include handle type id in the Dense shape payload.".to_string()),
-        0x14 => Err("InvalidDiscriminant: Vec element tag is not valid for a Dense memory element. Fix: serialize vectors as scalar lanes or extend the Dense shape payload.".to_string()),
-        0x15 => Err("InvalidDiscriminant: TensorShaped element tag is not valid for a Dense memory element. Fix: use DataType::Tensor in this VIR0 schema.".to_string()),
-        0x19 => Ok(DataType::F8E4M3),
-        0x1A => Ok(DataType::F8E5M2),
-        0x1B => Ok(DataType::I4),
-        0x1C => Ok(DataType::FP4),
-        0x1D => Ok(DataType::NF4),
-        value => Err(format!(
-            "InvalidDiscriminant: field element has value {value}. Fix: use a defined DataType discriminant."
         )),
     }
 }

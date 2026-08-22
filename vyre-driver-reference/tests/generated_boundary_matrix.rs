@@ -6,10 +6,10 @@
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_reference::CpuRefBackend;
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::Expr;
 
-mod support;
-use support::{dispatch_with_inputs, u32_out_buffer};
+mod dispatch_fixtures;
+use dispatch_fixtures::{binary_program, dispatch_with_inputs};
 
 #[derive(Clone, Copy)]
 struct BinaryCase {
@@ -50,28 +50,6 @@ const BINARY_CASES: &[BinaryCase] = &[
         expected: |a, b| a | b,
     },
 ];
-
-fn binary_program(expr: fn(Expr, Expr) -> Expr) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::read("a", 0, DataType::U32),
-            BufferDecl::read("b", 1, DataType::U32),
-            u32_out_buffer("out", 2),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::u32(0)),
-            Node::store(
-                "out",
-                Expr::var("idx"),
-                expr(
-                    Expr::load("a", Expr::var("idx")),
-                    Expr::load("b", Expr::var("idx")),
-                ),
-            ),
-        ],
-    )
-}
 
 fn generated_pair(seed: u32) -> (u32, u32) {
     let a = seed.wrapping_mul(0x9e37_79b9).rotate_left(seed & 31) ^ 0xa5a5_5a5a;

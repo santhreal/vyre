@@ -4,12 +4,12 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::ir_inner::model::expr::{Expr, Ident};
 use crate::ir_inner::model::node::Node;
-use crate::ir_inner::model::types::DataType;
+use crate::ir_inner::model::op_signature::DataType;
 use crate::memory_model::MemoryOrdering;
 use crate::validate::binding::Binding;
 use crate::validate::uniformity::is_uniform_with_load_policy;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 struct ExitUniformityState {
     scope: FxHashMap<Ident, Binding>,
     dirty_buffers: FxHashSet<Ident>,
@@ -80,7 +80,7 @@ fn analyze_exit_node(
 ) -> ExitProof {
     match node {
         Node::Let { name, value } => {
-            let uniform = exit_expr_is_uniform(value, state);
+            let uniform = exit_expr_is_uniform(value, state) && path_uniform;
             invalidate_expr_atomics(value, state);
             state.scope.insert(
                 name.clone(),
@@ -94,7 +94,7 @@ fn analyze_exit_node(
             ExitProof::NONE
         }
         Node::Assign { name, value } => {
-            let uniform = exit_expr_is_uniform(value, state);
+            let uniform = exit_expr_is_uniform(value, state) && path_uniform;
             invalidate_expr_atomics(value, state);
             if let Some(binding) = state.scope.get_mut(name.as_str()) {
                 binding.uniform = uniform;
@@ -122,10 +122,14 @@ fn analyze_exit_node(
             let mut then_state = before.clone();
             let then_proof =
                 analyze_exit_sequence(then, &mut then_state, path_uniform && cond_uniform);
-            let mut else_state = before;
+            let mut else_state = before.clone();
             let else_proof =
                 analyze_exit_sequence(otherwise, &mut else_state, path_uniform && cond_uniform);
-            *state = merge_exit_states(then_state, else_state);
+            let mut merged = merge_exit_states(then_state, else_state);
+            if !cond_uniform || !path_uniform {
+                merged.loads_settled = false;
+            }
+            *state = merged;
             let mut proof = then_proof;
             proof.merge(else_proof);
             proof
@@ -141,21 +145,49 @@ fn analyze_exit_node(
             invalidate_expr_atomics(from, state);
             invalidate_expr_atomics(to, state);
             let before = state.clone();
-            let mut body_state = before.clone();
-            body_state.scope.insert(
-                var.clone(),
-                Binding {
-                    ty: DataType::U32,
-                    ty_known: true,
-                    mutable: false,
-                    uniform: bounds_uniform,
-                },
-            );
-            let proof =
-                analyze_exit_sequence(body, &mut body_state, path_uniform && bounds_uniform);
-            body_state.scope.remove(var.as_str());
-            *state = merge_exit_states(before, body_state);
-            proof
+            let mut loop_entry_state = before.clone();
+            let mut accumulated_proof = ExitProof::NONE;
+            let mut converged = false;
+
+            for _ in 0..16 {
+                let mut body_state = loop_entry_state.clone();
+                body_state.scope.insert(
+                    var.clone(),
+                    Binding {
+                        ty: DataType::U32,
+                        ty_known: true,
+                        mutable: false,
+                        uniform: bounds_uniform && path_uniform,
+                    },
+                );
+                let proof =
+                    analyze_exit_sequence(body, &mut body_state, path_uniform && bounds_uniform);
+                accumulated_proof.merge(proof);
+                body_state.scope.remove(var.as_str());
+                let next_entry_state = merge_exit_states(loop_entry_state.clone(), body_state);
+                if next_entry_state == loop_entry_state {
+                    converged = true;
+                    break;
+                }
+                loop_entry_state = next_entry_state;
+            }
+
+            if !converged {
+                accumulated_proof.all_collective = false;
+            }
+
+            let mut final_state = merge_exit_states(before, loop_entry_state);
+            if !bounds_uniform || !path_uniform || !converged {
+                final_state.loads_settled = false;
+                if !converged {
+                    final_state.unknown_write = true;
+                    for binding in final_state.scope.values_mut() {
+                        binding.uniform = false;
+                    }
+                }
+            }
+            *state = final_state;
+            accumulated_proof
         }
         Node::IndirectDispatch { .. } | Node::AsyncWait { .. } | Node::Resume { .. } => {
             ExitProof::NONE
@@ -203,6 +235,23 @@ fn analyze_exit_node(
         }
         Node::Block(nodes) => analyze_exit_sequence(nodes, state, path_uniform),
         Node::Region { body, .. } => analyze_exit_sequence(body, state, path_uniform),
+        Node::TileLoad { origin, .. } => {
+            for off in origin {
+                invalidate_expr_atomics(off, state);
+            }
+            ExitProof::NONE
+        }
+        Node::TileStore { buffer, origin, .. } => {
+            state.dirty_buffers.insert(buffer.clone());
+            for off in origin {
+                invalidate_expr_atomics(off, state);
+            }
+            ExitProof::NONE
+        }
+        Node::TileElementwise { body, .. } => analyze_exit_sequence(body, state, path_uniform),
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {
+            ExitProof::NONE
+        }
         Node::Opaque(_) => {
             state.unknown_write = true;
             ExitProof::NONE

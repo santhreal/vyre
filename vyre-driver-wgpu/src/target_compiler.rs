@@ -1,102 +1,75 @@
+use vyre_driver::target_dialect::{EmittedDialectModule, TargetDialect};
 use vyre_driver::BackendError;
-use vyre_megakernel::{
-    compile_selected_modules, Artifact, EmittedTargetModule, TargetCompileError, TargetCompiler,
-    TargetPayload, TargetPayloadFormat, TargetProfile,
-};
+use vyre_megakernel::{SelectedLowering, TargetCompileError, TargetCompiler, TargetProfile};
+
+use crate::WGPU_BACKEND_ID;
 
 pub(crate) const WGPU_TARGET_FORMAT: &str = "wgsl";
 pub(crate) const WGPU_TARGET_FORMAT_VERSION: u16 = 2;
 
 pub(crate) const WGPU_TARGET_MODULE_SCHEMA_VERSION: u16 = 2;
 
+const WGPU_DIALECT: TargetDialect = TargetDialect {
+    backend_id: WGPU_BACKEND_ID,
+    dialect: "WGSL",
+    format: WGPU_TARGET_FORMAT,
+    format_version: WGPU_TARGET_FORMAT_VERSION,
+    generation: WGPU_TARGET_FORMAT_VERSION as u64,
+    max_workgroup_size: [256, 256, 64],
+    max_invocations_per_workgroup: 256,
+    max_dynamic_shared_bytes: 16_384,
+    subgroup_size: 0,
+    emit: emit_wgsl_module,
+};
+
+/// The payload is the WGSL text behind a schema version, because the
+/// materializer accepts source it must hand to the shader compiler, not an
+/// image it can submit directly.
 #[derive(serde::Serialize, serde::Deserialize)]
 pub(crate) struct WgpuTargetModule {
     pub(crate) schema_version: u16,
     pub(crate) wgsl: String,
 }
 
-pub(crate) struct WgpuTargetCompiler {
-    format: TargetPayloadFormat,
-    profile: TargetProfile,
-}
-
-impl TargetCompiler for WgpuTargetCompiler {
-    fn format(&self) -> &TargetPayloadFormat {
-        &self.format
-    }
-
-    fn profile(&self) -> &TargetProfile {
-        &self.profile
-    }
-
-    fn compile(&self, artifact: &Artifact) -> Result<TargetPayload, TargetCompileError> {
-        compile_selected_modules(
-            artifact,
-            self.format.clone(),
-            self.profile.clone(),
-            |selected, _profile| {
-                let descriptor = selected.descriptor.clone();
-                let module =
-                    crate::emit::emit_naga_module_for_descriptor(&descriptor).map_err(|error| {
-                        TargetCompileError::Emission(format!("WGSL emission failed: {error}"))
-                    })?;
-                let wgsl = crate::emit::write_wgsl(&module).map_err(|error| {
-                    TargetCompileError::Emission(format!("WGSL writing failed: {error}"))
-                })?;
-                let target = WgpuTargetModule {
-                    schema_version: WGPU_TARGET_MODULE_SCHEMA_VERSION,
-                    wgsl,
-                };
-                let grid_size = vyre_driver::infer_dispatch_grid_for_count(
-                    selected.logical_element_count,
-                    selected.descriptor.dispatch.workgroup_size,
-                )
-                .map_err(|error| TargetCompileError::Emission(error.to_string()))?;
-                serde_json::to_vec(&target)
-                    .map(|bytes| EmittedTargetModule {
-                        entry_point: "main".to_string(),
-                        grid_size,
-                        dynamic_shared_bytes: 0,
-                        workgroup_size: selected.descriptor.dispatch.workgroup_size,
-                        resource_bindings: selected.canonical_bindings.clone(),
-                        bytes,
-                    })
-                    .map_err(|error| {
-                        TargetCompileError::Emission(format!(
-                            "WGSL target module serialization failed: {error}"
-                        ))
-                    })
-            },
-        )
-    }
-}
-
-pub(crate) fn target_profile() -> Result<TargetProfile, BackendError> {
-    TargetProfile::new(
-        WGPU_TARGET_FORMAT,
-        u64::from(WGPU_TARGET_FORMAT_VERSION),
-        [256, 256, 64],
-        256,
-        16_384,
-        0,
-    )
-    .map_err(|error| BackendError::KernelCompileFailed {
-        backend: "wgpu".to_string(),
-        compiler_message: format!(
-            "WGSL target profile is invalid: {error}. Fix: repair the registered profile."
-        ),
+fn emit_wgsl_module(
+    selected: &SelectedLowering,
+    _profile: &TargetProfile,
+) -> Result<EmittedDialectModule, TargetCompileError> {
+    let module = crate::emit::emit_naga_module_for_descriptor(&selected.descriptor)
+        .map_err(|error| TargetCompileError::Emission(format!("WGSL emission failed: {error}")))?;
+    let wgsl = crate::emit::write_wgsl(&module)
+        .map_err(|error| TargetCompileError::Emission(format!("WGSL writing failed: {error}")))?;
+    let bytes = serde_json::to_vec(&WgpuTargetModule {
+        schema_version: WGPU_TARGET_MODULE_SCHEMA_VERSION,
+        wgsl,
+    })
+    .map_err(|error| {
+        TargetCompileError::Emission(format!("WGSL target module serialization failed: {error}"))
+    })?;
+    Ok(EmittedDialectModule {
+        entry_point: "main".to_string(),
+        bytes,
+        dynamic_shared_bytes: 0,
     })
 }
 
+pub(crate) fn target_profile() -> Result<TargetProfile, BackendError> {
+    WGPU_DIALECT.profile()
+}
+
 pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, BackendError> {
-    let format = TargetPayloadFormat::new(WGPU_TARGET_FORMAT, WGPU_TARGET_FORMAT_VERSION).map_err(|error| {
-        BackendError::KernelCompileFailed {
-            backend: "wgpu".to_string(),
-            compiler_message: format!(
-                "WGSL target format is invalid: {error}. Fix: repair the registered format identity."
-            ),
-        }
-    })?;
-    let profile = target_profile()?;
-    Ok(Box::new(WgpuTargetCompiler { format, profile }))
+    WGPU_DIALECT.compiler()
+}
+
+/// The workgroup extents this backend can actually run: the adapter limit
+/// intersected with what WGSL emission admits. The dialect caps at the WebGPU
+/// spec baseline, which is below what most native adapters report, and a
+/// composition that believes the adapter emits a payload the envelope rejects.
+pub(crate) fn admissible_workgroup_size(adapter: [u32; 3]) -> [u32; 3] {
+    WGPU_DIALECT.admissible_workgroup_size(adapter)
+}
+
+/// The invocation count per workgroup this backend can actually run.
+pub(crate) const fn admissible_invocations_per_workgroup(adapter: u32) -> u32 {
+    WGPU_DIALECT.admissible_invocations_per_workgroup(adapter)
 }

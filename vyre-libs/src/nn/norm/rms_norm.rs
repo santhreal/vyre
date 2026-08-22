@@ -3,17 +3,17 @@
 //! Category-A composition with a workgroup-tiled reduction. The scalar
 //! [`rms_norm_reference`] entry remains available as the correctness oracle.
 
+use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 use crate::{
+    builder::reduction::{ReductionComposer, ReductionPhase},
     builder::{strided_accumulate_child, strided_writeback_child},
     nn::rms::{inverse_rms_expr, square_expr, EMPTY_RMS_FIX},
-    region::wrap_anonymous,
 };
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 const OP_ID: &str = "vyre-libs::nn::rms_norm";
 const REFERENCE_OP_ID: &str = "vyre-libs::nn::rms_norm_reference";
-const RMS_TILE: u32 = 256;
 
 /// Build a Program that applies RMSNorm element-wise.
 #[must_use]
@@ -34,21 +34,18 @@ pub fn rms_norm_reference(input: &str, output: &str, n: u32, eps: f32) -> Progra
 }
 
 fn invalid_rms_program(op_id: &'static str, output: &str) -> Program {
-    crate::builder::invalid_builder_trap_program(
+    trap_program(
         op_id,
-        output,
-        DataType::F32,
+        Some((output, DataType::F32)),
         EMPTY_RMS_FIX.to_string(),
     )
 }
 
 fn rms_norm_tiled_program(input: &str, output: &str, n: u32, eps: f32) -> Program {
-    let tile = RMS_TILE.min(n).max(1);
+    let tile = 256_u32.min(n).max(1);
     let chunks = n.div_ceil(tile);
-    let local = Expr::var("local");
-    let mut body = vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
-        strided_accumulate_child(
+    let sum_of_squares = ReductionPhase {
+        accumulate: strided_accumulate_child(
             OP_ID,
             tile,
             chunks,
@@ -61,27 +58,31 @@ fn rms_norm_tiled_program(input: &str, output: &str, n: u32, eps: f32) -> Progra
                 Expr::add(acc, square_expr(value))
             },
         ),
-        Node::barrier(),
-    ];
-    body.push(workgroup_tree::sum_f32_child(
-        OP_ID,
-        tile,
-        "rms_scratch",
-        WorkgroupReductionScope::FirstWorkgroup,
-    ));
-    body.push(Node::if_then(
-        Expr::and(
-            Expr::is_first_workgroup(),
-            Expr::eq(local.clone(), Expr::u32(0)),
-        ),
-        vec![Node::Store {
+        reductions: vec![workgroup_tree::sum_f32_child(
+            OP_ID,
+            tile,
+            "rms_scratch",
+            WorkgroupReductionScope::FirstWorkgroup,
+        )],
+        publish: vec![Node::Store {
             buffer: "rms_scale".into(),
             index: Expr::u32(0),
             value: inverse_rms_expr(Expr::load("rms_scratch", Expr::u32(0)), n, eps),
         }],
-    ));
-    body.push(Node::barrier());
-    body.push(strided_writeback_child(
+    };
+
+    ReductionComposer::new(
+        OP_ID,
+        vec![
+            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
+            BufferDecl::workgroup("rms_scratch", tile, DataType::F32),
+            BufferDecl::workgroup("rms_scale", 1, DataType::F32),
+            BufferDecl::output(output, 1, DataType::F32).with_count(n),
+        ],
+        [tile, 1, 1],
+    )
+    .with_phase(sum_of_squares)
+    .with_writeback(strided_writeback_child(
         OP_ID,
         tile,
         chunks,
@@ -92,18 +93,8 @@ fn rms_norm_tiled_program(input: &str, output: &str, n: u32, eps: f32) -> Progra
             Expr::load("rms_scale", Expr::u32(0)),
         )],
         |idx| Expr::mul(Expr::load(input, idx), Expr::var("scale")),
-    ));
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::workgroup("rms_scratch", tile, DataType::F32),
-            BufferDecl::workgroup("rms_scale", 1, DataType::F32),
-            BufferDecl::output(output, 1, DataType::F32).with_count(n),
-        ],
-        [tile, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
-    )
+    ))
+    .build()
 }
 
 fn rms_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> Program {
@@ -139,46 +130,36 @@ fn rms_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> Pr
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(REFERENCE_OP_ID, body)],
+        vec![wrap_anonymous_region(REFERENCE_OP_ID, body)],
     )
 }
 
+const EXPECTED_RMS_NORM_OUTPUT_BYTES: [u8; 16] = [
+    0xB2, 0xF4, 0xBA, 0x3E, 0xB2, 0xF4, 0x3A, 0x3F, 0x86, 0x37, 0x8C, 0x3F, 0xB2, 0xF4, 0xBA, 0x3F,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(2),
-        id: "vyre-libs::nn::rms_norm",
-        build: Some(|| rms_norm("input", "output", 4, 1e-5)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::nn::rms_norm",
+        || rms_norm("input", "output", 4, 1e-5),
+        Some(|| {
             let to_bytes =
                 |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             // Input = [1.0, 2.0, 3.0, 4.0].
             vec![vec![to_bytes(&[1.0, 2.0, 3.0, 4.0])]]
         }),
-        expected_output: Some(|| {
-            let to_bytes =
-                |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            // mean(x^2) = (1+4+9+16)/4 = 7.5.
-            // rms = inverseSqrt(7.5 + 1e-5).
-            // y_i = x_i * rms.
-            let mean_sq = (1.0_f32 + 4.0 + 9.0 + 16.0) / 4.0;
-            let rms = (mean_sq + 1e-5_f32).sqrt().recip();
-            let y: [f32; 4] = [1.0 * rms, 2.0 * rms, 3.0 * rms, 4.0 * rms];
-            vec![vec![to_bytes(&y)]]
-        }),
-        category: Some("nn"),
-    }
+        Some(|| vec![vec![EXPECTED_RMS_NORM_OUTPUT_BYTES.to_vec()]]),
+    )
+    .with_category("nn")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(2))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::assert_tiled_matches_reference;
+    use crate::fixture_bytes::eval_f32;
+    use crate::fixture_bytes::try_eval_bytes;
 
     #[test]
     fn tiled_rms_norm_matches_scalar_reference_across_multiple_tiles() {
@@ -187,25 +168,13 @@ mod tests {
         let input = (0..n)
             .map(|i| ((i as f32) * 0.017).cos() * 3.0 + (i % 11) as f32 * 0.125)
             .collect::<Vec<_>>();
-        let run = |program: Program| {
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[
-                    Value::from(f32_bytes(&input)),
-                    Value::from(vec![0u8; n as usize * 4]),
-                ],
-            )
-            .expect("Fix: rms_norm program must execute in the reference interpreter.");
-            decode_f32(&outputs[0].to_bytes())
-        };
-        let actual = run(rms_norm("input", "output", n, eps));
-        let expected = run(rms_norm_reference("input", "output", n, eps));
-        for (idx, (lhs, rhs)) in actual.iter().zip(expected.iter()).enumerate() {
-            assert!(
-                (lhs - rhs).abs() <= 1.0e-5,
-                "rms_norm mismatch at lane {idx}: tiled={lhs:?} reference={rhs:?}"
-            );
-        }
+        assert_tiled_matches_reference(
+            "rms_norm",
+            &input,
+            1.0e-5,
+            &rms_norm("input", "output", n, eps),
+            &rms_norm_reference("input", "output", n, eps),
+        );
     }
 
     #[test]
@@ -219,35 +188,20 @@ mod tests {
                 wave + saw
             })
             .collect::<Vec<_>>();
-        let run = |program: Program| {
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[
-                    Value::from(f32_bytes(&input)),
-                    Value::from(vec![0u8; n as usize * 4]),
-                ],
-            )
-            .expect("Fix: generated rms_norm program must execute in the reference interpreter.");
-            decode_f32(&outputs[0].to_bytes())
-        };
-        let actual = run(rms_norm("input", "output", n, eps));
-        let expected = run(rms_norm_reference("input", "output", n, eps));
-        for (idx, (lhs, rhs)) in actual.iter().zip(expected.iter()).enumerate() {
-            assert!(
-                (lhs - rhs).abs() <= 1.0e-5,
-                "generated rms_norm mismatch at lane {idx}: tiled={lhs:?} reference={rhs:?}"
-            );
-        }
+        assert_tiled_matches_reference(
+            "generated rms_norm",
+            &input,
+            1.0e-5,
+            &rms_norm("input", "output", n, eps),
+            &rms_norm_reference("input", "output", n, eps),
+        );
     }
 
     #[test]
     fn zero_length_rms_norm_traps_without_panicking() {
         let program = rms_norm("input", "output", 0, 1.0e-5);
-        let err = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(vec![0u8; core::mem::size_of::<f32>()])],
-        )
-        .expect_err("zero-length rms_norm must trap instead of constructing a fake output");
+        let err = try_eval_bytes(&program, vec![vec![0u8; core::mem::size_of::<f32>()]])
+            .expect_err("zero-length rms_norm must trap instead of constructing a fake output");
         assert!(
             err.to_string().contains(EMPTY_RMS_FIX),
             "wrong error: {err}"
@@ -265,12 +219,7 @@ mod tests {
         let x = 1e-20f32;
         let input = [x; 4];
         let program = rms_norm("input", "output", n, eps);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: rms_norm must not panic on tiny input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("rms_norm", &program, &[&input[..]], 4);
         let scale = 1.0 / (x * x + eps).sqrt();
         let expected = x * scale;
         for (i, &v) in out.iter().enumerate() {
@@ -290,12 +239,7 @@ mod tests {
         let eps = 1e-5_f32;
         let input = [1e10f32, -1e10, 1e10, -1e10];
         let program = rms_norm("input", "output", n, eps);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: rms_norm must not panic on large-variance input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("rms_norm", &program, &[&input[..]], 4);
         for (i, &v) in out.iter().enumerate() {
             assert!(
                 v.is_finite(),
@@ -315,12 +259,7 @@ mod tests {
         let eps = 1e-5_f32;
         let input = [x];
         let program = rms_norm("input", "output", 1, eps);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: rms_norm single element must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("rms_norm", &program, &[&input[..]], 1);
         let expected = x / (x * x + eps).sqrt();
         assert!(
             (out[0] - expected).abs() <= 1.0e-6,
@@ -337,12 +276,7 @@ mod tests {
         fn rms_norm_output_rms_is_one(input in prop::collection::vec(-1e10f32..1e10f32, 1..32)) {
             let n = input.len() as u32;
             let program = rms_norm("input", "output", n, 1e-5);
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; input.len() * 4])],
-            )
-            .expect("Fix: rms_norm must execute");
-            let out = decode_f32(&outputs[0].to_bytes());
+            let out = eval_f32("rms_norm", &program, &[&input[..]], input.len());
             let mean_sq = out.iter().map(|v| v * v).sum::<f32>() / out.len() as f32;
             prop_assert!(
                 (mean_sq - 1.0).abs() <= 1.0e-3,

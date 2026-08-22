@@ -4,14 +4,16 @@ use std::ffi::c_void;
 
 use cudarc::driver::sys::{CUfunction, CUresult, CUstream};
 use smallvec::SmallVec;
-use vyre_driver::binding::BindingPlan;
 use vyre_driver::validation::validate_launch_geometry;
+use vyre_driver::BindingPlan;
 use vyre_driver::{BackendError, DispatchConfig, LaunchPlan};
 use vyre_foundation::ir::Program;
 
 use super::allocations::cuda_check;
 use super::dispatch::CudaBackend;
 use super::module_cache::ModuleCacheKey;
+use super::module_globals::ModuleGlobalsLease;
+use super::plan::CudaDispatchPlan;
 use super::staging_reserve::reserve_smallvec;
 use crate::numeric::CUDA_NUMERIC;
 use crate::occupancy::cooperative_thread_residency_block_limit;
@@ -478,8 +480,59 @@ impl CudaBackend {
         self.record_launch_occupancy(func, launch);
         Ok(())
     }
+
+    /// Enqueue the resolved kernel `prepared.fixpoint_iterations` times on one
+    /// stream, resetting the grid-barrier counter ahead of every launch.
+    ///
+    /// Every launch path replayed this sequence itself, and the pairing is the
+    /// part that must not drift: the reset belongs inside the iteration and
+    /// ahead of the launch, because the counter is per-launch. A launch that
+    /// starts from a stale counter finds every barrier already satisfied, so
+    /// the kernel returns success, the driver reports no error, and the only
+    /// symptom is wrong data.
+    ///
+    /// The trap record is per-SEQUENCE, not per launch, and is zeroed by
+    /// [`ModuleGlobalsLease::launch_then_release`] before this runs. Zeroing it
+    /// here would erase an earlier iteration's trap.
+    ///
+    /// CUDA serializes kernels within one stream, so each iteration observes the
+    /// previous iteration's writes. That is the persistent-state contract a
+    /// fixpoint program converges under, and it is why the iterations are
+    /// enqueued back to back on the same stream rather than fanned out.
+    ///
+    /// The lease is borrowed rather than consumed because ending it is a
+    /// separate ordered step that [`ModuleGlobalsLease::launch_then_release`]
+    /// owns; call this from inside that closure.
+    pub(crate) fn replay_fixpoint_launches(
+        &self,
+        module_globals: &ModuleGlobalsLease,
+        func: CUfunction,
+        kernel_args: &mut SmallVec<[*mut std::ffi::c_void; 8]>,
+        prepared: &CudaDispatchPlan,
+        stream: CUstream,
+    ) -> Result<(), BackendError> {
+        for _ in 0..prepared.fixpoint_iterations {
+            // SAFETY: `stream` is owned by this dispatch's launch lease for the
+            // whole replay, so it outlives the memset; the memset is enqueued on
+            // the same stream as the launch below and is therefore ordered ahead
+            // of the kernel that waits on the counter.
+            unsafe {
+                module_globals.enqueue_barrier_reset(stream)?;
+            }
+            self.launch_prevalidated_function(
+                func,
+                kernel_args,
+                &prepared.launch,
+                stream,
+                false,
+                prepared.cooperative,
+            )?;
+        }
+        Ok(())
+    }
 }
 
+// Inline: covers `kernel_args_into`, `launch_cuda_function`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{launch_cuda_function, CudaBackend};

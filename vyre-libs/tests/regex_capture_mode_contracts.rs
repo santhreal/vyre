@@ -86,10 +86,10 @@ fn regex_capture_mode_contracts_keep_whole_match_modes_accelerator_eligible() {
 /// mis-route. This gate locks every mode's `mode_id`, `output_shape`, routing
 /// bits, and `null_policy` to the exact TOML text, and checks the enum covers
 /// every declared mode and no extras.
-#[cfg(feature = "matching-regex")]
+#[cfg(feature = "pattern-regex")]
 #[test]
 fn capture_mode_enum_matches_the_toml_contract_row_for_row() {
-    use vyre_libs::scan::CaptureMode;
+    use vyre_libs::pattern::CaptureMode;
 
     // Every mode the enum knows appears in the TOML with byte-identical fields.
     for mode in CaptureMode::ALL {

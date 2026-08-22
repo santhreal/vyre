@@ -13,8 +13,29 @@ use vyre_foundation::ir::{
 use crate::ReferenceError;
 use smallvec::SmallVec;
 
+use crate::execution::axis_value;
+use crate::execution::call::{callable_signature, invoke_signature, resolve_call};
 use crate::execution::expr_cast::cast_value;
 use crate::{atomics, oob, value::Value, workgroup::Invocation, workgroup::Memory};
+
+/// Evaluate an `Expr::Call` through the shared call ABI.
+///
+/// The statement evaluator owns only argument evaluation; resolution, arity,
+/// encoding and output decode live in [`crate::execution::call`].
+fn eval_call(
+    call_expr: *const Expr,
+    op_id: &str,
+    args: &[Expr],
+    invocation: &mut Invocation<'_>,
+    memory: &mut Memory,
+    program: &Program,
+) -> Result<Value, ReferenceError> {
+    let resolved = resolve_call(call_expr, op_id, &mut invocation.op_cache)?;
+    let signature = callable_signature(op_id, &resolved.operation)?;
+    invoke_signature(op_id, signature, args, |arg| {
+        eval(arg, invocation, memory, program)
+    })
+}
 
 /// Re-export the OOB-guarded buffer type used by storage operations.
 pub use crate::oob::Buffer;
@@ -138,15 +159,11 @@ pub(crate) fn eval_frame_oracle(
                     value,
                     ordering: _,
                 } => {
-                    match (*op, expected.as_deref()) {
-                        (AtomicOp::CompareExchange, None) => {
-                            return Err(ReferenceError::new("compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."));
-                        }
-                        (AtomicOp::CompareExchange, Some(_)) => {}
-                        (_, Some(_)) => {
-                            return Err(ReferenceError::new("non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange."));
-                        }
-                        (_, None) => {}
+                    if *op == AtomicOp::CompareExchange && expected.is_none() {
+                        return Err(ReferenceError::new("compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."));
+                    }
+                    if *op != AtomicOp::CompareExchange && expected.is_some() {
+                        return Err(ReferenceError::new("non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange."));
                     }
                     frames.push(Frame::AtomicIndex {
                         op: *op,
@@ -157,7 +174,7 @@ pub(crate) fn eval_frame_oracle(
                     frames.push(Frame::Expr(index));
                 }
                 Expr::Call { op_id, args } => {
-                    let val = crate::execution::call::eval_call(
+                    let val = eval_call(
                         expr as *const Expr,
                         op_id,
                         args,
@@ -432,6 +449,15 @@ fn eval_local_id(axis: u8, invocation: &Invocation<'_>) -> Result<Value, crate::
     axis_value(invocation.ids.local, axis)
 }
 
+/// Return a shared buffer for reading.
+pub fn buffer<'a>(
+    memory: &'a Memory,
+    program: &Program,
+    name: &str,
+) -> Result<&'a oob::Buffer, crate::ReferenceError> {
+    resolve_buffer(memory, program, name)
+}
+
 fn resolve_buffer<'a>(
     memory: &'a Memory,
     program: &Program,
@@ -498,18 +524,7 @@ fn buffer_decl<'a>(
     })
 }
 
-fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, crate::ReferenceError> {
-    values
-        .get(axis as usize)
-        .copied()
-        .map(Value::U32)
-        .ok_or_else(|| {
-            ReferenceError::new(format!(
-                "invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2."
-            ))
-        })
-}
-
+// Inline: covers the crate-private `eval`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
 

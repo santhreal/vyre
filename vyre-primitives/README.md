@@ -1,78 +1,58 @@
 # vyre-primitives
 
-Compositional primitives for vyre: the Tier-2.5 LEGO substrate that
-sits between Tier-2 hardware intrinsics (`vyre-intrinsics`) and Tier-3
-domain libraries (`vyre-libs`). Every domain library reuses primitives
-from this crate; consumers compose primitives without touching
-`vyre-driver-*` directly.
+Marker types the interpreter and emitters dispatch on, and hardware
+intrinsics: operations that need a dedicated emitter arm in every
+backend and a dedicated arm in the reference interpreter.
 
-## What this crate is
+Not here: compositions. A function that returns a `Program` built from
+existing IR belongs in `vyre-libs`, whoever calls it. Reuse count is not
+an admission criterion.
 
-The crate is feature-gated per domain so a consumer that wants only
-bitset operations does not pay for the matching DFA, the d-DNNF
-compiler, or the cryptographic hash family. Each domain is a feature
-flag; a crate-level marker type lives at
-`vyre-primitives::<domain>::*` and submits one
-`OperationRegistration::primitive(...)` so the canonical operation registry
-enumerates every primitive linked into the current binary.
+The crate has no concrete backend dependencies. It depends only on
+`vyre-foundation` and `vyre-spec`.
 
-The crate intentionally has zero concrete backend dependencies. It
-depends only on `vyre-foundation` + `vyre-spec`.
-The boundary is enforced by `scripts/check_architectural_invariants.sh`
-and `OWNERSHIP.md`.
+[`src/organization.rs`](src/organization.rs) is the one classification
+of every Cargo feature, and its own
+`every_cargo_feature_is_classified_exactly_once` test fails if a new
+feature is added without being listed there. The test lives beside the
+lists because they are crate-private: an integration test would force
+them into the public API.
 
-## Domain layout
+## Layout
 
-Mirrors the Linux kernel `fs/` / `mm/` / `net/` shape: each domain is
-its own subdirectory under `src/`, gated behind a Cargo feature flag.
+| Path                       | Feature              | Contents                                                   |
+|----------------------------|----------------------|------------------------------------------------------------|
+| `src/markers.rs`           | always on            | marker types the emitters and the interpreter dispatch on  |
+| `src/wire.rs`              | always on            | host and device byte layout                                |
+| `src/dispatch_grid.rs`     | always on            | lane count to dispatch grid                                |
+| `src/ir_safe.rs`           | `vyre-foundation`    | guarded IR construction                                    |
+| `src/hardware/`            | `hardware`           | subgroup collectives, fences, bit instructions, fma, rsqrt |
+| `src/vfs/`                 | `vyre-foundation`    | async DMA resolvers for include-style asset loading        |
+| `src/operation_catalog.rs` | `inventory-registry` | derived view over the registered primitives                |
 
-| Feature              | Subsystem            | Highlights                                              |
-|---------------------|----------------------|---------------------------------------------------------|
-| `bitset`            | `bitset/`            | bitset_and / or / xor / not / popcount / contains       |
-| `reduce`            | `reduce/`            | reduce_sum / max / min / count / scatter / segment      |
-| `text`              | `text/`              | char_class / line_index / utf8_validate                |
-| `matching`          | `matching/`          | dfa_compile, classifier_emit, region builder           |
-| `math`              | `math/`              | linalg primitives, sparse_recovery, interval algebra   |
-| `nn`                | `nn/`                | activation, attention scaffolding (composed in libs)   |
-| `hash`              | `hash/`              | perfect_hash, blake3_round                             |
-| `parsing`           | `parsing/`           | bracket_match, ast_walk_preorder                       |
-| `graph`             | `graph/`             | csr_*, motif, reachable, union_find, exploded          |
-| `bitset` `+ reduce` | derived              | scan_*, prefix_*, four_russians readiness              |
-| `label`             | `label/`             | resolve_family, label_program                          |
-| `predicate`         | `predicate/`         | size_argument_of and friends (predicate substrate)     |
-| `fixpoint`          | `fixpoint/`          | persistent_fixpoint, level_wave                        |
-| `dnnf`              | `dnnf/`              | host-side d-DNNF compiler + model counter (P-PRIM-6)    |
-| `inventory-registry`| (gate)               | Enables `inventory::submit!` registration system       |
-
-`all-lego` enables every Tier-2.5 domain; `default` enables the small
-core (`bitset`, `reduce`, `inventory-registry`).
+`hardware` is the one domain feature the crate declares, and `all-lego`
+equals it. Every composition domain moved to `vyre-libs`. `default`
+enables nothing.
 
 ## Architecture decisions
 
-- **Marker types only at the public surface.** Each primitive is a
-  unit struct that implements the relevant trait
-  (`ReferenceEvaluator`, `BackendEmitter`, etc.). The implementations
-  live in `vyre-reference` (CPU oracle) and the per-backend crate.
-- **No GPU code in this crate.** Every primitive's GPU lowering lives
-  in the concrete driver crate that owns the target. The marker type
-  does not import shader strings: the
-  `check_no_string_wgsl.sh` gate is non-negotiable.
-- **Promotion path.** A composition that lives in `vyre-libs` is
-  promoted to a primitive here only after ≥3 distinct callers and an
-  explicit architectural review. The `LEGO_PRIMITIVES.md` audit tracks
-  candidates.
-- **Per-domain test directories.** Every domain ships positive,
-  negative, adversarial, cross-call, and proptest fixtures; see
-  `tests/<domain>_*.rs`.
+- **Intrinsic means uncomposable.** An operation stays here only when
+  it cannot be expressed as IR composition.
+- **Marker types at the public surface.** Implementations live in
+  `vyre-reference` and the concrete driver crates.
+- **No GPU code in this crate.** Lowering lives in the driver that
+  owns the target. The `shader-source` gate is non-negotiable.
+- **No promotion by caller count.** A composition does not move here
+  because a second dialect called it.
 
 ## Where to look
 
 - `src/lib.rs`: feature-gate table and the public domain list.
 - `src/markers.rs`: the always-on marker registry types.
-- `tests/`: per-domain adversarial corpora.
-- `docs/OWNERSHIP.md`: workspace boundary definition.
-- `docs/generated/OP_SCHEMA.json`: canonical operation tiers, signatures,
-  fixtures, backend evidence, and composition chains.
+- `src/hardware/`: the Category C intrinsic home.
+- `tests/`: hardware conformance, registry closure, and wire round-trip corpora.
+- `docs/generated/OP_SCHEMA.json`: canonical operation tiers.
+- [`docs/architecture/crates.md`](../docs/architecture/crates.md) for the placement rules.
 
 ## Conformance
 
@@ -84,30 +64,30 @@ parity across backends; drift is publish-blocking.
 <!-- BEGIN GENERATED CRATE CONTRACT -->
 ## Crate contract
 
-This section is generated by `python3 scripts/crate_readmes.py --write` from
+This section is generated by `xtask crate-readmes --write` from
 the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Own reusable Tier 2.5 program builders shared by higher-level libraries and runtimes.
+Own marker types and uncomposable hardware intrinsics. A composition belongs in vyre-libs, not here.
 
 ### Boundaries
 
 The `primitive-library` owner maintains this `primitives` crate at `vyre-primitives`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-foundation`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-primitives/examples/dominator_tree_e2e.rs`:
+Run the checked-in behavior from `vyre-primitives/examples/vyre_primitives_release_surface.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-primitives --example dominator_tree_e2e --features cpu-parity,graph
+./cargo_full run -p vyre-primitives --example vyre_primitives_release_surface
 ```
 
 ### Features
 
-- Manifest features: `all-lego`, `bitset`, `cat`, `cpu-parity`, `decode`, `default`, `dnnf`, `effects`, `fixpoint`, `geom`, `gpu`, `graph`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nfa`, `nn`, `opt`, `parsing`, `predicate`, `reduce`, `text`, `topology`, `types`, `visual`, `vyre-foundation`, `zx`
+- Manifest features: `cpu-parity`, `default`, `gpu`, `hardware`, `inventory-registry`, `vyre-foundation`
 - Default feature members: None
 
 ### Errors and unsupported behavior
@@ -116,18 +96,18 @@ Invalid dimensions, overflow, unsupported contracts, and malformed program input
 
 ### Testing
 
-Use [`docs/testing/vyre-primitives.md`](../docs/testing/vyre-primitives.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/vyre-primitives.md`](../docs/testing/vyre-primitives.md) for the crate's test command,
+hardware contract, expected skips, and failure semantics. It is generated
+from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-`vyre-primitives@0.7.2` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
+`vyre-primitives@0.8.0` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

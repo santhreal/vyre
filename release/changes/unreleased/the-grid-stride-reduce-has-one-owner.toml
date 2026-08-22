@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Bitset equality and subset now reduce through the grid-stride reduction primitive instead of a second copy of it. The copy was missing the first-workgroup guard the owner documents, so the relation ops wrote their result from every workgroup. The owner takes an input list and a value expression, which is what the relation ops needed and what the copy existed to provide."

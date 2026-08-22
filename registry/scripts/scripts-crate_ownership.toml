@@ -1,0 +1,4 @@
+path = "scripts/crate_ownership.py"
+state = "implements"
+gate = "check-tier-deps"
+reason = "writes docs/CRATE_GRAPH.md and docs/OWNERSHIP.md from docs/CRATE_OWNERSHIP.toml, and check-tier-deps and layering run it with --check"

@@ -1,117 +1,528 @@
-# Pinned result of every registered gate, written by `xtask gates --write-baseline`.
+# Baseline findings for the gate suite.
 #
-# `status` is the exit result and `output_lines` is the combined stdout and
-# stderr line count, used as the finding count. More lines than the pin
-# fails; fewer is reported so the pin can be lowered here. A red gate that
-# starts passing fails until its status is flipped, and must name the PR
-# that clears it while it is still red.
+# Every gate registered in `xtask` is represented here with its pinned finding
+# count. Every pin is hard 0; non-zero baselines are rejected.
 
 [[gate]]
 name = "abstraction-gate"
-status = "red"
-output_lines = 34
-owner = "unassigned"
+findings = 0
+
+[[gate]]
+name = "architecture-contract"
+findings = 0
+
+[[gate]]
+name = "backend-extension"
+findings = 0
+
+[[gate]]
+name = "backend-matrix"
+findings = 0
+
+[[gate]]
+name = "bench-baselines"
+findings = 0
+
+[[gate]]
+name = "bench-coverage"
+findings = 0
+
+[[gate]]
+name = "bench-crossback"
+findings = 0
+
+[[gate]]
+name = "bench-release"
+findings = 0
+
+[[gate]]
+name = "bench-smoke-runtime"
+findings = 0
 
 [[gate]]
 name = "catalog"
-status = "green"
-output_lines = 1
+findings = 0
 
 [[gate]]
 name = "check-tier-deps"
-status = "green"
-output_lines = 1
+findings = 0
+
+[[gate]]
+name = "ci-concurrency"
+findings = 0
+
+[[gate]]
+name = "ci-matrix"
+findings = 0
+
+[[gate]]
+name = "ci-registry"
+findings = 0
+
+[[gate]]
+name = "ci-required"
+findings = 0
+
+[[gate]]
+name = "ci-shell"
+findings = 0
+
+[[gate]]
+name = "ci-steps"
+findings = 0
+
+[[gate]]
+name = "codeowners"
+findings = 0
+
+[[gate]]
+name = "cli-docs"
+findings = 0
+
+[[gate]]
+name = "compile"
+findings = 0
 
 [[gate]]
 name = "conformance-matrix"
-status = "green"
-output_lines = 1
+findings = 0
+
+[[gate]]
+name = "contract-in-source"
+findings = 0
+
+[[gate]]
+name = "crate-ownership"
+findings = 0
+
+[[gate]]
+name = "crate-pages"
+findings = 0
+
+[[gate]]
+name = "crate-readmes"
+findings = 0
+
+[[gate]]
+name = "cross-target"
+findings = 0
+
+[[gate]]
+name = "cuda-parity"
+findings = 0
 
 [[gate]]
 name = "dep-drift"
-status = "green"
-output_lines = 1
+findings = 0
+
+[[gate]]
+name = "device-test-gating"
+findings = 0
+
+[[gate]]
+name = "doc-claims"
+findings = 0
 
 [[gate]]
 name = "docs-check"
-status = "green"
-output_lines = 0
+findings = 0
+
+[[gate]]
+name = "docs-coupling"
+findings = 0
+
+[[gate]]
+name = "docs-references"
+findings = 0
+
+[[gate]]
+name = "docs-register"
+findings = 0
 
 [[gate]]
 name = "dup-scan"
-status = "green"
-output_lines = 1
+findings = 0
+
+[[gate]]
+name = "evidence-paths"
+findings = 0
+
+[[gate]]
+name = "error-codes"
+findings = 0
+
+[[gate]]
+name = "example-capability"
+findings = 0
+
+[[gate]]
+name = "feature-isolation"
+findings = 0
+
+[[gate]]
+name = "feature-matrix"
+findings = 0
+
+[[gate]]
+name = "feature-msrv"
+findings = 0
+
+[[gate]]
+name = "file-size"
+findings = 0
+
+[[gate]]
+name = "frozen-contracts"
+findings = 0
+
+[[gate]]
+name = "gate-canon"
+findings = 0
 
 [[gate]]
 name = "gate1"
-status = "red"
-output_lines = 396
-owner = "unassigned"
+findings = 0
+
+[[gate]]
+name = "gpu-loudness"
+findings = 0
 
 [[gate]]
 name = "heuristic-audit"
-status = "green"
-output_lines = 6
+findings = 0
+
+[[gate]]
+name = "host-oracle-elimination"
+findings = 0
+
+[[gate]]
+name = "hot-path-blocking-wait"
+findings = 0
+
+[[gate]]
+name = "hot-path-inventory"
+findings = 0
+
+[[gate]]
+name = "hot-path-nested-rows"
+findings = 0
+
+[[gate]]
+name = "hot-path-owned-dispatch"
+findings = 0
+
+[[gate]]
+name = "hot-path-reserve"
+findings = 0
 
 [[gate]]
 name = "hot-path-scan"
-status = "green"
-output_lines = 182
+findings = 0
+
+[[gate]]
+name = "hot-path-unbounded-cache"
+findings = 0
+
+[[gate]]
+name = "hot-path-unbounded-read"
+findings = 0
 
 [[gate]]
 name = "hygiene-matrix"
-status = "red"
-output_lines = 1
-owner = "unassigned"
+findings = 0
 
 [[gate]]
-name = "lego-audit"
-status = "green"
-output_lines = 47
+name = "internal-dep-versions"
+findings = 0
+
+[[gate]]
+name = "invariant-paths"
+findings = 0
+
+[[gate]]
+name = "launch-state"
+findings = 0
+
+[[gate]]
+name = "layering"
+findings = 0
+
+[[gate]]
+name = "lego-composability"
+findings = 0
+
+[[gate]]
+name = "lego-composition-chains"
+findings = 0
+
+[[gate]]
+name = "lego-composition-depth"
+findings = 0
+
+[[gate]]
+name = "lego-cross-dialect"
+findings = 0
+
+[[gate]]
+name = "lego-exemption-liveness"
+findings = 0
+
+[[gate]]
+name = "lego-name-stems"
+findings = 0
+
+[[gate]]
+name = "lego-no-reinvention"
+findings = 0
+
+[[gate]]
+name = "lego-operand-shapes"
+findings = 0
+
+[[gate]]
+name = "lego-primitive-coverage"
+findings = 0
 
 [[gate]]
 name = "lego-quick"
-status = "red"
-output_lines = 13390
-owner = "unassigned"
+findings = 0
+
+[[gate]]
+name = "lego-semantic-organization"
+findings = 0
+
+[[gate]]
+name = "lego-tier-claims"
+findings = 0
+
+[[gate]]
+name = "lego-trend"
+findings = 0
+
+[[gate]]
+name = "lint-expect-fix"
+findings = 0
+
+[[gate]]
+name = "lint-one-policy"
+findings = 0
+
+[[gate]]
+name = "lint-unsafe-budget"
+findings = 0
+
+[[gate]]
+name = "lint-unsafe-justification"
+findings = 0
 
 [[gate]]
 name = "list-ops"
-status = "green"
-output_lines = 1
+findings = 0
+
+[[gate]]
+name = "lockfile-clean"
+findings = 0
+
+[[gate]]
+name = "metadata-matrix"
+findings = 0
+
+[[gate]]
+name = "metal-parity"
+findings = 0
+
+[[gate]]
+name = "module-layout"
+findings = 0
+
+[[gate]]
+name = "neutral-crates"
+findings = 0
+
+[[gate]]
+name = "op-matrix"
+findings = 0
+
+[[gate]]
+name = "op-names"
+findings = 0
 
 [[gate]]
 name = "operation-schema"
-status = "green"
-output_lines = 1
+findings = 0
+
+[[gate]]
+name = "optimization-corpus"
+findings = 0
 
 [[gate]]
 name = "optimization-docs"
-status = "green"
-output_lines = 1
+findings = 0
+
+[[gate]]
+name = "optimization-matrix"
+findings = 0
+
+[[gate]]
+name = "oracle-sweeps"
+findings = 0
+
+[[gate]]
+name = "package-readiness"
+findings = 0
+
+[[gate]]
+name = "parity-testing-isolated"
+findings = 0
+
+[[gate]]
+name = "path-deps-resolve"
+findings = 0
+
+[[gate]]
+name = "placement-predicates"
+findings = 0
 
 [[gate]]
 name = "platform-boundary"
-status = "green"
-output_lines = 1
+findings = 0
 
 [[gate]]
-name = "primitive-admission-gate"
-status = "green"
-output_lines = 3
+name = "platform-consumer-docs"
+findings = 0
+
+[[gate]]
+name = "print-composition"
+findings = 0
+
+[[gate]]
+name = "program-wire-fields"
+findings = 0
+
+[[gate]]
+name = "proptest-coverage"
+findings = 0
+
+[[gate]]
+name = "public-api-paths"
+findings = 0
+
+[[gate]]
+name = "public-api-snapshot"
+findings = 0
+
+[[gate]]
+name = "readback-ring"
+findings = 0
+
+[[gate]]
+name = "release-benchmarks"
+findings = 0
+
+[[gate]]
+name = "release-conformance"
+findings = 0
+
+[[gate]]
+name = "release-docs"
+findings = 0
+
+[[gate]]
+name = "release-evidence"
+findings = 0
+
+[[gate]]
+name = "release-workload-matrix"
+findings = 0
+
+[[gate]]
+name = "repo-hygiene"
+findings = 0
+
+[[gate]]
+name = "script-ledger"
+findings = 0
+
+[[gate]]
+name = "shader-source"
+findings = 0
+
+[[gate]]
+name = "shrink"
+findings = 0
+
+[[gate]]
+name = "single-backlog"
+findings = 0
+
+[[gate]]
+name = "source-include-module"
+findings = 0
+
+[[gate]]
+name = "source-parses"
+findings = 0
+
+[[gate]]
+name = "source-reachability"
+findings = 0
+
+[[gate]]
+name = "spirv-parity"
+findings = 0
+
+[[gate]]
+name = "test-material-placement"
+findings = 0
+
+[[gate]]
+name = "testing-guides"
+findings = 0
+
+[[gate]]
+name = "trace-f32"
+findings = 0
+
+[[gate]]
+name = "unification"
+findings = 0
 
 [[gate]]
 name = "verify-rewrite-proofs"
-status = "green"
-output_lines = 5
+findings = 0
+
+[[gate]]
+name = "version-matrix"
+findings = 0
 
 [[gate]]
 name = "vyre-release-gate"
-status = "red"
-output_lines = 251
-owner = "unassigned"
+findings = 0
 
 [[gate]]
 name = "whats-similar"
-status = "green"
-output_lines = 5
+findings = 0
+
+[[gate]]
+name = "wire-determinism"
+findings = 0
+
+[[gate]]
+name = "workspace-check"
+findings = 0
+
+[[gate]]
+name = "workspace-clippy"
+findings = 0
+
+[[gate]]
+name = "workspace-docs"
+findings = 0
+
+[[gate]]
+name = "workspace-membership"
+findings = 0
+
+[[gate]]
+name = "workspace-tests"
+findings = 0

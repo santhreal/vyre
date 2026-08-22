@@ -4,13 +4,14 @@ use std::fs::File;
 use std::os::fd::AsRawFd;
 use std::path::Path;
 
-use crate::resident_work_queue::ResidentIoQueue;
+use crate::resident_work_queue::io::ResidentIoQueue;
 use crate::PipelineError;
 
+use super::buffer::{GpuMappedBuffer, Iovec};
 #[cfg(feature = "uring-cmd-nvme")]
 use super::gpudirect::encode_nvme_read_sqe;
 use super::gpudirect::GpuDirectCapability;
-use super::stream::{AsyncUringStream, GpuMappedBuffer, Iovec};
+use super::stream::AsyncUringStream;
 
 #[derive(Debug)]
 struct PendingIngest {
@@ -694,15 +695,11 @@ fn reserve_ingest_vec_capacity<T>(
     capacity: usize,
     field: &'static str,
 ) -> Result<(), PipelineError> {
-    if vec.capacity() >= capacity {
-        return Ok(());
-    }
-    vec.try_reserve_exact(capacity - vec.capacity())
-        .map_err(|error| {
-            PipelineError::Backend(format!(
-                "io_uring GPU ingest failed to reserve {field} for {capacity} entries: {error}. Fix: reduce ingest slot fan-out or shard the ingest batch."
-            ))
-        })
+    vyre_foundation::allocation::try_reserve_vec_to_capacity(vec, capacity).map_err(|error| {
+        PipelineError::Backend(format!(
+            "io_uring GPU ingest failed to reserve {field} for {capacity} entries: {error}. Fix: reduce ingest slot fan-out or shard the ingest batch."
+        ))
+    })
 }
 
 fn partition_slot_bytes(total_len: usize, slot_count: usize) -> Result<usize, PipelineError> {
@@ -728,6 +725,8 @@ fn partition_slot_bytes(total_len: usize, slot_count: usize) -> Result<usize, Pi
     Ok(slot_bytes)
 }
 
+// Inline: covers `checked_telemetry_add`, `partition_slot_bytes`, `reserve_ingest_vec_capacity`,
+// which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

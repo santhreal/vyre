@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use thiserror::Error;
 use vyre_foundation::{execution_plan::fusion::merge_programs_shared, ir::Program};
 use vyre_lower::{KernelDescriptor, MemoryClass};
@@ -47,7 +47,13 @@ pub struct SelectedLowering {
 }
 
 /// Canonical target-module bundle schema carried inside one target payload.
-pub const TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16 = 2;
+///
+/// Version 3 encodes an f32 literal by its IEEE-754 bits. Version 2 wrote the
+/// number, which JSON cannot spell for a non-finite value: a bundle carrying an
+/// infinity was written with `null` in its place and refused on decode. A stored
+/// version 2 bundle is refused by version rather than reinterpreted, because the
+/// two encodings read the same field differently.
+pub const TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16 = 3;
 
 /// One generated target module corresponding to one selected fusion group.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,6 +72,31 @@ pub struct TargetModuleImage {
     pub entry_point: String,
     /// Immutable target-native module bytes.
     pub bytes: Vec<u8>,
+}
+
+impl TargetModuleImage {
+    /// Resolve a Program buffer name to the exact target `(group, slot)`.
+    ///
+    /// Shared and scratch storage are not externally bound. Duplicate names are
+    /// ambiguous and fail closed as `None`.
+    #[must_use]
+    pub fn binding_slot(&self, name: &str) -> Option<(u32, u32)> {
+        let mut found = None;
+        for slot in &self.descriptor.bindings.slots {
+            if slot.name != name {
+                continue;
+            }
+            let group = match slot.memory_class {
+                MemoryClass::Shared | MemoryClass::Scratch => continue,
+                MemoryClass::Uniform => 1,
+                MemoryClass::Global | MemoryClass::Constant => 0,
+            };
+            if found.replace((group, slot.slot)).is_some() {
+                return None;
+            }
+        }
+        found
+    }
 }
 
 /// Canonical ordered target modules for one neutral artifact.
@@ -112,6 +143,15 @@ impl TargetModuleBundle {
         }
         let bundle: Self = serde_json::from_slice(body)
             .map_err(|error| TargetCompileError::ModuleBundle(error.to_string()))?;
+        // Before any module content: the version says which encoding the fields
+        // were written in, so a stale bundle is refused by version rather than
+        // reported as a malformed descriptor it is not.
+        if bundle.schema_version != TARGET_MODULE_BUNDLE_SCHEMA_VERSION {
+            return Err(TargetCompileError::ModuleBundle(format!(
+                "schema {} is unsupported; expected {}",
+                bundle.schema_version, TARGET_MODULE_BUNDLE_SCHEMA_VERSION
+            )));
+        }
         for module in &bundle.modules {
             if module.nodes.is_empty() {
                 return Err(TargetCompileError::ModuleBundle(format!(
@@ -131,12 +171,6 @@ impl TargetModuleBundle {
                     module.group.0
                 ))
             })?;
-        }
-        if bundle.schema_version != TARGET_MODULE_BUNDLE_SCHEMA_VERSION {
-            return Err(TargetCompileError::ModuleBundle(format!(
-                "schema {} is unsupported; expected {}",
-                bundle.schema_version, TARGET_MODULE_BUNDLE_SCHEMA_VERSION
-            )));
         }
         if bundle.modules.windows(2).any(|modules| {
             (modules[0].stage, modules[0].group) >= (modules[1].stage, modules[1].group)
@@ -270,7 +304,8 @@ pub fn compile_selected_modules(
                 module.group.0
             ))
         })?;
-        let bindings = selected_resource_bindings(artifact, &module, &lowered.descriptor)?;
+        let descriptor = lowered.descriptor;
+        let bindings = selected_resource_bindings(artifact, &module, &descriptor)?;
         let abi = selected_abi(artifact, &module);
         let logical_element_count =
             selected_logical_element_count(artifact, &module, &lowered.program);
@@ -279,7 +314,7 @@ pub fn compile_selected_modules(
             group: module.group,
             stage: module.stage,
             nodes: module.nodes,
-            descriptor: lowered.descriptor,
+            descriptor,
             abi,
             canonical_bindings: bindings,
             logical_element_count,
@@ -327,25 +362,13 @@ fn selected_resource_bindings(
     module: &SelectedModule,
     descriptor: &KernelDescriptor,
 ) -> Result<Vec<TargetResourceBinding>, TargetCompileError> {
-    let canonical_by_name = module
-        .nodes
-        .iter()
-        .filter_map(|node| {
-            artifact
-                .abi()
-                .entries
-                .iter()
-                .find(|entry| entry.node == *node)
-        })
-        .flat_map(|entry| entry.inputs.iter().chain(entry.outputs.iter()).copied())
-        .filter_map(|value| {
-            artifact
-                .resources()
-                .iter()
-                .find(|resource| resource.value == value)
-                .map(|resource| (resource.name.as_str(), value))
-        })
-        .collect::<HashMap<_, _>>();
+    // Named entry-ABI records own each node's directional value identity. The
+    // artifact resource set supplies descriptor carriers that are intentionally
+    // absent from one split node's graph boundary; descriptor positions never
+    // participate in either lookup.
+    let canonical_by_name = artifact
+        .canonical_value_by_name()
+        .map_err(|collision| TargetCompileError::InvalidArtifact(collision.to_string()))?;
     let constant_values = artifact
         .resources()
         .iter()
@@ -363,15 +386,70 @@ fn selected_resource_bindings(
             ) && slot.name != vyre_lower::TRAP_SIDECAR_NAME
         })
         .map(|slot| {
-            let resource = canonical_by_name
-                .get(slot.name.as_str())
-                .copied()
+            let mut first_input = None;
+            let mut last_output = None;
+            for node_id in &module.nodes {
+                let Some(entry) = artifact
+                    .abi()
+                    .entries
+                    .iter()
+                    .find(|entry| entry.node == *node_id)
+                else {
+                    continue;
+                };
+                if first_input.is_none() {
+                    first_input = entry
+                        .input_bindings
+                        .iter()
+                        .find(|binding| binding.buffer == slot.name)
+                        .map(|binding| binding.value);
+                }
+                if let Some(output) = entry
+                    .output_bindings
+                    .iter()
+                    .find(|binding| binding.buffer == slot.name)
+                    .map(|binding| binding.value)
+                {
+                    // A fused carrier publishes its final successor while
+                    // retaining the first input as its launch predecessor.
+                    last_output = Some(output);
+                }
+            }
+            let resource = last_output
+                .or(first_input)
+                .or_else(|| canonical_by_name.get(slot.name.as_str()).copied())
                 .ok_or_else(|| {
                     TargetCompileError::InvalidArtifact(format!(
-                    "fusion group {} descriptor binding `{}` has no canonical artifact resource",
-                    module.group.0, slot.name
-                ))
+                        "fusion group {} descriptor binding `{}` has no canonical artifact resource",
+                        module.group.0, slot.name
+                    ))
                 })?;
+            let inactive_access = artifact
+                .abi()
+                .resources
+                .iter()
+                .find(|binding| binding.value == resource)
+                .and_then(|binding| match binding.access {
+                    crate::AbiAccess::ReadOnly | crate::AbiAccess::Uniform => {
+                        Some(TargetResourceAccess::ReadOnly)
+                    }
+                    crate::AbiAccess::WriteOnly | crate::AbiAccess::ReadWrite => artifact
+                        .resources()
+                        .iter()
+                        .find(|candidate| candidate.value == resource)
+                        .map(|record| {
+                            if module.stage < record.first_stage {
+                                TargetResourceAccess::WriteOnly
+                            } else {
+                                TargetResourceAccess::ReadWrite
+                            }
+                        }),
+                })
+                .unwrap_or_else(|| match slot.visibility {
+                    vyre_lower::BindingVisibility::ReadOnly => TargetResourceAccess::ReadOnly,
+                    vyre_lower::BindingVisibility::WriteOnly => TargetResourceAccess::WriteOnly,
+                    vyre_lower::BindingVisibility::ReadWrite => TargetResourceAccess::ReadWrite,
+                });
             Ok(TargetResourceBinding {
                 resource,
                 group: if matches!(slot.memory_class, MemoryClass::Uniform) {
@@ -389,10 +467,16 @@ fn selected_resource_bindings(
                 } else {
                     TargetResourceMemory::Global
                 },
-                access: match slot.visibility {
-                    vyre_lower::BindingVisibility::ReadOnly => TargetResourceAccess::ReadOnly,
-                    vyre_lower::BindingVisibility::WriteOnly => TargetResourceAccess::WriteOnly,
-                    vyre_lower::BindingVisibility::ReadWrite => TargetResourceAccess::ReadWrite,
+                access: match (first_input.is_some(), last_output.is_some()) {
+                    (true, true) => TargetResourceAccess::ReadWrite,
+                    (true, false)
+                        if slot.visibility == vyre_lower::BindingVisibility::ReadWrite =>
+                    {
+                        TargetResourceAccess::ReadWrite
+                    }
+                    (true, false) => TargetResourceAccess::ReadOnly,
+                    (false, true) => TargetResourceAccess::WriteOnly,
+                    (false, false) => inactive_access,
                 },
             })
         })
@@ -478,6 +562,12 @@ fn selected_abi(artifact: &Artifact, module: &SelectedModule) -> ArtifactAbi {
     }
 }
 
+/// Decode one selected group's programs at the geometry the search selected.
+///
+/// The workgroup a node program declares is an input to the compiler search, not
+/// its result. The artifact records the selected geometry per node, so the
+/// decoded programs are set to it before fusion and the emitted module declares
+/// the shape every consumer launches.
 fn decode_group(
     artifact: &Artifact,
     group: &FusionRecord,
@@ -497,12 +587,26 @@ fn decode_group(
                         group.id.0, node.0
                     ))
                 })?;
-            Program::from_wire(&record.program).map_err(|error| {
+            let mut program = Program::from_wire(&record.program).map_err(|error| {
                 TargetCompileError::InvalidArtifact(format!(
                     "node {} canonical Program failed to decode: {error}",
                     node.0
                 ))
-            })
+            })?;
+            let geometry = artifact
+                .geometry()
+                .iter()
+                .find(|geometry| geometry.node == *node)
+                .ok_or_else(|| {
+                    TargetCompileError::InvalidArtifact(format!(
+                        "node {} has no selected launch geometry",
+                        node.0
+                    ))
+                })?;
+            if program.workgroup_size != geometry.workgroup_size {
+                program.set_workgroup_size(geometry.workgroup_size);
+            }
+            Ok::<Program, TargetCompileError>(program)
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(SelectedModule {

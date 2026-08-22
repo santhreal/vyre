@@ -1,9 +1,9 @@
 //! Last-dimension L2 normalization with float32 accumulation.
 
+use super::row_norm::row_sum_squares_body;
 use thiserror::Error;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program, UnOp};
 
 const OP_ID: &str = "vyre-libs::nn::last_dim_l2_norm";
 
@@ -55,60 +55,20 @@ pub fn last_dim_l2_norm(
     let total = rows
         .checked_mul(width)
         .ok_or(LastDimL2NormError::ElementCountOverflow)?;
-    let index = Expr::var("index");
-    let row_start = Expr::mul(Expr::div(index.clone(), Expr::u32(width)), Expr::u32(width));
     let normalized = Expr::mul(
-        Expr::cast(DataType::F32, Expr::load(input, index.clone())),
+        Expr::cast(DataType::F32, Expr::load(input, Expr::var("index"))),
         Expr::UnOp {
             op: UnOp::InverseSqrt,
             operand: Box::new(Expr::add(Expr::var("sum_squares"), Expr::f32(eps))),
         },
     );
-    let body = vec![
-        Node::let_bind("index", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(index.clone(), Expr::u32(total)),
-            vec![
-                Node::let_bind("row_start", row_start),
-                Node::let_bind("sum_squares", Expr::f32(0.0)),
-                Node::loop_for(
-                    "offset",
-                    Expr::u32(0),
-                    Expr::u32(width),
-                    vec![
-                        Node::let_bind(
-                            "l2_value",
-                            Expr::cast(
-                                DataType::F32,
-                                Expr::load(
-                                    input,
-                                    Expr::add(Expr::var("row_start"), Expr::var("offset")),
-                                ),
-                            ),
-                        ),
-                        Node::assign(
-                            "sum_squares",
-                            Expr::add(
-                                Expr::var("sum_squares"),
-                                Expr::mul(Expr::var("l2_value"), Expr::var("l2_value")),
-                            ),
-                        ),
-                    ],
-                ),
-                Node::Store {
-                    buffer: output.into(),
-                    index,
-                    value: Expr::cast(dtype.clone(), normalized),
-                },
-            ],
-        ),
-    ];
+    let body = row_sum_squares_body(input, total, width, output, dtype.clone(), normalized);
     Ok(Program::wrapped(
         vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(total),
             BufferDecl::output(output, 1, dtype).with_count(total),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }

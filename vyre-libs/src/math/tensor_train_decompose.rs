@@ -1,0 +1,842 @@
+//! Tensor-train decomposition via SVD-truncation per mode (#P-PRIM-12).
+//!
+//! Decomposes an n-mode tensor into a chain of TT cores.
+//!
+//! Composes `symmetric_eigen_jacobi` (the eigensolve) and `dot_partial` (the core columns).
+//!
+//! Algorithm: TT-SVD (Oseledets 2011).
+
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
+
+use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
+use crate::math::dot_partial::{dot_partial, OP_ID as DOT_PARTIAL_OP_ID};
+use crate::math::symmetric_eigen_jacobi::{
+    jacobi_eigen_region, jacobi_scratch_buffers, jacobi_workgroup,
+};
+
+/// `row * cols + col` flat index for a row-major matrix.
+fn tt_idx(row: Expr, cols: u32, col: Expr) -> Expr {
+    crate::builder::stencil::flat_index(row, cols, col)
+}
+
+/// Op id.
+pub const OP_ID: &str = "vyre-libs::math::tensor_train_decompose";
+
+/// Build a TT-decomposition Program.
+///
+/// Due to the complex sequence of SVDs and reshapes, this primitive
+/// implements one mode-truncation step. Full decomposition is achieved
+/// by a chain of these steps.
+///
+/// Inputs:
+/// - `input_matrix`: $r_{prev} \times (n_k \cdot \text{rem})$ matrix.
+/// - `u_out`: $r_{prev} \times n_k \times r_{next}$ core (output).
+/// - `rem_out`: $r_{next} \times \text{rem}$ next matrix.
+#[must_use]
+pub fn tensor_train_decompose_step(
+    input_matrix: &str,
+    u_out: &str,
+    rem_out: &str,
+    r_prev: u32,
+    nk: u32,
+    rem: u32,
+    r_next: u32,
+) -> Program {
+    let Some(input_rows) = r_prev.checked_mul(nk) else {
+        return trap_program(
+            OP_ID,
+            Some((u_out, DataType::F32)),
+            "Fix: tensor_train_decompose_step r_prev * nk must fit in u32.".to_owned(),
+        );
+    };
+    let Some(input_count) = input_rows.checked_mul(rem) else {
+        return trap_program(
+            OP_ID,
+            Some((u_out, DataType::F32)),
+            "Fix: tensor_train_decompose_step input count must fit in u32.".to_owned(),
+        );
+    };
+    let Some(u_count) = input_rows.checked_mul(r_next) else {
+        return trap_program(
+            OP_ID,
+            Some((u_out, DataType::F32)),
+            "Fix: tensor_train_decompose_step core count must fit in u32.".to_owned(),
+        );
+    };
+    let Some(rem_count) = r_next.checked_mul(rem) else {
+        return trap_program(
+            OP_ID,
+            Some((u_out, DataType::F32)),
+            "Fix: tensor_train_decompose_step remainder count must fit in u32.".to_owned(),
+        );
+    };
+    let Some(gram_count) = rem.checked_mul(rem) else {
+        return trap_program(
+            OP_ID,
+            Some((u_out, DataType::F32)),
+            "Fix: tensor_train_decompose_step Gram matrix count must fit in u32.".to_owned(),
+        );
+    };
+    if r_prev == 0 || nk == 0 || rem == 0 || r_next == 0 {
+        return trap_program(
+            OP_ID,
+            Some((u_out, DataType::F32)),
+            "Fix: tensor_train_decompose_step dimensions and ranks must be non-zero.".to_owned(),
+        );
+    }
+    if r_next > rem {
+        return trap_program(
+            OP_ID,
+            Some((u_out, DataType::F32)),
+            "Fix: tensor_train_decompose_step requires r_next <= rem for emitted rank columns."
+                .to_owned(),
+        );
+    }
+
+    // Real per-mode TT-SVD (Oseledets 2011) of the `m x n` unfolding `M` (m = r_prev*nk rows,
+    // n = rem columns), in f32, run serially on lane 0. Mirrors the CPU reference
+    // `truncated_svd_into`: (1) Gram matrix G = MᵀM (n x n, symmetric PSD); (2) eigendecompose G by
+    // composing `symmetric_eigen_jacobi` → eigenvalues + eigenvectors V; (3) take the r_next
+    // largest eigenpairs:
+    // σ = √max(λ,0); core column U[:,k] = M·V[:,k]/σ; remainder row = σ·V[:,k]ᵀ carried to the next
+    // mode. `tt_ata`/`tt_evec`/`tt_eval` are internal f32 scratch (Gram, eigenvectors, eigenvalues);
+    // after selecting an eigenpair its eigenvalue is marked used (−inf) so the next rank picks the
+    // next-largest (a serial argmax in place of a sort primitive).
+    let m = input_rows;
+    let n = rem;
+    let neg_big = Expr::f32(-1.0e30);
+    let mut gram: Vec<Node> = Vec::new();
+
+    // 1. Gram matrix G[ca,cb] = Σ_row M[row,ca]·M[row,cb].
+    gram.push(Node::loop_for(
+        "tt_ca",
+        Expr::u32(0),
+        Expr::u32(n),
+        vec![Node::loop_for(
+            "tt_cb",
+            Expr::u32(0),
+            Expr::u32(n),
+            vec![
+                Node::let_bind("tt_gacc", Expr::f32(0.0)),
+                Node::loop_for(
+                    "tt_grow",
+                    Expr::u32(0),
+                    Expr::u32(m),
+                    vec![Node::assign(
+                        "tt_gacc",
+                        // Stated as one fused multiply-add, not a multiply feeding
+                        // an add. Written unfused, the reference takes two
+                        // roundings per row and a device is free to take one, and
+                        // the Gram matrix of a cancelling column pair amplifies
+                        // that: `gqa_attention -> tensor_train_decompose` measured
+                        // 503 ULP on `tt_ata` against the reference run on the
+                        // device's own intermediate, four times this operation's
+                        // budget. `Expr::fma` fixes one rounding on the reference
+                        // and in every emitter alike.
+                        Expr::fma(
+                            Expr::load(
+                                input_matrix,
+                                tt_idx(Expr::var("tt_grow"), n, Expr::var("tt_ca")),
+                            ),
+                            Expr::load(
+                                input_matrix,
+                                tt_idx(Expr::var("tt_grow"), n, Expr::var("tt_cb")),
+                            ),
+                            Expr::var("tt_gacc"),
+                        ),
+                    )],
+                ),
+                Node::store(
+                    "tt_ata",
+                    tt_idx(Expr::var("tt_ca"), n, Expr::var("tt_cb")),
+                    Expr::var("tt_gacc"),
+                ),
+            ],
+        )],
+    ));
+
+    // 3. Truncated SVD: r_next largest eigenpairs → core U and remainder S·Vᵀ.
+    let mut svd: Vec<Node> = Vec::new();
+    svd.push(Node::loop_for(
+        "tt_rank",
+        Expr::u32(0),
+        Expr::u32(r_next),
+        vec![
+            // argmax over remaining eigenvalues.
+            Node::let_bind("tt_best", neg_big.clone()),
+            Node::let_bind("tt_eidx", Expr::u32(0)),
+            Node::loop_for(
+                "tt_e",
+                Expr::u32(0),
+                Expr::u32(n),
+                vec![
+                    Node::let_bind("tt_ev", Expr::load("tt_eval", Expr::var("tt_e"))),
+                    Node::let_bind("tt_gt", Expr::gt(Expr::var("tt_ev"), Expr::var("tt_best"))),
+                    Node::assign(
+                        "tt_eidx",
+                        Expr::select(Expr::var("tt_gt"), Expr::var("tt_e"), Expr::var("tt_eidx")),
+                    ),
+                    Node::assign(
+                        "tt_best",
+                        Expr::select(Expr::var("tt_gt"), Expr::var("tt_ev"), Expr::var("tt_best")),
+                    ),
+                ],
+            ),
+            // σ = √max(λ, 0).
+            Node::let_bind(
+                "tt_sigma",
+                Expr::sqrt(Expr::max(Expr::var("tt_best"), Expr::f32(0.0))),
+            ),
+            // Store the eigenvector as the remainder row rem_out[rank, :] = V[:, eidx].
+            Node::loop_for(
+                "tt_vc",
+                Expr::u32(0),
+                Expr::u32(n),
+                vec![Node::store(
+                    rem_out,
+                    tt_idx(Expr::var("tt_rank"), n, Expr::var("tt_vc")),
+                    Expr::load(
+                        "tt_evec",
+                        tt_idx(Expr::var("tt_vc"), n, Expr::var("tt_eidx")),
+                    ),
+                )],
+            ),
+            // Core column: U[row, rank] = (Σ_c M[row,c]·V[c,eidx]) / σ  (0 when σ ≈ 0).
+            Node::loop_for(
+                "tt_ur",
+                Expr::u32(0),
+                Expr::u32(m),
+                vec![
+                    Node::let_bind("tt_dot", Expr::f32(0.0)),
+                    // Composed from the registered `dot_partial` primitive rather than a
+                    // second hand-rolled accumulation loop: row `tt_ur` of the unfolding and
+                    // row `tt_rank` of the remainder are both unit-stride runs of `n` f32,
+                    // which is exactly that primitive's contract.
+                    wrap_child_region(
+                        DOT_PARTIAL_OP_ID,
+                        Ident::from(OP_ID),
+                        vec![dot_partial(
+                            input_matrix,
+                            rem_out,
+                            "tt_dot",
+                            Expr::mul(Expr::var("tt_ur"), Expr::u32(n)),
+                            Expr::mul(Expr::var("tt_rank"), Expr::u32(n)),
+                            n,
+                        )],
+                    ),
+                    Node::store(
+                        u_out,
+                        tt_idx(Expr::var("tt_ur"), r_next, Expr::var("tt_rank")),
+                        Expr::select(
+                            Expr::gt(Expr::var("tt_sigma"), Expr::f32(1.0e-6)),
+                            Expr::div(Expr::var("tt_dot"), Expr::var("tt_sigma")),
+                            Expr::f32(0.0),
+                        ),
+                    ),
+                ],
+            ),
+            // Scale the stored eigenvector row by σ so rem_out[rank, :] = σ·V[:, eidx]ᵀ = (S·Vᵀ) row.
+            Node::loop_for(
+                "tt_sc",
+                Expr::u32(0),
+                Expr::u32(n),
+                vec![Node::store(
+                    rem_out,
+                    tt_idx(Expr::var("tt_rank"), n, Expr::var("tt_sc")),
+                    Expr::mul(
+                        Expr::load(rem_out, tt_idx(Expr::var("tt_rank"), n, Expr::var("tt_sc"))),
+                        Expr::var("tt_sigma"),
+                    ),
+                )],
+            ),
+            // Mark this eigenvalue used so the next rank picks the next-largest.
+            Node::store("tt_eval", Expr::var("tt_eidx"), neg_big.clone()),
+        ],
+    ));
+
+    // Lane 0 of the first workgroup owns the two serial phases; the eigensolve is cooperative and
+    // guards itself, so the barriers that separate the three stay uniform. A guard around the whole
+    // body would put the eigensolve's barriers inside a non-uniform branch, which the reference
+    // rejects and a backend deadlocks on.
+    let serial = Expr::and(
+        Expr::is_first_workgroup(),
+        Expr::eq(Expr::LocalId { axis: 0 }, Expr::u32(0)),
+    );
+    let mut buffers = vec![
+        BufferDecl::storage(input_matrix, 0, BufferAccess::ReadOnly, DataType::F32)
+            .with_count(input_count),
+        BufferDecl::storage(u_out, 1, BufferAccess::ReadWrite, DataType::F32).with_count(u_count),
+        BufferDecl::storage(rem_out, 2, BufferAccess::ReadWrite, DataType::F32)
+            .with_count(rem_count),
+        BufferDecl::storage("tt_ata", 3, BufferAccess::ReadWrite, DataType::F32)
+            .with_count(gram_count),
+        BufferDecl::storage("tt_evec", 4, BufferAccess::ReadWrite, DataType::F32)
+            .with_count(gram_count),
+        BufferDecl::storage("tt_eval", 5, BufferAccess::ReadWrite, DataType::F32).with_count(n),
+    ];
+    buffers.extend(jacobi_scratch_buffers());
+    Program::wrapped(
+        buffers,
+        jacobi_workgroup(),
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![
+                Node::if_then(serial.clone(), gram),
+                Node::barrier(),
+                // 2. Eigendecompose the Gram matrix. ONE-PLACE: `symmetric_eigen_jacobi` owns the
+                // only Program-emitting spelling of the symmetric Jacobi eigendecomposition in this
+                // crate, and the child region records that composition edge in the IR rather than
+                // leaving the nodes spliced in bare where no audit can distinguish them from a
+                // hand-rolled eigensolve.
+                jacobi_eigen_region(OP_ID, "tt_ata", "tt_evec", "tt_eval", n),
+                Node::barrier(),
+                Node::if_then(serial, svd),
+            ],
+        )],
+    )
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        // m = r_prev*nk = 4 rows, n = rem = 2 columns, r_next = 1 (rank-1 truncation).
+        //
+        // The unfolding is TALL on purpose. A wide one (m < n) makes the Gram matrix
+        // rank-deficient, its null space is a degenerate eigen-subspace, and any
+        // eigenvector basis for it is equally correct. That leaves the eigenvector
+        // buffer with no single right answer and no oracle can pin it. With m >= n and
+        // distinct eigenvalues every output is determined, up to the sign convention
+        // `jacobi_eigen_body` now fixes.
+        || tensor_train_decompose_step("in", "u", "rem", 2, 2, 2, 1),
+        Some(|| {
+            let to_bytes = |vals: &[f32]| vyre_primitives::wire::pack_f32_slice(vals);
+            // One f32 input per buffer in binding order: input_matrix (4x2), then the writable
+            // core/remainder/scratch buffers zero-initialized (backend zero-allocation).
+            vec![vec![
+                to_bytes(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]), // input_matrix (4x2)
+                to_bytes(&[0.0; 4]),                                 // u_out (4x1)
+                to_bytes(&[0.0; 2]),                                 // rem_out (1x2)
+                to_bytes(&[0.0; 4]),                                 // tt_ata (2x2)
+                to_bytes(&[0.0; 4]),                                 // tt_evec (2x2)
+                to_bytes(&[0.0; 2]),                                 // tt_eval (2)
+            ]]
+        }),
+        // Exact oracle for the rank-1 truncation of M = [[1,2],[3,4],[5,6],[7,8]].
+        //
+        // Derived analytically, not captured from a run. G = MtM = [[84,100],[100,120]],
+        // whose eigenvalues are (204 +- sqrt(41296))/2, so lambda1 = 203.6071 and
+        // lambda2 = 0.39291. sigma1 = sqrt(lambda1) = 14.2691. The dominant eigenvector
+        // solves (84 - lambda1)x + 100y = 0, giving v1 = (0.64142, 0.76719) once
+        // normalized and sign-canonicalized. From those: rem = sigma1 * v1t, and
+        // u = M*v1/sigma1.
+        //
+        // The op used to ship no oracle at all, on the reasoning that a truncated SVD is
+        // basis-dependent. Two of the three ambiguities are removed rather than tolerated:
+        // the sign by `jacobi_eigen_body`'s canonicalization, the degenerate subspace by
+        // the tall unfolding above. Ordering is not an ambiguity here because the two
+        // eigenvalues differ by three orders of magnitude.
+        Some(|| {
+            vec![vec![
+                // u_out = M*v1/sigma1
+                vec![
+                    0x91, 0x24, 0x1c, 0x3e, // 0.15248324
+                    0x81, 0x28, 0xb3, 0x3e, // 0.3499184
+                    0x5c, 0x1f, 0x0c, 0x3f, // 0.5473535
+                    0x77, 0xaa, 0x3e, 0x3f, // 0.7447886
+                ],
+                // rem_out = sigma1*v1t
+                vec![
+                    0xc0, 0x70, 0x12, 0x41, // 9.152527
+                    0x34, 0x27, 0x2f, 0x41, // 10.947071
+                ],
+                // tt_ata diagonalized
+                vec![
+                    0xb4, 0x2b, 0xc9, 0x3e, // 0.39291155
+                    0x00, 0x00, 0x00, 0x00, // 0.0
+                    0x00, 0x00, 0x00, 0x00, // 0.0
+                    0x6b, 0x9b, 0x4b, 0x43, // 203.6071
+                ],
+                // tt_evec columns
+                vec![
+                    0x65, 0x66, 0x44, 0x3f, // 0.7671874
+                    0x4d, 0x34, 0x24, 0x3f, // 0.64142305
+                    0x4d, 0x34, 0x24, 0xbf, // -0.64142305
+                    0x65, 0x66, 0x44, 0x3f, // 0.7671874
+                ],
+                // tt_eval, top marked used
+                vec![
+                    0xb4, 0x2b, 0xc9, 0x3e, // 0.39291155
+                    0xca, 0xf2, 0x49, 0xf1, // -1.0e30
+                ],
+            ]]
+        }),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct TensorTrainCpuScratch {
+        c: Vec<f64>,
+        next_c: Vec<f64>,
+        u: Vec<f64>,
+        s: Vec<f64>,
+        vt: Vec<f64>,
+        ata: Vec<f64>,
+        eigenvalues: Vec<f64>,
+        eigenvectors: Vec<f64>,
+        order: Vec<usize>,
+    }
+
+    impl TensorTrainCpuScratch {
+        fn new() -> Self {
+            Self {
+                c: Vec::new(),
+                next_c: Vec::new(),
+                u: Vec::new(),
+                s: Vec::new(),
+                vt: Vec::new(),
+                ata: Vec::new(),
+                eigenvalues: Vec::new(),
+                eigenvectors: Vec::new(),
+                order: Vec::new(),
+            }
+        }
+    }
+
+    fn jacobi_eigensolve(a: &[f64], n: usize, evals: &mut Vec<f64>, evecs: &mut Vec<f64>) {
+        evals.clear();
+        evals.resize(n, 0.0);
+        evecs.clear();
+        evecs.resize(n * n, 0.0);
+        for i in 0..n {
+            evecs[i * n + i] = 1.0;
+        }
+        let mut mat = a.to_vec();
+        mat.resize(n * n, 0.0);
+
+        for _ in 0..100 {
+            let mut max_off = 0.0f64;
+            for i in 0..n {
+                for j in i + 1..n {
+                    max_off = max_off.max(mat[i * n + j].abs());
+                }
+            }
+            if max_off < 1e-12 {
+                break;
+            }
+
+            for p in 0..n {
+                for q in p + 1..n {
+                    let apq = mat[p * n + q];
+                    if apq.abs() < 1e-15 {
+                        continue;
+                    }
+                    let app = mat[p * n + p];
+                    let aqq = mat[q * n + q];
+                    let theta = 0.5 * (2.0 * apq).atan2(app - aqq);
+                    let c = theta.cos();
+                    let s = theta.sin();
+
+                    let mut mat_col_p = vec![0.0; n];
+                    let mut mat_col_q = vec![0.0; n];
+                    for i in 0..n {
+                        mat_col_p[i] = c * mat[i * n + p] + s * mat[i * n + q];
+                        mat_col_q[i] = -s * mat[i * n + p] + c * mat[i * n + q];
+                    }
+                    for i in 0..n {
+                        mat[i * n + p] = mat_col_p[i];
+                        mat[p * n + i] = mat_col_p[i];
+                        mat[i * n + q] = mat_col_q[i];
+                        mat[q * n + i] = mat_col_q[i];
+                    }
+                    mat[p * n + p] = c * c * app + 2.0 * s * c * apq + s * s * aqq;
+                    mat[q * n + q] = s * s * app - 2.0 * s * c * apq + c * c * aqq;
+                    mat[p * n + q] = 0.0;
+                    mat[q * n + p] = 0.0;
+
+                    for i in 0..n {
+                        let vip = evecs[i * n + p];
+                        let viq = evecs[i * n + q];
+                        evecs[i * n + p] = c * vip + s * viq;
+                        evecs[i * n + q] = -s * vip + c * viq;
+                    }
+                }
+            }
+        }
+
+        for i in 0..n {
+            evals[i] = mat[i * n + i];
+        }
+    }
+
+    fn truncated_svd_into(
+        matrix: &[f64],
+        rows: usize,
+        cols: usize,
+        rank: usize,
+        u: &mut Vec<f64>,
+        s: &mut Vec<f64>,
+        vt: &mut Vec<f64>,
+        ata: &mut Vec<f64>,
+        eigenvalues: &mut Vec<f64>,
+        eigenvectors: &mut Vec<f64>,
+        order: &mut Vec<usize>,
+    ) {
+        let m = rows;
+        let n = cols;
+        ata.clear();
+        ata.resize(n * n, 0.0);
+        for ca in 0..n {
+            for cb in 0..n {
+                let mut sum = 0.0;
+                for r in 0..m {
+                    sum += matrix[r * n + ca] * matrix[r * n + cb];
+                }
+                ata[ca * n + cb] = sum;
+            }
+        }
+
+        jacobi_eigensolve(ata, n, eigenvalues, eigenvectors);
+
+        order.clear();
+        order.extend(0..n);
+        order.sort_by(|&a, &b| {
+            eigenvalues[b]
+                .partial_cmp(&eigenvalues[a])
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        u.clear();
+        u.resize(m * rank, 0.0);
+        s.clear();
+        s.resize(rank, 0.0);
+        vt.clear();
+        vt.resize(rank * n, 0.0);
+
+        for r in 0..rank {
+            if r < n {
+                let eidx = order[r];
+                let val = eigenvalues[eidx].max(0.0);
+                let sigma = val.sqrt();
+                s[r] = sigma;
+
+                for c in 0..n {
+                    vt[r * n + c] = eigenvectors[c * n + eidx];
+                }
+
+                if sigma > 1e-12 {
+                    for row in 0..m {
+                        let mut sum = 0.0;
+                        for c in 0..n {
+                            sum += matrix[row * n + c] * eigenvectors[c * n + eidx];
+                        }
+                        u[row * rank + r] = sum / sigma;
+                    }
+                }
+            }
+        }
+    }
+
+    fn truncated_svd(
+        matrix: &[f64],
+        rows: usize,
+        cols: usize,
+        rank: usize,
+    ) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+        let mut u = Vec::new();
+        let mut s = Vec::new();
+        let mut vt = Vec::new();
+        let mut ata = Vec::new();
+        let mut eigenvalues = Vec::new();
+        let mut eigenvectors = Vec::new();
+        let mut order = Vec::new();
+        truncated_svd_into(
+            matrix,
+            rows,
+            cols,
+            rank,
+            &mut u,
+            &mut s,
+            &mut vt,
+            &mut ata,
+            &mut eigenvalues,
+            &mut eigenvectors,
+            &mut order,
+        );
+        (u, s, vt)
+    }
+
+    fn cpu_ref_into(
+        tensor: &[f64],
+        dims: &[usize],
+        ranks: &[usize],
+        cores: &mut Vec<Vec<f64>>,
+        scratch: &mut TensorTrainCpuScratch,
+    ) {
+        let d = dims.len();
+        while cores.len() < d {
+            cores.push(Vec::new());
+        }
+        cores.truncate(d);
+        if d == 0 {
+            return;
+        }
+
+        scratch.c.clear();
+        scratch.c.extend_from_slice(tensor);
+
+        for k in 0..d - 1 {
+            let r_prev = ranks[k];
+            let n_k = dims[k];
+            let r_next = ranks[k + 1];
+            let m = r_prev * n_k;
+            let n = if m == 0 { 0 } else { scratch.c.len() / m };
+
+            truncated_svd_into(
+                &scratch.c,
+                m,
+                n,
+                r_next,
+                &mut scratch.u,
+                &mut scratch.s,
+                &mut scratch.vt,
+                &mut scratch.ata,
+                &mut scratch.eigenvalues,
+                &mut scratch.eigenvectors,
+                &mut scratch.order,
+            );
+
+            cores[k].clear();
+            cores[k].extend_from_slice(&scratch.u);
+
+            scratch.next_c.clear();
+            scratch.next_c.resize(r_next * n, 0.0);
+            for i in 0..r_next {
+                let sigma = scratch.s[i];
+                for j in 0..n {
+                    scratch.next_c[i * n + j] = sigma * scratch.vt[i * n + j];
+                }
+            }
+
+            std::mem::swap(&mut scratch.c, &mut scratch.next_c);
+        }
+
+        cores[d - 1].clear();
+        cores[d - 1].extend_from_slice(&scratch.c);
+    }
+
+    fn cpu_ref(tensor: &[f64], dims: &[usize], ranks: &[usize]) -> Vec<Vec<f64>> {
+        let mut cores = Vec::new();
+        let mut scratch = TensorTrainCpuScratch::new();
+        cpu_ref_into(tensor, dims, ranks, &mut cores, &mut scratch);
+        cores
+    }
+
+    #[test]
+    fn cpu_ref_rank_1_decomposition() {
+        // T(i, j) = 1.0
+        let tensor = vec![1.0; 4];
+        let dims = vec![2, 2];
+        let ranks = vec![1, 1, 1];
+        let cores = cpu_ref(&tensor, &dims, &ranks);
+        assert_eq!(cores.len(), 2);
+        assert_eq!(cores[0].len(), 2); // 1 * 2 * 1
+        assert_eq!(cores[1].len(), 2); // 1 * 2 * 1
+    }
+
+    #[test]
+    fn cpu_ref_3mode() {
+        let tensor = vec![1.0; 8];
+        let dims = vec![2, 2, 2];
+        let ranks = vec![1, 1, 1, 1];
+        let cores = cpu_ref(&tensor, &dims, &ranks);
+        assert_eq!(cores.len(), 3);
+    }
+
+    #[test]
+    fn cpu_ref_varying_ranks() {
+        let tensor = vec![0.0; 12]; // 2 x 3 x 2
+        let dims = vec![2, 3, 2];
+        let ranks = vec![1, 2, 2, 1];
+        let cores = cpu_ref(&tensor, &dims, &ranks);
+        assert_eq!(cores.len(), 3);
+        assert_eq!(cores[0].len(), 4); // 1 * 2 * 2
+        assert_eq!(cores[1].len(), 12); // 2 * 3 * 2
+        assert_eq!(cores[2].len(), 4); // 2 * 2 * 1
+    }
+
+    #[test]
+    fn cpu_ref_into_reuses_core_vectors_and_svd_scratch() {
+        let tensor = vec![1.0; 8];
+        let dims = vec![2, 2, 2];
+        let ranks = vec![1, 1, 1, 1];
+        let mut cores = vec![
+            vec![99.0; 16],
+            vec![88.0; 16],
+            vec![77.0; 16],
+            vec![66.0; 16],
+        ];
+        let core_caps = cores.iter().map(Vec::capacity).collect::<Vec<_>>();
+        let mut scratch = TensorTrainCpuScratch::new();
+        scratch.c.reserve(32);
+        scratch.next_c.reserve(32);
+        scratch.u.reserve(32);
+        scratch.s.reserve(8);
+        scratch.vt.reserve(32);
+        scratch.ata.reserve(32);
+        scratch.eigenvalues.reserve(8);
+        scratch.eigenvectors.reserve(32);
+        scratch.order.reserve(8);
+        let scratch_caps = [
+            scratch.c.capacity(),
+            scratch.next_c.capacity(),
+            scratch.u.capacity(),
+            scratch.s.capacity(),
+            scratch.vt.capacity(),
+            scratch.ata.capacity(),
+            scratch.eigenvalues.capacity(),
+            scratch.eigenvectors.capacity(),
+            scratch.order.capacity(),
+        ];
+
+        cpu_ref_into(&tensor, &dims, &ranks, &mut cores, &mut scratch);
+
+        assert_eq!(cores.len(), 3);
+        assert_eq!(cores[0].len(), 2);
+        assert_eq!(cores[1].len(), 2);
+        assert_eq!(cores[2].len(), 2);
+        assert_eq!(cores[0].capacity(), core_caps[0]);
+        assert_eq!(cores[1].capacity(), core_caps[1]);
+        assert_eq!(cores[2].capacity(), core_caps[2]);
+        assert_eq!(scratch.c.capacity(), scratch_caps[0]);
+        assert_eq!(scratch.next_c.capacity(), scratch_caps[1]);
+        assert_eq!(scratch.u.capacity(), scratch_caps[2]);
+        assert_eq!(scratch.s.capacity(), scratch_caps[3]);
+        assert_eq!(scratch.vt.capacity(), scratch_caps[4]);
+        assert_eq!(scratch.ata.capacity(), scratch_caps[5]);
+        assert_eq!(scratch.eigenvalues.capacity(), scratch_caps[6]);
+        assert_eq!(scratch.eigenvectors.capacity(), scratch_caps[7]);
+        assert_eq!(scratch.order.capacity(), scratch_caps[8]);
+
+        cpu_ref_into(&tensor[..4], &[2, 2], &[1, 1, 1], &mut cores, &mut scratch);
+        assert_eq!(cores.len(), 2);
+        assert_eq!(cores[0].len(), 2);
+        assert_eq!(cores[1].len(), 2);
+        assert_eq!(cores[0].capacity(), core_caps[0]);
+        assert_eq!(cores[1].capacity(), core_caps[1]);
+    }
+
+    #[test]
+    fn truncated_svd_into_reuses_all_supplied_buffers() {
+        let matrix = vec![1.0, 2.0, 3.0, 4.0];
+        let mut u = Vec::with_capacity(8);
+        let mut s = Vec::with_capacity(4);
+        let mut vt = Vec::with_capacity(8);
+        let mut ata = Vec::with_capacity(8);
+        let mut eigenvalues = Vec::with_capacity(4);
+        let mut eigenvectors = Vec::with_capacity(8);
+        let mut order = Vec::with_capacity(4);
+        let caps = [
+            u.capacity(),
+            s.capacity(),
+            vt.capacity(),
+            ata.capacity(),
+            eigenvalues.capacity(),
+            eigenvectors.capacity(),
+            order.capacity(),
+        ];
+
+        truncated_svd_into(
+            &matrix,
+            2,
+            2,
+            2,
+            &mut u,
+            &mut s,
+            &mut vt,
+            &mut ata,
+            &mut eigenvalues,
+            &mut eigenvectors,
+            &mut order,
+        );
+
+        assert_eq!(u.len(), 4);
+        assert_eq!(s.len(), 2);
+        assert_eq!(vt.len(), 4);
+        assert_eq!(u.capacity(), caps[0]);
+        assert_eq!(s.capacity(), caps[1]);
+        assert_eq!(vt.capacity(), caps[2]);
+        assert_eq!(ata.capacity(), caps[3]);
+        assert_eq!(eigenvalues.capacity(), caps[4]);
+        assert_eq!(eigenvectors.capacity(), caps[5]);
+        assert_eq!(order.capacity(), caps[6]);
+    }
+
+    #[test]
+    fn truncated_svd_columns_are_orthonormal() {
+        let matrix = vec![1.0, 2.0, 3.0, 4.0];
+        let (u, _, _) = truncated_svd(&matrix, 2, 2, 2);
+        let dot = u[0] * u[1] + u[2] * u[3];
+        let n0 = u[0] * u[0] + u[2] * u[2];
+        let n1 = u[1] * u[1] + u[3] * u[3];
+        assert!(dot.abs() < 1e-8, "left singular vectors must be orthogonal");
+        assert!((n0 - 1.0).abs() < 1e-8, "first vector must be unit length");
+        assert!((n1 - 1.0).abs() < 1e-8, "second vector must be unit length");
+    }
+
+    #[test]
+    fn truncated_svd_full_rank_reconstructs_matrix() {
+        let matrix = vec![1.0, 2.0, 3.0, 4.0];
+        let (u, s, vt) = truncated_svd(&matrix, 2, 2, 2);
+        let mut reconstructed = [0.0_f64; 4];
+        for row in 0..2 {
+            for col in 0..2 {
+                for rank in 0..2 {
+                    reconstructed[row * 2 + col] +=
+                        u[row * 2 + rank] * s[rank] * vt[rank * 2 + col];
+                }
+            }
+        }
+        for (actual, expected) in reconstructed.iter().zip(matrix.iter()) {
+            assert!(
+                (actual - expected).abs() < 1e-8,
+                "full-rank SVD reconstruction drifted: actual={actual}, expected={expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn program_buffer_layout() {
+        use vyre_foundation::ir::{BufferAccess, DataType};
+        let p = tensor_train_decompose_step("in", "u", "rem", 1, 2, 4, 1);
+        // input_matrix (RO) + u_out/rem_out (RW outputs) + tt_ata/tt_evec/tt_eval (RW f32 scratch
+        // for the Gram matrix, eigenvectors, eigenvalues) = 6 bound buffers, all f32, plus the two
+        // workgroup scratch buffers the composed eigensolve reduces its pivot through.
+        let bound: Vec<_> = p
+            .buffers
+            .iter()
+            .filter(|b| b.access() != BufferAccess::Workgroup)
+            .collect();
+        assert_eq!(bound.len(), 6);
+        assert!(bound.iter().all(|b| b.element() == DataType::F32));
+        assert_eq!(bound[0].access(), BufferAccess::ReadOnly);
+        assert!(bound[1..]
+            .iter()
+            .all(|b| b.access() == BufferAccess::ReadWrite));
+        let scratch: Vec<_> = p
+            .buffers
+            .iter()
+            .filter(|b| b.access() == BufferAccess::Workgroup)
+            .collect();
+        assert_eq!(
+            scratch.len(),
+            2,
+            "the eigensolve's pivot reduces through workgroup scratch, which is never mapped, so \
+             the step's mapped outputs are still exactly the six bound buffers"
+        );
+    }
+}

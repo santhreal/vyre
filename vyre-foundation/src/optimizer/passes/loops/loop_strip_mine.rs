@@ -1,4 +1,4 @@
-//! ROADMAP A29  -  strip-mine large literal loops into tiled outer and
+//! strip-mine large literal loops into tiled outer and
 //! fixed-size inner loops.
 //!
 //! Soundness: `Exact`. For an original `i in from..to`, the rewrite
@@ -9,10 +9,11 @@
 //! loop to unroll/vectorization and tiled-memory rewrites while keeping
 //! code size bounded.
 
-use super::substitution::{body_writes_loop_var, substitute_nodes};
+use super::substitution::body_writes_loop_var;
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
+use crate::transform::subst::substitute_nodes;
 
 /// Generic strip-mining tile. Eight lanes stays below the existing
 /// unroll budget while still exposing a regular inner loop.
@@ -34,54 +35,35 @@ impl LoopStripMine {
     /// Skip programs without a strip-mining-eligible loop.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        // O(1) fast-path: no Loop in the cached stats bitset → no
-        // strip-mining work possible. Avoids the per-call recursive
-        // tree walk on programs that contain no loops at all.
-        if !program.stats().has_node_loop() {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|node| node_map::any_descendant(node, &mut is_strip_mine_eligible))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_LOOP],
+            &mut is_strip_mine_eligible,
+        )
     }
 
     /// Rewrite every eligible loop.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            // Every name bound or referenced anywhere in the program. Synthesized
-            // tile/lane loop variables must avoid ALL of them -- not just the
-            // names in the loop body -- so a generated `<var>_tile` cannot shadow
-            // an (otherwise unused) enclosing binding of the same name (V008).
-            let scope_names = names_in_nodes(&entry);
-            entry
-                .into_iter()
-                .map(|node| rewrite_node(node, &scope_names, &mut changed))
-                .collect()
-        });
-        PassResult { program, changed }
+        // Every name bound or referenced anywhere in the program. Synthesized
+        // tile/lane loop variables must avoid ALL of them, not just the names
+        // in the loop body, so a generated `<var>_tile` cannot shadow an
+        // (otherwise unused) enclosing binding of the same name (V008).
+        let scope_names = names_in_nodes(program.entry());
+        driver::rewrite_entry_nodes(program, &mut |node| {
+            strip_mine_if_eligible(node, &scope_names)
+        })
     }
 }
 
-fn rewrite_node(node: Node, scope_names: &[Ident], changed: &mut bool) -> Node {
-    let recursed =
-        node_map::map_children(node, &mut |child| rewrite_node(child, scope_names, changed));
-    let recursed = node_map::map_body(recursed, &mut |body| {
-        body.into_iter()
-            .map(|child| rewrite_node(child, scope_names, changed))
-            .collect()
-    });
-    strip_mine_if_eligible(recursed, scope_names, changed)
-}
-
-fn strip_mine_if_eligible(node: Node, scope_names: &[Ident], changed: &mut bool) -> Node {
+/// `node` rewritten into a tile loop over a lane loop, when it is eligible.
+///
+/// Eligibility is [`is_strip_mine_eligible`]'s decision, so the analysis
+/// cannot schedule the pass for a loop this rewrite then declines.
+fn strip_mine_if_eligible(node: &Node, scope_names: &[Ident]) -> Option<Vec<Node>> {
+    if !is_strip_mine_eligible(node) {
+        return None;
+    }
     let Node::Loop {
         var,
         from,
@@ -89,38 +71,13 @@ fn strip_mine_if_eligible(node: Node, scope_names: &[Ident], changed: &mut bool)
         body,
     } = node
     else {
-        return node;
+        return None;
     };
-    let Some((from_lit, to_lit)) = literal_bounds(&from, &to) else {
-        return Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        };
-    };
-    let Some(trip_count) = to_lit.checked_sub(from_lit) else {
-        return Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        };
-    };
-    if trip_count < DEFAULT_STRIP_MINE_TILE.saturating_mul(2) || body_writes_loop_var(&body, &var) {
-        return Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        };
-    }
+    let (from_lit, to_lit) = literal_bounds(from, to)?;
+    let trip_count = to_lit.checked_sub(from_lit)?;
 
-    // Avoid every name in scope (enclosing bindings + this body), not just the
-    // body's names, so the synthesized tile/lane vars cannot shadow an outer
-    // binding (V008). `scope_names` already includes this loop's body names.
-    let outer_var = fresh_ident(&var, "tile", scope_names);
-    let lane_var = fresh_ident(&var, "lane", scope_names);
+    let outer_var = fresh_ident(var, "tile", scope_names);
+    let lane_var = fresh_ident(var, "lane", scope_names);
     let tile_count = trip_count.div_ceil(DEFAULT_STRIP_MINE_TILE);
     let tile_offset = Expr::add(
         Expr::mul(
@@ -130,14 +87,13 @@ fn strip_mine_if_eligible(node: Node, scope_names: &[Ident], changed: &mut bool)
         Expr::var(lane_var.as_str()),
     );
     let original_index = Expr::add(Expr::u32(from_lit), tile_offset.clone());
-    let tiled_body = substitute_nodes(&body, &var, &original_index);
+    let tiled_body = substitute_nodes(body, var, &original_index);
     let guarded_body = vec![Node::if_then(
         Expr::lt(tile_offset, Expr::u32(trip_count)),
         tiled_body,
     )];
 
-    *changed = true;
-    Node::loop_for(
+    Some(vec![Node::loop_for(
         outer_var,
         Expr::u32(0),
         Expr::u32(tile_count),
@@ -147,7 +103,7 @@ fn strip_mine_if_eligible(node: Node, scope_names: &[Ident], changed: &mut bool)
             Expr::u32(DEFAULT_STRIP_MINE_TILE),
             guarded_body,
         )],
-    )
+    )])
 }
 
 fn literal_bounds(from: &Expr, to: &Expr) -> Option<(u32, u32)> {
@@ -237,6 +193,52 @@ fn collect_names(nodes: &[Node], out: &mut Vec<Ident>) {
             }
             Node::Block(body) => collect_names(body, out),
             Node::Region { body, .. } => collect_names(body, out),
+            Node::TileElementwise {
+                out: name,
+                inputs,
+                body,
+            } => {
+                out.push(name.clone());
+                out.extend(inputs.iter().cloned());
+                collect_names(body, out);
+            }
+            Node::TileLoad {
+                tile,
+                buffer,
+                origin,
+                ..
+            } => {
+                out.push(tile.clone());
+                out.push(buffer.clone());
+                for e in origin {
+                    collect_names_in_expr(e, out);
+                }
+            }
+            Node::TileStore {
+                buffer,
+                origin,
+                tile,
+            } => {
+                out.push(buffer.clone());
+                out.push(tile.clone());
+                for e in origin {
+                    collect_names_in_expr(e, out);
+                }
+            }
+            Node::TileMatmul { acc, a, b } => {
+                out.push(acc.clone());
+                out.push(a.clone());
+                out.push(b.clone());
+            }
+            Node::TileReduce {
+                out: name, tile, ..
+            } => {
+                out.push(name.clone());
+                out.push(tile.clone());
+            }
+            Node::TileDecl { name, .. } => {
+                out.push(name.clone());
+            }
             Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
                 collect_names_in_expr(offset, out);
                 collect_names_in_expr(size, out);
@@ -256,68 +258,17 @@ fn collect_names(nodes: &[Node], out: &mut Vec<Ident>) {
     }
 }
 
+/// Push every variable `expr` reads, in source order.
+///
+/// Operand positions come from `visit::expr_children`, so a new
+/// operand-carrying `Expr` variant cannot hide a name from the fresh-name
+/// collision check that strip-mining depends on.
 fn collect_names_in_expr(expr: &Expr, out: &mut Vec<Ident>) {
-    match expr {
-        Expr::Var(name) => out.push(name.clone()),
-        Expr::Load { index, .. } | Expr::UnOp { operand: index, .. } => {
-            collect_names_in_expr(index, out);
+    crate::visit::for_each_subexpr(expr, &mut |candidate| {
+        if let Expr::Var(name) = candidate {
+            out.push(name.clone());
         }
-        Expr::BinOp { left, right, .. } => {
-            collect_names_in_expr(left, out);
-            collect_names_in_expr(right, out);
-        }
-        Expr::Call { args, .. } => {
-            for arg in args {
-                collect_names_in_expr(arg, out);
-            }
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            collect_names_in_expr(cond, out);
-            collect_names_in_expr(true_val, out);
-            collect_names_in_expr(false_val, out);
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
-            collect_names_in_expr(value, out);
-        }
-        Expr::Fma { a, b, c } => {
-            collect_names_in_expr(a, out);
-            collect_names_in_expr(b, out);
-            collect_names_in_expr(c, out);
-        }
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            collect_names_in_expr(index, out);
-            if let Some(expected) = expected {
-                collect_names_in_expr(expected, out);
-            }
-            collect_names_in_expr(value, out);
-        }
-        Expr::SubgroupBallot { cond } => collect_names_in_expr(cond, out),
-        Expr::SubgroupShuffle { value, lane } => {
-            collect_names_in_expr(value, out);
-            collect_names_in_expr(lane, out);
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
-    }
+    });
 }
 
 // `body_writes_loop_var` lives in `super::substitution` (one canonical copy
@@ -349,7 +300,7 @@ mod tests {
             )],
         )]));
         assert!(result.changed);
-        let entry = crate::test_util::region_body(&result.program);
+        let entry = crate::test_ir_inspect::region_body(&result.program);
         let Node::Loop {
             var: outer,
             from,
@@ -389,7 +340,7 @@ mod tests {
             vec![Node::store("out", Expr::var("i"), Expr::var("i"))],
         )]));
         assert!(result.changed);
-        let entry = crate::test_util::region_body(&result.program);
+        let entry = crate::test_ir_inspect::region_body(&result.program);
         let Node::Loop { body, .. } = &entry[0] else {
             panic!("expected outer loop");
         };
@@ -418,7 +369,7 @@ mod tests {
             vec![Node::store("out", Expr::var("i"), Expr::var("i"))],
         )]));
         assert!(result.changed);
-        let entry = crate::test_util::region_body(&result.program);
+        let entry = crate::test_ir_inspect::region_body(&result.program);
         let Node::Loop { body, .. } = &entry[0] else {
             panic!("expected outer loop");
         };
@@ -488,7 +439,7 @@ mod tests {
             ],
         )]));
         assert!(result.changed);
-        let entry = crate::test_util::region_body(&result.program);
+        let entry = crate::test_ir_inspect::region_body(&result.program);
         let Node::Loop { var, body, .. } = &entry[0] else {
             panic!("expected outer loop");
         };

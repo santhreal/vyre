@@ -4,7 +4,7 @@
 //! fail loudly with an actionable diagnostic; it must not silently return
 //! success or skip a CUDA/WGPU test path.
 
-use crate::{paths::workspace_relative, Violation, ViolationKind};
+use crate::{scan, Violation, ViolationKind};
 use anyhow::Result;
 use std::path::Path;
 
@@ -57,19 +57,7 @@ const LOUD_DIAGNOSTIC_FRAGMENTS: &[&str] = &[
 
 /// Scan a source tree for GPU tests that silently skip unavailable hardware.
 pub fn scan_tree(root: &Path) -> Result<Vec<Violation>> {
-    let mut all = Vec::new();
-    for entry in walkdir::WalkDir::new(root)
-        .into_iter()
-        .filter_map(|entry| entry.ok())
-    {
-        let path = entry.path();
-        if !path.is_file() || path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
-            continue;
-        }
-        let workspace_rel = workspace_relative(path);
-        all.extend(scan_file(path, &workspace_rel)?);
-    }
-    Ok(all)
+    scan::collect_violations(root, scan::RUST_SOURCE, scan::accept_all, scan_file)
 }
 
 fn scan_file(path: &Path, workspace_rel: &str) -> Result<Vec<Violation>> {

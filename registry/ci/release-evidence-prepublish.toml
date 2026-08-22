@@ -1,0 +1,10 @@
+lane = "release-evidence-prepublish"
+workflow = ".github/workflows/release-evidence.yml"
+job = "prepublish"
+state = "live"
+required_status = "release-evidence / Composite pre-publish runners"
+triggers = ["workflow_dispatch", "push"]
+steps = [
+  { subset = "cat-a" },
+  { subset = "prepublish" },
+]

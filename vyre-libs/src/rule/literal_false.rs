@@ -1,3 +1,5 @@
+//! The constant-false rule leaf.
+
 use crate::rule::condition_op;
 
 condition_op::impl_literal_program!(LiteralFalse, OP_ID, 0);

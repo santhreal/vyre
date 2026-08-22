@@ -1,5 +1,6 @@
 //! Shared host-dispatch bookkeeping for queue-based benchmark stages.
 
+use crate::api::metric::elapsed_ns;
 use std::time::Instant;
 
 use crate::api::case::{BenchContext, BenchError};
@@ -22,7 +23,14 @@ pub(crate) struct QueueSequenceRun {
     pub(crate) bytes_written: u64,
 }
 
-pub(crate) fn queue_materialize_sequence_fingerprint(
+/// Hash the programs and grids of a staged queue sequence into one value.
+///
+/// Named for its inputs rather than for the queue-materialize case, because
+/// `cases::queue_materialize::queue_materialize_sequence_fingerprint` is the
+/// spelling that takes a prepared case and is the only one a case should call.
+/// Two functions with one name meant two things could disagree about what a
+/// sample hashed with nothing to say which was meant.
+pub(crate) fn staged_sequence_fingerprint(
     domain: &[u8],
     programs: [&Program; 3],
     high_traverse_program: Option<&Program>,
@@ -105,6 +113,8 @@ pub(crate) struct HostQueueSequenceSpec<'a> {
     pub(crate) context: &'static str,
 }
 
+/// The resident materialize sequence, which binds the shared queue resource
+/// layout below rather than restating it per case.
 pub(crate) struct ResidentQueueSequenceSpec<'a> {
     pub(crate) reset_program: &'a Program,
     pub(crate) queue_program: &'a Program,
@@ -114,14 +124,8 @@ pub(crate) struct ResidentQueueSequenceSpec<'a> {
     pub(crate) traverse_grid: [u32; 3],
     pub(crate) high_traverse_grid: [u32; 3],
     pub(crate) baseline_output_len: usize,
-    pub(crate) reset_grid: [u32; 3],
-    pub(crate) reset_indices: &'a [usize],
-    pub(crate) high_reset_indices: &'a [usize],
-    pub(crate) queue_indices: &'a [usize],
-    pub(crate) traverse_indices: &'a [usize],
-    pub(crate) split_indices: &'a [usize],
-    pub(crate) high_traverse_indices: &'a [usize],
-    pub(crate) labels: [&'static str; 6],
+    /// Family noun leading every stage label, e.g. `"IFDS"`.
+    pub(crate) context: &'static str,
 }
 
 pub(crate) fn dispatch_resident_queue_sequence(
@@ -130,22 +134,29 @@ pub(crate) fn dispatch_resident_queue_sequence(
     resident: &ResidentInputSet,
     workgroup: [u32; 3],
 ) -> Result<QueueSequenceRun, BenchError> {
-    let [reset_label, high_reset_label, queue_label, traverse_label, split_label, high_label] =
-        spec.labels;
-    let reset_resources = resident.resources_for_indices(spec.reset_indices, reset_label)?;
-    let high_reset_resources =
-        resident.resources_for_indices(spec.high_reset_indices, high_reset_label)?;
-    let queue_resources = resident.resources_for_indices(spec.queue_indices, queue_label)?;
+    let context = spec.context;
+    let reset_resources = resident.resources_for_indices(
+        &QUEUE_RESET_RESOURCE_INDICES,
+        &format!("{context} queue reset"),
+    )?;
+    let high_reset_resources = resident.resources_for_indices(
+        &QUEUE_HIGH_RESET_RESOURCE_INDICES,
+        &format!("{context} high queue reset"),
+    )?;
+    let queue_resources = resident.resources_for_indices(
+        &QUEUE_BUILD_RESOURCE_INDICES,
+        &format!("{context} queue build"),
+    )?;
     let reset_step = ResidentDispatchStep {
         program: spec.reset_program,
         resources: &reset_resources,
-        grid_override: Some(spec.reset_grid),
+        grid_override: Some(QUEUE_RESET_GRID),
         workgroup_override: None,
     };
     let high_reset_step = ResidentDispatchStep {
         program: spec.reset_program,
         resources: &high_reset_resources,
-        grid_override: Some(spec.reset_grid),
+        grid_override: Some(QUEUE_RESET_GRID),
         workgroup_override: None,
     };
     let queue_step = ResidentDispatchStep {
@@ -158,9 +169,14 @@ pub(crate) fn dispatch_resident_queue_sequence(
     let mut frontier_output = Vec::with_capacity(spec.baseline_output_len);
     let started = Instant::now();
     if let Some(high_program) = spec.high_traverse_program {
-        let split_resources = resident.resources_for_indices(spec.split_indices, split_label)?;
-        let high_resources =
-            resident.resources_for_indices(spec.high_traverse_indices, high_label)?;
+        let split_resources = resident.resources_for_indices(
+            &QUEUE_SPLIT_LOW_RESOURCE_INDICES,
+            &format!("{context} split-low queue traverse"),
+        )?;
+        let high_resources = resident.resources_for_indices(
+            &QUEUE_HIGH_TRAVERSE_RESOURCE_INDICES,
+            &format!("{context} high-degree queue traverse"),
+        )?;
         let split_step = ResidentDispatchStep {
             program: spec.traverse_program,
             resources: &split_resources,
@@ -191,8 +207,10 @@ pub(crate) fn dispatch_resident_queue_sequence(
         )
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     } else {
-        let traverse_resources =
-            resident.resources_for_indices(spec.traverse_indices, traverse_label)?;
+        let traverse_resources = resident.resources_for_indices(
+            &QUEUE_TRAVERSE_RESOURCE_INDICES,
+            &format!("{context} queue traverse"),
+        )?;
         let traverse_step = ResidentDispatchStep {
             program: spec.traverse_program,
             resources: &traverse_resources,
@@ -211,7 +229,7 @@ pub(crate) fn dispatch_resident_queue_sequence(
         )
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     }
-    let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+    let wall_ns = elapsed_ns(started);
     let bytes_written = frontier_output.len() as u64;
     Ok(QueueSequenceRun {
         outputs: vec![frontier_output],
@@ -241,77 +259,72 @@ pub(crate) struct QueueClosureSequenceRun {
     pub(crate) wall_ns: u64,
 }
 
-macro_rules! define_host_queue_sequence_dispatch {
-    ($visibility:vis $name:ident, $prepared:ty, $context:literal) => {
-        $visibility fn $name(
-            ctx: &$crate::api::case::BenchContext,
-            prepared: &$prepared,
-            workgroup: [u32; 3],
-        ) -> Result<$crate::cases::queue_stage::QueueSequenceRun, $crate::api::case::BenchError> {
-            $crate::cases::queue_stage::dispatch_host_queue_sequence(
-                ctx,
-                $crate::cases::queue_stage::HostQueueSequenceSpec {
-                    inputs: &prepared.inputs,
-                    reset_program: &prepared.reset_program,
-                    queue_program: &prepared.queue_program,
-                    traverse_program: &prepared.traverse_program,
-                    high_traverse_program: prepared.high_traverse_program.as_ref(),
-                    frontier_words: prepared.stats.frontier_words,
-                    traverse_grid: prepared.traverse_grid,
-                    high_traverse_grid: prepared.high_traverse_grid,
-                    context: $context,
-                },
-                workgroup,
-            )
-        }
-    };
-}
+/// Binding order of the split-queue materialize workload.
+///
+/// The IFDS and CSR materialize cases bind the same resources in the same
+/// order, because they run the same `vyre-primitives` queue programs. The
+/// layout is one fact and lives here, next to the sequence dispatch that
+/// consumes it, rather than once per case.
+pub(crate) const QUEUE_FRONTIER_IN_INDEX: usize = 0;
+pub(crate) const QUEUE_ACTIVE_QUEUE_INDEX: usize = 1;
+pub(crate) const QUEUE_LEN_INDEX: usize = 2;
+pub(crate) const QUEUE_EDGE_OFFSETS_INDEX: usize = 3;
+pub(crate) const QUEUE_EDGE_TARGETS_INDEX: usize = 4;
+pub(crate) const QUEUE_EDGE_KIND_INDEX: usize = 5;
+pub(crate) const QUEUE_FRONTIER_OUT_INDEX: usize = 6;
+pub(crate) const QUEUE_HIGH_QUEUE_INDEX: usize = 7;
+pub(crate) const QUEUE_HIGH_LEN_INDEX: usize = 8;
 
-pub(crate) use define_host_queue_sequence_dispatch;
+/// Both queue-length resets are single-lane counter writes.
+pub(crate) const QUEUE_RESET_GRID: [u32; 3] = [1, 1, 1];
 
-macro_rules! define_resident_queue_sequence_dispatch {
-    ($visibility:vis $name:ident, $prepared:ty, $context:literal) => {
-        $visibility fn $name(
-            ctx: &$crate::api::case::BenchContext,
-            prepared: &$prepared,
-            resident: &$crate::api::resident::ResidentInputSet,
-            workgroup: [u32; 3],
-        ) -> Result<$crate::cases::queue_stage::QueueSequenceRun, $crate::api::case::BenchError> {
-            $crate::cases::queue_stage::dispatch_resident_queue_sequence(
-                ctx,
-                $crate::cases::queue_stage::ResidentQueueSequenceSpec {
-                    reset_program: &prepared.reset_program,
-                    queue_program: &prepared.queue_program,
-                    traverse_program: &prepared.traverse_program,
-                    high_traverse_program: prepared.high_traverse_program.as_ref(),
-                    frontier_words: prepared.stats.frontier_words,
-                    traverse_grid: prepared.traverse_grid,
-                    high_traverse_grid: prepared.high_traverse_grid,
-                    baseline_output_len: prepared.baseline_output.len(),
-                    reset_grid: QUEUE_RESET_GRID,
-                    reset_indices: &QUEUE_RESET_RESOURCE_INDICES,
-                    high_reset_indices: &QUEUE_HIGH_RESET_RESOURCE_INDICES,
-                    queue_indices: &QUEUE_BUILD_RESOURCE_INDICES,
-                    traverse_indices: &QUEUE_TRAVERSE_RESOURCE_INDICES,
-                    split_indices: &QUEUE_SPLIT_LOW_RESOURCE_INDICES,
-                    high_traverse_indices: &QUEUE_HIGH_TRAVERSE_RESOURCE_INDICES,
-                    labels: [
-                        concat!($context, " queue reset"),
-                        concat!($context, " high queue reset"),
-                        concat!($context, " queue build"),
-                        concat!($context, " queue traverse"),
-                        concat!($context, " split-low queue traverse"),
-                        concat!($context, " high-degree queue traverse"),
-                    ],
-                },
-                resident,
-                workgroup,
-            )
-        }
-    };
-}
+pub(crate) const QUEUE_RESET_RESOURCE_INDICES: [usize; 1] = [QUEUE_LEN_INDEX];
+pub(crate) const QUEUE_HIGH_RESET_RESOURCE_INDICES: [usize; 1] = [QUEUE_HIGH_LEN_INDEX];
+pub(crate) const QUEUE_BUILD_RESOURCE_INDICES: [usize; 4] = [
+    QUEUE_FRONTIER_IN_INDEX,
+    QUEUE_ACTIVE_QUEUE_INDEX,
+    QUEUE_LEN_INDEX,
+    QUEUE_FRONTIER_OUT_INDEX,
+];
+pub(crate) const QUEUE_TRAVERSE_RESOURCE_INDICES: [usize; 6] = [
+    QUEUE_ACTIVE_QUEUE_INDEX,
+    QUEUE_LEN_INDEX,
+    QUEUE_EDGE_OFFSETS_INDEX,
+    QUEUE_EDGE_TARGETS_INDEX,
+    QUEUE_EDGE_KIND_INDEX,
+    QUEUE_FRONTIER_OUT_INDEX,
+];
+pub(crate) const QUEUE_SPLIT_LOW_RESOURCE_INDICES: [usize; 8] = [
+    QUEUE_ACTIVE_QUEUE_INDEX,
+    QUEUE_LEN_INDEX,
+    QUEUE_EDGE_OFFSETS_INDEX,
+    QUEUE_EDGE_TARGETS_INDEX,
+    QUEUE_EDGE_KIND_INDEX,
+    QUEUE_FRONTIER_OUT_INDEX,
+    QUEUE_HIGH_QUEUE_INDEX,
+    QUEUE_HIGH_LEN_INDEX,
+];
+pub(crate) const QUEUE_HIGH_TRAVERSE_RESOURCE_INDICES: [usize; 6] = [
+    QUEUE_HIGH_QUEUE_INDEX,
+    QUEUE_HIGH_LEN_INDEX,
+    QUEUE_EDGE_OFFSETS_INDEX,
+    QUEUE_EDGE_TARGETS_INDEX,
+    QUEUE_EDGE_KIND_INDEX,
+    QUEUE_FRONTIER_OUT_INDEX,
+];
 
-pub(crate) use define_resident_queue_sequence_dispatch;
+/// Binding order of the queue-closure workload, shared the same way.
+pub(crate) const QUEUE_CLOSURE_SEED_FRONTIER_INDEX: usize = 0;
+pub(crate) const QUEUE_CLOSURE_SEED_QUEUE_INDEX: usize = 1;
+pub(crate) const QUEUE_CLOSURE_SEED_LEN_INDEX: usize = 2;
+pub(crate) const QUEUE_CLOSURE_QUEUE_A_INDEX: usize = 3;
+pub(crate) const QUEUE_CLOSURE_LEN_A_INDEX: usize = 4;
+pub(crate) const QUEUE_CLOSURE_QUEUE_B_INDEX: usize = 5;
+pub(crate) const QUEUE_CLOSURE_LEN_B_INDEX: usize = 6;
+pub(crate) const QUEUE_CLOSURE_EDGE_OFFSETS_INDEX: usize = 7;
+pub(crate) const QUEUE_CLOSURE_EDGE_TARGETS_INDEX: usize = 8;
+pub(crate) const QUEUE_CLOSURE_EDGE_KIND_INDEX: usize = 9;
+pub(crate) const QUEUE_CLOSURE_ACCUMULATOR_INDEX: usize = 10;
 
 pub(crate) fn build_queue_inputs(
     frontier_in: &[u32],
@@ -651,7 +664,7 @@ pub(crate) fn dispatch_host_queue_sequence(
                 None,
             )
         };
-    let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+    let wall_ns = elapsed_ns(started);
     let bytes_read = queue_stage_input_bytes(&reset.inputs)
         .saturating_add(queue_stage_input_bytes(&queue.inputs))
         .saturating_add(
@@ -703,6 +716,43 @@ pub(crate) fn dispatch_host_queue_sequence(
         bytes_read,
         bytes_written,
     })
+}
+
+/// How a closure of `closure_iterations` half-waves folds into one prefix plus
+/// a repeated four-step pair.
+///
+/// The delta program alternates direction every half-wave, so a pair of
+/// half-waves is the shortest repeatable unit. An odd iteration count cannot be
+/// expressed as pairs alone: the leading A-to-B half-wave is hoisted into the
+/// prefix and the remainder divides evenly.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct QueueClosureRepeatedPlan {
+    pub(crate) leading_a_to_b_half_wave: bool,
+    pub(crate) repeated_pair_count: u32,
+}
+
+impl QueueClosureRepeatedPlan {
+    /// Half-waves the plan expands to. Must equal the requested iterations.
+    pub(crate) const fn total_half_waves(self) -> u32 {
+        self.repeated_pair_count
+            .saturating_mul(2)
+            .saturating_add(self.leading_a_to_b_half_wave as u32)
+    }
+
+    /// Dispatches the plan submits: one reset plus two per half-wave.
+    pub(crate) const fn dispatch_count(self) -> u32 {
+        1_u32.saturating_add(self.total_half_waves().saturating_mul(2))
+    }
+}
+
+/// Fold an iteration count into its prefix-plus-repeated-pair plan.
+pub(crate) const fn queue_closure_repeated_plan(
+    closure_iterations: u32,
+) -> QueueClosureRepeatedPlan {
+    QueueClosureRepeatedPlan {
+        leading_a_to_b_half_wave: closure_iterations & 1 == 1,
+        repeated_pair_count: closure_iterations / 2,
+    }
 }
 
 pub(crate) fn dispatch_resident_queue_closure_sequence(
@@ -761,8 +811,7 @@ pub(crate) fn dispatch_resident_queue_closure_sequence(
     }];
     let mut accumulator_output = Vec::with_capacity(prepared.baseline_output_len);
     let started = Instant::now();
-    let leading_a_to_b_half_wave = prepared.closure_iterations & 1 == 1;
-    let repeated_pair_count = prepared.closure_iterations / 2;
+    let plan = queue_closure_repeated_plan(prepared.closure_iterations);
     let clear_a_step = || ResidentDispatchStep {
         program: prepared.clear_len_program,
         resources: &resource_sets[1],
@@ -788,7 +837,7 @@ pub(crate) fn dispatch_resident_queue_closure_sequence(
         workgroup_override: None,
     };
 
-    if leading_a_to_b_half_wave {
+    if plan.leading_a_to_b_half_wave {
         let prefix_steps = [reset_step, clear_b_step(), delta_a_to_b_step()];
         let repeated_steps = [
             clear_a_step(),
@@ -799,7 +848,7 @@ pub(crate) fn dispatch_resident_queue_closure_sequence(
         ctx.dispatch_resident_repeated_sequence_read_ranges_into(
             &prefix_steps,
             &repeated_steps,
-            repeated_pair_count,
+            plan.repeated_pair_count,
             &read_ranges,
             &mut [&mut accumulator_output],
         )
@@ -814,7 +863,7 @@ pub(crate) fn dispatch_resident_queue_closure_sequence(
         ctx.dispatch_resident_repeated_sequence_read_ranges_into(
             &prefix_steps,
             &repeated_steps,
-            repeated_pair_count,
+            plan.repeated_pair_count,
             &read_ranges,
             &mut [&mut accumulator_output],
         )
@@ -823,6 +872,108 @@ pub(crate) fn dispatch_resident_queue_closure_sequence(
 
     Ok(QueueClosureSequenceRun {
         outputs: vec![accumulator_output],
-        wall_ns: started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64,
+        wall_ns: elapsed_ns(started),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cases::mix32;
+
+    /// The repeated-pair plan must expand to exactly the requested half-waves,
+    /// in alternating direction, for every iteration count either queue closure
+    /// case can produce.
+    ///
+    /// Both salts are the ones the IFDS and CSR cases each generated against
+    /// while they carried their own copy of this plan, so collapsing them onto
+    /// one owner did not narrow the input space.
+    #[test]
+    fn generated_repeated_plan_preserves_every_queue_closure_wave() {
+        const CASES: u32 = 10_000;
+
+        for salt in [0xC105_E7E5_u32, 0x6A17_0359] {
+            let mut odd_cases = 0_u32;
+            let mut repeated_pairs = 0_u64;
+
+            for case in 0..CASES {
+                let iterations = mix32(case ^ salt) % 16_385;
+                let plan = queue_closure_repeated_plan(iterations);
+
+                assert_eq!(
+                    plan.total_half_waves(),
+                    iterations,
+                    "salt {salt:#x} case {case}"
+                );
+                assert_eq!(
+                    plan.dispatch_count(),
+                    1 + iterations.saturating_mul(2),
+                    "dispatch count salt {salt:#x} case {case}"
+                );
+                assert_eq!(
+                    plan.leading_a_to_b_half_wave,
+                    iterations & 1 == 1,
+                    "leading wave parity salt {salt:#x} case {case}"
+                );
+                assert_eq!(
+                    plan.repeated_pair_count,
+                    iterations / 2,
+                    "pair count salt {salt:#x} case {case}"
+                );
+                assert_repeated_plan_expands_to_alternating_half_waves(case, iterations, plan);
+
+                odd_cases += u32::from(plan.leading_a_to_b_half_wave);
+                repeated_pairs += u64::from(plan.repeated_pair_count);
+            }
+
+            assert!(odd_cases > CASES / 3, "salt {salt:#x}");
+            assert!(repeated_pairs > u64::from(CASES) * 1_000, "salt {salt:#x}");
+        }
+    }
+
+    fn assert_repeated_plan_expands_to_alternating_half_waves(
+        case: u32,
+        iterations: u32,
+        plan: QueueClosureRepeatedPlan,
+    ) {
+        let mut half_wave = 0_u32;
+        if plan.leading_a_to_b_half_wave {
+            assert_half_wave(case, half_wave, true);
+            half_wave += 1;
+        }
+
+        for _ in 0..plan.repeated_pair_count {
+            if plan.leading_a_to_b_half_wave {
+                assert_half_wave(case, half_wave, false);
+                half_wave += 1;
+                assert_half_wave(case, half_wave, true);
+            } else {
+                assert_half_wave(case, half_wave, true);
+                half_wave += 1;
+                assert_half_wave(case, half_wave, false);
+            }
+            half_wave += 1;
+        }
+
+        assert_eq!(half_wave, iterations, "expanded wave count case {case}");
+    }
+
+    fn assert_half_wave(case: u32, half_wave: u32, a_to_b: bool) {
+        assert_eq!(
+            a_to_b,
+            half_wave & 1 == 0,
+            "half-wave direction case {case} wave {half_wave}"
+        );
+    }
+
+    /// A zero-iteration closure still submits the reset dispatch and nothing
+    /// else; the boundary the generated cases never reach.
+    #[test]
+    fn a_zero_iteration_closure_submits_only_the_reset() {
+        let plan = queue_closure_repeated_plan(0);
+
+        assert_eq!(plan.total_half_waves(), 0);
+        assert_eq!(plan.dispatch_count(), 1);
+        assert!(!plan.leading_a_to_b_half_wave);
+    }
 }

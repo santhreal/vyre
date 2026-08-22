@@ -1,0 +1,164 @@
+//! Fused `linear_silu` constructor  -  Linear + SiLU activation in one
+//! GPU dispatch.
+//!
+//! GEMM + bias + activation fusion. Companion to
+//! `linear_relu`; computes `out[i] = silu(sum_k x[k] * w[k, i] + b[i])`
+//! where `silu(z) = z / (1 + exp(-z))`.
+//!
+//! Without this fused variant, the same effect requires two
+//! dispatches (linear, then silu) with an intermediate buffer
+//! materialising the linear output to global memory only to be
+//! re-read by silu. The fused variant keeps the matmul accumulator
+//! in registers through the activation, halving the global memory
+//! traffic.
+//!
+//! Soundness: numerically equivalent to `linear` followed by `silu`
+//! because the activation is element-wise and depends only on the
+//! per-output-row accumulator value.
+
+use vyre_foundation::composition::trap_program;
+use vyre_foundation::ir::{DataType, Program};
+
+use super::fused_activation::{linear_fused_4x4_fixture_inputs, linear_fused_activation};
+use crate::nn::activation::silu::silu_expr;
+
+const OP_ID: &str = "vyre-libs::nn::linear_silu";
+
+/// Build a Program that computes `out[i] = silu(sum_k x[k] * w[k, i] + b[i])`.
+///
+/// Fused variant of `linear` followed by SiLU activation.
+///
+/// # Errors
+/// Returns `Err` when `in_dim == 0` or `out_dim == 0`.
+pub fn linear_silu(
+    x: &str,
+    w: &str,
+    b: &str,
+    out: &str,
+    in_dim: u32,
+    out_dim: u32,
+) -> Result<Program, String> {
+    linear_fused_activation(
+        "linear_silu",
+        OP_ID,
+        x,
+        w,
+        b,
+        out,
+        in_dim,
+        out_dim,
+        silu_expr,
+    )
+}
+
+const EXPECTED_LINEAR_SILU_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x60, 0x42, 0x00, 0x00, 0x78, 0x42, 0x00, 0x00, 0x88, 0x42, 0x00, 0x00, 0x94, 0x42,
+];
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || {
+            linear_silu("x", "w", "b", "out", 4, 4).unwrap_or_else(|error| {
+                trap_program(
+                    OP_ID,
+                    Some(("out", DataType::F32)),
+                    error,
+                )
+            })
+        },
+        Some(linear_fused_4x4_fixture_inputs),
+        Some(|| {
+            vec![vec![EXPECTED_LINEAR_SILU_OUTPUT_BYTES.to_vec()]]
+        }),
+    )
+    .with_category("nn")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::fixture_bytes::eval_bytes;
+    use crate::fixture_bytes::f32_bytes;
+
+    fn decode(bytes: &[u8]) -> Vec<f32> {
+        vyre_primitives::wire::decode_f32_le_bytes_all(bytes)
+    }
+
+    fn silu_scalar(z: f32) -> f32 {
+        z / (1.0 + (-z).exp())
+    }
+
+    /// `linear_silu` matches `linear` followed by element-wise silu
+    /// when both are evaluated through the reference interpreter.
+    #[test]
+    fn linear_silu_matches_linear_plus_silu_reference() {
+        let in_dim = 4u32;
+        let out_dim = 4u32;
+        let x: Vec<f32> = (0..in_dim).map(|i| i as f32).collect();
+        let w: Vec<f32> = (0..in_dim * out_dim).map(|i| i as f32 * 0.1).collect();
+        let bias = vec![0.5, -0.25, 1.0, 0.0];
+        let prog = linear_silu("x", "w", "b", "out", in_dim, out_dim).expect("Fix: build");
+        let outputs = eval_bytes(
+            "silu",
+            &prog,
+            vec![
+                f32_bytes(&x),
+                f32_bytes(&w),
+                f32_bytes(&bias),
+                vec![0u8; (out_dim as usize) * 4],
+            ],
+        );
+        let actual = decode(&outputs[0]);
+        let expected: Vec<f32> = (0..out_dim as usize)
+            .map(|i| {
+                let acc = bias[i]
+                    + (0..in_dim as usize)
+                        .map(|k| x[k] * w[k * out_dim as usize + i])
+                        .sum::<f32>();
+                silu_scalar(acc)
+            })
+            .collect();
+        for (a, e) in actual.iter().zip(expected.iter()) {
+            assert!((a - e).abs() <= 1.0e-5, "{a} != {e}");
+        }
+    }
+
+    /// `linear_silu(0, _)` rejects the empty reduction.
+    #[test]
+    fn linear_silu_rejects_empty_in_dim() {
+        let err =
+            linear_silu("x", "w", "b", "out", 0, 4).expect_err("Fix: empty reduction must error");
+        assert!(err.contains("in_dim=0"));
+    }
+
+    /// `linear_silu(_, 0)` rejects empty output.
+    #[test]
+    fn linear_silu_rejects_empty_out_dim() {
+        let err =
+            linear_silu("x", "w", "b", "out", 4, 0).expect_err("Fix: empty output must error");
+        assert!(err.contains("out_dim=0"));
+    }
+
+    #[test]
+    fn linear_silu_reuses_standalone_tiny_flush_semantics() {
+        let subnormal = f32::from_bits(1);
+        let prog = linear_silu("x", "w", "b", "out", 1, 1).expect("Fix: build linear_silu");
+        let outputs = eval_bytes(
+            "silu",
+            &prog,
+            vec![
+                f32_bytes(&[0.0]),
+                f32_bytes(&[0.0]),
+                f32_bytes(&[subnormal]),
+                vec![0u8; 4],
+            ],
+        );
+        let actual = decode(&outputs[0]);
+        assert_eq!(
+            actual[0].to_bits(),
+            0.0f32.to_bits(),
+            "linear_silu must use the same flush_tiny SiLU semantics as standalone silu"
+        );
+    }
+}

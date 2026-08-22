@@ -1,6 +1,7 @@
 //! Descriptor-level validation and analysis before concrete CUDA PTX emission.
 
 use vyre_foundation::ir::Program;
+use vyre_lower::pattern_audit::PatternAudit;
 
 pub(crate) fn validate_and_analyze(
     program: &Program,
@@ -8,7 +9,7 @@ pub(crate) fn validate_and_analyze(
 ) -> Result<vyre_lower::KernelDescriptor, String> {
     let descriptor = lower_for_cuda_emit(program)?;
     if crate::instrumentation::cuda_descriptor_audit_enabled() {
-        let neutral = vyre_lower::audit::audit(&descriptor);
+        let neutral = vyre_lower::audit(&descriptor);
         let concrete = vyre_emit_ptx::patterns::audit(&descriptor, compute_capability(target_sm));
         tracing::trace!(
             target: "vyre_driver_cuda::descriptor",
@@ -49,11 +50,12 @@ pub(crate) fn compute_capability(target_sm: u32) -> vyre_emit_ptx::ComputeCapabi
     }
 }
 
+// Inline: covers `compute_capability`, `validate_and_analyze`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
     use vyre_foundation::ir::{BufferDecl, DataType, Expr, Ident, Node, Program};
-    use vyre_lower::emit_adversarial_corpus::{self, EmitAdversarialBackend};
+    use vyre_lower::emit_adversarial_corpus;
 
     #[test]
     fn validates_simple_store_program() {
@@ -73,7 +75,7 @@ mod tests {
 
         assert_eq!(descriptor.dispatch.workgroup_size, [128, 1, 1]);
         assert_eq!(descriptor.bindings.slots.len(), 1);
-        assert!(vyre_lower::verify::verify(&descriptor).is_ok());
+        assert!(vyre_lower::verify(&descriptor).is_ok());
     }
 
     #[test]
@@ -89,11 +91,6 @@ mod tests {
 
     #[test]
     fn adversarial_success_corpus_passes_verification_and_ptx_emit() {
-        assert!(
-            emit_adversarial_corpus::required_backends().contains(&EmitAdversarialBackend::Cuda),
-            "Fix: shared emit adversarial corpus must register CUDA as a required consumer."
-        );
-
         for case in emit_adversarial_corpus::success_cases() {
             let descriptor =
                 vyre_lower::verify_descriptor(&case.descriptor).unwrap_or_else(|error| {

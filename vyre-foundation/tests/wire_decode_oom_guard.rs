@@ -1,4 +1,4 @@
-//! P1 inventory #90  -  OOM / huge-input tests for wire decode.
+//! OOM / huge-input tests for wire decode.
 //!
 //! The wire decoder must reject frames that claim a payload larger
 //! than `MAX_PROGRAM_BYTES` without allocating that much memory. The
@@ -9,9 +9,9 @@
 //! Paired with `vyre-foundation/fuzz/fuzz_targets/program_wire.rs` for
 //! continuous fuzz coverage.
 
-mod wire_decode_support;
+mod wire_decode_hostile_inputs;
 
-use wire_decode_support::decode_error_string;
+use wire_decode_hostile_inputs::decode_error_string;
 
 #[test]
 fn wire_decoder_rejects_oversized_declared_length() {

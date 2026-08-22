@@ -1,16 +1,15 @@
 //! Overflow-guard regression tests for Cat-A composition builders.
 //!
 //! When a caller passes shape parameters whose product overflows u32,
-//! the builders MUST panic with an actionable message rather than
-//! silently produce an under-sized buffer + OOB memory access at
-//! runtime. The guards use `checked_mul`; these tests prove every
-//! exit path fires at the correct boundary.
+//! the builders must return an actionable error rather than silently produce
+//! an under-sized buffer and out-of-bounds device access. The guards use
+//! `checked_mul`; these tests prove every exit path fires at the boundary.
 
 #![cfg(all(feature = "math-linalg", feature = "nn-attention"))]
 
 use vyre_libs::math::linalg::{matmul, matmul_tiled, Matmul, MatmulTiled};
 use vyre_libs::nn::attention::{attention, Attention};
-use vyre_libs::tensor_ref::TensorRef;
+use vyre_libs::TensorRef;
 
 /// Near-overflow bound: any `a*b > u32::MAX` must panic.
 const PIVOT: u32 = 1u32 << 16; // 65_536; 65_536 * 65_536 = u32::MAX + 1

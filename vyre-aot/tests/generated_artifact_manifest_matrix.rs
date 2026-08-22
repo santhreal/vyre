@@ -1,6 +1,6 @@
 //! Generated canonical envelope and AOT packaging-manifest matrix.
 
-mod common;
+mod fixture_target;
 
 use vyre_aot::Manifest;
 
@@ -24,7 +24,7 @@ fn generated_manifest(seed: u32, envelope: &vyre_aot::ArtifactEnvelope) -> Manif
         schema: Manifest::SCHEMA_VERSION.to_string(),
         aot_version: vyre_aot::VERSION.to_string(),
         artifact_name: format!("artifact_{seed:08x}"),
-        target: common::fixture_target(),
+        target: fixture_target::fixture_target(),
         target_payload_format: target_payload(envelope).format().identity().to_string(),
         envelope_file: format!("artifact_{seed:08x}.vmk.lzma"),
         envelope_compression: "lzma".to_string(),
@@ -41,7 +41,7 @@ fn generated_manifest(seed: u32, envelope: &vyre_aot::ArtifactEnvelope) -> Manif
 /// Generated regression: canonical envelope bytes and identities remain stable across repeated reads.
 #[test]
 fn generated_canonical_envelopes_round_trip() {
-    let envelope = common::compiled_artifact();
+    let envelope = fixture_target::compiled_artifact();
     let expected_neutral = envelope.neutral().digest();
     let expected_payload = target_payload(&envelope).digest();
     let expected_bytes = target_payload(&envelope).bytes().to_vec();
@@ -60,7 +60,7 @@ fn generated_canonical_envelopes_round_trip() {
 /// Generated regression: AOT manifests retain exact canonical identities without resource copies.
 #[test]
 fn generated_manifests_round_trip_canonical_identity_fields() {
-    let envelope = common::compiled_artifact();
+    let envelope = fixture_target::compiled_artifact();
     for seed in 0..512_u32 {
         let manifest = generated_manifest(seed.wrapping_mul(0x9e37_79b9), &envelope);
         let bytes = serde_json::to_vec(&manifest).expect("generated manifest must serialize");

@@ -23,8 +23,10 @@ jobs:
         with:
           components: miri
       - name: Run miri
+        # rust-toolchain.toml pins the workspace to 1.86, which has no miri
+        # component, so every invocation names the nightly the action installed.
         run: |
-          cargo miri setup
-          cargo miri test -p vyre-spec --lib
-          cargo miri test -p vyre-foundation --lib
-          cargo miri test -p vyre -p vyre-reference --lib --no-default-features
+          ./cargo_full +nightly miri setup
+          ./cargo_full +nightly miri test -p vyre-spec --lib
+          ./cargo_full +nightly miri test -p vyre-foundation --lib
+          ./cargo_full +nightly miri test -p vyre -p vyre-reference --lib --no-default-features

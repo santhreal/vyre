@@ -5,18 +5,23 @@
 //! taint-class compatibility check before writing one compact candidate score.
 //! The point is to measure one resident GPU program that would otherwise be a
 //! chain of CPU-side passes with intermediate materialization.
+//!
+//! The measured loop, the input length check and the baseline capture are
+//! shared with `runtime.adaptive_routing.gpu_resident.1m` and live in
+//! `super::triplet_pass`; the fused program, the generated streams and the
+//! per-item acceptance decision are here.
 
-use super::byte_pack::u32_bytes;
+use super::harness::{CaseOps, ContractDescription, HarnessCase, WorkloadDescription};
+use super::mix32;
+use super::triplet_pass::{
+    prepare_triplet, triplet_bytes_touched, triplet_measure, triplet_program, TripletPrepared,
+    TripletSpec,
+};
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, Correctness, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
-use crate::api::resident::{
-    dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
-};
+use crate::api::metric::MetricPoint;
 use crate::api::suite::SuiteKind;
-use rayon::prelude::*;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const ITEM_COUNT: u32 = 1 << 20;
@@ -31,188 +36,84 @@ const SUITES: &[SuiteKind] = &[
     SuiteKind::Honest,
 ];
 
-pub struct CompoundFusedFilter;
+static WORKLOAD: WorkloadDescription = WorkloadDescription {
+    id: "compound.pipeline.fused_filter.1m",
+    name: "Compound Fused Filter 1M",
+    summary: "One resident GPU pass fusing literal hash, dataflow liveness, score threshold, and taint-class filtering",
+    tags: &[
+        "compound",
+        "resident",
+        "dataflow",
+        "matching",
+        "release",
+    ],
+    layer: BenchLayer::Runtime,
+    workload: WorkloadClass::Macro,
+    suites: SUITES,
+    min_vram_bytes: Some(ITEM_COUNT as u64 * 16),
+    min_input_bytes: Some(ITEM_COUNT as u64 * 12),
+    feature_set: &["compound.pipeline", "resident"],
+    contract: Some(ContractDescription {
+        primitive: "fused compound rule/dataflow filtering",
+        baseline_crate: "rayon",
+        baseline_name: "Rayon-parallel staged CPU filter with equivalent predicates",
+        min_speedup_x: 10.0,
+    }),
+    ..WorkloadDescription::BASE
+};
 
-struct CompoundFusedFilterPrepared {
-    program: Program,
-    inputs: Vec<Vec<u8>>,
-    input_bytes_total: u64,
-    baseline_output: Vec<u8>,
-    baseline_wall_ns: u64,
-    accepted_count: u64,
-    resident: Option<ResidentInputSet>,
+static OPS: CaseOps<TripletPrepared> = CaseOps {
+    build: prepare_compound_fused_filter,
+    measure: triplet_measure,
+    verify: verify_exact,
+    program: triplet_program,
+    fingerprint: None,
+    bytes_touched: triplet_bytes_touched,
+};
+
+pub(crate) static COMPOUND_FUSED_FILTER: HarnessCase<TripletPrepared> = HarnessCase {
+    workload: &WORKLOAD,
+    ops: &OPS,
+};
+
+fn verify_exact(run: &BenchRun) -> Result<Correctness, BenchError> {
+    run.verify_exact_outputs()
 }
 
-impl BenchCase for CompoundFusedFilter {
-    fn id(&self) -> BenchId {
-        BenchId("compound.pipeline.fused_filter.1m".to_string())
-    }
+fn prepare_compound_fused_filter(ctx: &mut BenchContext) -> Result<TripletPrepared, BenchError> {
+    prepare_triplet(
+        ctx,
+        TripletSpec {
+            program: compound_program(),
+            streams: compound_inputs(),
+            lane: compound_acceptance_value,
+            stream_names: ["tokens", "scores", "states"],
+            subject: "compound fused filter",
+            metrics: compound_metrics,
+        },
+    )
+}
 
-    fn metadata(&self) -> BenchMetadata {
-        BenchMetadata {
-            id: self.id(),
-            name: "Compound Fused Filter 1M".to_string(),
-            description:
-                "One resident GPU pass fusing literal hash, dataflow liveness, score threshold, and taint-class filtering"
-                    .to_string(),
-            tags: vec![
-                "compound".to_string(),
-                "resident".to_string(),
-                "dataflow".to_string(),
-                "matching".to_string(),
-                "release".to_string(),
-            ],
-            layer: BenchLayer::Runtime,
-            workload: WorkloadClass::Macro,
-            determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-bench".to_string(),
-        }
-    }
-
-    fn suites(&self) -> &'static [SuiteKind] {
-        SUITES
-    }
-
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: Some(u64::from(ITEM_COUNT) * 16),
-            min_input_bytes: Some(u64::from(ITEM_COUNT) * 12),
-            feature_set: vec!["compound.pipeline".to_string(), "resident".to_string()],
-        }
-    }
-
-    fn performance_contract(&self) -> Option<PerformanceContract> {
-        Some(PerformanceContract::cpu_sota_10x(
-            "fused compound rule/dataflow filtering",
-            "rayon",
-            "Rayon-parallel staged CPU filter with equivalent predicates",
-        ))
-    }
-
-    fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let program = compound_program();
-        let (tokens, scores, states) = compound_inputs();
-        let inputs = vec![u32_bytes(&tokens), u32_bytes(&scores), u32_bytes(&states)];
-        let input_bytes_total = input_bytes_total(&inputs);
-        let baseline_start = std::time::Instant::now();
-        let baseline_words = compound_cpu_oracle_checked(&tokens, &scores, &states)?;
-        let baseline_wall_ns =
-            u64::try_from(baseline_start.elapsed().as_nanos()).unwrap_or(u64::MAX);
-        let accepted_count = baseline_words.iter().filter(|&&value| value != 0).count() as u64;
-        let baseline_output = u32_bytes(&baseline_words);
-        let resident = ResidentInputSet::upload_with_zeroed_outputs_optional(
-            ctx,
-            &inputs,
-            &[baseline_output.len()],
-            "compound fused filter",
-        )?;
-
-        Ok(Box::new(CompoundFusedFilterPrepared {
-            program,
-            inputs,
-            input_bytes_total,
-            baseline_output,
-            baseline_wall_ns,
-            accepted_count,
-            resident,
-        }))
-    }
-
-    fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a Program> {
-        prepared
-            .downcast_ref::<CompoundFusedFilterPrepared>()
-            .map(|prepared| &prepared.program)
-    }
-
-    fn run(
-        &self,
-        ctx: &mut BenchContext,
-        prepared: &mut PreparedCase,
-    ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<CompoundFusedFilterPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "compound fused filter prepared payload type mismatch".to_string(),
-                )
-            })?;
-        let dispatch = dispatch_program_timed(
-            ctx,
-            &prepared.program,
-            prepared.resident.as_ref(),
-            &prepared.inputs,
-            &ctx.dispatch_config,
-        )?;
-        let timed = dispatch.timed;
-        let outputs = timed.outputs;
-        let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let accounting = transfer_accounting(
-            prepared.input_bytes_total,
-            output_bytes,
-            dispatch.resident_used,
-        );
-
-        Ok(BenchRun {
-            metrics: BenchMetrics {
-                wall_ns: Some(timed.wall_ns),
-                dispatch_ns: timed.device_ns,
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(output_bytes),
-                bytes_read: Some(accounting.bytes_read),
-                bytes_written: Some(accounting.bytes_written),
-                bytes_touched: Some(accounting.bytes_touched),
-                custom: vec![
-                    MetricPoint {
-                        name: "compound_items".to_string(),
-                        value: u64::from(ITEM_COUNT),
-                    },
-                    MetricPoint {
-                        name: "compound_fused_predicates".to_string(),
-                        value: 4,
-                    },
-                    MetricPoint {
-                        name: "compound_cpu_passes_elided".to_string(),
-                        value: 3,
-                    },
-                    MetricPoint {
-                        name: "compound_accepted_items".to_string(),
-                        value: prepared.accepted_count,
-                    },
-                    MetricPoint {
-                        name: "resident_buffers".to_string(),
-                        value: u64::from(dispatch.resident_used),
-                    },
-                ],
-                ..Default::default()
-            },
-            baseline_metrics: Some(BenchMetrics {
-                wall_ns: Some(prepared.baseline_wall_ns),
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(prepared.baseline_output.len() as u64),
-                bytes_touched: Some(
-                    prepared
-                        .input_bytes_total
-                        .saturating_add(prepared.baseline_output.len() as u64),
-                ),
-                ..Default::default()
-            }),
-            outputs,
-            baseline_outputs: Some(vec![prepared.baseline_output.clone()]),
-        })
-    }
-
-    fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
-        run.verify_exact_outputs()
-    }
-
-    fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
-        prepared
-            .downcast_ref::<CompoundFusedFilterPrepared>()
-            .map(|prepared| (prepared.input_bytes_total, u64::from(ITEM_COUNT) * 4))
-            .unwrap_or((u64::from(ITEM_COUNT) * 12, u64::from(ITEM_COUNT) * 4))
-    }
+fn compound_metrics(baseline_words: &[u32]) -> Vec<MetricPoint> {
+    let accepted = baseline_words.iter().filter(|&&value| value != 0).count() as u64;
+    vec![
+        MetricPoint {
+            name: "compound_items".to_string(),
+            value: u64::from(ITEM_COUNT),
+        },
+        MetricPoint {
+            name: "compound_fused_predicates".to_string(),
+            value: 4,
+        },
+        MetricPoint {
+            name: "compound_cpu_passes_elided".to_string(),
+            value: 3,
+        },
+        MetricPoint {
+            name: "compound_accepted_items".to_string(),
+            value: accepted,
+        },
+    ]
 }
 
 fn compound_program() -> Program {
@@ -309,31 +210,6 @@ fn compound_inputs() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     })
 }
 
-fn compound_cpu_oracle(tokens: &[u32], scores: &[u32], states: &[u32]) -> Vec<u32> {
-    tokens
-        .par_iter()
-        .zip(scores.par_iter())
-        .zip(states.par_iter())
-        .map(|((&token, &score), &state)| compound_acceptance_value(token, score, state))
-        .collect()
-}
-
-fn compound_cpu_oracle_checked(
-    tokens: &[u32],
-    scores: &[u32],
-    states: &[u32],
-) -> Result<Vec<u32>, BenchError> {
-    if tokens.len() != scores.len() || tokens.len() != states.len() {
-        return Err(BenchError::ExecutionFailed(format!(
-            "compound fused filter input length mismatch: tokens={}, scores={}, states={}. Fix: generate equal-length streams before building the CPU oracle.",
-            tokens.len(),
-            scores.len(),
-            states.len()
-        )));
-    }
-    Ok(compound_cpu_oracle(tokens, scores, states))
-}
-
 fn compound_acceptance_value(token: u32, score: u32, state: u32) -> u32 {
     let mixed = token ^ state.wrapping_mul(HASH_SALT);
     let score_floor = SCORE_BASE + ((state >> 8) & SCORE_SPAN_MASK);
@@ -348,16 +224,8 @@ fn compound_acceptance_value(token: u32, score: u32, state: u32) -> u32 {
     }
 }
 
-fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
-    value ^ (value >> 16)
-}
-
 inventory::submit! {
-    &CompoundFusedFilter as &'static dyn BenchCase
+    &COMPOUND_FUSED_FILTER as &'static dyn BenchCase
 }
 
 #[cfg(test)]
@@ -416,27 +284,45 @@ mod tests {
         }
     }
 
+    /// The three generated streams reach the shared oracle at equal length; a
+    /// mismatch would silently truncate the captured baseline.
     #[test]
-    fn compound_cpu_oracle_checked_emits_one_word_per_item() {
-        let tokens = vec![0, 1, 2, 3];
-        let scores = vec![700, 700, 700, 700];
-        let states = vec![1, 3, 5, 7];
+    fn generated_streams_are_equal_length() {
+        let (tokens, scores, states) = compound_inputs();
 
-        let output = compound_cpu_oracle_checked(&tokens, &scores, &states).unwrap();
+        assert_eq!(tokens.len(), ITEM_COUNT as usize);
+        assert_eq!(scores.len(), ITEM_COUNT as usize);
+        assert_eq!(states.len(), ITEM_COUNT as usize);
+    }
 
-        assert_eq!(output.len(), tokens.len());
+    /// The accepted metric counts exactly the non-zero baseline words.
+    #[test]
+    fn accepted_metric_counts_non_zero_words() {
+        let metrics = compound_metrics(&[0, 7, 0, 9]);
+
+        assert_eq!(
+            metrics
+                .iter()
+                .find(|metric| metric.name == "compound_accepted_items")
+                .map(|metric| metric.value),
+            Some(2)
+        );
     }
 
     #[test]
-    fn compound_cpu_oracle_checked_rejects_silent_truncation() {
-        let error = compound_cpu_oracle_checked(&[1, 2, 3], &[700, 701], &[1, 3, 5])
-            .expect_err("Fix: mismatched compound inputs must never truncate");
-
-        assert!(
-            error
-                .to_string()
-                .contains("compound fused filter input length mismatch"),
-            "{error}"
+    fn harness_case_keeps_its_registered_identity_and_contract() {
+        assert_eq!(
+            COMPOUND_FUSED_FILTER.id().0,
+            "compound.pipeline.fused_filter.1m"
+        );
+        assert_eq!(COMPOUND_FUSED_FILTER.suites(), SUITES);
+        assert_eq!(
+            COMPOUND_FUSED_FILTER
+                .performance_contract()
+                .expect("compound fused filter must keep its CPU-baseline contract")
+                .baselines[0]
+                .min_speedup_x,
+            10.0
         );
     }
 }

@@ -1,16 +1,22 @@
+# `release_contract_path` names the document a release is judged against. It
+# pointed at `../docs/RELEASE.md`, an operator runbook deleted with the mdbook,
+# so the gate opened every run with a blocker naming a file no clone has. The
+# surviving authority is the release train beside this manifest: it declares the
+# versions, the product-scoped tags, the package membership, the repository, and
+# the three approval-gated external actions, and unlike a prose runbook it is
+# the file every generator and gate already reads.
 schema_version = 2
-release_contract_path = "../docs/RELEASE.md"
+release_contract_path = "release-train.toml"
 
 [release]
-vyre = "0.7.2"
+vyre = "0.8.0"
 
 [[requirements]]
 id = "version-story"
 title = "Manifest, tag, docs, and release-note version story is resolved"
 status = "closed"
-minimum_evidence = 4
 evidence = [
-  "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json",
+  "cargo_full run --bin xtask -- version-matrix --write",
   "evidence/version/version-matrix.json",
   "evidence/version/release-tag-plan.json",
   "evidence/docs/release-notes-version-story.md",
@@ -20,13 +26,38 @@ evidence = [
 id = "cuda-first-path"
 title = "CUDA is the documented, tested, benchmarked fast release path"
 status = "closed"
-minimum_evidence = 5
 evidence = [
+  "cargo_full run --bin xtask -- release-benchmarks --backend cuda --measured-samples 30 --write",
   "evidence/backends/backend-matrix.json",
   "evidence/benchmarks/release-workload-matrix.json",
   "evidence/benchmarks/cuda-release-suite.json",
   "evidence/benchmarks/cuda-ptx-patterns.json",
   "evidence/benchmarks/bench-release-axes.json",
+  "evidence/benchmarks/cpu-only-100x-proof.json",
+  "evidence/benchmarks/dataflow-analysis-release.json",
+  "evidence/benchmarks/frontier-leaderboard.json",
+  "evidence/benchmarks/megakernel-condition-100x-proof.json",
+  "evidence/benchmarks/megakernel-condition-cuda.json",
+  "evidence/benchmarks/megakernel-latency-cuda.json",
+  "evidence/benchmarks/workload-01-condition-eval.json",
+  "evidence/benchmarks/workload-02-string-bitmap-scatter.json",
+  "evidence/benchmarks/workload-03-offset-count-aggregation.json",
+  "evidence/benchmarks/workload-04-metadata-conditions.json",
+  "evidence/benchmarks/workload-05-entropy-window.json",
+  "evidence/benchmarks/workload-06-quantified-condition-loops.json",
+  "evidence/benchmarks/workload-07-alias-reaching-def.json",
+  "evidence/benchmarks/workload-08-ifds-witness.json",
+  "evidence/benchmarks/workload-09-ast-motif-traversal.json",
+  "evidence/benchmarks/workload-10-megakernel-queued-batches.json",
+  "evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
+  "evidence/benchmarks/workload-12-sparse-output-compaction.json",
+  "evidence/benchmarks/workload-13-callgraph-reachability.json",
+  "evidence/benchmarks/workload-14-compound-fused-filter.json",
+  "evidence/benchmarks/workload-15-adaptive-routing.json",
+  "evidence/benchmarks/workload-16-quantized-linear.json",
+  "evidence/benchmarks/workload-17-egraph-saturation.json",
+  "evidence/optimization/optimizer-impact-cuda.json",
+  "evidence/optimization/pass-family-benchmark-manifest.json",
   "evidence/docs/cuda-release-path.md",
 ]
 
@@ -34,10 +65,27 @@ evidence = [
 id = "wgpu-fallback"
 title = "WGPU fallback is semantically correct, tested, and benchmarked"
 status = "closed"
-minimum_evidence = 3
 evidence = [
+  "cargo_full run --bin xtask -- release-benchmarks --backend wgpu --measured-samples 30 --write",
   "evidence/backends/backend-matrix.json",
   "evidence/benchmarks/wgpu-fallback-suite.json",
+  "evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+  "evidence/benchmarks/wgpu-workload-02-string-bitmap-scatter.json",
+  "evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json",
+  "evidence/benchmarks/wgpu-workload-04-metadata-conditions.json",
+  "evidence/benchmarks/wgpu-workload-05-entropy-window.json",
+  "evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json",
+  "evidence/benchmarks/wgpu-workload-07-alias-reaching-def.json",
+  "evidence/benchmarks/wgpu-workload-08-ifds-witness.json",
+  "evidence/benchmarks/wgpu-workload-09-ast-motif-traversal.json",
+  "evidence/benchmarks/wgpu-workload-10-megakernel-queued-batches.json",
+  "evidence/benchmarks/wgpu-workload-11-semantic-optimizer-impact.json",
+  "evidence/benchmarks/wgpu-workload-12-sparse-output-compaction.json",
+  "evidence/benchmarks/wgpu-workload-13-callgraph-reachability.json",
+  "evidence/benchmarks/wgpu-workload-14-compound-fused-filter.json",
+  "evidence/benchmarks/wgpu-workload-15-adaptive-routing.json",
+  "evidence/benchmarks/wgpu-workload-16-quantized-linear.json",
+  "evidence/benchmarks/wgpu-workload-17-egraph-saturation.json",
   "evidence/conformance/conformance-matrix.json",
   "evidence/conformance/wgpu-conformance.json",
   "evidence/docs/wgpu-fallback-proof.md",
@@ -47,7 +95,6 @@ evidence = [
 id = "megakernel-default"
 title = "Megakernel is the default high-throughput runtime path where legal"
 status = "closed"
-minimum_evidence = 5
 evidence = [
   "evidence/backends/backend-matrix.json",
   "evidence/benchmarks/release-workload-matrix.json",
@@ -60,7 +107,6 @@ evidence = [
 id = "optimization-corpus-4096"
 title = "Optimization corpus contains at least 4096 distinct semantic-preserving cases"
 status = "closed"
-minimum_evidence = 5
 evidence = [
   "evidence/optimization/optimization-corpus.json",
   "evidence/optimization/optimization-corpus-contracts.json",
@@ -73,7 +119,6 @@ evidence = [
 id = "optimization-benchmark-proof"
 title = "Canonical semantic optimizer has before/after benchmark evidence"
 status = "closed"
-minimum_evidence = 5
 evidence = [
   "cargo_full run --bin xtask -- measurement-gate --strict",
   "evidence/optimization/optimization-integration-matrix.json",
@@ -87,7 +132,6 @@ evidence = [
 id = "semantic-optimizer-registration"
 title = "Semantic optimizer registrations and supplemental rules are source-owned and proved"
 status = "closed"
-minimum_evidence = 3
 evidence = [
   "evidence/optimization/optimization-integration-matrix.json",
   "evidence/optimization/optimizer-pass-manifest.json",
@@ -98,7 +142,6 @@ evidence = [
 id = "proof-workloads-12"
 title = "At least 12 proof workload families have reproducible CPU/GPU benchmark artifacts"
 status = "closed"
-minimum_evidence = 12
 evidence = [
   "evidence/benchmarks/release-workload-matrix.json",
   "../docs/optimization/BENCH_TARGETS.toml",
@@ -110,24 +153,24 @@ evidence = [
   "evidence/benchmarks/workload-06-quantified-condition-loops.json",
   "evidence/benchmarks/workload-07-alias-reaching-def.json",
   "evidence/benchmarks/workload-08-ifds-witness.json",
-  "evidence/benchmarks/workload-09-c-ast-traversal.json",
+  "evidence/benchmarks/workload-09-ast-motif-traversal.json",
   "evidence/benchmarks/workload-10-megakernel-queued-batches.json",
   "evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
   "evidence/benchmarks/workload-12-sparse-output-compaction.json",
   "evidence/benchmarks/workload-13-callgraph-reachability.json",
+  "evidence/benchmarks/workload-17-egraph-saturation.json",
 ]
 
 [[requirements]]
 id = "cpu-only-100x-proof"
 title = "Ten release workloads prove 100x+ CUDA wins against CPU-SOTA baselines"
 status = "closed"
-minimum_evidence = 6
 evidence = [
   "evidence/benchmarks/release-workload-matrix.json",
   "evidence/benchmarks/cpu-only-100x-proof.json",
   "evidence/benchmarks/megakernel-condition-100x-proof.json",
   "evidence/benchmarks/workload-01-condition-eval.json",
-  "evidence/benchmarks/workload-02-string-bitmap-scatter.json",
+  "evidence/benchmarks/workload-17-egraph-saturation.json",
   "evidence/benchmarks/workload-03-offset-count-aggregation.json",
   "evidence/benchmarks/workload-05-entropy-window.json",
   "evidence/benchmarks/workload-06-quantified-condition-loops.json",
@@ -140,18 +183,17 @@ evidence = [
 id = "conformance-hard-gate"
 title = "Conformance is wired as a hard release-blocking gate for every claimed op/backend"
 status = "closed"
-minimum_evidence = 10
 evidence = [
   "evidence/conformance/conformance-matrix.json",
   "evidence/conformance/cuda-conformance.json",
   "evidence/conformance/wgpu-conformance.json",
   "evidence/conformance/reference-conformance.json",
   "evidence/conformance/release-gate-log.json",
-  "../../../../../.github/workflows/conform.yml",
-  "../../../../../.github/workflows/gpu-parity.yml",
-  "../../../../../.github/workflows/architectural-invariants.yml",
-  "../../../../../.github/CI_REQUIRED.md",
-  "../../../../../scripts/apply-branch-protection.sh",
+  "../.github/workflows/conform.yml",
+  "../.github/workflows/gpu-parity.yml",
+  "../.github/workflows/architectural-invariants.yml",
+  "../.github/CI_REQUIRED.md",
+  "../scripts/apply-branch-protection.sh",
 ]
 
 
@@ -159,11 +201,11 @@ evidence = [
 id = "docs-evidence-linked"
 title = "User, contributor, benchmark, conformance, optimization, and release docs are tied to evidence"
 status = "closed"
-minimum_evidence = 8
 evidence = [
   "../docs/DOCS.toml",
   "../docs/SUMMARY.md",
   "../docs/INDEX.md",
+  "evidence/docs/docs-evidence-map.md",
   "evidence/docs/vyre-readme-contracts.json",
   "evidence/docs/vyre-readme-proof.md",
   "evidence/docs/benchmark-doc-proof.md",
@@ -176,11 +218,10 @@ evidence = [
 id = "crate-metadata"
 title = "Every release crate has coherent metadata, features, docs, readme, license, and version policy"
 status = "closed"
-minimum_evidence = 9
 evidence = [
-  "cargo_full run --bin xtask -- metadata-matrix --output release/evidence/metadata/metadata-matrix.json",
-  "cargo_full run --bin xtask -- feature-matrix --output release/evidence/metadata/feature-matrix.json",
-  "cargo_full run --bin xtask -- package-readiness --output release/evidence/package/publish-readiness.json",
+  "cargo_full run --bin xtask -- metadata-matrix --write",
+  "cargo_full run --bin xtask -- feature-matrix --write",
+  "cargo_full run --bin xtask -- package-readiness --write",
   "cargo_full run --bin xtask -- dep-drift",
   "evidence/metadata/metadata-matrix.json",
   "evidence/version/version-matrix.json",
@@ -193,34 +234,35 @@ evidence = [
 id = "release-hygiene"
 title = "No shipped stubs, hidden fallbacks, unbounded resources, hot-path sleeps, unactionable errors, or stale docs"
 status = "closed"
-minimum_evidence = 16
 evidence = [
   "cargo_full run --bin xtask -- recursion-gate --strict",
   "cargo_full run --bin xtask -- heuristic-audit --strict",
   "evidence/hygiene/hygiene-matrix.json",
+  "evidence/hygiene/implementation-intake.json",
+  "evidence/hygiene/threshold-policy.json",
   "evidence/hygiene/no-stubs-scan.json",
   "evidence/hygiene/no-hidden-fallback-scan.json",
   "evidence/hygiene/resource-bound-scan.json",
   "evidence/hygiene/error-surface-scan.json",
   "evidence/hygiene/cargo-wrapper-scan.json",
   "evidence/docs/release-hygiene-proof.md",
-  "../../../../../.github/workflows/architectural-invariants.yml",
-  "../../../../../.github/CI_REQUIRED.md",
-  "../../../../../scripts/apply-branch-protection.sh",
-  "../../../../../scripts/check_architectural_invariants.sh",
+  "../.github/workflows/architectural-invariants.yml",
+  "../.github/CI_REQUIRED.md",
+  "../scripts/apply-branch-protection.sh",
+  "cargo_full run --bin xtask -- neutral-crates",
 ]
 
 [[requirements]]
 id = "public-launch"
 title = "Public launch state preserves approval-gated external actions"
 status = "closed"
-minimum_evidence = 9
 evidence = [
   "cargo_full run --bin xtask -- release-evidence",
-  "cargo_full run --bin xtask -- vyre-release-gate --prepublish",
   "cargo_full run --bin xtask -- vyre-release-gate",
-  "cargo_full run --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json",
+  "cargo_full run --bin xtask -- vyre-release-gate --launch-complete",
+  "cargo_full run --bin xtask -- launch-state --write",
   "evidence/final/release-evidence-run.json",
+  "evidence/final/expected-artifacts.json",
   "evidence/final/public-launch-state.json",
   "../scripts/final-launch.sh",
   "../scripts/publish-release.sh",

@@ -12,17 +12,19 @@
 #![cfg(all(
     feature = "math-linalg",
     feature = "math-scan",
-    feature = "matching-substring",
-    feature = "matching-dfa",
+    feature = "pattern-substring",
+    feature = "pattern-dfa",
 ))]
 
-mod common;
-use common::{decode_u32_words, u32_bytes};
+mod wire_words;
 use vyre::ir::Program;
 use vyre_reference::value::Value;
+use wire_words::{decode_u32_words, u32_bytes};
 
 /// Run `program` on `inputs` and return the read-write buffer outputs.
 fn run_program(program: &Program, inputs: Vec<Value>) -> Vec<Vec<u8>> {
+    let inputs =
+        vyre_reference::reference_inputs(program, inputs.iter().map(Value::to_bytes).collect());
     let outputs =
         vyre_reference::reference_eval(program, &inputs).expect("Cat-A program must execute");
     outputs.into_iter().map(|v| v.to_bytes()).collect()
@@ -32,7 +34,7 @@ fn run_program(program: &Program, inputs: Vec<Value>) -> Vec<Vec<u8>> {
 #[test]
 fn cat_a_substring_edge_cases() {
     // Needle longer than haystack → every match slot is 0.
-    use vyre_libs::scan::substring_search;
+    use vyre_libs::pattern::substring_search;
     let program = substring_search("haystack", "needle", "matches", 3, 10);
     let haystack_bytes: Vec<u8> = "abc"
         .bytes()
@@ -56,7 +58,7 @@ fn cat_a_substring_edge_cases() {
 
 #[test]
 fn cat_a_substring_search_matches_cpu_reference() {
-    use vyre_libs::scan::substring_search;
+    use vyre_libs::pattern::substring_search;
 
     // Witness set: (haystack, needle, expected match bitmap).
     let witnesses: &[(&str, &str, Vec<u32>)] = &[
@@ -111,11 +113,7 @@ fn cat_a_dot_matches_cpu_reference() {
         let program = dot("lhs", "rhs", "out", lhs.len() as u32).unwrap();
         let outputs = run_program(
             &program,
-            vec![
-                Value::from(u32_bytes(lhs)),
-                Value::from(u32_bytes(rhs)),
-                Value::from(vec![0u8; 4]),
-            ],
+            vec![Value::from(u32_bytes(lhs)), Value::from(u32_bytes(rhs))],
         );
         let got = decode_u32_words(&outputs[0])[0];
         assert_eq!(
@@ -127,8 +125,8 @@ fn cat_a_dot_matches_cpu_reference() {
 
 #[test]
 fn cat_a_aho_corasick_matches_cpu_reference() {
-    use vyre_libs::scan::{aho_corasick};
-use vyre_primitives::matching::{dfa_compile};
+    use vyre_libs::pattern::aho_corasick;
+    use vyre_libs::pattern::dfa_compile;
 
     let patterns: [&[u8]; 4] = [b"he", b"she", b"his", b"hers"];
     let compiled = dfa_compile(&patterns);
@@ -157,7 +155,6 @@ use vyre_primitives::matching::{dfa_compile};
         )),
         Value::from(u32_bytes(&compiled.transitions)),
         Value::from(u32_bytes(&compiled.accept)),
-        Value::from(vec![0u8; haystack.len() * 4]),
     ];
     let outputs = run_program(&program, inputs);
     assert_eq!(
@@ -184,13 +181,7 @@ fn cat_a_scan_prefix_sum_matches_cpu_reference() {
 
     for (input, expected) in witnesses {
         let program = scan_prefix_sum("input", "output", input.len() as u32);
-        let outputs = run_program(
-            &program,
-            vec![
-                Value::from(u32_bytes(input)),
-                Value::from(vec![0u8; input.len() * 4]),
-            ],
-        );
+        let outputs = run_program(&program, vec![Value::from(u32_bytes(input))]);
         let got = decode_u32_words(&outputs[0]);
         assert_eq!(
             got, *expected,

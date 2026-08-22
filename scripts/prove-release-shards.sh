@@ -11,8 +11,6 @@ SHARD_WORKERS="${VYRE_RELEASE_SHARD_WORKERS:-4}"
 PROFILE="${VYRE_RELEASE_PROFILE:-debug}"
 
 cd "$ROOT_DIR"
-source scripts/lib/cargo_runner.sh
-vyre_select_cargo_runner
 
 if [[ "$OUT_DIR" != /* ]]; then
     OUT_DIR="$ROOT_DIR/$OUT_DIR"
@@ -51,13 +49,20 @@ case "$PROFILE" in
         ;;
 esac
 
-CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$CARGO_RUNNER" "${build_args[@]}"
+vyre_select_cargo_runner() {
+    if [[ -n "${CARGO:-}" ]]; then
+        printf '%s\n' "$CARGO"
+    elif [[ -x "$ROOT_DIR/cargo_full" ]]; then
+        printf '%s\n' "$ROOT_DIR/cargo_full"
+    else
+        printf 'cargo\n'
+    fi
+}
 
-if [[ -n "${CARGO_TARGET_DIR:-}" ]]; then
-    target_root="$CARGO_TARGET_DIR"
-else
-    target_root="$("$CARGO_RUNNER" metadata --no-deps --format-version 1 | sed -n 's/.*"target_directory":"\([^"]*\)".*/\1/p')"
-fi
+CARGO_RUNNER="$(vyre_select_cargo_runner)"
+"$CARGO_RUNNER" "${build_args[@]}"
+
+target_root="$("$CARGO_RUNNER" metadata --no-deps --format-version 1 | sed -n 's/.*"target_directory":"\([^"]*\)".*/\1/p')"
 target_root="${target_root:-$ROOT_DIR/target}"
 if [[ "$target_root" != /* ]]; then
     target_root="$ROOT_DIR/$target_root"
@@ -84,31 +89,37 @@ run_shard() {
     printf 'proving shard %s/%s backend=%s workers=%s -> %s\n' "$index" "$SHARDS" "$BACKEND" "$WORKERS" "$shard_path" >&2
     (
         cd "$ROOT_DIR"
-        VYRE_CONFORM_PROOF_WORKERS="$WORKERS" CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$RUNNER_BIN" "${prove_args[@]}"
+        VYRE_CONFORM_PROOF_WORKERS="$WORKERS" "$RUNNER_BIN" "${prove_args[@]}"
     )
 }
 
 mkdir -p "$OUT_DIR"
 shard_paths=()
-active_jobs=0
+worker_pids=()
+joined=0
 failures=0
+# Join a recorded pid rather than whichever worker finishes first. `wait -n` is
+# bash 4 and macOS runs bash 3.2, where it printed `invalid option` once per
+# worker and every shard was counted as a failure. `wait "$pid"` reports that
+# worker's own status on every bash in the matrix; the pool then drains in
+# submission order, which costs a little throughput and no accounting.
 for ((index = 0; index < SHARDS; index += 1)); do
     shard_path="$OUT_DIR/shard-${index}-of-${SHARDS}.json"
     shard_paths+=("$shard_path")
     run_shard "$index" "$shard_path" &
-    active_jobs=$((active_jobs + 1))
-    if [[ "$active_jobs" -ge "$SHARD_WORKERS" ]]; then
-        if ! wait -n; then
+    worker_pids+=("$!")
+    if [[ $((${#worker_pids[@]} - joined)) -ge "$SHARD_WORKERS" ]]; then
+        if ! wait "${worker_pids[joined]}"; then
             failures=$((failures + 1))
         fi
-        active_jobs=$((active_jobs - 1))
+        joined=$((joined + 1))
     fi
 done
-while [[ "$active_jobs" -gt 0 ]]; do
-    if ! wait -n; then
+while [[ "$joined" -lt "${#worker_pids[@]}" ]]; do
+    if ! wait "${worker_pids[joined]}"; then
         failures=$((failures + 1))
     fi
-    active_jobs=$((active_jobs - 1))
+    joined=$((joined + 1))
 done
 if [[ "$failures" -gt 0 ]]; then
     printf 'Fix: %s release conformance shard worker(s) failed.\n' "$failures" >&2
@@ -121,6 +132,6 @@ merge_args=(merge --out "$merged")
 merge_args+=("${shard_paths[@]}")
 (
     cd "$ROOT_DIR"
-    CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$RUNNER_BIN" "${merge_args[@]}"
+    "$RUNNER_BIN" "${merge_args[@]}"
 )
 printf '%s\n' "$merged"

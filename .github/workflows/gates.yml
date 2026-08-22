@@ -5,24 +5,202 @@ on:
   push:
     branches: [main]
 
+# Two of these jobs build the whole workspace on one persistent GPU host, so a
+# superseded run holds that runner against the commit that replaced it.
+concurrency:
+  group: gates-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   registered-gates:
     name: Every registered gate
-    runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
+    # The registry holds device-requiring gates (bench-smoke-runtime times a
+    # real dispatch), and a GPU-required gate fails closed on an empty probe
+    # rather than skipping, so the job that runs every gate needs an adapter.
+    # This host, not the release host: the sweep builds the workspace with
+    # --all-features --all-targets three times over, which does not fit in the
+    # release host's remaining root filesystem.
+    runs-on: [self-hosted, gpu-5090]
     steps:
+      # docs-coupling compares this head against the base branch, so this job
+      # reads history rather than one tree. Every other job here clones shallow.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-08-07
+      - name: Install dependencies for registered gates
+        run: |
+          if ! command -v z3 >/dev/null; then
+            sudo apt-get update && sudo apt-get install -y z3
+          fi
+          cargo +nightly-2026-08-07 install --locked cargo-public-api --version 0.51.0
 
-      # Runs every subcommand registered as a gate and holds each to the
-      # result pinned in xtask/gate-baselines.toml. 41 subcommands were
-      # registered here and 9 were ever invoked; this step is what makes the
-      # other 32 count for anything.
+      # Runs every registered gate and holds each to the number pinned in
+      # xtask/gate-baselines.toml. Registering a gate without a pin fails, and a
+      # pin naming no gate fails, so neither list is maintained by hand and no
+      # rule can be registered and left unrun. The source-scanning rules, the
+      # frozen contracts, the size ratchet, the unification rows, the release
+      # evidence path oracle and the doc claim manifest are all in here; they
+      # used to be twenty separate steps below, each able to go red without
+      # anyone noticing which. It is also the backstop for a gate that belongs
+      # to no subset, which the sweep's wiring check reports.
       - name: Run the registered gate sweep
         run: ./cargo_full run -p xtask -- gates
+
+      # Descriptor areas are the only named subsets. The whole sweep above
+      # remains authoritative; these focused runs address failures to the owner
+      # without maintaining a second handwritten gate list.
+      - name: LEGO composition laws
+        run: ./cargo_full run -p xtask -- gates --subset lego-audit
+
+      - name: Generated documentation artifacts
+        run: ./cargo_full run -p xtask -- gates --subset docs
+
+      - name: Pre-publish compiler and release contracts
+        run: ./cargo_full run -p xtask -- gates --subset prepublish
 
       # Structural rules that must hold while the workspace does not compile,
       # so they live in a crate that depends on no vyre crate.
       - name: Workspace structure
         run: ./cargo_full run -p structure-gate
+
+      # bench-regression.yml times one case, which proves the runner works, not
+      # that the registry still covers the dimensions the audit rows claim. This
+      # holds each dimension to a named case and resolves every `--case`
+      # reference in a tracked file against the live registry, so a renamed case
+      # fails here instead of at the next release benchmark.
+      - name: Benchmark registry covers every claimed dimension
+        run: ./cargo_full run -q -p xtask --bin xtask -- bench-coverage
+
+  tree-rules:
+    name: Rules the sweep owns, named by domain
+    # contract-rules owns bench-smoke-runtime, which dispatches on a device.
+    runs-on: [self-hosted, gpu-5090]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      # rustfmt is the only single-file Rust parser the toolchain ships, and
+      # `source-parses` treats a missing rustfmt as a failure rather than as a
+      # clean tree, so the component is installed instead of assumed. The tree is
+      # never formatted here: --check is read-only and no --emit is passed.
+      - name: Install rustfmt for the parse rule
+        run: rustup component add rustfmt
+
+      # These are the remaining descriptor-derived areas. Every registered area
+      # is named by a workflow, and an unknown or retired area fails the sweep.
+      - name: CI registry rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset ci-rules
+
+      - name: Hot-path rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset hot-path
+
+      - name: Source, manifest, API, and workspace contracts
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset contract-rules
+
+  feature-msrv:
+    name: Every feature compiles alone on the MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      # [workspace.package].rust-version is the single owner of the MSRV, so the
+      # toolchain is installed from the value the gate validated instead of
+      # pinned a second time here, where a bump would leave the two disagreeing.
+      - name: Install the advertised MSRV toolchain
+        run: |
+          rustup toolchain install --profile minimal \
+            "$(./cargo_full run -q -p xtask --bin xtask -- feature-msrv --print-toolchain | head -1)"
+
+      # Two classes, neither reachable from another workflow. Feature isolation:
+      # strict.yml builds --all-features, a union in which a feature whose
+      # prerequisites some other feature happens to enable compiles anyway, and
+      # ci.yml builds default features only, so a granular feature is never
+      # built alone. MSRV: ci.yml's toolchain matrix is stable and nightly, so
+      # nothing compiled this workspace on the version it publishes. The axis is
+      # derived from tracked manifests, so a new feature or member joins it and
+      # fails here until it compiles.
+      - name: Feature-isolated MSRV sweep
+        run: ./cargo_full run -q -p xtask --bin xtask -- feature-msrv --sweep
+
+  feature-isolation:
+    name: Every feature compiles alone or records why it cannot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      # The class `feature-msrv` above cannot close: it compiles the derived
+      # matrix and reports pass or fail, so a pair that cannot stand alone has
+      # nowhere to be recorded and the whole job is red until someone deletes a
+      # feature. This holds each (member, feature) pair to the outcome recorded
+      # in xtask/feature-isolation.toml. The pair set is re-derived from the
+      # tracked manifests inside the gate, so a new feature or member fails here
+      # until a decision is recorded for it, and a row naming a pair that no
+      # longer exists fails as stale. The declaration half also runs inside
+      # `xtask gates`; this job is the compile half. `--bin xtask` is explicit
+      # because the package also carries two rule-authoring binaries, so a bare
+      # `cargo run -p xtask` cannot decide which one to build.
+      - name: Feature-isolation compile sweep
+        run: ./cargo_full run -p xtask --bin xtask -- feature-isolation --sweep
+
+  feature-gated-sweeps:
+    name: Oracle-matrix sweeps ci.yml cannot reach
+    # The oracle matrices dispatch their cases, and a GPU-required case fails
+    # closed on a probe with no devices rather than skipping, so a hosted runner
+    # reports a missing accelerator instead of a parity verdict.
+    runs-on: [self-hosted, axiomexec, gpu]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      # ci.yml runs `./cargo_full test --workspace` with default features, so a
+      # sweep whose [[test]] required-features name a non-default feature is
+      # skipped there, and strict.yml builds --all-targets without running
+      # anything. These are the oracle-parity matrices, so a skipped one is
+      # unproven parity. Roster and per-crate features are derived inside the
+      # gate from tracked sources and each crate's own [[test]] entries, so a
+      # new sweep runs without an edit here and a stale [[test]] entry fails
+      # instead of reserving features for a target that cannot build.
+      - name: Sweep oracle matrices
+        run: ./cargo_full run -q -p xtask --bin xtask -- oracle-sweeps --run --partition matrix
+
+      # The volume waves are the same rule at 16k cases per target. Run as a
+      # single shard of one: sharding exists so a developer can split the wall
+      # time locally, and four hosted runners would each rebuild the workspace
+      # to divide well under a minute of test time.
+      - name: Volume oracle matrix waves
+        run: ./cargo_full run -q -p xtask --bin xtask -- oracle-sweeps --run --partition volume --shard 0 --shards 1
+
+  spirv-validation:
+    name: Emitted SPIR-V is validated, not just shaped
+    # The parity target validates the emission and then materializes it on a
+    # Vulkan device, and it refuses a software implementation, so the job needs
+    # a host with a real compute queue.
+    runs-on: [self-hosted, axiomexec, gpu]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      # spirv-val is the only thing that can tell a valid module from a blob with
+      # a correct magic word. The suite used to accept the second when the
+      # validator was absent, so every emission passed here and the gate was
+      # decoration. Installing it is what makes the assertion mean anything. The
+      # persistent host already carries it, so the install runs only when the
+      # validator is missing.
+      - name: Install spirv-val
+        run: |
+          if ! command -v spirv-val >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y spirv-tools libvulkan1 mesa-vulkan-drivers
+          fi
+      # The target is registered behind `spirv-val`, so ci.yml's default
+      # --workspace run skips it and this job is the only thing that runs it. The
+      # gate fails closed when the validator is missing rather than falling back
+      # to a header check.
+      - name: Validated SPIR-V emission
+        run: ./cargo_full run -q -p xtask --bin xtask -- spirv-parity --validate

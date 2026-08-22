@@ -3,7 +3,10 @@ use vyre_lower::{KernelOp, KernelOpKind};
 pub(super) fn is_latency_load(op: &KernelOp) -> bool {
     matches!(
         op.kind,
-        KernelOpKind::LoadGlobal | KernelOpKind::LoadShared | KernelOpKind::LoadConstant
+        KernelOpKind::LoadGlobal
+            | KernelOpKind::LoadShared
+            | KernelOpKind::LoadConstant
+            | KernelOpKind::VectorLoadGlobal { .. }
     ) && op.result.is_some()
 }
 
@@ -12,6 +15,7 @@ pub(crate) fn is_scheduling_fence(op: &KernelOp) -> bool {
         op.kind,
         KernelOpKind::StoreGlobal
             | KernelOpKind::StoreShared
+            | KernelOpKind::VectorStoreGlobal { .. }
             | KernelOpKind::Atomic { .. }
             | KernelOpKind::Barrier { .. }
             | KernelOpKind::Return
@@ -47,6 +51,7 @@ pub(crate) fn is_schedulable_pure_op(op: &KernelOp) -> bool {
             | KernelOpKind::SubgroupShuffle
             | KernelOpKind::SubgroupBroadcast
             | KernelOpKind::SubgroupReduce { .. }
+            | KernelOpKind::ExtractLane { .. }
     ) && op.result.is_some()
 }
 
@@ -67,10 +72,11 @@ pub(super) fn op_reads_operand(op: &KernelOp, operand: u32) -> bool {
         .any(|candidate| *candidate == operand && !operand_is_immediate(op, *candidate))
 }
 
+// Inline: covers the private `is_schedulable_pure_op`, `op_reads_operand` and `operand_is_immediate`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_lower::{MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape};
+    use vyre_lower::descriptor_builder::mma_f16_m16n8k16;
 
     fn op(kind: KernelOpKind, operands: Vec<u32>, result: Option<u32>) -> KernelOp {
         KernelOp {
@@ -88,14 +94,7 @@ mod tests {
             Some(4)
         )));
         assert!(is_schedulable_pure_op(&op(
-            KernelOpKind::MatrixMma {
-                shape: MatrixMmaShape::M16N8K16,
-                a_layout: MatrixMmaLayout::RowMajor,
-                b_layout: MatrixMmaLayout::ColMajor,
-                a_type: MatrixMmaElement::F16,
-                b_type: MatrixMmaElement::F16,
-                accum_type: MatrixMmaElement::F32,
-            },
+            mma_f16_m16n8k16(),
             vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             Some(11)
         )));

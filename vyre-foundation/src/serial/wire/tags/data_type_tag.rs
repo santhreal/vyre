@@ -3,7 +3,23 @@ use crate::serial::wire::encode::WireEncodeErr;
 use crate::serial::wire::framing::{put_u32, put_u8};
 use crate::serial::wire::{MAX_MESH_AXES, MAX_TENSOR_RANK};
 
+/// Wire tag reserved for extension `DataTypes`. The tag byte is `0x80`;
+/// the u32 extension id follows immediately (little-endian). Ids below
+/// `0x8000_0000` collide with core IR and are rejected.
+pub(crate) const DATA_TYPE_TAG_OPAQUE: u8 = 0x80;
+
 /// Encode a [`DataType`] into its stable VIR0 wire-format tag byte.
+///
+/// # Role
+///
+/// The one owner of the `DataType` to numeric-tag mapping. The wire envelope,
+/// the AOT artifact identity, and the driver's specialization cache key all
+/// read the same table here, so a cache key cannot describe a different type
+/// than the blob it is filed under. Two copies of this table existed before:
+/// one in the dense memory-region encoder and one in
+/// `vyre_driver::specialization`, and the driver's had already lost
+/// `DataType::Quantized`, which therefore collapsed onto the unknown-variant
+/// sentinel and shared a cache key with every other unmapped type.
 ///
 /// # Preconditions
 ///
@@ -15,19 +31,14 @@ use crate::serial::wire::{MAX_MESH_AXES, MAX_TENSOR_RANK};
 ///
 /// `Ok(u8)` containing the tag value. Scalar and tensor types map to a single
 /// byte; `Array` maps to tag `12` and the caller must follow up with the
-/// `element_size` payload via [`put_data_type`].
+/// `element_size` payload via the crate-private `put_data_type` encoder.
 ///
-/// # Failure mode
+/// # Errors
 ///
 /// Returns `Err("unknown DataType variant")` when the variant has no
 /// registered tag, preventing silent data loss on round-trip.
-/// Wire tag reserved for extension `DataTypes`. The tag byte is `0x80`;
-/// the u32 extension id follows immediately (little-endian). See
-/// `docs/wire-format.md` §Extensions.
-pub(crate) const DATA_TYPE_TAG_OPAQUE: u8 = 0x80;
-
 #[inline]
-pub(crate) fn data_type_tag(value: &DataType) -> Result<u8, WireEncodeErr> {
+pub fn data_type_tag(value: &DataType) -> Result<u8, WireEncodeErr> {
     match value {
         DataType::U32 => Ok(0x01),
         DataType::I32 => Ok(0x02),
@@ -322,7 +333,7 @@ mod tests {
             DataType::FP4,
             DataType::NF4,
             DataType::Array { element_size: 16 },
-            DataType::Handle(vyre_spec::data_type::TypeId(0xDEAD_BEEF)),
+            DataType::Handle(vyre_spec::TypeId(0xDEAD_BEEF)),
             DataType::Vec {
                 element: Box::new(DataType::F32),
                 count: 4,

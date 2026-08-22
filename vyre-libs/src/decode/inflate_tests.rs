@@ -1,0 +1,347 @@
+//! Contracts for stored-block inflate: the CPU reference, the emitted program,
+//! and the fused inflate-then-scan path.
+
+use super::inflate::{
+    inflate_stored_block, inflate_stored_block_then_aho_corasick, DYNAMIC_HUFFMAN_REJECT,
+    FAMILY_PREFIX, FIXED_HUFFMAN_REJECT, INFLATED_LEN_BUFFER, RESERVED_BTYPE_FIX,
+    STORED_HEADER_FIX,
+};
+use crate::buffer_names::fixed_name;
+use crate::fixture_bytes::eval_bytes;
+use crate::pattern::dfa_compile;
+use vyre_primitives::wire::pack_u32_slice as pack_words;
+use vyre_reference::composition_witness::{inflate_stored_witness, InflateStoredWitness};
+
+fn inflate_error(input: &[u32]) -> &'static str {
+    match input.first().copied().unwrap_or(0) >> 1 & 0x3 {
+        1 => FIXED_HUFFMAN_REJECT,
+        2 => DYNAMIC_HUFFMAN_REJECT,
+        3 => RESERVED_BTYPE_FIX,
+        _ => STORED_HEADER_FIX,
+    }
+}
+
+fn inflate_stored_reference_words(input: &[u32]) -> Result<InflateStoredWitness, &'static str> {
+    inflate_stored_witness(input).map_err(|_| inflate_error(input))
+}
+
+fn reference_inflate_stored(input: &[u32]) -> Option<InflateStoredWitness> {
+    inflate_stored_reference_words(input).ok()
+}
+
+fn reference_inflate_stored_result(input: &[u32]) -> Result<(Vec<u32>, u32), &'static str> {
+    let result = inflate_stored_reference_words(input)?;
+    Ok((result.data, result.inflated_len))
+}
+
+fn reference_inflate_stored_bytes(input: &[u8]) -> Result<(Vec<u32>, u32), &'static str> {
+    let words: Vec<u32> = input.iter().map(|&b| u32::from(b)).collect();
+    reference_inflate_stored_result(&words)
+}
+
+#[test]
+fn inflate_stored_hello() {
+    // Matches the inventory test case exactly.
+    let input = [
+        0x01, // BFINAL=1, BTYPE=00
+        0x05,
+        0x00, // LEN = 5
+        0xFA,
+        0xFF, // NLEN = 0xFFFA (= 5 ^ 0xFFFF)
+        b'h' as u32,
+        b'e' as u32,
+        b'l' as u32,
+        b'l' as u32,
+        b'o' as u32,
+    ];
+    let result = reference_inflate_stored(&input).unwrap();
+    assert_eq!(result.inflated_len, 5);
+    assert_eq!(
+        result.data,
+        vec![
+            b'h' as u32,
+            b'e' as u32,
+            b'l' as u32,
+            b'l' as u32,
+            b'o' as u32
+        ]
+    );
+}
+
+#[test]
+fn inflate_stored_empty_block() {
+    let input = [
+        0x01, // BFINAL=1, BTYPE=00
+        0x00, 0x00, // LEN = 0
+        0xFF, 0xFF, // NLEN = 0xFFFF
+    ];
+    let result = reference_inflate_stored(&input).unwrap();
+    assert_eq!(result.inflated_len, 0);
+    assert!(result.data.is_empty());
+}
+
+#[test]
+fn inflate_stored_rejects_fixed_huffman() {
+    let input = [
+        0x03, // BFINAL=1, BTYPE=01 (fixed Huffman)
+        0x00, 0x00, 0xFF, 0xFF,
+    ];
+    assert!(reference_inflate_stored(&input).is_none());
+}
+
+#[test]
+fn inflate_stored_rejects_len_nlen_mismatch() {
+    let input = [
+        0x01, // BFINAL=1, BTYPE=00
+        0x05,
+        0x00, // LEN = 5
+        0x00,
+        0x00, // NLEN = 0 (wrong!)
+        b'x' as u32,
+        b'x' as u32,
+        b'x' as u32,
+        b'x' as u32,
+        b'x' as u32,
+    ];
+    assert!(reference_inflate_stored(&input).is_none());
+}
+
+#[test]
+fn inflate_stored_rejects_truncated_payload() {
+    let input = [0x01, 0x05, 0x00, 0xFA, 0xFF, b'h' as u32, b'e' as u32];
+    assert_eq!(
+        inflate_stored_reference_words(&input),
+        Err(STORED_HEADER_FIX)
+    );
+    assert!(reference_inflate_stored(&input).is_none());
+}
+
+/// Widen packed bytes to one `u32` per byte, the shape these programs read.
+fn widen(bytes: &[u8]) -> Vec<u32> {
+    bytes.iter().map(|&byte| u32::from(byte)).collect()
+}
+
+/// The little-endian `u32` an inflated-length buffer carries.
+fn read_len(bytes: &[u8]) -> u32 {
+    u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+}
+
+fn inflate_words(input: &[u8]) -> (Vec<u32>, u32) {
+    let program = inflate_stored_block("input", "output", input.len() as u32);
+    let outputs = eval_bytes(
+        "inflate_stored_block",
+        &program,
+        vec![
+            pack_words(&widen(input)),
+            vec![0u8; input.len() * 4],
+            vec![0u8; 4],
+        ],
+    );
+    let decoded = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0]);
+    let decoded_len = read_len(&outputs[1]);
+    (decoded, decoded_len)
+}
+
+#[test]
+fn stored_block_decodes_without_host_roundtrip() {
+    let (decoded, decoded_len) =
+        inflate_words(&[0x01, 0x05, 0x00, 0xFA, 0xFF, b'h', b'e', b'l', b'l', b'o']);
+    assert_eq!(&decoded[..5], &[104, 101, 108, 108, 111]);
+    assert_eq!(decoded_len, 5);
+}
+
+#[test]
+fn reference_names_fixed_huffman_gap() {
+    let err =
+        reference_inflate_stored_result(&[0x03, 0, 0, 0, 0]).expect_err("BTYPE=1 must reject");
+    assert_eq!(err, FIXED_HUFFMAN_REJECT);
+}
+
+#[test]
+fn reference_names_dynamic_huffman_gap() {
+    let err =
+        reference_inflate_stored_result(&[0x05, 0, 0, 0, 0]).expect_err("BTYPE=2 must reject");
+    assert_eq!(err, DYNAMIC_HUFFMAN_REJECT);
+}
+
+#[test]
+#[cfg(feature = "pattern-dfa")]
+fn fused_stored_block_matches_parity_with_separate_inflate_then_aho() {
+    let patterns: [&[u8]; 1] = [b"ell"];
+    let compiled = dfa_compile(&patterns);
+    let input_len = 10u32;
+
+    let stored_block = {
+        let payload = b"hello";
+        let len = payload.len() as u16;
+        let nlen = !len;
+        [
+            &[0x01u8][..],
+            &len.to_le_bytes(),
+            &nlen.to_le_bytes(),
+            payload.as_slice(),
+        ]
+        .concat()
+    };
+
+    // --- Fused run ---
+    let fused_program = inflate_stored_block_then_aho_corasick(
+        "input",
+        "decoded",
+        "transitions",
+        "accept",
+        "matches",
+        input_len,
+        compiled.state_count,
+    );
+    let fused_outputs = eval_bytes(
+        "inflate_stored_block_then_aho_corasick",
+        &fused_program,
+        vec![
+            pack_words(&widen(&stored_block)),
+            vec![0u8; input_len as usize * 4],
+            pack_words(&compiled.transitions),
+            pack_words(&compiled.accept),
+            vec![0u8; input_len as usize * 4],
+            vec![0u8; 4],
+        ],
+    );
+    let fused_matches = vyre_primitives::wire::decode_u32_le_bytes_all(&fused_outputs[1]);
+
+    // --- Separate inflate ---
+    let inflate_program = inflate_stored_block("input", "output", input_len);
+    let inflate_outputs = eval_bytes(
+        "inflate_stored_block",
+        &inflate_program,
+        vec![
+            pack_words(&widen(&stored_block)),
+            vec![0u8; input_len as usize * 4],
+            vec![0u8; 4],
+        ],
+    );
+    let decoded_bytes = &inflate_outputs[0];
+    let decoded_len = read_len(&inflate_outputs[1]);
+
+    // --- Separate aho ---
+    let aho_program = crate::pattern::aho_corasick(
+        "haystack",
+        "transitions",
+        "accept",
+        "matches",
+        decoded_len,
+        compiled.state_count,
+    );
+    let aho_outputs = eval_bytes(
+        "aho_corasick",
+        &aho_program,
+        vec![
+            decoded_bytes[..decoded_len as usize * 4].to_vec(),
+            pack_words(&compiled.transitions),
+            pack_words(&compiled.accept),
+            vec![0u8; decoded_len as usize * 4],
+        ],
+    );
+    let separate_matches = vyre_primitives::wire::decode_u32_le_bytes_all(&aho_outputs[0]);
+
+    assert_eq!(
+        &fused_matches[..decoded_len as usize],
+        &separate_matches[..]
+    );
+    for &m in &fused_matches[decoded_len as usize..] {
+        assert_eq!(m, 0);
+    }
+}
+
+#[test]
+fn fused_program_reuses_decoded_buffer_for_scan() {
+    let dfa = crate::decode::scan::dummy_compiled_dfa();
+    let program = inflate_stored_block_then_aho_corasick(
+        "input",
+        "decoded",
+        "transitions",
+        "accept",
+        "matches",
+        10,
+        dfa.state_count,
+    );
+    assert_eq!(
+        program.buffers()[1].name(),
+        fixed_name(FAMILY_PREFIX, "decoded")
+    );
+    assert_eq!(program.buffers()[4].name(), "matches");
+    assert_eq!(program.buffers()[5].name(), INFLATED_LEN_BUFFER);
+}
+
+#[test]
+fn generic_default_names_are_family_scoped() {
+    let program = inflate_stored_block("input", "decoded", 10);
+    assert_eq!(
+        program.buffers()[0].name(),
+        fixed_name(FAMILY_PREFIX, "input")
+    );
+    assert_eq!(
+        program.buffers()[1].name(),
+        fixed_name(FAMILY_PREFIX, "decoded")
+    );
+    assert_eq!(program.buffers()[2].name(), INFLATED_LEN_BUFFER);
+}
+
+#[test]
+fn generated_stored_blocks_match_reference_and_clear_length_once() {
+    for seed in 0u32..2048 {
+        let len = (seed % 65) as usize;
+        let mut state = seed ^ 0x1F1A_7E55;
+        let mut payload = Vec::with_capacity(len);
+        for _ in 0..len {
+            state = state.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+            payload.push((state >> 16) as u8);
+        }
+        let len16 = len as u16;
+        let nlen = !len16;
+        let mut input = Vec::with_capacity(5 + payload.len());
+        input.push(0x01);
+        input.extend_from_slice(&len16.to_le_bytes());
+        input.extend_from_slice(&nlen.to_le_bytes());
+        input.extend_from_slice(&payload);
+
+        let (actual, actual_len) = inflate_words(&input);
+        let (expected, expected_len) = reference_inflate_stored_bytes(&input)
+            .unwrap_or_else(|error| panic!("generated stored block rejected seed {seed}: {error}"));
+        assert_eq!(actual_len, expected_len, "inflated length seed {seed}");
+        assert_eq!(
+            &actual[..expected_len as usize],
+            expected.as_slice(),
+            "payload seed {seed}"
+        );
+        assert!(
+            actual[expected_len as usize..]
+                .iter()
+                .all(|&word| word == 0),
+            "stored inflate must not dirty output tail at seed {seed}"
+        );
+    }
+}
+
+#[test]
+fn generated_non_stored_and_corrupt_headers_report_canonical_reasons() {
+    for seed in 0u32..2048 {
+        let mut input = vec![0x01, 0x04, 0x00, 0xFB, 0xFF, b't', b'e', b's', b't'];
+        match seed % 4 {
+            0 => input[0] = 0x03,
+            1 => input[0] = 0x05,
+            2 => input[0] = 0x07,
+            _ => input[3] ^= 0x5A,
+        }
+        let err = match reference_inflate_stored_bytes(&input) {
+            Ok(_) => panic!("generated corrupt block accepted seed {seed}"),
+            Err(error) => error,
+        };
+        let expected = match seed % 4 {
+            0 => FIXED_HUFFMAN_REJECT,
+            1 => DYNAMIC_HUFFMAN_REJECT,
+            2 => RESERVED_BTYPE_FIX,
+            _ => STORED_HEADER_FIX,
+        };
+        assert_eq!(err, expected, "canonical reject reason seed {seed}");
+    }
+}

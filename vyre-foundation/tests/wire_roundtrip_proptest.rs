@@ -1,12 +1,7 @@
-//! Wire-format roundtrip proptest. Shared generators and invariant cases stay
-//! in one flat scope because the support file opens the `proptest!` block used
-//! by the included cases.
+//! Wire-format roundtrip proptest. The support chunk holds the shared
+//! generators; the invariant cases are declared under it so they keep seeing
+//! those generators.
 #![allow(dead_code)]
-mod wire_roundtrip_proptest_suite {
-    include!("contract_cases/wire_roundtrip_proptest_support__extension_kind.rs");
-    include!("contract_cases/wire_roundtrip_proptest_support__arb_node.rs");
-    include!(
-        "contract_cases/wire_roundtrip_proptest__program_wire_roundtrip_preserves_structure.rs"
-    );
-    include!("contract_cases/wire_roundtrip_proptest__every_expression_variant_roundtrips_in_one_program.rs");
-}
+
+#[path = "contract_cases/wire_roundtrip_proptest_support__extension_kind.rs"]
+mod wire_roundtrip_proptest_support_extension_kind;

@@ -1,4 +1,4 @@
-//! ROADMAP L2 / E2  -  content-hash LRU cache for parsed source.
+//! content-hash LRU cache for parsed source.
 //!
 //! Substrate that any language's parse pipeline can opt into without
 //! plumbing a cache through every layer of the parser. The cache is
@@ -250,9 +250,11 @@ impl<T> ParsedSourceLru<T> {
         // the panic loudly (same poison policy as the readiness mutex below).
         // (The in-flight-parse state lock is a SEPARATE, deliberate protocol:
         // a panicking parse is an expected, flagged condition there.)
-        self.inner
-            .lock()
-            .expect("parsed-source LRU cache lock was poisoned")
+        self.inner.lock().expect(
+            "the parsed-source LRU lock is poisoned, so entries, recency, and coldest \
+             disagree. Fix: drop this cache and build a new one; the panic that poisoned \
+             it is the defect to chase, and it is reported by whichever parse panicked",
+        )
     }
 
     #[cfg(test)]
@@ -591,8 +593,8 @@ mod tests {
             .or_else(|| panic.downcast_ref::<&'static str>().copied())
             .unwrap_or("<non-string panic>");
         assert!(
-            message.contains("parsed-source LRU cache lock was poisoned"),
-            "{message}"
+            message.contains("parsed-source LRU lock is poisoned") && message.contains("Fix: "),
+            "a poisoned cache must name the lock it lost and the action that recovers: {message}"
         );
     }
 }

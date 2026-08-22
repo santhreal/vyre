@@ -430,7 +430,7 @@ pub fn generated_relation_finding_fact_ids(findings: &[FindingProofBundle]) -> V
     let mut ids = Vec::new();
     for finding in findings {
         for fact_id in &finding.fact_ids {
-            if !ids.contains(fact_id) {
+            if !ids.iter().any(|id| id == fact_id) {
                 ids.push(*fact_id);
             }
         }

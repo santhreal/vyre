@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-mod support;
+mod expansion_fixtures;
 
 use vyre_macros::vyre_ast_registry;
 

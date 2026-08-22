@@ -16,9 +16,8 @@
 //!
 //! Dims beyond rope_dims: grad_x = grad_out (identity).
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::partial_rope_backward";
 
@@ -134,33 +133,29 @@ pub fn partial_rope_backward(
             BufferDecl::output(grad_in, 3, DataType::F32).with_count(total),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
+const EXPECTED_PARTIAL_ROPE_BACKWARD_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0x40, 0x00, 0x00, 0xC0, 0x40,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| partial_rope_backward("grad_out", "cos", "sin", "grad_in", 1, 1, 4, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || partial_rope_backward("grad_out", "cos", "sin", "grad_in", 1, 1, 4, 2),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 0.0, 5.0, 6.0]), // grad_out
                 to_f32(&[1.0]),                   // cos
                 to_f32(&[0.0]),                   // sin
-                vec![0u8; 4 * 4],
             ]]
         }),
-        expected_output: Some(|| {
-            // cos=1, sin=0: backward rotation is also identity
-            let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![to_f32(&[1.0, 0.0, 5.0, 6.0])]]
+        Some(|| {
+            vec![vec![EXPECTED_PARTIAL_ROPE_BACKWARD_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

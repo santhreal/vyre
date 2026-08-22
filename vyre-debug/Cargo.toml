@@ -1,6 +1,6 @@
 [package]
 name = "vyre-debug"
-version = "0.7.2"
+version = "0.8.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Debugging CLI and inspection helpers for Vyre programs, lowering, and emitted shaders."
@@ -10,6 +10,9 @@ homepage = "https://santh.dev/vyre/"
 documentation = "https://docs.rs/vyre-debug"
 categories = ["development-tools", "compilers"]
 keywords = ["vyre", "debug", "gpu", "shader"]
+
+[package.metadata.cargo-machete]
+ignored = ["vyre-megakernel"]
 
 [lints]
 workspace = true
@@ -29,11 +32,14 @@ naga = { workspace = true, features = ["wgsl-out"] }
 clap = { workspace = true, features = ["derive"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-vyre-libs = { workspace = true, features = ["c-parser"] }
-vyre-primitives.workspace = true
+vyre-libs = { workspace = true, features = ["python-parser"] }
 bincode = { workspace = true }
 
 [dev-dependencies]
+# `neutral_target_debug_separation` reaches `vyre_lower::descriptor_builder`,
+# which the shipped surface gates behind `test-fixtures`.
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
+vyre-megakernel.workspace = true
 vyre-test-support.workspace = true
 assert_cmd = { workspace = true }
 predicates = { workspace = true }

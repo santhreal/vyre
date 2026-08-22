@@ -1,23 +1,25 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase,
+    WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use vyre::ir::Program;
 use vyre_driver::TimedDispatchResult;
-use vyre_primitives::reduce::{sum, workgroup_tree};
+use vyre_libs::reduce::{grid_stride_tree, sum};
 
 pub struct ReduceSumBench;
 
 const SMALL_COUNT: u32 = 32;
 const LARGE_COUNT: u32 = 1 << 20;
-const MAX_TREE_TILE: u32 = 256;
 const ROUTE_ATOMIC: u64 = 0;
 const ROUTE_TREE: u64 = 1;
 
 struct ReductionSizePrepared {
     count: u32,
     tree_tile: u32,
+    tree_grid: Option<[u32; 3]>,
+    values: Vec<u32>,
     atomic_program: Program,
     tree_program: Program,
     inputs: [Vec<u8>; 2],
@@ -75,12 +77,33 @@ impl BenchCase for ReduceSumBench {
         ))
     }
 
-    fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let baseline_started = std::time::Instant::now();
-        let small = prepare_size(SMALL_COUNT);
-        let large = prepare_size(LARGE_COUNT);
-        let baseline_wall_ns =
-            u64::try_from(baseline_started.elapsed().as_nanos()).unwrap_or(u64::MAX);
+    fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
+        // The fused tree reduction carries a whole-grid fence, so it launches
+        // cooperatively and every workgroup must be co-resident. One workgroup
+        // per compute unit is the widest grid that holds at this tile. A backend
+        // that cannot report a compute-unit count places no cap on the request,
+        // and the builder clamps it to what the shape admits: reading the
+        // unreported count as one workgroup measured 0.08x of the CPU baseline.
+        let profile = ctx.preferred_backend.device_profile();
+        let tree_blocks = profile.grid_stride_workgroups();
+        let tile_ceiling = tree_tile_ceiling(&profile);
+        let small = prepare_size(SMALL_COUNT, tree_blocks, tile_ceiling);
+        let large = prepare_size(LARGE_COUNT, tree_blocks, tile_ceiling);
+
+        let pool = crate::cases::cpu_baselines::baseline_pool();
+        let mut durations = Vec::with_capacity(11);
+        for _ in 0..11 {
+            let start = std::time::Instant::now();
+            let (_s, _l) = pool.install(|| {
+                use rayon::prelude::*;
+                let s: u32 = small.values.par_iter().copied().sum();
+                let l: u32 = large.values.par_iter().copied().sum();
+                (s, l)
+            });
+            durations.push(elapsed_ns(start));
+        }
+        durations.sort_unstable();
+        let baseline_wall_ns = durations[durations.len() / 2];
 
         Ok(Box::new(ReduceSumPrepared {
             small,
@@ -99,6 +122,7 @@ impl BenchCase for ReduceSumBench {
         for size in [&prepared.small, &prepared.large] {
             hasher.update(&size.count.to_le_bytes());
             hasher.update(&size.tree_tile.to_le_bytes());
+            hasher.update(&size.tree_grid.unwrap_or([0; 3])[0].to_le_bytes());
             hasher.update(&size.atomic_program.fingerprint());
             hasher.update(&size.tree_program.fingerprint());
         }
@@ -110,13 +134,7 @@ impl BenchCase for ReduceSumBench {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<ReduceSumPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "reduce-sum crossover prepared payload type mismatch".to_string(),
-                )
-            })?;
+        let prepared = prepared_as::<ReduceSumPrepared>(prepared, "reduce-sum crossover")?;
 
         let small = measure_size(ctx, &prepared.small, "small")?;
         let large = measure_size(ctx, &prepared.large, "large")?;
@@ -129,8 +147,8 @@ impl BenchCase for ReduceSumBench {
             _ => None,
         };
         let outputs = vec![
-            small.selected.outputs[0].clone(),
-            large.selected.outputs[0].clone(),
+            small.selected.outputs.last().cloned().unwrap_or_default(),
+            large.selected.outputs.last().cloned().unwrap_or_default(),
         ];
         let baseline_outputs = vec![
             prepared.small.expected.clone(),
@@ -209,17 +227,45 @@ struct MeasuredSize {
     selected: TimedDispatchResult,
 }
 
-fn prepare_size(count: u32) -> ReductionSizePrepared {
+/// Largest tile the tree reduction may launch on the measured device.
+///
+/// The tree halves its active lanes each round, so the tile is the admitted
+/// workgroup extent floored to a power of two. Both limits come from the
+/// probed device: a backend whose target dialect admits fewer invocations than
+/// its adapter advertises rejects a payload sized for the adapter's number,
+/// and WGSL admits the WebGPU spec baseline of 256 where CUDA admits 1024.
+fn tree_tile_ceiling(profile: &vyre_driver::DeviceProfile) -> u32 {
+    let admitted = profile.max_workgroup_size[0]
+        .min(profile.max_invocations_per_workgroup)
+        .max(1);
+    1u32 << admitted.ilog2()
+}
+
+fn prepare_size(count: u32, tree_blocks: u32, tile_ceiling: u32) -> ReductionSizePrepared {
     let values: Vec<u32> = (0..count)
         .map(|index| index.wrapping_mul(17).wrapping_add(3) & 0xff)
         .collect();
     let expected = values.iter().copied().fold(0u32, u32::wrapping_add);
-    let tree_tile = count.min(MAX_TREE_TILE).max(1).next_power_of_two();
+    let tree_tile = count.min(tile_ceiling).max(1).next_power_of_two();
+    let tree_blocks =
+        grid_stride_tree::grid_stride_tree_sum_u32_blocks(count, tree_tile, tree_blocks);
     ReductionSizePrepared {
         count,
         tree_tile,
+        // The tree program's grid is a contract of the program at every block
+        // count: pass 1 strides the input over exactly this many blocks and
+        // sizes its partial buffer to them. Leaving the launch to inference
+        // spans the widest declared buffer instead, which is the whole input.
+        tree_grid: Some([tree_blocks, 1, 1]),
+        values: values.clone(),
         atomic_program: sum::reduce_sum("values", "out", count),
-        tree_program: workgroup_tree::workgroup_sum_u32("values", "out", count, tree_tile),
+        tree_program: grid_stride_tree::grid_stride_tree_sum_u32(
+            "values",
+            "out",
+            count,
+            tree_tile,
+            tree_blocks,
+        ),
         inputs: [
             crate::cases::byte_pack::u32_bytes(&values),
             crate::cases::byte_pack::u32_bytes(&[0]),
@@ -242,26 +288,33 @@ fn measure_size(
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     verify_route_output(size_name, "atomic", &atomic.outputs, &prepared.expected)?;
 
+    let mut tree_config = ctx.dispatch_config.clone();
+    if let Some(grid) = prepared.tree_grid {
+        tree_config.grid_override = Some(grid);
+    }
     let tree = ctx
-        .dispatch_timed(
-            &prepared.tree_program,
-            std::slice::from_ref(&prepared.inputs[0]),
-            &ctx.dispatch_config,
-        )
+        .dispatch_timed(&prepared.tree_program, &prepared.inputs, &tree_config)
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     verify_route_output(size_name, "tree", &tree.outputs, &prepared.expected)?;
 
-    let device_timing = match (atomic.device_ns, tree.device_ns) {
-        (Some(_), Some(_)) => true,
-        (None, None) => false,
-        _ => {
+    let (atomic_ns, tree_ns) = match (atomic.device_ns, tree.device_ns) {
+        (Some(a), Some(t)) if a > 0 && t > 0 => (a, t),
+        (Some(a), Some(t)) => {
             return Err(BenchError::BackendFailed(format!(
-                "{size_name} reduction routes reported inconsistent device-timing availability"
+                "{size_name} reduction routes reported zero device timing: atomic={a} ns, tree={t} ns"
+            )));
+        }
+        (a, t) => {
+            return Err(BenchError::BackendFailed(format!(
+                "{size_name} reduction routes missing device timing: atomic={a:?}, tree={t:?}"
             )));
         }
     };
-    let atomic_ns = atomic.device_ns.unwrap_or(atomic.wall_ns);
-    let tree_ns = tree.device_ns.unwrap_or(tree.wall_ns);
+    if size_name == "large" && atomic_ns == tree_ns {
+        return Err(BenchError::BackendFailed(format!(
+            "large reduction routes reported identical device timings ({atomic_ns} ns); selector cannot determine measured winner"
+        )));
+    }
     let (selected_route, selected) = if atomic_ns <= tree_ns {
         (ROUTE_ATOMIC, atomic)
     } else {
@@ -272,7 +325,7 @@ fn measure_size(
         atomic_ns,
         tree_ns,
         selected_route,
-        device_timing,
+        device_timing: true,
         selected,
     })
 }
@@ -283,7 +336,7 @@ fn verify_route_output(
     outputs: &[Vec<u8>],
     expected: &[u8],
 ) -> Result<(), BenchError> {
-    if outputs == [expected] {
+    if outputs.last().map(Vec::as_slice) == Some(expected) {
         return Ok(());
     }
     Err(BenchError::CorrectnessViolation(format!(
@@ -303,4 +356,123 @@ fn metric(name: &str, value: u64) -> MetricPoint {
 }
 inventory::submit! {
     &ReduceSumBench as &'static dyn BenchCase
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn profile_with(max_workgroup_x: u32, max_invocations: u32) -> vyre_driver::DeviceProfile {
+        let mut profile = vyre_driver::DeviceProfile::conservative("test");
+        profile.max_workgroup_size = [max_workgroup_x, 1, 1];
+        profile.max_invocations_per_workgroup = max_invocations;
+        profile
+    }
+
+    #[test]
+    fn the_tile_ceiling_is_the_smaller_of_the_two_workgroup_facts() {
+        assert_eq!(tree_tile_ceiling(&profile_with(1024, 1024)), 1024);
+        assert_eq!(
+            tree_tile_ceiling(&profile_with(1024, 256)),
+            256,
+            "Fix: a dialect that admits 256 invocations rejects a 1024-wide tile the adapter allows"
+        );
+        assert_eq!(tree_tile_ceiling(&profile_with(256, 1024)), 256);
+        assert_eq!(
+            tree_tile_ceiling(&profile_with(768, 768)),
+            512,
+            "Fix: the tree halves its lanes each round, so a tile must be a power of two"
+        );
+        assert_eq!(
+            tree_tile_ceiling(&vyre_driver::DeviceProfile::conservative("unprobed")),
+            1,
+            "Fix: an unprobed backend admits one invocation, not a baked-in default"
+        );
+    }
+
+    #[test]
+    fn small_and_large_reduction_sizes_prepare_expected_values() {
+        // The block count a 4090-class device reports; the clamp is what turns
+        // it into a legal grid for each size. Both tile ceilings are real: CUDA
+        // admits 1024 invocations per workgroup, WGSL admits 256.
+        let compute_units = 170;
+
+        for tile_ceiling in [1024, 256] {
+            let small = prepare_size(SMALL_COUNT, compute_units, tile_ceiling);
+            assert_eq!(small.count, 32);
+            assert_eq!(small.tree_tile, 32);
+            assert_eq!(small.inputs[0].len(), 32 * 4);
+            assert_eq!(small.expected.len(), 4);
+            assert_eq!(
+                small.tree_grid,
+                Some([1, 1, 1]),
+                "Fix: 32 elements at tile 32 need one block, and the launch pins it rather than letting the widest buffer infer a wider grid"
+            );
+
+            let large = prepare_size(LARGE_COUNT, compute_units, tile_ceiling);
+            assert_eq!(large.count, 1 << 20);
+            assert_eq!(
+                large.tree_tile, tile_ceiling,
+                "Fix: a million elements fill whatever tile the device admits"
+            );
+            assert_eq!(large.inputs[0].len(), (1 << 20) * 4);
+            assert_eq!(large.expected.len(), 4);
+            assert_eq!(
+                large.tree_grid,
+                Some([compute_units, 1, 1]),
+                "Fix: the launch must pin the block count the pass-one loop was built for"
+            );
+
+            // Pass two reduces the per-block partials inside one tile-wide
+            // workgroup, so the block count is capped by the tile as well as by
+            // the number of tiles the input fills.
+            let saturated = prepare_size(LARGE_COUNT, 100_000, tile_ceiling);
+            assert_eq!(
+                saturated.tree_grid,
+                Some([tile_ceiling.min(LARGE_COUNT / tile_ceiling), 1, 1]),
+                "Fix: more blocks than tiles leaves blocks with nothing to reduce"
+            );
+        }
+    }
+
+    /// WHY: the WGPU adapter probe reports no compute-unit count, and reading
+    /// that as one workgroup launched a one-million-element reduction at a
+    /// single block. It computed the right answer at 0.08x of the CPU baseline,
+    /// so only a performance contract could see it. This pins the request for
+    /// every backend whose profile leaves the count unreported.
+    #[test]
+    fn an_unreported_compute_unit_count_still_fills_the_grid() {
+        for tile_ceiling in [1024u32, 256] {
+            let profile = profile_with(tile_ceiling, tile_ceiling);
+            assert_eq!(
+                profile.compute_units, 0,
+                "Fix: this case only means something while the profile leaves the count unreported"
+            );
+            let prepared = prepare_size(
+                LARGE_COUNT,
+                profile.grid_stride_workgroups(),
+                tree_tile_ceiling(&profile),
+            );
+            assert_eq!(
+                prepared.tree_grid,
+                Some([tile_ceiling.min(LARGE_COUNT / tile_ceiling), 1, 1]),
+                "Fix: an unreported compute-unit count must leave the shape to cap the grid, not collapse it to one block"
+            );
+        }
+    }
+
+    #[test]
+    fn verify_route_output_rejects_mismatch_and_accepts_expected() {
+        let expected = vec![1, 2, 3, 4];
+        let matching = vec![vec![1, 2, 3, 4]];
+        let mismatch = vec![vec![1, 2, 3, 5]];
+
+        assert!(verify_route_output("test", "atomic", &matching, &expected).is_ok());
+        assert!(verify_route_output("test", "atomic", &mismatch, &expected).is_err());
+    }
+
+    #[test]
+    fn tree_barrier_rounds_computes_expected_log2_rounds() {
+        assert_eq!(tree_barrier_rounds(32), 6);
+        assert_eq!(tree_barrier_rounds(256), 9);
+    }
 }

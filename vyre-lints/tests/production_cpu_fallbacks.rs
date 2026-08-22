@@ -14,7 +14,7 @@ fn scan_fixture(source: &str) -> Vec<vyre_lints::Violation> {
 #[test]
 fn flags_reference_eval_in_production_source() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("vyre-frontend-c/src");
+    let src = dir.path().join("vyre-libs/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("dispatch.rs"),
@@ -52,23 +52,72 @@ fn cli_rejects_missing_production_root() {
     );
 }
 
+/// Default roots the CLI declares for `flag`, asked of the binary rather than
+/// restated here. A copy of the list would pass while naming roots the CLI no
+/// longer scans.
+fn declared_default_roots(flag: &str) -> Vec<String> {
+    let output = Command::new(env!("CARGO_BIN_EXE_vyre-lints"))
+        .arg(flag)
+        .arg("--print-default-roots")
+        .output()
+        .expect("run vyre-lints");
+    assert!(
+        output.status.success(),
+        "printing default roots must not scan or fail: stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
 #[test]
 fn cli_default_production_roots_are_vyre_owned_only() {
-    let dir = tempfile::tempdir().expect("tempdir");
-    for root in [
-        "vyre-aot/src",
-        "vyre/src",
-        "vyre-driver/src",
-        "vyre-driver-cuda/src",
-        "vyre-driver-wgpu/src",
-        "vyre-frontend-c/src",
-        "vyre-libs/src",
-        "vyre-lower/src",
-        "vyre-runtime/src",
-        "vyre-self-substrate/src",
-    ] {
-        fs::create_dir_all(dir.path().join(root)).expect("create default production root");
+    let roots = declared_default_roots("--check-production-cpu-fallbacks");
+    assert!(
+        !roots.is_empty(),
+        "a lint that declares no default root scans nothing"
+    );
+
+    let workspace = vyre_test_support::monorepo::vyre_workspace_root();
+    for root in &roots {
+        let path = std::path::Path::new(root);
+        assert!(
+            path.is_relative(),
+            "default production root `{root}` is absolute, so the printed list names this \
+             checkout rather than the workspace members a caller would scan"
+        );
+        assert!(
+            path.file_name().and_then(std::ffi::OsStr::to_str) == Some("src"),
+            "default production root `{root}` is not a member `src` directory"
+        );
+        assert!(
+            workspace.join(path).is_dir(),
+            "default production root `{root}` does not exist in this workspace, so a default \
+             scan would need an external consumer checkout"
+        );
     }
+
+    // The declared roots are the workspace members, so the fixture needs the
+    // manifest they are derived from. A bare directory tree would test a root
+    // list nothing produced.
+    let dir = tempfile::tempdir().expect("tempdir");
+    let mut members = String::new();
+    for root in &roots {
+        fs::create_dir_all(dir.path().join(root)).expect("create default production root");
+        let member = root
+            .strip_suffix("/src")
+            .expect("a default root is a member `src` directory");
+        members.push_str(&format!("    \"{member}\",\n"));
+    }
+    fs::write(
+        dir.path().join("Cargo.toml"),
+        format!("[workspace]\nresolver = \"2\"\nmembers = [\n{members}]\n"),
+    )
+    .expect("write the fixture workspace manifest");
 
     let output = Command::new(env!("CARGO_BIN_EXE_vyre-lints"))
         .arg("--check-production-cpu-fallbacks")
@@ -79,7 +128,7 @@ fn cli_default_production_roots_are_vyre_owned_only() {
 
     assert!(
         output.status.success(),
-        "Vyre default production roots must not require external consumer checkouts: stderr={}",
+        "the roots the CLI declares must be exactly the roots it requires: stderr={}",
         String::from_utf8_lossy(&output.stderr)
     );
     assert_eq!(
@@ -92,7 +141,7 @@ fn cli_default_production_roots_are_vyre_owned_only() {
 #[test]
 fn permits_reference_eval_inside_cfg_test_module() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("vyre-frontend-c/src");
+    let src = dir.path().join("vyre-libs/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("dispatch.rs"),
@@ -108,7 +157,7 @@ fn permits_reference_eval_inside_cfg_test_module() {
 #[test]
 fn permits_cfg_test_module_with_intervening_attributes() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("vyre-frontend-c/src");
+    let src = dir.path().join("vyre-libs/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("dispatch.rs"),
@@ -124,7 +173,7 @@ fn permits_cfg_test_module_with_intervening_attributes() {
 #[test]
 fn permits_reference_eval_under_tests_directory() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let tests = dir.path().join("vyre-frontend-c/tests");
+    let tests = dir.path().join("vyre-libs/tests");
     fs::create_dir_all(&tests).expect("create tests");
     fs::write(
         tests.join("oracle.rs"),
@@ -156,7 +205,7 @@ fn permits_explicit_cpu_oracle_files() {
 #[test]
 fn permits_explicit_cpu_fallback_reachability_validator() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("vyre-self-substrate/src");
+    let src = dir.path().join("vyre-pass-engine/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("cpu_fallback_reachability.rs"),
@@ -226,7 +275,7 @@ fn flags_suffix_cpu_helper_definition_in_production_source() {
 #[test]
 fn flags_cpu_module_export_in_production_source() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("vyre-self-substrate/src");
+    let src = dir.path().join("vyre-pass-engine/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(src.join("lib.rs"), "pub mod cpu_fallback_reachability;\n").expect("write fixture");
 

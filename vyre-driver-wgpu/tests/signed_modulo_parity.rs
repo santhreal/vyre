@@ -1,7 +1,7 @@
 //! Signed integer modulo parity against Rust `%` on the live GPU.
 //!
 //! naga's `BinaryOperator::Modulo` lowers to an UNSIGNED remainder on the SPIR-V
-//! backend even for signed operands, a vendored-naga bug: on the 5090,
+//! backend even for signed operands, a vendored-naga bug: on live GPU silicon,
 //! `rem(i32, i32)` of (-7, 3) returned 0 (== unsigned `0xFFFF_FFF9 % 3`) instead
 //! of the signed -1, while `div(i32, i32)` of (-7, 3) correctly returned -2. The
 //! emitter now synthesizes signed remainder from the truncating-division identity
@@ -12,8 +12,10 @@
 //! (The inventory's 2026-06-18 "signed mod emits SRem, correct" conclusion was a
 //! source-read that was never GPU-verified; this test is the empirical truth.)
 
-mod common;
-use common::u32_bytes;
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
@@ -75,13 +77,17 @@ fn div_program(n: u32) -> Program {
 }
 
 fn run(backend: &WgpuBackend, program: &Program, ps: &[(i32, i32)]) -> Vec<i32> {
-    let a = u32_bytes(&ps.iter().map(|&(a, _)| a as u32).collect::<Vec<_>>());
-    let b = u32_bytes(&ps.iter().map(|&(_, b)| b as u32).collect::<Vec<_>>());
-    let out_init = u32_bytes(&vec![0u32; ps.len()]);
+    let a_bytes = u32_bytes(&ps.iter().map(|&(a, _)| a as u32).collect::<Vec<_>>());
+    let b_bytes = u32_bytes(&ps.iter().map(|&(_, b)| b as u32).collect::<Vec<_>>());
+    let zero_bytes = u32_bytes(&vec![0u32; ps.len()]);
     let outputs = backend
         .dispatch_borrowed(
             program,
-            &[out_init.as_slice(), a.as_slice(), b.as_slice()],
+            &[
+                zero_bytes.as_slice(),
+                a_bytes.as_slice(),
+                b_bytes.as_slice(),
+            ],
             &DispatchConfig::default(),
         )
         .expect("Fix: WGPU must dispatch the signed modulo contract.");

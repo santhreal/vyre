@@ -150,6 +150,9 @@ fn f32_classification_ops_survive_bool_output_readback() {
 
 #[test]
 fn f32_comparison_ops_preserve_unordered_nan_and_signed_zero_semantics() {
+    // Stated here rather than called from `vyre_foundation::fp_parity`: this
+    // test judges the canonicalization the oracle applies, and a judge that
+    // calls the thing it judges agrees with a wrong rule.
     fn canonical_compare_input(value: f32) -> f32 {
         if value.is_nan() {
             f32::from_bits(0x7fc0_0000)

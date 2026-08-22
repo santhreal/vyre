@@ -11,8 +11,10 @@
 //! reset to Free and the caller receives a structured error. Integration tests
 //! cover the normal liveness path without faking GPU absence or forcing device loss.
 
-mod common;
-use common::acquire_live_backend as live_backend;
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::acquire_live_backend as live_backend;
 
 use vyre_driver_wgpu::runtime::readback_ring::{ReadbackRing, ReadbackRingSet};
 

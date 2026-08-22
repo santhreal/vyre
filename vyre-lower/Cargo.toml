@@ -1,6 +1,6 @@
 [package]
 name = "vyre-lower"
-version = "0.7.2"
+version = "0.8.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Substrate-neutral lowering: vyre Program → KernelDescriptor consumed by vyre-emit-* crates."
@@ -18,15 +18,34 @@ workspace = true
 name = "vyre_lower"
 path = "src/lib.rs"
 
+[features]
+default = []
+
+# Fixture builders for kernel descriptors, used only by emitter tests. Off by
+# default so a published build does not carry test scaffolding.
+test-fixtures = []
+
 [dependencies]
 vyre-foundation = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 rustc-hash = { workspace = true }
 smallvec.workspace = true
-im = { workspace = true }
+imbl = { workspace = true }
 
 [dev-dependencies]
+# The crate's own integration tests reach `descriptor_builder`,
+# `artifact_golden` and `program_stability_corpus`, which are gated behind
+# `test-fixtures`. A `cfg(test)` gate covers unit tests only, so the feature is
+# turned on for this crate's test targets here.
+vyre-lower = { path = ".", features = ["test-fixtures"] }
 vyre-test-support.workspace = true
 serde_json = { workspace = true }
 toml = { workspace = true }
+# The descriptor literal contract judges the compact encoding the descriptor
+# dump and the metal descriptor hash use, so it needs that format itself.
+bincode = { workspace = true }
+
+[[test]]
+name = "lowering_contracts"
+path = "tests/lowering_contracts/mod.rs"

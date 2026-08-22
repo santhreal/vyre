@@ -27,7 +27,7 @@ fn assert_composition_chain(program: &Program, parent_id: &str, primitive_id: &s
         panic!("expected one Tier-2.5 child region");
     };
     assert_eq!(generator.as_ref(), primitive_id);
-    assert_eq!(parent.name, parent_id);
+    assert_eq!(parent.as_str(), parent_id);
 }
 
 /// This test prevents the two public INT4 dot wrappers from presenting primitive IR as parent-owned implementation work.
@@ -37,14 +37,14 @@ fn dot_wrappers_record_cat_a_parent_and_primitive_child() {
     assert_composition_chain(
         &dot,
         "vyre-libs::quant::int4_dot_i32",
-        "vyre-primitives::math::quantized::i4x8_dot_i32",
+        "vyre-libs::math::quantized::i4x8_dot_i32",
     );
 
     let scaled = int4_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", 8);
     assert_composition_chain(
         &scaled,
         "vyre-libs::quant::int4_dot_f32_scaled",
-        "vyre-primitives::math::quantized::i4x8_dot_f32_scaled",
+        "vyre-libs::math::quantized::i4x8_dot_f32_scaled",
     );
 }
 
@@ -55,7 +55,7 @@ fn matrix_wrappers_record_their_exact_primitive_children() {
     assert_composition_chain(
         &matvec,
         "vyre-libs::quant::int4_matvec_f32_scaled",
-        "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled",
+        "vyre-libs::math::quantized::i4x8_matvec_f32_scaled",
     );
 
     let batched_matvec =
@@ -63,7 +63,7 @@ fn matrix_wrappers_record_their_exact_primitive_children() {
     assert_composition_chain(
         &batched_matvec,
         "vyre-libs::quant::int4_batched_matvec_f32_scaled",
-        "vyre-primitives::math::quantized::i4x8_batched_matvec_f32_scaled",
+        "vyre-libs::math::quantized::i4x8_batched_matvec_f32_scaled",
     );
 
     let batched_matmul = int4_batched_matmul_f32_scaled(
@@ -79,7 +79,7 @@ fn matrix_wrappers_record_their_exact_primitive_children() {
     assert_composition_chain(
         &batched_matmul,
         "vyre-libs::quant::int4_batched_matmul_f32_scaled",
-        "vyre-primitives::math::quantized::i4x8_batched_matmul_f32_scaled",
+        "vyre-libs::math::quantized::i4x8_batched_matmul_f32_scaled",
     );
 
     let top1 = int4_batched_matmul_top1_f32_scaled(
@@ -95,7 +95,7 @@ fn matrix_wrappers_record_their_exact_primitive_children() {
     assert_composition_chain(
         &top1,
         "vyre-libs::quant::int4_batched_matmul_top1_f32_scaled",
-        "vyre-primitives::math::quantized::i4x8_batched_matmul_top1_f32_scaled",
+        "vyre-libs::math::quantized::i4x8_batched_matmul_top1_f32_scaled",
     );
 }
 
@@ -107,7 +107,7 @@ fn zero_lane_dot_keeps_composition_chain_and_trap() {
     assert_composition_chain(
         &program,
         "vyre-libs::quant::int4_dot_i32",
-        "vyre-primitives::math::quantized::i4x8_dot_i32",
+        "vyre-libs::math::quantized::i4x8_dot_i32",
     );
     assert!(program.stats().trap());
 }

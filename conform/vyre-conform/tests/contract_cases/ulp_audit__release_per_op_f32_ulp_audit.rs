@@ -38,19 +38,6 @@ fn release_per_op_f32_ulp_audit() {
                 ));
             continue;
         };
-
-        let tolerance = audit_f32_ulp_budget(&program);
-        let production = match ProductionSession::compile(&program, backend) {
-            Ok(production) => production,
-            Err(error) => {
-                failures.push(format!(
-                    "{}: backend `{}` artifact compilation failed: {error}",
-                    entry.id, backend.id
-                ));
-                continue;
-            }
-        };
-
         let cases = test_inputs();
         let expected_cases = expected_output();
         if cases.is_empty() {
@@ -76,7 +63,11 @@ fn release_per_op_f32_ulp_audit() {
             ));
             continue;
         }
-        let input_plan = match backend_dispatch_plan(&program) {
+        if cases.is_empty() {
+            failures.push(format!("{}: ULP audit has no fixture cases", entry.id));
+            continue;
+        }
+        let input_plan = match WitnessInputPlan::for_program(&program) {
             Ok(plan) => plan,
             Err(error) => {
                 failures.push(format!(
@@ -86,16 +77,37 @@ fn release_per_op_f32_ulp_audit() {
                 continue;
             }
         };
-        let adv_input_indices = backend_input_buffer_indices(&input_plan);
+        let mut first_inputs: Vec<&[u8]> = Vec::with_capacity(program.buffers().len());
+        if let Err(error) = plan_witness_inputs_into(&cases[0], &input_plan, &mut first_inputs) {
+            failures.push(format!(
+                "{}: ULP audit first witness input planning failed: {error}",
+                entry.id
+            ));
+            continue;
+        }
+        let tolerance = f32_ulp_tolerance(&program);
+        let production = match ProductionSession::compile_with_representative_inputs(
+            &program,
+            &first_inputs,
+            backend,
+        ) {
+            Ok(production) => production,
+            Err(error) => {
+                failures.push(format!(
+                    "{}: backend `{}` artifact compilation failed: {error}",
+                    entry.id, backend.id
+                ));
+                continue;
+            }
+        };
+        let adv_input_indices: Vec<usize> = input_plan.buffer_indices().collect();
 
         let mut op_max_ulp = 0u32;
 
         // Fixture cases
         let mut backend_inputs: Vec<&[u8]> = Vec::with_capacity(program.buffers().len());
         for (case_index, inputs) in cases.iter().enumerate() {
-            if let Err(error) =
-                backend_inputs_from_fixture_into(inputs, &input_plan, &mut backend_inputs)
-            {
+            if let Err(error) = plan_witness_inputs_into(inputs, &input_plan, &mut backend_inputs) {
                 failures.push(format!(
                     "{} case {}: ULP audit input planning failed: {error}",
                     entry.id, case_index
@@ -127,7 +139,7 @@ fn release_per_op_f32_ulp_audit() {
                     continue;
                 }
             };
-            let max_ulp = match max_ulp_delta(&cpu, &gpu, &program) {
+            let max_ulp = match max_output_ulp(&program, &cpu, &gpu) {
                 Some(u) => u,
                 None => {
                     failures.push(format!(
@@ -148,9 +160,7 @@ fn release_per_op_f32_ulp_audit() {
 
         // Adversarial companion
         if !cases.is_empty() {
-            if let Err(error) =
-                backend_inputs_from_fixture_into_owned(&cases[0], &input_plan, &mut base)
-            {
+            if let Err(error) = plan_witness_inputs_owned_into(&cases[0], &input_plan, &mut base) {
                 failures.push(format!(
                     "{}: ULP audit adversarial base planning failed: {error}",
                     entry.id
@@ -188,7 +198,7 @@ fn release_per_op_f32_ulp_audit() {
                 };
                 match production.submit(&backend_inputs_for_adversarial) {
                     Ok(gpu) => {
-                        let max_ulp = match max_ulp_delta(&cpu, &gpu, &program) {
+                        let max_ulp = match max_output_ulp(&program, &cpu, &gpu) {
                             Some(u) => u,
                             None => {
                                 failures.push(format!(

@@ -4,6 +4,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::ir::{CommGroup, Expr, Node, Program};
+use crate::visit::child_bodies;
 
 /// Error returned when a collective cannot be lowered without real transport.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -223,6 +224,13 @@ fn record_nodes_transport_plan(nodes: &[Node], plan: &mut CollectiveTransportPla
     stack.push(nodes);
     while let Some(nodes) = stack.pop() {
         for node in nodes {
+            // Children come from the single exhaustive owner, so a new nesting
+            // variant cannot hide a collective from the transport plan.
+            for body in child_bodies(node).into_iter().rev() {
+                if !body.is_empty() {
+                    stack.push(body);
+                }
+            }
             match node {
                 Node::AllReduce { group, .. } => {
                     plan.record(
@@ -250,15 +258,28 @@ fn record_nodes_transport_plan(nodes: &[Node], plan: &mut CollectiveTransportPla
                     };
                     plan.record(transport, CollectiveNodeKind::Broadcast);
                 }
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    stack.push(otherwise);
-                    stack.push(then);
-                }
-                Node::Loop { body, .. } | Node::Block(body) => stack.push(body),
-                Node::Region { body, .. } => stack.push(body.as_ref()),
-                _ => {}
+                Node::If { .. }
+                | Node::Loop { .. }
+                | Node::Block(_)
+                | Node::Region { .. }
+                | Node::Let { .. }
+                | Node::Assign { .. }
+                | Node::Store { .. }
+                | Node::Return
+                | Node::Barrier { .. }
+                | Node::IndirectDispatch { .. }
+                | Node::AsyncLoad { .. }
+                | Node::AsyncStore { .. }
+                | Node::AsyncWait { .. }
+                | Node::Trap { .. }
+                | Node::Resume { .. }
+                | Node::TileLoad { .. }
+                | Node::TileStore { .. }
+                | Node::TileMatmul { .. }
+                | Node::TileReduce { .. }
+                | Node::TileElementwise { .. }
+                | Node::TileDecl { .. }
+                | Node::Opaque(_) => {}
             }
         }
     }

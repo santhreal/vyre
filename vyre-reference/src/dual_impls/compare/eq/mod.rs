@@ -1,5 +1,5 @@
 /// Equality-comparison dual implementation reference.
-pub mod reference;
+mod reference;
 
 /// Operation ID for equality-comparison dual references.
 pub const OP_ID: &str = "primitive.compare.eq";
@@ -10,7 +10,7 @@ pub struct EqDualReference;
 define_compare_dual_reference!(
     EqDualReference,
     |left, right| left == right,
-    super::super::common::eq_bytes
+    super::super::byte_walk_reference::eq_bytes
 );
 
 inventory::submit! {

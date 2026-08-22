@@ -12,8 +12,9 @@
 //! that matches `wrapping_{add,and,or,xor}`, `min`, `max`, `exchange`,
 //! or `compare_exchange` semantics under single-lane contention.
 
+use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::memory_model::MemoryOrdering;
 
 // --- Macros must be defined before `pub mod` declarations so child modules
 // can name them. `macro_rules!` is textual and scoped to what appears
@@ -30,7 +31,9 @@ macro_rules! define_atomic_serial_module {
         $values:expr,
         $initial:expr,
         $final_state:expr,
-        $trace:expr
+        $final_state_bytes:expr,
+        $trace:expr,
+        $trace_bytes:expr
     ) => {
         use vyre_foundation::ir::Program;
 
@@ -50,26 +53,29 @@ macro_rules! define_atomic_serial_module {
         }
 
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration {
-                semantic_version: 1,
-                signature: None,
-                tier: vyre_foundation::operation::OperationTier::Library,
-                laws: &[],
-                tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-                id: OP_ID,
-                build: Some(|| $fn_name("values", "state", "trace", 4)),
-                test_inputs: Some(|| {
+            vyre_foundation::operation::OperationRegistration::library(
+                OP_ID,
+                || $fn_name("values", "state", "trace", 4),
+                Some(|| {
                     let to_bytes = vyre_primitives::wire::pack_u32_slice;
                     let values: &[u32] = &$values;
                     vec![vec![to_bytes(values), to_bytes(&[$initial])]]
                 }),
-                expected_output: Some(|| {
-                    let to_bytes = vyre_primitives::wire::pack_u32_slice;
-                    let trace: &[u32] = &$trace;
-                    vec![vec![to_bytes(&[$final_state]), to_bytes(trace)]]
+                Some(|| {
+                    vec![vec![$final_state_bytes.to_vec(), $trace_bytes.to_vec()]]
                 }),
-                category: Some("math"),
-            }
+            )
+            .with_category("math")
+            .with_laws(match vyre_foundation::ir::AtomicOp::$atomic_op {
+                vyre_foundation::ir::AtomicOp::Add => &["associative", "commutative", "identity"],
+                vyre_foundation::ir::AtomicOp::And => &["associative", "commutative", "idempotent"],
+                vyre_foundation::ir::AtomicOp::Or => &["absorbing", "associative", "commutative", "idempotent"],
+                vyre_foundation::ir::AtomicOp::Xor => &["associative", "commutative", "self-inverse"],
+                vyre_foundation::ir::AtomicOp::Max => &["absorbing", "associative", "commutative", "idempotent", "identity"],
+                vyre_foundation::ir::AtomicOp::Min => &["absorbing", "associative", "commutative", "idempotent", "left-absorbing"],
+                vyre_foundation::ir::AtomicOp::Exchange => &["custom"],
+                _ => &[],
+            })
         }
 
         #[cfg(test)]
@@ -96,7 +102,7 @@ macro_rules! define_atomic_serial_module {
 }
 
 /// Cat-B atomic-add composition.
-pub mod atomic_add {
+mod atomic_add {
     define_atomic_serial_module!(
         atomic_add_u32,
         "vyre-libs::math::atomic::atomic_add_u32",
@@ -105,12 +111,17 @@ pub mod atomic_add {
         [1u32, 5, u32::MAX, 3],
         7u32,
         15u32,
-        [7u32, 8, 13, 12]
+        [0x0f, 0x00, 0x00, 0x00],
+        [7u32, 8, 13, 12],
+        [
+            0x07, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x00, 0x00, 0x0c, 0x00,
+            0x00, 0x00
+        ]
     );
 }
 
 /// Cat-B atomic-AND composition.
-pub mod atomic_and {
+mod atomic_and {
     define_atomic_serial_module!(
         atomic_and_u32,
         "vyre-libs::math::atomic::atomic_and_u32",
@@ -119,13 +130,18 @@ pub mod atomic_and {
         [0xFFu32, 0xF0, 0x0F, 0x33],
         u32::MAX,
         0x00u32,
-        [u32::MAX, 0xFF, 0xF0, 0x00]
+        [0x00, 0x00, 0x00, 0x00],
+        [u32::MAX, 0xFF, 0xF0, 0x00],
+        [
+            0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00
+        ]
     );
 }
 
-pub mod atomic_compare_exchange;
+pub(crate) mod atomic_compare_exchange;
 /// Cat-B atomic-exchange composition.
-pub mod atomic_exchange {
+mod atomic_exchange {
     define_atomic_serial_module!(
         atomic_exchange_u32,
         "vyre-libs::math::atomic::atomic_exchange_u32",
@@ -134,13 +150,18 @@ pub mod atomic_exchange {
         [100u32, 200, 300, 400],
         42u32,
         400u32,
-        [42u32, 100, 200, 300]
+        [0x90, 0x01, 0x00, 0x00],
+        [42u32, 100, 200, 300],
+        [
+            0x2a, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, 0x00, 0x00, 0x00, 0x2c, 0x01,
+            0x00, 0x00
+        ]
     );
 }
 
-pub mod atomic_lru_update;
+pub(crate) mod atomic_lru_update;
 /// Cat-B atomic-max composition.
-pub mod atomic_max {
+mod atomic_max {
     define_atomic_serial_module!(
         atomic_max_u32,
         "vyre-libs::math::atomic::atomic_max_u32",
@@ -149,12 +170,17 @@ pub mod atomic_max {
         [50u32, 20, 80, 10],
         0u32,
         80u32,
-        [0u32, 50, 50, 80]
+        [0x50, 0x00, 0x00, 0x00],
+        [0u32, 50, 50, 80],
+        [
+            0x00, 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, 0x50, 0x00,
+            0x00, 0x00
+        ]
     );
 }
 
 /// Cat-B atomic-min composition.
-pub mod atomic_min {
+mod atomic_min {
     define_atomic_serial_module!(
         atomic_min_u32,
         "vyre-libs::math::atomic::atomic_min_u32",
@@ -163,12 +189,17 @@ pub mod atomic_min {
         [50u32, 20, 80, 10],
         100u32,
         10u32,
-        [100u32, 50, 20, 20]
+        [0x0a, 0x00, 0x00, 0x00],
+        [100u32, 50, 20, 20],
+        [
+            0x64, 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x14, 0x00,
+            0x00, 0x00
+        ]
     );
 }
 
 /// Cat-B atomic-OR composition.
-pub mod atomic_or {
+mod atomic_or {
     define_atomic_serial_module!(
         atomic_or_u32,
         "vyre-libs::math::atomic::atomic_or_u32",
@@ -177,12 +208,17 @@ pub mod atomic_or {
         [0x01u32, 0x02, 0x04, 0x08],
         0u32,
         0x0Fu32,
-        [0u32, 1, 3, 7]
+        [0x0f, 0x00, 0x00, 0x00],
+        [0u32, 1, 3, 7],
+        [
+            0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x07, 0x00,
+            0x00, 0x00
+        ]
     );
 }
 
 /// Cat-B atomic-XOR composition.
-pub mod atomic_xor {
+mod atomic_xor {
     define_atomic_serial_module!(
         atomic_xor_u32,
         "vyre-libs::math::atomic::atomic_xor_u32",
@@ -191,7 +227,12 @@ pub mod atomic_xor {
         [0xF0u32, 0x0F, 0xFF, 0x55],
         0u32,
         0x55u32,
-        [0u32, 0xF0, 0xFF, 0x00]
+        [0x55, 0x00, 0x00, 0x00],
+        [0u32, 0xF0, 0xFF, 0x00],
+        [
+            0x00, 0x00, 0x00, 0x00, 0xf0, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00
+        ]
     );
 }
 
@@ -226,7 +267,7 @@ pub(crate) fn build_atomic_serial(
     trace: &str,
     n: u32,
 ) -> Program {
-    let body = vec![crate::region::wrap_anonymous(
+    let body = vec![wrap_anonymous_region(
         op_id,
         vec![Node::if_then(
             Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
@@ -272,7 +313,7 @@ pub(crate) fn build_atomic_compare_exchange(
     trace: &str,
     n: u32,
 ) -> Program {
-    let body = vec![crate::region::wrap_anonymous(
+    let body = vec![wrap_anonymous_region(
         op_id,
         vec![Node::if_then(
             Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
@@ -312,7 +353,7 @@ pub(crate) fn build_atomic_compare_exchange(
 // Test helpers shared across atomic op unit tests.
 #[cfg(test)]
 pub(crate) mod testutil {
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_bytes;
 
     pub(crate) use vyre_primitives::wire::pack_u32_slice as pack_u32;
 
@@ -373,16 +414,15 @@ pub(crate) mod testutil {
     ) -> (u32, Vec<u32>) {
         let n = values.len().max(1);
         let inputs = vec![
-            Value::Bytes(pack_u32(values).into()),
-            Value::Bytes(pack_u32(&[initial_state]).into()),
-            Value::Bytes(vec![0u8; n * 4].into()),
+            pack_u32(values),
+            pack_u32(&[initial_state]),
+            vec![0u8; n * 4],
         ];
-        let outputs = vyre_reference::reference_eval(program, &inputs)
-            .expect("Fix: atomic op must run; restore this invariant before continuing.");
-        let state_bytes = outputs[0].to_bytes();
+        let outputs = eval_bytes("atomic", program, inputs.clone());
+        let state_bytes = outputs[0].clone();
         let state = vyre_primitives::wire::read_u32_le_word(&state_bytes, 0, "atomic state")
             .expect("Fix: atomic state output must contain one u32.");
-        let trace_bytes = outputs[1].to_bytes();
+        let trace_bytes = outputs[1].clone();
         let trace = vyre_primitives::wire::decode_u32_le_bytes_all(&trace_bytes);
         (state, trace)
     }
@@ -395,17 +435,16 @@ pub(crate) mod testutil {
     ) -> (u32, Vec<u32>) {
         let n = expected.len().max(1);
         let inputs = vec![
-            Value::Bytes(pack_u32(expected).into()),
-            Value::Bytes(pack_u32(desired).into()),
-            Value::Bytes(pack_u32(&[initial_state]).into()),
-            Value::Bytes(vec![0u8; n * 4].into()),
+            pack_u32(expected),
+            pack_u32(desired),
+            pack_u32(&[initial_state]),
+            vec![0u8; n * 4],
         ];
-        let outputs = vyre_reference::reference_eval(program, &inputs)
-            .expect("Fix: cas op must run; restore this invariant before continuing.");
-        let state_bytes = outputs[0].to_bytes();
+        let outputs = eval_bytes("atomic", program, inputs);
+        let state_bytes = outputs[0].clone();
         let state = vyre_primitives::wire::read_u32_le_word(&state_bytes, 0, "cas state")
             .expect("Fix: CAS state output must contain one u32.");
-        let trace_bytes = outputs[1].to_bytes();
+        let trace_bytes = outputs[1].clone();
         let trace = vyre_primitives::wire::decode_u32_le_bytes_all(&trace_bytes);
         (state, trace)
     }

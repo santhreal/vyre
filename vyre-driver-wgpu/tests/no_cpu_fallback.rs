@@ -3,6 +3,7 @@
 //! If a real GPU is present, the backend must bind to it. CPU or
 //! "Other" adapters must be rejected with an actionable error.
 
+#![cfg(feature = "device-tests")]
 #![allow(clippy::needless_range_loop)]
 
 use vyre_driver_wgpu::WgpuBackend;
@@ -29,7 +30,7 @@ fn default_acquisition_prefers_discrete_gpu_when_enumerable() {
         "WgpuBackend::acquire failed on a machine that must have a GPU. \
          Fix: inspect driver visibility and adapter probing; this must not silently skip.",
     );
-    let adapters = vyre_driver_wgpu::runtime::device::enumerate_adapters();
+    let adapters = vyre_driver_wgpu::runtime::enumerate_adapters();
     let has_discrete = adapters
         .iter()
         .any(|adapter| adapter.device_type == wgpu::DeviceType::DiscreteGpu);

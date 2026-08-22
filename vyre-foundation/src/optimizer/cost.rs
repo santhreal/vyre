@@ -45,8 +45,9 @@
 //! capability requirements; cost-direction is orthogonal.
 
 use super::is_invocation_id_eq_constant;
-use crate::ir::{Node, Program};
+use crate::ir::{Expr, Node, Program};
 use crate::optimizer::AdapterCaps;
+use crate::visit::{expr_children, for_each_descendant};
 
 /// A frozen snapshot of the cost dimensions tracked by the optimizer's
 /// monotone-down post-condition gate.
@@ -224,15 +225,48 @@ impl CostCertificate {
 /// pattern this dimension tracks. Other branchy patterns (e.g. `if x < y`) are
 /// not divergent in the same warp-cost sense and are NOT counted here  -  they
 /// land in `control_flow_count`, which is also tracked.
+///
+/// The descent is [`for_each_descendant`], the exhaustive owner, and not
+/// `any_descendant` with a predicate that always answers `false`: that spelling
+/// counts a prefix of the tree the moment somebody makes the predicate answer
+/// `true`, and a cost fold that silently stops early lets the scheduler land a
+/// rewrite that raised the dimension it was refusing to raise.
 fn count_divergent_patterns(node: &Node, score: &mut u64) {
-    let _ = crate::visit::node_map::any_descendant(node, &mut |n| {
-        if let Node::If { cond, .. } = n {
+    for_each_descendant(node, &mut |current| {
+        if let Node::If { cond, .. } = current {
             if is_invocation_id_eq_constant(cond) {
                 *score = score.saturating_add(1);
             }
         }
-        false
     });
+}
+
+/// True when recomputing `expr` at a use site costs no more than holding it in
+/// a named binding.
+///
+/// This is the ONE owner of the rematerialization cost question. It has no
+/// operand to re-evaluate, so one register holding a name and one register
+/// holding the same value cost the same, and dropping the name pays one fewer
+/// live binding without paying any extra arithmetic.
+///
+/// The operand count comes from [`expr_children`], the exhaustive owner of which
+/// expression variants contain other expressions, so a variant added tomorrow is
+/// classified by its shape instead of by a per-pass list that predates it. Three
+/// passes carried their own copy of the same twelve-name leaf list; they agreed,
+/// but nothing made them agree, and `rematerialize_cheap_let` dropping a binding
+/// that `fusion` still considers worth one is an oscillation between two passes
+/// in the same pipeline.
+///
+/// Two childless variants are excluded by name because "no operand" does not
+/// make them free: an `Expr::Opaque` payload is extension-defined and an
+/// argument-less `Expr::Call` runs an operation body, so duplicating either one
+/// duplicates work and may duplicate a side effect.
+#[must_use]
+pub fn is_rematerializable_leaf(expr: &Expr) -> bool {
+    match expr {
+        Expr::Opaque(_) | Expr::Call { .. } => false,
+        _ => expr_children(expr).iter().next().is_none(),
+    }
 }
 
 #[cfg(test)]
@@ -415,90 +449,5 @@ mod tests {
             wide_cost.score < compact_cost.score,
             "Fix: wider profile vector/unroll/tile facts must lower the projected device cost"
         );
-    }
-
-    #[test]
-
-    fn walker_matches_canonical_on_corpus() {
-        // Kept-inline private old walker for drift-prevention
-        fn count_divergent_patterns_old(node: &Node, score: &mut u64, visited: &mut Vec<Node>) {
-            let mut stack: smallvec::SmallVec<[&Node; 64]> = smallvec::SmallVec::new();
-            stack.push(node);
-            while let Some(node) = stack.pop() {
-                visited.push(node.clone());
-                match node {
-                    Node::If {
-                        cond,
-                        then,
-                        otherwise,
-                    } => {
-                        if super::is_invocation_id_eq_constant(cond) {
-                            *score = score.saturating_add(1);
-                        }
-                        stack.extend(otherwise.iter());
-                        stack.extend(then.iter());
-                    }
-                    Node::Loop { body, .. } | Node::Block(body) => {
-                        stack.extend(body.iter());
-                    }
-                    Node::Region { body, .. } => stack.extend(body.iter()),
-                    _ => {}
-                }
-            }
-        }
-
-        let inner = Node::if_then(
-            Expr::BinOp {
-                op: BinOp::Eq,
-                left: Box::new(Expr::gid_x()),
-                right: Box::new(Expr::u32(1)),
-            },
-            vec![Node::store("buf", Expr::u32(1), Expr::u32(7))],
-        );
-        let outer = Node::if_then(
-            Expr::BinOp {
-                op: BinOp::Eq,
-                left: Box::new(Expr::gid_x()),
-                right: Box::new(Expr::u32(0)),
-            },
-            vec![inner, Node::Block(vec![Node::Return])],
-        );
-
-        let mut score_old = 0;
-        let mut visited_old = Vec::new();
-        count_divergent_patterns_old(&outer, &mut score_old, &mut visited_old);
-
-        let mut score_new = 0;
-        let mut visited_new = Vec::new();
-        let _ = crate::visit::node_map::any_descendant(&outer, &mut |n| {
-            visited_new.push(n.clone());
-            if let Node::If { cond, .. } = n {
-                if super::is_invocation_id_eq_constant(cond) {
-                    score_new += 1;
-                }
-            }
-            false
-        });
-
-        assert_eq!(score_old, score_new, "Divergence score mismatch");
-        assert_eq!(
-            visited_old.len(),
-            visited_new.len(),
-            "Node set length mismatch"
-        );
-
-        // Node-set (unordered) equivalence assertion
-        for node in &visited_old {
-            assert!(
-                visited_new.contains(node),
-                "Old walker visited a node that the new canonical walker missed"
-            );
-        }
-        for node in &visited_new {
-            assert!(
-                visited_old.contains(node),
-                "New canonical walker visited a node that the old walker missed"
-            );
-        }
     }
 }

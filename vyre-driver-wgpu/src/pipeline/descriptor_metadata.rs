@@ -48,8 +48,7 @@ pub(crate) struct BufferBindingInfo {
 pub(crate) fn descriptor_buffer_bindings(
     descriptor: &vyre_lower::KernelDescriptor,
     public_output_bindings: &FxHashSet<u32>,
-    explicit_output_bindings: &FxHashSet<u32>,
-    pipeline_live_out_bindings: &FxHashSet<u32>,
+    host_input_bindings: &FxHashSet<(u32, u32)>,
 ) -> Result<Vec<BufferBindingInfo>, BackendError> {
     let mut bindings = Vec::new();
     vyre_driver::allocation::try_reserve_vec_to_capacity(
@@ -69,11 +68,8 @@ pub(crate) fn descriptor_buffer_bindings(
         let access = descriptor_buffer_access(slot.visibility);
         let internal_trap = slot.name == TRAP_SIDECAR_NAME;
         let is_output = public_output_bindings.contains(&slot.slot) && !internal_trap;
-        let explicit_output = explicit_output_bindings.contains(&slot.slot);
-        let pipeline_live_out = pipeline_live_out_bindings.contains(&slot.slot);
         let preserve_input_contents = access == vyre_foundation::ir::BufferAccess::ReadWrite
-            && !explicit_output
-            && !(is_output && pipeline_live_out)
+            && host_input_bindings.contains(&(group, slot.slot))
             && !internal_trap;
         bindings.push(BufferBindingInfo {
             group,
@@ -205,64 +201,17 @@ pub(crate) fn create_bind_group_layouts(
     Ok(layouts.into())
 }
 
+/// The descriptor's trap tag table, as this backend decodes sidecar words with.
+///
+/// `TrapTag` is an alias of the owner's pair type, so this is the owner's table
+/// verbatim: no reprojection, no second allocation, and no way for a code to
+/// mean one thing here and another in an emitter.
 pub(crate) fn descriptor_trap_tags(
     descriptor: &vyre_lower::KernelDescriptor,
 ) -> Result<Vec<TrapTag>, BackendError> {
-    fn recursive_op_count(body: &vyre_lower::KernelBody) -> Result<usize, BackendError> {
-        let mut count = body.ops.len();
-        for child in &body.child_bodies {
-            count = count.checked_add(recursive_op_count(child)?).ok_or_else(|| {
-                BackendError::new(
-                    "kernel descriptor recursive op count overflowed usize. Fix: split nested kernel bodies before descriptor metadata extraction.",
-                )
-            })?;
-        }
-        Ok(count)
-    }
-
-    fn walk(
-        body: &vyre_lower::KernelBody,
-        seen: &mut FxHashSet<vyre_lower::descriptor::Name>,
-        out: &mut Vec<TrapTag>,
-    ) -> Result<(), BackendError> {
-        for op in &body.ops {
-            if let vyre_lower::KernelOpKind::Trap { tag } = &op.kind {
-                if seen.insert(tag.clone()) {
-                    let code = out
-                        .len()
-                        .checked_add(1)
-                        .and_then(|value| u32::try_from(value).ok())
-                        .ok_or_else(|| {
-                            BackendError::new(
-                                "kernel descriptor trap tag code overflowed u32. Fix: split trap-tag metadata before pipeline creation.",
-                            )
-                        })?;
-                    out.push(TrapTag {
-                        code,
-                        tag: Arc::from(tag.as_ref()),
-                    });
-                }
-            }
-        }
-        for child in &body.child_bodies {
-            walk(child, seen, out)?;
-        }
-        Ok(())
-    }
-
-    let op_count = recursive_op_count(&descriptor.body)?;
-    let mut seen = FxHashSet::default();
-    vyre_foundation::allocation::try_reserve_hash_set_to_capacity(&mut seen, op_count).map_err(|source| {
+    vyre_lower::descriptor_trap_tags(&descriptor.body).map_err(|source| {
         BackendError::new(format!(
-            "trap-tag dedup allocation failed for {op_count} descriptor ops: {source}. Fix: split nested kernel bodies before descriptor metadata extraction."
+            "descriptor trap tag table unavailable: {source}. Fix: split nested kernel bodies before descriptor metadata extraction."
         ))
-    })?;
-    let mut out = Vec::new();
-    vyre_driver::allocation::try_reserve_vec_to_capacity(&mut out, op_count).map_err(|source| {
-        BackendError::new(format!(
-            "trap-tag output allocation failed for {op_count} descriptor ops: {source}. Fix: split nested kernel bodies before descriptor metadata extraction."
-        ))
-    })?;
-    walk(&descriptor.body, &mut seen, &mut out)?;
-    Ok(out)
+    })
 }

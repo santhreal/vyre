@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The registered encodex operation now records the exact ASCII, UTF-8, UTF-16LE, and ISO-8859-1 classifier identifiers produced by its canonical fixtures."

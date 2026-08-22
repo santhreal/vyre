@@ -1,3 +1,5 @@
+use super::*;
+
 #[test]
 fn canonical_f32_zero_nonzero_with_sign_bit_set_passes_through() {
     // Adversarial: 0x80000001 is the smallest negative subnormal, NOT zero.
@@ -43,7 +45,7 @@ fn canonical_f32_zero_all_sign_exponent_mantissa_combinations_for_f32() {
 }
 
 // ------------------------------------------------------------------
-// CRITIQUE_FIX_REVIEW_2026-04-23 Finding #13 regressions.
+// Regression pins.
 // ------------------------------------------------------------------
 
 use vyre_foundation::opaque_payload::endian::LeBytesWriter;

@@ -7,7 +7,7 @@ use std::process::Command;
 fn flags_same_module_basename_across_authority_roots() {
     let dir = tempfile::tempdir().expect("tempdir");
     let primitive = dir.path().join("vyre-primitives/src/graph");
-    let substrate = dir.path().join("vyre-self-substrate/src");
+    let substrate = dir.path().join("vyre-pass-engine/src");
     fs::create_dir_all(&primitive).expect("create primitive root");
     fs::create_dir_all(&substrate).expect("create substrate root");
     fs::write(
@@ -59,7 +59,7 @@ fn ignores_generic_rust_module_basenames() {
 #[test]
 fn ignores_same_basename_repeated_inside_one_authority_root() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let root = dir.path().join("vyre-self-substrate/src/graph");
+    let root = dir.path().join("vyre-libs/src/graph");
     fs::create_dir_all(root.join("left")).expect("create left module");
     fs::create_dir_all(root.join("right")).expect("create right module");
     fs::write(root.join("left/dispatch.rs"), "pub fn left_dispatch() {}\n")

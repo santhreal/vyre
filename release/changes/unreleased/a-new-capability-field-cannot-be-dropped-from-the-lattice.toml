@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "RequiredCapabilities::join and ::union destructure the operand exhaustively, so a capability field added to the struct fails to compile here instead of being silently dropped from the lattice. Grid-scope synchronisation is carried as such a field and is now joined like every other capability."

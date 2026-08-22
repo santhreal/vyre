@@ -1,5 +1,9 @@
-// Shared builders for rule condition operations.
+//! The shape every rule condition operation shares: its input types, its
+//! algebraic laws, and the macro that emits a constant-valued leaf.
+//!
+//! Shared builders for rule condition operations.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_spec::AlgebraicLaw;
 
@@ -35,10 +39,10 @@ pub fn condition_program(op_id: &'static str, compute: fn() -> Expr) -> Program 
             BufferDecl::read("pattern_count", 3, DataType::U32),
             BufferDecl::read("file_size", 4, DataType::U32),
             BufferDecl::read("threshold", 5, DataType::U32),
-            BufferDecl::output("out", 6, DataType::U32),
+            BufferDecl::output("out", 6, DataType::U32).with_count(1),
         ],
         WORKGROUP_SIZE,
-        vec![crate::region::wrap_anonymous(
+        vec![wrap_anonymous_region(
             op_id,
             vec![Node::store("out", Expr::u32(0), compute())],
         )],

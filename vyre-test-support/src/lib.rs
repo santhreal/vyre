@@ -1,33 +1,190 @@
 //! Shared test-only harness helpers for the vyre workspace.
 //!
-//! # The registry/coverage CLOSURE gate. ONE definitional home
+//! # The registry/coverage closure gate, one definitional home
 //!
-//! Every vyre crate that ships `pub fn ... -> Program` builders needs the same contract:
-//! each builder must be reachable from its `inventory::submit!` registry OR pinned by a
-//! parity/behavioral test, otherwise a builder can rot, diverge from its GPU/reference
-//! arm, or silently lose coverage with nothing red. Historically each crate shipped its
-//! own ~230-line copy of the enumerator (and 22 crates shipped a *tautology stub* whose doc
-//! claimed adversarial closure coverage while asserting `bytes[0] == bytes[0]`: a Law 6 /
-//! Law 9 evasion). That duplication is itself a ONE-PLACE violation: 26 copies drift.
+//! Every vyre crate that ships `pub fn ... -> Program` builders owes the same
+//! contract: each builder is reachable from that crate's `inventory::submit!`
+//! registry, or it is pinned by a parity/behavioral test. A builder that is
+//! neither still compiles, still appears in the catalogs generated from source,
+//! and still diverges from its reference arm with nothing red.
 //!
-//! [`assert_registry_closure`] is the single canonical enumerator. Each crate's
-//! `tests/adversarial_registry_closure.rs` becomes a thin wrapper:
+//! [`assert_registry_closure`] is the one enumerator, and
+//! [`registry_closure_gate!`] is how a crate declares its gate. The crate's
+//! `tests/registry_closure.rs` carries only what is crate-specific, the floor
+//! and the waived builders, because the test name, the manifest-directory
+//! argument and the call itself are the same in every crate and were being
+//! copied verbatim:
 //!
 //! ```ignore
-//! const COVERAGE_WAIVER: &[&str] = &[ /* builder, reason */ ];
-//! #[test]
-//! fn every_program_builder_is_tested_registered_or_explicitly_waived() {
-//!     vyre_test_support::assert_registry_closure(env!("CARGO_MANIFEST_DIR"), COVERAGE_WAIVER, 4);
+//! vyre_test_support::registry_closure_gate! {
+//!     floor: 4,
+//!     waiver: ["uncovered_builder_with_its_reason_above"],
 //! }
 //! ```
 //!
-//! The enumeration is **feature-independent** (it reads source files as TEXT, never compiling
-//! them), so the gate is green under any feature set, it matches CI regardless of which
-//! `--features` the runner selects. See `BACKLOG.md` WIRING-tautology-closure-25crates.
-#![forbid(unsafe_code)]
+//! The candidate set is derived from the crate's tree on each run rather than
+//! listed in the caller, so a builder added tomorrow is judged tomorrow. That
+//! derivation's failure mode is finding nothing: zero builders are trivially
+//! all covered, so `BUILDER_FLOOR` is what makes a broken scan fail instead of
+//! reporting a clean sweep of a nearly empty set.
+//!
+//! The enumeration is feature-independent: it reads source files as TEXT and
+//! never compiles them, so it reports the same builder set whichever features
+//! the runner selects.
 
+/// Declare this crate's registry/coverage closure gate.
+///
+/// `floor` is the minimum builder count the source enumeration must find, and
+/// `waiver` lists builders that are knowingly uncovered. Both are the only
+/// crate-specific parts of the gate, so they are the only arguments; the test
+/// name and the crate directory are derived here. The directory is the run-time
+/// checkout root joined to `CARGO_PKG_NAME`, which expands at the call site and
+/// so names the crate that declares the gate. A compiled-in manifest directory
+/// would name whichever checkout built the binary, and every checkout here
+/// shares one target directory.
+#[macro_export]
+macro_rules! registry_closure_gate {
+    (floor: $floor:expr, waiver: [$($waived:expr),* $(,)?] $(,)?) => {
+        #[test]
+        fn every_program_builder_is_tested_registered_or_explicitly_waived() {
+            $crate::assert_registry_closure(
+                $crate::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")),
+                &[$($waived),*],
+                $floor,
+            );
+        }
+    };
+}
+
+/// Declare a test-only `Expr::Opaque` payload type.
+///
+/// An extension payload is six trait methods of which five are the same in
+/// every test that needs one: report `Ok(())` from validation, hand back
+/// `self` for downcasting, and answer the two identity questions from a
+/// literal. Only the kind string, the debug identity, the result type, the
+/// CSE answer and the fingerprint byte differ, so those are the arguments.
+///
+/// A test that needs a payload with reachable structure, a wire body, or a
+/// validation failure writes the impl out: this macro is for the inert leaf.
+///
+/// `ExprNode` and `DataType` are named unqualified, so the caller must have
+/// both in scope. `vyre-foundation` implements these traits on its own types
+/// from inside itself, where a path through this crate's dependency on it
+/// names a different crate instance and does not compile.
+#[macro_export]
+macro_rules! test_expr_extension {
+    (
+        $name:ident,
+        kind: $kind:expr,
+        identity: $identity:expr,
+        result_type: $result_type:expr,
+        cse_safe: $cse_safe:expr,
+        fingerprint: $fingerprint:expr $(,)?
+    ) => {
+        #[derive(Debug)]
+        struct $name;
+
+        impl ExprNode for $name {
+            fn extension_kind(&self) -> &'static str {
+                $kind
+            }
+            fn debug_identity(&self) -> &str {
+                $identity
+            }
+            fn result_type(&self) -> Option<DataType> {
+                $result_type
+            }
+            fn cse_safe(&self) -> bool {
+                $cse_safe
+            }
+            fn stable_fingerprint(&self) -> [u8; 32] {
+                [$fingerprint; 32]
+            }
+            fn validate_extension(&self) -> ::core::result::Result<(), ::std::string::String> {
+                Ok(())
+            }
+            fn as_any(&self) -> &dyn ::std::any::Any {
+                self
+            }
+        }
+    };
+}
+
+/// Declare a test-only `Node::Opaque` payload type.
+///
+/// The statement form of [`test_expr_extension!`]: a statement extension has
+/// no result type and no CSE answer, so only the kind string, the debug
+/// identity and the fingerprint byte differ between tests. `NodeExtension` is
+/// named unqualified, so the caller must have it in scope.
+#[macro_export]
+macro_rules! test_node_extension {
+    (
+        $name:ident,
+        kind: $kind:expr,
+        identity: $identity:expr,
+        fingerprint: $fingerprint:expr $(,)?
+    ) => {
+        #[derive(Debug)]
+        struct $name;
+
+        impl NodeExtension for $name {
+            fn extension_kind(&self) -> &'static str {
+                $kind
+            }
+            fn debug_identity(&self) -> &str {
+                $identity
+            }
+            fn stable_fingerprint(&self) -> [u8; 32] {
+                [$fingerprint; 32]
+            }
+            fn validate_extension(&self) -> ::core::result::Result<(), ::std::string::String> {
+                Ok(())
+            }
+            fn as_any(&self) -> &dyn ::std::any::Any {
+                self
+            }
+        }
+    };
+}
+
+#[cfg(feature = "ir-fixtures")]
+pub mod adversarial_generators;
+#[cfg(feature = "ir-fixtures")]
+pub mod async_span_parity;
+#[cfg(feature = "ir-fixtures")]
+pub mod binop_parity;
+pub mod case_table;
+#[cfg(feature = "ir-fixtures")]
+pub mod cast_parity;
 pub mod consumer_boundary;
+pub mod data_type_elements;
+#[cfg(feature = "ir-fixtures")]
+pub mod data_type_variants;
+#[cfg(feature = "ir-fixtures")]
+pub mod differential_matrix;
+pub mod exploded_ifds_cases;
+#[cfg(feature = "ir-fixtures")]
+pub mod expr_variants;
+#[cfg(feature = "ir-fixtures")]
+pub mod extension_variants;
+pub mod fixed_point;
+#[cfg(feature = "ir-fixtures")]
+pub mod ir_regions;
+#[cfg(feature = "ir-fixtures")]
+pub mod ir_variants;
+#[cfg(feature = "ir-fixtures")]
+pub mod memory_order_variants;
 pub mod monorepo;
+#[cfg(feature = "ir-fixtures")]
+pub mod mutation_testing;
+#[cfg(feature = "ir-fixtures")]
+pub mod pass_programs;
+#[cfg(feature = "ir-fixtures")]
+pub mod registry_nets;
+pub mod replay_capsule;
+#[cfg(feature = "ir-fixtures")]
+pub use pass_programs::overfire_grid;
+pub mod public_api;
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -64,16 +221,52 @@ fn read_source_file_with_cap(path: &Path, max_bytes: u64) -> std::io::Result<Str
     Ok(text)
 }
 
-/// Assert the registry-closure contract for the crate rooted at `manifest_dir`.
+/// The brace-delimited body that follows `declaration` in `source`.
 ///
-/// Source-enumerates every `pub fn NAME(...) -> Program` builder under `<manifest_dir>/src`,
+/// `declaration` is the text up to and including the opening brace, so
+/// `"pub enum DataType {"` or `"pub trait NodeVisitor {"`. The returned slice
+/// excludes both braces and is nesting-aware, which is the whole reason this
+/// is one function: a scan that stopped at the first `}` would end inside the
+/// first struct-shaped variant or the first defaulted method body, and would
+/// then report a short member list as fact.
+///
+/// Returns `None` when `declaration` does not appear, or when its braces never
+/// close.
+#[must_use]
+pub fn braced_body<'a>(source: &'a str, declaration: &str) -> Option<&'a str> {
+    let start = source.find(declaration)? + declaration.len();
+    let mut depth = 1usize;
+    for (offset, ch) in source[start..].char_indices() {
+        match ch {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(&source[start..start + offset]);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Assert the registry-closure contract for the crate rooted at `crate_dir`.
+///
+/// Resolve `crate_dir` from the working directory, with
+/// [`monorepo::vyre_workspace_root`] joined to the crate's directory name. A
+/// compiled-in `CARGO_MANIFEST_DIR` answers for whichever checkout built the
+/// test binary, which is not the checkout the command ran in whenever a target
+/// directory is shared.
+///
+/// Source-enumerates every `pub fn NAME(...) -> Program` builder under `<crate_dir>/src`,
 /// EXCLUDING `impl`-block methods (`&self` receiver) and IR-transform passes (first parameter
 /// is `Program`/`&Program`/`&mut Program`: a pass rewrites an existing Program rather than
 /// constructing one from source inputs, so it submits no `OperationRegistration` and is
 /// exercised by optimizer/pass tests, not the source-builder registry contract).
 ///
 /// A builder is COVERED iff its name appears (word-boundary) in (a) an `inventory::submit!`
-/// block, (b) any file under `<manifest_dir>/tests` (except the closure gate itself), or
+/// block, (b) any file under `<crate_dir>/tests` (except the closure gate itself), or
 /// (c) an inline `#[cfg(test)]` / `#[test]` / `mod tests` region of a source file.
 ///
 /// Every UNCOVERED builder must be listed in `waiver` with a trailing `//` reason. Three
@@ -87,49 +280,76 @@ fn read_source_file_with_cap(path: &Path, max_bytes: u64) -> std::io::Result<Str
 ///
 /// # Panics
 /// Panics (i.e. fails the test) on any guard violation, or if a source/test file is unreadable.
-pub fn assert_registry_closure(manifest_dir: &str, waiver: &[&str], floor: usize) {
-    let crate_name = Path::new(manifest_dir)
+
+pub fn assert_registry_closure(crate_dir: impl AsRef<Path>, waiver: &[&str], floor: usize) {
+    let crate_dir = crate_dir.as_ref();
+    let crate_name = crate_dir
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("<crate>");
-    let src = Path::new(manifest_dir).join("src");
-    let tests = Path::new(manifest_dir).join("tests");
+    let src = crate_dir.join("src");
+    let tests = crate_dir.join("tests");
 
     let mut src_files = Vec::new();
     collect_rust_files(&src, &mut src_files);
     let mut test_files = Vec::new();
     collect_rust_files(&tests, &mut test_files);
 
-    let mut builders: BTreeSet<String> = BTreeSet::new();
-    let mut corpus = String::new();
+    let mut src_texts: Vec<(&Path, String)> = Vec::with_capacity(src_files.len());
     for path in &src_files {
         let text = read_source_file_bounded(path)
             .unwrap_or_else(|e| panic!("{crate_name} source file {path:?} must be readable: {e}"));
-        for name in program_builders_in(&text) {
+        src_texts.push((path.as_path(), text));
+    }
+
+    // A test module written in its own file carries no attribute of its own, so
+    // the gate is read where it is written: the `#[cfg(test)] mod name;` in the
+    // declaring file. Everything that resolves to is test text, whole.
+    let mut gated_paths: BTreeSet<PathBuf> = BTreeSet::new();
+    for (path, text) in &src_texts {
+        let module_dir = module_directory(path);
+        for name in structure_gate::cfg_test::cfg_test_module_declarations(text) {
+            gated_paths.insert(module_dir.join(format!("{name}.rs")));
+            gated_paths.insert(module_dir.join(&name));
+        }
+    }
+
+    let mut builders: BTreeSet<String> = BTreeSet::new();
+    let mut corpus = String::new();
+    for (path, text) in &src_texts {
+        if path.ancestors().any(|a| gated_paths.contains(a)) {
+            corpus.push_str(text);
+            corpus.push('\n');
+            continue;
+        }
+        for name in program_builders_in(text) {
             builders.insert(name);
         }
-        for block in inventory_submit_blocks(&text) {
+        for block in inventory_submit_blocks(text) {
             corpus.push_str(&block);
             corpus.push('\n');
         }
-        if let Some(pos) = ["#[cfg(test)]", "#[test]", "mod tests"]
-            .iter()
-            .filter_map(|marker| text.find(marker))
-            .min()
-        {
-            corpus.push_str(&text[pos..]);
+        // Only the test-gated items count as in-crate coverage. Taking every
+        // byte after the first `#[cfg(test)]` marker counted production code as
+        // test text, and a crate whose first marker precedes its re-export list
+        // had 174 symbols "covered" by a `pub use` block that merely names them.
+        let gated = structure_gate::cfg_test::cfg_test_items(text);
+        if !gated.is_empty() {
+            corpus.push_str(&gated);
             corpus.push('\n');
         }
     }
     for path in &test_files {
-        if path.file_name().and_then(|n| n.to_str()) == Some("adversarial_registry_closure.rs") {
+        let text = read_source_file_bounded(path)
+            .unwrap_or_else(|e| panic!("{crate_name} test file {path:?} must be readable: {e}"));
+        // The gate's own caller is not coverage. Excluding it by name would
+        // only exclude one spelling of the file; excluding every file that
+        // calls the enumerator keeps a waiver entry from covering itself
+        // whatever the caller is named.
+        if text.contains("assert_registry_closure(") {
             continue;
         }
-        corpus.push_str(
-            &read_source_file_bounded(path).unwrap_or_else(|e| {
-                panic!("{crate_name} test file {path:?} must be readable: {e}")
-            }),
-        );
+        corpus.push_str(&text);
         corpus.push('\n');
     }
 
@@ -178,10 +398,20 @@ pub fn assert_registry_closure(manifest_dir: &str, waiver: &[&str], floor: usize
         unwaived.is_empty(),
         "[{crate_name}] {} Program builder(s) have NO parity/behavioral test AND are NOT registered \
          in the inventory: {unwaived:?}. Fix: add a reference_eval parity test, submit an OperationRegistration, \
-         or add to COVERAGE_WAIVER with a reason. See BACKLOG.md WIRING-tautology-closure-25crates.",
+         or add to COVERAGE_WAIVER with the reason it is permanently uncoverable.",
         unwaived.len()
     );
 
+    let production_files = src_texts
+        .iter()
+        .filter(|(path, _)| !path.ancestors().any(|a| gated_paths.contains(a)))
+        .count();
+    assert!(
+        production_files > 0,
+        "[{crate_name}] the source walk found no production `.rs` file under {src:?}, so the \
+         enumeration proves nothing. Fix: the walk or the crate layout, not this gate. A crate \
+         whose only builders are test-gated fixtures reports zero builders and still scans files."
+    );
     assert!(
         builders.len() >= floor,
         "[{crate_name}] expected >= {floor} source `pub fn -> Program` builders (excluding `&self` \
@@ -192,21 +422,52 @@ pub fn assert_registry_closure(manifest_dir: &str, waiver: &[&str], floor: usize
 
 /// Collect every `.rs` file under `dir` into `out`.
 ///
+/// Public because a source-derived gate outside this crate needs the same walk:
+/// a second copy is what a `tests/support` coverage gate reached for, and it
+/// duplicated this one exactly.
+///
 /// # Panics
-/// Panics when a directory entry is unreadable. The closure gate enumerates source
-/// text, so skipping an unreadable file would quietly shrink the builder set and
-/// weaken the gate.
-fn collect_rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = fs::read_dir(dir) else {
-        return;
+/// Panics when `dir` exists but cannot be read, or when an entry under it cannot
+/// be read. A source-derived gate enumerates this set to decide what it proves,
+/// so a skipped file would shrink that set in silence and weaken the gate instead
+/// of failing it. A directory that does not exist is not a shrink: a crate with no
+/// `tests/` directory contributes no test sources, and that walk yields nothing.
+pub fn collect_rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    let entries = match fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return,
+        Err(error) => panic!(
+            "cannot enumerate `{}`: {error}. Fix: restore read permission on the directory so the gate proves every source file under it.",
+            dir.display()
+        ),
     };
     for entry in entries {
-        let path = entry.expect("source entry must be readable").path();
+        let path = entry
+            .unwrap_or_else(|error| {
+                panic!(
+                    "cannot read an entry under `{}`: {error}. Fix: restore read permission on that entry so the gate proves every source file under it.",
+                    dir.display()
+                )
+            })
+            .path();
         if path.is_dir() {
             collect_rust_files(&path, out);
         } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
             out.push(path);
         }
+    }
+}
+
+/// Directory the submodules declared by one source file live in.
+///
+/// `mod.rs`, `lib.rs` and `main.rs` declare siblings; every other file declares
+/// children in a directory named for it, which is where a `mod tests;` beside
+/// `foo.rs` resolves to `foo/tests.rs`.
+fn module_directory(path: &Path) -> PathBuf {
+    let parent = path.parent().unwrap_or(Path::new(".")).to_path_buf();
+    match path.file_stem().and_then(|s| s.to_str()) {
+        Some("mod" | "lib" | "main") | None => parent,
+        Some(stem) => parent.join(stem),
     }
 }
 
@@ -231,7 +492,6 @@ fn program_builders_in(text: &str) -> Vec<String> {
             continue;
         }
         let after_name = &rest[name.len()..];
-        let window = after_name.split('{').next().unwrap_or("");
         // Skip `impl`-block methods (`pub fn m(&self, ...) -> Program`).
         if takes_self_receiver(after_name) {
             continue;
@@ -243,7 +503,7 @@ fn program_builders_in(text: &str) -> Vec<String> {
         if first_param_is_program(after_name) {
             continue;
         }
-        if returns_program(window) {
+        if returns_program(after_name) {
             names.push(name);
         }
     }
@@ -303,18 +563,79 @@ fn first_param_is_program(after_name: &str) -> bool {
     })
 }
 
-fn returns_program(window: &str) -> bool {
-    for arrow in ["-> Program", "->Program"] {
-        if let Some(i) = window.find(arrow) {
-            let next = window[i + arrow.len()..].chars().next();
-            match next {
-                None => return true,
-                Some(c) if !(c.is_alphanumeric() || c == '_') => return true,
+/// The return-type text of a `fn` signature: everything between the parameter
+/// list's closing paren and the body's opening brace, `where` clause included.
+///
+/// Reading the whole signature instead is what misclassified
+/// `vyre_driver::self_optimizer_bench::report_scaling`, which returns `()` and
+/// takes a `fn(Program, &dyn ProgramDispatcher) -> Program` callback: the arrow
+/// in the parameter type was read as the function's own return type.
+fn return_type_window(after_name: &str) -> Option<&str> {
+    let mut rest = after_name;
+    // A generic parameter list carries parens and arrows of its own
+    // (`<F: Fn(u32) -> Program>`), so the parameter list does not start at the
+    // first `(`. `>` preceded by `-` is an arrow, not a closing bracket.
+    if rest.starts_with('<') {
+        let mut depth = 0i32;
+        let mut previous = ' ';
+        let mut end = None;
+        for (i, ch) in rest.char_indices() {
+            match ch {
+                '<' => depth += 1,
+                '>' if previous != '-' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        end = Some(i);
+                        break;
+                    }
+                }
                 _ => {}
             }
+            previous = ch;
+        }
+        rest = &rest[end? + 1..];
+    }
+    let open = rest.find('(')?;
+    let mut depth = 0i32;
+    let mut close = None;
+    for (i, ch) in rest[open..].char_indices() {
+        match ch {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    close = Some(open + i);
+                    break;
+                }
+            }
+            _ => {}
         }
     }
-    false
+    let tail = &rest[close? + 1..];
+    Some(tail.split('{').next().unwrap_or(tail))
+}
+
+/// True iff the signature's declared return type is exactly `Program`.
+///
+/// Anchored at the arrow: a `where` clause bound such as
+/// `where F: Fn() -> Program` sits in the same window and must not count, and
+/// neither must `-> Result<Program, E>` or `-> Arc<Program>`.
+fn returns_program(after_name: &str) -> bool {
+    let window = match return_type_window(after_name) {
+        Some(window) => window.trim_start(),
+        None => return false,
+    };
+    let Some(after_arrow) = window.strip_prefix("->") else {
+        return false;
+    };
+    after_arrow
+        .trim_start()
+        .strip_prefix("Program")
+        .is_some_and(|rest| {
+            rest.chars()
+                .next()
+                .is_none_or(|c| !(c.is_alphanumeric() || c == '_'))
+        })
 }
 
 /// Extract the brace-balanced body of every `inventory::submit! { ... }` block.
@@ -413,6 +734,57 @@ mod tests {
     fn requires_exact_program_return() {
         assert!(program_builders_in("pub fn f(n: u32) -> ProgramGraph { x }").is_empty());
         assert!(program_builders_in("pub fn f(n: u32) -> Result<Program> { x }").is_empty());
+    }
+
+    /// WHY: the enumerator used to search the WHOLE signature for `-> Program`,
+    /// so a function returning `()` was reported as an unregistered builder as
+    /// soon as one of its parameters was a callback returning a `Program`. That
+    /// misfire had `vyre-driver`'s closure gate red on a function that builds
+    /// nothing. The arrow only counts in return position.
+    ///
+    /// Not caught: a builder hidden behind a type alias (`-> MyProgram` where
+    /// `type MyProgram = Program`). The enumerator reads text, not types.
+    #[test]
+    fn ignores_program_arrows_outside_return_position() {
+        assert!(program_builders_in(
+            "pub fn report(dispatch: fn(Program, &dyn D) -> Program) { x }"
+        )
+        .is_empty());
+        assert!(program_builders_in(
+            "pub fn report(\n    backend: &str,\n    build: fn(u32) -> Program,\n) {\n    x\n}"
+        )
+        .is_empty());
+        assert!(
+            program_builders_in("pub fn run<F: Fn(u32) -> Program>(f: F) -> u32 { 0 }").is_empty()
+        );
+        assert!(
+            program_builders_in("pub fn run<F>(f: F) -> u32 where F: Fn() -> Program { 0 }")
+                .is_empty()
+        );
+    }
+
+    /// The same anchoring must not lose a real builder whose signature carries a
+    /// generic list, a `where` clause, or a nested-paren parameter type.
+    #[test]
+    fn keeps_builder_through_generics_and_where_clauses() {
+        assert_eq!(
+            program_builders_in("pub fn build<T: Shape>(shape: T) -> Program { p }"),
+            vec!["build".to_string()]
+        );
+        assert_eq!(
+            program_builders_in(
+                "pub fn build<T>(shape: T) -> Program\nwhere\n    T: Shape,\n{\n    p\n}"
+            ),
+            vec!["build".to_string()]
+        );
+        assert_eq!(
+            program_builders_in("pub fn build(pairs: Vec<(u32, u32)>) -> Program { p }"),
+            vec!["build".to_string()]
+        );
+        assert_eq!(
+            program_builders_in("pub fn build<F: Fn() -> u32>(f: F) -> Program { p }"),
+            vec!["build".to_string()]
+        );
     }
 
     #[test]

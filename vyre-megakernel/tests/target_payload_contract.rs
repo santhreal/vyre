@@ -1,18 +1,18 @@
 //! Regression contracts for canonical neutral artifacts with attached target payloads.
 
-use std::collections::BTreeMap;
-
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
-    ValueLifetime,
-};
+use vyre_foundation::ir::Program;
 use vyre_megakernel::{
-    attach_target, compile, Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId,
-    CompileError, CompileRequest, Digest, ExternalFacts, FusionGroupId, SearchBudget,
-    TargetCompileError, TargetCompiler, TargetEntryPoint, TargetModuleBundle, TargetModuleImage,
-    TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
+    attach_target, compile_selected_modules, Artifact, ArtifactEnvelope, ArtifactNodeId,
+    ArtifactValueId, CompileError, EmittedTargetModule, FusionGroupId, TargetCompileError,
+    TargetCompiler, TargetEntryPoint, TargetModuleBundle, TargetModuleImage, TargetPayload,
+    TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
     TargetResourceMemory,
 };
+
+#[path = "../../tests/support/artifact_fixtures.rs"]
+mod artifact_fixtures;
+
+use artifact_fixtures::{entry_point, neutral_artifact};
 
 fn diagnostic_path(error: &CompileError) -> Option<&str> {
     error
@@ -20,42 +20,6 @@ fn diagnostic_path(error: &CompileError) -> Option<&str> {
         .location
         .as_ref()
         .and_then(|location| location.path.as_deref())
-}
-
-fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
-    let mut graph = ProgramGraph::new();
-    graph
-        .add_external_value(
-            "input",
-            ValueContract {
-                dtype: DataType::U32,
-                shape: vec![ShapeDim::Known(8)],
-                access: BufferAccess::ReadOnly,
-                lifetime: ValueLifetime::Invocation,
-            },
-        )
-        .expect("fixture resource must be valid");
-    graph
-        .add_node(
-            "entry",
-            Program::wrapped(
-                vec![BufferDecl::read("input", 0, DataType::U32).with_count(8)],
-                workgroup_size,
-                Vec::new(),
-            ),
-            Vec::new(),
-            Vec::new(),
-        )
-        .expect("fixture node must be valid");
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
-        1_000_000,
-    )
-    .validate()
-    .expect("fixture request must validate");
-    compile(&request).expect("fixture request must compile")
 }
 
 fn format(version: u16) -> TargetPayloadFormat {
@@ -88,11 +52,12 @@ impl TargetCompiler for FixtureCompiler {
     }
 
     fn compile(&self, artifact: &Artifact) -> Result<TargetPayload, TargetCompileError> {
+        let entries = vec![entry_point()];
         TargetPayload::new(
             artifact,
             self.format.clone(),
             self.profile.clone(),
-            vec![entry()],
+            entries,
             vec![4, 2],
         )
         .map_err(Into::into)
@@ -119,23 +84,6 @@ fn target_compiler_attaches_exactly_one_authenticated_payload() {
     assert_eq!(payload.bytes(), &[4, 2]);
 }
 
-fn entry() -> TargetEntryPoint {
-    TargetEntryPoint {
-        name: "entry".into(),
-        node: ArtifactNodeId(0),
-        workgroup_size: [8, 1, 1],
-        grid_size: [4, 1, 1],
-        dynamic_shared_bytes: 64,
-        resource_bindings: vec![TargetResourceBinding {
-            resource: ArtifactValueId(0),
-            group: 0,
-            slot: 3,
-            memory: TargetResourceMemory::Global,
-            access: TargetResourceAccess::ReadOnly,
-        }],
-    }
-}
-
 /// Regression: packaging target bytes must retain the exact neutral artifact, entry IDs, and bytes.
 #[test]
 fn neutral_envelope_and_target_payload_round_trip_exactly() {
@@ -145,7 +93,7 @@ fn neutral_envelope_and_target_payload_round_trip_exactly() {
         &neutral,
         format(7),
         profile(7),
-        vec![entry()],
+        vec![entry_point()],
         vec![0, 3, 7, 255],
     )
     .expect("valid target payload must bind");
@@ -179,8 +127,14 @@ fn target_payload_rejects_a_different_neutral_artifact_digest() {
     let first = neutral_artifact([8, 1, 1]);
     let second = neutral_artifact([16, 1, 1]);
     assert_ne!(first.digest(), second.digest());
-    let payload = TargetPayload::new(&first, format(1), profile(1), vec![entry()], vec![9, 8, 7])
-        .expect("payload must bind to its source artifact");
+    let payload = TargetPayload::new(
+        &first,
+        format(1),
+        profile(1),
+        vec![entry_point()],
+        vec![9, 8, 7],
+    )
+    .expect("payload must bind to its source artifact");
     let mut wrong_envelope = ArtifactEnvelope::new(second);
 
     let error = wrong_envelope
@@ -204,7 +158,7 @@ fn target_payload_schema_and_format_version_skew_are_rejected() {
         &neutral,
         format(2),
         profile(2),
-        vec![entry()],
+        vec![entry_point()],
         vec![1, 2, 3],
     )
     .expect("payload must construct");
@@ -246,7 +200,7 @@ fn corrupted_target_payload_identity_is_rejected() {
         &neutral,
         format(1),
         profile(1),
-        vec![entry()],
+        vec![entry_point()],
         vec![11, 22, 33],
     )
     .expect("payload must construct");
@@ -297,4 +251,328 @@ fn target_module_bundle_rejects_noncanonical_module_order() {
             "unexpected admission error: {error}"
         );
     }
+}
+/// WHY: fused multi-node modules where individual node programs declare buffers at colliding local binding slots (e.g. both slot 0) must resolve descriptor bindings by exact buffer name ownership, never cross-node slot index collisions.
+#[test]
+fn fused_multi_node_binding_resolution_uses_exact_name_ownership_over_colliding_slots() {
+    let mut graph = vyre_foundation::ir::ProgramGraph::new();
+    let val_a = graph
+        .add_external_value(
+            "a",
+            vyre_foundation::ir::ValueContract {
+                dtype: vyre_foundation::ir::DataType::U32,
+                shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+            },
+        )
+        .unwrap();
+    let val_b = graph
+        .add_external_value(
+            "b",
+            vyre_foundation::ir::ValueContract {
+                dtype: vyre_foundation::ir::DataType::U32,
+                shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+            },
+        )
+        .unwrap();
+
+    let prog0 = Program::wrapped(
+        vec![
+            vyre_foundation::ir::BufferDecl::storage(
+                "node0_in",
+                0,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+            vyre_foundation::ir::BufferDecl::storage(
+                "mid_out",
+                1,
+                vyre_foundation::ir::BufferAccess::WriteOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+        ],
+        [32, 1, 1],
+        vec![vyre_foundation::ir::Node::store(
+            "mid_out",
+            vyre_foundation::ir::Expr::u32(0),
+            vyre_foundation::ir::Expr::load("node0_in", vyre_foundation::ir::Expr::u32(0)),
+        )],
+    );
+
+    let prog1 = Program::wrapped(
+        vec![
+            vyre_foundation::ir::BufferDecl::storage(
+                "node1_in",
+                0,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+            vyre_foundation::ir::BufferDecl::storage(
+                "mid_in",
+                1,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+            vyre_foundation::ir::BufferDecl::storage(
+                "node1_out",
+                2,
+                vyre_foundation::ir::BufferAccess::WriteOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+        ],
+        [32, 1, 1],
+        vec![vyre_foundation::ir::Node::store(
+            "node1_out",
+            vyre_foundation::ir::Expr::u32(0),
+            vyre_foundation::ir::Expr::add(
+                vyre_foundation::ir::Expr::load("node1_in", vyre_foundation::ir::Expr::u32(0)),
+                vyre_foundation::ir::Expr::load("mid_in", vyre_foundation::ir::Expr::u32(0)),
+            ),
+        )],
+    );
+
+    let (_node0, outputs0) = graph
+        .add_node(
+            "node0",
+            prog0,
+            vec![vyre_foundation::ir::GraphInput {
+                buffer: "node0_in".into(),
+                value: val_a,
+                contract: vyre_foundation::ir::ValueContract {
+                    dtype: vyre_foundation::ir::DataType::U32,
+                    shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                    access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                    lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+                },
+            }],
+            vec![vyre_foundation::ir::GraphOutput {
+                buffer: "mid_out".into(),
+                name: "mid".into(),
+                contract: vyre_foundation::ir::ValueContract {
+                    dtype: vyre_foundation::ir::DataType::U32,
+                    shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                    access: vyre_foundation::ir::BufferAccess::WriteOnly,
+                    lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+    let mid_val = outputs0[0];
+
+    let (_node1, outputs1) = graph
+        .add_node(
+            "node1",
+            prog1,
+            vec![
+                vyre_foundation::ir::GraphInput {
+                    buffer: "node1_in".into(),
+                    value: val_b,
+                    contract: vyre_foundation::ir::ValueContract {
+                        dtype: vyre_foundation::ir::DataType::U32,
+                        shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                        access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                        lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+                    },
+                },
+                vyre_foundation::ir::GraphInput {
+                    buffer: "mid_in".into(),
+                    value: mid_val,
+                    contract: vyre_foundation::ir::ValueContract {
+                        dtype: vyre_foundation::ir::DataType::U32,
+                        shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                        access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                        lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+                    },
+                },
+            ],
+            vec![vyre_foundation::ir::GraphOutput {
+                buffer: "node1_out".into(),
+                name: "out1".into(),
+                contract: vyre_foundation::ir::ValueContract {
+                    dtype: vyre_foundation::ir::DataType::U32,
+                    shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                    access: vyre_foundation::ir::BufferAccess::WriteOnly,
+                    lifetime: vyre_foundation::ir::ValueLifetime::Output,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+    let out_val = outputs1[0];
+
+    let mut symbols = std::collections::BTreeMap::new();
+    symbols.insert("items".into(), 32);
+    let req = vyre_megakernel::CompileRequest::new(
+        graph,
+        vyre_megakernel::ExternalFacts::new(vyre_megakernel::Digest([0; 32]), symbols),
+        vyre_megakernel::DeviceFacts::unknown(),
+        vyre_megakernel::SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+        1_000_000,
+    )
+    .validate()
+    .unwrap();
+
+    let artifact = vyre_megakernel::compile(&req).expect("compilation must succeed");
+
+    let mut module_count = 0;
+    let mut captured_bindings = Vec::new();
+    let _payload = compile_selected_modules(&artifact, format(1), profile(1), |selected, _prof| {
+        module_count += 1;
+        assert_eq!(
+            selected.nodes.len(),
+            2,
+            "producer and consumer must fuse into a 2-node module"
+        );
+        captured_bindings = selected.canonical_bindings.clone();
+        Ok(EmittedTargetModule {
+            entry_point: "fused_entry".into(),
+            workgroup_size: [32, 1, 1],
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: selected.canonical_bindings.clone(),
+            bytes: vec![1, 2, 3],
+        })
+    })
+    .expect("selected module compilation must succeed");
+
+    assert_eq!(module_count, 1, "exactly one fused module must be compiled");
+
+    let node0_in_binding = captured_bindings
+        .iter()
+        .find(|b| b.resource == ArtifactValueId(val_a.0));
+    let node1_in_binding = captured_bindings
+        .iter()
+        .find(|b| b.resource == ArtifactValueId(val_b.0));
+    let out_binding = captured_bindings
+        .iter()
+        .find(|b| b.resource == ArtifactValueId(out_val.0));
+
+    assert!(
+        node0_in_binding.is_some(),
+        "node0_in must be bound to val_a"
+    );
+    assert!(
+        node1_in_binding.is_some(),
+        "node1_in must be bound to val_b"
+    );
+    assert!(out_binding.is_some(), "node1_out must be bound to out_val");
+    assert_ne!(
+        node0_in_binding.unwrap().slot,
+        node1_in_binding.unwrap().slot,
+        "descriptor slots in fused kernel must be distinct"
+    );
+}
+/// WHY: entry metadata must reject duplicate (group, slot) bindings.
+#[test]
+fn target_payload_rejects_duplicate_slot_within_entry() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let bindings = vec![
+        TargetResourceBinding {
+            resource: ArtifactValueId(0),
+            group: 0,
+            slot: 0,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::ReadOnly,
+        },
+        TargetResourceBinding {
+            resource: ArtifactValueId(0),
+            group: 0,
+            slot: 0,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::WriteOnly,
+        },
+    ];
+    let error = TargetPayload::new(
+        &neutral,
+        format(1),
+        profile(1),
+        vec![TargetEntryPoint {
+            name: "dup_slot".into(),
+            node: ArtifactNodeId(0),
+            workgroup_size: [8, 1, 1],
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: bindings,
+        }],
+        vec![1, 2, 3],
+    )
+    .expect_err("duplicate (group, slot) must fail admission");
+    assert_eq!(
+        error.diagnostic.code.as_str(),
+        "MKC017_MALFORMED_TARGET_PAYLOAD"
+    );
+}
+
+/// WHY: fused modules where a canonical resource is bound at distinct slots (e.g. producer output and consumer input) must be accepted.
+#[test]
+fn target_payload_accepts_same_resource_at_distinct_slots() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let bindings = vec![
+        TargetResourceBinding {
+            resource: ArtifactValueId(0),
+            group: 0,
+            slot: 0,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::ReadOnly,
+        },
+        TargetResourceBinding {
+            resource: ArtifactValueId(0),
+            group: 0,
+            slot: 1,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::WriteOnly,
+        },
+    ];
+    let payload = TargetPayload::new(
+        &neutral,
+        format(1),
+        profile(1),
+        vec![TargetEntryPoint {
+            name: "distinct_slots_same_res".into(),
+            node: ArtifactNodeId(0),
+            workgroup_size: [8, 1, 1],
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: bindings,
+        }],
+        vec![1, 2, 3],
+    )
+    .expect("same resource at distinct slots must be admitted");
+    assert_eq!(payload.entries()[0].resource_bindings.len(), 2);
+}
+
+/// WHY: target payload must fail closed when referencing an unknown canonical resource.
+#[test]
+fn target_payload_rejects_unknown_canonical_resource() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let bindings = vec![TargetResourceBinding {
+        resource: ArtifactValueId(999),
+        group: 0,
+        slot: 0,
+        memory: TargetResourceMemory::Global,
+        access: TargetResourceAccess::ReadOnly,
+    }];
+    let error = TargetPayload::new(
+        &neutral,
+        format(1),
+        profile(1),
+        vec![TargetEntryPoint {
+            name: "unknown_res".into(),
+            node: ArtifactNodeId(0),
+            workgroup_size: [8, 1, 1],
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: bindings,
+        }],
+        vec![1, 2, 3],
+    )
+    .expect_err("unknown resource must fail admission");
+    assert_eq!(
+        error.diagnostic.code.as_str(),
+        "MKC020_TARGET_PAYLOAD_ASSOCIATION_MISMATCH"
+    );
 }

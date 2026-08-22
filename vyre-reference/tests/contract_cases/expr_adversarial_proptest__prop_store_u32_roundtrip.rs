@@ -12,7 +12,7 @@ proptest! {
                 Node::store("out", Expr::u32(0), Expr::u32(value)),
             ],
         );
-        let inputs = [Value::from(vec![0; 4])];
+        let inputs: [Value; 0] = [];
         let outputs = vyre_reference::reference_eval(&program, &inputs)
             .expect("Fix: store program must execute successfully");
         prop_assert_eq!(outputs.len(), 1);
@@ -35,7 +35,7 @@ proptest! {
                 Node::store("out", Expr::load("idx", Expr::u32(0)), Expr::u32(0xDEADBEEF)),
             ],
         );
-        let inputs = [Value::from(index.to_le_bytes().to_vec()), Value::from(vec![0; 4])];
+        let inputs = [Value::from(index.to_le_bytes().to_vec())];
         let outputs = vyre_reference::reference_eval(&program, &inputs)
             .expect("Fix: OOB store must be a silent no-op");
         prop_assert_eq!(outputs[0].to_bytes(), vec![0; 4]);

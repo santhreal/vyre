@@ -1,0 +1,4 @@
+path = "scripts/lib/check_feature_msrv.py"
+state = "retired"
+gate = "feature-isolation"
+reason = "the derived matrix it built is the feature-isolation axis, which also covers unpublishable members and cross-member edge selections"

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Launch geometry is a lowering decision produced by backend GeometryStrategy from neutral GeometryRequirements rather than hardcoded in library operations."

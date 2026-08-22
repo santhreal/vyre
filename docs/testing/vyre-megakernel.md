@@ -3,10 +3,10 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-megakernel
+./cargo_full test -p vyre-megakernel
 ```
 
-Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, expose selected modules and canonical ABI to registered target compilers, then emit canonical Artifact and ArtifactEnvelope records without owning admission, execution, or lifecycle policy.
+Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, emit a megakernel Artifact and TargetPayloads, and never claim a measured winner that no clock produced. Does not own admission, execution, or lifecycle policy.
 
 The crate lives at `vyre-megakernel`. The `megakernel-compiler` owner maintains its
 `compiler-boundary` testing contract.
@@ -14,7 +14,7 @@ The crate lives at `vyre-megakernel`. The `megakernel-compiler` owner maintains 
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-megakernel
+./cargo_full test -p vyre-megakernel
 ```
 
 ## Feature sets
@@ -25,9 +25,13 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_megakernel` | `vyre-megakernel/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-megakernel` |
-| `test` | `artifact_contract` | `vyre-megakernel/tests/artifact_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-megakernel --test artifact_contract` |
-| `test` | `target_payload_contract` | `vyre-megakernel/tests/target_payload_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-megakernel --test target_payload_contract` |
+| `lib` | `vyre_megakernel` | `vyre-megakernel/src/lib.rs` | None | `./cargo_full test -p vyre-megakernel` |
+| `test` | `artifact_contract` | `vyre-megakernel/tests/artifact_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test artifact_contract` |
+| `test` | `candidate_budget_and_dependency_endpoints` | `vyre-megakernel/tests/candidate_budget_and_dependency_endpoints.rs` | None | `./cargo_full test -p vyre-megakernel --test candidate_budget_and_dependency_endpoints` |
+| `test` | `selection_cost_contract` | `vyre-megakernel/tests/selection_cost_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test selection_cost_contract` |
+| `test` | `shared_tile_cost` | `vyre-megakernel/tests/shared_tile_cost.rs` | None | `./cargo_full test -p vyre-megakernel --test shared_tile_cost` |
+| `test` | `target_payload_contract` | `vyre-megakernel/tests/target_payload_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test target_payload_contract` |
+| `test` | `topology_contract` | `vyre-megakernel/tests/topology_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test topology_contract` |
 
 ## Test classes
 

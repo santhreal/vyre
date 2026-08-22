@@ -22,7 +22,8 @@ pub(crate) fn dispatch_resident_timed(
     let timed = pipeline.dispatch_persistent_handles_timed(resources, config)?;
     Ok(vyre_driver::TimedDispatchResult {
         outputs: timed.outputs,
-        wall_ns: elapsed_nanos_u64(started, "resident timed dispatch")?,
+        wall_ns: crate::numeric::WGPU_NUMERIC
+            .elapsed_nanos_u64(started, "resident timed dispatch")?,
         device_ns: timed.device_ns,
         enqueue_ns: timed.enqueue_ns,
         wait_ns: timed.wait_ns,
@@ -51,12 +52,4 @@ pub(crate) fn dispatch_resident_async(
     Ok(Box::new(pipeline.dispatch_persistent_handles_async(
         resources, config, started,
     )?))
-}
-
-fn elapsed_nanos_u64(start: Instant, label: &str) -> Result<u64, vyre_driver::BackendError> {
-    u64::try_from(start.elapsed().as_nanos()).map_err(|source| {
-        vyre_driver::BackendError::new(format!(
-            "{label} elapsed time cannot fit u64 nanoseconds: {source}. Fix: split or timeout the dispatch before telemetry overflows."
-        ))
-    })
 }

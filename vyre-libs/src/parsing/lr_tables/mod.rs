@@ -5,16 +5,14 @@
 //! C expression grammar. When the grammar grows beyond expressions, move
 //! table generation into a `build.rs` script that emits literal arrays, then
 //! keep this module as the stable runtime API.
+//!
+//! `vyre_spec::c11_expr_token` owns the terminal ids these tables index by. A
+//! caller that builds a token stream names that module.
 
 mod action;
 mod c11_expr;
-mod parser;
 mod table;
 
 pub use action::Action;
-pub use c11_expr::{
-    ACTION_TABLE, C11_EXPR, GOTO_TABLE, NT_E, NT_F, NT_T, PRODUCTIONS, TOK_EOF, TOK_ID, TOK_LPAREN,
-    TOK_MINUS, TOK_NUM, TOK_PLUS, TOK_RPAREN, TOK_SLASH, TOK_STAR,
-};
-pub use parser::{parse_lr, ParseError};
+pub use c11_expr::{ACTION_TABLE, C11_EXPR, GOTO_TABLE, NT_E, NT_F, NT_T, PRODUCTIONS};
 pub use table::{LrTables, Production};

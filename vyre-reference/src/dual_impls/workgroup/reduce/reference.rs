@@ -1,21 +1,21 @@
-use crate::{dual_impls::common, workgroup::Memory};
+use crate::{dual_impls::evaluator, workgroup::Memory};
 use vyre_primitives::{CombineOp, Reduce};
 
-impl common::ReferenceEvaluator for Reduce {
-    fn evaluate(&self, inputs: &[Memory]) -> Result<Memory, common::EvalError> {
-        let words = common::u32_words(common::one_input(inputs, "reduce")?, "reduce")?;
+impl evaluator::ReferenceEvaluator for Reduce {
+    fn evaluate(&self, inputs: &[Memory]) -> Result<Memory, evaluator::EvalError> {
+        let words = evaluator::u32_words(evaluator::one_input(inputs, "reduce")?, "reduce")?;
         let Some((&first, tail)) = words.split_first() else {
             // Return the correct algebraic identity for each operator so the
             // reference oracle matches a correct GPU kernel's empty-input
             // behavior. Returning 0 for every operator was wrong: Min and
             // BitAnd have identity u32::MAX, and Mul has identity 1.
-            return Ok(common::scalar(identity_for(self.combine)));
+            return Ok(evaluator::scalar(identity_for(self.combine)));
         };
         let mut value = first;
         for next in tail.iter().copied() {
-            value = common::combine(self.combine, value, next)?;
+            value = evaluator::combine(self.combine, value, next)?;
         }
-        Ok(common::scalar(value))
+        Ok(evaluator::scalar(value))
     }
 }
 
@@ -39,10 +39,11 @@ fn identity_for(op: CombineOp) -> u32 {
     }
 }
 
+// Inline: covers items in the crate-private `dual_impls::evaluator` module, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dual_impls::common::ReferenceEvaluator;
+    use crate::dual_impls::evaluator::ReferenceEvaluator;
 
     /// Before the fix, empty-input Reduce always returned scalar(0) regardless
     /// of operator. After the fix, each operator returns its algebraic identity.

@@ -1,0 +1,62 @@
+# Testing `structure-gate`
+
+Run the default crate suite from the workspace root:
+
+```console
+./cargo_full test -p structure-gate
+```
+
+Enforce the crate roster, one operation identity per semantic operation, one home per concept, and one place per module. Depends on no vyre crate so it keeps running while the workspace does not compile.
+
+The crate lives at `structure-gate`. The `release-tooling` owner maintains its
+`standalone-tooling` testing contract.
+
+## Commands
+
+```console
+./cargo_full test -p structure-gate
+```
+
+## Feature sets
+
+This crate declares no Cargo features.
+
+## Cargo targets
+
+| Kind | Target | Source | Required features | Focused command |
+| --- | --- | --- | --- | --- |
+| `bin` | `structure-gate` | `structure-gate/src/main.rs` | None | `./cargo_full test -p structure-gate --bin structure-gate` |
+| `lib` | `structure_gate` | `structure-gate/src/lib.rs` | None | `./cargo_full test -p structure-gate` |
+| `test` | `cfg_gate_polarity` | `structure-gate/tests/cfg_gate_polarity.rs` | None | `./cargo_full test -p structure-gate --test cfg_gate_polarity` |
+| `test` | `checkout_provenance` | `structure-gate/tests/checkout_provenance.rs` | None | `./cargo_full test -p structure-gate --test checkout_provenance` |
+| `test` | `crate_ownership_registry_reader` | `structure-gate/tests/crate_ownership_registry_reader.rs` | None | `./cargo_full test -p structure-gate --test crate_ownership_registry_reader` |
+| `test` | `crate_structure_contracts` | `structure-gate/tests/crate_structure_contracts.rs` | None | `./cargo_full test -p structure-gate --test crate_structure_contracts` |
+| `test` | `deletion_evidence_and_pass_registry` | `structure-gate/tests/deletion_evidence_and_pass_registry.rs` | None | `./cargo_full test -p structure-gate --test deletion_evidence_and_pass_registry` |
+| `test` | `device_only_routing` | `structure-gate/tests/device_only_routing.rs` | None | `./cargo_full test -p structure-gate --test device_only_routing` |
+| `test` | `materializer_admission` | `structure-gate/tests/materializer_admission.rs` | None | `./cargo_full test -p structure-gate --test materializer_admission` |
+| `test` | `module_routes` | `structure-gate/tests/module_routes.rs` | None | `./cargo_full test -p structure-gate --test module_routes` |
+| `test` | `node_child_descent_owner` | `structure-gate/tests/node_child_descent_owner.rs` | None | `./cargo_full test -p structure-gate --test node_child_descent_owner` |
+| `test` | `source_directory_placement` | `structure-gate/tests/source_directory_placement.rs` | None | `./cargo_full test -p structure-gate --test source_directory_placement` |
+| `test` | `string_literals` | `structure-gate/tests/string_literals.rs` | None | `./cargo_full test -p structure-gate --test string_literals` |
+| `test` | `test_gated_items` | `structure-gate/tests/test_gated_items.rs` | None | `./cargo_full test -p structure-gate --test test_gated_items` |
+| `test` | `test_gated_modules` | `structure-gate/tests/test_gated_modules.rs` | None | `./cargo_full test -p structure-gate --test test_gated_modules` |
+
+## Test classes
+
+- Repository contract scans
+- Checkout resolution and path boundaries
+- Failure diagnostics that name the correction
+
+## Hardware requirements
+
+No accelerator is required for the default suite.
+
+## Evidence outputs
+
+- No persistent release artifact. The command status and exact behavioral assertions are the proof.
+
+## Skips and failures
+
+The default command does not run tests marked `#[ignore]`. No executed test may silently treat a missing requested backend or device as success.
+
+A failed assertion, build error, backend acquisition error, or malformed fixture returns a nonzero status with the failing test and contract in the diagnostic.

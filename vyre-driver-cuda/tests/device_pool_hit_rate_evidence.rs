@@ -8,20 +8,12 @@
 //! asserts the telemetry snapshot reports a HIGH pool hit rate, the evidence the
 //! plan asks for, not just that the counters exist.
 
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::no_op_program;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-/// A minimal fixed-shape Program: one thread storing a constant. Every dispatch
-/// requests the same device buffers, so after warm-up the pool should serve them
-/// all from cache.
-fn no_op_program() -> Program {
-    Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(0))],
-    )
-}
 
 #[test]
 fn steady_state_redispatch_loop_reports_high_device_pool_hit_rate() {

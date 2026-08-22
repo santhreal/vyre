@@ -389,6 +389,12 @@ impl BodyCtx<'_> {
     /// Lowered as: `safe = (idx < len) ? idx : 0`. When `len == 0` the
     /// dispatcher rejects the launch upstream, so the `0` fallback
     /// always points at a valid byte.
+    ///
+    /// This makes an out-of-range access fault-free, not correct. The folded
+    /// address is element 0, which a load may read and discard and a store may
+    /// not write: a store carries its own bounds predicate
+    /// (`store_guard::store_guard_for_index`) so the write is dropped rather
+    /// than redirected onto a live element.
     fn clamp_index_to_buffer_length(&mut self, binding_slot: u32, raw_idx: Reg) -> Reg {
         let len_reg = self.ensure_buffer_length_reg(binding_slot);
         let in_bounds = self.alloc(PtxType::Bool);
@@ -423,6 +429,22 @@ impl BodyCtx<'_> {
             "    setp.lt.u32    {in_bounds}, {raw_idx}, {len_reg};"
         );
         in_bounds
+    }
+
+    /// `reg = operand(index_op_id) + offset`, or the operand itself when
+    /// `offset` is zero.
+    pub(super) fn emit_index_plus_immediate(
+        &mut self,
+        index_op_id: u32,
+        offset: u32,
+    ) -> Result<Reg, EmitError> {
+        let base = self.lookup_operand(index_op_id)?;
+        if offset == 0 {
+            return Ok(base);
+        }
+        let reg = self.alloc(PtxType::U32);
+        let _ = writeln!(self.text, "    add.u32    {reg}, {base}, {offset};");
+        Ok(reg)
     }
 
     fn ensure_buffer_length_reg(&mut self, binding_slot: u32) -> Reg {

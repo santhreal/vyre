@@ -24,7 +24,7 @@
 //!   dispatch(prefilter & confirmer fused) → readback(committed_tiles)
 //! ```
 //!
-//! One dispatch, no host round-trip. On Ada-class hardware this is
+//! One dispatch, no host round-trip. On high-throughput device architectures this is
 //! a 2-4x wall-clock win on the fused kernel vs the non-speculative
 //! two-stage GPU pair,
 //! *if* the pre-filter hit rate is high enough to amortise the
@@ -112,7 +112,7 @@ impl SpeculationReport {
 
 /// Default crossover threshold. Below this commit rate the
 /// speculative path underperforms the non-speculative GPU
-/// prefilter -> confirmer pair on Ada-class hardware. Empirical.
+/// prefilter -> confirmer pair on empirical benchmarks.
 pub const DEFAULT_THRESHOLD_PCT: u32 = 15;
 
 /// Caller-controlled speculation policy.
@@ -476,6 +476,8 @@ where
     })
 }
 
+// Inline: `vyre_driver::speculate` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -586,7 +588,7 @@ mod tests {
             SpeculativeVariantKeys {
                 conservative: &conservative,
                 speculative: &speculative,
-                adapter_id: "native-sm120",
+                adapter_id: "native-test-adapter",
             },
             SpeculativeVariantRace {
                 conservative_dispatch_ns: 1_000,
@@ -610,7 +612,7 @@ mod tests {
         );
         assert_eq!(
             decision.autotune_key,
-            AutotuneKey::new(&speculative, "native-sm120")
+            AutotuneKey::new(&speculative, "native-test-adapter")
         );
     }
 
@@ -624,7 +626,7 @@ mod tests {
             SpeculativeVariantKeys {
                 conservative: &conservative,
                 speculative: &speculative,
-                adapter_id: "portable-vk",
+                adapter_id: "portable-test-adapter",
             },
             SpeculativeVariantRace {
                 conservative_dispatch_ns: 500,
@@ -647,7 +649,7 @@ mod tests {
         );
         assert_eq!(
             decision.autotune_key,
-            AutotuneKey::new(&conservative, "portable-vk")
+            AutotuneKey::new(&conservative, "portable-test-adapter")
         );
     }
 
@@ -661,7 +663,7 @@ mod tests {
             SpeculativeVariantKeys {
                 conservative: &conservative,
                 speculative: &speculative,
-                adapter_id: "native-sm120",
+                adapter_id: "native-test-adapter",
             },
             SpeculativeVariantRace {
                 conservative_dispatch_ns: u64::MAX,
@@ -745,7 +747,7 @@ mod tests {
 
     struct TailBackend;
 
-    impl crate::backend::private::Sealed for TailBackend {}
+    impl crate::backend::sealed::Sealed for TailBackend {}
 
     impl VyreBackend for TailBackend {
         fn id(&self) -> &'static str {
@@ -758,10 +760,10 @@ mod tests {
             OPS.get_or_init(HashSet::new)
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<OutputBuffers, BackendError> {
             Ok(vec![encode_counter_tail(SpeculationReport::from_counts(

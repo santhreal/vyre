@@ -226,12 +226,7 @@ fn egraph_structural_equivalence_kernel_fails_closed_on_output_overflow() {
     // The kernel will emit exactly 1 equivalence pair (30, 40).
     // We cap `max_equivalences` to 0 so device_reported_count (1) > planned_capacity (0),
     // triggering the fail-closed path.
-    let snapshot = GpuEGraphSnapshot::build([
-        (10u32, "lit", &[][..]),
-        (20u32, "lit", &[][..]),
-        (30u32, "add", &[10u32, 20u32][..]),
-        (40u32, "add", &[10u32, 20u32][..]),
-    ]);
+    let snapshot = duplicate_add_snapshot();
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");

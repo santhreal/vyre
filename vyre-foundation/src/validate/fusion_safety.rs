@@ -4,18 +4,26 @@
 //! but it cannot see hazards introduced when independently valid nodes are
 //! fused into the same kernel. This pass walks node sequences and rejects
 //! mixed atomic / non-atomic access to the same buffer unless an explicit
-//! `Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }` separates them.
+//! `Node::Barrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst }` separates them.
+//!
+//! # Sole owner of `V116`
+//!
+//! [`validate_fusion_alias_hazards`] is the only implementation of the rule.
+//! The production single-pass walk in `super::rule_pipeline` used to carry a
+//! second, frame-scoped copy threaded through its explicit stack machine, and
+//! the two under-reported against each other: the inline copy recorded only the
+//! `source` and `destination` of an async transfer, never the `offset` and
+//! `size` operands, so an atomic in a transfer size was invisible to it while
+//! this walk rejected it. Both walks now call this function, so the rule cannot
+//! have two answers.
 
 use crate::ir::Expr;
 use crate::ir::Ident;
-#[cfg(test)]
 use crate::ir::Node;
-#[cfg(test)]
 use crate::validate::{err, ValidationError};
-#[cfg(test)]
 use crate::validate::{ValidationLocation, ValidationPhase};
+use crate::visit;
 use rustc_hash::FxHashSet;
-use smallvec::SmallVec;
 
 #[derive(Debug, Default)]
 pub(crate) struct NodeAccesses {
@@ -28,12 +36,10 @@ pub(crate) struct NodeAccesses {
 }
 
 /// Validate fusion hazards caused by mixing non-atomic reads and atomic writes.
-#[cfg(test)]
 pub(crate) fn validate_fusion_alias_hazards(nodes: &[Node], errors: &mut Vec<ValidationError>) {
     validate_sequence(nodes, errors);
 }
 
-#[cfg(test)]
 fn validate_sequence(nodes: &[Node], errors: &mut Vec<ValidationError>) {
     let mut reads_since_barrier = FxHashSet::<Ident>::default();
     let mut atomics_since_barrier = FxHashSet::<Ident>::default();
@@ -93,12 +99,17 @@ fn validate_sequence(nodes: &[Node], errors: &mut Vec<ValidationError>) {
                 );
                 reads_since_barrier.extend(accesses.read_buffers);
                 atomics_since_barrier.extend(accesses.atomic_buffers);
+                // A variant this match does not name may still carry child
+                // bodies. `child_bodies` owns which slots exist, so a new
+                // one is validated instead of skipped in silence.
+                for body in visit::child_bodies(node) {
+                    validate_sequence(body, errors);
+                }
             }
         }
     }
 }
 
-#[cfg(test)]
 fn report_alias_hazards(
     accesses: &NodeAccesses,
     reads_since_barrier: &FxHashSet<Ident>,
@@ -124,13 +135,10 @@ fn report_alias_hazards(
     for buffer in hazards {
         errors.push(err("V116", ValidationPhase::Composition, ValidationLocation::Program, format!(
             "fusion hazard on buffer `{buffer}`: one node reads it non-atomically while another issues an atomic access without an explicit barrier"
-        ), format!(
-            "insert `Node::barrier()` between the read path and the atomic path, or rename the buffers before fusion."
-        )));
+        ), "insert `Node::barrier()` between the read path and the atomic path, or rename the buffers before fusion.".to_string()));
     }
 }
 
-#[cfg(test)]
 pub(crate) fn collect_node_accesses(node: &Node, accesses: &mut NodeAccesses) {
     match node {
         Node::Let { value, .. } | Node::Assign { value, .. } => {
@@ -187,6 +195,22 @@ pub(crate) fn collect_node_accesses(node: &Node, accesses: &mut NodeAccesses) {
         Node::Region { body, .. } => {
             collect_node_sequence_accesses(body, accesses);
         }
+        Node::TileElementwise { body, .. } => {
+            collect_node_sequence_accesses(body, accesses);
+        }
+        Node::TileLoad { buffer, origin, .. } => {
+            accesses.read_buffers.insert(buffer.clone());
+            for expr in origin {
+                collect_expr_accesses(expr, accesses);
+            }
+        }
+        Node::TileStore { buffer, origin, .. } => {
+            accesses.read_buffers.insert(buffer.clone());
+            for expr in origin {
+                collect_expr_accesses(expr, accesses);
+            }
+        }
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {}
         Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
             accesses.read_buffers.insert(buffer.clone());
         }
@@ -203,89 +227,28 @@ pub(crate) fn collect_node_accesses(node: &Node, accesses: &mut NodeAccesses) {
     }
 }
 
-#[cfg(test)]
 fn collect_node_sequence_accesses(nodes: &[Node], accesses: &mut NodeAccesses) {
     for node in nodes {
         collect_node_accesses(node, accesses);
     }
 }
 
+/// Record every buffer `expr` reads or atomically updates.
+///
+/// Which positions name a buffer, and how, is `visit::visit_expr_buffer_accesses`'s
+/// decision, not this function's. A callee parameter is a read-only or uniform
+/// buffer by declaration, so `Expr::BufferRef` counts as a read there; recording
+/// it as an atomic access would report a phantom hazard against every ordinary
+/// read of the same buffer in the caller.
 pub(crate) fn collect_expr_accesses(expr: &Expr, accesses: &mut NodeAccesses) {
-    let mut stack: SmallVec<[&Expr; 32]> = SmallVec::new();
-    stack.push(expr);
-    while let Some(expr) = stack.pop() {
-        match expr {
-            Expr::Load { buffer, index } => {
-                accesses.read_buffers.insert(buffer.clone());
-                stack.push(index);
-            }
-            Expr::BufLen { buffer } => {
-                accesses.read_buffers.insert(buffer.clone());
-            }
-            // A callee parameter is a read-only or uniform buffer by
-            // declaration, so passing a buffer is a read. Recording it as an
-            // atomic access instead would report a phantom hazard against
-            // every ordinary read of the same buffer in the caller.
-            Expr::BufferRef { buffer } => {
-                accesses.read_buffers.insert(buffer.clone());
-            }
-            Expr::Atomic {
-                buffer,
-                index,
-                expected,
-                value,
-                ..
-            } => {
-                accesses.atomic_buffers.insert(buffer.clone());
-                stack.push(value);
-                if let Some(expected) = expected {
-                    stack.push(expected);
-                }
-                stack.push(index);
-            }
-            Expr::BinOp { left, right, .. } => {
-                stack.push(right);
-                stack.push(left);
-            }
-            Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-                stack.push(operand);
-            }
-            Expr::Call { args, .. } => {
-                stack.extend(args.iter());
-            }
-            Expr::Fma { a, b, c } => {
-                stack.push(c);
-                stack.push(b);
-                stack.push(a);
-            }
-            Expr::Select {
-                cond,
-                true_val,
-                false_val,
-            } => {
-                stack.push(false_val);
-                stack.push(true_val);
-                stack.push(cond);
-            }
-            Expr::SubgroupBallot { cond } => stack.push(cond),
-            Expr::SubgroupShuffle { value, lane } => {
-                stack.push(lane);
-                stack.push(value);
-            }
-            Expr::SubgroupReduce { value, .. } => stack.push(value),
-            Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitF32(_)
-            | Expr::LitBool(_)
-            | Expr::Var(_)
-            | Expr::InvocationId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-            | Expr::Opaque(_) => {}
+    crate::visit::visit_expr_buffer_accesses(expr, |access, buffer| match access {
+        crate::visit::ExprBufferAccess::Load => {
+            accesses.read_buffers.insert(buffer.clone());
         }
-    }
+        crate::visit::ExprBufferAccess::Atomic => {
+            accesses.atomic_buffers.insert(buffer.clone());
+        }
+    });
 }
 
 #[cfg(test)]

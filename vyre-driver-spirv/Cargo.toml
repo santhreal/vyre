@@ -1,6 +1,6 @@
 [package]
 name = "vyre-driver-spirv"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -21,18 +21,49 @@ rustdoc-args = ["--cfg", "docsrs"]
 [lints]
 workspace = true
 
+[features]
+default = []
+
+# The spirv_parity suite validates every blob it emits with spirv-val, and a
+# machine without that binary must skip the target rather than compile it and
+# pass without validating anything, which is what it used to do. Registering the
+# target behind a feature is the same remedy the oracle-matrix suite uses: a
+# default run cleanly skips it, and the gate that enables it fails
+# closed when the validator is missing.
+spirv-val = []
+
+# `tests/dispatch.rs` acquires a live Vulkan compute device and fails loudly
+# when there is none, which is right on a runner that has one and turns every
+# hosted CPU leg red on a runner that does not. `gpu-parity.yml` turns this on
+# for the machine with the device.
+device-tests = []
+
 [dependencies]
 vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
-vyre-spec = { workspace = true }
 vyre-lower = { workspace = true }
 vyre-emit-spirv = { workspace = true }
 inventory.workspace = true
 ash.workspace = true
-smallvec = { workspace = true }
 
 [dev-dependencies]
+vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # integration tests/benches assert against these crates' public APIs
 vyre-reference = { path = "../vyre-reference" }
 tempfile.workspace = true
+
+[[test]]
+name = "spirv_parity"
+path = "tests/spirv_parity.rs"
+required-features = ["spirv-val"]
+
+[[test]]
+name = "dispatch"
+path = "tests/dispatch.rs"
+required-features = ["device-tests"]
+
+[[test]]
+name = "hostile_input_closure_contract"
+path = "tests/hostile_input_closure_contract.rs"
+required-features = ["device-tests"]

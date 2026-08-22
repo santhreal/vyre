@@ -1,8 +1,8 @@
 //! Resident work-queue protocol and host-mirror contracts.
 
-use vyre_runtime::resident_work_queue::{
-    protocol, ResidentQueueBuffers, ResidentQueueReadback, ResidentWorkQueue,
-};
+use vyre_runtime::resident_work_queue::readback::ResidentQueueReadback;
+use vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers;
+use vyre_runtime::resident_work_queue::{protocol, ResidentWorkQueue};
 
 #[test]
 fn readback_rejects_truncated_ring_before_telemetry() {

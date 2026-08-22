@@ -6,9 +6,10 @@
 
 use vyre_driver::BackendError;
 
-use crate::backend::allocations::{DeviceAllocation, HostTransferAllocations};
+use crate::backend::allocations::DeviceAllocation;
 use crate::backend::copy::aligned_async_copy_len;
 use crate::backend::launch_params::launch_param_byte_len;
+use crate::backend::pinned_allocations::HostTransferAllocations;
 use crate::backend::CudaBackend;
 use crate::numeric::CUDA_NUMERIC;
 

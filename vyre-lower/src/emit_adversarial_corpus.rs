@@ -7,8 +7,8 @@
 
 use std::sync::Arc;
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, UnOp};
-use vyre_foundation::memory_model::MemoryOrdering;
 
 use crate::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
@@ -49,39 +49,6 @@ pub enum EmitOutcome {
     Success,
     /// The emitter must reject the descriptor.
     Reject,
-}
-
-/// Backends that must consume this corpus in their own emit/descriptor tests.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum EmitAdversarialBackend {
-    /// Backend-neutral text emitter.
-    Naga,
-    /// Native module emitter.
-    Metal,
-    /// Primary text emitter.
-    Ptx,
-    /// Primary binary emitter.
-    Spirv,
-    /// Portable device runtime.
-    Wgpu,
-    /// Primary device runtime.
-    Cuda,
-}
-
-/// Backends required to consume the adversarial corpus.
-pub const REQUIRED_BACKENDS: [EmitAdversarialBackend; 6] = [
-    EmitAdversarialBackend::Naga,
-    EmitAdversarialBackend::Metal,
-    EmitAdversarialBackend::Ptx,
-    EmitAdversarialBackend::Spirv,
-    EmitAdversarialBackend::Wgpu,
-    EmitAdversarialBackend::Cuda,
-];
-
-/// Return the required adversarial-corpus backend set.
-#[must_use]
-pub fn required_backends() -> &'static [EmitAdversarialBackend] {
-    &REQUIRED_BACKENDS
 }
 
 /// One adversarial emit program case.
@@ -580,10 +547,11 @@ fn reject_grid_sync_barrier() -> EmitAdversarialCase {
 ///
 /// This is the shape that hid a whole class of emit-validity bugs: the loaded
 /// word is `Sint`, but bit/shift arithmetic against `u32` literals (and the
-/// final store into a `u32` buffer) requires operand-kind reconciliation. WGSL
-/// rejects `BitAnd(i32, u32)` and a shift whose amount is not `u32`; PTX must
-/// pick the signed vs unsigned form. Every backend must reconcile the kinds
-/// validating emitters (naga) catch any regression at the matrix gate.
+/// final store into a `u32` buffer) requires operand-kind reconciliation. The
+/// primary text dialect rejects `BitAnd(i32, u32)` and a shift whose amount is
+/// not `u32`; the primary binary dialect must pick the signed vs unsigned form.
+/// Every backend must reconcile the kinds, and the validating emitters catch any
+/// regression at the matrix gate.
 fn signed_buffer_arithmetic() -> EmitAdversarialCase {
     EmitAdversarialCase {
         id: "adv_signed_buffer_arith",
@@ -678,6 +646,7 @@ pub fn case_by_id(id: &str) -> Option<EmitAdversarialCase> {
     corpus().into_iter().find(|case| case.id == id)
 }
 
+// Inline: covers items in the crate-private `verify` module, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -701,22 +670,6 @@ mod tests {
                 errors
             );
         }
-    }
-
-    #[test]
-    fn required_backend_matrix_names_all_emit_consumers() {
-        assert_eq!(
-            required_backends(),
-            [
-                EmitAdversarialBackend::Naga,
-                EmitAdversarialBackend::Metal,
-                EmitAdversarialBackend::Ptx,
-                EmitAdversarialBackend::Spirv,
-                EmitAdversarialBackend::Wgpu,
-                EmitAdversarialBackend::Cuda,
-            ],
-            "Fix: adversarial emit corpus must stay wired to every descriptor-emitting backend."
-        );
     }
 
     #[test]

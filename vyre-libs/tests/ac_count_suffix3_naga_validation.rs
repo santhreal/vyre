@@ -1,6 +1,6 @@
 //! Validate that the suffix3 AC count prefilter lowers cleanly through Naga.
 
-use vyre_libs::scan::classic_ac::{
+use vyre_libs::pattern::classic_ac::{
     build_ac_bounded_count_suffix3_prefilter_program, classic_ac_compile,
 };
 

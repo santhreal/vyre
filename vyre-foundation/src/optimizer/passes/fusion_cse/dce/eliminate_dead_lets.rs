@@ -1,13 +1,12 @@
-use super::{collect_expr_refs, expr_has_effect, reachable_prefix, LiveResult};
-use crate::ir::{Ident, Node};
-use im::HashSet;
+use super::{collect_expr_refs, expr_has_effect, reachable_prefix, LiveResult, LiveSet};
+use crate::ir::Node;
 
 #[inline]
 #[expect(
     clippy::too_many_lines,
     reason = "reverse liveness/DCE pass keeps Node reconstruction and live-set transfer together"
 )]
-pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: HashSet<Ident>) -> LiveResult {
+pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: LiveSet) -> LiveResult {
     let reachable_len = reachable_prefix(&nodes).len();
     let mut live = live_after;
     let mut kept = Vec::with_capacity(reachable_len);
@@ -152,6 +151,30 @@ pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: HashSet<Ident>) 
                 kept.push(Node::Trap { address, tag });
             }
             Node::Resume { tag } => kept.push(Node::Resume { tag }),
+            Node::TileLoad { ref origin, .. } => {
+                for off in origin {
+                    collect_expr_refs(off, &mut live);
+                }
+                kept.push(node);
+            }
+            Node::TileStore { ref origin, .. } => {
+                for off in origin {
+                    collect_expr_refs(off, &mut live);
+                }
+                kept.push(node);
+            }
+            Node::TileElementwise { out, inputs, body } => {
+                let body_result = eliminate_dead_lets(body, live.clone());
+                live.extend(body_result.live_in);
+                kept.push(Node::TileElementwise {
+                    out,
+                    inputs,
+                    body: body_result.nodes,
+                });
+            }
+            Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {
+                kept.push(node);
+            }
             Node::Opaque(extension) => kept.push(Node::Opaque(extension)),
         }
     }

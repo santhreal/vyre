@@ -169,6 +169,8 @@ fn reserve_dispatch_param_words(words: &mut Vec<u32>, word_len: usize) -> Result
     })
 }
 
+// Inline: `vyre_driver::program_walks` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -239,7 +241,7 @@ mod tests {
         assert_eq!(words[10], 4);
         assert_eq!(
             words[8], 0,
-            "Fix: CUDA/PTX parameter words are indexed by binding slot, not buffer_index."
+            "Fix: dispatch parameter words are indexed by binding slot, not buffer_index."
         );
     }
 

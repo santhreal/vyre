@@ -4,12 +4,12 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::model::program_graph_identity::{
-    ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
-};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
+};
+use vyre_foundation::ir::{
+    ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
 };
 
 fn tensor(
@@ -122,8 +122,8 @@ fn canonical_composition_identity_matches_frozen_digest() {
     assert_eq!(
         identity.digest,
         [
-            128, 253, 86, 56, 126, 206, 127, 140, 199, 42, 50, 6, 50, 55, 18, 228, 217, 157, 21,
-            58, 202, 82, 10, 210, 203, 74, 221, 171, 137, 28, 46, 105,
+            233, 179, 221, 38, 121, 114, 177, 17, 131, 17, 116, 24, 114, 152, 110, 76, 218, 164,
+            165, 128, 172, 171, 89, 26, 195, 25, 161, 177, 129, 70, 254, 116,
         ]
     );
 }

@@ -1,6 +1,6 @@
 //! Structured artifact-session recovery policy.
 
-use vyre_driver::backend::ErrorCode;
+use vyre_driver::ErrorCode;
 use vyre_driver::{BackendError, DeviceIdentity};
 use vyre_foundation::diagnostics::RetryClass;
 

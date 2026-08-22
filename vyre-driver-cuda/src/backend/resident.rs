@@ -12,11 +12,10 @@ use smallvec::SmallVec;
 use vyre_driver::accounting::{
     checked_add_u64_lazy, checked_add_usize_lazy, checked_atomic_add_u64_guarded_with_order,
     checked_atomic_add_usize_with_order, checked_atomic_next_u64_with_order,
-    checked_atomic_sub_usize_with_order,
+    checked_atomic_sub_u64 as checked_sub_u64, checked_atomic_sub_usize_with_order,
 };
 use vyre_driver::{BackendError, ResidentHandle, ResidentOwner};
 
-use super::accounting::checked_sub_u64;
 use super::allocations::{alloc_cuda_ptr, free_cuda_ptr};
 use super::staging_reserve::{reserve_hash_map, reserve_smallvec};
 
@@ -47,6 +46,50 @@ impl Drop for ResidentBuffer {
 pub(crate) struct ResidentBufferView {
     pub(crate) ptr: u64,
     pub(crate) byte_len: usize,
+}
+
+impl ResidentBufferView {
+    /// Check this view against the binding declaration it was resolved for.
+    ///
+    /// Two facts, and both are the whole reason a resident launch argument can
+    /// be trusted: the allocation is at least as large as the declared extent,
+    /// and its device pointer is not null. Resident, resident-batch and
+    /// resident-sequence dispatch each proved them separately with the same two
+    /// diagnostics, and a launch that skips either passes a short or null
+    /// pointer to a kernel that indexes it.
+    ///
+    /// A larger allocation than declared is accepted: a resident buffer is
+    /// uploaded once and bound to many programs, so a declared extent is a
+    /// minimum rather than an exact size.
+    ///
+    /// `subject` names the dispatch path and `binding` the declared binding,
+    /// both only for the diagnostic.
+    pub(crate) fn validate_binding(
+        self,
+        subject: &str,
+        binding: &str,
+        static_byte_len: Option<usize>,
+        handle: ResidentHandle,
+    ) -> Result<(), BackendError> {
+        if let Some(expected) = static_byte_len {
+            if self.byte_len < expected {
+                return Err(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: CUDA {subject} binding `{binding}` expected at least {expected} bytes but handle {handle} has {} bytes.",
+                        self.byte_len
+                    ),
+                });
+            }
+        }
+        if self.ptr == 0 {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA {subject} binding `{binding}` resolved to a null device pointer; resident launch arguments must preserve descriptor order."
+                ),
+            });
+        }
+        Ok(())
+    }
 }
 
 /// Stable CUDA-resident buffer handle owned by [`crate::backend::CudaBackend`].
@@ -578,6 +621,8 @@ pub(crate) fn validate_resident_allocation_budget(
     Ok(())
 }
 
+// Inline: covers `CudaResidentStore`, `ResidentBuffer`, `ResidentViewCache`, `resident` and 2 more
+// items this module keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{

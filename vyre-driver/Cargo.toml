@@ -1,6 +1,6 @@
 [package]
 name = "vyre-driver"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -21,7 +21,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [[test]]
 name = "cache_invalidation_default"
 path = "tests/cache_invalidation_default.rs"
-required-features = ["self-substrate-adapters"]
+required-features = ["libs-compositions"]
 
 [[test]]
 name = "sweep_dispatch_shape_oracle_matrix"
@@ -37,19 +37,28 @@ path = "tests/driver_lifecycle_e2e.rs"
 
 [features]
 default = []
-self-substrate-adapters = [
-    "dep:vyre-self-substrate",
-    "vyre-self-substrate/data",
-    "vyre-self-substrate/logic",
-    "vyre-self-substrate/telemetry",
+# Cache invalidation and substrate telemetry, implemented as vyre-libs
+# compositions. Without it those two entry points fail closed rather than fall
+# back to a reference path. Named `self-substrate-adapters` until the crate it
+# was named for, vyre-self-substrate, became vyre-pass-engine; the feature
+# never depended on that crate, so the name described nothing.
+libs-compositions = [
+    "dep:vyre-libs",
+    "vyre-libs/encoding",
+    "vyre-libs/reasoning",
+    "vyre-libs/telemetry",
+    "vyre-libs/analysis",
 ]
+
+# Elementwise parity-gate scaffolding, used only by the concrete driver crates'
+# tests. Off by default so a published build does not carry test scaffolding.
+test-fixtures = []
 
 [dependencies]
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
-vyre-self-substrate = { workspace = true, optional = true }
+vyre-libs = { workspace = true, optional = true }
 vyre-spec.workspace = true
-vyre-macros.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -67,10 +76,10 @@ fs2.workspace = true
 workspace = true
 
 [dev-dependencies]
-vyre-test-support.workspace = true
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # integration tests/benches assert against these crates' public APIs
 vyre = { path = "../vyre", default-features = false }
 vyre-driver-reference = { path = "../vyre-driver-reference" }
 vyre-reference = { path = "../vyre-reference" }
-vyre-intrinsics = { path = "../vyre-intrinsics" }
+vyre-primitives = { path = "../vyre-primitives", features = ["hardware"] }
 tempfile.workspace = true

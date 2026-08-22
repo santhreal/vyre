@@ -381,6 +381,8 @@ fn parse_u32(value: &str) -> Option<u32> {
     Some(out)
 }
 
+// Inline: `vyre_driver::device_signature` is `pub(crate)`, so no integration test can reach what
+// this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::{DeviceSignature, DeviceSignatureTable};
@@ -472,7 +474,7 @@ bank_width_bytes = 4
 
     #[test]
     fn repository_device_signatures_load() {
-        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../devices");
+        let dir = vyre_test_support::monorepo::vyre_workspace_root().join("devices");
         let table = DeviceSignatureTable::load_dir(dir).unwrap();
 
         assert!(table.get("blackwell_120").is_some());
@@ -507,7 +509,7 @@ bank_width_bytes = 4
     /// callers ask for it.
     ///
     /// Backend projections call `builtins()` on every dispatch (twice, in the
-    /// CUDA case: once deriving validation capabilities and once deriving
+    /// native backend case: once deriving validation capabilities and once deriving
     /// adapter caps), so a reparse here is a per-dispatch TOML parse on the
     /// hot path. This pins the invariant rather than a duration, because a
     /// timing assertion would be flaky on a contended box and would not

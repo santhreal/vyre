@@ -8,13 +8,13 @@ use crate::program_caps::{self, RequiredCapabilities};
 use crate::validate::{validate_with_options, ValidationOptions};
 
 pub mod fusion;
-pub mod memory_budget;
+pub(crate) mod memory_budget;
 mod policy;
 mod strategy;
 pub use memory_budget::{DeviceMemoryBudget, MemoryBudgetReport};
 pub use policy::{PolicyRoute, SchedulingPolicy};
 pub use strategy::{
-    AccuracyStrategy, AutotuneStrategy, DispatchStrategy, FusionStrategy, LayoutStrategy,
+    AutotuneStrategy, ConformanceStrength, DispatchStrategy, FusionStrategy, LayoutStrategy,
     ProvenanceStrategy, ReadbackStrategy, StrategyPlan,
 };
 
@@ -381,7 +381,7 @@ fn provenance_plan(program: &Program, _fusion: &FusionPlan) -> ProvenancePlan {
 
 fn accuracy_plan(caps: &RequiredCapabilities, _provenance: &ProvenancePlan) -> AccuracyPlan {
     AccuracyPlan {
-        shadow_reference_recommended: caps.subgroup_ops,
+        exhaustive_conformance_required: caps.subgroup_ops,
         reason: if caps.subgroup_ops {
             "subgroup semantics"
         } else {
@@ -471,7 +471,7 @@ fn track_decisions(
         ),
         track_decision(
             InnovationTrack::DifferentialAccuracy,
-            accuracy.shadow_reference_recommended,
+            accuracy.exhaustive_conformance_required,
             accuracy.reason,
         ),
         track_decision(
@@ -561,11 +561,14 @@ pub struct ProvenancePlan {
     pub emit_region_trace: bool,
 }
 
-/// Accuracy strategy facts used for shadow-reference selection.
+/// Numerical risk facts used to decide required conformance strength.
+///
+/// These are facts about the program, not a second way to compute its
+/// result. Nothing derived from them may run the program on the host.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AccuracyPlan {
-    /// Whether a shadow reference pass is recommended.
-    pub shadow_reference_recommended: bool,
+    /// Whether the program's numerics need exhaustive conformance coverage.
+    pub exhaustive_conformance_required: bool,
     /// Stable reason for the recommendation.
     pub reason: &'static str,
 }

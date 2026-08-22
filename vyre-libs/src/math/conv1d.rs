@@ -1,0 +1,341 @@
+//! 1D separable convolution primitive.
+//!
+//! Applies a 1D kernel of precomputed weights along a single axis of
+//! a buffer. Domain-neutral: reused by image blur (horizontal/vertical
+//! passes), signal processing, audio filtering, and NLP.
+//!
+//! # Wire format
+//!
+//! - `input`:   `[u32; count]`  -  source data
+//! - `output`:  `[u32; count]`  -  convolved result
+//! - `weights`: `[u32; diameter]`  -  kernel weights (fixed-point 16.16)
+//! - `params`:  `[u32; 4]`  -  `[count, stride, radius, _reserved]`
+//!
+//! `stride` controls axis selection: for a 2D buffer of width W,
+//! `stride=1` convolves along rows (horizontal) and `stride=W`
+//! convolves along columns (vertical).
+
+use vyre_foundation::composition::wrap_anonymous_region;
+
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
+/// Stable op id.
+pub const OP_ID: &str = "vyre-libs::math::conv1d";
+
+/// Maximum supported kernel half-width.
+pub const MAX_RADIUS: u32 = 64;
+
+/// Emit the 1D convolution loop for a single output element.
+///
+/// Each invocation at index `gid.x` reads `2*radius+1` input elements
+/// centered at `gid.x` (with clamped boundary), multiplies by the
+/// corresponding weight, and writes the weighted sum to `output[gid.x]`.
+///
+/// The `stride` parameter selects the axis: stride=1 for contiguous
+/// (row-major horizontal), stride=width for column-major vertical.
+/// Boundary handling: clamp indices to `[0, count-1]`.
+#[must_use]
+pub fn conv1d_node(input: &str, output: &str, weights: &str, params: &str) -> Node {
+    wrap_anonymous_region(
+        OP_ID,
+        vec![
+            // Load params.
+            Node::let_bind("count", Expr::load(params, Expr::u32(0))),
+            Node::let_bind("stride", Expr::load(params, Expr::u32(1))),
+            Node::let_bind("radius", Expr::load(params, Expr::u32(2))),
+            // Output index from global invocation id.
+            Node::let_bind("idx", Expr::gid_x()),
+            // Bounds check.
+            Node::if_then(
+                Expr::lt(Expr::var("idx"), Expr::var("count")),
+                vec![
+                    // Kernel diameter = 2 * radius + 1.
+                    Node::let_bind(
+                        "diameter",
+                        Expr::add(Expr::mul(Expr::var("radius"), Expr::u32(2)), Expr::u32(1)),
+                    ),
+                    // Accumulator.
+                    Node::let_bind("acc", Expr::u32(0)),
+                    // Convolution loop: k in 0..diameter.
+                    Node::loop_for(
+                        "k",
+                        Expr::u32(0),
+                        Expr::var("diameter"),
+                        vec![
+                            // Offset from center. Both arms of a select always
+                            // evaluate, so the distance is built from one
+                            // non-negative subtraction rather than one per
+                            // direction: `k - radius` and `radius - k` as two
+                            // arms means one of them wraps in every lane.
+                            //   dist   = |k - radius|
+                            //   offset = dist * stride
+                            //   k >= radius: min(idx + offset, count - 1)
+                            //   k <  radius: idx - min(idx, offset), floored at 0
+                            Node::let_bind(
+                                "dist",
+                                Expr::sub(
+                                    Expr::max(Expr::var("k"), Expr::var("radius")),
+                                    Expr::min(Expr::var("k"), Expr::var("radius")),
+                                ),
+                            ),
+                            Node::let_bind(
+                                "offset",
+                                Expr::mul(Expr::var("dist"), Expr::var("stride")),
+                            ),
+                            Node::let_bind(
+                                "src_idx",
+                                Expr::select(
+                                    Expr::ge(Expr::var("k"), Expr::var("radius")),
+                                    Expr::min(
+                                        Expr::add(Expr::var("idx"), Expr::var("offset")),
+                                        Expr::sub(Expr::var("count"), Expr::u32(1)),
+                                    ),
+                                    Expr::sub(
+                                        Expr::var("idx"),
+                                        Expr::min(Expr::var("idx"), Expr::var("offset")),
+                                    ),
+                                ),
+                            ),
+                            // Load source value and kernel weight.
+                            Node::let_bind("val", Expr::load(input, Expr::var("src_idx"))),
+                            Node::let_bind("w", Expr::load(weights, Expr::var("k"))),
+                            // Accumulate: acc += val * w.
+                            Node::assign(
+                                "acc",
+                                Expr::add(
+                                    Expr::var("acc"),
+                                    Expr::mul(Expr::var("val"), Expr::var("w")),
+                                ),
+                            ),
+                        ],
+                    ),
+                    // Write result (still in fixed-point  -  caller normalizes).
+                    Node::store(output, Expr::var("idx"), Expr::var("acc")),
+                ],
+            ),
+        ],
+    )
+}
+
+/// Standalone 1D convolution Program.
+///
+/// Dispatches one invocation per element. The caller is responsible
+/// for precomputing kernel weights and choosing the correct stride.
+#[must_use]
+pub fn conv1d_program(count: u32, radius: u32) -> Program {
+    let clamped_radius = radius.min(MAX_RADIUS);
+    let diameter = 2 * clamped_radius + 1;
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(count),
+            BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(count),
+            BufferDecl::storage("weights", 2, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(diameter),
+            BufferDecl::storage("params", 3, BufferAccess::ReadOnly, DataType::U32).with_count(4),
+        ],
+        [256, 1, 1],
+        vec![conv1d_node("input", "output", "weights", "params")],
+    )
+}
+
+/// Precompute Gaussian kernel weights as fixed-point 16.16 u32 values.
+///
+/// Returns a Vec suitable for uploading to the `weights` buffer.
+/// The kernel is normalized: sum of weights ≈ 1.0 (65536 in fixed-point).
+#[must_use]
+pub fn gaussian_weights(radius: u32, sigma: f32) -> Vec<u32> {
+    let clamped = radius.min(MAX_RADIUS);
+    let diameter = (2 * clamped + 1) as usize;
+    let mut weights = vec![0.0f64; diameter];
+    let s2 = 2.0 * (sigma as f64) * (sigma as f64);
+    let mut sum = 0.0;
+
+    for (i, w) in weights.iter_mut().enumerate() {
+        let x = i as f64 - clamped as f64;
+        *w = (-x * x / s2).exp();
+        sum += *w;
+    }
+
+    weights
+        .iter()
+        .map(|w| ((w / sum) * 65536.0).round() as u32)
+        .collect()
+}
+
+/// Pack conv1d params: `[count, stride, radius, 0]`.
+#[must_use]
+pub fn pack_params(count: u32, stride: u32, radius: u32) -> Vec<u32> {
+    vec![count, stride, radius.min(MAX_RADIUS), 0]
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || conv1d_program(8, 1),
+        Some(|| {
+            // 8-element signal, identity-like kernel (center-heavy).
+            let input: Vec<u32> = vec![100, 200, 300, 400, 500, 600, 700, 800];
+            let params = pack_params(8, 1, 1);
+            // Simple averaging kernel: [0.25, 0.5, 0.25] in fixed-point 16.16.
+            let weights: Vec<u32> = vec![16384, 32768, 16384];
+            let to_bytes = |v: &[u32]| vyre_primitives::wire::pack_u32_slice(v);
+            vec![vec![
+                to_bytes(&input),
+                vec![0u8; 32],       // output (zeroed)
+                to_bytes(&weights),
+                to_bytes(&params),
+            ]]
+        }),
+        Some(|| {
+            vec![vec![vec![
+                0x00, 0x00, 0x7d, 0x00, // 8_192_000
+                0x00, 0x00, 0xc8, 0x00, // 13_107_200
+                0x00, 0x00, 0x2c, 0x01, // 19_660_800
+                0x00, 0x00, 0x90, 0x01, // 26_214_400
+                0x00, 0x00, 0xf4, 0x01, // 32_768_000
+                0x00, 0x00, 0x58, 0x02, // 39_321_600
+                0x00, 0x00, 0xbc, 0x02, // 45_875_200
+                0x00, 0x00, 0x07, 0x03, // 50_790_400
+            ]]]
+        }),
+    )
+}
+
+// ---------------------------------------------------------------------------
+// CPU reference implementation
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::fixture_bytes::eval_bytes;
+    use vyre_reference::composition_witness::{
+        conv1d_witness as cpu_conv1d, conv1d_witness_into as cpu_conv1d_into,
+    };
+    #[test]
+    fn cpu_conv1d_identity_kernel() {
+        // Identity kernel: [0, 1.0, 0] in fixed-point = [0, 65536, 0]
+        let input = vec![10, 20, 30, 40, 50];
+        let weights = vec![0, 65536, 0];
+        let result = cpu_conv1d(&input, &weights, 1);
+        // Each output should be input[i] * 65536
+        let expected: Vec<u32> = input.iter().map(|&v| v * 65536).collect();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn cpu_conv1d_averaging_kernel_matches_inventory() {
+        // Must match the inventory expected output.
+        let input = vec![100u32, 200, 300, 400, 500, 600, 700, 800];
+        let weights = vec![16384u32, 32768, 16384]; // [0.25, 0.5, 0.25]
+        let result = cpu_conv1d(&input, &weights, 1);
+        let expected = vec![
+            8_192_000, 13_107_200, 19_660_800, 26_214_400, 32_768_000, 39_321_600, 45_875_200,
+            50_790_400,
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn cpu_conv1d_empty() {
+        let result = cpu_conv1d(&[], &[65536], 1);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn cpu_conv1d_single_element() {
+        let result = cpu_conv1d(&[42], &[16384, 32768, 16384], 1);
+        // Clamped boundaries: all lookups hit index 0 (value 42).
+        // acc = 42*16384 + 42*32768 + 42*16384 = 42*65536 = 2752512
+        assert_eq!(result, vec![42 * 65536]);
+    }
+
+    #[test]
+    fn cpu_conv1d_into_reuses_output_and_removes_stale_tail() {
+        let mut out = Vec::with_capacity(8);
+        out.extend_from_slice(&[1, 2, 3, 4, 5, 6]);
+        let capacity = out.capacity();
+
+        cpu_conv1d_into(&[10, 20, 30], &[0, 65536, 0], 1, &mut out);
+        assert_eq!(out, vec![655_360, 1_310_720, 1_966_080]);
+        assert_eq!(out.capacity(), capacity);
+
+        cpu_conv1d_into(&[7], &[65536], 1, &mut out);
+        assert_eq!(out, vec![458_752]);
+        assert_eq!(out.capacity(), capacity);
+    }
+
+    /// Run `conv1d_program` through the reference interpreter and return the
+    /// `output` buffer (the only ReadWrite buffer, so it lands at `outputs[0]`).
+    fn run_conv1d_ir(
+        count: u32,
+        radius: u32,
+        stride: u32,
+        input: &[u32],
+        weights: &[u32],
+    ) -> Vec<u32> {
+        let pack = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
+        let outputs = eval_bytes(
+            "conv1d",
+            &conv1d_program(count, radius),
+            vec![
+                pack(input),
+                pack(&vec![0u32; count as usize]),
+                pack(weights),
+                pack(&pack_params(count, stride, radius)),
+            ],
+        );
+        outputs[0]
+            .chunks_exact(4)
+            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect()
+    }
+
+    /// The IR (`conv1d_program`) and `cpu_conv1d` both exist but no test proved
+    /// they AGREE - every other test exercises only the CPU ref. This runs the
+    /// real IR through reference_eval and requires bit-exact equality with
+    /// `cpu_conv1d`, then pins the known inventory accumulators so the assertion
+    /// is non-vacuous.
+    #[test]
+    fn conv1d_program_ir_matches_cpu_reference_averaging() {
+        let input = vec![100u32, 200, 300, 400, 500, 600, 700, 800];
+        let weights = vec![16384u32, 32768, 16384]; // [0.25, 0.5, 0.25] in 16.16
+        let got = run_conv1d_ir(input.len() as u32, 1, 1, &input, &weights);
+        assert_eq!(
+            got,
+            cpu_conv1d(&input, &weights, 1),
+            "conv1d IR diverged from cpu_conv1d"
+        );
+        assert_eq!(
+            got,
+            vec![
+                8_192_000, 13_107_200, 19_660_800, 26_214_400, 32_768_000, 39_321_600, 45_875_200,
+                50_790_400,
+            ],
+            "conv1d IR must match the known inventory fixed-point accumulators"
+        );
+    }
+
+    /// count > 256 spans more than one workgroup of the `[256,1,1]` dispatch, so
+    /// this exercises the GLOBAL `gid_x` element indexing + clamped boundary
+    /// across the workgroup seam with a 5-tap (radius 2) kernel.
+    #[test]
+    fn conv1d_program_ir_matches_cpu_reference_across_workgroup_seam() {
+        let count = 300u32;
+        let input: Vec<u32> = (0..count).map(|i| (i % 97) + 1).collect();
+        let weights = vec![8192u32, 12288, 24576, 12288, 8192]; // symmetric 5-tap
+        let got = run_conv1d_ir(count, 2, 1, &input, &weights);
+        assert_eq!(
+            got.len(),
+            count as usize,
+            "conv1d must emit one output per element"
+        );
+        assert_eq!(
+            got,
+            cpu_conv1d(&input, &weights, 1),
+            "conv1d IR diverged from cpu_conv1d at count>256 (workgroup-seam gid indexing)"
+        );
+    }
+}

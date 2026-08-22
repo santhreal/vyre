@@ -1,13 +1,17 @@
+//! Extraction of Python decorators and the definitions they attach to.
+
+use super::walk::{pack_sparse_tokens, pack_words_padded_bytes, DottedName, TokenPass};
 use super::{
     find_matching_delimiter, load_u32, search_next_token, search_next_token_into, store_words,
+    token_word_at,
 };
-use crate::parsing::composition::child_phase;
-use crate::parsing::python::lex::{
-    TOK_ASYNC, TOK_AT, TOK_CLASS, TOK_DEF, TOK_DOT, TOK_IDENTIFIER, TOK_LPAREN, TOK_RPAREN,
+use crate::parsing::python::{DECORATOR_RECORD_WORDS, INVALID_POS};
+use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_spec::python_token::{
+    TOK_ASYNC, TOK_AT, TOK_CLASS, TOK_DEF, TOK_IDENTIFIER, TOK_LPAREN, TOK_RPAREN,
 };
-use crate::parsing::python::{DECORATOR_RECORD_WORDS, INVALID_POS, MAX_DOTTED_SEGMENTS};
-use crate::region::wrap_anonymous;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
+const OP_ID: &str = "vyre-libs::parsing::python312_extract_decorators";
 
 /// Extract decorator occurrences and their immediate target.
 #[must_use]
@@ -20,6 +24,12 @@ pub fn python312_extract_decorators(
     haystack_len: u32,
 ) -> Program {
     let t = Expr::InvocationId { axis: 0 };
+    let name = DottedName {
+        tok_types,
+        haystack_len,
+        head: Expr::var("decorator_name"),
+        accumulator: "decorator_end",
+    };
     let mut body = Vec::new();
     body.extend(search_next_token(
         "decorator_name",
@@ -32,10 +42,7 @@ pub fn python312_extract_decorators(
     // the if_then / loop_for scopes that assign it. Each helper we
     // call inside an if_then uses the `_into` (assign-only) variant
     // so the outer let_bind isn't redeclared (V008/V032 noise).
-    body.push(Node::let_bind("decorator_end", Expr::var("decorator_name")));
-    body.push(Node::let_bind("cursor", Expr::var("decorator_name")));
-    body.push(Node::let_bind("dot_pos", Expr::u32(INVALID_POS)));
-    body.push(Node::let_bind("after_dot", Expr::u32(INVALID_POS)));
+    body.extend(name.carriers());
     body.push(Node::let_bind("after_decorator", Expr::u32(INVALID_POS)));
     body.push(Node::let_bind("target_tok", Expr::u32(INVALID_POS)));
     body.push(Node::let_bind("target_name", Expr::u32(INVALID_POS)));
@@ -49,37 +56,37 @@ pub fn python312_extract_decorators(
         TOK_LPAREN,
         TOK_RPAREN,
     ));
+    let span = name.span(tok_starts, tok_lens);
     body.push(Node::if_then(
         Expr::and(
             Expr::eq(Expr::var("tok"), Expr::u32(TOK_AT)),
             Expr::eq(
-                load_u32(tok_types, Expr::var("decorator_name")),
+                token_word_at(tok_types, Expr::var("decorator_name"), haystack_len),
                 Expr::u32(TOK_IDENTIFIER),
             ),
         ),
-        vec![Node::loop_for(
-            "seg",
-            Expr::u32(0),
-            Expr::u32(MAX_DOTTED_SEGMENTS),
-            vec![
-                Node::assign("dot_pos", Expr::u32(INVALID_POS)),
-                Node::assign("after_dot", Expr::u32(INVALID_POS)),
-            ]
+        vec![name.walk()]
             .into_iter()
             .chain(search_next_token_into(
-                "dot_pos",
-                Expr::add(Expr::var("cursor"), Expr::u32(1)),
+                "after_decorator",
+                Expr::add(Expr::var("decorator_end"), Expr::u32(1)),
                 tok_types,
                 haystack_len,
             ))
-            .chain(vec![Node::if_then(
+            .chain(vec![Node::if_then_else(
                 Expr::eq(
-                    load_u32(tok_types, Expr::var("dot_pos")),
-                    Expr::u32(TOK_DOT),
+                    token_word_at(tok_types, Expr::var("after_decorator"), haystack_len),
+                    Expr::u32(TOK_LPAREN),
                 ),
                 search_next_token_into(
-                    "after_dot",
-                    Expr::add(Expr::var("dot_pos"), Expr::u32(1)),
+                    "target_tok",
+                    Expr::add(Expr::var("decorator_rparen"), Expr::u32(1)),
+                    tok_types,
+                    haystack_len,
+                ),
+                search_next_token_into(
+                    "target_tok",
+                    Expr::add(Expr::var("decorator_end"), Expr::u32(1)),
                     tok_types,
                     haystack_len,
                 ),
@@ -87,197 +94,122 @@ pub fn python312_extract_decorators(
             .chain(vec![
                 Node::if_then(
                     Expr::eq(
-                        load_u32(tok_types, Expr::var("after_dot")),
-                        Expr::u32(TOK_IDENTIFIER),
+                        token_word_at(tok_types, Expr::var("target_tok"), haystack_len),
+                        Expr::u32(TOK_DEF),
                     ),
                     vec![
-                        Node::assign("decorator_end", Expr::var("after_dot")),
-                        Node::assign("cursor", Expr::var("after_dot")),
-                    ],
+                        Node::assign("target_kind", Expr::u32(1)),
+                        Node::assign("target_name", Expr::u32(INVALID_POS)),
+                    ]
+                    .into_iter()
+                    .chain(search_next_token_into(
+                        "target_name",
+                        Expr::add(Expr::var("target_tok"), Expr::u32(1)),
+                        tok_types,
+                        haystack_len,
+                    ))
+                    .collect(),
                 ),
                 Node::if_then(
-                    Expr::ne(
-                        load_u32(tok_types, Expr::var("after_dot")),
-                        Expr::u32(TOK_IDENTIFIER),
+                    Expr::eq(
+                        token_word_at(tok_types, Expr::var("target_tok"), haystack_len),
+                        Expr::u32(TOK_CLASS),
                     ),
-                    vec![Node::assign("cursor", Expr::u32(INVALID_POS))],
+                    vec![
+                        Node::assign("target_kind", Expr::u32(3)),
+                        Node::assign("target_name", Expr::u32(INVALID_POS)),
+                    ]
+                    .into_iter()
+                    .chain(search_next_token_into(
+                        "target_name",
+                        Expr::add(Expr::var("target_tok"), Expr::u32(1)),
+                        tok_types,
+                        haystack_len,
+                    ))
+                    .collect(),
+                ),
+                Node::if_then(
+                    Expr::eq(
+                        token_word_at(tok_types, Expr::var("target_tok"), haystack_len),
+                        Expr::u32(TOK_ASYNC),
+                    ),
+                    vec![
+                        Node::assign("target_kind", Expr::u32(2)),
+                        Node::assign("target_name", Expr::u32(INVALID_POS)),
+                    ]
+                    .into_iter()
+                    .chain(search_next_token_into(
+                        "async_def",
+                        Expr::add(Expr::var("target_tok"), Expr::u32(1)),
+                        tok_types,
+                        haystack_len,
+                    ))
+                    .chain(search_next_token_into(
+                        "target_name",
+                        Expr::add(Expr::var("async_def"), Expr::u32(1)),
+                        tok_types,
+                        haystack_len,
+                    ))
+                    .collect(),
+                ),
+                Node::let_bind(
+                    "slot",
+                    Expr::atomic_add(out_counts, Expr::u32(0), Expr::u32(DECORATOR_RECORD_WORDS)),
                 ),
             ])
-            .collect(),
-        )]
-        .into_iter()
-        .chain(search_next_token_into(
-            "after_decorator",
-            Expr::add(Expr::var("decorator_end"), Expr::u32(1)),
-            tok_types,
-            haystack_len,
-        ))
-        .chain(vec![Node::if_then_else(
-            Expr::eq(
-                load_u32(tok_types, Expr::var("after_decorator")),
-                Expr::u32(TOK_LPAREN),
-            ),
-            search_next_token_into(
-                "target_tok",
-                Expr::add(Expr::var("decorator_rparen"), Expr::u32(1)),
-                tok_types,
-                haystack_len,
-            ),
-            search_next_token_into(
-                "target_tok",
-                Expr::add(Expr::var("decorator_end"), Expr::u32(1)),
-                tok_types,
-                haystack_len,
-            ),
-        )])
-        .chain(vec![
-            Node::if_then(
-                Expr::eq(
-                    load_u32(tok_types, Expr::var("target_tok")),
-                    Expr::u32(TOK_DEF),
-                ),
-                vec![
-                    Node::assign("target_kind", Expr::u32(1)),
-                    Node::assign("target_name", Expr::u32(INVALID_POS)),
-                ]
-                .into_iter()
-                .chain(search_next_token_into(
-                    "target_name",
-                    Expr::add(Expr::var("target_tok"), Expr::u32(1)),
-                    tok_types,
-                    haystack_len,
-                ))
-                .collect(),
-            ),
-            Node::if_then(
-                Expr::eq(
-                    load_u32(tok_types, Expr::var("target_tok")),
-                    Expr::u32(TOK_CLASS),
-                ),
-                vec![
-                    Node::assign("target_kind", Expr::u32(3)),
-                    Node::assign("target_name", Expr::u32(INVALID_POS)),
-                ]
-                .into_iter()
-                .chain(search_next_token_into(
-                    "target_name",
-                    Expr::add(Expr::var("target_tok"), Expr::u32(1)),
-                    tok_types,
-                    haystack_len,
-                ))
-                .collect(),
-            ),
-            Node::if_then(
-                Expr::eq(
-                    load_u32(tok_types, Expr::var("target_tok")),
-                    Expr::u32(TOK_ASYNC),
-                ),
-                vec![
-                    Node::assign("target_kind", Expr::u32(2)),
-                    Node::assign("target_name", Expr::u32(INVALID_POS)),
-                ]
-                .into_iter()
-                .chain(search_next_token_into(
-                    "async_def",
-                    Expr::add(Expr::var("target_tok"), Expr::u32(1)),
-                    tok_types,
-                    haystack_len,
-                ))
-                .chain(search_next_token_into(
-                    "target_name",
-                    Expr::add(Expr::var("async_def"), Expr::u32(1)),
-                    tok_types,
-                    haystack_len,
-                ))
-                .collect(),
-            ),
-            Node::let_bind(
+            .chain(store_words(
+                out_records,
                 "slot",
-                Expr::atomic_add(out_counts, Expr::u32(0), Expr::u32(DECORATOR_RECORD_WORDS)),
-            ),
-        ])
-        .chain(store_words(
-            out_records,
-            "slot",
-            &[
-                load_u32(tok_starts, Expr::var("decorator_name")),
-                Expr::add(
-                    Expr::sub(
-                        load_u32(tok_starts, Expr::var("decorator_end")),
-                        load_u32(tok_starts, Expr::var("decorator_name")),
-                    ),
-                    load_u32(tok_lens, Expr::var("decorator_end")),
-                ),
-                Expr::var("target_kind"),
-                load_u32(tok_starts, Expr::var("target_name")),
-                load_u32(tok_lens, Expr::var("target_name")),
-                Expr::var("target_tok"),
-            ],
-        ))
-        .collect(),
+                &[
+                    span[0].clone(),
+                    span[1].clone(),
+                    Expr::var("target_kind"),
+                    token_word_at(tok_starts, Expr::var("target_name"), haystack_len),
+                    token_word_at(tok_lens, Expr::var("target_name"), haystack_len),
+                    Expr::var("target_tok"),
+                ],
+            ))
+            .collect(),
     ));
 
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(tok_types, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(haystack_len),
-            BufferDecl::storage(tok_starts, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(haystack_len),
-            BufferDecl::storage(tok_lens, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(haystack_len),
-            BufferDecl::storage(out_records, 3, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(haystack_len.saturating_mul(DECORATOR_RECORD_WORDS)),
-            BufferDecl::storage(out_counts, 4, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous(
-            "vyre-libs::parsing::python312_extract_decorators",
-            vec![child_phase(
-                "vyre-libs::parsing::python312_extract_decorators",
-                vyre_primitives::parsing::core_delimiter_match::OP_ID,
-                vec![Node::if_then(
-                    Expr::lt(t.clone(), Expr::u32(haystack_len)),
-                    body,
-                )],
-            )],
-        )],
-    )
-    .with_entry_op_id("vyre-libs::parsing::python312_extract_decorators")
-    .with_non_composable_with_self(true)
+    TokenPass {
+        op_id: OP_ID,
+        child_op_id: crate::parsing::core_delimiter_match::OP_ID,
+        tok_types,
+        tok_starts,
+        tok_lens,
+        haystack_len,
+    }
+    .build_record_program(out_records, out_counts, DECORATOR_RECORD_WORDS, body)
 }
 
+const EXPECTED_DECORATOR_RECORDS: [u8; 384] = pack_words_padded_bytes([1, 1, 2, 13, 1, 3]);
+const EXPECTED_DECORATOR_COUNTS: [u8; 4] = 6u32.to_le_bytes();
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::python312_extract_decorators",
-        build: Some(|| python312_extract_decorators("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16)),
-        test_inputs: Some(decorator_fixture_inputs),
-        expected_output: Some(decorator_fixture_expected),
-        category: Some("parsing"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || python312_extract_decorators("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
+        Some(decorator_fixture_inputs),
+        Some(|| vec![vec![
+            EXPECTED_DECORATOR_RECORDS.to_vec(),
+            EXPECTED_DECORATOR_COUNTS.to_vec(),
+        ]]),
+    )
+    .with_category("parsing")
 }
 
 fn decorator_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
-    let mut tok_types = vec![0u8; 16 * 4];
-    let mut tok_starts = vec![0u8; 16 * 4];
-    let mut tok_lens = vec![0u8; 16 * 4];
-    for (pos, tok, len) in [
-        (0usize, TOK_AT, 1u32),
-        (1, TOK_IDENTIFIER, 1),
-        (3, TOK_ASYNC, 5),
-        (9, TOK_DEF, 3),
-        (13, TOK_IDENTIFIER, 1),
-    ] {
-        let base = pos * 4;
-        tok_types[base..base + 4].copy_from_slice(&tok.to_le_bytes());
-        tok_starts[base..base + 4].copy_from_slice(&(pos as u32).to_le_bytes());
-        tok_lens[base..base + 4].copy_from_slice(&len.to_le_bytes());
-    }
+    let (tok_types, tok_starts, tok_lens) = pack_sparse_tokens(
+        &[
+            (0, TOK_AT, 1),
+            (1, TOK_IDENTIFIER, 1),
+            (3, TOK_ASYNC, 5),
+            (9, TOK_DEF, 3),
+            (13, TOK_IDENTIFIER, 1),
+        ],
+        16,
+    );
 
     vec![vec![
         tok_types,
@@ -286,14 +218,4 @@ fn decorator_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
         vec![0u8; 16 * DECORATOR_RECORD_WORDS as usize * 4],
         vec![0u8; 4],
     ]]
-}
-
-fn decorator_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    let mut records = vec![0u8; 16 * DECORATOR_RECORD_WORDS as usize * 4];
-    for (idx, word) in [1u32, 1, 2, 13, 1, 3].into_iter().enumerate() {
-        let base = idx * 4;
-        records[base..base + 4].copy_from_slice(&word.to_le_bytes());
-    }
-
-    vec![vec![records, DECORATOR_RECORD_WORDS.to_le_bytes().to_vec()]]
 }

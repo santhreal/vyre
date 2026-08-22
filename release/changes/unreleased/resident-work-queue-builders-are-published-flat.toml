@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The resident work queue program builders are reached as vyre_runtime::resident_work_queue::build_program... instead of through a builder submodule path."

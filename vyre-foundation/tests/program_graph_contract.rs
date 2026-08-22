@@ -2,35 +2,13 @@
 
 #![forbid(unsafe_code)]
 
+#[path = "support/program_graph_fixtures.rs"]
+mod support;
+use support::{contract, copy_program};
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, GraphValueId, Node, Program,
+    BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, GraphValueId, Program,
     ProgramGraph, ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
 };
-
-fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
-    ValueContract {
-        dtype: DataType::F32,
-        shape: vec![ShapeDim::Symbol("tokens".into()), ShapeDim::Known(8)],
-        access,
-        lifetime,
-    }
-}
-
-fn copy_program(input: &str, output: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32),
-            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::F32),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            output,
-            vyre_foundation::ir::Expr::u32(0),
-            vyre_foundation::ir::Expr::load(input, vyre_foundation::ir::Expr::u32(0)),
-        )],
-    )
-}
-
 fn two_output_program(input: &str, first: &str, second: &str) -> Program {
     Program::wrapped(
         vec![
@@ -274,6 +252,43 @@ fn sequence_state_transition_preserves_contract() {
         graph.values()[outputs[0].0 as usize].retained_successor_of,
         Some(state)
     );
+}
+
+/// A retained-to-output transition is reserved for a Program result buffer.
+/// Ordinary mutable state must remain retained across every successor edge.
+#[test]
+fn non_output_buffer_cannot_end_a_retained_succession() {
+    let retained = contract(BufferAccess::ReadWrite, ValueLifetime::Retained);
+    let mut graph = ProgramGraph::new();
+    let state = graph
+        .add_external_value("cache.0", retained.clone())
+        .expect("initial retained state must be valid");
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("cache", 0, DataType::F32)],
+        [1, 1, 1],
+        Vec::new(),
+    );
+    let error = graph
+        .add_node(
+            "decode.final",
+            program,
+            vec![GraphInput {
+                buffer: "cache".into(),
+                value: state,
+                contract: retained,
+            }],
+            vec![GraphOutput {
+                buffer: "cache".into(),
+                name: "cache.output".into(),
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+                retained_successor_of: Some(state),
+            }],
+        )
+        .expect_err("an ordinary mutable buffer must not terminate retained state");
+    assert!(matches!(
+        error,
+        ProgramGraphError::InvalidRetainedTransition { .. }
+    ));
 }
 
 /// Prevents model layers from changing cache shape or lifetime across decode steps.

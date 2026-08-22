@@ -13,16 +13,18 @@
 //! the carry propagation miscompiled, every GPU FNV-64 hash would be silently
 //! wrong with no test to catch it.
 //!
-//! Dispatched on the 5090 and asserted byte-for-byte against the `fnv1a64` Rust
+//! Dispatched on the live GPU and asserted byte-for-byte against the `fnv1a64` Rust
 //! reference (and the canonical FNV-1a 64 vector for "abc").
 
-mod common;
-use common::u32_bytes;
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_primitives::hash::fnv1a::{fnv1a64, fnv1a64_program_n};
-
+use vyre_libs::hash::fnv1a::fnv1a64_program_n;
+use vyre_reference::composition_witness::fnv1a64_witness as fnv1a64;
 /// Dispatch the real `fnv1a64_program_n` on the GPU. Input is one U32 word per
 /// source byte; output is the 64-bit hash as two u32 words (`out[0]` = low,
 /// `out[1]` = high), reconstructed `lo | (hi << 32)`.

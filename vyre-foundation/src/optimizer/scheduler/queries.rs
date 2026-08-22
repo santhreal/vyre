@@ -14,8 +14,8 @@ use super::topo::{
 };
 use super::{PassResearchTrace, PassScheduler, PassSchedulingError, DEFAULT_MAX_ITERATIONS};
 use crate::optimizer::{
-    registered_passes, requirements_satisfied, OptimizerError, PassMetadata, ProgramPassKind,
-    ProgramPassRegistration,
+    registered_passes, requirements_satisfied, AdapterCaps, OptimizerError, PassMetadata,
+    ProgramPassKind, ProgramPassRegistration,
 };
 
 impl PassScheduler {
@@ -31,6 +31,25 @@ impl PassScheduler {
                 Self::empty_fallback()
             }
         }
+    }
+
+    /// Create a scheduler that compiles every program for `adapter`.
+    ///
+    /// This is the entry a backend uses once it has probed a device. Without
+    /// it the scheduler falls back to [`AdapterCaps::conservative`], and an
+    /// adapter-dependent pass then produces the program a device with no
+    /// optional feature would want.
+    #[must_use]
+    pub fn for_adapter(passes: Vec<ProgramPassKind>, adapter: AdapterCaps) -> Self {
+        let mut scheduler = Self::with_passes(passes);
+        scheduler.adapter = adapter;
+        scheduler
+    }
+
+    /// Device facts this scheduler compiles against.
+    #[must_use]
+    pub fn adapter(&self) -> &AdapterCaps {
+        &self.adapter
     }
 
     /// Create a new `PassScheduler` from an explicit list of passes, surfacing
@@ -79,6 +98,7 @@ impl PassScheduler {
             execution_order,
             requirements_prevalidated,
             max_iterations: DEFAULT_MAX_ITERATIONS,
+            adapter: AdapterCaps::conservative(),
             invalidation_adjacency_cache: OnceLock::new(),
             invalidation_closure_cache: OnceLock::new(),
             dirty_trigger_index_cache: OnceLock::new(),
@@ -98,6 +118,7 @@ impl PassScheduler {
             execution_order: Vec::new(),
             requirements_prevalidated: true,
             max_iterations: DEFAULT_MAX_ITERATIONS,
+            adapter: AdapterCaps::conservative(),
             invalidation_adjacency_cache: OnceLock::new(),
             invalidation_closure_cache: OnceLock::new(),
             dirty_trigger_index_cache: OnceLock::new(),
@@ -114,6 +135,12 @@ impl PassScheduler {
     pub fn with_max_iterations(mut self, max_iterations: usize) -> Self {
         self.max_iterations = max_iterations;
         self
+    }
+
+    /// Returns the configured maximum iteration budget for fixpoint execution.
+    #[must_use]
+    pub fn max_iterations(&self) -> usize {
+        self.max_iterations
     }
 
     /// Attach reproducibility metadata to pass metrics for one optimizer pass.
@@ -177,7 +204,7 @@ impl PassScheduler {
 
     /// Reachability check: returns true if pass `from` can transitively
     /// invalidate any capability `to` requires. Computed via the
-    /// substrate `dataflow_fixpoint::reachability_closure` with the
+    /// substrate `semiring_closure::reachability_closure` with the
     /// `BoolOr` semiring over the same invalidation adjacency built by
     /// [`Self::transitive_dependents`].
     ///

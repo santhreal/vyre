@@ -28,15 +28,16 @@
 //! `fixpoint_iterations` config  -  the same path single-direction
 //! flows_to uses.
 
+use crate::bitset::and::bitset_and;
+use crate::bitset::bitset_words;
+use crate::bitset::or_into::bitset_or_into;
+use crate::bitset::zero::bitset_zero;
+use crate::graph::program_graph::ProgramGraphShape;
+use crate::predicate::edge_kind;
+use vyre_foundation::composition::{tag_program, trap_program};
 use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
 use vyre_foundation::ir::Program;
 use vyre_foundation::ir::{BufferAccess, DataType};
-use vyre_primitives::bitset::and::bitset_and;
-use vyre_primitives::bitset::or_into::bitset_or_into;
-use vyre_primitives::bitset::zero::bitset_zero;
-use vyre_primitives::graph::csr_forward_traverse::bitset_words;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
 
 use crate::security::flows_to::flows_to_alias_only;
 
@@ -83,10 +84,9 @@ pub fn aliases_dataflow(
         out_buf,
     )
     .unwrap_or_else(|error| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             OP_ID,
-            out_buf,
-            DataType::U32,
+            Some((out_buf, DataType::U32)),
             format!("Fix: aliases_dataflow failed to fuse: {error}"),
         )
     })
@@ -171,7 +171,7 @@ pub fn try_aliases_dataflow(
             buffer
         })
         .collect();
-    Ok(fused.with_rewritten_buffers(buffers))
+    Ok(tag_program(OP_ID, fused.with_rewritten_buffers(buffers)))
 }
 
 /// CPU oracle. Mirrors the GPU semantic over a host-side dataflow
@@ -252,28 +252,24 @@ fn witness_inputs() -> Vec<Vec<u8>> {
         .collect()
 }
 
-fn witness_expected_outputs() -> Vec<Vec<u8>> {
-    witness_program()
-        .buffers()
-        .iter()
-        .filter(|decl| decl.is_output() || decl.access() == BufferAccess::ReadWrite)
-        .map(|decl| vyre_primitives::wire::pack_u32_slice(&witness_words(decl.name(), true)))
-        .collect()
-}
-
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(witness_program),
-        test_inputs: Some(|| vec![witness_inputs()]),
-        expected_output: Some(|| vec![witness_expected_outputs()]),
-        category: Some("security"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        witness_program,
+        Some(|| vec![witness_inputs()]),
+        Some(|| {
+            vec![vec![
+                vec![3, 0, 0, 0], // reach_x = {0, 1}
+                vec![6, 0, 0, 0], // reach_y = {1, 2}
+                vec![2, 0, 0, 0], // hop_x = {1}
+                vec![4, 0, 0, 0], // hop_y = {2}
+                vec![0, 0, 0, 0], // x_in_y = {}
+                vec![2, 0, 0, 0], // y_in_x = {1}
+                vec![2, 0, 0, 0], // out = {1}
+            ]]
+        }),
+    )
+    .with_category("security")
 }
 
 #[cfg(test)]
@@ -406,8 +402,8 @@ mod tests {
     /// Both scratch clears must retain canonical primitive provenance after fusion.
     #[test]
     fn fused_program_uses_two_canonical_bitset_zero_regions() {
-        use vyre_foundation::transform::visit::walk_nodes;
-        use vyre_primitives::bitset::zero::OP_ID as BITSET_ZERO_OP_ID;
+        use crate::bitset::zero::OP_ID as BITSET_ZERO_OP_ID;
+        use vyre_foundation::visit::walk_nodes;
 
         let program = witness_program();
         let mut primitive_zeros = 0usize;

@@ -1,0 +1,2 @@
+category = "Added"
+text = "`loop_legality_collector_closure` plants a scalar read, a buffer load, a store and a binding in every operand and body slot of every declared `Node` variant and asserts each read set reports it. The variant set comes from `NODE_VARIANT_NAMES` through the shared IR fixtures, so a new variant is red before any of the three questions is asked."

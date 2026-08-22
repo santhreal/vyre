@@ -2,63 +2,9 @@
 
 #![forbid(unsafe_code)]
 
+mod wire_words;
 use vyre_libs::nn::attention::gqa_attention_causal;
-use vyre_reference::value::Value;
-
-fn bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode(value: &Value) -> Vec<f32> {
-    value
-        .to_bytes()
-        .chunks_exact(4)
-        .map(|word| f32::from_le_bytes(word.try_into().expect("Fix: exact f32 word")))
-        .collect()
-}
-
-#[allow(clippy::too_many_arguments)]
-fn execute(
-    q: &[f32],
-    k: &[f32],
-    v: &[f32],
-    batch: u32,
-    query_heads: u32,
-    kv_heads: u32,
-    query_len: u32,
-    kv_len: u32,
-    dim: u32,
-    offset: u32,
-) -> Vec<f32> {
-    let program = gqa_attention_causal(
-        "q",
-        "k",
-        "v",
-        "output",
-        batch,
-        query_heads,
-        kv_heads,
-        query_len,
-        kv_len,
-        dim,
-        offset,
-    )
-    .expect("Fix: valid causal GQA fixture must build");
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[
-            Value::from(bytes(q)),
-            Value::from(bytes(k)),
-            Value::from(bytes(v)),
-            Value::from(vec![0; q.len() * 4]),
-        ],
-    )
-    .expect("Fix: causal GQA must execute");
-    decode(&outputs[0])
-}
+use wire_words::execute_causal_gqa as execute;
 
 /// Proves prompt token zero cannot receive probability mass from a future value.
 #[test]

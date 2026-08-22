@@ -1,5 +1,3 @@
-#![forbid(unsafe_code)]
-#![warn(missing_docs)]
 //! Procedural macros for the [`vyre`](https://docs.rs/vyre) GPU compute IR
 //! compiler.
 //!
@@ -9,8 +7,8 @@
 //! The macro surface contains the foundation-owned AST registry generator and
 //! the canonical semantic optimizer pass registration attribute.
 
+mod arg_parsers;
 mod ast_registry;
-mod parse_helpers;
 mod pass;
 
 use proc_macro::TokenStream;
@@ -25,5 +23,3 @@ pub fn vyre_ast_registry(item: TokenStream) -> TokenStream {
 pub fn vyre_pass(args: TokenStream, item: TokenStream) -> TokenStream {
     pass::vyre_pass_impl(args, item)
 }
-#[cfg(test)]
-mod tests;

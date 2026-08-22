@@ -1,0 +1,430 @@
+//! Pre-lowering constant-division recognition.
+//!
+//! Four rewrites run before the general lowering table because lowering a
+//! child destroys the constant they key on: Lemire's divisibility test, common
+//! factor cancellation between a dividend's multiplier and the divisor,
+//! fusion of a constant division chain, and narrowing of a nested modulus.
+//!
+//! Every test here is differential. It runs the real recognition entry point,
+//! evaluates the rewritten expression, and compares against the operator the
+//! source expression names. None of them assert expression shape, so a
+//! different but equally correct emission keeps them green while a wrong one
+//! cannot.
+//!
+//! The divisor space is enumerated at run time by asking the pass which
+//! divisors it admits, so a divisor a later change starts rewriting is proved
+//! here without an edit. A floor on the admitted count keeps an accidentally
+//! empty admission set from passing vacuously.
+
+use super::modulo_constant::eval_u32;
+use super::*;
+/// Divisors the tests offer to the pass: every small value, plus the large
+/// end of the range where `u32::MAX / d` is small and the Lemire limit is
+/// tightest.
+fn candidate_divisors() -> Vec<u32> {
+    if cfg!(miri) {
+        return vec![3, 5, 6, 7, 9, 10, 11, 12, 100, 65_535, 1_000_000_007];
+    }
+    (0u32..=512)
+        .chain((1u32..=64).map(|i| u32::MAX / i))
+        .chain([65_535, 65_536, 65_537, 1_000_000_007])
+        .collect()
+}
+
+/// Operand values the single-divisor sweeps use.
+fn sample_operands() -> Vec<u32> {
+    if cfg!(miri) {
+        return vec![
+            0,
+            1,
+            2,
+            3,
+            4,
+            15,
+            16,
+            17,
+            255,
+            256,
+            1000,
+            u32::MAX - 1,
+            u32::MAX,
+        ];
+    }
+    let mut values: Vec<u32> = (0u32..=600).collect();
+    values.extend((0..32).map(|bit| 1u32 << bit));
+    values.extend((0..32).map(|bit| (1u32 << bit).wrapping_sub(1)));
+    values.extend([u32::MAX, u32::MAX - 1, 0x8000_0000, 0x7FFF_FFFF]);
+    // A deterministic spread across the full range; no test may depend on a
+    // seed the harness does not own.
+    let mut state = 0x2545_F491u32;
+    for _ in 0..2_000 {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        values.push(state);
+    }
+    values
+}
+
+/// Smaller sweep for the tests that enumerate thousands of constant pairs.
+fn coarse_operands() -> Vec<u32> {
+    if cfg!(miri) {
+        return vec![0, 1, 2, 15, 16, 255, u32::MAX];
+    }
+    let mut values: Vec<u32> = (0u32..=64).collect();
+    values.extend((0..32).map(|bit| 1u32 << bit));
+    values.extend((0..32).map(|bit| (1u32 << bit).wrapping_sub(1)));
+    values.extend([u32::MAX, u32::MAX - 1, 0x8000_0000, 0x7FFF_FFFF]);
+    values
+}
+
+/// Evaluate a comparison the divisibility test emits.
+fn eval_bool_expr(expr: &Expr, x: u32) -> bool {
+    let Expr::BinOp { op, left, right } = expr else {
+        panic!("expected a comparison at the root, got {expr:?}");
+    };
+    let l = eval_u32(left, x);
+    let r = eval_u32(right, x);
+    match op {
+        BinOp::Le => l <= r,
+        BinOp::Gt => l > r,
+        BinOp::Eq => l == r,
+        BinOp::Ne => l != r,
+        other => panic!("evaluator has no comparison arm for {other:?}"),
+    }
+}
+
+fn remainder_compared_to_zero(divisor: u32, op: BinOp) -> Expr {
+    Expr::BinOp {
+        op,
+        left: Box::new(Expr::rem(Expr::var("x"), Expr::u32(divisor))),
+        right: Box::new(Expr::u32(0)),
+    }
+}
+
+#[test]
+fn divisibility_test_agrees_with_the_remainder_it_replaces() {
+    let operands = sample_operands();
+    let mut admitted = 0usize;
+    for divisor in candidate_divisors() {
+        let source = remainder_compared_to_zero(divisor, BinOp::Eq);
+        let Some(rewritten) = recognize_source_shape(&source) else {
+            continue;
+        };
+        admitted += 1;
+        for &x in &operands {
+            assert_eq!(
+                eval_bool_expr(&rewritten, x),
+                x % divisor == 0,
+                "divisibility test disagrees at x={x}, d={divisor}"
+            );
+        }
+    }
+    let min_admitted = if cfg!(miri) { 8 } else { 400 };
+    assert!(
+        admitted >= min_admitted,
+        "recognition admitted only {admitted} divisors; the divisibility rewrite is not firing"
+    );
+}
+
+#[test]
+fn non_divisibility_test_agrees_with_the_remainder_it_replaces() {
+    let operands = sample_operands();
+    let mut admitted = 0usize;
+    for divisor in candidate_divisors() {
+        let source = remainder_compared_to_zero(divisor, BinOp::Ne);
+        let Some(rewritten) = recognize_source_shape(&source) else {
+            continue;
+        };
+        admitted += 1;
+        for &x in &operands {
+            assert_eq!(
+                eval_bool_expr(&rewritten, x),
+                x % divisor != 0,
+                "non-divisibility test disagrees at x={x}, d={divisor}"
+            );
+        }
+    }
+    let min_admitted = if cfg!(miri) { 8 } else { 400 };
+    assert!(
+        admitted >= min_admitted,
+        "the non-divisibility rewrite is not firing"
+    );
+}
+
+#[test]
+fn only_divisors_with_no_cheaper_answer_are_admitted() {
+    for divisor in candidate_divisors() {
+        let source = remainder_compared_to_zero(divisor, BinOp::Eq);
+        if recognize_source_shape(&source).is_none() {
+            assert!(
+                divisor <= 1 || divisor.is_power_of_two(),
+                "divisor {divisor} was declined but has no cheaper lowering"
+            );
+        }
+    }
+}
+
+/// `(x & mask) * c / d`: the mask supplies the range proof the cancellation
+/// needs, so the rewrite is admitted exactly when `mask * c` does not wrap.
+fn masked_product_over(mask: u32, multiplier: u32, divisor: u32) -> Expr {
+    Expr::div(
+        Expr::mul(
+            Expr::bitand(Expr::var("x"), Expr::u32(mask)),
+            Expr::u32(multiplier),
+        ),
+        Expr::u32(divisor),
+    )
+}
+
+#[test]
+fn cancelling_a_common_factor_preserves_the_quotient() {
+    let operands = coarse_operands();
+    let mut fired = 0usize;
+    let max_mask = if cfg!(miri) { 4 } else { 24 };
+    let max_mult = if cfg!(miri) { 4 } else { 24 };
+    let max_div = if cfg!(miri) { 4 } else { 24 };
+    for mask_bits in 1u32..=max_mask {
+        let mask = (1u32 << mask_bits) - 1;
+        for multiplier in 1u32..=max_mult {
+            for divisor in 2u32..=max_div {
+                let source = masked_product_over(mask, multiplier, divisor);
+                let Some(rewritten) = recognize_source_shape(&source) else {
+                    continue;
+                };
+                fired += 1;
+                for &x in &operands {
+                    assert_eq!(
+                        eval_u32(&rewritten, x),
+                        eval_u32(&source, x),
+                        "cancellation changed the quotient at x={x}, mask={mask}, \
+                         c={multiplier}, d={divisor}"
+                    );
+                }
+            }
+        }
+    }
+    let min_fired = if cfg!(miri) { 5 } else { 100 };
+    assert!(
+        fired >= min_fired,
+        "factor cancellation fired only {fired} times"
+    );
+}
+
+#[test]
+fn an_unbounded_dividend_blocks_cancellation() {
+    // Without a range proof, `(x * 2) / 2` is not `x`: at x = 2^31 the product
+    // wraps to zero and the quotient is zero. The rewrite must decline.
+    let source = Expr::div(Expr::mul(Expr::var("x"), Expr::u32(2)), Expr::u32(2));
+    assert!(
+        recognize_source_shape(&source).is_none(),
+        "cancellation fired on an operand with no provable bound"
+    );
+}
+
+#[test]
+fn a_product_that_can_wrap_blocks_cancellation() {
+    // The mask allows values up to 2^31 - 1, so `x * 4` wraps.
+    let source = masked_product_over(0x7FFF_FFFF, 4, 2);
+    assert!(
+        recognize_source_shape(&source).is_none(),
+        "cancellation fired on a product that can wrap"
+    );
+}
+
+#[test]
+fn a_constant_division_chain_fuses_into_one_division() {
+    let operands = coarse_operands();
+    let max_outer = if cfg!(miri) { 6 } else { 40 };
+    let max_inner = if cfg!(miri) { 6 } else { 40 };
+    for outer in 1u32..=max_outer {
+        for inner in 1u32..=max_inner {
+            let source = Expr::div(
+                Expr::div(Expr::var("x"), Expr::u32(inner)),
+                Expr::u32(outer),
+            );
+            let Some(rewritten) = recognize_source_shape(&source) else {
+                panic!("division chain {inner} then {outer} was not fused");
+            };
+            for &x in &operands {
+                assert_eq!(
+                    eval_u32(&rewritten, x),
+                    eval_u32(&source, x),
+                    "fusion changed the quotient at x={x}, inner={inner}, outer={outer}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn a_nested_modulus_narrows_only_when_the_outer_divides_the_inner() {
+    let operands = coarse_operands();
+    let max_bound = if cfg!(miri) { 8 } else { 48 };
+    for inner in 1u32..=max_bound {
+        for outer in 1u32..=max_bound {
+            let source = Expr::rem(
+                Expr::rem(Expr::var("x"), Expr::u32(inner)),
+                Expr::u32(outer),
+            );
+            match recognize_source_shape(&source) {
+                Some(rewritten) => {
+                    assert_eq!(
+                        inner % outer,
+                        0,
+                        "narrowed {inner} then {outer} where the outer does not divide the inner"
+                    );
+                    for &x in &operands {
+                        assert_eq!(
+                            eval_u32(&rewritten, x),
+                            eval_u32(&source, x),
+                            "narrowing changed the remainder at x={x}, \
+                             inner={inner}, outer={outer}"
+                        );
+                    }
+                }
+                None => assert_ne!(
+                    inner % outer,
+                    0,
+                    "declined to narrow {inner} then {outer} where the outer does divide the inner"
+                ),
+            }
+        }
+    }
+}
+
+#[test]
+fn an_over_width_shift_chain_folds_to_zero() {
+    // Both operands of a shift are `u32`. V094 in `validate::typecheck` rejects
+    // any other type, so the signed operand whose sign bit would survive
+    // `(x >> 20) >> 20` cannot reach this pass. Every bit is gone once the
+    // counts reach the width, and the fused shift cannot be emitted instead:
+    // the target text masks the count with `& 31`, which turns `x << 32` back
+    // into `x`.
+    for (inner, outer) in [(20u32, 20u32), (31, 1), (16, 24), (30, 30)] {
+        for (source, label) in [
+            (
+                Expr::shr(
+                    Expr::shr(Expr::var("x"), Expr::u32(inner)),
+                    Expr::u32(outer),
+                ),
+                "right",
+            ),
+            (
+                Expr::shl(
+                    Expr::shl(Expr::var("x"), Expr::u32(inner)),
+                    Expr::u32(outer),
+                ),
+                "left",
+            ),
+        ] {
+            let rewritten = reduce_expr(&source).unwrap_or_else(|| {
+                panic!("kept an over-width {label}-shift chain {inner} then {outer}")
+            });
+            assert_eq!(
+                rewritten,
+                Expr::u32(0),
+                "an over-width {label}-shift chain {inner} then {outer} discards every bit"
+            );
+            for x in sample_operands() {
+                assert_eq!(
+                    eval_u32(&source, x),
+                    0,
+                    "the {label}-shift chain {inner} then {outer} is not zero for {x}, so folding \
+                     it to zero would be a miscompile"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn an_in_width_shift_chain_still_fuses() {
+    let source = Expr::shr(Expr::shr(Expr::var("x"), Expr::u32(3)), Expr::u32(4));
+    let rewritten = reduce_expr(&source).expect("in-width shift chain must still fuse");
+    for x in sample_operands() {
+        assert_eq!(eval_u32(&rewritten, x), x >> 7);
+    }
+}
+
+/// Count the operation nodes a lowered expression emits.
+fn operation_count(expr: &Expr) -> usize {
+    match expr {
+        Expr::BinOp { left, right, .. } => 1 + operation_count(left) + operation_count(right),
+        _ => 0,
+    }
+}
+
+/// Apply the lowering table until it stops changing, the way the scheduler
+/// re-runs the pass to fixpoint.
+fn lower_to_fixpoint(expr: &Expr) -> Expr {
+    let mut current = expr.clone();
+    for _ in 0..16 {
+        let next = crate::optimizer::rewrite::rewrite_expr(&current, &mut reduce_expr).into_owned();
+        if next == current {
+            return current;
+        }
+        current = next;
+    }
+    current
+}
+
+#[test]
+fn recognition_emits_fewer_operations_than_lowering_the_remainder() {
+    // The measurement the divisibility rewrite exists for: the general
+    // remainder lowering builds a multiply-high, a shift, a fixup on some
+    // divisors, a multiply, a subtract and a compare. Lemire's direct test
+    // is a multiply, a rotate and a compare (<= 3 operations in its initial
+    // recognized IR shape before fixpoint strength-reduction expands the multiply).
+    //
+    // Every supported divisor satisfies optimized_recognized <= lowered and its
+    // direct recognized IR stays within <= 3 operations.
+    for divisor in [
+        3u32,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        100,
+        1_000,
+        65_535,
+        1_000_000_007,
+    ] {
+        let source = remainder_compared_to_zero(divisor, BinOp::Eq);
+        let recognized_source =
+            recognize_source_shape(&source).expect("divisibility test must fire");
+        let direct_recognized = operation_count(&recognized_source);
+        let optimized_recognized = operation_count(&lower_to_fixpoint(&recognized_source));
+        let lowered = operation_count(&lower_to_fixpoint(&source));
+
+        assert!(
+            direct_recognized <= 3,
+            "d={divisor}: Lemire's direct recognized IR must stay within three operations, got {direct_recognized}"
+        );
+        assert!(
+            optimized_recognized <= lowered,
+            "d={divisor}: optimized recognition ({optimized_recognized} ops) must not exceed lowering ({lowered} ops)"
+        );
+    }
+
+    // Explicitly verify the measured baseline on standard expanding divisors.
+    for divisor in [3u32, 5, 6, 9, 10, 11, 12] {
+        let source = remainder_compared_to_zero(divisor, BinOp::Eq);
+        let recognized_source =
+            recognize_source_shape(&source).expect("divisibility test must fire");
+        let optimized_recognized = operation_count(&lower_to_fixpoint(&recognized_source));
+        let lowered = operation_count(&lower_to_fixpoint(&source));
+
+        assert!(
+            lowered >= 5,
+            "d={divisor}: expanding remainder lowering must emit >= 5 operations, got {lowered}"
+        );
+        assert!(
+            optimized_recognized < lowered,
+            "d={divisor}: recognition must strictly improve expanding lowering ({optimized_recognized} < {lowered})"
+        );
+    }
+}

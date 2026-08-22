@@ -1,3 +1,5 @@
+//! The constant-true rule leaf.
+
 use crate::rule::condition_op;
 use vyre_spec::OperationContract;
 

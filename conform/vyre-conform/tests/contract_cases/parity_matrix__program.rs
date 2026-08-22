@@ -1,6 +1,19 @@
 // Cross-backend parity matrix: registered backends, wire shapes, and buffer comparison.
-// `#![forbid(unsafe_code)]` was moved to the parent `parity_matrix.rs`
-// because inner attributes cannot ride an `include!`-d chunk.
+// `#![forbid(unsafe_code)]` lives on the parent `parity_matrix.rs` crate root.
+
+#[path = "parity_matrix__divergence.rs"]
+mod parity_matrix_divergence;
+#[path = "parity_matrix__entries.rs"]
+mod parity_matrix_entries;
+#[path = "parity_matrix__runner.rs"]
+mod parity_matrix_runner;
+#[path = "parity_matrix__synthetic_entries.rs"]
+mod parity_matrix_synthetic_entries;
+
+use parity_matrix_divergence::{Divergence, OpFailure, Summary};
+use parity_matrix_entries::{unified_entries, UnifiedEntry};
+use parity_matrix_runner::{backend_runners, BackendKind, BackendRunner};
+use parity_matrix_synthetic_entries::*;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
@@ -8,426 +21,13 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::Arc;
 
 use blake3::Hash;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, Program};
+use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_conform::dispatch_grid;
-use vyre_conform::fp_parity::{compare_output_buffers, BufferParity};
-use vyre_driver::backend::{backend_dispatches, registered_backends};
-use vyre_driver::{BackendRegistration, DispatchConfig};
+use vyre_conform::witness_plan::WitnessInputPlan;
+use vyre_driver::DispatchConfig;
+use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
 use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};
-use vyre_reference::value::Value;
 use vyre_spec::expr_variants;
-
-#[cfg(feature = "gpu")]
-use vyre_driver_cuda as _;
-#[cfg(feature = "gpu")]
-use vyre_driver_metal as _;
-#[cfg(feature = "gpu")]
-use vyre_driver_wgpu as _;
-use vyre_intrinsics as _;
-use vyre_libs as _;
-use vyre_primitives as _;
-
-type FixtureCases = Vec<Vec<Vec<u8>>>;
-type FixtureFn = fn() -> FixtureCases;
-
-#[derive(Clone, Copy)]
-struct UnifiedEntry {
-    id: &'static str,
-    build: Option<fn() -> Program>,
-    test_inputs: Option<FixtureFn>,
-    expected_output: Option<FixtureFn>,
-}
-
-impl UnifiedEntry {
-    fn program(&self) -> Option<Program> {
-        self.build.map(|build| build().with_entry_op_id(self.id))
-    }
-}
-
-#[derive(Debug)]
-struct SyntheticOpaqueExpr;
-
-impl ExprNode for SyntheticOpaqueExpr {
-    fn extension_kind(&self) -> &'static str {
-        "vyre.conform.synthetic.opaque"
-    }
-
-    fn debug_identity(&self) -> &str {
-        "synthetic-opaque-expr"
-    }
-
-    fn result_type(&self) -> Option<DataType> {
-        Some(DataType::U32)
-    }
-
-    fn cse_safe(&self) -> bool {
-        true
-    }
-
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        [0x5a; 32]
-    }
-
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn wire_payload(&self) -> Vec<u8> {
-        vec![0x5a]
-    }
-}
-
-#[derive(Debug)]
-struct Divergence {
-    op_id: &'static str,
-    backend_a: &'static str,
-    backend_b: &'static str,
-    input_hash: Hash,
-    output_a_hash: Hash,
-    output_b_hash: Hash,
-    detail: String,
-}
-
-#[derive(Default, Debug)]
-struct Summary {
-    ops_total: usize,
-    ops_covered: usize,
-    backends_linked: usize,
-    backends_runnable: usize,
-    divergences: Vec<Divergence>,
-}
-
-#[cfg_attr(not(feature = "gpu"), allow(dead_code))]
-enum BackendKind {
-    ReferenceBackend,
-    Registered(&'static BackendRegistration),
-}
-
-struct BackendRunner {
-    id: &'static str,
-    kind: BackendKind,
-}
-
-impl BackendRunner {
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        values: &mut Vec<Value>,
-    ) -> Result<Vec<Vec<u8>>, String> {
-        match &self.kind {
-            BackendKind::ReferenceBackend => {
-                values.clear();
-                for bytes in inputs {
-                    values.push(Value::from(bytes.as_slice()));
-                }
-                vyre_reference::reference_eval(program, values)
-                    .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
-                    .map_err(|error| format!("reference dispatch failed: {error}"))
-            }
-            BackendKind::Registered(_) => {
-                let mut backend_inputs = Vec::new();
-                let config = dispatch_grid::config_for_program(program)?;
-                self.dispatch_with_plan(program, inputs, values, None, &mut backend_inputs, &config)
-            }
-        }
-    }
-
-    fn dispatch_with_plan<'a>(
-        &self,
-        program: &Program,
-        inputs: &'a [Vec<u8>],
-        values: &mut Vec<Value>,
-        plan: Option<&'a BackendDispatchPlan>,
-        backend_inputs: &mut Vec<&'a [u8]>,
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, String> {
-        match &self.kind {
-            BackendKind::ReferenceBackend => {
-                values.clear();
-                if let Some(plan) = plan {
-                    backend_dispatch_inputs_with_plan_into(inputs, plan, backend_inputs)?;
-                    for bytes in backend_inputs.iter() {
-                        values.push(Value::from(*bytes));
-                    }
-                } else {
-                    for bytes in inputs {
-                        values.push(Value::from(bytes.as_slice()));
-                    }
-                }
-                vyre_reference::reference_eval(program, values)
-                    .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
-                    .map_err(|error| format!("reference dispatch failed: {error}"))
-            }
-            BackendKind::Registered(registration) => {
-                let production =
-                    vyre_conform::production::ProductionSession::compile(program, registration)
-                        .map_err(|error| error.to_string())?;
-                let run_submission = |inputs: &[&[u8]]| {
-                    if let Some(grid) = config.grid_override {
-                        production.submit_with_invocation_grid(inputs, grid)
-                    } else {
-                        production.submit(inputs)
-                    }
-                    .map_err(|error| error.to_string())
-                };
-
-                if let Some(plan) = plan {
-                    backend_dispatch_inputs_with_plan_into(inputs, plan, backend_inputs)?;
-                    run_submission(backend_inputs)
-                } else {
-                    let plan_storage = backend_dispatch_plan(program)?;
-                    let mut local_inputs = Vec::new();
-                    backend_dispatch_inputs_with_plan_into(
-                        inputs,
-                        &plan_storage,
-                        &mut local_inputs,
-                    )?;
-                    run_submission(&local_inputs)
-                }
-            }
-        }
-    }
-}
-
-#[derive(Clone)]
-enum BackendInputSource {
-    Fixture {
-        fixture_index: usize,
-        buffer_index: usize,
-        byte_len: Option<usize>,
-    },
-    ReadWriteOrZero {
-        fixture_index: usize,
-        buffer_index: usize,
-        zero_index: Option<usize>,
-        byte_len: Option<usize>,
-    },
-}
-
-struct BackendDispatchPlan {
-    sources: Vec<BackendInputSource>,
-    zeroed_inputs: Vec<Vec<u8>>,
-    buffer_len: usize,
-}
-
-fn backend_dispatch_plan(program: &Program) -> Result<BackendDispatchPlan, String> {
-    let mut sources = Vec::with_capacity(program.buffers().len());
-    let mut zeroed_inputs = Vec::with_capacity(program.buffers().len());
-    let mut fixture_index = 0usize;
-    for (buffer_index, buffer) in program.buffers().iter().enumerate() {
-        if buffer.kind() == vyre::ir::MemoryKind::Shared
-            || buffer.is_output()
-            || (buffer.is_pipeline_live_out()
-                && matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite))
-        {
-            continue;
-        }
-        if matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite) {
-            let byte_len = fixture_backed_byte_len(buffer)?;
-            let zero_index = if let Some(byte_len) = byte_len {
-                let zero_index = zeroed_inputs.len();
-                zeroed_inputs.push(vec![0u8; byte_len]);
-                Some(zero_index)
-            } else {
-                None
-            };
-            sources.push(BackendInputSource::ReadWriteOrZero {
-                fixture_index,
-                buffer_index,
-                zero_index,
-                byte_len,
-            });
-            fixture_index += 1;
-            continue;
-        }
-        let byte_len = fixture_backed_byte_len(buffer)?;
-        sources.push(BackendInputSource::Fixture {
-            fixture_index,
-            buffer_index,
-            byte_len,
-        });
-        fixture_index += 1;
-    }
-
-    Ok(BackendDispatchPlan {
-        sources,
-        zeroed_inputs,
-        buffer_len: program.buffers().len(),
-    })
-}
-
-fn fixture_backed_byte_len(buffer: &BufferDecl) -> Result<Option<usize>, String> {
-    buffer.static_byte_len().map_err(|error| {
-        format!(
-            "buffer `{}` static byte length could not be computed: {error}. Fix: use a fixed-width buffer type or provide concrete fixture bytes.",
-            buffer.name(),
-        )
-    })
-}
-
-fn backend_dispatch_inputs_with_plan_into<'a>(
-    fixture_inputs: &'a [Vec<u8>],
-    plan: &'a BackendDispatchPlan,
-    backend_inputs: &mut Vec<&'a [u8]>,
-) -> Result<(), String> {
-    if fixture_inputs.len() > plan.buffer_len {
-        return Err(format!(
-            "fixture provided {} buffer(s) but Program declares {}. Fix: fixture cases must not exceed Program::buffers order for reference parity.",
-            fixture_inputs.len(),
-            plan.buffer_len
-        ));
-    }
-
-    backend_inputs.clear();
-    for source in &plan.sources {
-        match source {
-            BackendInputSource::Fixture {
-                fixture_index,
-                buffer_index,
-                byte_len,
-            } => {
-                if let Some(bytes) =
-                    matching_fixture_bytes(fixture_inputs, *buffer_index, *fixture_index, *byte_len)
-                {
-                    backend_inputs.push(bytes.as_slice());
-                    continue;
-                }
-                return Err(format!(
-                    "fixture omitted required input buffer at fixture index `{fixture_index}` / program index `{buffer_index}`. Fix: every non-output read-only/uniform buffer must be present in the witness case."
-                ));
-            }
-            BackendInputSource::ReadWriteOrZero {
-                fixture_index,
-                buffer_index,
-                zero_index,
-                byte_len,
-            } => {
-                if let Some(bytes) =
-                    matching_fixture_bytes(fixture_inputs, *buffer_index, *fixture_index, *byte_len)
-                {
-                    backend_inputs.push(bytes.as_slice());
-                    continue;
-                }
-                if let Some(zero_index) = zero_index {
-                    if let Some(bytes) = plan.zeroed_inputs.get(*zero_index) {
-                        backend_inputs.push(bytes.as_slice());
-                        continue;
-                    }
-                    return Err(
-                        "internal plan mismatch: zeroed input index is invalid.".to_string()
-                    );
-                }
-                return Err(format!(
-                    "fixture omitted runtime-sized read-write buffer at fixture index `{fixture_index}` / program index `{buffer_index}`. Fix: provide concrete fixture bytes because dynamic read-write buffers cannot be zero-initialized without a byte length."
-                ));
-            }
-        }
-    }
-    Ok(())
-}
-
-fn matching_fixture_bytes<'a>(
-    fixture_inputs: &'a [Vec<u8>],
-    buffer_index: usize,
-    fixture_index: usize,
-    byte_len: Option<usize>,
-) -> Option<&'a Vec<u8>> {
-    if let Some(byte_len) = byte_len {
-        return fixture_inputs
-            .get(buffer_index)
-            .filter(|bytes| bytes.len() == byte_len)
-            .or_else(|| {
-                fixture_inputs
-                    .get(fixture_index)
-                    .filter(|bytes| bytes.len() == byte_len)
-            })
-            .or_else(|| fixture_inputs.get(fixture_index))
-            .or_else(|| fixture_inputs.get(buffer_index));
-    }
-    fixture_inputs
-        .get(fixture_index)
-        .or_else(|| fixture_inputs.get(buffer_index))
-}
-
-#[test]
-fn parity_backend_input_plan_accepts_logical_fixture_order_after_output_buffer() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::output("out", 0, DataType::U32).with_count(1),
-            BufferDecl::storage("input", 1, BufferAccess::ReadOnly, DataType::U32).with_count(2),
-        ],
-        [1, 1, 1],
-        Vec::<Node>::new(),
-    );
-    let plan =
-        backend_dispatch_plan(&program).expect("Fix: static logical input planning must succeed.");
-    let case = vec![vec![1, 0, 0, 0, 2, 0, 0, 0]];
-    let mut backend_inputs = Vec::new();
-
-    backend_dispatch_inputs_with_plan_into(&case, &plan, &mut backend_inputs)
-        .expect("Fix: logical fixture order must route input bytes even when output buffers precede inputs.");
-
-    assert_eq!(
-        backend_inputs,
-        vec![case[0].as_slice()],
-        "Fix: parity matrix must use logical fixture order, not raw Program::buffers indices."
-    );
-}
-
-#[test]
-fn parity_backend_input_plan_accepts_fixture_backed_runtime_sized_input() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::output("out", 1, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        Vec::<Node>::new(),
-    );
-    let plan = backend_dispatch_plan(&program)
-        .expect("Fix: runtime-sized read-only buffers must be fixture-backed.");
-    let case = vec![vec![0xAA; 12]];
-    let mut backend_inputs = Vec::new();
-
-    backend_dispatch_inputs_with_plan_into(&case, &plan, &mut backend_inputs)
-        .expect("Fix: concrete fixture bytes must satisfy runtime-sized parity inputs.");
-
-    assert_eq!(
-        backend_inputs,
-        vec![case[0].as_slice()],
-        "Fix: dynamic fixture bytes must pass through unchanged."
-    );
-}
-
-#[test]
-fn parity_backend_input_plan_rejects_omitted_runtime_sized_read_write_input() {
-    let program = Program::wrapped(
-        vec![BufferDecl::storage(
-            "scratch",
-            0,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )],
-        [1, 1, 1],
-        Vec::<Node>::new(),
-    );
-    let plan = backend_dispatch_plan(&program)
-        .expect("Fix: dynamic read-write input may be fixture-backed.");
-    let mut backend_inputs = Vec::new();
-
-    let error = backend_dispatch_inputs_with_plan_into(&[], &plan, &mut backend_inputs)
-        .expect_err("Fix: omitted dynamic read-write inputs must not be silently zeroed.");
-
-    assert!(
-        error.contains("runtime-sized read-write buffer"),
-        "Fix: error must preserve dynamic read-write fixture guidance, got: {error}"
-    );
-}
 
 #[test]
 fn parity_reference_runner_uses_planned_zeroed_read_write_inputs() {
@@ -443,7 +43,7 @@ fn parity_reference_runner_uses_planned_zeroed_read_write_inputs() {
             Expr::load("input", Expr::u32(0)),
         )],
     );
-    let plan = backend_dispatch_plan(&program)
+    let plan = WitnessInputPlan::for_program(&program)
         .expect("Fix: static read-write zero-fill planning must succeed.");
     let runner = BackendRunner {
         id: "reference",
@@ -476,6 +76,199 @@ fn parity_reference_runner_uses_planned_zeroed_read_write_inputs() {
 // backend in addition to vyre-reference must be linked. If the crate is built
 // without the `gpu` feature, this test must fail loudly instead of compiling
 // out the parity gate.
+/// Measure one operation on every runner and record what it found.
+///
+/// `Err` names a defect that stops this operation: a missing fixture, a program
+/// the validator rejects, a reference backend that refused the dispatch. Every
+/// defect that leaves the remaining witnesses measurable is pushed onto the
+/// summary instead, so one broken backend does not hide the operations behind
+/// it.
+fn measure_entry(
+    entry: &UnifiedEntry,
+    runners: &[BackendRunner],
+    summary: &mut Summary,
+) -> Result<(), OpFailure> {
+    let test_inputs = entry.test_inputs.ok_or_else(|| {
+        OpFailure::harness(
+            entry.id,
+            "fixtures",
+            "missing test_inputs; every registered op must provide fixture inputs".to_string(),
+        )
+    })?;
+    let expected_output = entry.expected_output.ok_or_else(|| {
+        OpFailure::harness(
+            entry.id,
+            "fixtures",
+            "missing expected_output; every registered op must provide a fixture oracle"
+                .to_string(),
+        )
+    })?;
+
+    let program = entry.program();
+    validate_program(entry.id, &program)
+        .map_err(|detail| OpFailure::harness(entry.id, "validation", detail))?;
+    check_region_chain(&program)
+        .map_err(|detail| OpFailure::harness(entry.id, "region chain", detail))?;
+
+    let input_cases = test_inputs();
+    let expected_cases = expected_output();
+    if input_cases.is_empty() {
+        return Err(OpFailure::harness(
+            entry.id,
+            "fixtures",
+            "registered empty test_inputs; empty witnesses are zero execution coverage".to_string(),
+        ));
+    }
+    if expected_cases.is_empty() {
+        return Err(OpFailure::harness(
+            entry.id,
+            "fixtures",
+            "registered empty expected_output; empty oracles are zero execution coverage"
+                .to_string(),
+        ));
+    }
+    if input_cases.len() != expected_cases.len() {
+        return Err(OpFailure::harness(
+            entry.id,
+            "fixtures",
+            format!(
+                "test_inputs / expected_output case count mismatch ({} vs {})",
+                input_cases.len(),
+                expected_cases.len()
+            ),
+        ));
+    }
+
+    summary.ops_covered += 1;
+    let input_plan = WitnessInputPlan::for_program(&program)
+        .map_err(|error| OpFailure::harness(entry.id, "input plan", error.to_string()))?;
+    let grid_config = dispatch_grid::config_for_program(&program)
+        .map_err(|error| OpFailure::harness(entry.id, "grid config", error.to_string()))?;
+    let mut reference_values = Vec::with_capacity(program.buffers().len());
+    let mut outputs = Vec::<(&'static str, Vec<Vec<u8>>)>::with_capacity(runners.len());
+    let mut borrowed_inputs = Vec::with_capacity(input_plan.source_count());
+    for (case_index, (inputs, expected)) in
+        input_cases.iter().zip(expected_cases.iter()).enumerate()
+    {
+        let input_hash = hash_buffers(inputs);
+        let program_hash_before = hash_program(&program)
+            .map_err(|detail| OpFailure::harness(entry.id, "program hash", detail))?;
+        outputs.clear();
+        borrowed_inputs.clear();
+
+        let reference_output = runners[0]
+            .dispatch_with_plan(
+                &program,
+                inputs,
+                &mut reference_values,
+                Some(&input_plan),
+                &mut borrowed_inputs,
+                &grid_config,
+            )
+            .map_err(|error| {
+                OpFailure::backend(
+                    entry.id,
+                    runners[0].id,
+                    "dispatch",
+                    format!("case {case_index}: {error}"),
+                )
+            })?;
+        let reference_hash = hash_buffers(&reference_output);
+        if hash_program(&program)
+            .map_err(|detail| OpFailure::harness(entry.id, "program hash", detail))?
+            != program_hash_before
+        {
+            return Err(OpFailure::backend(
+                entry.id,
+                runners[0].id,
+                "program stability",
+                format!(
+                    "case {case_index} mutated the Program during dispatch; the region chain must remain stable post-run"
+                ),
+            ));
+        }
+        compare_outputs(
+            entry.id,
+            "reference",
+            "expected_output",
+            input_hash,
+            &reference_output,
+            expected,
+            &program,
+            &mut summary.divergences,
+        );
+        outputs.push(("reference", reference_output));
+
+        for runner in runners.iter().skip(1) {
+            match catch_unwind(AssertUnwindSafe(|| {
+                runner.dispatch_with_plan(
+                    &program,
+                    inputs,
+                    &mut reference_values,
+                    Some(&input_plan),
+                    &mut borrowed_inputs,
+                    &grid_config,
+                )
+            })) {
+                Ok(Ok(output)) => match hash_program(&program) {
+                    Ok(after) if after == program_hash_before => {
+                        outputs.push((runner.id, output));
+                    }
+                    Ok(_) => summary.failures.push(OpFailure::backend(
+                        entry.id,
+                        runner.id,
+                        "program stability",
+                        format!(
+                            "case {case_index} mutated the Program during dispatch; the region chain must remain stable post-run"
+                        ),
+                    )),
+                    Err(detail) => {
+                        summary
+                            .failures
+                            .push(OpFailure::harness(entry.id, "program hash", detail));
+                    }
+                },
+                Ok(Err(error)) => summary.failures.push(OpFailure::backend(
+                    entry.id,
+                    runner.id,
+                    "dispatch",
+                    format!("case {case_index}: {error}"),
+                )),
+                Err(payload) => {
+                    summary.divergences.push(Divergence {
+                        op_id: entry.id,
+                        backend_a: runner.id,
+                        backend_b: "reference",
+                        input_hash,
+                        output_a_hash: hash_buffers(&[]),
+                        output_b_hash: reference_hash,
+                        detail: format!("dispatch panic: {}", panic_message(payload)),
+                    });
+                }
+            }
+        }
+
+        for i in 0..outputs.len() {
+            for j in (i + 1)..outputs.len() {
+                let (backend_a, output_a) = &outputs[i];
+                let (backend_b, output_b) = &outputs[j];
+                compare_outputs(
+                    entry.id,
+                    backend_a,
+                    backend_b,
+                    input_hash,
+                    output_a,
+                    output_b,
+                    &program,
+                    &mut summary.divergences,
+                );
+            }
+        }
+    }
+
+    Ok(())
+}
+
 #[test]
 fn parity_matrix_across_all_registered_ops() {
     // Validation resolves every `Expr::Call` through the immutable canonical
@@ -493,7 +286,7 @@ fn parity_matrix_across_all_registered_ops() {
     );
     assert!(
         !entries.is_empty(),
-        "Fix: parity matrix linked zero canonical operation registrations. Ensure vyre-libs and vyre-intrinsics are linked into this test binary."
+        "Fix: parity matrix linked zero canonical operation registrations. Ensure vyre-libs and vyre-primitives are linked into this test binary."
     );
     let missing_expr_variants = expr_variants()
         .iter()
@@ -506,7 +299,7 @@ fn parity_matrix_across_all_registered_ops() {
         missing_expr_variants.join(", ")
     );
 
-    for entry in entries {
+    for entry in &entries {
         if filter.as_deref().is_some_and(|needle| {
             needle
                 .strip_prefix('=')
@@ -515,168 +308,19 @@ fn parity_matrix_across_all_registered_ops() {
             continue;
         }
         summary.ops_total += 1;
-
-        let test_inputs = entry.test_inputs.unwrap_or_else(|| {
-            panic!(
-                "{}: missing test_inputs. Fix: every registered op must provide fixture inputs.",
-                entry.id
-            )
-        });
-        let expected_output = entry.expected_output.unwrap_or_else(|| {
-            panic!(
-                "{}: missing expected_output. Fix: every registered op must provide fixture oracle.",
-                entry.id
-            )
-        });
-
-        let program = entry
-            .program()
-            .expect("Fix: conformance operation must provide a neutral builder");
-        assert_valid(entry.id, &program, &runners);
-        assert_region_chain(entry.id, &program);
-
-        let input_cases = test_inputs();
-        let expected_cases = expected_output();
-        assert!(
-            !input_cases.is_empty(),
-            "Fix: {} registered empty test_inputs. Empty witnesses are zero execution coverage.",
-            entry.id,
-        );
-        assert!(
-            !expected_cases.is_empty(),
-            "Fix: {} registered empty expected_output. Empty oracles are zero execution coverage.",
-            entry.id,
-        );
-        assert_eq!(
-            input_cases.len(),
-            expected_cases.len(),
-            "Fix: {} test_inputs / expected_output case count mismatch ({} vs {}).",
-            entry.id,
-            input_cases.len(),
-            expected_cases.len()
-        );
-
-        summary.ops_covered += 1;
-        let input_plan = backend_dispatch_plan(&program).unwrap_or_else(|error| {
-            panic!("Fix: {} backend input plan failed: {error}", entry.id);
-        });
-        let grid_config = dispatch_grid::config_for_program(&program).unwrap_or_else(|error| {
-            panic!("Fix: {} config_for_program failed: {error}", entry.id);
-        });
-        let mut reference_values = Vec::with_capacity(program.buffers().len());
-        let mut outputs = Vec::<(&'static str, Vec<Vec<u8>>)>::with_capacity(runners.len());
-        let mut borrowed_inputs = Vec::with_capacity(input_plan.sources.len());
-        for (case_index, (inputs, expected)) in
-            input_cases.iter().zip(expected_cases.iter()).enumerate()
-        {
-            let input_hash = hash_buffers(inputs);
-            let program_hash_before = hash_program(&program);
-            outputs.clear();
-            borrowed_inputs.clear();
-
-            let reference_output = runners[0]
-                .dispatch_with_plan(
-                    &program,
-                    inputs,
-                    &mut reference_values,
-                    Some(&input_plan),
-                    &mut borrowed_inputs,
-                    &grid_config,
-                )
-                .unwrap_or_else(|error| {
-                    panic!(
-                        "Fix: {} case {} reference failed: {error}",
-                        entry.id, case_index
-                    )
-                });
-            let reference_hash = hash_buffers(&reference_output);
-            assert_eq!(
-                hash_program(&program),
-                program_hash_before,
-                "Fix: {} case {} mutated the Program during dispatch; region chain must remain stable post-run.",
-                entry.id,
-                case_index
-            );
-            compare_outputs(
-                entry.id,
-                "reference",
-                "expected_output",
-                input_hash,
-                &reference_output,
-                expected,
-                &program,
-                &mut summary.divergences,
-            );
-            outputs.push(("reference", reference_output));
-
-            for runner in runners.iter().skip(1) {
-                match catch_unwind(AssertUnwindSafe(|| {
-                    runner.dispatch_with_plan(
-                        &program,
-                        inputs,
-                        &mut reference_values,
-                        Some(&input_plan),
-                        &mut borrowed_inputs,
-                        &grid_config,
-                    )
-                })) {
-                    Ok(Ok(output)) => {
-                        assert_eq!(
-                            hash_program(&program),
-                            program_hash_before,
-                            "Fix: {} case {} mutated the Program during {} dispatch; region chain must remain stable post-run.",
-                            entry.id,
-                            case_index,
-                            runner.id
-                        );
-                        outputs.push((runner.id, output));
-                    }
-                    Ok(Err(error)) => {
-                        panic!(
-                            "{} on {}: backend dispatch error: {}. Fix: repair backend or op before claiming parity.",
-                            entry.id, runner.id, error
-                        );
-                    }
-                    Err(payload) => {
-                        summary.divergences.push(Divergence {
-                            op_id: entry.id,
-                            backend_a: runner.id,
-                            backend_b: "reference",
-                            input_hash,
-                            output_a_hash: hash_buffers(&[]),
-                            output_b_hash: reference_hash,
-                            detail: format!("dispatch panic: {}", panic_message(payload)),
-                        });
-                    }
-                }
-            }
-
-            for i in 0..outputs.len() {
-                for j in (i + 1)..outputs.len() {
-                    let (backend_a, output_a) = &outputs[i];
-                    let (backend_b, output_b) = &outputs[j];
-                    compare_outputs(
-                        entry.id,
-                        backend_a,
-                        backend_b,
-                        input_hash,
-                        output_a,
-                        output_b,
-                        &program,
-                        &mut summary.divergences,
-                    );
-                }
-            }
+        if let Err(failure) = measure_entry(entry, &runners, &mut summary) {
+            summary.failures.push(failure);
         }
     }
 
     eprintln!(
-        "PARITY-SUMMARY ops_total={} ops_covered={} backends_linked={} backends_runnable={} divergences={}",
+        "PARITY-SUMMARY ops_total={} ops_covered={} backends_linked={} backends_runnable={} divergences={} unmeasured={}",
         summary.ops_total,
         summary.ops_covered,
         summary.backends_linked,
         summary.backends_runnable,
-        summary.divergences.len()
+        summary.divergences.len(),
+        summary.failures.len()
     );
     for variant in expr_variants() {
         if let Some(op_ids) = expr_rows.get(variant) {
@@ -689,72 +333,102 @@ fn parity_matrix_across_all_registered_ops() {
     }
 
     assert!(
-        summary.ops_covered == summary.ops_total,
-        "parity matrix under-coverage: ops_covered={} ops_total={}. Fix: every registered op must run at least one witness case.",
-        summary.ops_covered,
-        summary.ops_total
-    );
-    assert!(
-        summary.divergences.is_empty(),
+        summary.failures.is_empty() && summary.divergences.is_empty(),
         "{}",
-        format_divergences(&summary.divergences)
+        format_summary_failures(&summary)
+    );
+    assert_eq!(
+        summary.ops_covered, summary.ops_total,
+        "parity matrix under-coverage: ops_covered={} ops_total={}. Fix: every registered op must run at least one witness case.",
+        summary.ops_covered, summary.ops_total
     );
 }
 
-fn backend_runners(summary: &mut Summary) -> Vec<BackendRunner> {
-    force_link_backend_inventory();
-    let selected = env::var("VYRE_BACKEND")
-        .ok()
-        .filter(|value| !value.trim().is_empty());
-    let mut registrations: Vec<&'static BackendRegistration> = registered_backends()
-        .expect("valid backend registry")
-        .iter()
-        .collect();
-    registrations.retain(|registration| {
-        selected
-            .as_deref()
-            .is_none_or(|backend| registration.id == backend)
-    });
-    registrations.sort_by(|left, right| left.id.cmp(right.id));
-    summary.backends_linked = registrations.len() + 1;
+/// The coverage bundle survives the neutral wire and still dispatches on every
+/// runnable backend when it is rebuilt from that wire image.
+///
+/// The bundle carries `Expr::Opaque`, whose payload is an out-of-tree extension
+/// node. Encoding, decoding and then dispatching the decoded program proves the
+/// extension reaches each backend through the wire rather than through the
+/// in-process value this test constructed.
+#[test]
+fn the_synthetic_opaque_extension_round_trips_through_the_wire() {
+    let mut summary = Summary::default();
+    let runners = backend_runners(&mut summary);
+    assert!(
+        runners.len() >= 2,
+        "Fix: this contract requires at least one linked dispatch-capable backend in addition to vyre-reference. Link a concrete driver crate for this gate."
+    );
+    let entry = synthetic_entries()
+        .into_iter()
+        .find(|entry| entry.id == SYNTHETIC_BUNDLE_OP_ID)
+        .expect(
+            "Fix: synthetic_entries() must register the coverage bundle under SYNTHETIC_BUNDLE_OP_ID.",
+        );
+    let program = entry.program();
+    let wire = program
+        .to_wire()
+        .expect("Fix: the coverage bundle must encode to the neutral wire.");
+    let decoded = Program::from_wire(&wire)
+        .expect("Fix: the coverage bundle must decode from its own wire image.");
+    assert_eq!(
+        decoded
+            .to_wire()
+            .expect("Fix: the decoded coverage bundle must re-encode to the neutral wire."),
+        wire,
+        "Fix: the coverage bundle wire image is not byte-stable across one decode and re-encode round trip."
+    );
+    let decoded_variants = expr_variants_in_program(&decoded);
+    assert!(
+        decoded_variants.contains("Opaque"),
+        "Fix: the decoded coverage bundle carries {:?} and no Opaque node; the opaque extension does not survive the wire.",
+        decoded_variants
+    );
+    assert_eq!(
+        decoded_variants,
+        expr_variants_in_program(&program),
+        "Fix: the wire round trip changed which Expr variants the coverage bundle contains."
+    );
 
-    let mut runners = vec![BackendRunner {
-        id: "reference",
-        kind: BackendKind::ReferenceBackend,
-    }];
-
-    for registration in registrations {
-        if let Some(runner) = build_backend_runner(registration) {
-            runners.push(runner);
+    let input_cases = (entry
+        .test_inputs
+        .expect("Fix: the coverage bundle must register test_inputs."))();
+    let expected_cases = (entry
+        .expected_output
+        .expect("Fix: the coverage bundle must register expected_output."))(
+    );
+    let input_plan = WitnessInputPlan::for_program(&decoded)
+        .expect("Fix: the decoded coverage bundle must yield a witness input plan.");
+    let grid_config = dispatch_grid::config_for_program(&decoded)
+        .expect("Fix: the decoded coverage bundle must yield a dispatch grid configuration.");
+    let mut values = Vec::with_capacity(decoded.buffers().len());
+    let mut borrowed_inputs = Vec::with_capacity(input_plan.source_count());
+    for runner in &runners {
+        for (case_index, (inputs, expected)) in
+            input_cases.iter().zip(expected_cases.iter()).enumerate()
+        {
+            borrowed_inputs.clear();
+            let output = runner
+                .dispatch_with_plan(
+                    &decoded,
+                    inputs,
+                    &mut values,
+                    Some(&input_plan),
+                    &mut borrowed_inputs,
+                    &grid_config,
+                )
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "Fix: {} refused the decoded coverage bundle on case {case_index}: {error}",
+                        runner.id
+                    )
+                });
+            assert_eq!(
+                hash_buffers(&output),
+                hash_buffers(expected),
+                "Fix: {} produced a different result for the decoded coverage bundle on case {case_index} than the fixture oracle.",
+                runner.id
+            );
         }
     }
-
-    summary.backends_runnable = runners.len();
-    runners
-}
-
-fn build_backend_runner(registration: &'static BackendRegistration) -> Option<BackendRunner> {
-    backend_dispatches(registration.id).expect("valid backend registry").then_some(BackendRunner {
-        id: registration.id,
-        kind: BackendKind::Registered(registration),
-    })
-}
-
-fn force_link_backend_inventory() {
-    #[cfg(feature = "gpu")]
-    {
-        std::hint::black_box(vyre_driver_metal::METAL_BACKEND_ID);
-    }
-}
-
-fn unified_entries() -> Vec<UnifiedEntry> {
-    let canonical = vyre_foundation::operation::OperationRegistry::global()
-        .iter()
-        .map(|entry| UnifiedEntry {
-            id: entry.id,
-            build: entry.build,
-            test_inputs: entry.test_inputs,
-            expected_output: entry.expected_output,
-        });
-    canonical.chain(synthetic_entries()).collect()
 }

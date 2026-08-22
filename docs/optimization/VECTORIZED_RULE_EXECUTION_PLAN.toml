@@ -17,7 +17,7 @@ owns = [
   "filter, projection, join, aggregation, anti-join, and semi-join operator boundaries",
   "operator fusion and materialization decisions for fact queries",
   "portable relational plan serialization boundary",
-  "CPU vector, GPU batch, and portable fallback route eligibility evidence",
+  "CPU vector, GPU batch, and portable reference route eligibility evidence",
 ]
 does_not_own = [
   "rule semantics, owned by scanner rule contracts and SEMANTIC_FACT_INDEX_SCHEMA",
@@ -39,7 +39,7 @@ aggregation = "groups by stable keys and emits counts, distincts, min/max, or ru
 [execution_routes]
 cpu_vector = "default route for fact relations using cache-sized batches and SIMD-friendly loops"
 gpu_batch = "admitted only when transfer, residency, and output equivalence evidence proves benefit"
-portable_iterator = "fallback route for small, unsupported, or debugging workloads where vector overhead exceeds benefit"
+portable_iterator = "reference route for small, unsupported, or debugging workloads where vector overhead exceeds benefit"
 substrait_boundary = "portable plans may be serialized only when every function, type, and extension anchor is declared"
 
 [fusion_policy]

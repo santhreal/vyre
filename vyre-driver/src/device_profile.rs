@@ -7,6 +7,9 @@
 
 use vyre_foundation::optimizer::AdapterCaps;
 use vyre_foundation::validate;
+use vyre_foundation::{
+    CooperativeWidth, ElementPolicy, GeometryRequirements, GeometryStrategy, LaunchGeometry,
+};
 
 /// Quality class for backend timing data exposed through [`DeviceProfile`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -45,6 +48,15 @@ pub struct DeviceProfile {
     pub supports_indirect_dispatch: bool,
     /// The backend lowers distributed collective communication nodes.
     pub supports_distributed_collectives: bool,
+    /// The device can launch a cooperative grid, so a whole-grid fence runs
+    /// inside one kernel instead of needing a launch boundary per fence.
+    pub supports_cooperative_launch: bool,
+    /// Measured host cost of one kernel launch in nanoseconds, or `0` when the
+    /// backend has not measured it.
+    pub per_launch_overhead_ns: u64,
+    /// Measured one-time cost of bringing up persistent execution in
+    /// nanoseconds, or `0` when the backend has not measured it.
+    pub persistent_setup_overhead_ns: u64,
     /// The backend supports compile-time specialization constants.
     pub supports_specialization_constants: bool,
     /// The backend lowers binary16 natively.
@@ -118,6 +130,9 @@ impl DeviceProfile {
             supports_subgroup_ops: false,
             supports_indirect_dispatch: false,
             supports_distributed_collectives: false,
+            supports_cooperative_launch: false,
+            per_launch_overhead_ns: 0,
+            persistent_setup_overhead_ns: 0,
             supports_specialization_constants: false,
             supports_f16: false,
             supports_bf16: false,
@@ -150,8 +165,14 @@ impl DeviceProfile {
     }
 
     /// Build a profile from the stable backend trait capability methods.
+    ///
+    /// This is the neutral profile: every fact the trait can answer, and a
+    /// conservative value for every fact it cannot. A backend that knows more
+    /// overrides the fields it knows and takes the rest from here, rather than
+    /// respelling forty fields; one that spelled them all had already lost two
+    /// of them.
     #[must_use]
-    pub fn from_backend(backend: &dyn crate::backend::VyreBackend) -> Self {
+    pub fn from_backend<B: crate::backend::VyreBackend + ?Sized>(backend: &B) -> Self {
         let max_workgroup_size = backend.max_workgroup_size();
         Self {
             backend: backend.id(),
@@ -161,6 +182,9 @@ impl DeviceProfile {
             supports_specialization_constants: false,
             supports_f16: backend.supports_f16(),
             supports_bf16: backend.supports_bf16(),
+            supports_cooperative_launch: backend.supports_grid_sync(),
+            per_launch_overhead_ns: 0,
+            persistent_setup_overhead_ns: 0,
             supports_trap_propagation: false,
             supports_tensor_cores: backend.supports_tensor_cores(),
             has_mul_high: false,
@@ -205,7 +229,32 @@ impl DeviceProfile {
             has_transcendental_polynomial_emit: true,
             supports_distributed_collectives: self.supports_distributed_collectives,
             max_native_int_width: self.max_native_int_width,
+            supports_tensor_cores: self.supports_tensor_cores,
+            max_shared_memory_bytes: self.max_shared_memory_bytes,
+            regs_per_thread_max: self.regs_per_thread_max,
+            subgroup_size: self.subgroup_size,
         }
+    }
+
+    /// Whole-program compile facts.
+    ///
+    /// The compiler validates and ranks against these, so every field is what the
+    /// backend reported. A zero means the backend measured nothing, and the
+    /// compiler treats a zero budget or a zero cost as unknown rather than as a
+    /// limit of zero.
+    #[must_use]
+    pub fn compile_facts(self) -> vyre_megakernel::DeviceFacts {
+        vyre_megakernel::DeviceFacts::new(
+            self.validation_capabilities(),
+            self.max_invocations_per_workgroup,
+        )
+        .with_cooperative_launch(self.supports_cooperative_launch)
+        .with_device_timestamps(self.supports_device_timestamps)
+        .with_occupancy(self.regs_per_thread_max, self.max_shared_memory_bytes)
+        .with_launch_costs(
+            self.per_launch_overhead_ns,
+            self.persistent_setup_overhead_ns,
+        )
     }
 
     /// Optimizer capability projection.
@@ -239,6 +288,23 @@ impl DeviceProfile {
     pub const fn strategy_capabilities(self) -> validate::BackendCapabilities {
         self.validation_capabilities()
     }
+
+    /// Workgroups a grid-stride kernel should ask for to keep the device busy.
+    ///
+    /// `compute_units` is `0` when the backend cannot report it, and one
+    /// workgroup is not what unknown means: a one-million-element reduction
+    /// launched at one workgroup measured 0.08x of a multithreaded CPU
+    /// baseline. An unknown count is therefore no cap at all, and the receiving
+    /// builder clamps the request down to what the shape admits, so the value
+    /// is a ceiling and never an index.
+    #[must_use]
+    pub const fn grid_stride_workgroups(self) -> u32 {
+        if self.compute_units == 0 {
+            u32::MAX
+        } else {
+            self.compute_units
+        }
+    }
 }
 
 impl From<DeviceProfile> for AdapterCaps {
@@ -255,6 +321,116 @@ impl From<DeviceProfile> for validate::BackendCapabilities {
     }
 }
 
+impl GeometryStrategy for DeviceProfile {
+    fn rank_geometries(
+        &self,
+        requirements: &GeometryRequirements,
+        problem_elements: u32,
+    ) -> Vec<LaunchGeometry> {
+        if requirements.min_shared_bytes > self.max_shared_memory_bytes
+            && self.max_shared_memory_bytes > 0
+        {
+            return Vec::new();
+        }
+
+        let max_x = self
+            .max_invocations_per_workgroup
+            .min(self.max_workgroup_size[0])
+            .max(1);
+        let warp_floor = if self.subgroup_size > 0 {
+            self.subgroup_size.min(max_x).max(1)
+        } else {
+            1
+        };
+
+        let allowed_widths: Vec<u32> = match requirements.cooperative_width {
+            CooperativeWidth::Exactly(exact) => {
+                if exact <= max_x && exact > 0 {
+                    vec![exact]
+                } else {
+                    return Vec::new();
+                }
+            }
+            CooperativeWidth::AtLeast(min_w) => {
+                if min_w > max_x {
+                    return Vec::new();
+                }
+                let mut widths = Vec::new();
+                let mut w = min_w.max(1).next_power_of_two();
+                while w <= max_x {
+                    widths.push(w);
+                    match w.checked_mul(2) {
+                        Some(next) if next > w => w = next,
+                        _ => break,
+                    }
+                }
+                widths
+            }
+            CooperativeWidth::Agnostic => {
+                let mut widths = Vec::new();
+                let start = warp_floor.next_power_of_two();
+                let mut w = 1_u32;
+                while w <= max_x {
+                    if w >= start || w == 1 {
+                        widths.push(w);
+                    }
+                    match w.checked_mul(2) {
+                        Some(next) if next > w => w = next,
+                        _ => break,
+                    }
+                }
+                if widths.is_empty() {
+                    widths.push(max_x);
+                }
+                widths
+            }
+        };
+
+        let epi = match requirements.per_invocation_elements {
+            ElementPolicy::Scalar => 1,
+            ElementPolicy::Multiple(factor) => factor.max(1),
+            ElementPolicy::Any => 1,
+        };
+
+        let mut candidates: Vec<LaunchGeometry> = allowed_widths
+            .into_iter()
+            .map(|w| {
+                let elements_per_wg = (w as u64).saturating_mul(epi as u64).max(1);
+                let grid_x = if problem_elements == 0 {
+                    1
+                } else {
+                    ((problem_elements as u64).div_ceil(elements_per_wg) as u32).max(1)
+                };
+                LaunchGeometry {
+                    workgroup: [w, 1, 1],
+                    grid: [grid_x, 1, 1],
+                    elements_per_invocation: epi,
+                    pipeline_stages: 1,
+                    shared_bytes: requirements.min_shared_bytes,
+                }
+            })
+            .collect();
+
+        candidates.sort_by(|a, b| {
+            let width_a = a.workgroup[0];
+            let width_b = b.workgroup[0];
+            if problem_elements >= 1024 {
+                width_b.cmp(&width_a)
+            } else if problem_elements > 0 {
+                let cover_a = (width_a * a.elements_per_invocation).abs_diff(problem_elements);
+                let cover_b = (width_b * b.elements_per_invocation).abs_diff(problem_elements);
+                cover_a.cmp(&cover_b).then_with(|| width_b.cmp(&width_a))
+            } else {
+                width_b.cmp(&width_a)
+            }
+        });
+
+        candidates
+    }
+}
+
+// Inline: `vyre_driver::device_profile` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use super::{DeviceProfile, DeviceTimingQuality};
@@ -283,6 +459,9 @@ mod tests {
             supports_subgroup_ops: true,
             supports_indirect_dispatch: true,
             supports_distributed_collectives: true,
+            supports_cooperative_launch: true,
+            per_launch_overhead_ns: 5_000,
+            persistent_setup_overhead_ns: 25_000,
             supports_specialization_constants: true,
             supports_f16: true,
             supports_bf16: false,

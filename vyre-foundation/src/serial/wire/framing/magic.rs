@@ -2,10 +2,9 @@
 
 /// Leading magic bytes for the vyre IR wire format.
 ///
-/// The `VYRE` tag identifies the stable schema documented in
-/// `docs/wire-format.md`; the version byte pair [`WIRE_FORMAT_VERSION`]
-/// immediately after the magic identifies which schema version the
-/// payload follows.
+/// The `VYRE` tag identifies the stable schema; the version byte pair
+/// [`WIRE_FORMAT_VERSION`] immediately after the magic identifies which
+/// schema version the payload follows.
 pub const MAGIC: &[u8; 4] = b"VYRE";
 
 /// Current wire-format schema version. Incremented on any
@@ -29,7 +28,8 @@ pub const MAGIC: &[u8; 4] = b"VYRE";
 /// [`crate::error::IrError::VersionMismatch`]) and a reserved
 /// dialect-manifest section after the header for rev-3+ readers. Rev
 /// 2 was never released; versions go 1 to 3 directly.
-pub const WIRE_FORMAT_VERSION: u16 = 6;
+/// Rev 7 adds Tile values and tile operation node variants.
+pub const WIRE_FORMAT_VERSION: u16 = 7;
 
 /// Oldest schema version this decoder reads.
 ///

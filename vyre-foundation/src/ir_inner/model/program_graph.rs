@@ -3,13 +3,13 @@
 //! `ProgramGraph` is composition metadata over existing Vyre IR. It is not a
 //! second neural IR: every executable node remains an ordinary `Program`.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use rustc_hash::FxHashMap;
 use thiserror::Error;
 
+use super::op_signature::{BufferAccess, DataType};
 use super::program::Program;
-use super::types::{BufferAccess, DataType};
 
 /// Canonical graph-local identity for one connected semantic value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -223,12 +223,46 @@ impl ProgramGraph {
 
     /// Lift one frontend program into the canonical graph boundary.
     ///
-    /// Every host-visible buffer becomes one typed external graph value. Workgroup-local
-    /// scratch remains internal to the node because callers cannot bind or retain it.
+    /// Runtime-sized buffers retain their unresolved zero extent. Call
+    /// [`Self::from_program_with_runtime_counts`] when caller bytes establish
+    /// exact element counts for artifact resource planning.
     pub fn from_program(
         node_name: impl Into<String>,
         program: Program,
     ) -> Result<Self, ProgramGraphError> {
+        Self::from_program_with_runtime_counts(node_name, program, &BTreeMap::new())
+    }
+
+    /// Lift a frontend program while resolving runtime-sized host buffers.
+    ///
+    /// `runtime_counts` keys Program buffer names and supplies exact logical
+    /// element counts. Only host-visible declarations with `count == 0` accept
+    /// an override; stale names and static declarations fail closed.
+    ///
+    /// Every host-visible buffer becomes one typed external graph value.
+    /// Workgroup-local scratch remains internal because callers cannot bind or
+    /// retain it.
+    pub fn from_program_with_runtime_counts(
+        node_name: impl Into<String>,
+        program: Program,
+        runtime_counts: &BTreeMap<String, u64>,
+    ) -> Result<Self, ProgramGraphError> {
+        let node_name = node_name.into();
+        for buffer_name in runtime_counts.keys() {
+            let Some(buffer) = program.buffer(buffer_name) else {
+                return Err(ProgramGraphError::MissingBuffer {
+                    node: node_name,
+                    buffer: buffer_name.clone(),
+                });
+            };
+            if buffer.access() == BufferAccess::Workgroup || buffer.count() != 0 {
+                return Err(ProgramGraphError::BufferContract {
+                    node: node_name,
+                    buffer: buffer_name.clone(),
+                    reason: "runtime element-count override requires a host-visible declaration with count == 0".to_string(),
+                });
+            }
+        }
         let mut graph = Self::new();
         let mut inputs = Vec::new();
         let mut outputs = Vec::new();
@@ -236,11 +270,16 @@ impl ProgramGraph {
             if buffer.access() == BufferAccess::Workgroup {
                 continue;
             }
+            let element_count = if buffer.count() == 0 {
+                runtime_counts.get(buffer.name()).copied().unwrap_or(0)
+            } else {
+                u64::from(buffer.count())
+            };
             let contract = ValueContract {
                 dtype: buffer.element(),
-                shape: vec![ShapeDim::Known(u64::from(buffer.count()))],
+                shape: vec![ShapeDim::Known(element_count)],
                 access: buffer.access(),
-                lifetime: if buffer.is_output() || buffer.access() == BufferAccess::WriteOnly {
+                lifetime: if buffer.is_backend_allocated_output() {
                     ValueLifetime::Output
                 } else if buffer.access() == BufferAccess::ReadWrite {
                     ValueLifetime::Retained
@@ -318,8 +357,8 @@ impl ProgramGraph {
     /// Append one Program node after all of its producers.
     ///
     /// Construction order is the topological schedule. This makes cycles
-    /// unrepresentable except for explicit, type-preserving retained-value
-    /// transitions declared through `retained_successor_of`.
+    /// unrepresentable except for explicit retained-value successions and the
+    /// final retained-to-output transition of a caller-visible result buffer.
     pub fn add_node(
         &mut self,
         name: impl Into<String>,
@@ -403,9 +442,20 @@ impl ProgramGraph {
                         prior: prior_id,
                     });
                 }
-                if prior.contract.lifetime != ValueLifetime::Retained
-                    || output.contract.lifetime != ValueLifetime::Retained
-                    || prior.contract != output.contract
+                let caller_output_transition = prior.contract.lifetime == ValueLifetime::Retained
+                    && output.contract.lifetime == ValueLifetime::Output
+                    && prior.contract.dtype == output.contract.dtype
+                    && prior.contract.shape == output.contract.shape
+                    && prior.contract.access == output.contract.access
+                    && program
+                        .buffers()
+                        .iter()
+                        .find(|buffer| buffer.name() == output.buffer)
+                        .is_some_and(|buffer| buffer.is_output());
+                if !caller_output_transition
+                    && (prior.contract.lifetime != ValueLifetime::Retained
+                        || output.contract.lifetime != ValueLifetime::Retained
+                        || prior.contract != output.contract)
                 {
                     return Err(ProgramGraphError::InvalidRetainedTransition {
                         output: output.name.clone(),

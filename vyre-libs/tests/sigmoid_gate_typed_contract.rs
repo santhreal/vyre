@@ -2,15 +2,12 @@
 
 #![forbid(unsafe_code)]
 
+mod wire_words;
+use wire_words::bf16_word;
+
 use vyre::ir::DataType;
 use vyre_libs::nn::activation::sigmoid_gate_typed;
 use vyre_reference::value::Value;
-
-fn bf16_word(value: f32) -> u16 {
-    let bits = value.to_bits();
-    let rounding_bias = 0x7fff + ((bits >> 16) & 1);
-    ((bits.wrapping_add(rounding_bias)) >> 16) as u16
-}
 
 fn execute_bf16(gate: &[f32], branch: &[f32]) -> Vec<u16> {
     let encode = |values: &[f32]| {
@@ -29,11 +26,7 @@ fn execute_bf16(gate: &[f32], branch: &[f32]) -> Vec<u16> {
     .expect("Fix: BF16 sigmoid gate must build");
     let outputs = vyre_reference::reference_eval(
         &program,
-        &[
-            Value::from(encode(gate)),
-            Value::from(encode(branch)),
-            Value::from(vec![0; gate.len() * size_of::<u16>()]),
-        ],
+        &[Value::from(encode(gate)), Value::from(encode(branch))],
     )
     .expect("Fix: BF16 sigmoid gate must execute");
     outputs[0]

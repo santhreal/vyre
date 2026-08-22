@@ -1,15 +1,15 @@
-//! Adversarial tests for `vyre_libs::scan::regex_compile`.
+//! Adversarial tests for `vyre_libs::pattern::regex_compile`.
 //!
 //! Exercises the regex AST → NfaPlan frontend with pathological,
 //! malformed, and boundary inputs. Every test asserts a specific
 //! contract  -  no panics, no silent swallowing, precise error
 //! variants with correct metadata.
 
-#![cfg(feature = "matching-regex")]
+#![cfg(feature = "pattern-regex")]
 
-use vyre_libs::scan::{RegexCompileError, compile_regex_set};
+use vyre_libs::pattern::{compile_regex_set, RegexCompileError};
 
-const STATE_CAP: usize = vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP * 32;
+const STATE_CAP: usize = vyre_libs::nfa::subgroup_nfa::LANES_PER_SUBGROUP * 32;
 
 // ---------------------------------------------------------------------------
 // 1. Malformed regex parser inputs  -  must return RegexCompileError::Parse

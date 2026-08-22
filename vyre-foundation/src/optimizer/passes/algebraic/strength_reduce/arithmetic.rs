@@ -1,3 +1,4 @@
+use super::duplication::may_duplicate;
 use crate::ir::{BinOp, Expr, UnOp};
 use crate::optimizer::passes::algebraic::const_fold::is_float_expr;
 
@@ -187,6 +188,10 @@ pub(super) fn shift_add_decompose(x: &Expr, constant: &Expr) -> Option<Expr> {
     if let Some(chain) = shift_add_chain(x, c) {
         return Some(chain);
     }
+    // Both fallback shapes below write `x` into two terms.
+    if !may_duplicate(x, 2) {
+        return None;
+    }
     for hi in (1u32..=16).rev() {
         let high = 1u32 << hi;
         if high > c {
@@ -232,7 +237,7 @@ pub(super) fn shift_add_decompose(x: &Expr, constant: &Expr) -> Option<Expr> {
 /// `21`, `27`, `31`) while the cost gate avoids replacing one multiply with a
 /// longer ALU chain.
 pub(super) fn shift_add_chain(x: &Expr, c: u32) -> Option<Expr> {
-    if c <= 1 || c.is_power_of_two() || operand_duplication_cost(x) > 1 {
+    if c <= 1 || c.is_power_of_two() {
         return None;
     }
 
@@ -242,6 +247,10 @@ pub(super) fn shift_add_chain(x: &Expr, c: u32) -> Option<Expr> {
     }
     let cost = shift_add_cost(&terms);
     if cost > MAX_SHIFT_ADD_CHAIN_COST {
+        return None;
+    }
+    // The chain writes `x` once per term.
+    if !may_duplicate(x, u32::try_from(terms.len()).unwrap_or(u32::MAX)) {
         return None;
     }
 
@@ -305,23 +314,6 @@ fn shifted_term(x: &Expr, shift: u32) -> Expr {
         x.clone()
     } else {
         Expr::shl(x.clone(), Expr::u32(shift))
-    }
-}
-
-fn operand_duplication_cost(expr: &Expr) -> u32 {
-    match expr {
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => 0,
-        Expr::Load { .. } | Expr::BufLen { .. } => 1,
-        _ => 2,
     }
 }
 
@@ -451,15 +443,21 @@ pub(super) struct DivMagic {
 
 /// Compute Granlund-Montgomery magic numbers for unsigned 32-bit division.
 ///
-/// Panics if `d` is 0 or 1 or a power of two (use `power_of_two_shift`
-/// for those cases  -  they're even cheaper).
-///
 /// Algorithm D from Hacker's Delight, Chapter 10 (Henry S. Warren Jr.).
 /// Uses u32 wrapping arithmetic matching Warren's original C code.
+///
+/// # Panics
+///
+/// Panics if `d` is 0, 1, or a power of two. Those divisors belong to
+/// `power_of_two_shift`, which is cheaper, and the sequence derived here is
+/// wrong for them: the check holds in release builds because a magic number
+/// computed outside the domain emits a division that returns wrong results
+/// instead of failing.
 pub(super) fn compute_div_magic(d: u32) -> DivMagic {
-    debug_assert!(
+    assert!(
         d >= 2 && !d.is_power_of_two(),
-        "d must be >= 2 and not a power of 2"
+        "Fix: {d} is outside the Granlund-Montgomery domain; route 0, 1, and powers of two \
+         through power_of_two_shift."
     );
 
     let mut needs_fixup = false;
@@ -512,16 +510,36 @@ pub(super) fn compute_div_magic(d: u32) -> DivMagic {
     }
 }
 
+/// How many times the Granlund-Montgomery sequence for `/ d` reads its
+/// dividend. The fixup form reads `n` three times: twice through `t`
+/// (`t = mulhi(n, M)` appearing as the left term in the sum and inside `n - t`)
+/// and once directly in `n - t`.
+///
+/// A divisor outside the transform's domain reads it once, because the
+/// sequence is never built for one; `compute_div_magic` divides by `d` and
+/// must not be reached with a divisor it cannot factor.
+pub(super) fn div_operand_copies(d: u32) -> u32 {
+    if d <= 1 || d.is_power_of_two() {
+        return 1;
+    }
+    if compute_div_magic(d).needs_fixup {
+        3
+    } else {
+        1
+    }
+}
+
 /// Emit the Granlund-Montgomery sequence for `dividend / d`.
 ///
-/// Returns `None` if `d` is 0, 1, or a power of two (handled elsewhere).
-///
+/// Returns `None` if `d` is 0, 1, or a power of two (handled elsewhere), or if
+/// evaluating `dividend` (three times for the fixup form, once for non-fixup)
+/// exceeds the duplication budget or is not safe.
 /// For non-fixup: `mulhi(n, M) >> s`  -  2 instructions, ~5 GPU cycles.
 /// For fixup:     `t = mulhi(n, M); (t + ((n - t) >> 1)) >> (s - 1)`
 ///                 -  5 instructions, ~9 GPU cycles.
 /// Original `Div`: 1 instruction but ~50-100 GPU cycles (software).
 pub(super) fn granlund_montgomery_div(dividend: &Expr, d: u32) -> Option<Expr> {
-    if d <= 1 || d.is_power_of_two() {
+    if d <= 1 || d.is_power_of_two() || !may_duplicate(dividend, div_operand_copies(d)) {
         return None;
     }
 
@@ -623,6 +641,123 @@ mod tests {
             let t = hi;
             let half = (n.wrapping_sub(t)) >> 1;
             (t.wrapping_add(half)) >> magic.shift.saturating_sub(1)
+        }
+    }
+
+    #[test]
+    fn div_operand_copies_matches_exact_dividend_evaluations() {
+        for d in 0..=1000 {
+            let copies = div_operand_copies(d);
+            if d <= 1 || d.is_power_of_two() {
+                assert_eq!(copies, 1, "d={d} outside transform domain must return 1");
+            } else {
+                let magic = compute_div_magic(d);
+                if magic.needs_fixup {
+                    assert_eq!(copies, 3, "d={d} with fixup must report 3 dividend copies");
+                } else {
+                    assert_eq!(copies, 1, "d={d} without fixup must report 1 dividend copy");
+                }
+            }
+        }
+        for d in [3, 7, 10, 127, 255, 1000, 65535, 0x7FFF_FFFF, u32::MAX - 1] {
+            let copies = div_operand_copies(d);
+            if d <= 1 || d.is_power_of_two() {
+                assert_eq!(copies, 1);
+            } else {
+                let magic = compute_div_magic(d);
+                if magic.needs_fixup {
+                    assert_eq!(copies, 3, "extreme d={d} with fixup must report 3 copies");
+                } else {
+                    assert_eq!(copies, 1, "extreme d={d} without fixup must report 1 copy");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn granlund_montgomery_duplication_budget_enforcement() {
+        // Fixup divisors (e.g. 7, 14) vs non-fixup divisors (e.g. 3, 5, 6, 9)
+        assert!(compute_div_magic(7).needs_fixup);
+        assert!(compute_div_magic(14).needs_fixup);
+        assert!(!compute_div_magic(3).needs_fixup);
+        assert!(!compute_div_magic(5).needs_fixup);
+
+        let leaf_dividend = Expr::var("x"); // cost 1
+        let two_node_dividend = Expr::negate(Expr::var("x")); // cost 2
+        let three_node_dividend = Expr::add(Expr::var("x"), Expr::var("y")); // cost 3
+                                                                             // Non-fixup divisor (copies = 1):
+                                                                             // 1 copy adds 0 extra nodes, so leaf, 2-node, and 3-node dividends all succeed.
+        assert!(
+            granlund_montgomery_div(&leaf_dividend, 3).is_some(),
+            "non-fixup division of leaf must succeed"
+        );
+        assert!(
+            granlund_montgomery_div(&two_node_dividend, 3).is_some(),
+            "non-fixup division of 2-node expr must succeed (no duplication)"
+        );
+        assert!(
+            granlund_montgomery_div(&three_node_dividend, 3).is_some(),
+            "non-fixup division of 3-node expr must succeed (no duplication)"
+        );
+
+        // Fixup divisor (copies = 3, extra = 2):
+        // Leaf (cost 1): 1 * 2 = 2 <= MAX_DUPLICATED_NODES (2) -> allowed
+        assert!(
+            granlund_montgomery_div(&leaf_dividend, 7).is_some(),
+            "fixup division of single leaf variable must succeed within duplication budget"
+        );
+
+        // 2-node dividend (cost 2): 2 * 2 = 4 > MAX_DUPLICATED_NODES (2) -> rejected
+        // (With the stale copies = 2 bug, cost 2 * 1 = 2 would incorrectly pass).
+        assert!(
+            granlund_montgomery_div(&two_node_dividend, 7).is_none(),
+            "fixup division of 2-node expr must be rejected because 3 copies exceed duplication budget"
+        );
+        assert!(
+            granlund_montgomery_div(&two_node_dividend, 14).is_none(),
+            "fixup division of 2-node expr must be rejected for all fixup divisors"
+        );
+
+        // 3-node dividend (cost 3): 3 * 2 = 6 > MAX_DUPLICATED_NODES (2) -> rejected
+        assert!(
+            granlund_montgomery_div(&three_node_dividend, 7).is_none(),
+            "fixup division of 3-node expr must be rejected"
+        );
+    }
+
+    fn count_var_in_expr(expr: &Expr, name: &str) -> u32 {
+        let mut count = 0;
+        crate::visit::for_each_subexpr(expr, &mut |candidate| {
+            if let Expr::Var(v) = candidate {
+                if v.as_str() == name {
+                    count += 1;
+                }
+            }
+        });
+        count
+    }
+
+    #[test]
+    fn div_operand_copies_matches_emitted_ast_occurrences() {
+        for d in 2u32..=1000 {
+            if d.is_power_of_two() {
+                continue;
+            }
+            let copies = div_operand_copies(d);
+            let magic = compute_div_magic(d);
+            if magic.needs_fixup {
+                assert_eq!(copies, 3, "d={d} needs fixup so copies must be 3");
+            } else {
+                assert_eq!(copies, 1, "d={d} does not need fixup so copies must be 1");
+            }
+            let emitted = granlund_montgomery_div(&Expr::var("dividend_leaf"), d)
+                .expect("leaf dividend must strength-reduce");
+            let actual_ast_count = count_var_in_expr(&emitted, "dividend_leaf");
+            assert_eq!(
+                actual_ast_count, copies,
+                "d={d} (fixup={}): AST occurrences ({actual_ast_count}) must match div_operand_copies ({copies})",
+                magic.needs_fixup
+            );
         }
     }
 }

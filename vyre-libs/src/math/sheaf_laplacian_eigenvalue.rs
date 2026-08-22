@@ -1,0 +1,421 @@
+//! Sheaf Laplacian eigenvalue primitive (#P-PRIM-9).
+//!
+//! Extracts the dominant eigenpair of the **diagonal** sheaf Laplacian.
+//!
+//! The restriction is supplied as a diagonal (`restriction_diag`), so the operator this primitive
+//! represents is `diag(r)`: its eigenvalues are exactly the diagonal entries `r[i]` and its
+//! eigenvectors are the standard basis vectors `e_i`. The dominant eigenpair is therefore the
+//! CLOSED FORM
+//!
+//! ```text
+//!   lambda = max_i r[i]
+//!   v      = e_argmax   (unit indicator at the arg-max index; first arg-max on ties)
+//! ```
+//!
+//! This is exact, no power iteration and no square root are needed (a power iteration on a
+//! diagonal operator converges to this same eigenpair, immediately). The `iterations` parameter is
+//! retained for interface stability but the answer is iteration-independent. All values are 16.16
+//! fixed point on the GPU/IR path (`r`, `v`) and `f64` on the CPU reference path.
+
+use std::sync::Arc;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
+use crate::builder::cooperative::{for_each_index, Argmax, KeyKind, LANES};
+
+/// Op id.
+pub const OP_ID: &str = "vyre-libs::math::sheaf_laplacian_eigenvalue";
+/// Inner scan-phase op id.
+///
+/// The `power_iteration_phase` suffix is a LEGACY-STABLE identity string: it is pinned in the
+/// generated conformance evidence (`release/evidence/conformance/*.json`), the primitive catalog,
+/// and the generated op docs, so it is retained verbatim as an identifier rather than renamed. The
+/// phase itself no longer runs a power iteration, it performs the exact single-pass diagonal
+/// max/arg-max scan below (the diagonal operator's dominant eigenpair is closed-form).
+const POWER_ITERATION_PHASE_OP_ID: &str =
+    "vyre-libs::math::sheaf_laplacian_eigenvalue::power_iteration_phase";
+
+/// Workgroup scratch the diagonal entry reduces through, one u32 entry per lane.
+const SHEAF_MAX_SCRATCH: &str = "eig_max_scratch";
+
+/// Workgroup scratch the arg-max index reduces through, one u32 entry per lane.
+const SHEAF_ARGMAX_SCRATCH: &str = "eig_argmax_scratch";
+
+/// Build a sheaf Laplacian eigenvalue Program.
+///
+/// Inputs:
+/// - `restriction_diag`: `n * d` diagonal sheaf Laplacian.
+/// - `v`: `n * d` vector; OVERWRITTEN with the dominant eigenvector `e_argmax` (the initial
+///   contents are ignored (the diagonal eigenvector does not depend on a starting vector)).
+/// - `lambda`: 1-element output eigenvalue = `max_i r[i]`.
+///
+/// The max and its index reduce through workgroup scratch, which is per-workgroup and never
+/// mapped, so the Program's only writable outputs are still exactly `v` and `lambda`.
+#[must_use]
+pub fn sheaf_laplacian_eigenvalue(
+    restriction_diag: &str,
+    v: &str,
+    lambda: &str,
+    n_nodes: u32,
+    d: u32,
+    iterations: u32,
+) -> Program {
+    // `iterations` is accepted for interface stability. The dominant eigenpair of a diagonal
+    // operator is the closed form below regardless of iteration count (a power iteration converges
+    // to it immediately), so it does not influence the emitted program.
+    let _ = iterations;
+    if n_nodes == 0 || d == 0 {
+        return trap_program(OP_ID, Some((lambda, DataType::U32)), format!(
+            "Fix: sheaf_laplacian_eigenvalue requires n_nodes > 0 and d > 0, got n_nodes={n_nodes}, d={d}."
+        ));
+    }
+    let Some(cells) = n_nodes.checked_mul(d) else {
+        return trap_program(OP_ID, Some((lambda, DataType::U32)), format!(
+            "Fix: sheaf_laplacian_eigenvalue n_nodes*d overflows vector cell count for n_nodes={n_nodes}, d={d}; shard the sheaf spectrum before GPU dispatch."
+        ));
+    };
+
+    // Closed-form dominant eigenpair of diag(r): a cooperative argmax over the `cells` diagonal
+    // entries, then `lambda = max r` and the unit eigenvector `e_argmax`.
+    //
+    // Ties keep the FIRST index, matching the CPU reference: the reduction takes the maximum entry
+    // and then the smallest index attaining it, which is what a strict-`>` sequential scan keeps.
+    // `one_fp_buf[0]` is 1.0 in 16.16 (the single non-zero eigenvector entry).
+    let one_fp = Expr::load("one_fp_buf", Expr::u32(0));
+    let scan = Argmax {
+        op_id: OP_ID,
+        count: cells,
+        tile: LANES,
+        key_scratch: SHEAF_MAX_SCRATCH,
+        key_kind: KeyKind::U32,
+        index_scratch: SHEAF_ARGMAX_SCRATCH,
+        var: "eig_scan_i",
+    };
+    let mut nodes = vec![Node::let_bind("local", Expr::LocalId { axis: 0 })];
+    nodes.extend(scan.nodes(|index| Expr::load(restriction_diag, index)));
+    nodes.extend([
+        Node::let_bind("eig_argmax", Expr::load(SHEAF_ARGMAX_SCRATCH, Expr::u32(0))),
+        // One writer for the eigenvalue, `cells` writers for the eigenvector: every lane of the
+        // first workgroup writes a disjoint slice of `v`, so the answer stays grid-invariant
+        // without the whole body collapsing onto one lane.
+        Node::if_then(
+            Expr::and(
+                Expr::is_first_workgroup(),
+                Expr::eq(Expr::var("local"), Expr::u32(0)),
+            ),
+            vec![Node::store(
+                lambda,
+                Expr::u32(0),
+                Expr::load(SHEAF_MAX_SCRATCH, Expr::u32(0)),
+            )],
+        ),
+        Node::if_then(
+            Expr::is_first_workgroup(),
+            vec![for_each_index(
+                cells,
+                LANES,
+                "eig_write_j",
+                vec![Node::store(
+                    v,
+                    Expr::var("eig_write_j"),
+                    Expr::select(
+                        Expr::eq(Expr::var("eig_write_j"), Expr::var("eig_argmax")),
+                        one_fp.clone(),
+                        Expr::u32(0),
+                    ),
+                )],
+            )],
+        ),
+    ]);
+
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(restriction_diag, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(cells),
+            BufferDecl::storage(v, 1, BufferAccess::ReadWrite, DataType::U32).with_count(cells),
+            BufferDecl::storage(lambda, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+            BufferDecl::storage("one_fp_buf", 3, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(1),
+            BufferDecl::workgroup(SHEAF_MAX_SCRATCH, LANES, DataType::U32),
+            BufferDecl::workgroup(SHEAF_ARGMAX_SCRATCH, LANES, DataType::U32),
+        ],
+        [LANES, 1, 1],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::Region {
+                generator: Ident::from(POWER_ITERATION_PHASE_OP_ID),
+                source_region: Some(Ident::from(OP_ID)),
+                // The reference and the GPU infer the dispatch grid from buffer shapes, so a
+                // count-`cells` vector spawns more than one workgroup once `cells` exceeds the
+                // tile. Every workgroup reduces its own scratch and only the first one writes
+                // `lambda` and `v`, which keeps the answer grid-invariant with the barriers
+                // uniform: the branch is per-workgroup, never per-lane.
+                body: Arc::new(nodes),
+            }],
+        )],
+    )
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || sheaf_laplacian_eigenvalue("r", "v", "l", 4, 1, 4),
+        Some(|| {
+            let to_bytes = |words: &[u32]| vyre_primitives::wire::pack_u32_slice(words);
+            vec![vec![
+                to_bytes(&[0; 4]),       // r
+                to_bytes(&[0; 4]),       // v
+                to_bytes(&[0]),          // l
+                to_bytes(&[1u32 << 16]), // one_fp_buf
+            ]]
+        }),
+        Some(|| {
+            // All-zero diagonal: max is 0 at arg-max index 0, so lambda = 0 and the eigenvector is
+            // e_0 = [1.0, 0, 0, 0] in 16.16. The only writable outputs are `v` and `lambda`: the
+            // running max/arg-max are loop-carried locals, not storage buffers.
+            vec![vec![
+                vec![
+                    0x00, 0x00, 0x01, 0x00, // 1.0 in 16.16
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                ], // v = e_0
+                vec![0x00, 0x00, 0x00, 0x00], // l = max r = 0
+            ]]
+        }),
+    )
+}
+
+/// The largest diagonal entry in the fixture, which the phase selects.
+const EXPECTED_POWER_ITERATION_PHASE_BYTES: [u8; 4] = [50, 0, 0, 0];
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        POWER_ITERATION_PHASE_OP_ID,
+        || {
+            Program::wrapped(
+                vec![
+                    BufferDecl::storage("diag_in", 0, BufferAccess::ReadOnly, DataType::U32)
+                        .with_count(4),
+                    BufferDecl::output("max_out", 1, DataType::U32).with_count(1),
+                ],
+                [1, 1, 1],
+                vec![wrap_anonymous_region(
+                    POWER_ITERATION_PHASE_OP_ID,
+                    vec![
+                        Node::store("max_out", Expr::u32(0), Expr::load("diag_in", Expr::u32(0))),
+                        Node::loop_for(
+                            "i",
+                            Expr::u32(1),
+                            Expr::u32(4),
+                            vec![Node::store(
+                                "max_out",
+                                Expr::u32(0),
+                                Expr::max(
+                                    Expr::load("max_out", Expr::u32(0)),
+                                    Expr::load("diag_in", Expr::var("i")),
+                                ),
+                            )],
+                        ),
+                    ],
+                )],
+            )
+        },
+        Some(|| {
+            let to_bytes = |words: &[u32]| vyre_primitives::wire::pack_u32_slice(words);
+            vec![vec![to_bytes(&[10, 50, 30, 20])]]
+        }),
+        Some(|| vec![vec![EXPECTED_POWER_ITERATION_PHASE_BYTES.to_vec()]]),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn try_cpu_ref_into(
+        restriction_diag: &[f64],
+        init: &[f64],
+        iterations: u32,
+        v: &mut Vec<f64>,
+        next: &mut Vec<f64>,
+    ) -> Result<f64, String> {
+        if restriction_diag.len() < init.len() {
+            return Err("restriction_diag too short".to_string());
+        }
+        let lambda = vyre_reference::composition_witness::sheaf_dominant_spectrum_witness_into(
+            &restriction_diag[..init.len()],
+            iterations,
+            v,
+        );
+        next.clear();
+        next.extend_from_slice(v);
+        Ok(lambda)
+    }
+
+    fn try_cpu_ref(
+        restriction_diag: &[f64],
+        init: &[f64],
+        iterations: u32,
+    ) -> Result<(f64, Vec<f64>), String> {
+        let mut v = Vec::new();
+        let mut next = Vec::new();
+        let lambda = try_cpu_ref_into(restriction_diag, init, iterations, &mut v, &mut next)?;
+        Ok((lambda, v))
+    }
+
+    fn cpu_ref(restriction_diag: &[f64], init: &[f64], iterations: u32) -> (f64, Vec<f64>) {
+        try_cpu_ref(restriction_diag, init, iterations).unwrap()
+    }
+
+    #[test]
+    fn cpu_ref_diagonal_max() {
+        let r = vec![1.0, 2.0, 5.0, 3.0];
+        let v = vec![1.0, 1.0, 1.0, 1.0];
+        let (lambda, vec_final) = cpu_ref(&r, &v, 20);
+        // Dominant eigenvalue is the max diagonal entry 5.0; eigenvector is e_2.
+        assert_eq!(lambda, 5.0);
+        assert_eq!(vec_final, vec![0.0, 0.0, 1.0, 0.0]);
+    }
+
+    #[test]
+    fn cpu_ref_uniform() {
+        let r = vec![2.0, 2.0];
+        let v = vec![1.0, 0.0];
+        let (lambda, vec_final) = cpu_ref(&r, &v, 5);
+        assert_eq!(lambda, 2.0);
+        // Ties keep the first arg-max index: e_0.
+        assert_eq!(vec_final, vec![1.0, 0.0]);
+    }
+
+    #[test]
+    fn cpu_ref_zero() {
+        let r = vec![0.0, 0.0];
+        let v = vec![1.0, 1.0];
+        let (lambda, vec_final) = cpu_ref(&r, &v, 5);
+        assert_eq!(lambda, 0.0);
+        // No entry exceeds the 0.0 running max, so the arg-max stays at index 0.
+        assert_eq!(vec_final, vec![1.0, 0.0]);
+    }
+
+    #[test]
+    fn cpu_ref_single() {
+        let r = vec![42.0];
+        let v = vec![1.0];
+        let (lambda, vec_final) = cpu_ref(&r, &v, 1);
+        assert_eq!(lambda, 42.0);
+        assert_eq!(vec_final, vec![1.0]);
+    }
+
+    #[test]
+    fn cpu_ref_asymmetric() {
+        let r = vec![1.0, 10.0, 0.1];
+        let v = vec![1.0, 1.0, 1.0];
+        let (lambda, vec_final) = cpu_ref(&r, &v, 10);
+        assert_eq!(lambda, 10.0);
+        assert_eq!(vec_final, vec![0.0, 1.0, 0.0]);
+    }
+
+    #[test]
+    fn cpu_ref_is_iteration_independent() {
+        // The closed-form diagonal eigenpair does not depend on the iteration count.
+        let r = vec![1.0, 7.0, 3.0, 2.0];
+        let v = vec![1.0, 1.0, 1.0, 1.0];
+        let (lambda_1, vec_1) = cpu_ref(&r, &v, 1);
+        let (lambda_50, vec_50) = cpu_ref(&r, &v, 50);
+        assert_eq!(lambda_1, 7.0);
+        assert_eq!(lambda_1, lambda_50);
+        assert_eq!(vec_1, vec_50);
+        assert_eq!(vec_1, vec![0.0, 1.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn cpu_ref_into_reuses_vectors_and_truncates_stale_tail() {
+        let r = vec![1.0, 2.0, 5.0, 3.0];
+        let init = vec![1.0, 1.0, 1.0, 1.0];
+        let mut v = Vec::with_capacity(8);
+        let mut next = Vec::with_capacity(8);
+        v.extend([99.0; 8]);
+        next.extend([99.0; 8]);
+        let v_ptr = v.as_ptr();
+        let next_ptr = next.as_ptr();
+
+        let lambda = try_cpu_ref_into(&r, &init, 20, &mut v, &mut next).unwrap();
+
+        assert_eq!(lambda, 5.0);
+        assert_eq!(v, vec![0.0, 0.0, 1.0, 0.0]);
+        assert_eq!(v.len(), init.len());
+        assert_eq!(next.len(), init.len());
+        assert_eq!(v.as_ptr(), v_ptr);
+        assert_eq!(next.as_ptr(), next_ptr);
+    }
+
+    #[test]
+    fn generated_cpu_ref_matches_independent_arg_max() {
+        for case in 0..48 {
+            let n = 1 + (case % 8);
+            let restriction: Vec<f64> = (0..n)
+                .map(|idx| 0.5 + ((idx * 7 + case * 3) % 11) as f64 * 0.25)
+                .collect();
+            let init: Vec<f64> = vec![1.0; n];
+            let iterations = 1 + (case % 8) as u32;
+            let mut v = Vec::with_capacity(n + 3);
+            let mut next = Vec::with_capacity(n + 3);
+
+            let lambda =
+                try_cpu_ref_into(&restriction, &init, iterations, &mut v, &mut next).unwrap();
+            let (expected_lambda, expected_arg) = independent_diagonal_dominant(&restriction);
+
+            assert_eq!(lambda, expected_lambda, "case {case}: lambda");
+            for (idx, &value) in v.iter().enumerate() {
+                let want = if idx == expected_arg { 1.0 } else { 0.0 };
+                assert_eq!(value, want, "case {case} idx {idx}: eigenvector entry");
+            }
+        }
+    }
+
+    #[test]
+    fn try_cpu_ref_rejects_short_restriction_diag() {
+        let err = try_cpu_ref(&[1.0], &[1.0, 2.0], 1).unwrap_err();
+        assert!(err.contains("restriction_diag too short"), "{err}");
+    }
+
+    #[test]
+    fn program_buffer_count() {
+        let p = sheaf_laplacian_eigenvalue("r", "v", "l", 4, 1, 4);
+        // restriction_diag(RO) + v(RW) + lambda(RW) + one_fp_buf(RO), plus the two workgroup
+        // scratch buffers the cooperative argmax reduces through.
+        assert_eq!(p.buffers.len(), 6);
+        let writable = p
+            .buffers
+            .iter()
+            .filter(|b| b.access() == BufferAccess::ReadWrite)
+            .count();
+        assert_eq!(writable, 2, "only v and lambda are writable outputs");
+        let scratch = p
+            .buffers
+            .iter()
+            .filter(|b| b.access() == BufferAccess::Workgroup)
+            .count();
+        assert_eq!(
+            scratch, 2,
+            "the max and its index reduce through workgroup scratch, which is never mapped, so \
+             nothing internal leaks across the dispatch boundary"
+        );
+    }
+
+    /// Independent dominant-eigenpair oracle for diag(r): the first arg-max of the diagonal, with a
+    /// 0.0 running-max floor (matching the unsigned fixed-point path).
+    fn independent_diagonal_dominant(restriction_diag: &[f64]) -> (f64, usize) {
+        let mut max_r = 0.0f64;
+        let mut arg = 0usize;
+        for (idx, &value) in restriction_diag.iter().enumerate() {
+            if value > max_r {
+                max_r = value;
+                arg = idx;
+            }
+        }
+        (max_r, arg)
+    }
+}

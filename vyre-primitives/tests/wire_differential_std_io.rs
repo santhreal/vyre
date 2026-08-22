@@ -10,7 +10,7 @@ use std::io::{Cursor, Read, Write};
 
 use proptest::prelude::*;
 use vyre_primitives::wire::{
-    pack_f32_slice, pack_i32_slice, pack_u32_slice, pack_u64_slice, unpack_f32_slice,
+    pack_f32_slice, pack_i32_slice, pack_u32_slice, pack_u64_slice_into, unpack_f32_slice,
     unpack_u32_slice_into,
 };
 
@@ -118,6 +118,8 @@ proptest! {
     fn wire_pack_u64_matches_std_io_cursor(
         values in proptest::collection::vec(any::<u64>(), 0..128),
     ) {
-        prop_assert_eq!(pack_u64_slice(&values), std_pack_u64_le(&values));
+        let mut packed = Vec::new();
+        pack_u64_slice_into(&values, &mut packed);
+        prop_assert_eq!(packed, std_pack_u64_le(&values));
     }
 }

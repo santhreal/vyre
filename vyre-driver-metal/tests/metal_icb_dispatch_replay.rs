@@ -1,5 +1,7 @@
 //! Metal icb dispatch replay test suite.
 
+#![cfg(feature = "device-tests")]
+
 const REPLAY: &str = include_str!("../../docs/optimization/METAL_ICB_DISPATCH_REPLAY.toml");
 
 #[test]

@@ -1,14 +1,25 @@
 //! Prefix-sum scan  -  inclusive scan over a u32 buffer.
 //!
-//! Category A composition backed by Tier-2.5 scan primitives: a compact
-//! workgroup scan for one-block inputs and the multi-block scan for larger
-//! buffers.
+//! Category A composition and the one size contract over the scan primitives.
+//! `scan_prefix_sum` is where an element count picks an algorithm:
+//! at or under [`MAX_SINGLE_BLOCK_SCAN`] the compact workgroup scan, above it
+//! the multi-block chain. The primitives own the two bodies and neither of them
+//! chooses.
 
+use crate::math::prefix_scan::{prefix_scan, ScanKind, MAX_SINGLE_BLOCK_SCAN};
+use crate::plumbing::program::attribution::attribute_child_nodes;
+use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::Program;
-use vyre_primitives::math::prefix_scan::{prefix_scan_with_op_id, ScanKind};
-use vyre_primitives::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 
 const OP_ID: &str = "vyre-libs::math::scan_prefix_sum";
+
+/// The single-block scan body, as a phase boundary inside one operation.
+///
+/// It carries the `anonymous::` prefix over the builder's own id because that
+/// id registers no canonical operation, and a child region naming an
+/// unregistered id claims a building block that does not exist.
+const SINGLE_BLOCK_CHILD: &str = "anonymous::vyre-libs::math::prefix_scan_inclusive_sum";
 
 /// Build a Program that computes the inclusive prefix sum of `input`
 /// into `output`, both sized `n`.
@@ -19,56 +30,62 @@ const OP_ID: &str = "vyre-libs::math::scan_prefix_sum";
 #[must_use]
 pub fn scan_prefix_sum(input: &str, output: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::builder::invalid_builder_trap_program(
+        return trap_program(
             OP_ID,
-            output,
-            vyre_foundation::ir::DataType::U32,
+            Some((output, vyre_foundation::ir::DataType::U32)),
             "Fix: scan_prefix_sum requires n > 0.".to_string(),
         );
     }
-    if (1..=1024).contains(&n) {
-        prefix_scan_with_op_id(input, output, n, ScanKind::InclusiveSum, OP_ID)
+    if n <= MAX_SINGLE_BLOCK_SCAN {
+        compose_scan_primitive(
+            SINGLE_BLOCK_CHILD,
+            prefix_scan(input, output, n, ScanKind::InclusiveSum),
+        )
     } else {
-        wrap_large_scan_program(multi_block_prefix_scan_sum_u32(input, output, n))
+        compose_scan_primitive(
+            crate::reduce::multi_block_prefix_scan::OP_ID_INCLUSIVE_SUM,
+            multi_block_prefix_scan_sum_u32(input, output, n),
+        )
     }
 }
 
-fn wrap_large_scan_program(program: Program) -> Program {
-    // Only the entry changes, so rebuild only the entry. `Program::wrapped`
-    // would deep-clone the buffer table and reset the metadata flags.
-    let tagged = vec![crate::region::wrap_anonymous(
-        OP_ID,
-        program.entry().to_vec(),
-    )];
-    program.with_rewritten_wrapped_entry(tagged)
+/// Declare the scan primitive this composition selected as its child.
+///
+/// The primitive builds its own region; this replaces that region with the
+/// same body under the same generator, attributed to this composition, so the
+/// selection is an edge to a registered building block rather than a relabel
+/// of the body.
+fn compose_scan_primitive(child_id: &'static str, program: Program) -> Program {
+    let child = attribute_child_nodes(OP_ID, child_id, &program);
+    program.with_rewritten_wrapped_entry(vec![wrap_anonymous_region(OP_ID, child)])
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| scan_prefix_sum("input", "output", 4)),
-        test_inputs: Some(|| vec![vec![
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || scan_prefix_sum("input", "output", 4),
+        Some(|| vec![vec![
             vyre_primitives::wire::pack_u32_slice(&[1u32, 2, 3, 4]),
         ]]),
-        expected_output: Some(|| vec![vec![
-            // Only ReadWrite buffer: prefix sum [1, 3, 6, 10]
-            vyre_primitives::wire::pack_u32_slice(&[1u32, 3, 6, 10]),
-        ]]),
-        category: Some("math"),
-    }
+        Some(|| vec![vec![vec![
+            0x01, 0x00, 0x00, 0x00, // 1
+            0x03, 0x00, 0x00, 0x00, // 3
+            0x06, 0x00, 0x00, 0x00, // 6
+            0x0a, 0x00, 0x00, 0x00, // 10
+        ]]]),
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::{bytes_to_u32 as decode_u32_words, u32_bytes};
+    use crate::fixture_bytes::bytes_to_u32 as decode_u32_words;
+    use crate::fixture_bytes::eval_bytes;
+    use crate::fixture_bytes::try_eval_bytes;
+    use crate::fixture_bytes::u32_bytes;
     use vyre_foundation::ir::{BufferAccess, Expr, Node};
-    use vyre_reference::value::Value;
+    use vyre_foundation::visit::any_descendant;
 
     /// Run `scan_prefix_sum` through the reference interpreter and return the
     /// `output` buffer. `reference_eval` takes one Value per non-workgroup buffer
@@ -91,7 +108,7 @@ mod tests {
             } else {
                 vec![0u8; (buf.count() as usize).saturating_mul(4)]
             };
-            inputs.push(Value::from(bytes));
+            inputs.push(bytes);
             if buf.access() == BufferAccess::ReadWrite {
                 if buf.name() == "output" {
                     output_result_index = Some(writable_seen);
@@ -99,10 +116,9 @@ mod tests {
                 writable_seen += 1;
             }
         }
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: prefix sum must execute");
+        let outputs = eval_bytes("prefix_sum", &program, inputs);
         let idx = output_result_index.expect("output buffer must be present and writable");
-        decode_u32_words(&outputs[idx].to_bytes())
+        decode_u32_words(&outputs[idx])
     }
 
     #[test]
@@ -115,11 +131,8 @@ mod tests {
     #[test]
     fn prefix_sum_empty_n_zero_should_trap() {
         let program = scan_prefix_sum("input", "output", 0);
-        let error = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(vec![0u8; 0]), Value::from(vec![0u8; 0])],
-        )
-        .expect_err("n=0 prefix_sum must trap instead of returning empty");
+        let error = try_eval_bytes(&program, vec![vec![0u8; 0], vec![0u8; 0]])
+            .expect_err("n=0 prefix_sum must trap instead of returning empty");
         let msg = error.to_string();
         assert!(
             msg.contains("trap") || msg.contains("Fix:"),
@@ -145,10 +158,15 @@ mod tests {
     fn prefix_sum_boundary_large_path_is_parallel_multi_block() {
         let program = scan_prefix_sum("input", "output", 1025);
         assert_top_region_generator(&program, OP_ID);
-        assert_eq!(program.workgroup_size(), [1024, 1, 1]);
+        // The unlowered builder uses the portable width. Backend-specific
+        // callers select a wider admitted width through launch geometry.
+        assert_eq!(
+            program.workgroup_size(),
+            [vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS, 1, 1,]
+        );
         assert!(
             !contains_loop(&program),
-            "large scan_prefix_sum must not route through prefix_scan_large's serial loop"
+            "large scan_prefix_sum must not route through a serial per-element loop"
         );
         assert!(
             !contains_invocation_zero_gate(&program),
@@ -165,7 +183,11 @@ mod tests {
         for n in 1025..=4097 {
             let program = scan_prefix_sum("input", "output", n);
             assert_top_region_generator(&program, OP_ID);
-            assert_eq!(program.workgroup_size(), [1024, 1, 1], "n={n}");
+            assert_eq!(
+                program.workgroup_size(),
+                [vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS, 1, 1,],
+                "n={n}"
+            );
             assert!(
                 !contains_loop(&program),
                 "n={n}: large scan_prefix_sum must not emit a serial loop"
@@ -257,44 +279,25 @@ mod tests {
     }
 
     fn contains_loop(program: &Program) -> bool {
-        program.entry().iter().any(node_contains_loop)
-    }
-
-    fn node_contains_loop(node: &Node) -> bool {
-        match node {
-            Node::Loop { .. } => true,
-            Node::Block(children) => children.iter().any(node_contains_loop),
-            Node::If {
-                then, otherwise, ..
-            } => then.iter().any(node_contains_loop) || otherwise.iter().any(node_contains_loop),
-            Node::Region { body, .. } => body.iter().any(node_contains_loop),
-            _ => false,
-        }
-    }
-
-    fn contains_invocation_zero_gate(program: &Program) -> bool {
         program
             .entry()
             .iter()
-            .any(node_contains_invocation_zero_gate)
+            .any(|node| any_descendant(node, &mut |n| matches!(n, Node::Loop { .. })))
     }
 
-    fn node_contains_invocation_zero_gate(node: &Node) -> bool {
-        match node {
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                expr_is_invocation_zero(cond)
-                    || then.iter().any(node_contains_invocation_zero_gate)
-                    || otherwise.iter().any(node_contains_invocation_zero_gate)
-            }
-            Node::Block(children) => children.iter().any(node_contains_invocation_zero_gate),
-            Node::Loop { body, .. } => body.iter().any(node_contains_invocation_zero_gate),
-            Node::Region { body, .. } => body.iter().any(node_contains_invocation_zero_gate),
-            _ => false,
-        }
+    /// True when any `If` anywhere in `program` is gated on invocation zero.
+    ///
+    /// Descent comes from `visit::any_descendant`, the one owner of
+    /// which node variants nest. The two hand-written matches this replaces both
+    /// ended in `_ => false`, so a fifth body-bearing variant would have hidden
+    /// the gate and the assertion would have reported the wrong shape.
+    fn contains_invocation_zero_gate(program: &Program) -> bool {
+        program.entry().iter().any(|node| {
+            any_descendant(
+                node,
+                &mut |n| matches!(n, Node::If { cond, .. } if expr_is_invocation_zero(cond)),
+            )
+        })
     }
 
     fn expr_is_invocation_zero(expr: &Expr) -> bool {

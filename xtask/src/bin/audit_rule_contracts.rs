@@ -1,45 +1,59 @@
-//! Audit `rules/launch/*.toml` rule contracts and report missing or
-//! malformed fields.
+//! Audit every `rules/launch/<slug>` rule contract and report the missing
+//! contract or truth-data directories.
 //!
-//! Run via `cargo xtaskbin audit_rule_contracts`. The binary
-//! exits non-zero when any rule deviates from `rules/SCHEMA.md`.
+//! Run via `./cargo_full run -p xtask --bin audit_rule_contracts`. The binary exits
+//! non-zero when any rule deviates from the layout `xtask::rule_tree` declares in
+//! `TRUTH_DIRS` and `TRUTH_FILES`. That module owns the layout it audits, so the
+//! auditor and `scaffold_rule` cannot disagree.
 
 use std::fs;
-use std::path::Path;
 
-fn print_help() {
-    println!("Audit launch-rule contracts and truth-test directories.");
-    println!();
-    println!("Usage: audit_rule_contracts");
-    println!();
-    println!("Exit codes:");
-    println!("  0  every rule contract and truth-test directory exists");
-    println!("  1  the rule tree is unavailable or a contract is incomplete");
-    println!("  2  command-line arguments are invalid");
-}
+use xtask::cli::NoArguments;
+use xtask::rule_tree;
+
+const CLI: NoArguments<'_> = NoArguments {
+    binary: "audit_rule_contracts",
+    summary: "Audit launch-rule contracts and truth-test directories.",
+    success: "every rule contract and truth-test directory exists",
+    failure: "the rule tree is unavailable or a contract is incomplete",
+};
 
 fn main() {
-    let mut args = std::env::args().skip(1);
-    if let Some(arg) = args.next() {
-        if matches!(arg.as_str(), "-h" | "--help") && args.next().is_none() {
-            print_help();
-            return;
-        }
-        eprintln!("Fix: unknown argument `{arg}`. Use `audit_rule_contracts --help`.");
-        std::process::exit(2);
-    }
-    let launch_dir = Path::new("../../../../../rules/launch");
+    CLI.accept();
+    let launch_dir = rule_tree::launch_dir();
     if !launch_dir.exists() {
-        eprintln!("Rules directory not found");
+        eprintln!(
+            "Fix: no rule tree at `{}`. Scaffold one with `cargo run -p xtask --bin \
+             scaffold_rule -- <slug>`.",
+            launch_dir.display()
+        );
         std::process::exit(1);
     }
 
     let mut failed = false;
-    for entry in fs::read_dir(launch_dir).unwrap() {
-        let entry = entry.unwrap();
+    let entries = match fs::read_dir(&launch_dir) {
+        Ok(entries) => entries,
+        Err(error) => {
+            eprintln!("Fix: cannot read `{}`: {error}", launch_dir.display());
+            std::process::exit(1);
+        }
+    };
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(error) => {
+                eprintln!("FAIL: cannot read a rule-tree entry: {error}");
+                failed = true;
+                continue;
+            }
+        };
         let path = entry.path();
         if path.is_dir() {
-            let slug = path.file_name().unwrap().to_str().unwrap();
+            let Some(slug) = path.file_name().and_then(|f| f.to_str()) else {
+                eprintln!("FAIL: rule path is not valid UTF-8: {}", path.display());
+                failed = true;
+                continue;
+            };
             println!("Auditing rule {}", slug);
 
             let contract = path.join("CONTRACT.md");
@@ -48,11 +62,10 @@ fn main() {
                 failed = true;
             }
 
-            let test_dir = Path::new("../../../../../tests/launch_rule_truth").join(slug);
-            let expected_dirs = ["positives", "negatives", "evasions", "cross_file"];
-            for d in expected_dirs.iter() {
-                if !test_dir.join(d).exists() {
-                    eprintln!("FAIL: Missing test dir {}/{}", slug, d);
+            let truth_dir = rule_tree::truth_dir(slug);
+            for case_class in rule_tree::TRUTH_DIRS {
+                if !truth_dir.join(case_class).exists() {
+                    eprintln!("FAIL: Missing truth directory {slug}/truth/{case_class}");
                     failed = true;
                 }
             }

@@ -198,10 +198,11 @@ where
     )
 }
 
+// Inline: covers `CudaReusableIndexScratch`, `CudaStorageReserveFailure`, `reserve_index_scratch`,
+// `reserve_smallvec` and 6 more items this module keeps private, which no integration test can
+// name.
 #[cfg(test)]
 mod tests {
-    use std::cell::Cell;
-
     use rustc_hash::{FxHashMap, FxHashSet};
     use smallvec::SmallVec;
 
@@ -314,39 +315,6 @@ mod tests {
         assert!(scratch.ordered_index_capacity() >= ordered_capacity);
         assert!(scratch.ordered_indices().is_empty());
         assert!(scratch.insert_seen(7));
-    }
-
-    #[test]
-    fn reusable_index_scratch_skips_sort_when_keys_are_monotonic() {
-        let mut scratch = CudaReusableIndexScratch::<u32>::new();
-        scratch.push_index(0);
-        scratch.push_index(1);
-        scratch.push_index(2);
-
-        let key_calls = Cell::new(0);
-        scratch.sort_indices_unstable_by_key_if_needed(|index| {
-            key_calls.set(key_calls.get() + 1);
-            [10_u32, 20, 30][index]
-        });
-
-        assert_eq!(scratch.ordered_indices(), &[0, 1, 2]);
-        assert_eq!(
-            key_calls.get(),
-            4,
-            "Fix: monotonic CUDA planner indices must not call sort_unstable_by_key on already ordered release-path batches."
-        );
-    }
-
-    #[test]
-    fn reusable_index_scratch_sorts_when_keys_are_not_monotonic() {
-        let mut scratch = CudaReusableIndexScratch::<u32>::new();
-        scratch.push_index(2);
-        scratch.push_index(0);
-        scratch.push_index(1);
-
-        scratch.sort_indices_unstable_by_key_if_needed(|index| [10_u32, 20, 30][index]);
-
-        assert_eq!(scratch.ordered_indices(), &[0, 1, 2]);
     }
 
     #[test]

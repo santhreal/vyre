@@ -1,6 +1,7 @@
 {
+  "source_fingerprint": "git:c09214c207a78d1a73c44853adb53961d3147326:dirty=false",
   "schema_version": 1,
-  "release_blocker_count": 4,
+  "release_blocker_count": 0,
   "intake_summary": [
     {
       "owner_lane": "bench_harness",
@@ -12,58 +13,22 @@
       "count": 1
     },
     {
+      "owner_lane": "bench_harness",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
       "owner_lane": "coordination",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 10
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "panic_macro",
-      "release_blocker": false,
-      "count": 3
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "raw_workspace_cargo",
-      "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 1
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "unbounded_read",
-      "release_blocker": true,
-      "count": 3
+      "count": 39
     },
     {
       "owner_lane": "coordination",
@@ -77,11 +42,20 @@
     {
       "owner_lane": "coordination",
       "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 34
+    },
+    {
+      "owner_lane": "coordination",
+      "surface": "test",
       "risk": "test_hygiene",
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 4
+      "count": 24
     },
     {
       "owner_lane": "coordination",
@@ -90,7 +64,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 1
+      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -99,14 +73,41 @@
       "hot_path": false,
       "pattern": "panic_macro",
       "release_blocker": false,
-      "count": 3
+      "count": 5
     },
     {
       "owner_lane": "coordination",
       "surface": "test",
       "risk": "test_hygiene",
       "hot_path": false,
-      "pattern": "stub_text",
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "unbounded_read",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "unwrap_call",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "owner_lane": "driver_cuda",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "std_thread_sleep",
       "release_blocker": false,
       "count": 1
     },
@@ -115,9 +116,9 @@
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "raw_workspace_cargo",
+      "pattern": "thread_sleep",
       "release_blocker": false,
-      "count": 2
+      "count": 1
     },
     {
       "owner_lane": "driver_cuda",
@@ -129,22 +130,22 @@
       "count": 1
     },
     {
-      "owner_lane": "driver_shared",
-      "surface": "production",
+      "owner_lane": "driver_cuda",
+      "surface": "test",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "documented_panic_contract",
+      "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 8
+      "count": 1
     },
     {
       "owner_lane": "driver_shared",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "expect_call",
+      "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 4
+      "count": 66
     },
     {
       "owner_lane": "driver_shared",
@@ -153,16 +154,61 @@
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 4
+      "count": 6
     },
     {
-      "owner_lane": "foundation_wire",
+      "owner_lane": "driver_shared",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "driver_wgpu",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 4
+      "count": 1
+    },
+    {
+      "owner_lane": "driver_wgpu",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "foundation_optimizer",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "foundation_wire",
+      "surface": "production",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "foundation_wire",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 2
     },
     {
       "owner_lane": "foundation_wire",
@@ -180,16 +226,16 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 15
+      "count": 1
     },
     {
-      "owner_lane": "frontend_parsing",
+      "owner_lane": "lower_emit",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "expect_call",
+      "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 1
+      "count": 11
     },
     {
       "owner_lane": "nn_math",
@@ -201,31 +247,31 @@
       "count": 4
     },
     {
-      "owner_lane": "runtime_megakernel",
+      "owner_lane": "runtime_resident_work_queue",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 12
+      "count": 10
     },
     {
-      "owner_lane": "runtime_megakernel",
+      "owner_lane": "runtime_resident_work_queue",
       "surface": "production",
       "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "runtime_resident_work_queue",
+      "surface": "test",
+      "risk": "test_hygiene",
       "hot_path": false,
       "pattern": "unwrap_call",
       "release_blocker": false,
       "count": 4
-    },
-    {
-      "owner_lane": "scan_static",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "documented_panic_contract",
-      "release_blocker": false,
-      "count": 11
     },
     {
       "owner_lane": "security_dataflow",
@@ -234,7 +280,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 16
+      "count": 10
     },
     {
       "owner_lane": "security_dataflow",
@@ -246,20 +292,11 @@
       "count": 1
     },
     {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "informational",
+      "owner_lane": "security_dataflow",
+      "surface": "test",
+      "risk": "test_hygiene",
       "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 4
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "raw_workspace_cargo",
+      "pattern": "documented_panic_contract",
       "release_blocker": false,
       "count": 1
     },
@@ -277,12 +314,118 @@
       "surface": "release_tooling",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "panic_macro",
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 9
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
       "release_blocker": false,
       "count": 2
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "std_thread_sleep",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "thread_sleep",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "tokio_sleep",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "FIXME",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "TODO",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 17
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "stub_text",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 33
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 4
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "expect_call",
+      "release_blocker": false,
+      "count": 11
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 1
     }
   ],
-  "blockers": [
-    "4 release-blocking hygiene finding(s) remain; implementation-intake.json groups them by owner lane, surface, risk, hot-path flag, and pattern"
-  ]
+  "blockers": []
 }

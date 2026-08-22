@@ -1,15 +1,3 @@
-#![allow(
-    clippy::doc_lazy_continuation,
-    clippy::double_must_use,
-    clippy::manual_div_ceil,
-    clippy::needless_range_loop,
-    clippy::collapsible_if,
-    clippy::match_like_matches_macro,
-    clippy::redundant_closure,
-    clippy::too_many_arguments,
-    clippy::nonminimal_bool,
-    clippy::derivable_impls
-)]
 //! PTX text emitter for vyre `KernelDescriptor`.
 //!
 //! Consumes a substrate-neutral `vyre_lower::KernelDescriptor` and
@@ -75,6 +63,32 @@ use vyre_lower::KernelDescriptor;
 pub use error::EmitError;
 pub use target::{ComputeCapability, PtxEmitOptions};
 
+/// Digest of this emitter's source, stamped in at build time.
+///
+/// A PTX cache keyed on the program and a hand-edited lowering label cannot see
+/// that the emitter changed: the key stays the same and stale PTX, in memory or
+/// on disk, answers for a fixed lowering. Mixing this into the key ties every
+/// cached artifact to the emitter that produced it, whether or not the label was
+/// edited.
+pub const LOWERING_DIGEST: &str = env!("VYRE_PTX_LOWERING_DIGEST");
+
+/// Module-scope symbol holding the trap record for one loaded module.
+///
+/// [`vyre_lower::TRAP_SIDECAR_WORDS`] u32 words: word 0 is the claim flag (CAS 0
+/// to 1, so exactly one lane writes the rest), word 1 the address operand the
+/// trapping op carried, word 2 the trap tag code, word 3 the flattened global
+/// invocation id. Same layout the secondary text emitter writes, so a host
+/// decodes either target's record with one reader.
+pub const TRAP_SIDECAR_SYMBOL: &str = "_vyre_trap_sidecar";
+
+/// Comment prefix carrying one `code tag` pair per declared trap in the emitted
+/// text.
+///
+/// The table travels in the module text rather than beside it so the host decodes
+/// word 2 against the module it loaded. A module is cached by its text and target,
+/// so a table parsed out of that text cannot belong to a different descriptor.
+pub const TRAP_TAG_PTX_MARKER: &str = "// vyre trap tag ";
+
 /// Emit PTX for the default compute capability.
 pub fn emit(desc: &KernelDescriptor) -> Result<String, EmitError> {
     emit_with_target(desc, ComputeCapability::default())
@@ -104,6 +118,3 @@ pub fn emit_with_options(
     }
     emitter::emit_text(desc, options)
 }
-
-#[cfg(test)]
-mod tests;

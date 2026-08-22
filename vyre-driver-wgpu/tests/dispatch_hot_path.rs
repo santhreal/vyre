@@ -12,12 +12,13 @@
 //! - Even on the compiled-pipeline fast path execution remains GPU-consistent,
 //!   never silently falling back to CPU
 
-mod common;
-use common::acquire_live_backend as live_backend;
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::{acquire_live_backend as live_backend, add_one_program};
 
 use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
-use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::CompiledPipeline;
 use vyre_driver::{DispatchConfig, VyreBackend};
 
@@ -31,31 +32,6 @@ fn hot_path_test_guard() -> MutexGuard<'static, ()> {
     })
 }
 
-fn add_one_program(words: u32) -> Program {
-    let idx = Expr::gid_x();
-    let in_bounds = Expr::lt(idx.clone(), Expr::u32(words));
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(words),
-            BufferDecl::output("out", 1, DataType::U32)
-                .with_count(words)
-                .with_output_byte_range(0..(words as usize * 4)),
-        ],
-        [64, 1, 1],
-        vec![
-            Node::if_then(
-                in_bounds,
-                vec![Node::store(
-                    "out",
-                    idx.clone(),
-                    Expr::add(Expr::load("input", idx), Expr::u32(1)),
-                )],
-            ),
-            Node::return_(),
-        ],
-    )
-}
-
 // ------------------------------------------------------------------
 // 1. Pipeline cache reuse
 // ------------------------------------------------------------------
@@ -65,7 +41,7 @@ fn pipeline_cache_hit_avoids_recompilation_latency() {
     let _guard = hot_path_test_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
 
     // Cold dispatch: must compile the pipeline.
     let cold_start = Instant::now();
@@ -107,7 +83,7 @@ fn bind_group_cache_reused_on_repeated_dispatches() {
     let _guard = hot_path_test_guard();
     let backend = live_backend();
     let program = add_one_program(256);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..256u32);
+    let input: Vec<u8> = (0..256u32).flat_map(u32::to_le_bytes).collect();
 
     let pipeline = backend
         .compile_pipeline_for_oracle(&program, &DispatchConfig::default())
@@ -152,7 +128,7 @@ fn persistent_pool_reuses_allocations_on_repeated_dispatches() {
     let _guard = hot_path_test_guard();
     let backend = live_backend();
     let program = add_one_program(256);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..256u32);
+    let input: Vec<u8> = (0..256u32).flat_map(u32::to_le_bytes).collect();
 
     let pipeline = backend
         .compile_pipeline_for_oracle(&program, &DispatchConfig::default())
@@ -185,7 +161,7 @@ fn compiled_dispatch_never_cpu_fallback() {
     let _guard = hot_path_test_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
 
     let pipeline = backend
         .compile_pipeline_for_oracle(&program, &DispatchConfig::default())
@@ -204,7 +180,7 @@ fn compiled_dispatch_never_cpu_fallback() {
          This suggests a silent CPU fallback."
     );
 
-    let expected: Vec<u8> = vyre_primitives::wire::pack_u32_iter(1..=1024u32);
+    let expected: Vec<u8> = (1..=1024u32).flat_map(u32::to_le_bytes).collect();
     assert_eq!(
         outputs,
         vec![expected],
@@ -221,7 +197,7 @@ fn dispatch_borrowed_avoids_async_pool_overhead() {
     let _guard = hot_path_test_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
     let borrowed = [input.as_slice()];
 
     // Warm every cache layer so we measure steady-state overhead differences.
@@ -265,7 +241,7 @@ fn hot_cached_dispatch_latency_bounded() {
     let _guard = hot_path_test_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
 
     // Warm caches.
     let _ = backend
@@ -293,7 +269,7 @@ fn long_buffer_throughput_latency_bounded() {
     let backend = live_backend();
     let words = 1 << 20;
     let program = add_one_program(words);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..words);
+    let input: Vec<u8> = (0..words).flat_map(u32::to_le_bytes).collect();
 
     let _ = backend
         .dispatch(&program, &[input.clone()], &DispatchConfig::default())
@@ -328,7 +304,7 @@ fn dispatch_batch_submit_overhead_bounded() {
     let _guard = hot_path_test_guard();
     let backend = live_backend();
     let program = add_one_program(512);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..512u32);
+    let input: Vec<u8> = (0..512u32).flat_map(u32::to_le_bytes).collect();
 
     // Warm caches.
     let _ = backend
@@ -371,7 +347,7 @@ fn dispatch_batch_submit_overhead_bounded() {
         let outputs = result
             .as_ref()
             .unwrap_or_else(|e| panic!("Fix: batch job #{i} must succeed: {e:?}"));
-        let expected: Vec<u8> = vyre_primitives::wire::pack_u32_iter(1..=512u32);
+        let expected: Vec<u8> = (1..=512u32).flat_map(u32::to_le_bytes).collect();
         assert_eq!(
             *outputs,
             vec![expected],

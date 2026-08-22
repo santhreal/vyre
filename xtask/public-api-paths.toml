@@ -1,0 +1,106 @@
+# Items each crate publishes at more than one path, measured from the
+# committed snapshots under docs/public-api. A number here only goes down:
+# `xtask public-api-paths --write` lowers a row to what it measured and
+# never raises one, so a count that grew stays red until the second path
+# is deleted.
+schema_version = 1
+
+[[crate]]
+name = "vyre"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-aot"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-debug"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-driver"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-driver-cuda"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-driver-metal"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-driver-reference"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-driver-spirv"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-driver-wgpu"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-emit-metal"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-emit-naga"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-emit-ptx"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-emit-spirv"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-foundation"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-lints"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-lower"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-macros"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-megakernel"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-pass-engine"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-primitives"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-reference"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-runtime"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-safetensors"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-spec"
+duplicate_paths = 0

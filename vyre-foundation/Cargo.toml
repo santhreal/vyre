@@ -1,6 +1,6 @@
 [package]
 name = "vyre-foundation"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -35,21 +35,16 @@ rustc-hash.workspace = true
 hashbrown.workspace = true
 smallvec.workspace = true
 blake3.workspace = true
-bytemuck.workspace = true
 inventory.workspace = true
-bumpalo.workspace = true
-im.workspace = true
+imbl.workspace = true
 libm.workspace = true
 itoa.workspace = true
-ryu.workspace = true
 arrayvec.workspace = true
 
 [lints]
 workspace = true
 
 [dev-dependencies]
-# integration tests/benches assert against these crates' public APIs
-vyre-lower = { path = "../vyre-lower" }
 vyre-reference = { path = "../vyre-reference" }
 # Integration tests under tests/ use the `vyre` umbrella facade (vyre::ir::*)
 # as the public boundary they assert against. The `vyre` facade package
@@ -58,7 +53,8 @@ vyre-reference = { path = "../vyre-reference" }
 vyre = { path = "../vyre", default-features = false }
 proptest.workspace = true
 criterion.workspace = true
-vyre-test-support.workspace = true
+tempfile.workspace = true
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 
 [[test]]
 name = "sweep_validation_rejection_oracle_matrix"
@@ -66,3 +62,11 @@ path = "tests/sweep_validation_rejection_oracle_matrix.rs"
 [[test]]
 name = "sweep_validation_rejection_volume_oracle_matrix"
 path = "tests/sweep_validation_rejection_volume_oracle_matrix.rs"
+
+[[bench]]
+name = "optimizer_pipeline"
+harness = false
+
+[[test]]
+name = "memo_key_completeness"
+path = "tests/memo_key_completeness/mod.rs"

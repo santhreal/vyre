@@ -12,9 +12,43 @@ fn format_cuda_context_init_error(ordinal: usize, error: impl fmt::Display) -> S
     )
 }
 
+fn cuda_driver_lib_load_panic<'a>(
+    payload: &'a (dyn std::any::Any + Send + 'static),
+) -> Option<&'a str> {
+    let message = payload
+        .downcast_ref::<&'static str>()
+        .copied()
+        .or_else(|| payload.downcast_ref::<String>().map(String::as_str))?;
+    let names_cuda_driver_library =
+        message.contains("cuda") || message.contains("libcuda") || message.contains("nvcuda");
+    (message.contains("Unable to dynamically load") && names_cuda_driver_library).then_some(message)
+}
+
+/// Run an acquisition or probing closure, intercepting dynamic library load
+/// panics from `cudarc` when the CUDA driver library (`libcuda.so` / `nvcuda.dll`)
+/// is missing on the host. Unrelated panics are NOT masked and resume unwinding.
+pub(crate) fn catch_cuda_driver_init<T, F>(op: F) -> Result<T, String>
+where
+    F: FnOnce() -> Result<T, String> + std::panic::UnwindSafe,
+{
+    match std::panic::catch_unwind(op) {
+        Ok(result) => result,
+        Err(payload) => {
+            if let Some(msg) = cuda_driver_lib_load_panic(&*payload) {
+                Err(format!(
+                    "CUDA driver library (libcuda.so / nvcuda.dll) could not be loaded: {msg}. Fix: verify `nvidia-smi` succeeds and libcuda.so from the NVIDIA driver is visible in LD_LIBRARY_PATH (or system dynamic linker search paths); on a GPU-required host, do not continue on a CPU path."
+                ))
+            } else {
+                std::panic::resume_unwind(payload);
+            }
+        }
+    }
+}
+
+// Inline: the suite drives the `#[cfg(test)]` `tests`, which an integration test does not compile.
 #[cfg(test)]
 mod context_init_error_tests {
-    use super::format_cuda_context_init_error;
+    use super::{catch_cuda_driver_init, format_cuda_context_init_error};
 
     #[test]
     fn context_init_oom_diagnostic_names_vram_pressure_without_cpu_escape() {
@@ -25,6 +59,58 @@ mod context_init_error_tests {
             .contains("nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv"));
         assert!(diagnostic.contains("do not skip GPU tests"));
         assert!(diagnostic.contains("continue on a CPU path"));
+    }
+
+    #[test]
+    fn missing_cuda_library_dynamic_load_panic_converts_to_error_without_cpu_escape() {
+        let res: Result<(), String> = catch_cuda_driver_init(|| {
+            panic!("Unable to dynamically load the \"cuda\" shared library - searched for library names: [\"libcuda.so.1\", \"libcuda.so\"]. Ensure that `LD_LIBRARY_PATH` has the correct path to the installed library. If the shared library is present on the system under a different name than one of those listed above, please open a GitHub issue.");
+        });
+        let err = res.expect_err("Fix: missing CUDA shared library must return Err, never panic");
+        assert!(err.contains("CUDA driver library (libcuda.so / nvcuda.dll) could not be loaded"));
+        assert!(err.contains("Unable to dynamically load"));
+        assert!(err.contains("libcuda"));
+        assert!(err.contains("nvidia-smi"));
+        assert!(err.contains("do not continue on a CPU path"));
+    }
+
+    #[test]
+    fn missing_cuda_library_panic_converts_to_contextual_backend_error_without_cpu_fallback() {
+        let acquisition_err: Result<(), String> = catch_cuda_driver_init(|| {
+            panic!("Unable to dynamically load the \"nvcuda\" shared library - searched for library names: [\"nvcuda.dll\"]. Ensure that `LD_LIBRARY_PATH` has the correct path to the installed library.");
+        });
+        let err_str = acquisition_err.unwrap_err();
+        let backend_err = vyre_driver::BackendError::DispatchFailed {
+            code: None,
+            message: format!("CUDA backend acquisition failed: {err_str}"),
+        };
+        let rendered = backend_err.to_string();
+        assert!(rendered.contains("CUDA backend acquisition failed"));
+        assert!(rendered.contains("nvcuda"));
+        assert!(rendered.contains("do not continue on a CPU path"));
+    }
+
+    #[test]
+    fn unrelated_panics_during_acquisition_are_not_masked() {
+        let panic_result = std::panic::catch_unwind(|| {
+            catch_cuda_driver_init(|| -> Result<(), String> {
+                panic!("unrelated libcuda invariant violation: corrupted internal pointer table");
+            })
+        });
+        assert!(
+            panic_result.is_err(),
+            "Fix: unrelated panics must not be masked by CUDA acquisition error handling"
+        );
+        let payload = panic_result.unwrap_err();
+        let msg = payload
+            .downcast_ref::<&str>()
+            .copied()
+            .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
+            .unwrap_or("");
+        assert_eq!(
+            msg,
+            "unrelated libcuda invariant violation: corrupted internal pointer table"
+        );
     }
 }
 
@@ -124,22 +210,24 @@ impl CudaDeviceHandle {
     /// ordinal is invalid, context creation fails, context binding fails, or a
     /// required device attribute cannot be queried.
     pub fn acquire_ordinal(ordinal: usize) -> Result<Self, String> {
-        let device_count = CudaDeviceCaps::visible_device_count()?;
-        if ordinal >= device_count {
-            return Err(format!(
-                "CUDA device ordinal {ordinal} is out of range for {device_count} visible device(s). Fix: select a CUDA device ordinal reported by `nvidia-smi`."
-            ));
-        }
+        catch_cuda_driver_init(|| {
+            let device_count = CudaDeviceCaps::visible_device_count()?;
+            if ordinal >= device_count {
+                return Err(format!(
+                    "CUDA device ordinal {ordinal} is out of range for {device_count} visible device(s). Fix: select a CUDA device ordinal reported by `nvidia-smi`."
+                ));
+            }
 
-        let ctx = CudaContext::new(ordinal)
-            .map_err(|error| format_cuda_context_init_error(ordinal, error))?;
-        ctx.bind_to_thread().map_err(|e| {
-            format!(
-                "CUDA context bind failed for ordinal {ordinal}: {e}. Fix: repair CUDA context ownership before dispatch; GPU-required runs must not continue with an unbound context."
-            )
-        })?;
-        let caps = CudaDeviceCaps::probe_context(ordinal, &ctx)?;
-        Ok(Self { caps, ctx })
+            let ctx = CudaContext::new(ordinal)
+                .map_err(|error| format_cuda_context_init_error(ordinal, error))?;
+            ctx.bind_to_thread().map_err(|e| {
+                format!(
+                    "CUDA context bind failed for ordinal {ordinal}: {e}. Fix: repair CUDA context ownership before dispatch; GPU-required runs must not continue with an unbound context."
+                )
+            })?;
+            let caps = CudaDeviceCaps::probe_context(ordinal, &ctx)?;
+            Ok(Self { caps, ctx })
+        })
     }
 }
 
@@ -173,19 +261,21 @@ impl CudaDeviceCaps {
     /// Returns an error when the CUDA driver cannot initialize or report its
     /// visible device count.
     pub fn visible_device_count() -> Result<usize, String> {
-        result::init().map_err(|e| {
-            format!(
-                "CUDA driver init failed: {e}. Fix: verify `nvidia-smi` succeeds and libcuda.so from the NVIDIA driver is visible to this process."
-            )
-        })?;
-        let count = result::device::get_count()
-            .map_err(|e| {
+        catch_cuda_driver_init(|| {
+            result::init().map_err(|e| {
                 format!(
-                    "CUDA device-count query failed: {e}. Fix: repair CUDA driver/device visibility; a GPU-required host must not report zero devices."
+                    "CUDA driver init failed: {e}. Fix: verify `nvidia-smi` succeeds and libcuda.so from the NVIDIA driver is visible to this process."
                 )
             })?;
-        usize::try_from(count)
-            .map_err(|_| format!("CUDA device-count query returned negative value {count}"))
+            let count = result::device::get_count()
+                .map_err(|e| {
+                    format!(
+                        "CUDA device-count query failed: {e}. Fix: repair CUDA driver/device visibility; a GPU-required host must not report zero devices."
+                    )
+                })?;
+            usize::try_from(count)
+                .map_err(|_| format!("CUDA device-count query returned negative value {count}"))
+        })
     }
 
     /// Probe every CUDA device visible to the process.
@@ -194,19 +284,21 @@ impl CudaDeviceCaps {
     ///
     /// Returns an actionable error when any visible device cannot be probed.
     pub fn probe_all() -> Result<Vec<Self>, String> {
-        let device_count = Self::visible_device_count()?;
-        if device_count == 0 {
-            return Err(
-                "CUDA device-count query returned zero visible devices. Fix: this is a GPU-required release host; run `nvidia-smi -L`, repair CUDA_VISIBLE_DEVICES/container GPU passthrough, and do not silently continue on a CPU path."
-                    .to_string(),
-            );
-        }
-        let mut devices = reserved_vec(device_count, "cuda visible device probes")
-            .map_err(|error| error.to_string())?;
-        for ordinal in 0..device_count {
-            devices.push(Self::probe(ordinal)?);
-        }
-        Ok(devices)
+        catch_cuda_driver_init(|| {
+            let device_count = Self::visible_device_count()?;
+            if device_count == 0 {
+                return Err(
+                    "CUDA device-count query returned zero visible devices. Fix: this is a GPU-required release host; run `nvidia-smi -L`, repair CUDA_VISIBLE_DEVICES/container GPU passthrough, and do not silently continue on a CPU path."
+                        .to_string(),
+                );
+            }
+            let mut devices = reserved_vec(device_count, "cuda visible device probes")
+                .map_err(|error| error.to_string())?;
+            for ordinal in 0..device_count {
+                devices.push(Self::probe(ordinal)?);
+            }
+            Ok(devices)
+        })
     }
 
     /// Probe the device using the raw CUDA driver API.
@@ -216,16 +308,18 @@ impl CudaDeviceCaps {
     /// Returns an error when the CUDA driver cannot initialize, the ordinal is
     /// out of range, or a required device attribute cannot be queried.
     pub fn probe(ordinal: usize) -> Result<Self, String> {
-        let device_count = Self::visible_device_count()?;
-        if ordinal >= device_count {
-            return Err(format!(
-                "CUDA device ordinal {ordinal} is out of range for {device_count} visible device(s). Fix: select a CUDA device ordinal reported by `nvidia-smi`."
-            ));
-        }
+        catch_cuda_driver_init(|| {
+            let device_count = Self::visible_device_count()?;
+            if ordinal >= device_count {
+                return Err(format!(
+                    "CUDA device ordinal {ordinal} is out of range for {device_count} visible device(s). Fix: select a CUDA device ordinal reported by `nvidia-smi`."
+                ));
+            }
 
-        let ctx = CudaContext::new(ordinal)
-            .map_err(|error| format_cuda_context_init_error(ordinal, error))?;
-        Self::probe_context(ordinal, &ctx)
+            let ctx = CudaContext::new(ordinal)
+                .map_err(|error| format_cuda_context_init_error(ordinal, error))?;
+            Self::probe_context(ordinal, &ctx)
+        })
     }
 
     fn probe_context(ordinal: usize, ctx: &CudaContext) -> Result<Self, String> {
@@ -610,7 +704,7 @@ impl CudaDeviceCaps {
     }
 
     /// Project a CUDA device snapshot into the workspace-wide
-    /// [`vyre_foundation::optimizer::AdapterCaps`] (audit P0 #60). All vyre
+    /// [`vyre_foundation::optimizer::AdapterCaps`]. All vyre
     /// backends consume the same typed capability shape so passes that
     /// adapt to subgroup-ops, indirect dispatch, max workgroup size, or
     /// shared-memory budget take a single typed input regardless of
@@ -643,9 +737,16 @@ impl CudaDeviceCaps {
             supports_subgroup_ops: subgroup.supports_subgroup,
             supports_indirect_dispatch: self.cooperative_launch,
             supports_distributed_collectives: false,
+            supports_cooperative_launch: self.cooperative_launch,
+            per_launch_overhead_ns: 0,
+            persistent_setup_overhead_ns: 0,
             supports_specialization_constants: false,
             supports_f16: self.hardware_supports_f16(),
             supports_bf16: self.hardware_supports_bf16(),
+            // True because the emitter writes a trap record into the module-scope
+            // sidecar and every launch path reads it back after synchronizing. See
+            // `CudaDeviceCaps::program_validation_caps`; the two records must
+            // report the same answer.
             supports_trap_propagation: true,
             supports_tensor_cores: self.hardware_supports_tensor_cores(),
             has_mul_high: true,
@@ -684,6 +785,8 @@ impl CudaDeviceCaps {
     }
 }
 
+// Inline: `vyre_driver_cuda::device` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use crate::synthetic_device_caps::synthetic_sm120_envelope_default;

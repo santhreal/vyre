@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A test that compiles a scratch crate builds it in the cargo build directory. vyre_test_support::monorepo::cargo_target_directory reports where cargo is writing this run's artifacts, resolved from the running test binary, so no test reads or sets CARGO_TARGET_DIR. The feature-boundary fixture had compiled the substrate and the foundation under the temp filesystem, which is capped, and it no longer clears its own build tree between the two consumers it checks."

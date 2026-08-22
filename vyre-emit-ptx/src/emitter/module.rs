@@ -1,25 +1,36 @@
 use std::fmt::Write as _;
 
 use rustc_hash::FxHashSet;
-use vyre_lower::{KernelDescriptor, MemoryClass, TRAP_SIDECAR_NAME};
+use vyre_lower::{
+    DescriptorTrapTag, KernelDescriptor, KernelOpKind, MemoryClass, TRAP_SIDECAR_NAME,
+    TRAP_SIDECAR_WORDS,
+};
 
-use vyre_lower::KernelOpKind;
-
-use super::names::sanitize_param_name;
-use super::sizing::{body_op_count_recursive, estimate_body_text_capacity};
+use super::param_identifier::sanitize_param_name;
+use super::text_capacity::{body_op_count_recursive, estimate_body_text_capacity};
 use super::BodyCtx;
-use crate::{EmitError, PtxEmitOptions};
+use crate::{EmitError, PtxEmitOptions, TRAP_SIDECAR_SYMBOL, TRAP_TAG_PTX_MARKER};
 
-/// Whether the descriptor contains a `MemoryOrdering::GridSync` barrier, which
-/// the body lowers to a monotonic-counter cooperative barrier
-/// ([`BodyCtx::emit_grid_sync_barrier`]) that reads/writes the module-scope
-/// `_vyre_grid_barrier` counter. The same recursive iterator drives
+/// How many `MemoryOrdering::GridSync` barriers the descriptor contains.
+///
+/// Each lowers to a monotonic-counter cooperative barrier
+/// ([`BodyCtx::emit_grid_sync_barrier`]) that reads and writes the module-scope
+/// `_vyre_grid_barrier` counter, so a nonzero count is what makes the module
+/// declare that counter. The same recursive iterator drives
 /// `requires_full_workgroup_entry`, so detection here and the all-lanes-live
 /// entry stay in lockstep.
-fn descriptor_has_grid_sync_barrier(desc: &KernelDescriptor) -> bool {
-    desc.ops_iter().any(
-        |op| matches!(op.kind, KernelOpKind::Barrier { ordering } if ordering.requires_grid_sync()),
-    )
+///
+/// The count, rather than a bare yes/no, is what lets the body tell a lane exit
+/// that still has a barrier ahead of it from one that has none left: the counter
+/// is only stranded by a lane that leaves before its CTA's last arrival.
+pub(super) fn descriptor_grid_sync_barrier_count(desc: &KernelDescriptor) -> u32 {
+    desc.ops_iter()
+        .filter(|op| {
+            matches!(op.kind, KernelOpKind::Barrier { ordering } if ordering.requires_grid_sync())
+        })
+        .count()
+        .try_into()
+        .unwrap_or(u32::MAX)
 }
 
 pub(super) struct ModuleBuilder {
@@ -60,8 +71,60 @@ impl ModuleBuilder {
         );
     }
 
+    /// Declare the module-scope trap sidecar and the tag table that decodes it.
+    ///
+    /// The sidecar is four u32 words at module scope, not an entry parameter.
+    /// Every launch path on this target builds its kernel argument list from the
+    /// program's buffers, and the sidecar is a descriptor binding with no program
+    /// buffer behind it, so adding a parameter would require each of those paths
+    /// to synthesize an allocation in exactly the right position. A position
+    /// mismatch there compiles and launches, and reads whatever the neighbouring
+    /// argument points at. Module scope needs no argument at all, and the host
+    /// resolves the symbol from the loaded module the same way it resolves
+    /// `_vyre_grid_barrier`.
+    ///
+    /// Module scope means one sidecar per loaded module rather than one per
+    /// launch, so the host serializes launches of a trap-declaring module for the
+    /// same reason it serializes cooperative ones: overlapping launches would let
+    /// one launch's zeroing erase another's record.
+    ///
+    /// The tag markers carry the code-to-tag table in the PTX text, so the host
+    /// decodes word 2 from the module it actually loaded rather than from a
+    /// descriptor it was separately handed. `vyre-lower` owns the numbering, so a
+    /// code means the same tag here as on every other target.
+    fn write_trap_sidecar(&mut self, trap_tags: &[DescriptorTrapTag]) -> Result<(), EmitError> {
+        if trap_tags.is_empty() {
+            return Ok(());
+        }
+        let _ = writeln!(
+            self.text,
+            ".global .align 4 .u32 {TRAP_SIDECAR_SYMBOL}[{TRAP_SIDECAR_WORDS}];"
+        );
+        for entry in trap_tags {
+            if entry.tag.contains('\n') {
+                return Err(EmitError::InvalidDescriptor(format!(
+                    "trap tag `{}` spans lines, so it cannot be carried in a PTX comment marker. Fix: give the trap a single-line tag.",
+                    entry.tag
+                )));
+            }
+            let _ = writeln!(
+                self.text,
+                "{TRAP_TAG_PTX_MARKER}{} {}",
+                entry.code, entry.tag
+            );
+        }
+        self.text.push('\n');
+        Ok(())
+    }
+
     pub(super) fn write_entry_point(&mut self, desc: &KernelDescriptor) -> Result<(), EmitError> {
-        if self.options.cooperative_grid_sync && descriptor_has_grid_sync_barrier(desc) {
+        // One walk for the whole emission: the sidecar declaration below and the
+        // body's per-trap store both need the same code-to-tag table, and a second
+        // walk could disagree with the first only by being a different function.
+        let trap_tags = vyre_lower::descriptor_trap_tags(&desc.body).map_err(|source| {
+            EmitError::InvalidDescriptor(format!("trap tag codes unavailable: {source}"))
+        })?;
+        if self.options.cooperative_grid_sync && descriptor_grid_sync_barrier_count(desc) > 0 {
             // Module-scope arrival counter for the cooperative grid barrier. A
             // single u32, zeroed by the host before each cooperative launch; each
             // CTA leader bumps it once per barrier and spins until it reaches
@@ -70,6 +133,7 @@ impl ModuleBuilder {
             self.text
                 .push_str(".global .align 4 .u32 _vyre_grid_barrier[1];\n\n");
         }
+        self.write_trap_sidecar(&trap_tags)?;
         self.text.push_str(".visible .entry main(\n");
         let mut first = true;
         for binding in &desc.bindings.slots {
@@ -106,6 +170,7 @@ impl ModuleBuilder {
             read_only_cache_slots,
             estimate_body_text_capacity(&desc.body, &desc.bindings),
             body_op_count_recursive(&desc.body),
+            &trap_tags,
         );
         body_ctx.preload_bindings(desc)?;
         body_ctx.emit_body(&desc.body)?;

@@ -18,8 +18,16 @@ publish = false
 toml.workspace = true
 walkdir.workspace = true
 
+# Fixture trees for the source-placement contracts. A test that judges how a
+# directory tree is read has to build one.
+[dev-dependencies]
+tempfile.workspace = true
+
 [lints]
 workspace = true
+
+[lib]
+path = "src/lib.rs"
 
 [[bin]]
 name = "structure-gate"

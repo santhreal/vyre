@@ -3,7 +3,7 @@
 //! Warp-scoped collective reductions across the active subgroup lanes. Distinct
 //! from [`crate::collective_op::CollectiveOp`], which is distributed-scoped
 //! (NCCL/MPI) and lacks the multiplicative reduction the warp ISA exposes.
-//! This is the complete set the hardware/`naga::SubgroupOperation` surface
+//! This is the complete set the hardware and the emitter subgroup surface
 //! supports.
 // TAG RESERVATIONS: Add=0x01, Mul=0x02, Min=0x03, Max=0x04, And=0x05,
 // Or=0x06, Xor=0x07, 0x08..=0x7F reserved.

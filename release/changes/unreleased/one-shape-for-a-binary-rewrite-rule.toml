@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A binary-operator rewrite rule is a table row over one owned shape instead of twelve lines written out per rule, and the CSE rule body imports the literal body it builds on."

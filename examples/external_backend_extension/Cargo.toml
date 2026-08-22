@@ -5,9 +5,17 @@ edition = "2021"
 publish = false
 
 [dependencies]
-vyre = "0.7.2"
+inventory = "=0.3.24"
+vyre = "0.8.0"
+vyre-driver = "0.8.0"
+vyre-foundation = "0.8.0"
+vyre-reference = "0.8.0"
+
 
 [workspace]
 
 [patch.crates-io]
 vyre = { path = "../../vyre" }
+vyre-driver = { path = "../../vyre-driver" }
+vyre-foundation = { path = "../../vyre-foundation" }
+vyre-reference = { path = "../../vyre-reference" }

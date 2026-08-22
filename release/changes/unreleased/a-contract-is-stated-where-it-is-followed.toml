@@ -1,0 +1,2 @@
+category = "Added"
+text = "The `contract-in-source` gate reports a comment that defers its contract to a published document instead of stating it. A pointer costs a reader a second file and outlives the file it names: when the book those comments pointed into was deleted, every pointer became a pointer to nothing and no gate went red. The rule lived in a test in an unrelated crate and shelled out to git; it now reads the tracked source set through the scanner, reports the file and line, and is exercised on 4511 files."

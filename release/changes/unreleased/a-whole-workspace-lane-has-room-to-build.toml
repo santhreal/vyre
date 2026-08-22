@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every CI lane that builds every target of the workspace deletes the preinstalled .NET, Android, Haskell, Swift, PowerShell and CodeQL trees first, and prints the free space before and after. That reclaim alone was not enough: a lane died with 112 GiB free, because the build it was running needs more than that. It is kept because the space is real and free, not because it is sufficient."

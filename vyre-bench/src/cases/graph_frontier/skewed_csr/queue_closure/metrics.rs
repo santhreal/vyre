@@ -1,10 +1,8 @@
 use crate::api::metric::MetricPoint;
 
-use super::{
-    graph_queue_closure_delta_lanes_per_source, GraphCsrSkewedQueueClosurePrepared,
-    GRAPH_QUEUE_CLOSURE_MAX_ITERS, GRAPH_QUEUE_CLOSURE_WORKGROUP_SIZE,
-};
+use super::{GraphCsrSkewedQueueClosurePrepared, GRAPH_QUEUE_CLOSURE_MAX_ITERS};
 use crate::cases::graph_frontier::skewed_csr::metrics::skewed_csr_baseline_metric_points;
+use crate::cases::queue_closure::{delta_lanes_per_source, QUEUE_CLOSURE_WORKGROUP_SIZE};
 use crate::cases::queue_closure_profile::{
     queue_closure_launch_lanes_per_wave, QueueClosureLaneProfile,
 };
@@ -21,7 +19,7 @@ pub(super) fn queue_closure_metric_points(
     ));
     metrics.push(metric(
         "graph_csr_workgroup_size_x",
-        u64::from(GRAPH_QUEUE_CLOSURE_WORKGROUP_SIZE[0]),
+        u64::from(QUEUE_CLOSURE_WORKGROUP_SIZE[0]),
     ));
     if wall_ns > 0 {
         metrics.push(metric(
@@ -88,14 +86,12 @@ fn append_queue_closure_points(
         "graph_csr_queue_closure_row_strided_delta",
         u64::from(prepared.row_strided_delta),
     ));
-    let launch_lanes_per_wave = queue_closure_launch_lanes_per_wave(
-        prepared.delta_grid,
-        GRAPH_QUEUE_CLOSURE_WORKGROUP_SIZE,
-    );
+    let launch_lanes_per_wave =
+        queue_closure_launch_lanes_per_wave(prepared.delta_grid, QUEUE_CLOSURE_WORKGROUP_SIZE);
     let lane_profile = QueueClosureLaneProfile::from_wave_lengths_with_launch_lanes(
         prepared.queue_capacity,
         &prepared.wave_queue_lengths,
-        graph_queue_closure_delta_lanes_per_source(prepared.row_strided_delta),
+        delta_lanes_per_source(prepared.row_strided_delta),
         launch_lanes_per_wave,
     );
     metrics.push(metric("graph_csr_queue_closure_wave_profiled", 1));

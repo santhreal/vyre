@@ -3,7 +3,7 @@
 //! Category-A composition that emits a single-invocation loop to compute
 //! the sum and sum-of-squares stably.
 
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::math::welford_sum_of_squares";
@@ -83,7 +83,7 @@ pub fn welford_sum_of_squares(input: &str, sum_out: &str, sum_sq_out: &str, n: u
             BufferDecl::read_write(sum_sq_out, 2, DataType::F32).with_count(1),
         ],
         [1, 1, 1], // Single invocation
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -95,7 +95,7 @@ fn welford_invalid_program(input: &str, sum_out: &str, sum_sq_out: &str) -> Prog
             BufferDecl::read_write(sum_sq_out, 2, DataType::F32).with_count(1),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::trap(Expr::u32(0), EMPTY_REDUCTION_FIX)],
         )],
@@ -106,8 +106,9 @@ fn welford_invalid_program(input: &str, sum_out: &str, sum_sq_out: &str) -> Prog
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32_one as decode_one;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::try_eval_bytes;
 
     #[test]
     fn welford_small_dataset() {
@@ -115,18 +116,14 @@ mod tests {
         let n = input.len() as u32;
         let program = welford_sum_of_squares("input", "sum", "sum_sq", n);
 
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "welford",
             &program,
-            &[
-                Value::from(f32_bytes(&input)),
-                Value::from(vec![0u8; 4]),
-                Value::from(vec![0u8; 4]),
-            ],
-        )
-        .expect("Fix: execution failed");
+            vec![f32_bytes(&input), vec![0u8; 4], vec![0u8; 4]],
+        );
 
-        let sum = decode_one(&outputs[0].to_bytes());
-        let sum_sq = decode_one(&outputs[1].to_bytes());
+        let sum = decode_one(&outputs[0]);
+        let sum_sq = decode_one(&outputs[1]);
 
         let expected_mean = 18.0;
         let expected_sum = expected_mean * 8.0; // 144.0
@@ -151,18 +148,14 @@ mod tests {
         let input = vec![42.0];
         let program = welford_sum_of_squares("input", "sum", "sum_sq", 1);
 
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "welford",
             &program,
-            &[
-                Value::from(f32_bytes(&input)),
-                Value::from(vec![0u8; 4]),
-                Value::from(vec![0u8; 4]),
-            ],
-        )
-        .expect("Fix: execution failed");
+            vec![f32_bytes(&input), vec![0u8; 4], vec![0u8; 4]],
+        );
 
-        let sum = decode_one(&outputs[0].to_bytes());
-        let sum_sq = decode_one(&outputs[1].to_bytes());
+        let sum = decode_one(&outputs[0]);
+        let sum_sq = decode_one(&outputs[1]);
 
         assert!((sum - 42.0).abs() < 1e-4);
         assert!((sum_sq - 0.0).abs() < 1e-4);
@@ -171,15 +164,8 @@ mod tests {
     #[test]
     fn welford_empty_rejected() {
         let program = welford_sum_of_squares("input", "sum", "sum_sq", 0);
-        let err = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(vec![0u8; 4]),
-                Value::from(vec![0u8; 4]),
-                Value::from(vec![0u8; 4]),
-            ],
-        )
-        .expect_err("should trap");
+        let err = try_eval_bytes(&program, vec![vec![0u8; 4], vec![0u8; 4], vec![0u8; 4]])
+            .expect_err("should trap");
 
         assert!(err.to_string().contains(EMPTY_REDUCTION_FIX));
     }

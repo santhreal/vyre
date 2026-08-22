@@ -18,17 +18,16 @@
 //! - The host reference mirrors the GPU heuristics so conformance can
 //!   prove the on-device path without routing production work through it.
 
+use crate::text::byte_histogram_256_child;
+use crate::text::encoding_classify_child;
+#[cfg(test)]
+use crate::text::{ENC_ASCII, ENC_ISO8859_1, ENC_UTF16LE, ENC_UTF8};
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
-use vyre_primitives::text::byte_histogram::byte_histogram_256_child;
-pub use vyre_primitives::text::encoding_classify::{
-    classify_from_histogram, encoding_classify_child, ENC_ASCII, ENC_BINARY, ENC_ISO8859_1,
-    ENC_UTF16BE, ENC_UTF16LE, ENC_UTF8,
-};
 
 #[cfg(test)]
 use crate::buffer_names::fixed_name;
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decode_output_buffer};
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::decode::encodex";
 const FAMILY_PREFIX: &str = "decode_encodex";
@@ -48,7 +47,7 @@ use vyre_primitives::wire::pack_u32_slice as pack_words;
 /// their own CPU-side refinement if desired.
 ///
 /// ```ignore
-/// use vyre_libs::decode::encodex_gpu;
+/// use vyre_libs::decode::encodex::encodex_gpu;
 ///
 /// let program = encodex_gpu("bytes", "encoding", 1024);
 /// assert_eq!(program.buffers().len(), 3);
@@ -75,36 +74,25 @@ pub fn encodex_gpu(input: &str, output: &str, count: u32) -> Program {
             BufferDecl::output(&output, 2, DataType::U32).with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
-}
-
-/// Host-side reference that mirrors the GPU heuristics.
-///
-/// Computes the same 256-bin histogram and applies the identical
-/// classification rules so the host oracle and `encodex_gpu` agree on
-/// every fixture input.
-pub fn encodex_reference(input: &[u8]) -> u32 {
-    let histogram = vyre_primitives::text::byte_histogram::reference_byte_histogram(input);
-    classify_from_histogram(&histogram, input.len() as u32)
 }
 
 // ---------------------------------------------------------------------------
 // Fixtures & harness
 // ---------------------------------------------------------------------------
 
-fn fixture_cases() -> Vec<Vec<u8>> {
-    vec![
-        b"Hello".to_vec(),
-        vec![0xC3, 0xA9, 0xC3, 0xA9, b'!'],
-        vec![0x00, 0x00, 0x00, 0x41, 0x42],
-        vec![0xE9, 0xE8, 0xEA, 0xEB, 0xEC],
-    ]
-}
+/// Deterministic fixture inputs for encodex operation registration.
+const FIXTURE_INPUTS: &[&[u8]] = &[
+    b"Hello",
+    &[0xC3, 0xA9, 0xC3, 0xA9, b'!'],
+    &[0x00, 0x00, 0x00, 0x41, 0x42],
+    &[0xE9, 0xE8, 0xEA, 0xEB, 0xEC],
+];
 
 fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
-    fixture_cases()
-        .into_iter()
+    FIXTURE_INPUTS
+        .iter()
         .map(|input| {
             vec![
                 pack_words(&input.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
@@ -114,26 +102,61 @@ fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
         .collect()
 }
 
-fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
-    fixture_cases()
-        .into_iter()
-        .map(|input| {
-            let histogram = vyre_primitives::text::byte_histogram::reference_byte_histogram(&input);
-            let enc_id = classify_from_histogram(&histogram, input.len() as u32);
-            vec![
-                vyre_primitives::wire::pack_u32_slice(&histogram),
-                enc_id.to_le_bytes().to_vec(),
-            ]
-        })
-        .collect()
+const fn build_hist<const N: usize>(input: &[u8; N]) -> [u8; 1024] {
+    let mut out = [0u8; 1024];
+    let mut i = 0;
+    while i < N {
+        let b = input[i] as usize;
+        let base = b * 4;
+        let count = (out[base] as u32)
+            | ((out[base + 1] as u32) << 8)
+            | ((out[base + 2] as u32) << 16)
+            | ((out[base + 3] as u32) << 24);
+        let next = count + 1;
+        out[base] = next as u8;
+        out[base + 1] = (next >> 8) as u8;
+        out[base + 2] = (next >> 16) as u8;
+        out[base + 3] = (next >> 24) as u8;
+        i += 1;
+    }
+    out
 }
+
+const EXPECTED_ENCODEX_HIST_0: [u8; 1024] = build_hist(b"Hello");
+const EXPECTED_ENCODEX_HIST_1: [u8; 1024] = build_hist(&[0xC3, 0xA9, 0xC3, 0xA9, b'!']);
+const EXPECTED_ENCODEX_HIST_2: [u8; 1024] = build_hist(&[0x00, 0x00, 0x00, 0x41, 0x42]);
+const EXPECTED_ENCODEX_HIST_3: [u8; 1024] = build_hist(&[0xE9, 0xE8, 0xEA, 0xEB, 0xEC]);
+
+const EXPECTED_ENCODEX_ENC_0: [u8; 4] = [0, 0, 0, 0];
+const EXPECTED_ENCODEX_ENC_1: [u8; 4] = [1, 0, 0, 0];
+const EXPECTED_ENCODEX_ENC_2: [u8; 4] = [2, 0, 0, 0];
+const EXPECTED_ENCODEX_ENC_3: [u8; 4] = [4, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || encodex_gpu("input", "output", 5),
         Some(fixture_inputs),
-        Some(fixture_outputs),
+        Some(|| {
+            vec![
+                vec![
+                    EXPECTED_ENCODEX_HIST_0.to_vec(),
+                    EXPECTED_ENCODEX_ENC_0.to_vec(),
+                ],
+                vec![
+                    EXPECTED_ENCODEX_HIST_1.to_vec(),
+                    EXPECTED_ENCODEX_ENC_1.to_vec(),
+                ],
+                vec![
+                    EXPECTED_ENCODEX_HIST_2.to_vec(),
+                    EXPECTED_ENCODEX_ENC_2.to_vec(),
+                ],
+                vec![
+                    EXPECTED_ENCODEX_HIST_3.to_vec(),
+                    EXPECTED_ENCODEX_ENC_3.to_vec(),
+                ],
+            ]
+        }),
     )
 }
 
@@ -144,35 +167,49 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::{bytes_to_u32, decode_u32_one, eval_bytes};
 
-    fn run(input: &[u8]) -> (Vec<u32>, u32) {
+    fn histogram(input: &[u8]) -> (Vec<u32>, u32) {
         let program = encodex_gpu("input", "output", input.len() as u32);
-        let input_words = if input.is_empty() {
+        let input_words: Vec<u32> = if input.is_empty() {
             vec![0]
         } else {
-            input.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()
+            input.iter().map(|&b| u32::from(b)).collect()
         };
-        let inputs = vec![
-            Value::from(pack_words(&input_words)),
-            Value::from(vec![0u8; 256 * 4]),
-            Value::from(vec![0u8; 4]),
+        let outputs = eval_bytes(
+            "encodex_gpu",
+            &program,
+            vec![pack_words(&input_words), vec![0u8; 256 * 4], vec![0u8; 4]],
+        );
+        (bytes_to_u32(&outputs[0]), decode_u32_one(&outputs[1]))
+    }
+
+    fn encodex_reference(input: &[u8]) -> u32 {
+        let histogram = vyre_reference::composition_witness::byte_histogram_witness(input);
+        vyre_reference::composition_witness::encoding_classify_histogram_witness(
+            &histogram,
+            input.len() as u32,
+        )
+    }
+
+    /// WHY: registration literals must stay synchronized with independent IR execution.
+    #[test]
+    fn registration_outputs_match_reference_execution() {
+        let expected_encodings = [
+            EXPECTED_ENCODEX_ENC_0,
+            EXPECTED_ENCODEX_ENC_1,
+            EXPECTED_ENCODEX_ENC_2,
+            EXPECTED_ENCODEX_ENC_3,
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: encodex must run; restore this invariant before continuing.");
-        let histogram = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes());
-        let enc_id = u32::from_le_bytes([
-            outputs[1].to_bytes()[0],
-            outputs[1].to_bytes()[1],
-            outputs[1].to_bytes()[2],
-            outputs[1].to_bytes()[3],
-        ]);
-        (histogram, enc_id)
+        for (input, expected) in FIXTURE_INPUTS.iter().zip(expected_encodings) {
+            let (_, actual) = histogram(input);
+            assert_eq!(actual.to_le_bytes(), expected);
+        }
     }
 
     #[test]
     fn ascii_detected() {
-        let (histogram, enc_id) = run(b"Hello");
+        let (histogram, enc_id) = histogram(b"Hello");
         assert_eq!(histogram[72], 1);
         assert_eq!(histogram[101], 1);
         assert_eq!(histogram[108], 2);
@@ -183,7 +220,7 @@ mod tests {
     #[test]
     fn utf8_detected() {
         // é encoded as UTF-8 = 0xC3 0xA9
-        let (histogram, enc_id) = run(&[0xC3, 0xA9, 0xC3, 0xA9]);
+        let (histogram, enc_id) = histogram(&[0xC3, 0xA9, 0xC3, 0xA9]);
         assert_eq!(histogram[0xC3], 2);
         assert_eq!(histogram[0xA9], 2);
         assert_eq!(enc_id, ENC_UTF8);
@@ -191,7 +228,7 @@ mod tests {
 
     #[test]
     fn high_null_guesses_utf16le() {
-        let (histogram, enc_id) = run(&[0x00, 0x00, 0x00, 0x41]);
+        let (histogram, enc_id) = histogram(&[0x00, 0x00, 0x00, 0x41]);
         assert_eq!(histogram[0x00], 3);
         assert_eq!(histogram[0x41], 1);
         assert_eq!(enc_id, ENC_UTF16LE);
@@ -199,7 +236,7 @@ mod tests {
 
     #[test]
     fn iso8859_1_detected() {
-        let (histogram, enc_id) = run(&[0xE9, 0xE8, 0xEA]);
+        let (histogram, enc_id) = histogram(&[0xE9, 0xE8, 0xEA]);
         assert_eq!(histogram[0xE9], 1);
         assert_eq!(histogram[0xE8], 1);
         assert_eq!(histogram[0xEA], 1);
@@ -208,7 +245,7 @@ mod tests {
 
     #[test]
     fn empty_input_is_ascii() {
-        let (histogram, enc_id) = run(b"");
+        let (histogram, enc_id) = histogram(b"");
         assert!(histogram.iter().all(|&v| v == 0));
         assert_eq!(enc_id, ENC_ASCII);
     }
@@ -223,12 +260,12 @@ mod tests {
             b"Pure ASCII text here",
         ];
         for input in inputs {
-            let (_, gpu_id) = run(input);
-            let cpu_id = encodex_reference(input);
+            let (_, gpu_id) = histogram(input);
+            let reference_id = encodex_reference(input);
             assert_eq!(
-                gpu_id, cpu_id,
-                "GPU/CPU mismatch for input {:?}: gpu={} cpu={}",
-                input, gpu_id, cpu_id
+                gpu_id, reference_id,
+                "GPU/reference mismatch for input {:?}: gpu={} reference={}",
+                input, gpu_id, reference_id
             );
         }
     }

@@ -4,17 +4,30 @@
 //! the existing invocation simulator until `Program` stores graph nodes
 //! directly.
 
+pub(crate) mod async_transfer;
 pub(crate) mod call;
 pub mod expr;
 pub(crate) mod expr_cast;
 pub(crate) mod hashmap;
 pub mod node;
+pub(crate) mod node_async;
+pub(crate) mod node_tile;
 pub(crate) mod node_tree;
 /// Thread-local arithmetic-IR-op counting for roofline / complexity analysis.
 pub mod op_count;
 pub mod sequential;
+pub(crate) mod tile;
 pub(crate) mod typed_ops;
 
+pub(crate) fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, crate::ReferenceError> {
+    (axis < 3)
+        .then(|| Value::U32(values[axis as usize]))
+        .ok_or_else(|| {
+            crate::ReferenceError::new(format!(
+                "invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2."
+            ))
+        })
+}
 use std::borrow::Cow;
 
 use rustc_hash::FxHashMap;
@@ -60,8 +73,9 @@ pub(crate) fn program_for_interpreter(
     // Skipping this made every composite call fall through to the empty
     // lowering table's placeholder, which cleared the output buffer instead
     // of computing anything.
-    let inlined = vyre_foundation::ir::inline_composite_calls(collectives_lowered.as_ref())
-        .map_err(|error| crate::ReferenceError::new(error.to_string()))?;
+    let inlined =
+        vyre_foundation::transform::inline::inline_composite_calls(collectives_lowered.as_ref())
+            .map_err(|error| crate::ReferenceError::new(error.to_string()))?;
     Ok(Cow::Owned(inlined))
 }
 
@@ -70,6 +84,45 @@ pub(crate) fn program_for_interpreter(
 /// [`output_index`] locates a named output by that predicate. Re-exported so test
 /// harnesses never hand-roll (and drift from) the selection.
 pub use hashmap::{is_reference_input, is_reference_output, output_index};
+
+/// Project a declaration-order buffer list onto the interpreter's input ABI.
+///
+/// [`reference_eval`] takes one `Value` per [`is_reference_input`] buffer and
+/// nothing for a backend-allocated output, which is what a device artifact
+/// enforces. A harness that walks `Program::buffers()` naturally produces the
+/// longer declaration-order list instead, with a zeroed stand-in per output.
+/// This is the one translation between the two, so a harness never re-derives
+/// it and drifts.
+///
+/// A list already sized to the reference inputs passes through. Anything that
+/// is neither shape is handed over unchanged: the interpreter names the buffer
+/// it is missing a `Value` for, which is a better diagnostic than a count, and
+/// leaving the refusal with the ABI's owner keeps this a translation rather
+/// than a second validator with its own opinion.
+#[must_use]
+pub fn reference_inputs(program: &Program, buffers: Vec<Vec<u8>>) -> Vec<Value> {
+    let declared = program
+        .buffers()
+        .iter()
+        .filter(|decl| decl.access() != vyre_foundation::ir::BufferAccess::Workgroup)
+        .count();
+    let logical = program
+        .buffers()
+        .iter()
+        .filter(|decl| is_reference_input(decl))
+        .count();
+    if buffers.len() != declared || declared == logical {
+        return buffers.into_iter().map(Value::from).collect();
+    }
+    program
+        .buffers()
+        .iter()
+        .filter(|decl| decl.access() != vyre_foundation::ir::BufferAccess::Workgroup)
+        .zip(buffers)
+        .filter(|(decl, _)| is_reference_input(decl))
+        .map(|(_, bytes)| Value::from(bytes))
+        .collect()
+}
 
 /// Execute a vyre IR program on the pure Rust reference interpreter.
 ///
@@ -89,7 +142,7 @@ pub fn reference_eval(
 /// The interpreter DEFINES OOB loads as zero-fill and OOB stores as a no-op so
 /// its output stays deterministic, but that silent absorption is exactly what
 /// masks a GPU/CPU parity hazard: an IR program with an ungated data-derived index
-/// "works" here yet a real GPU (CUDA does no bounds-checking) reads garbage or
+/// "works" here yet a real GPU, which does no bounds-checking, reads garbage or
 /// corrupts memory. Use this to assert a program NEVER relies on that masking: a
 /// correctly bounds-gated program handles an out-of-contract index with explicit
 /// control flow, so it records `OobReport::total() == 0` even on hostile input. A
@@ -223,13 +276,24 @@ pub fn reference_eval_lane_reversed(
     hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Reversed, None)
 }
 
-/// Differential oracle retained for tests during the generic interpreter transition.
-#[cfg(test)]
-pub fn eval_hashmap_reference(
+/// Execute a program with the workgroup/invocation STEP ORDER rotated left by `by`.
+///
+/// Same purpose as [`reference_eval_lane_reversed`], and strictly stronger on one axis:
+/// reversal is a symmetric permutation, so an implementation that confuses lane identity
+/// with step position can be made reversal-symmetric and still be wrong. A rotation is
+/// asymmetric, so it also catches a collective (ballot, shuffle, reduce) that reads its
+/// peers by step position rather than by lane index. `by` is taken modulo the list
+/// length, so any value is a legal schedule and `0` reproduces [`reference_eval`].
+///
+/// # Errors
+/// Same as [`reference_eval`].
+pub fn reference_eval_lane_rotated(
     program: &Program,
     inputs: &[Value],
+    by: u32,
 ) -> Result<Vec<Value>, crate::ReferenceError> {
-    run_arena_reference(program, inputs)
+    let program = program_for_interpreter(program)?;
+    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Rotated(by), None)
 }
 
 /// Interpret a compact [`NodeStorage`] graph and return output node values.
@@ -312,6 +376,7 @@ fn duplicate_node_error(id: NodeId) -> crate::ReferenceError {
     ))
 }
 
+// Inline: covers the crate-private `missing_node_error`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

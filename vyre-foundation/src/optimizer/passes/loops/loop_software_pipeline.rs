@@ -1,4 +1,4 @@
-//! ROADMAP A31  -  software pipelining.
+//! software pipelining.
 //!
 //! 2-stage Load-then-Store narrow slice shipped here. Detect the
 //! tight pattern:
@@ -63,6 +63,7 @@
 use crate::ir::{BinOp, Expr, Ident, Node, Program};
 use crate::optimizer::program_soa::ProgramFacts;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::visit;
 
 /// 2-stage Load-then-Store software pipeline pass.
 #[derive(Debug, Default)]
@@ -87,21 +88,21 @@ impl LoopSoftwarePipeline {
             return PassAnalysis::SKIP;
         }
         let facts = ProgramFacts::build_cached(program);
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_has_pipelinable_loop(n, &facts))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        PassAnalysis::run_if(
+            program
+                .entry()
+                .iter()
+                .any(|n| node_has_pipelinable_loop(n, &facts)),
+        )
     }
 
     /// Walk the entry tree; rewrite every pipelinable Loop into
     /// prologue + steady-state + epilogue.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
+        if !Self::analyze_impl(&program).should_run {
+            return PassResult::unchanged(program);
+        }
         let facts = ProgramFacts::build_cached(&program);
         let mut changed = false;
         let program = program.map_entry(|entry| {
@@ -156,27 +157,16 @@ fn rewrite_node(node: Node, facts: &ProgramFacts, changed: &mut bool) -> Vec<Nod
                 .flat_map(|n| rewrite_node(n, facts, changed))
                 .collect(),
         )],
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec: Vec<Node> = match std::sync::Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            vec![Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(
-                    body_vec
-                        .into_iter()
-                        .flat_map(|n| rewrite_node(n, facts, changed))
-                        .collect(),
-                ),
-            }]
-        }
-        other => vec![other],
+        // A `Region`, and every other body-bearing variant this match does not
+        // name, is descended as well: the applicability search below admits a
+        // nested loop through `child_bodies`, so a rewrite that stopped here
+        // would report no change for a program the analysis accepted.
+        // `map_body` owns which slots exist.
+        other => vec![visit::node_map::map_body(other, &mut |body| {
+            body.into_iter()
+                .flat_map(|n| rewrite_node(n, facts, changed))
+                .collect()
+        })],
     }
 }
 
@@ -393,7 +383,13 @@ fn node_has_pipelinable_loop(node: &Node, facts: &ProgramFacts) -> bool {
         }
         Node::Block(body) => body.iter().any(|n| node_has_pipelinable_loop(n, facts)),
         Node::Region { body, .. } => body.iter().any(|n| node_has_pipelinable_loop(n, facts)),
-        _ => false,
+        // A variant this match does not name may still carry child bodies.
+        // `child_bodies` owns which slots exist, so a loop nested under a new
+        // variant is found instead of skipped.
+        _ => visit::child_bodies(node)
+            .into_iter()
+            .flatten()
+            .any(|n| node_has_pipelinable_loop(n, facts)),
     }
 }
 

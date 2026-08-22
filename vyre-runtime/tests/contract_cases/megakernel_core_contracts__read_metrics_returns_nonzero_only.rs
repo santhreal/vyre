@@ -1,3 +1,5 @@
+use super::*;
+
 #[test]
 fn read_metrics_returns_nonzero_only() {
     let mut ctrl = vec![0u8; (control::METRICS_BASE as usize + 32) * 4];
@@ -92,8 +94,13 @@ fn opcode_count_zero_is_nop() {
 #[test]
 fn batch_fence_after_packed_slot_increments_epoch() {
     let mut ring = ResidentWorkQueue::encode_empty_ring(4).unwrap();
-    ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &[(opcodes::STORE_U32 as u8, vec![10, 32])])
-        .expect("Fix: packed slot publish must succeed");
+    ResidentWorkQueue::publish_packed_slot(
+        &mut ring,
+        0,
+        0,
+        &[(opcodes::STORE_U32 as u8, vec![10, 32])],
+    )
+    .expect("Fix: packed slot publish must succeed");
     ResidentWorkQueue::publish_slot(&mut ring, 1, 0, opcodes::BATCH_FENCE, &[1, 0xBEEF])
         .expect("Fix: fence publish after packed slot must succeed");
     let fence_base = SLOT_WORDS as usize * 4;

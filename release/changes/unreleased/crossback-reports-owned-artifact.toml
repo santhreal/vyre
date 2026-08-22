@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The cross-backend comparison gate now reports ownership of its generated table, so both immutable validation and canonical regeneration satisfy the gate artifact contract."

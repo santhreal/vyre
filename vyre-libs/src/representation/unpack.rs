@@ -2,55 +2,35 @@
 //!
 //! Category-A compositions over `UnOp::Unpack*` primitives.
 
-use crate::region::wrap_anonymous;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{DataType, Expr, Program};
 
 /// Unpack 4-bit values from a u32 buffer into f32.
 /// Input: `n/8` u32s (each holds 8 4-bit values), Output: `n` f32s.
 #[must_use]
 pub fn unpack_4bit_f32(input: &str, output: &str, n: u32) -> Program {
-    let i = Expr::var("i");
-    let u32_idx = Expr::div(i.clone(), Expr::u32(8));
-    let shift = Expr::mul(Expr::rem(i.clone(), Expr::u32(8)), Expr::u32(4));
-
-    // Logic: (val >> shift) & 0xF
-    let val = Expr::bitand(Expr::shr(Expr::load(input, u32_idx), shift), Expr::u32(0xF));
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value: Expr::cast(DataType::F32, val),
-            }],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n / 8),
-            BufferDecl::output(output, 1, DataType::F32).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous(
-            "vyre-libs::representation::unpack_4bit_f32",
-            body,
-        )],
-    )
+    ElementwiseComposer::new("vyre-libs::representation::unpack_4bit_f32", n)
+        .add_input(input, DataType::U32, n / 8)
+        .add_output(output, DataType::F32, n)
+        .build_pointwise(output, |i| {
+            let u32_idx = Expr::div(i.clone(), Expr::u32(8));
+            let shift = Expr::mul(Expr::rem(i, Expr::u32(8)), Expr::u32(4));
+            let val = Expr::bitand(Expr::shr(Expr::load(input, u32_idx), shift), Expr::u32(0xF));
+            Expr::cast(DataType::F32, val)
+        })
 }
 
+const EXPECTED_UNPACK_NIBBLE_U32_F32_OUTPUT_BYTES: [u8; 64] = [
+    0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192,
+    64, 0, 0, 224, 64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32, 65, 0, 0, 48, 65, 0, 0, 64, 65, 0, 0,
+    80, 65, 0, 0, 96, 65, 0, 0, 112, 65,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::representation::unpack_4bit_f32",
-        build: Some(|| unpack_4bit_f32("input", "output", 16)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::representation::unpack_4bit_f32",
+        || unpack_4bit_f32("input", "output", 16),
+        Some(|| {
 
             // Pack 16 4-bit values: 0..15 into 2 u32s (8 nibbles each)
             // u32[0] = 0x76543210, u32[1] = 0xFEDCBA98
@@ -58,16 +38,8 @@ inventory::submit! {
                 crate::fixture_bytes::u32_bytes(&[0x7654_3210, 0xFEDC_BA98]), // input: 2 packed u32s
             ]]
         }),
-        expected_output: Some(|| {
-            // u32 → f32 as a value-preserving cast (not a bit-cast),
-            // matching target-text `f32(u32_value)`. The packed input
-            // [0x76543210, 0xFEDCBA98] unpacks into nibbles 0..15
-            // in LSB-first order, each of which casts to its integer
-            // value as f32.
-            let values: Vec<f32> = (0u32..16).map(|v| v as f32).collect();
-            let bytes = vyre_primitives::wire::pack_f32_slice(&values);
-            vec![vec![bytes]]
+        Some(|| {
+            vec![vec![EXPECTED_UNPACK_NIBBLE_U32_F32_OUTPUT_BYTES.to_vec()]]
         }),
-        category: None,
-    }
+    )
 }

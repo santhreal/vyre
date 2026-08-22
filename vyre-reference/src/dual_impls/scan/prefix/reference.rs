@@ -1,9 +1,9 @@
-use crate::{dual_impls::common, workgroup::Memory};
+use crate::{dual_impls::evaluator, workgroup::Memory};
 use vyre_primitives::Scan;
 
-impl common::ReferenceEvaluator for Scan {
-    fn evaluate(&self, inputs: &[Memory]) -> Result<Memory, common::EvalError> {
-        let words = common::u32_words(common::one_input(inputs, "scan")?, "scan")?;
+impl evaluator::ReferenceEvaluator for Scan {
+    fn evaluate(&self, inputs: &[Memory]) -> Result<Memory, evaluator::EvalError> {
+        let words = evaluator::u32_words(evaluator::one_input(inputs, "scan")?, "scan")?;
         let mut iter = words.into_iter();
         let Some(first) = iter.next() else {
             return Ok(Memory::from_bytes(Vec::new()));
@@ -11,9 +11,9 @@ impl common::ReferenceEvaluator for Scan {
         let mut acc = first;
         let mut output = vec![acc];
         for value in iter {
-            acc = common::combine(self.combine, acc, value)?;
+            acc = evaluator::combine(self.combine, acc, value)?;
             output.push(acc);
         }
-        Ok(common::write_u32s(output))
+        Ok(evaluator::write_u32s(output))
     }
 }

@@ -1,0 +1,368 @@
+//! Subgroup prefix-sum (inclusive / exclusive scan)  -  core 1000×
+//! primitive for variable-length compaction.
+//!
+//! # Use cases
+//!
+//! * **Hit-buffer compaction:** each lane produces 0 or 1 live
+//!   flag; an exclusive scan over the flag vector gives the
+//!   destination slot for each live hit. One dispatch provides the
+//!   parallel compaction primitive used by PHASE9_EMIT.
+//! * **Histogram prefix:** turn a bin-count vector into the CDF
+//!   lookup used by the radix-sort primitive.
+//! * **Segmented-reduce baseline:** classical parallel-scan is
+//!   the inner kernel of a `(segment_offsets, values)` pair.
+//!
+//! # Algorithm
+//!
+//! Work-efficient Blelloch scan over `N` elements in one workgroup of at most
+//! 256 lanes. A lane owns a contiguous run of
+//! `ceil(N / lanes)` elements: it sums its run, the workgroup scans the run
+//! sums with [`reduce::workgroup_tree`](crate::reduce::workgroup_tree), and the
+//! lane replays its run from the resulting offset.
+//!
+//! ```text
+//!   stage:   scratch[lane] = sum(in[lane*r .. lane*r+r])
+//!   sweep:   scratch      = exclusive scan of the run sums
+//!   replay:  out[lane*r+k] = scratch[lane] + sum(in[lane*r ..= lane*r+k])
+//! ```
+//!
+//! Total work is `2N` element reads plus the `2*lanes-2` additions of the
+//! sweep. The workgroup is never inflated past 256 lanes, so
+//! `N = 1024` dispatches 256 lanes of four elements rather than 1024 lanes of
+//! one, and `N = 513` dispatches 256 rather than the 1024 a
+//! next-power-of-two lane count would ask for.
+
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
+use crate::reduce::workgroup_scan::blelloch_inclusive_sum_nodes;
+use vyre_primitives::ir_safe::clamped_load_to;
+
+/// Canonical op id for inclusive sum-scan.
+pub const OP_ID_INCLUSIVE_SUM: &str = "vyre-libs::math::prefix_scan_inclusive_sum";
+/// Canonical op id for exclusive sum-scan.
+pub const OP_ID_EXCLUSIVE_SUM: &str = "vyre-libs::math::prefix_scan_exclusive_sum";
+
+/// Which scan variant to emit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScanKind {
+    /// `out[i] = sum(in[0..=i])`.
+    InclusiveSum,
+    /// `out[i] = sum(in[0..i])`  -  identity element (`0`) at slot 0.
+    ExclusiveSum,
+}
+
+/// Largest element count one workgroup scans.
+///
+/// Above this the scan is a multi-block chain, which
+/// `reduce::multi_block_prefix_scan` owns and `vyre-libs::math::scan_prefix_sum`
+/// selects. This builder traps instead of silently scanning a prefix.
+pub const MAX_SINGLE_BLOCK_SCAN: u32 = 1024;
+
+/// Emit a single-workgroup prefix-sum Program.
+///
+/// `n` is the number of input slots, in `1..=`[`MAX_SINGLE_BLOCK_SCAN`]. The
+/// emitted workgroup is capped at the portable workgroup width and each lane
+/// walks `ceil(n / lanes)` elements.
+#[must_use]
+pub fn prefix_scan(in_buf: &str, out_buf: &str, n: u32, kind: ScanKind) -> Program {
+    let op_id = match kind {
+        ScanKind::InclusiveSum => OP_ID_INCLUSIVE_SUM,
+        ScanKind::ExclusiveSum => OP_ID_EXCLUSIVE_SUM,
+    };
+    prefix_scan_with_op_id(in_buf, out_buf, n, kind, op_id)
+}
+
+/// Emit a single-workgroup prefix-sum Program with an explicit region generator
+/// id, so a composition can carry its own op id over the shared body.
+#[must_use]
+pub fn prefix_scan_with_op_id(
+    in_buf: &str,
+    out_buf: &str,
+    n: u32,
+    kind: ScanKind,
+    op_id: &'static str,
+) -> Program {
+    if n == 0 || n > MAX_SINGLE_BLOCK_SCAN {
+        return trap_program(
+            op_id,
+            Some((out_buf, DataType::U32)),
+            format!(
+                "Fix: prefix_scan scans one workgroup and requires n in 1..={MAX_SINGLE_BLOCK_SCAN}, got {n}. Build larger scans with vyre-libs::math::scan_prefix_sum, which selects the multi-block chain."
+            ),
+        );
+    }
+
+    let lanes = n
+        .next_power_of_two()
+        .min(vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS);
+    let run = n.div_ceil(lanes);
+    // Workgroup-LOCAL, and the whole body is fenced to workgroup 0.
+    //
+    // This is a single-workgroup scan: `scratch_a` and `scratch_b` are
+    // workgroup-scoped and hold exactly `lanes` slots, and the Blelloch sweep
+    // between them is ordered by a workgroup barrier that means nothing across
+    // workgroups. The lane index used to be `InvocationId`, the GLOBAL id. That
+    // is the same number only when the launch is one workgroup wide. It is, for
+    // `n <= lanes`, which is why every test of this builder passed; above that
+    // the grid is `ceil(n / lanes)` workgroups, lanes `lanes..` index a
+    // workgroup buffer that has `lanes` slots, and a device faults on the store
+    // with an illegal address rather than returning a wrong answer.
+    //
+    // A program that is only correct at one launch geometry must not read a
+    // geometry-dependent id. The sibling bottom-out scan in
+    // `reduce::multi_block_prefix_scan` already fences on `WorkgroupId == 0`
+    // and reads `LocalId`; this now matches it, so extra workgroups are inert
+    // instead of out of bounds and the answer no longer depends on which grid
+    // the driver infers.
+    let lane = Expr::var("lane");
+    let scratch_a = format!("__{out_buf}_scan_a");
+    let scratch_b = format!("__{out_buf}_scan_b");
+    let run_base = Expr::mul(lane.clone(), Expr::u32(run));
+
+    // Stage: one lane, one run sum. Every lane writes, so the sweep reads a
+    // fully initialized buffer without a separate zero-fill pass.
+    let mut staged = Expr::u32(0);
+    for step in 0..run {
+        staged = Expr::add(staged, run_element(in_buf, &run_base, step, n));
+    }
+    let mut body = vec![
+        Node::let_bind("lane", Expr::LocalId { axis: 0 }),
+        Node::store(&scratch_a, lane.clone(), staged),
+        Node::barrier(),
+    ];
+
+    body.extend(blelloch_inclusive_sum_nodes(
+        &scratch_a, &scratch_b, &lane, lanes,
+    ));
+
+    // Replay: the sweep leaves the INCLUSIVE run-sum prefix in `scratch_a` and
+    // this lane's own run sum in `scratch_b`, so their difference is the
+    // exclusive offset the run starts from.
+    let offset = format!("__{out_buf}_scan_offset");
+    body.push(Node::let_bind(
+        offset.as_str(),
+        Expr::load(&scratch_a, lane.clone()).wrapping_sub(Expr::load(&scratch_b, lane.clone())),
+    ));
+    let mut running = Expr::var(offset.as_str());
+    for step in 0..run {
+        let element = run_element(in_buf, &run_base, step, n);
+        let inclusive = format!("__{out_buf}_scan_run_{step}");
+        body.push(Node::let_bind(
+            inclusive.as_str(),
+            Expr::add(running, element.clone()),
+        ));
+        let index = Expr::add(run_base.clone(), Expr::u32(step));
+        let value = match kind {
+            ScanKind::InclusiveSum => Expr::var(inclusive.as_str()),
+            ScanKind::ExclusiveSum => Expr::var(inclusive.as_str()).wrapping_sub(element),
+        };
+        body.push(Node::if_then(
+            Expr::lt(index.clone(), Expr::u32(n)),
+            vec![Node::store(out_buf, index, value)],
+        ));
+        running = Expr::var(inclusive.as_str());
+    }
+
+    let output_bytes = usize::try_from(n).unwrap_or(usize::MAX).saturating_mul(4);
+    let buffers = vec![
+        BufferDecl::storage(in_buf, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+        BufferDecl::output(out_buf, 1, DataType::U32)
+            .with_count(n)
+            .with_output_byte_range(0..output_bytes),
+        BufferDecl::workgroup(&scratch_a, lanes, DataType::U32),
+        BufferDecl::workgroup(&scratch_b, lanes, DataType::U32),
+    ];
+
+    Program::wrapped(
+        buffers,
+        [lanes, 1, 1],
+        vec![wrap_anonymous_region(
+            op_id,
+            vec![Node::if_then(
+                Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+                body,
+            )],
+        )],
+    )
+}
+
+/// Element `step` of the run based at `run_base`, or zero when the run overruns
+/// `n`.
+///
+/// The load is clamped as well as selected: a lane whose run overruns the input
+/// still issues the load on every backend that evaluates both arms of a select,
+/// and an unclamped index would read past the buffer there.
+fn run_element(in_buf: &str, run_base: &Expr, step: u32, n: u32) -> Expr {
+    let index = Expr::add(run_base.clone(), Expr::u32(step));
+    Expr::select(
+        Expr::lt(index.clone(), Expr::u32(n)),
+        clamped_load_to(in_buf, index, Expr::u32(n)),
+        Expr::u32(0),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn try_cpu_ref_into(input: &[u32], kind: ScanKind, out: &mut Vec<u32>) -> Result<(), String> {
+        let inclusive = match kind {
+            ScanKind::InclusiveSum => true,
+            ScanKind::ExclusiveSum => false,
+        };
+        vyre_reference::composition_witness::prefix_scan_witness_into(
+            input,
+            inclusive,
+            |a, b| a.wrapping_add(b),
+            0,
+            out,
+        );
+        Ok(())
+    }
+
+    fn cpu_ref_into(input: &[u32], kind: ScanKind, out: &mut Vec<u32>) {
+        try_cpu_ref_into(input, kind, out).expect("cpu_ref_into failed");
+    }
+
+    fn cpu_ref(input: &[u32], kind: ScanKind) -> Vec<u32> {
+        let mut out = Vec::new();
+        cpu_ref_into(input, kind, &mut out);
+        out
+    }
+
+    #[test]
+    fn inclusive_cpu_ref_matches_textbook() {
+        assert_eq!(
+            cpu_ref(&[1, 2, 3, 4], ScanKind::InclusiveSum),
+            vec![1, 3, 6, 10],
+        );
+    }
+
+    #[test]
+    fn exclusive_cpu_ref_matches_textbook() {
+        assert_eq!(
+            cpu_ref(&[1, 2, 3, 4], ScanKind::ExclusiveSum),
+            vec![0, 1, 3, 6],
+        );
+    }
+
+    #[test]
+    fn empty_cpu_ref_returns_empty() {
+        assert_eq!(cpu_ref(&[], ScanKind::InclusiveSum), Vec::<u32>::new());
+        assert_eq!(cpu_ref(&[], ScanKind::ExclusiveSum), Vec::<u32>::new());
+    }
+
+    #[test]
+    fn wrap_on_overflow() {
+        // Overflow check: wrapping_add semantics.
+        assert_eq!(
+            cpu_ref(&[u32::MAX, 1], ScanKind::InclusiveSum),
+            vec![u32::MAX, 0],
+        );
+    }
+
+    #[test]
+    fn cpu_ref_into_reuses_output_buffer() {
+        let mut out = Vec::with_capacity(16);
+        let ptr = out.as_ptr();
+        cpu_ref_into(&[1, 2, 3, 4], ScanKind::ExclusiveSum, &mut out);
+        assert_eq!(out, vec![0, 1, 3, 6]);
+        assert_eq!(out.as_ptr(), ptr);
+    }
+
+    #[test]
+    fn cpu_ref_into_truncates_stale_tail_without_reallocating() {
+        let mut out = Vec::with_capacity(16);
+        out.extend([99u32; 16]);
+        let ptr = out.as_ptr();
+
+        try_cpu_ref_into(&[1, 2, 3, 4], ScanKind::InclusiveSum, &mut out).unwrap();
+
+        assert_eq!(out, vec![1, 3, 6, 10]);
+        assert_eq!(out.as_ptr(), ptr);
+    }
+
+    #[test]
+    fn generated_cpu_ref_matches_independent_wrapping_scan() {
+        for len in 0..128usize {
+            let input: Vec<u32> = (0..len)
+                .map(|idx| {
+                    (idx as u32)
+                        .wrapping_mul(0x9E37_79B9)
+                        .wrapping_add(len as u32)
+                })
+                .collect();
+            for kind in [ScanKind::InclusiveSum, ScanKind::ExclusiveSum] {
+                let mut out = Vec::with_capacity(len + 3);
+                try_cpu_ref_into(&input, kind, &mut out).unwrap();
+                let mut expected = Vec::with_capacity(len);
+                let mut acc = 0u32;
+                for &value in &input {
+                    match kind {
+                        ScanKind::InclusiveSum => {
+                            acc = acc.wrapping_add(value);
+                            expected.push(acc);
+                        }
+                        ScanKind::ExclusiveSum => {
+                            expected.push(acc);
+                            acc = acc.wrapping_add(value);
+                        }
+                    }
+                }
+                assert_eq!(
+                    out, expected,
+                    "generated prefix scan len={len} kind={kind:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn emitted_inclusive_program_has_expected_buffers() {
+        let p = prefix_scan("in", "out", 32, ScanKind::InclusiveSum);
+        assert_eq!(p.workgroup_size, [32, 1, 1]);
+        let names: Vec<&str> = p.buffers.iter().map(|b| b.name()).collect();
+        assert_eq!(names, vec!["in", "out", "__out_scan_a", "__out_scan_b"]);
+    }
+
+    #[test]
+    fn emitted_exclusive_program_has_expected_buffers() {
+        let p = prefix_scan("in", "out", 64, ScanKind::ExclusiveSum);
+        assert_eq!(p.workgroup_size, [64, 1, 1]);
+    }
+
+    #[test]
+    fn non_power_of_two_n_pads_to_next_power_of_two() {
+        let p = prefix_scan("in", "out", 5, ScanKind::InclusiveSum);
+        assert_eq!(p.workgroup_size, [8, 1, 1]);
+    }
+
+    #[test]
+    fn zero_n_traps() {
+        let p = prefix_scan("in", "out", 0, ScanKind::InclusiveSum);
+        assert!(p.stats().trap());
+    }
+
+    #[test]
+    fn over_limit_n_traps() {
+        let p = prefix_scan("in", "out", 2048, ScanKind::InclusiveSum);
+        assert!(p.stats().trap());
+    }
+
+    #[test]
+    fn binary_power_of_two_sizes_accepted() {
+        for n in &[1_u32, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024] {
+            let program = prefix_scan("in", "out", *n, ScanKind::InclusiveSum);
+            let names: Vec<&str> = program.buffers().iter().map(|b| b.name()).collect();
+            assert!(
+                names.contains(&"in"),
+                "prefix_scan must declare in for n={n}"
+            );
+            assert!(
+                names.contains(&"out"),
+                "prefix_scan must declare out for n={n}"
+            );
+        }
+    }
+}

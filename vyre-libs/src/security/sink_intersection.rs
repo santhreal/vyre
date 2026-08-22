@@ -2,16 +2,22 @@
 //! a sink-family bitset. Used by rules that want a fractional
 //! confidence ("X% of nodes reachable from source landed in sinks").
 
-use std::sync::Arc;
+use crate::bitset::and::bitset_and;
+use crate::bitset::bitset_words;
+use crate::reduce::count::reduce_count;
+use vyre_foundation::ir::Program;
 
-use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_primitives::graph::csr_forward_traverse::bitset_words;
+use crate::security::flow_composition::fuse_security_flow;
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::sink_intersection";
 
-/// Build a sink-intersection-count Program. AND query with sink_set,
-/// popcount the result, write to out_scalar.
+/// Build a sink-intersection-count Program: AND `query_set` with
+/// `sink_set` into `intersect_buf`, then popcount-reduce that into
+/// `out_scalar`.
+///
+/// `reduce_count` seeds `out_scalar` to zero before accumulating, so
+/// the count is the intersection's population and not an addition to
+/// whatever the caller left in the slot.
 #[must_use]
 pub fn sink_intersection(
     node_count: u32,
@@ -21,47 +27,13 @@ pub fn sink_intersection(
     out_scalar: &str,
 ) -> Program {
     let words = bitset_words(node_count);
-    let t = Expr::InvocationId { axis: 0 };
-    let body = vec![
-        Node::let_bind(
-            "intersect",
-            Expr::bitand(
-                Expr::load(query_set, t.clone()),
-                Expr::load(sink_set, t.clone()),
-            ),
-        ),
-        Node::store(intersect_buf, t.clone(), Expr::var("intersect")),
-        Node::let_bind(
-            "count",
-            Expr::UnOp {
-                op: UnOp::Popcount,
-                operand: Box::new(Expr::var("intersect")),
-            },
-        ),
-        Node::let_bind(
-            "_",
-            Expr::atomic_add(out_scalar, Expr::u32(0), Expr::var("count")),
-        ),
-    ];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(query_set, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(words),
-            BufferDecl::storage(sink_set, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(words),
-            BufferDecl::storage(intersect_buf, 2, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(words),
-            BufferDecl::output(out_scalar, 3, DataType::U32).with_count(1),
+    fuse_security_flow(
+        OP_ID,
+        &[
+            bitset_and(query_set, sink_set, intersect_buf, words),
+            reduce_count(intersect_buf, out_scalar, words),
         ],
-        [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
-                Expr::lt(t.clone(), Expr::u32(words)),
-                body,
-            )]),
-        }],
+        out_scalar,
     )
 }
 
@@ -69,8 +41,8 @@ pub fn sink_intersection(
 #[must_use]
 #[cfg(test)]
 pub(crate) fn cpu_ref(query_set: &[u32], sink_set: &[u32]) -> u32 {
-    let inter = vyre_primitives::bitset::and::cpu_ref(query_set, sink_set);
-    inter.iter().map(|w| w.count_ones()).sum()
+    let intersection = vyre_reference::composition_witness::bitset_and_witness(query_set, sink_set);
+    vyre_reference::composition_witness::reduce_count_witness(&intersection)
 }
 
 /// Soundness marker for [`sink_intersection`].

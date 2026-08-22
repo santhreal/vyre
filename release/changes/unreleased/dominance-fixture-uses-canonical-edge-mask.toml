@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The bounded-by-comparison registration fixture now uses the canonical dominance edge bit, restoring the documented backward ancestor step instead of returning only its seed frontier."

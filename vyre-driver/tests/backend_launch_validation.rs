@@ -5,18 +5,18 @@ use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
 
 struct GridLimitBackend;
 
-impl vyre_driver::backend::private::Sealed for GridLimitBackend {}
+impl vyre_driver::sealed::Sealed for GridLimitBackend {}
 
 impl VyreBackend for GridLimitBackend {
     fn id(&self) -> &'static str {
         "grid-limit-test"
     }
 
-    fn dispatch(
+    fn dispatch_borrowed(
         &self,
-        _program: &Program,
-        _inputs: &[Vec<u8>],
-        _config: &DispatchConfig,
+        _: &Program,
+        _: &[&[u8]],
+        _: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         Ok(Vec::new())
     }
@@ -47,8 +47,9 @@ fn validate_program_for_backend_rejects_grid_override_past_backend_axis_limit() 
         let mut config = DispatchConfig::default();
         config.grid_override = Some(grid);
 
-        let err = vyre_driver::validate_program_for_backend(&backend, &program, &config)
-            .expect_err("Fix: grid_override above the backend per-dimension limit must fail.");
+        let err =
+            vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
+                .expect_err("Fix: grid_override above the backend per-dimension limit must fail.");
         let msg = err.to_string();
         assert!(
             msg.contains("Fix:"),
@@ -80,13 +81,15 @@ fn backend_error_preserves_structured_validation_source() {
         supports_indirect_dispatch: false,
         supports_distributed_collectives: false,
         supports_trap_propagation: false,
+        supports_grid_sync: false,
+        allows_host_grid_sync_split: false,
         max_workgroup_size: [256, 256, 64],
     };
 
     let error = vyre_driver::validation::validate_program_contract(
         &program,
         vyre_foundation::validate::ValidationOptions::default(),
-        vyre_driver::backend::validation::default_supported_ops(),
+        vyre_driver::default_supported_ops(),
         caps,
     )
     .expect_err("zero workgroup axis must fail validation");
@@ -107,7 +110,7 @@ fn validate_program_for_backend_accepts_grid_override_at_backend_axis_limit() {
     let mut config = DispatchConfig::default();
     config.grid_override = Some([7, 7, 7]);
 
-    vyre_driver::validate_program_for_backend(&backend, &program, &config)
+    vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
         .expect("Fix: grid_override equal to the backend per-dimension limit must be valid.");
 }
 
@@ -118,7 +121,7 @@ fn validate_program_for_backend_rejects_zero_grid_override_dimension() {
     let mut config = DispatchConfig::default();
     config.grid_override = Some([1, 0, 1]);
 
-    let err = vyre_driver::validate_program_for_backend(&backend, &program, &config)
+    let err = vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
         .expect_err("Fix: zero grid_override dimensions must fail before backend dispatch.");
     let msg = err.to_string();
     assert!(

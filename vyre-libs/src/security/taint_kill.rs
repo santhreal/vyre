@@ -15,9 +15,10 @@
 //! Soundness: ``Exact``. The set difference
 //! is bit-precise on every word; no over- or under-approximation.
 
+use crate::bitset::and_not::bitset_and_not;
+use crate::bitset::bitset_words;
+use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
-use vyre_primitives::bitset::and_not::bitset_and_not;
-use vyre_primitives::graph::csr_forward_traverse::bitset_words;
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::taint_kill";
 
@@ -35,11 +36,9 @@ pub fn taint_kill(
     frontier_out: &str,
 ) -> Program {
     let words = bitset_words(node_count);
-    let primitive = bitset_and_not(frontier_in, kill_set, frontier_out, words);
-    Program::wrapped(
-        primitive.buffers().to_vec(),
-        primitive.workgroup_size(),
-        crate::region::reparent_program_children(&primitive, OP_ID),
+    tag_program(
+        OP_ID,
+        bitset_and_not(frontier_in, kill_set, frontier_out, words),
     )
 }
 
@@ -47,7 +46,7 @@ pub fn taint_kill(
 #[must_use]
 #[cfg(test)]
 pub(crate) fn cpu_ref(frontier_in: &[u32], kill_set: &[u32]) -> Vec<u32> {
-    vyre_primitives::bitset::and_not::cpu_ref(frontier_in, kill_set)
+    vyre_reference::composition_witness::bitset_and_not_witness(frontier_in, kill_set)
 }
 
 /// Marker type for the taint_kill dataflow primitive.

@@ -17,27 +17,16 @@ fn ptx_emits_bitwise_ops() {
         ("shl", Expr::shl(Expr::gid_x(), Expr::u32(2)), "shl.b32"),
         ("shr", Expr::shr(Expr::gid_x(), Expr::u32(2)), "shr.u32"),
     ];
-    for (name, expr, expected_insn) in ops {
-        let program = Program::wrapped(
-            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-            [1, 1, 1],
-            vec![Node::store("out", Expr::u32(0), expr)],
-        );
-        let secondary_text = program_to_ptx(&program, &default_config())
-            .unwrap_or_else(|e| panic!("Fix: {name} must lower to PTX: {e}"));
-        assert!(
-            secondary_text.contains(expected_insn),
-            "Fix: {name} must emit {expected_insn}."
-        );
-    }
+    assert_ptx_emits_expr_insns(&ops);
 }
 
 #[test]
 fn grouped_int4_affine_ptx_masks_power_of_two_modulo() {
     let spec = vyre_libs::nn::linear::QuantizedLinear4BitSpec::affine_grouped(256, 4096, 64);
-    let program =
-        vyre_libs::nn::linear::linear_4bit_affine_grouped_typed(&spec, "x", "w", "scale", "zp", "b", "out")
-            .expect("Fix: grouped INT4 affine release program must build.");
+    let program = vyre_libs::nn::linear::linear_4bit_affine_grouped_typed(
+        &spec, "x", "w", "scale", "zp", "b", "out",
+    )
+    .expect("Fix: grouped INT4 affine release program must build.");
     let ptx = program_to_ptx_for_sm(&program, &default_config(), 90)
         .expect("Fix: grouped INT4 affine release program must lower to PTX.");
 
@@ -54,9 +43,10 @@ fn grouped_int4_affine_ptx_masks_power_of_two_modulo() {
 #[test]
 fn grouped_int4_affine_ptx_broadcasts_packed_weight_words() {
     let spec = vyre_libs::nn::linear::QuantizedLinear4BitSpec::affine_grouped(256, 4096, 64);
-    let program =
-        vyre_libs::nn::linear::linear_4bit_affine_grouped_typed(&spec, "x", "w", "scale", "zp", "b", "out")
-            .expect("Fix: grouped INT4 affine release program must build.");
+    let program = vyre_libs::nn::linear::linear_4bit_affine_grouped_typed(
+        &spec, "x", "w", "scale", "zp", "b", "out",
+    )
+    .expect("Fix: grouped INT4 affine release program must build.");
     let ptx = program_to_ptx_for_sm(&program, &default_config(), 90)
         .expect("Fix: grouped INT4 affine release program must lower to PTX.");
 
@@ -276,8 +266,45 @@ fn ptx_uses_strict_inverse_sqrt_without_ulp_budget() {
     );
 }
 
+/// WHY: closes, on this route, the class "the PTX emitter refuses a program for
+/// want of a `ulp_budget` it cannot usefully choose". PTX has no exact `tanh`,
+/// so a budget selects nothing for it; gating admission on the budget meant
+/// every route had to pass a positive value, and the artifact route that did
+/// not took 21 registered ops out of the conformance certificate on cuda.
+///
+/// The invariant over the whole `UnOp` space lives with the emitter that owns
+/// the decision, in `vyre-emit-ptx/tests/ulp_budget_is_not_an_admission_gate.rs`.
+/// What this asserts is that the direct CUDA dispatch route inherits it.
+///
+/// Does not catch: a budget that changes the emitted numbers beyond the parity
+/// window, which the conformance comparator owns.
 #[test]
-fn ptx_requires_ulp_budget_for_approximate_transcendentals() {
+fn a_ulp_budget_still_selects_the_approximate_form_where_both_exist() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::F32).with_count(1),
+            BufferDecl::output("out", 1, DataType::F32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::inverse_sqrt(Expr::load("input", Expr::u32(0))),
+        )],
+    );
+    let mut budgeted = default_config();
+    budgeted.ulp_budget = Some(64);
+    let secondary_text = program_to_ptx(&program, &budgeted)
+        .expect("Fix: a budgeted inverse-sqrt must lower to PTX.");
+    assert!(
+        secondary_text.contains("rsqrt.approx.f32"),
+        "Fix: a positive ULP budget must select the approximate reciprocal-sqrt where PTX offers \
+         both forms; got:\n{secondary_text}"
+    );
+}
+
+#[test]
+fn an_approximate_only_transcendental_lowers_without_any_budget() {
     let program = Program::wrapped(
         vec![
             BufferDecl::read("input", 0, DataType::F32).with_count(1),
@@ -293,20 +320,11 @@ fn ptx_requires_ulp_budget_for_approximate_transcendentals() {
             },
         )],
     );
-    let err = program_to_ptx(&program, &default_config())
-        .expect_err("Fix: CUDA tanh must reject implicit approximate lowering.");
-    assert!(
-        err.contains("tanh") && err.contains("ulp_budget") && err.contains("Fix:"),
-        "Fix: approximate-transcendental rejection must name the op and remediation; got: {err}"
-    );
-
-    let mut config = default_config();
-    config.ulp_budget = Some(64);
-    let secondary_text = program_to_ptx(&program, &config)
-        .expect("Fix: explicit ULP budget must permit approximate tanh PTX.");
+    let secondary_text = program_to_ptx(&program, &default_config())
+        .expect("Fix: PTX has no exact tanh, so the only lowering must not need a budget.");
     assert!(
         secondary_text.contains("tanh.approx.f32"),
-        "Fix: budgeted tanh lowering must use the PTX fast approximation; got:\n{secondary_text}"
+        "Fix: tanh must lower to the one instruction PTX has; got:\n{secondary_text}"
     );
 }
 
@@ -334,19 +352,7 @@ fn ptx_emits_integer_subgroup_ops() {
             "redux.sync.add.u32",
         ),
     ];
-    for (name, expr, expected_insn) in ops {
-        let program = Program::wrapped(
-            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-            [1, 1, 1],
-            vec![Node::store("out", Expr::u32(0), expr)],
-        );
-        let secondary_text = program_to_ptx(&program, &default_config())
-            .unwrap_or_else(|e| panic!("Fix: {name} must lower to PTX: {e}"));
-        assert!(
-            secondary_text.contains("activemask.b32") && secondary_text.contains(expected_insn),
-            "Fix: {name} must emit active-mask guarded {expected_insn}."
-        );
-    }
+    assert_ptx_emits_active_mask_subgroup_insns(&ops);
 }
 
 #[test]
@@ -361,7 +367,7 @@ fn ptx_lowers_workgroup_sum_region_to_subgroup_reduction() {
             Node::let_bind("local", Expr::LocalId { axis: 0 }),
             Node::store("scratch", Expr::var("local"), Expr::f32(1.0)),
             Node::Region {
-                generator: "vyre-primitives::reduce::workgroup_sum_f32_child".into(),
+                generator: "vyre-libs::reduce::workgroup_sum_f32_child".into(),
                 source_region: None,
                 body: std::sync::Arc::new(vec![
                     Node::store(
@@ -387,7 +393,7 @@ fn ptx_lowers_workgroup_sum_region_to_subgroup_reduction() {
     // `laneid ^ offset` source, combined by add.f32. Two instructions must NOT
     // appear: redux.sync.add.f32 (invalid PTX for f32), and shfl.sync.down.b32
     // (a down-tree feeds only lane 0, violating the all-lane-broadcast contract
-    // that subgroup_reduce_gpu_parity verifies on a live sm_120 GPU).
+    // that subgroup_reduce_gpu_parity verifies on a live CUDA GPU).
     assert!(
         secondary_text.contains("shfl.sync.idx.b32")
             && secondary_text.contains("add.f32")
@@ -442,13 +448,33 @@ fn ptx_emits_if_then_else() {
     );
     let secondary_text =
         program_to_ptx(&program, &default_config()).expect("Fix: If/else must lower to PTX.");
-    assert!(
-        secondary_text.contains("@%") && secondary_text.contains("@!%"),
-        "Fix: simple PTX if/else store bodies must lower to complementary predicated stores."
+    let stores: Vec<&str> = secondary_text
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.contains("st.global.u32"))
+        .collect();
+    assert_eq!(
+        stores.len(),
+        2,
+        "Fix: PTX if/else must emit both predicated stores, got {stores:?}."
     );
-    assert!(
-        secondary_text.matches("st.global.u32").count() == 2,
-        "Fix: PTX if/else must emit both predicated stores."
+    let guards: Vec<&str> = stores
+        .iter()
+        .map(|line| {
+            line.split_whitespace()
+                .next()
+                .expect("Fix: a store line has at least one token.")
+        })
+        .collect();
+    for guard in &guards {
+        assert!(
+            guard.starts_with('@'),
+            "Fix: every arm of a simple if/else store body must be issued under a predicate, got `{guard}`."
+        );
+    }
+    assert_ne!(
+        guards[0], guards[1],
+        "Fix: the two arms must be issued under complementary predicates, not the same one."
     );
     assert!(
         !secondary_text.contains("$L_if_else_") && !secondary_text.contains("$L_if_end_"),
@@ -494,12 +520,19 @@ fn ptx_emits_trap_as_lane_exit() {
     let secondary_text =
         program_to_ptx(&program, &default_config()).expect("Fix: Trap must lower to PTX.");
     assert!(
-        secondary_text.contains("// trap tag: decode.invalid")
+        secondary_text.contains(&format!(
+            "{}1 decode.invalid",
+            vyre_emit_ptx::TRAP_TAG_PTX_MARKER
+        )) && secondary_text.contains(vyre_emit_ptx::TRAP_SIDECAR_SYMBOL)
+            && secondary_text.contains("atom.global.cas.b32")
+            && secondary_text.contains("st.global.u32")
             && secondary_text.contains("bra $L_exit;"),
-        "Fix: CUDA trap lowering must preserve the tag in PTX comments and terminate the lane."
+        "Fix: CUDA trap lowering must declare the decodable module sidecar, record the first \
+         trap, preserve the tag table, and terminate the lane."
     );
     assert!(
         !secondary_text.contains("__vyre_descriptor_trap_sidecar"),
-        "Fix: CUDA PTX must not expose vyre-lower's internal trap sidecar in the kernel ABI until CUDA implements trap-sidecar readback."
+        "Fix: CUDA PTX must expose only the emitter-owned module-global trap record, not \
+         vyre-lower's internal descriptor binding."
     );
 }

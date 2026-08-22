@@ -1,16 +1,17 @@
 //! Parity test for vyre-primitives text::encoding_classify against
 //! the histogram-based CPU classifier oracle.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::text::encoding_classify::{
-    classify_from_histogram, encoding_classify, ENCODING_CLASSIFY_WORKGROUP_SIZE, ENC_ASCII,
-    ENC_BINARY, ENC_ISO8859_1, ENC_UTF16LE, ENC_UTF8,
+use vyre_libs::text::{
+    encoding_classify, ENCODING_CLASSIFY_WORKGROUP_SIZE, ENC_ASCII, ENC_BINARY, ENC_ISO8859_1,
+    ENC_UTF16LE, ENC_UTF8,
 };
+use vyre_reference::composition_witness::encoding_classify_histogram_witness as classify_from_histogram;
 
 fn run_classify(histogram: &[u32; 256], count: u32) -> u32 {
     let program = encoding_classify("histogram", "encoding", count);

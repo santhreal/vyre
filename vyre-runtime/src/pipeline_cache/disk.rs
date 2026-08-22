@@ -9,7 +9,6 @@ use std::io::Read;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::OnceLock;
 
 use dashmap::DashMap;
 
@@ -235,21 +234,22 @@ impl PipelineCacheStore for DiskCache {
 }
 
 fn flush_paths(paths: &[PathBuf]) -> io::Result<()> {
-    let mut parents = Vec::with_capacity(paths.len());
     sync_paths_bounded(
         paths,
         File::sync_data,
         "pipeline cache file sync worker panicked",
     )?;
-    for path in paths {
-        if let Some(parent) = path.parent() {
-            parents.push(parent.to_path_buf());
-        }
-    }
-    parents.sort();
-    parents.dedup();
-    sync_parent_dirs(&parents)?;
-    Ok(())
+    let parents = vyre_driver::durable_fanout::parent_directories(paths, |parents, capacity| {
+        parents.try_reserve_exact(capacity).map_err(|source| {
+            io::Error::new(
+                io::ErrorKind::OutOfMemory,
+                format!(
+                    "pipeline cache flush could not reserve {capacity} parent path slot(s): {source}. Fix: flush fewer cache paths per batch."
+                ),
+            )
+        })
+    })?;
+    sync_parent_dirs(&parents)
 }
 
 #[cfg(unix)]
@@ -271,38 +271,22 @@ fn sync_paths_bounded(
     sync: fn(&File) -> io::Result<()>,
     panic_message: &'static str,
 ) -> io::Result<()> {
-    if paths.is_empty() {
-        return Ok(());
-    }
-    let workers = sync_worker_count();
-    for chunk in paths.chunks(workers) {
-        std::thread::scope(|scope| {
-            let mut handles = Vec::with_capacity(chunk.len());
-            for path in chunk {
-                handles.push(scope.spawn(move || {
-                    let file = File::open(path)?;
-                    sync(&file)
-                }));
-            }
-            for handle in handles {
-                handle
-                    .join()
-                    .map_err(|_| io::Error::other(panic_message))??;
-            }
-            Ok::<(), io::Error>(())
-        })?;
-    }
-    Ok(())
-}
-
-fn sync_worker_count() -> usize {
-    static WORKERS: OnceLock<usize> = OnceLock::new();
-    *WORKERS.get_or_init(|| {
-        std::thread::available_parallelism()
-            .map(usize::from)
-            .unwrap_or(1)
-            .clamp(1, 16)
-    })
+    vyre_driver::durable_fanout::for_each_bounded(
+        paths,
+        |path| {
+            let file = File::open(path)?;
+            sync(&file)
+        },
+        || io::Error::other(panic_message),
+        |requested, source| {
+            io::Error::new(
+                io::ErrorKind::OutOfMemory,
+                format!(
+                    "pipeline cache sync could not reserve {requested} worker handle(s): {source}. Fix: lower pipeline cache sync fan-out."
+                ),
+            )
+        },
+    )
 }
 
 /// Errors from disk-backed pipeline cache construction / use.
@@ -389,10 +373,12 @@ fn append_u64_decimal(out: &mut String, mut value: u64) {
     }
 }
 
+// Inline: covers `CHECKSUM_LEN`, `MAX_ENCODED_PIPELINE_BLOB_BYTES`, `encode_cache_blob`, `flush`
+// and 2 more items this module keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_helpers::tiny_artifact;
+    use crate::pipeline_cache::test_artifact_fixtures::tiny_artifact;
 
     #[test]
     fn disk_cache_persists_across_store_reopen() {

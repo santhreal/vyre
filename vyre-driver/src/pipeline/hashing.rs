@@ -2,7 +2,6 @@
 
 use crate::backend::DispatchConfig;
 use vyre_foundation::ir::Program;
-use vyre_spec::BackendId;
 
 /// Return the normalized program digest used by backend pipeline caches.
 ///
@@ -193,6 +192,7 @@ pub(super) fn push_decimal_u32(out: &mut String, value: u32) {
     }
 }
 
+// Inline: covers `push_decimal_u32`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{

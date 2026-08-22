@@ -2,22 +2,22 @@
 //!
 //! Builds a Program with structurally identical sub-expressions,
 //! dispatches the two CSE kernels (structural-hash + canonical-id)
-//! through `CudaOptimizerDispatcher`, and verifies the canonical
+//! through `CudaProgramDispatcher`, and verifies the canonical
 //! buffer assigns equal canonicals to syntactically equal Exprs.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::live_backend;
+use harness::live_backend;
 use vyre::ir::{Expr, Node, Program};
-use vyre_driver_cuda::CudaOptimizerDispatcher;
-use vyre_self_substrate::optimizer::cse_via_encoded::gpu_cse_canonicals;
+use vyre_driver_cuda::CudaProgramDispatcher;
+use vyre_pass_engine::optimizer::cse_via_encoded::gpu_cse_canonicals;
 
 #[test]
 fn cuda_cse_finds_canonicals_for_equal_literal_pairs() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     // Two identical literal pairs in different lets:
     //   let a = 5         (LitU32 5 -> hash H_5)
@@ -43,7 +43,7 @@ fn cuda_cse_finds_canonicals_for_equal_literal_pairs() {
     let mut lit5_ids: Vec<u32> = Vec::new();
     let mut lit7_ids: Vec<u32> = Vec::new();
     for (i, &kind) in arena.kinds.iter().enumerate() {
-        if kind == vyre_self_substrate::optimizer::expr_arena::expr_kind::LIT_U32 {
+        if kind == vyre_pass_engine::optimizer::expr_arena::expr_kind::LIT_U32 {
             match arena.arg0[i] {
                 5 => lit5_ids.push(i as u32),
                 7 => lit7_ids.push(i as u32),
@@ -83,7 +83,7 @@ fn cuda_cse_finds_canonicals_for_equal_literal_pairs() {
 #[test]
 fn cuda_cse_finds_canonicals_for_equal_binops() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     // Two structurally identical binops:
     //   let a = 1 + 2
@@ -106,8 +106,8 @@ fn cuda_cse_finds_canonicals_for_equal_binops() {
 
     // Identify the BIN_OP entries with LitU32(1)+LitU32(2) children
     // vs LitU32(3)+LitU32(4) children.
-    let bin_op_kind = vyre_self_substrate::optimizer::expr_arena::expr_kind::BIN_OP;
-    let lit_kind = vyre_self_substrate::optimizer::expr_arena::expr_kind::LIT_U32;
+    let bin_op_kind = vyre_pass_engine::optimizer::expr_arena::expr_kind::BIN_OP;
+    let lit_kind = vyre_pass_engine::optimizer::expr_arena::expr_kind::LIT_U32;
     let mut bin_one_two: Vec<u32> = Vec::new();
     let mut bin_three_four: Vec<u32> = Vec::new();
     for (i, &kind) in arena.kinds.iter().enumerate() {

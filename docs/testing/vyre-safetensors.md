@@ -3,7 +3,7 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-safetensors
+./cargo_full test -p vyre-safetensors
 ```
 
 Validate safetensors metadata, shard indexes, compiler requirements, trusted shard digests, and immutable checkpoint identities without owning runtime residency.
@@ -14,7 +14,7 @@ The crate lives at `vyre-safetensors`. The `safetensors-adapter` owner maintains
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-safetensors
+./cargo_full test -p vyre-safetensors
 ```
 
 ## Feature sets
@@ -25,8 +25,8 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_safetensors` | `vyre-safetensors/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-safetensors` |
-| `test` | `ingestion` | `vyre-safetensors/tests/ingestion.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-safetensors --test ingestion` |
+| `lib` | `vyre_safetensors` | `vyre-safetensors/src/lib.rs` | None | `./cargo_full test -p vyre-safetensors` |
+| `test` | `ingestion` | `vyre-safetensors/tests/ingestion.rs` | None | `./cargo_full test -p vyre-safetensors --test ingestion` |
 
 ## Test classes
 

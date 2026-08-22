@@ -1,9 +1,9 @@
 //! Execution-planning contract tests.
 
 use vyre_foundation::execution_plan::{
-    plan, plan_with_options, AccuracyStrategy, AutotuneStrategy, DispatchStrategy, FusionStrategy,
-    InnovationTrack, LayoutStrategy, PlanError, PolicyRoute, ProvenanceStrategy, ReadbackStrategy,
-    SchedulingPolicy,
+    plan, plan_with_options, AutotuneStrategy, ConformanceStrength, DispatchStrategy,
+    FusionStrategy, InnovationTrack, LayoutStrategy, PlanError, PolicyRoute, ProvenanceStrategy,
+    ReadbackStrategy, SchedulingPolicy,
 };
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::validate::{BackendCapabilities, ValidationOptions};
@@ -69,7 +69,7 @@ fn strategy_encodes_all_seven_tracks_for_small_trimmed_program() {
     let plan = plan(&ranged_output_program()).expect("canonical ranged output program must plan");
     assert_eq!(plan.strategy.fusion, FusionStrategy::Candidate);
     assert_eq!(plan.strategy.dispatch, DispatchStrategy::PersistentRuntime);
-    assert_eq!(plan.strategy.accuracy, AccuracyStrategy::Direct);
+    assert_eq!(plan.strategy.conformance, ConformanceStrength::Standard);
     assert_eq!(plan.strategy.autotune, AutotuneStrategy::DeclaredShape);
     assert_eq!(plan.strategy.provenance, ProvenanceStrategy::GpuTrace);
     assert_eq!(plan.strategy.layout, LayoutStrategy::Static);
@@ -104,15 +104,10 @@ fn shared_policy_owns_strategy_and_route_boundaries() {
     assert!(policy.use_persistent_runtime(65));
     assert!(!policy.recommend_autotune(64));
     assert!(policy.recommend_autotune(65));
-    assert_eq!(
-        policy.route(64, (1 << 16) - 1),
-        PolicyRoute::PersistentMegakernel
-    );
-    assert_eq!(policy.route(64, 1 << 16), PolicyRoute::PersistentMegakernel);
-    assert_eq!(
-        policy.route(1025, 1 << 16),
-        PolicyRoute::PersistentMegakernel
-    );
+    // `route` took a `static_bytes` argument that only ever fed a host-executing
+    // route whose predicate ignored it. Both remaining answers are device routes.
+    assert_eq!(policy.route(64), PolicyRoute::PersistentMegakernel);
+    assert_eq!(policy.route(1025), PolicyRoute::PersistentMegakernel);
 }
 
 #[test]

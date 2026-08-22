@@ -7,19 +7,15 @@
 //! prove that a backend's emitted code respects the declared effect
 //! discipline.
 //!
-//! The kinds mirror `vyre_primitives::effects::EffectKind` so a
-//! downstream crate can convert this row into the primitives'
-//! `EffectRow`. The duplication is deliberate: foundation cannot
-//! depend on primitives (cycle), and a row is cheap.
+//! [`ProgramEffects`] is the one list of effect kinds. An analysis that needs
+//! a program's effects reads this row rather than restating the kinds.
 
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
 
-/// Set of effect kinds a `Program` produces. Matches the canonical
-/// `EffectKind` ordering shipped from `vyre_primitives::effects`.
-/// Each backend lowering pass may require / discharge / forbid
-/// specific kinds.
+/// Set of effect kinds a `Program` produces. Each backend lowering pass may
+/// require, discharge, or forbid specific kinds.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct ProgramEffects(u32);
 
@@ -37,7 +33,7 @@ impl ProgramEffects {
     pub const HOST_IO: Self = Self(1 << 2);
     /// Nested GPU dispatch  -  `Node::IndirectDispatch`.
     pub const GPU_DISPATCH: Self = Self(1 << 3);
-    /// Synchronization  -  `Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }`.
+    /// Synchronization  -  `Node::Barrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst }`.
     pub const BARRIER: Self = Self(1 << 4);
     /// Async load fetching from streaming storage  -
     /// `Node::AsyncLoad`.
@@ -154,6 +150,23 @@ fn walk_node(node: &Node, effects: &mut ProgramEffects) {
         | Node::Broadcast { .. } => {
             *effects |= ProgramEffects::BUFFER_WRITE;
             *effects |= ProgramEffects::BARRIER;
+        }
+        Node::TileLoad { origin, .. } => {
+            for expr in origin {
+                walk_expr(expr, effects);
+            }
+        }
+        Node::TileStore { origin, .. } => {
+            *effects |= ProgramEffects::BUFFER_WRITE;
+            for expr in origin {
+                walk_expr(expr, effects);
+            }
+        }
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {}
+        Node::TileElementwise { body, .. } => {
+            for n in body {
+                walk_node(n, effects);
+            }
         }
         Node::AsyncWait { .. } | Node::Resume { .. } | Node::Return | Node::Opaque(_) => {}
         Node::Trap { address, .. } => {

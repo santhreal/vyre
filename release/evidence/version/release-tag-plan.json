@@ -1,13 +1,14 @@
 {
+  "source_fingerprint": "git:80f9241c72cdc9156ad7f7152e0a196386c94c53:dirty=true:worktree=2e1f07fe4f479c721a2d0a121f78059df8205476b8a30511e30125a80f7a65fa",
   "schema_version": 2,
-  "vyre_rc_tag": "vyre-v0.7.2-rc.1",
-  "vyre_tag": "vyre-v0.7.2",
+  "vyre_rc_tag": "vyre-v0.8.0-rc.1",
+  "vyre_tag": "vyre-v0.8.0",
   "tag_creation_order": [
-    "vyre-v0.7.2-rc.1",
-    "vyre-v0.7.2"
+    "vyre-v0.8.0-rc.1",
+    "vyre-v0.8.0"
   ],
-  "required_gate_before_rc_tag": "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
-  "required_gate_before_tag": "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
+  "required_gate_before_rc_tag": "cargo_full run --bin xtask -- version-matrix && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
+  "required_gate_before_tag": "cargo_full run --bin xtask -- version-matrix && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
   "version_matrix_blocker_count": 0,
   "blockers": []
 }

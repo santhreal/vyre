@@ -1,14 +1,34 @@
-//! Shared PTX vector memory fusion chain detector.
+//! Vector memory-fusion chain detection for PTX.
+//!
+//! NVIDIA GPUs move 8 or 16 bytes per transaction with `ld.global.v2/v4` and
+//! `st.global.v2/v4` instead of 2 or 4 scalar 4-byte accesses. This detects
+//! the chains that qualify: 2 or 4 consecutive `LoadGlobal`/`LoadConstant` or
+//! `StoreGlobal` ops that read or write one binding slot at indices
+//! `i, i+1, i+2, [i+3]`, with no intervening op other than the
+//! index-increment `Add`s. The emitter consumes the same chain shape and
+//! binds every scalar result id to the vector instruction's registers.
+//!
+//! The load and store sides differ only in which operand carries the index
+//! and whether there is a value operand, so [`MemoryFusionKind`] carries that
+//! difference and one detector serves both. A caller that wants only one side
+//! passes only that kind.
+//!
+//! `alignment_bytes` is a requirement, not a guarantee: the host allocator
+//! must satisfy it for the fused access to be valid.
 
 use crate::emitter::schedule::{is_schedulable_pure_op, is_scheduling_fence};
 use crate::index_facts::IndexFacts;
 use rustc_hash::FxHashMap;
+use serde::{Deserialize, Serialize};
 use vyre_foundation::ir::DataType;
 use vyre_lower::{BindingSlot, KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum MemoryFusionKind {
+/// Which side of memory a fusion chain accesses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MemoryFusionKind {
+    /// Consecutive reads, fusible into `ld.global.v2/v4`.
     Load,
+    /// Consecutive writes, fusible into `st.global.v2/v4`.
     Store,
 }
 
@@ -39,20 +59,33 @@ impl MemoryFusionKind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct MemoryFusionCandidate {
-    pub(super) first_op_idx: usize,
-    pub(super) group_size: u8,
-    pub(super) binding_slot: u32,
-    pub(super) element_type: DataType,
-    pub(super) alignment_bytes: u32,
+/// One chain of consecutive scalar accesses that could be merged into a
+/// single PTX vector access.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MemoryFusionCandidate {
+    /// Op-index of the first access in the chain.
+    pub first_op_idx: usize,
+    /// Number of accesses in the chain. Only 2 and 4 occur; PTX has no `v3`.
+    pub group_size: u8,
+    /// Binding slot every access in the chain touches.
+    pub binding_slot: u32,
+    /// Element type taken from the binding.
+    pub element_type: DataType,
+    /// Base-pointer alignment the fused access requires, in bytes:
+    /// `group_size * element_size`.
+    pub alignment_bytes: u32,
 }
 
+/// Fusion opportunities of one kind for one kernel.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct MemoryFusionPlan {
+    /// Chains eligible for fusion, in op order.
+    pub candidates: Vec<MemoryFusionCandidate>,
+}
+
+/// Detect fusible chains of the given kind.
 #[must_use]
-pub(super) fn analyze_memory_fusion(
-    desc: &KernelDescriptor,
-    kind: MemoryFusionKind,
-) -> Vec<MemoryFusionCandidate> {
+pub fn analyze(desc: &KernelDescriptor, kind: MemoryFusionKind) -> MemoryFusionPlan {
     let binding_by_slot: FxHashMap<u32, &BindingSlot> = desc
         .bindings
         .slots
@@ -61,7 +94,7 @@ pub(super) fn analyze_memory_fusion(
         .collect();
     let mut candidates = Vec::new();
     walk(&desc.body, &binding_by_slot, kind, &mut candidates);
-    candidates
+    MemoryFusionPlan { candidates }
 }
 
 fn walk(
@@ -146,282 +179,5 @@ fn walk(
 
     for child in &body.child_bodies {
         walk(child, binding_by_slot, kind, candidates);
-    }
-}
-
-#[cfg(test)]
-pub(super) mod tests {
-    use super::*;
-    use vyre_foundation::ir::BinOp;
-    use vyre_lower::descriptor_builder::{body, descriptor, effect, global_ro, global_wo, lit, op};
-    use vyre_lower::{BindingVisibility, LiteralValue};
-
-    const KINDS: [MemoryFusionKind; 2] = [MemoryFusionKind::Load, MemoryFusionKind::Store];
-
-    impl MemoryFusionKind {
-        fn opposite(self) -> Self {
-            match self {
-                Self::Load => Self::Store,
-                Self::Store => Self::Load,
-            }
-        }
-
-        fn visibility(self) -> BindingVisibility {
-            match self {
-                Self::Load => BindingVisibility::ReadOnly,
-                Self::Store => BindingVisibility::WriteOnly,
-            }
-        }
-    }
-
-    fn binding(slot: u32, name: &str, visibility: BindingVisibility) -> BindingSlot {
-        match visibility {
-            BindingVisibility::ReadOnly => global_ro(slot, DataType::U32, name),
-            _ => global_wo(slot, DataType::U32, name),
-        }
-    }
-
-    fn add(lhs: u32, rhs: u32, result: u32) -> KernelOp {
-        op(KernelOpKind::BinOpKind(BinOp::Add), [lhs, rhs], result)
-    }
-
-    /// One access of `kind`: a load reads `slot[index_id]`, a store
-    /// writes `value_id` into it.
-    fn access(
-        kind: MemoryFusionKind,
-        slot: u32,
-        index_id: u32,
-        value_id: u32,
-        result: u32,
-    ) -> KernelOp {
-        match kind {
-            MemoryFusionKind::Load => op(KernelOpKind::LoadGlobal, [slot, index_id], result),
-            MemoryFusionKind::Store => effect(KernelOpKind::StoreGlobal, [slot, index_id, value_id]),
-        }
-    }
-
-    fn kernel(
-        slots: Vec<BindingSlot>,
-        ops: Vec<KernelOp>,
-        literals: Vec<LiteralValue>,
-    ) -> KernelDescriptor {
-        descriptor("k")
-            .slots(slots)
-            .body(body().ops(ops).literals(literals))
-            .build()
-    }
-
-    /// `count` accesses on slot 0, each index the previous plus `stride`.
-    /// Op 0 is the base index literal, op 1 the stride literal, so the
-    /// first access is always op 2.
-    fn chain(kind: MemoryFusionKind, count: usize, stride: u32) -> KernelDescriptor {
-        let mut ops = vec![lit(0, 0), lit(1, 1)];
-        let mut next_id = 2;
-        let mut index_id = 0;
-        for position in 0..count {
-            if position > 0 {
-                ops.push(add(index_id, 1, next_id));
-                index_id = next_id;
-                next_id += 1;
-            }
-            ops.push(access(kind, 0, index_id, 1, next_id));
-            next_id += 1;
-        }
-        kernel(
-            vec![binding(0, "buf", kind.visibility())],
-            ops,
-            vec![LiteralValue::U32(0), LiteralValue::U32(stride)],
-        )
-    }
-
-    /// A v2 load chain starting at op 2 and a v2 store chain starting at
-    /// op 5, so a facade that asks for the wrong kind reports the wrong
-    /// first-op index instead of an empty plan.
-    pub(in crate::patterns) fn mixed_load_and_store_chains() -> KernelDescriptor {
-        kernel(
-            vec![
-                binding(0, "in", BindingVisibility::ReadOnly),
-                binding(1, "out", BindingVisibility::WriteOnly),
-            ],
-            vec![
-                lit(0, 0),
-                lit(1, 1),
-                access(MemoryFusionKind::Load, 0, 0, 1, 2),
-                add(0, 1, 3),
-                access(MemoryFusionKind::Load, 0, 3, 1, 4),
-                access(MemoryFusionKind::Store, 1, 0, 2, 0),
-                access(MemoryFusionKind::Store, 1, 3, 4, 0),
-            ],
-            vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-        )
-    }
-
-    fn only_candidate(
-        desc: &KernelDescriptor,
-        kind: MemoryFusionKind,
-    ) -> Option<MemoryFusionCandidate> {
-        let mut found = analyze_memory_fusion(desc, kind);
-        assert!(found.len() <= 1, "{kind:?}: expected at most one candidate");
-        found.pop()
-    }
-
-    #[test]
-    fn empty_body_has_no_candidates() {
-        for kind in KINDS {
-            let desc = chain(kind, 0, 1);
-            assert!(analyze_memory_fusion(&desc, kind).is_empty(), "{kind:?}");
-        }
-    }
-
-    #[test]
-    fn single_access_has_no_candidate() {
-        for kind in KINDS {
-            let desc = chain(kind, 1, 1);
-            assert!(analyze_memory_fusion(&desc, kind).is_empty(), "{kind:?}");
-        }
-    }
-
-    #[test]
-    fn two_unit_stride_accesses_form_a_v2_candidate() {
-        for kind in KINDS {
-            let desc = chain(kind, 2, 1);
-            let candidate = only_candidate(&desc, kind).unwrap_or_else(|| panic!("{kind:?}"));
-            assert_eq!(candidate.first_op_idx, 2, "{kind:?}");
-            assert_eq!(candidate.group_size, 2, "{kind:?}");
-            assert_eq!(candidate.binding_slot, 0, "{kind:?}");
-            assert_eq!(candidate.element_type, DataType::U32, "{kind:?}");
-            assert_eq!(candidate.alignment_bytes, 8, "{kind:?}");
-        }
-    }
-
-    #[test]
-    fn four_unit_stride_accesses_form_a_v4_candidate() {
-        for kind in KINDS {
-            let desc = chain(kind, 4, 1);
-            let candidate = only_candidate(&desc, kind).unwrap_or_else(|| panic!("{kind:?}"));
-            assert_eq!(candidate.first_op_idx, 2, "{kind:?}");
-            assert_eq!(candidate.group_size, 4, "{kind:?}");
-            assert_eq!(candidate.alignment_bytes, 16, "{kind:?}");
-        }
-    }
-
-    #[test]
-    fn three_accesses_yield_only_a_v2_candidate() {
-        // PTX has no v3, so the third access stays scalar.
-        for kind in KINDS {
-            let desc = chain(kind, 3, 1);
-            let candidate = only_candidate(&desc, kind).unwrap_or_else(|| panic!("{kind:?}"));
-            assert_eq!(candidate.group_size, 2, "{kind:?}");
-        }
-    }
-
-    #[test]
-    fn non_unit_stride_does_not_chain() {
-        for kind in KINDS {
-            let desc = chain(kind, 2, 2);
-            assert!(analyze_memory_fusion(&desc, kind).is_empty(), "{kind:?}");
-        }
-    }
-
-    #[test]
-    fn accesses_to_different_slots_do_not_chain() {
-        for kind in KINDS {
-            let desc = kernel(
-                vec![
-                    binding(0, "a", kind.visibility()),
-                    binding(1, "b", kind.visibility()),
-                ],
-                vec![
-                    lit(0, 0),
-                    lit(1, 1),
-                    access(kind, 0, 0, 1, 2),
-                    add(0, 1, 3),
-                    access(kind, 1, 3, 1, 4),
-                ],
-                vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-            );
-            assert!(analyze_memory_fusion(&desc, kind).is_empty(), "{kind:?}");
-        }
-    }
-
-    #[test]
-    fn intervening_memory_effect_breaks_the_chain() {
-        // Pure arithmetic may be scheduled into the gap; another memory
-        // access may not be crossed.
-        for kind in KINDS {
-            let desc = kernel(
-                vec![
-                    binding(0, "buf", kind.visibility()),
-                    binding(1, "other", kind.opposite().visibility()),
-                ],
-                vec![
-                    lit(0, 0),
-                    lit(1, 1),
-                    access(kind, 0, 0, 1, 2),
-                    access(kind.opposite(), 1, 0, 1, 3),
-                    add(0, 1, 4),
-                    access(kind, 0, 4, 1, 5),
-                ],
-                vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-            );
-            assert!(analyze_memory_fusion(&desc, kind).is_empty(), "{kind:?}");
-        }
-    }
-
-    #[test]
-    fn folded_literal_indices_form_a_v4_candidate() {
-        // Indices 0,1,2,3 arrive as separate literals rather than adds.
-        for kind in KINDS {
-            let desc = kernel(
-                vec![binding(0, "buf", kind.visibility())],
-                vec![
-                    lit(0, 0),
-                    lit(1, 1),
-                    access(kind, 0, 0, 1, 2),
-                    lit(2, 3),
-                    access(kind, 0, 3, 1, 4),
-                    lit(3, 5),
-                    access(kind, 0, 5, 1, 6),
-                    lit(4, 7),
-                    access(kind, 0, 7, 1, 8),
-                ],
-                vec![
-                    LiteralValue::U32(0),
-                    LiteralValue::U32(100),
-                    LiteralValue::U32(1),
-                    LiteralValue::U32(2),
-                    LiteralValue::U32(3),
-                ],
-            );
-            let candidate = only_candidate(&desc, kind).unwrap_or_else(|| panic!("{kind:?}"));
-            assert_eq!(candidate.first_op_idx, 2, "{kind:?}");
-            assert_eq!(candidate.group_size, 4, "{kind:?}");
-            assert_eq!(candidate.alignment_bytes, 16, "{kind:?}");
-        }
-    }
-
-    #[test]
-    fn store_value_produced_in_the_gap_breaks_the_chain() {
-        // Store-only: the fused value registers must already be live at
-        // the first store. A load has no value operand to constrain.
-        let kind = MemoryFusionKind::Store;
-        let desc = kernel(
-            vec![binding(0, "out", BindingVisibility::WriteOnly)],
-            vec![
-                lit(0, 0),
-                lit(1, 1),
-                access(kind, 0, 0, 1, 0),
-                lit(2, 2),
-                lit(3, 3),
-                access(kind, 0, 2, 3, 0),
-            ],
-            vec![
-                LiteralValue::U32(0),
-                LiteralValue::U32(10),
-                LiteralValue::U32(1),
-                LiteralValue::U32(11),
-            ],
-        );
-        assert!(analyze_memory_fusion(&desc, kind).is_empty());
     }
 }

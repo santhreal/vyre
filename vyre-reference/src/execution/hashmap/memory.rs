@@ -152,6 +152,7 @@ pub(crate) fn atomic_buffer_mut<'a>(
     memory . storage . get_mut (name) . ok_or_else (| | { ReferenceError::new(format ! ("atomic target `{name}` is workgroup memory or missing. Fix: atomics only support ReadWrite storage buffers.")) })
 }
 
+// Inline: covers the crate-private `HashmapMemory` and `new`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

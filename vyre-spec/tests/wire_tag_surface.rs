@@ -5,6 +5,9 @@
 //! the frozen builtin tag for each core enum and excludes extension ids from
 //! that builtin space.
 
+#[path = "../../tests/support/spec_variant_tables.rs"]
+mod spec_variant_tables;
+
 use std::collections::BTreeSet;
 
 use vyre_spec::extension::{
@@ -209,14 +212,7 @@ fn ternary_op_builtin_wire_tags_are_exact_and_unique() {
 
 #[test]
 fn collective_op_builtin_wire_tags_are_exact_unique_and_decodable() {
-    let cases = [
-        (CollectiveOp::Sum, 0x01),
-        (CollectiveOp::Min, 0x02),
-        (CollectiveOp::Max, 0x03),
-        (CollectiveOp::BitAnd, 0x04),
-        (CollectiveOp::BitOr, 0x05),
-        (CollectiveOp::BitXor, 0x06),
-    ];
+    let cases = spec_variant_tables::builtin_collective_ops();
     let mut seen = BTreeSet::new();
 
     for (op, tag) in cases {

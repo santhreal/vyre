@@ -698,6 +698,8 @@ fn free_bucket_capacity(max_retained_bytes: usize) -> usize {
         .min(MAX_FREE_ENTRIES_PER_BUCKET)
 }
 
+// Inline: covers `class_index`, `free_bucket_capacity`, `release`, `size_class`, which no
+// integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{class_index, free_bucket_capacity, size_class, BufferPool};
@@ -763,6 +765,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "device-tests")]
     #[test]
     fn pooled_reuse_updates_logical_element_count() {
         let arc = crate::runtime::cached_device()
@@ -789,6 +792,7 @@ mod tests {
         assert_eq!(small.byte_len(), 7);
     }
 
+    #[cfg(feature = "device-tests")]
     #[test]
     fn tiering_acquire_release_is_nonblocking_under_contention() {
         let arc = crate::runtime::cached_device()

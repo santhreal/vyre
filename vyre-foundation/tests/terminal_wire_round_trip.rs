@@ -1,21 +1,26 @@
 //! Terminal enum variant wire-format round trips.
+//!
+//! Which operator variants exist is owned by
+//! `tests/support/spec_variant_tables.rs`, and what a round trip has to
+//! preserve is owned by `tests/support/wire_round_trip.rs`. That every variant
+//! survives one is this suite's contract. The `DataType` list below stays
+//! local: a cast target may be `Handle`, `Vec`, `TensorShaped` or `Opaque`,
+//! none of which a buffer element table describes.
+
+#[path = "../../tests/support/spec_variant_tables.rs"]
+mod spec_variant_tables;
+#[path = "../../tests/support/wire_round_trip.rs"]
+mod wire_round_trip;
 
 use smallvec::smallvec;
+use spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_foundation::MemoryOrdering;
-use vyre_spec::data_type::TypeId;
 use vyre_spec::extension::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId,
 };
-
-fn round_trip(program: Program) {
-    let encoded = program
-        .to_wire()
-        .unwrap_or_else(|error| panic!("Fix: terminal variant program must encode: {error}"));
-    let decoded = Program::from_wire(&encoded)
-        .unwrap_or_else(|error| panic!("Fix: terminal variant program must decode: {error}"));
-    assert_eq!(decoded, program);
-}
+use vyre_spec::TypeId;
+use wire_round_trip::assert_canonical_wire_round_trip;
 
 #[test]
 fn every_terminal_data_type_round_trips_in_cast_targets() {
@@ -65,46 +70,20 @@ fn every_terminal_data_type_round_trips_in_cast_targets() {
         .chain([Node::Return])
         .collect();
 
-    round_trip(Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        nodes,
-    ));
+    assert_canonical_wire_round_trip(
+        &Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            nodes,
+        ),
+        "every cast target",
+    );
 }
 
 #[test]
 fn every_terminal_binop_round_trips() {
-    let variants = vec![
-        BinOp::Add,
-        BinOp::Sub,
-        BinOp::Mul,
-        BinOp::Div,
-        BinOp::Mod,
-        BinOp::BitAnd,
-        BinOp::BitOr,
-        BinOp::BitXor,
-        BinOp::Shl,
-        BinOp::Shr,
-        BinOp::Eq,
-        BinOp::Ne,
-        BinOp::Lt,
-        BinOp::Gt,
-        BinOp::Le,
-        BinOp::Ge,
-        BinOp::And,
-        BinOp::Or,
-        BinOp::AbsDiff,
-        BinOp::Min,
-        BinOp::Max,
-        BinOp::SaturatingAdd,
-        BinOp::SaturatingSub,
-        BinOp::SaturatingMul,
-        BinOp::Shuffle,
-        BinOp::Ballot,
-        BinOp::WaveReduce,
-        BinOp::WaveBroadcast,
-        BinOp::Opaque(ExtensionBinOpId(0x8000_0101)),
-    ];
+    let mut variants = builtin_bin_ops();
+    variants.push(BinOp::Opaque(ExtensionBinOpId(0x8000_0101)));
 
     let nodes = variants
         .into_iter()
@@ -122,54 +101,20 @@ fn every_terminal_binop_round_trips() {
         .chain([Node::Return])
         .collect();
 
-    round_trip(Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        nodes,
-    ));
+    assert_canonical_wire_round_trip(
+        &Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            nodes,
+        ),
+        "every binop",
+    );
 }
 
 #[test]
 fn every_terminal_unop_round_trips() {
-    let variants = vec![
-        UnOp::Negate,
-        UnOp::BitNot,
-        UnOp::LogicalNot,
-        UnOp::Popcount,
-        UnOp::Clz,
-        UnOp::Ctz,
-        UnOp::ReverseBits,
-        UnOp::Cos,
-        UnOp::Sin,
-        UnOp::Abs,
-        UnOp::Sqrt,
-        UnOp::Floor,
-        UnOp::Ceil,
-        UnOp::Round,
-        UnOp::Trunc,
-        UnOp::Sign,
-        UnOp::IsNan,
-        UnOp::IsInf,
-        UnOp::IsFinite,
-        UnOp::Exp,
-        UnOp::Log,
-        UnOp::Log2,
-        UnOp::Exp2,
-        UnOp::Tan,
-        UnOp::Acos,
-        UnOp::Asin,
-        UnOp::Atan,
-        UnOp::Tanh,
-        UnOp::Sinh,
-        UnOp::Cosh,
-        UnOp::InverseSqrt,
-        UnOp::Reciprocal,
-        UnOp::Unpack4Low,
-        UnOp::Unpack4High,
-        UnOp::Unpack8Low,
-        UnOp::Unpack8High,
-        UnOp::Opaque(ExtensionUnOpId(0x8000_0202)),
-    ];
+    let mut variants = builtin_un_ops();
+    variants.push(UnOp::Opaque(ExtensionUnOpId(0x8000_0202)));
 
     let nodes = variants
         .into_iter()
@@ -186,29 +131,20 @@ fn every_terminal_unop_round_trips() {
         .chain([Node::Return])
         .collect();
 
-    round_trip(Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        nodes,
-    ));
+    assert_canonical_wire_round_trip(
+        &Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            nodes,
+        ),
+        "every unop",
+    );
 }
 
 #[test]
 fn every_terminal_atomic_op_round_trips() {
-    let variants = vec![
-        AtomicOp::Add,
-        AtomicOp::Or,
-        AtomicOp::And,
-        AtomicOp::Xor,
-        AtomicOp::Min,
-        AtomicOp::Max,
-        AtomicOp::Exchange,
-        AtomicOp::CompareExchange,
-        AtomicOp::CompareExchangeWeak,
-        AtomicOp::FetchNand,
-        AtomicOp::LruUpdate,
-        AtomicOp::Opaque(ExtensionAtomicOpId(0x8000_0303)),
-    ];
+    let mut variants = builtin_atomic_ops();
+    variants.push(AtomicOp::Opaque(ExtensionAtomicOpId(0x8000_0303)));
 
     let nodes = variants
         .into_iter()
@@ -233,9 +169,12 @@ fn every_terminal_atomic_op_round_trips() {
         .chain([Node::Return])
         .collect();
 
-    round_trip(Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        nodes,
-    ));
+    assert_canonical_wire_round_trip(
+        &Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            nodes,
+        ),
+        "every atomic op",
+    );
 }

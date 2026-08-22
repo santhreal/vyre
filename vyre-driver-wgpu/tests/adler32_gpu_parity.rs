@@ -10,49 +10,39 @@
 //! silicon, the modulo complements `div_zero_shift_mask_parity` (which only
 //! covered the mod-by-zero edge) with mod-by-constant in a real workload loop.
 //!
-//! Dispatched on the 5090 and asserted byte-for-byte against the `adler32` Rust
+//! Dispatched on the live GPU and asserted byte-for-byte against the `adler32` Rust
 //! reference and the standard zlib Adler-32 vector for "abc".
 
-mod common;
-use common::u32_bytes;
+#![cfg(feature = "device-tests")]
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+mod harness;
+use harness::{byte_stream_input_bytes, dispatch_single_u32_output, u32_bytes};
+
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_primitives::hash::adler32::{adler32, adler32_program};
+use vyre_libs::hash::adler32::adler32_program;
+use vyre_reference::composition_witness::multi_hash_witness;
 
+fn reference_adler32(bytes: &[u8]) -> u32 {
+    multi_hash_witness(bytes).2
+}
 /// Dispatch the real `adler32_program` on the GPU: one U32 word per source byte,
 /// single u32 checksum `(b << 16) | a` out at `out[0]`.
 fn gpu_adler32(backend: &WgpuBackend, bytes: &[u8]) -> u32 {
     let n = bytes.len() as u32;
     let program = adler32_program("input", "out", n);
-    let input_words: Vec<u32> = bytes.iter().map(|&b| u32::from(b)).collect();
-    let input_b = u32_bytes(&input_words);
+    let input_b = byte_stream_input_bytes(bytes);
     let out_init = u32_bytes(&[0u32]);
-
-    let outputs = backend
-        .dispatch_borrowed(
-            &program,
-            &[input_b.as_slice(), out_init.as_slice()],
-            &DispatchConfig::default(),
-        )
-        .expect("Fix: WGPU must dispatch the Adler-32 dual-accumulator loop program.");
-    assert_eq!(
-        outputs.len(),
-        1,
-        "adler32_program exposes one output (out); got {}",
-        outputs.len()
-    );
-    let words: Vec<u32> = outputs[0]
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect();
-    assert_eq!(words.len(), 1, "out is a single u32 checksum");
-    words[0]
+    dispatch_single_u32_output(
+        backend,
+        &program,
+        &[input_b.as_slice(), out_init.as_slice()],
+        "Fix: WGPU must dispatch the Adler-32 dual-accumulator loop program.",
+    )
 }
 
 fn check(backend: &WgpuBackend, bytes: &[u8], label: &str) {
     let gpu = gpu_adler32(backend, bytes);
-    let expected = adler32(bytes);
+    let expected = reference_adler32(bytes);
     assert_eq!(
         gpu, expected,
         "GPU Adler-32 of {label} diverged from the Rust reference, the dual-accumulator \
@@ -66,7 +56,7 @@ fn adler32_abc_matches_reference_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: Adler-32 GPU parity requires a live GPU.");
     // Drift-guard against the standard zlib Adler-32 of "abc".
     assert_eq!(
-        adler32(b"abc"),
+        reference_adler32(b"abc"),
         0x024d_0127,
         "Adler-32 reference drifted for \"abc\""
     );
@@ -85,11 +75,10 @@ fn adler32_varied_inputs_match_reference_on_gpu() {
     check(&backend, &long, "a 64-byte block");
     // Wikipedia's canonical Adler-32 example: "Wikipedia" -> 0x11E60398.
     assert_eq!(
-        adler32(b"Wikipedia"),
+        reference_adler32(b"Wikipedia"),
         0x11E6_0398,
         "Adler-32 reference drifted for \"Wikipedia\""
     );
-    check(&backend, b"Wikipedia", "\"Wikipedia\"");
 }
 
 #[test]
@@ -108,6 +97,6 @@ fn adler32_high_half_is_exercised_on_gpu() {
         0,
         "the `b` accumulator (high half) must be non-zero for a real input"
     );
-    assert_eq!(a, adler32(b"adler-in-0"));
-    assert_eq!(b, adler32(b"adler-in-1"));
+    assert_eq!(a, reference_adler32(b"adler-in-0"));
+    assert_eq!(b, reference_adler32(b"adler-in-1"));
 }

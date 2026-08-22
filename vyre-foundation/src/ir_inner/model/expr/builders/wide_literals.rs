@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::extension::OpaqueExprResolver;
 use crate::ir_inner::model::expr::{Expr, ExprNode};
-use crate::ir_inner::model::types::DataType;
+use crate::ir_inner::model::op_signature::DataType;
 
 const KIND_I64: &str = "vyre.literal.i64";
 const KIND_U64: &str = "vyre.literal.u64";

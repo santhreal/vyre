@@ -1,6 +1,6 @@
 //! Backend-neutral planning for replayable graph-capture dispatch paths.
 //!
-//! CUDA graphs, WGPU command replay, and future persistent-dispatch recorders
+//! Native graph capture, portable command replay, and future persistent-dispatch recorders
 //! all need the same first step: walk a [`BindingPlan`] once, classify which
 //! runtime buffers require stable input storage, which require output readback
 //! storage, and how many kernel pointer arguments are needed in lowered binding
@@ -355,6 +355,7 @@ fn graph_capture_capacity_add(lhs: usize, rhs: usize, label: &str) -> Result<usi
     GRAPH_CAPTURE_BINDING_ACCOUNTING.add_usize_capacity(lhs, rhs, label)
 }
 
+// Inline: covers `graph_capture_capacity_add`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{

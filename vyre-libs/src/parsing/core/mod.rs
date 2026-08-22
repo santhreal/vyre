@@ -1,7 +1,6 @@
 //! Substrate-neutral parsing primitives (AST, delimiters, bracket matching).
 
 pub mod ast;
-pub mod delimiter;
 
 pub(crate) fn ascii_whitespace_expr(value: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr {
     use vyre_foundation::ir::Expr;

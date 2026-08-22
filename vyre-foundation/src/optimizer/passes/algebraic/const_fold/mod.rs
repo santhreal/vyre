@@ -18,7 +18,7 @@
 pub(crate) mod binop_identities;
 mod cast_rules;
 mod fma_rules;
-/// ROADMAP A11  -  cross-control-flow literal Let propagation built on
+/// cross-control-flow literal Let propagation built on
 /// the A2 `ProgramFacts` substrate. Propagates literal-valued Lets
 /// whose name is unique program-wide to every Var read site, even
 /// across sibling control-flow branches.
@@ -116,4 +116,5 @@ pub(crate) fn fold_expr(expr: &Expr) -> Option<Expr> {
 }
 
 #[cfg(test)]
+#[path = "../../../../../tests/internal/optimizer/passes/algebraic/const_fold/mod.rs"]
 mod tests;

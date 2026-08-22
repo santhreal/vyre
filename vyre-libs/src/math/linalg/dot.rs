@@ -3,19 +3,22 @@
 //! Category A composition: reads two equally-sized u32 buffers,
 //! multiplies element-wise, and reduces through workgroup scratch.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::composition::trap_program;
+#[cfg(test)]
+use vyre_foundation::composition::wrap_region;
+#[cfg(test)]
+use vyre_foundation::ir::{BufferAccess, BufferDecl, Expr, Node};
+use vyre_foundation::ir::{DataType, Program};
 
+use crate::builder::reduction::ReductionComposer;
 use crate::{
-    builder::{check_tensors, strided_accumulate_child, BuildOptions},
-    region::wrap,
-    tensor_ref::{TensorRef, TensorRefError},
+    builder::{check_tensors, BuildOptions},
+    plumbing::operand::tensor_ref::{TensorRef, TensorRefError},
 };
-use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 const OP_ID: &str = "vyre-libs::math::dot";
 #[cfg(test)]
 const DOT_REFERENCE_OP_ID: &str = "vyre-libs::math::dot_reference";
-const DOT_TILE: u32 = 256;
 
 /// Typed Cat-A builder for [`dot`].
 #[derive(Debug, Clone)]
@@ -87,22 +90,11 @@ impl Dot {
         let lhs = self.lhs.name_str();
         let rhs = self.rhs.name_str();
         let out = self.out.name_str();
-        let workgroup = self.options.workgroup_size.unwrap_or([DOT_TILE, 1, 1]);
+        let workgroup = self.options.workgroup_size.unwrap_or([256, 1, 1]);
         let tile = workgroup[0].max(1);
-        let region = wrap(
-            self.options.region_generator.unwrap_or(OP_ID),
-            dot_tiled_body(lhs, rhs, out, n, tile),
-            None,
-        );
-        Ok(Program::wrapped(
-            vec![
-                BufferDecl::storage(lhs, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-                BufferDecl::storage(rhs, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-                BufferDecl::workgroup("dot_scratch", tile, DataType::U32),
-                BufferDecl::output(out, 2, DataType::U32).with_count(1),
-            ],
-            workgroup,
-            vec![region],
+        let generator = self.options.region_generator.unwrap_or(OP_ID);
+        Ok(ReductionComposer::tiled_dot(
+            generator, lhs, rhs, out, n, tile,
         ))
     }
 }
@@ -133,45 +125,6 @@ pub fn dot(lhs: &str, rhs: &str, out: &str, n: u32) -> Result<Program, String> {
     )
     .build()
     .map_err(|error| format!("Fix: {OP_ID} build failed: {error}"))
-}
-
-fn dot_tiled_body(lhs: &str, rhs: &str, out: &str, n: u32, tile: u32) -> Vec<Node> {
-    let chunks = n.div_ceil(tile);
-    let local = Expr::var("local");
-    let mut body = vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
-        strided_accumulate_child(
-            OP_ID,
-            tile,
-            chunks,
-            n,
-            "local_acc",
-            Expr::u32(0),
-            "dot_scratch",
-            |idx, acc| {
-                Expr::add(
-                    acc,
-                    Expr::mul(Expr::load(lhs, idx.clone()), Expr::load(rhs, idx)),
-                )
-            },
-        ),
-        Node::barrier(),
-    ];
-    body.push(workgroup_tree::sum_u32_child(
-        OP_ID,
-        tile,
-        "dot_scratch",
-        WorkgroupReductionScope::FirstWorkgroup,
-    ));
-    body.push(Node::if_then(
-        Expr::and(Expr::is_first_workgroup(), Expr::eq(local, Expr::u32(0))),
-        vec![Node::Store {
-            buffer: out.into(),
-            index: Expr::u32(0),
-            value: Expr::load("dot_scratch", Expr::u32(0)),
-        }],
-    ));
-    body
 }
 
 #[cfg(test)]
@@ -210,7 +163,7 @@ fn dot_reference(lhs: &str, rhs: &str, out: &str, n: u32) -> Program {
             BufferDecl::output(out, 2, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![wrap(
+        vec![wrap_region(
             DOT_REFERENCE_OP_ID,
             dot_reference_body(lhs, rhs, out, n),
             None,
@@ -219,30 +172,25 @@ fn dot_reference(lhs: &str, rhs: &str, out: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| dot("lhs", "rhs", "out", 256).unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: dot fixture must build: {error}")))),
-        test_inputs: Some(|| vec![vec![
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || dot("lhs", "rhs", "out", 256).unwrap_or_else(|error| trap_program(OP_ID, None, format!("Fix: dot fixture must build: {error}"))),
+        Some(|| vec![vec![
             vec![0u8; 256 * 4],
             vec![0u8; 256 * 4],
         ]]),
-        expected_output: Some(|| vec![vec![
-            0u32.to_le_bytes().to_vec(),
+        Some(|| vec![vec![
+            vec![0x00, 0x00, 0x00, 0x00],
         ]]),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_u32_one as decode_one;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_bytes;
 
     #[test]
     fn tiled_dot_matches_scalar_reference_across_multiple_tiles() {
@@ -254,16 +202,16 @@ mod tests {
             .map(|i| i.wrapping_mul(29).wrapping_add(11))
             .collect::<Vec<_>>();
         let run = |program: Program| {
-            let outputs = vyre_reference::reference_eval(
+            let outputs = eval_bytes(
+                "dot",
                 &program,
-                &[
-                    Value::from(crate::fixture_bytes::u32_bytes(&lhs)),
-                    Value::from(crate::fixture_bytes::u32_bytes(&rhs)),
-                    Value::from(vec![0u8; core::mem::size_of::<u32>()]),
+                vec![
+                    crate::fixture_bytes::u32_bytes(&lhs),
+                    crate::fixture_bytes::u32_bytes(&rhs),
+                    vec![0u8; core::mem::size_of::<u32>()],
                 ],
-            )
-            .expect("Fix: dot program must execute in the reference interpreter.");
-            decode_one(&outputs[0].to_bytes())
+            );
+            decode_one(&outputs[0])
         };
         let actual = run(dot("lhs", "rhs", "out", n).expect("Fix: dot dimensions are valid"));
         let expected = run(dot_reference("lhs", "rhs", "out", n));
@@ -282,16 +230,16 @@ mod tests {
         let lhs = vec![7u32];
         let rhs = vec![3u32];
         let program = dot("lhs", "rhs", "out", 1).expect("Fix: dot n=1 must build");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "dot",
             &program,
-            &[
-                Value::from(crate::fixture_bytes::u32_bytes(&lhs)),
-                Value::from(crate::fixture_bytes::u32_bytes(&rhs)),
-                Value::from(vec![0u8; 4]),
+            vec![
+                crate::fixture_bytes::u32_bytes(&lhs),
+                crate::fixture_bytes::u32_bytes(&rhs),
+                vec![0u8; 4],
             ],
-        )
-        .expect("Fix: dot n=1 must execute");
-        let actual = decode_one(&outputs[0].to_bytes());
+        );
+        let actual = decode_one(&outputs[0]);
         assert_eq!(actual, 21u32, "dot of [7]·[3] = 21");
     }
 
@@ -306,20 +254,20 @@ mod tests {
 
     #[test]
     fn dot_large_n_tile_boundary_matches_reference() {
-        let n = 1025_u32; // Just above DOT_TILE=256, needs multiple tiles
+        let n = 1025_u32; // Just above 256, needs multiple tiles
         let lhs: Vec<u32> = (0..n).map(|i| i.wrapping_add(1)).collect();
         let rhs: Vec<u32> = (0..n).map(|i| i.wrapping_add(2)).collect();
         let program = dot("lhs", "rhs", "out", n).expect("Fix: dot n=1025 must build");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "dot",
             &program,
-            &[
-                Value::from(crate::fixture_bytes::u32_bytes(&lhs)),
-                Value::from(crate::fixture_bytes::u32_bytes(&rhs)),
-                Value::from(vec![0u8; 4]),
+            vec![
+                crate::fixture_bytes::u32_bytes(&lhs),
+                crate::fixture_bytes::u32_bytes(&rhs),
+                vec![0u8; 4],
             ],
-        )
-        .expect("Fix: dot n=1025 must execute");
-        let actual = decode_one(&outputs[0].to_bytes());
+        );
+        let actual = decode_one(&outputs[0]);
         let expected: u32 = lhs
             .iter()
             .zip(rhs.iter())

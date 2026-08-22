@@ -113,10 +113,13 @@ fn allows_release_train_product_names_in_release_runbooks() {
 
 /// The release-runbook exemption must not leak into ordinary documentation.
 ///
-/// `docs/RELEASE.md` is exempt; `docs/RELEASING_GUIDE.md`, `docs/ARCHITECTURE.md`, and
-/// a nested `docs/guide/release-notes.md` are not. Without this test, a suffix match
-/// like `ends_with("RELEASE.md")` or a substring match on "release" would silently
-/// exempt half the documentation tree.
+/// A release runbook is exempt; a guide whose name merely contains the word
+/// release, a document in a directory next to one, and an architecture overview
+/// are not. The exempt and non-exempt paths are the fixtures written below, so
+/// the rule is checked against files the code creates rather than against names
+/// in this sentence. Without the test, a suffix match on the runbook's filename
+/// or a substring match on "release" would silently exempt half the
+/// documentation tree.
 #[test]
 fn release_runbook_exemption_does_not_leak_to_neighbouring_docs() {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -161,15 +164,13 @@ fn release_runbook_exemption_does_not_leak_to_neighbouring_docs() {
 
 /// Rust source is never exempt, including under a release-shaped module path.
 ///
-/// The exemption is about operator runbooks. `vyre-self-substrate/src/integration/
+/// The exemption is about operator runbooks. `vyre-pass-engine/src/integration/
 /// release/*.rs` is platform code that happens to sit under a `release/` directory,
 /// and naming a consumer there is exactly the API coupling the guard exists to stop.
 #[test]
 fn release_runbook_exemption_never_covers_rust_source() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir
-        .path()
-        .join("vyre-self-substrate/src/integration/release");
+    let src = dir.path().join("vyre-pass-engine/src/integration/release");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("launch.rs"),

@@ -5,12 +5,11 @@
 //! trees, single-node trees, cap exhaustion, and validation.
 //!
 //! GPU acquisition: none  -  all tests use the reference interpreter.
-
+#![cfg(feature = "graph")]
 #![allow(deprecated)]
 
-mod common;
-use common::decode_u32_words;
-use vyre_reference::value::Value;
+mod wire_words;
+use vyre_libs::graph::pack_branching_fixture;
 
 fn pack_spine_fixture(node_count: u32) -> (Vec<u8>, Vec<u8>) {
     let full = vyre_foundation::vast::pack_spine_vast(&vec![1u32; node_count as usize]);
@@ -19,91 +18,8 @@ fn pack_spine_fixture(node_count: u32) -> (Vec<u8>, Vec<u8>) {
     let region = full[start..start + node_len].to_vec();
     (full, region)
 }
-
-fn pack_branching_fixture() -> Vec<u8> {
-    use vyre_foundation::vast::{VastNode, NODE_STRIDE_U32, SENTINEL};
-
-    let nodes = [
-        VastNode {
-            kind: 1,
-            parent_idx: SENTINEL,
-            first_child: 1,
-            next_sibling: SENTINEL,
-            src_file: 0,
-            src_byte_off: 0,
-            src_byte_len: 1,
-            attr_off: 0,
-            attr_len: 0,
-            reserved: 0,
-        },
-        VastNode {
-            kind: 1,
-            parent_idx: 0,
-            first_child: 4,
-            next_sibling: 2,
-            src_file: 0,
-            src_byte_off: 1,
-            src_byte_len: 1,
-            attr_off: 0,
-            attr_len: 0,
-            reserved: 0,
-        },
-        VastNode {
-            kind: 1,
-            parent_idx: 0,
-            first_child: SENTINEL,
-            next_sibling: 3,
-            src_file: 0,
-            src_byte_off: 2,
-            src_byte_len: 1,
-            attr_off: 0,
-            attr_len: 0,
-            reserved: 0,
-        },
-        VastNode {
-            kind: 1,
-            parent_idx: 0,
-            first_child: 5,
-            next_sibling: SENTINEL,
-            src_file: 0,
-            src_byte_off: 3,
-            src_byte_len: 1,
-            attr_off: 0,
-            attr_len: 0,
-            reserved: 0,
-        },
-        VastNode {
-            kind: 1,
-            parent_idx: 1,
-            first_child: SENTINEL,
-            next_sibling: SENTINEL,
-            src_file: 0,
-            src_byte_off: 4,
-            src_byte_len: 1,
-            attr_off: 0,
-            attr_len: 0,
-            reserved: 0,
-        },
-        VastNode {
-            kind: 1,
-            parent_idx: 3,
-            first_child: SENTINEL,
-            next_sibling: SENTINEL,
-            src_file: 0,
-            src_byte_off: 5,
-            src_byte_len: 1,
-            attr_off: 0,
-            attr_len: 0,
-            reserved: 0,
-        },
-    ];
-
-    let mut out = Vec::with_capacity(nodes.len() * NODE_STRIDE_U32 * 4);
-    for node in nodes {
-        out.extend_from_slice(&node.to_bytes());
-    }
-    out
-}
+use vyre_reference::value::Value;
+use wire_words::decode_u32_words;
 
 // ---------------------------------------------------------------------------
 // ast_walk_preorder

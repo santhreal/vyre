@@ -5,10 +5,10 @@
 //! is rarely at byte 0), and it is the deliberate mirror of the leftmost-longest
 //! suite: same fixed-structure token patterns, orthogonal property (position, not
 //! length). Green today (fixed `{n}` repeats; range `{n,m}` excluded per item 18/27).
-#![cfg(feature = "matching-regex")]
+#![cfg(feature = "pattern-regex")]
 
 use proptest::prelude::*;
-use vyre_libs::scan::regex_dfa::{build_regex_dfa_pipeline, build_regex_dfa_unanchored};
+use vyre_libs::pattern::{build_regex_dfa_pipeline, build_regex_dfa_unanchored};
 
 /// Single-pass accept-end walk over the public `CompiledDfa` fields (mirrors the
 /// production scan). The DFA type is never named, inferred field access keeps this

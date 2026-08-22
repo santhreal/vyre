@@ -1,10 +1,12 @@
 //! Live CUDA/reference coverage for PTX vectorized memory chains.
 
-mod common;
-#[path = "common/vectorized_memory_dynamic_affine.rs"]
+#![cfg(feature = "device-tests")]
+
+mod harness;
+#[path = "harness/vectorized_memory_dynamic_affine.rs"]
 mod vectorized_memory_dynamic_affine;
 
-use common::{
+use harness::{
     assert_f32_output_lanes, assert_u32_output_lanes, bool_bytes, cuda_reference_outputs,
     f32_bytes, i32_bytes, live_backend, u32_bytes,
 };

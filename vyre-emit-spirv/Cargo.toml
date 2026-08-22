@@ -1,6 +1,6 @@
 [package]
 name = "vyre-emit-spirv"
-version = "0.7.2"
+version = "0.8.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "SPIR-V binary emitter for vyre KernelDescriptor. Routes through naga::Module → naga::back::spv to share substrate-neutral lowering with vyre-emit-naga."
@@ -26,8 +26,13 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
 vyre-test-support.workspace = true
 vyre-foundation.workspace = true
 # integration tests/benches assert against these crates' public APIs
 vyre-emit-ptx = { path = "../vyre-emit-ptx" }
 proptest.workspace = true
+
+[[test]]
+name = "pattern_analysis_contracts"
+path = "tests/pattern_analysis_contracts/mod.rs"

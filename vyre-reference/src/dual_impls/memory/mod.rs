@@ -1,4 +1,4 @@
 /// docs
-pub mod gather;
+pub(crate) mod gather;
 /// docs
-pub mod scatter;
+pub(crate) mod scatter;

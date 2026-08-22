@@ -4,14 +4,16 @@
 //! intermediate parent links but must agree on which nodes share a
 //! root.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
-use vyre_primitives::graph::union_find::union_find_dispatch_grid;
-use vyre_self_substrate::union_find_emit::{
-    canonicalize_parent_to_roots, reference_union_find_alias, union_find_alias_via,
+use harness::with_cuda_optimizer_dispatcher;
+use vyre_libs::graph::dispatch::union_find_emit::union_find_alias_via;
+use vyre_libs::graph::union_find::union_find_dispatch_grid;
+use vyre_reference::composition_witness::{
+    canonicalize_union_find_witness as canonicalize_parent_to_roots,
+    union_find_alias_witness as reference_union_find_alias,
 };
 
 fn assert_same_partition(a: &[u32], b: &[u32]) {

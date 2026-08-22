@@ -18,26 +18,26 @@
 //! against the real wgpu backend, the actual production path, so a
 //! subgroup-divergence under-fire that only manifests on device is caught there.
 
+mod wire_words;
+use wire_words::decode_u32_words as decode_u32;
+
 mod presence_oracle;
 
 use presence_oracle::{
     assert_presence_matches, edge_cases, random_haystack, random_literals, random_region_starts,
     scale_cases, Lcg,
 };
-use vyre_libs::scan::classic_ac::{
-    classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
-    classic_ac_candidate_suffix3_bloom_words, classic_ac_compile, presence_by_region_words,
+use vyre_libs::pattern::classic_ac::{
+    classic_ac_compile, presence_by_region_words,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
 };
-use vyre_libs::scan::{pack_haystack_u32};
-use vyre_primitives::wire::{pack_u32_slice};
-
-fn decode_u32(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
-}
+use vyre_libs::pattern::pack_haystack_u32;
+use vyre_primitives::wire::pack_u32_slice;
+use vyre_reference::composition_witness::{
+    classic_ac_candidate_end_byte_mask_words_witness,
+    classic_ac_candidate_suffix2_mask_words_witness,
+    classic_ac_candidate_suffix3_bloom_words_witness,
+};
 
 /// Evaluate the region-presence GPU program on the CPU reference backend and
 /// return the decoded per-region presence bitmap.
@@ -47,9 +47,17 @@ fn program_presence(literals: &[Vec<u8>], haystack: &[u8], region_starts: &[u32]
     let pattern_count = literals.len() as u32;
     let region_count = region_starts.len() as u32;
 
-    let end_mask = classic_ac_candidate_end_byte_mask_words(&ac.dfa);
-    let suffix2_mask = classic_ac_candidate_suffix2_mask_words(&ac.dfa);
-    let suffix3_bloom = classic_ac_candidate_suffix3_bloom_words(&pattern_refs);
+    let end_mask = classic_ac_candidate_end_byte_mask_words_witness(
+        &ac.dfa.transitions,
+        &ac.dfa.output_offsets,
+        ac.dfa.state_count,
+    );
+    let suffix2_mask = classic_ac_candidate_suffix2_mask_words_witness(
+        &ac.dfa.transitions,
+        &ac.dfa.output_offsets,
+        ac.dfa.state_count,
+    );
+    let suffix3_bloom = classic_ac_candidate_suffix3_bloom_words_witness(&pattern_refs);
     let lengths: Vec<u32> = literals.iter().map(|l| l.len() as u32).collect();
 
     let haystack_packed = pack_haystack_u32(haystack);

@@ -117,7 +117,6 @@ fn run(model_dim: u32, hidden_dim: u32) -> (Vec<f32>, Vec<f32>) {
             Value::from(pack_f32_slice(&f.b1)),
             Value::from(pack_f32_slice(&f.w2)),
             Value::from(pack_f32_slice(&f.b2)),
-            Value::from(vec![0_u8; model_dim as usize * std::mem::size_of::<f32>()]),
         ],
     )
     .expect("Fix: mlp_4x_leaky_sq must reference-evaluate");

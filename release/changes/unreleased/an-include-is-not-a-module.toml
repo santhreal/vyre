@@ -1,0 +1,2 @@
+category = "Added"
+text = "The source-include-module gate reports include! of a tracked Rust file. A pasted file has no module path, so a name it defines cannot be qualified, its items sit in the including module's namespace, and the reachability rules read it as an orphan. The tree reached zero such includes by converting the files to modules and nothing held that line. A build script include of a generated path under OUT_DIR names no tracked file and is not a finding."

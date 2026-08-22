@@ -1,0 +1,135 @@
+//! Canonical generated operation schema built from live registrations.
+//!
+//! ## Layout
+//!
+//! - `schema` the wire types and the version they are pinned to
+//! - `signature` one operation signature from a Program or a declaration
+//! - `composition` the nested-operation chain a Program spells out
+//! - `placement` where each operation is defined, read from the checkout
+//! - `routing` category and the manifests that must declare a feature
+//! - `assemble` the live registry join that produces the document
+//! - `validate` the judgment every document has to pass
+
+use std::io;
+use std::path::Path;
+
+use xtask::gate::{GateCtx, GateError, Report};
+
+use self::assemble::build;
+use self::schema::OperationSchema;
+use self::validate::validate_schema;
+
+pub mod assemble;
+mod composition;
+pub mod placement;
+mod routing;
+pub mod schema;
+mod signature;
+mod validate;
+
+const DEFAULT_OUTPUT: &str = "docs/generated/OP_SCHEMA.json";
+const MAX_SCHEMA_BYTES: u64 = 16_777_216;
+
+/// Holds the canonical live operation contract schema to the registry.
+pub struct OperationSchemaGate;
+
+impl xtask::gate::GateBehavior for OperationSchemaGate {
+    fn usage(&self) -> &'static [&'static str] {
+        &["--validate PATH judges one schema document instead of the committed one"]
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let live = build();
+        if let Some(path) = ctx.flag("--validate") {
+            let candidate = read_schema(Path::new(path)).map_err(|error| {
+                GateError::new(error, "pass a readable schema document after --validate")
+            })?;
+            // The document is judged on its own terms first. Reporting the live
+            // registry's errors instead left every mutation of the document
+            // unread, so a schema that disagreed with itself passed whenever
+            // some unrelated registration was broken.
+            let mut messages = match validate_schema(&candidate, live.as_ref().ok()) {
+                Ok(()) => Vec::new(),
+                Err(errors) => errors,
+            };
+            if let Err(errors) = &live {
+                messages.push(format!(
+                "the live registry does not assemble, so the document was judged on its own and not compared against it: {}",
+                errors.join("; ")
+            ));
+            }
+            let mut report = if messages.is_empty() {
+                Report::clean()
+            } else {
+                Report::from_messages(
+                    messages,
+                    "repair the document, or regenerate it from the registry with --write",
+                )
+            };
+            report.cover_complete("validated operation contracts", candidate.operation_count);
+            report.produced(DEFAULT_OUTPUT);
+            report.note(format!(
+                "{} live operation contract(s) in the validated document",
+                candidate.operation_count
+            ));
+            return Ok(report);
+        }
+        let schema = match live {
+            Ok(schema) => schema,
+            Err(errors) => {
+                let mut report = Report::from_messages(
+                    errors,
+                    "repair the registration the schema rejects, then run the gate again",
+                );
+                report.cover_complete(
+                    "registered operations",
+                    vyre_registry_link::operation::live_operation_registry()
+                        .iter()
+                        .count(),
+                );
+                report.produced(DEFAULT_OUTPUT);
+                return Ok(report);
+            }
+        };
+        let mut inspection = xtask::artifact_gate::Inspection::new();
+        inspection.generates(DEFAULT_OUTPUT, &schema);
+        let mut report = xtask::artifact_gate::settle_inspection(ctx, ctx.gate_name()?, inspection);
+        report.note(format!(
+            "{} live operation contract(s)",
+            schema.operation_count
+        ));
+        Ok(report)
+    }
+}
+
+fn read_schema(path: &Path) -> Result<OperationSchema, String> {
+    let text =
+        read_text_bounded(path).map_err(|error| format!("read {}: {error}", path.display()))?;
+    serde_json::from_str(&text).map_err(|error| format!("parse {}: {error}", path.display()))
+}
+
+pub(super) fn read_text_bounded(path: &Path) -> io::Result<String> {
+    xtask::output_arg::read_text_bounded(path, MAX_SCHEMA_BYTES, "operation schema")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::schema::SCHEMA_VERSION;
+
+    /// The op-schema wire version is pinned twice: this crate generates the
+    /// file, and `xtask::gates::architecture_contract` re-checks the artifact
+    /// against its own expectation. They drifted once, generator on 3 against a
+    /// checker still demanding 2, and nothing went red because the checker was
+    /// a Python script whose number could only be compared as text. Both are
+    /// now constants in the same build, so this fails to compile or fails here
+    /// the moment they disagree.
+    #[test]
+    fn the_architecture_contract_pins_the_same_operation_schema_version() {
+        assert_eq!(
+            i64::from(SCHEMA_VERSION),
+            xtask::gates::architecture_contract::OPERATION_SCHEMA_VERSION,
+            "Fix: bump xtask::gates::architecture_contract::OPERATION_SCHEMA_VERSION \
+             in the same change as SCHEMA_VERSION"
+        );
+    }
+}

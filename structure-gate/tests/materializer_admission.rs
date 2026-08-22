@@ -25,8 +25,10 @@ fn a_backend_that_redefines_a_shared_helper_is_a_violation() {
         fn invalid_module(reason: &str) -> BackendError { todo() }
         fn materialize(&self) { materialize::admit(a, p, t) }
     "#;
-    let failures =
-        materializer_admission_failures(&[("vyre-driver-x/src/materializer.rs".into(), source.into())]);
+    let failures = materializer_admission_failures(&[(
+        "vyre-driver-x/src/materializer.rs".into(),
+        source.into(),
+    )]);
     assert_eq!(failures.len(), 1, "expected one failure, got {failures:?}");
     assert!(
         failures[0].contains("defines its own `invalid_module`"),
@@ -40,8 +42,10 @@ fn a_backend_that_redefines_a_shared_helper_is_a_violation() {
 #[test]
 fn a_backend_that_never_calls_admit_is_a_violation() {
     let source = "fn materialize(&self) { self.open_payload_my_own_way() }";
-    let failures =
-        materializer_admission_failures(&[("vyre-driver-y/src/materializer.rs".into(), source.into())]);
+    let failures = materializer_admission_failures(&[(
+        "vyre-driver-y/src/materializer.rs".into(),
+        source.into(),
+    )]);
     assert_eq!(failures.len(), 1, "expected one failure, got {failures:?}");
     assert!(
         failures[0].contains("does not admit its target payload"),
@@ -51,20 +55,58 @@ fn a_backend_that_never_calls_admit_is_a_violation() {
 }
 
 /// WHY: the rule must accept the shape every backend is supposed to have, or it
-/// would be satisfied only by deleting materializers.
+/// would be satisfied only by deleting materializers. Both spellings of the
+/// choke point are covered, because a rule that knew only the older one turned
+/// red on all four backends the day they moved to the descriptor form.
 #[test]
-fn a_backend_that_routes_through_admit_is_clean() {
-    let source = r#"
+fn every_spelling_of_the_shared_choke_point_is_clean() {
+    let routes = [
+        (
+            "bare admit",
+            r#"
         let admitted = materialize::admit(artifact, payload, target)?;
         return Err(materialize::invalid_module("bad dialect image"));
+    "#,
+        ),
+        (
+            "descriptor admit_modules",
+            r#"
+        let modules = self.descriptor.admit_modules(BACKEND_ID, artifact, payload, decode)?;
+        return Err(materialize::invalid_module("bad dialect image"));
+    "#,
+        ),
+    ];
+
+    for (name, source) in routes {
+        assert!(
+            materializer_admission_failures(&[(
+                "vyre-driver-z/src/materializer.rs".into(),
+                source.into()
+            )])
+            .is_empty(),
+            "a backend delegating to the shared module through {name} must pass"
+        );
+    }
+}
+
+/// WHY: routing through the shared call is not enough if the backend also
+/// carries its own copy of the decision under the same name.
+#[test]
+fn a_backend_that_defines_its_own_admission_is_a_violation() {
+    let source = r#"
+        fn admit_modules(&self, artifact: &Artifact) -> Result<Vec<Module>> { todo() }
+        fn materialize(&self) { self.descriptor.admit_modules(a, p, t, d) }
     "#;
+    let failures = materializer_admission_failures(&[(
+        "vyre-driver-w/src/materializer.rs".into(),
+        source.into(),
+    )]);
+
+    assert_eq!(failures.len(), 1, "expected one failure, got {failures:?}");
     assert!(
-        materializer_admission_failures(&[(
-            "vyre-driver-z/src/materializer.rs".into(),
-            source.into()
-        )])
-        .is_empty(),
-        "a backend delegating to the shared module must pass"
+        failures[0].contains("defines its own `admit_modules`"),
+        "failure must name the redefined decision, got `{}`",
+        failures[0]
     );
 }
 

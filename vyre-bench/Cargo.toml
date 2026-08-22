@@ -1,6 +1,6 @@
 [package]
 name = "vyre-bench"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -15,33 +15,46 @@ vyre = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-driver-wgpu = { workspace = true }
-vyre-driver-metal = { workspace = true }
-vyre-driver-spirv = { workspace = true }
+# Every driver crate is linked through this owner, which asserts that each one
+# reached the backend registry. Benchmarks report the linked dispatch set, so a
+# driver dropped at link time would understate the matrix instead of failing.
+vyre-registry-link = { workspace = true, features = [
+    "cuda",
+    "metal",
+    "reference",
+    "spirv",
+    "wgpu",
+] }
 vyre-driver-reference = { workspace = true }
 vyre-reference = { workspace = true }
 vyre-runtime = { workspace = true }
-vyre-libs = { workspace = true, features = ["nn-linear-4bit", "c-parser"] }
-vyre-primitives = { workspace = true, features = ["bitset", "graph", "cpu-parity"] }
-vyre-intrinsics = { workspace = true }
+# vyre-libs provides domain Program builders for benchmarks and verification.
+vyre-libs = { workspace = true, features = [
+    "bitset",
+    "graph",
+    "math-scan",
+    "nn-linear-4bit",
+    "predicate",
+] }
+vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-lower = { workspace = true }
 vyre-emit-ptx = { workspace = true }
 vyre-spec = { workspace = true }
-vyre-frontend-rust = { workspace = true }
-vyre-frontend-c = { path = "../vyre-frontend-c" }
+# The source fingerprint every recorded artifact names its tree with has one
+# producer, and it is the crate that links no vyre crate so it still identifies a
+# checkout while the workspace does not compile.
+xtask = { path = "../xtask" }
 blake3 = { workspace = true }
 
 aho-corasick = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-tracing = { workspace = true }
 clap = { workspace = true, optional = true }
 toml = { workspace = true }
 inventory = { workspace = true }
-regex = { workspace = true }
 hashbrown = { workspace = true }
 pcre2 = { workspace = true }
-openssl = { workspace = true }
 faer = { workspace = true }
 memchr = { workspace = true }
 rayon = { workspace = true }
@@ -51,8 +64,12 @@ rand.workspace = true
 env_logger = { workspace = true, optional = true }
 rusqlite = { workspace = true }
 core_affinity = { workspace = true }
-tree-sitter = { workspace = true }
-tree-sitter-c = { workspace = true }
+# The AES-CTR CPU baseline names openssl as its comparison crate, so the
+# measured library must be the same build on every host that records a result.
+# Vendoring pins the C library with the crate instead of resolving whatever the
+# host installed, which also removes the system probe that has no answer on
+# windows-msvc.
+openssl = { workspace = true, features = ["vendored"] }
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
 vyre-driver-cuda = { workspace = true }
@@ -60,6 +77,11 @@ vyre-driver-cuda = { workspace = true }
 [features]
 default = ["cli"]
 cli = ["dep:clap", "dep:env_logger"]
+# In-crate tests that dispatch on a physical GPU. Off by default because the
+# hosted CI matrix has no CUDA driver and no Vulkan adapter, where the tests do
+# not fail on a defect, they fail on the absence of hardware. `gpu-parity.yml`
+# turns the feature on so the tests still run, on a runner that has the device.
+device-tests = []
 
 [dev-dependencies]
 vyre-test-support.workspace = true
@@ -81,3 +103,7 @@ harness = false
 
 [lints]
 workspace = true
+
+[[test]]
+name = "release_matrix_contracts"
+path = "tests/release_matrix_contracts/mod.rs"

@@ -35,6 +35,7 @@
 use crate::ir::{Node, Program};
 use crate::memory_model::MemoryOrdering;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::visit::any_body;
 
 /// Coalesce consecutive `Node::Barrier` siblings into the join of their orderings.
 #[derive(Debug, Default)]
@@ -59,19 +60,25 @@ impl BarrierCoalescePass {
         {
             return PassAnalysis::SKIP;
         }
-        if sequence_has_consecutive_barriers(program.entry())
-            || program.entry().iter().any(has_consecutive_barriers)
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        // `any_body` is the one owner of which node variants nest, so the set of
+        // bodies searched here cannot drift from the set `transform` rewrites.
+        // The hand-written `has_consecutive_barriers` this replaces re-listed
+        // the four body-bearing variants and ended in `_ => false`, so a pair
+        // inside a fifth variant read as absent, the gate returned SKIP, and
+        // the pass never ran on a program it could have coalesced.
+        PassAnalysis::run_if(any_body(
+            program.entry(),
+            &mut sequence_has_consecutive_barriers,
+        ))
     }
 
     /// Walk the entry tree; for every body containing consecutive
     /// barriers, replace them with the join.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
+        if !Self::analyze_impl(&program).should_run {
+            return PassResult::unchanged(program);
+        }
         let mut changed = false;
         let program = program.map_entry(|entry| coalesce_nodes(entry, &mut changed));
         PassResult { program, changed }
@@ -155,28 +162,7 @@ fn push_coalesced(out: &mut Vec<Node>, node: Node, changed: &mut bool) {
     }
 }
 
-/// True if `node` (or any of its non-Region descendants) contains an
-/// adjacent-barrier pair at any nesting level. Drives the analyze gate.
-fn has_consecutive_barriers(node: &Node) -> bool {
-    match node {
-        Node::If {
-            then, otherwise, ..
-        } => {
-            sequence_has_consecutive_barriers(then)
-                || sequence_has_consecutive_barriers(otherwise)
-                || then.iter().any(has_consecutive_barriers)
-                || otherwise.iter().any(has_consecutive_barriers)
-        }
-        Node::Loop { body, .. } | Node::Block(body) => {
-            sequence_has_consecutive_barriers(body) || body.iter().any(has_consecutive_barriers)
-        }
-        Node::Region { body, .. } => {
-            sequence_has_consecutive_barriers(body) || body.iter().any(has_consecutive_barriers)
-        }
-        _ => false,
-    }
-}
-
+/// True if any two adjacent siblings in `body` are both barriers.
 fn sequence_has_consecutive_barriers(body: &[Node]) -> bool {
     body.windows(2).any(|pair| {
         matches!(
@@ -214,42 +200,24 @@ mod tests {
         Program::wrapped(vec![buf()], [1, 1, 1], entry)
     }
 
-    /// Count `Node::Barrier` occurrences anywhere in the program entry
-    /// tree (descending into Region / If / Loop / Block bodies). Lets
-    /// tests assert post-coalesce barrier count even though
-    /// Program::wrapped puts everything inside an outer Region.
+    /// Count `Node::Barrier` occurrences anywhere in the program entry tree.
+    /// Lets tests assert post-coalesce barrier count even though
+    /// `Program::wrapped` puts everything inside an outer Region.
     fn count_barriers(node: &Node) -> usize {
-        match node {
-            Node::Barrier { .. } => 1,
-            Node::If {
-                then, otherwise, ..
-            } => {
-                then.iter().map(count_barriers).sum::<usize>()
-                    + otherwise.iter().map(count_barriers).sum::<usize>()
-            }
-            Node::Loop { body, .. } | Node::Block(body) => body.iter().map(count_barriers).sum(),
-            Node::Region { body, .. } => body.iter().map(count_barriers).sum(),
-            _ => 0,
-        }
+        crate::test_ir_inspect::count_nodes(std::slice::from_ref(node), |candidate| {
+            matches!(candidate, Node::Barrier { .. })
+        })
     }
 
-    /// Find the first `Node::Barrier` at any depth in the entry tree
-    /// and return its ordering. Returns None if no barrier exists.
+    /// The ordering of the first `Node::Barrier` at any depth, in source order.
     fn first_barrier_ordering(node: &Node) -> Option<MemoryOrdering> {
-        match node {
-            Node::Barrier { ordering } => Some(*ordering),
-            Node::If {
-                then, otherwise, ..
-            } => then
-                .iter()
-                .find_map(first_barrier_ordering)
-                .or_else(|| otherwise.iter().find_map(first_barrier_ordering)),
-            Node::Loop { body, .. } | Node::Block(body) => {
-                body.iter().find_map(first_barrier_ordering)
+        let mut first = None;
+        crate::visit::for_each_node(std::slice::from_ref(node), |candidate| {
+            if let Node::Barrier { ordering } = candidate {
+                first = first.or(Some(*ordering));
             }
-            Node::Region { body, .. } => body.iter().find_map(first_barrier_ordering),
-            _ => None,
-        }
+        });
+        first
     }
 
     #[test]

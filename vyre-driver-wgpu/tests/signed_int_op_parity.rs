@@ -5,12 +5,14 @@
 //! NEGATIVE i32 operands. This locks the rest of the signedness-sensitive integer
 //! ops: `min`/`max` (signed SMin/SMax) and the ordered comparisons (signed
 //! SLessThan etc.), against the same class of regression. All are dispatched on
-//! the 5090 with negative operands and asserted byte-for-byte against Rust.
+//! the live GPU with negative operands and asserted byte-for-byte against Rust.
 //!
 //! (Division and modulo have their own guard in `signed_modulo_parity`.)
 
-mod common;
-use common::u32_bytes;
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::{bytes_u32, u32_bytes};
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
@@ -54,20 +56,21 @@ fn program(elem: DataType, n: u32, f: fn(Expr, Expr) -> Expr) -> Program {
 }
 
 fn dispatch(backend: &WgpuBackend, program: &Program, ps: &[(i32, i32)]) -> Vec<u32> {
-    let a = u32_bytes(&ps.iter().map(|&(a, _)| a as u32).collect::<Vec<_>>());
-    let b = u32_bytes(&ps.iter().map(|&(_, b)| b as u32).collect::<Vec<_>>());
-    let out_init = u32_bytes(&vec![0u32; ps.len()]);
+    let a_words: Vec<u32> = ps.iter().map(|&(a, _)| a as u32).collect();
+    let b_words: Vec<u32> = ps.iter().map(|&(_, b)| b as u32).collect();
+    let zero_bytes = u32_bytes(&vec![0u32; ps.len()]);
     let outputs = backend
         .dispatch_borrowed(
             program,
-            &[out_init.as_slice(), a.as_slice(), b.as_slice()],
+            &[
+                zero_bytes.as_slice(),
+                u32_bytes(&a_words).as_slice(),
+                u32_bytes(&b_words).as_slice(),
+            ],
             &DispatchConfig::default(),
         )
         .expect("Fix: WGPU must dispatch the signed int-op contract.");
-    outputs[0]
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
+    bytes_u32(&outputs[0])
 }
 
 #[test]

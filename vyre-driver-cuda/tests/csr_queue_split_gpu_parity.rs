@@ -1,27 +1,27 @@
 //! CUDA parity for mixed scalar plus row-strided CSR queue traversal.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, live_backend, u32_bytes};
-use vyre_driver_cuda::CudaOptimizerDispatcher;
-use vyre_primitives::bitset::bitset_words;
-use vyre_primitives::graph::csr_queue_split::{
-    csr_queue_split_low_dispatch_grid, csr_queue_split_low_forward_traverse,
-    try_csr_queue_split_low_forward_traverse_cpu,
+use harness::{bytes_u32, live_backend, u32_bytes};
+use vyre_driver_cuda::CudaProgramDispatcher;
+use vyre_foundation::program_dispatch::{
+    ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
-use vyre_primitives::graph::csr_queue_strided::{
+use vyre_libs::bitset::bitset_words;
+use vyre_libs::graph::csr_queue_split::{
+    csr_queue_split_low_dispatch_grid, csr_queue_split_low_forward_traverse,
+};
+use vyre_libs::graph::csr_queue_strided::{
     csr_queue_strided_forward_dispatch_grid, csr_queue_strided_forward_traverse,
 };
-use vyre_self_substrate::optimizer::dispatcher::{
-    OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
-};
+use vyre_reference::composition_witness::csr_queue_split_low_forward_witness;
 
 #[test]
 fn cuda_resident_csr_queue_split_low_then_high_matches_scalar_on_overflowing_hubs() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 2048_u32;
     let queue_capacity = 10_u32;
     let high_queue_capacity = 2_u32;
@@ -33,21 +33,21 @@ fn cuda_resident_csr_queue_split_low_then_high_matches_scalar_on_overflowing_hub
     let words = bitset_words(node_count) as usize;
     let frontier_seed = generated_frontier_seed(words);
 
-    let split_expected = try_csr_queue_split_low_forward_traverse_cpu(
-        &active_queue,
-        queue_len[0],
-        &edge_offsets,
-        &edge_targets,
-        &edge_kind_mask,
-        &frontier_seed,
-        node_count,
-        high_queue_capacity as usize,
-        high_degree_threshold,
-        allow_mask,
-    )
-    .expect("Fix: split-low CPU oracle should accept the generated power-law graph");
-    let mut expected_full = split_expected.frontier_out.clone();
-    for &src in &split_expected.high_queue {
+    let (expected_frontier_out, expected_high_queue, expected_high_len) =
+        csr_queue_split_low_forward_witness(
+            &active_queue,
+            queue_len[0],
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &frontier_seed,
+            node_count,
+            high_queue_capacity as usize,
+            high_degree_threshold,
+            allow_mask,
+        );
+    let mut expected_full = expected_frontier_out;
+    for &src in &expected_high_queue {
         emit_row(
             src,
             &edge_offsets,
@@ -186,10 +186,10 @@ fn cuda_resident_csr_queue_split_low_then_high_matches_scalar_on_overflowing_hub
         .expect("Fix: resident split-low plus high-row CSR queue sequence failed.");
 
     assert_eq!(bytes_u32(&outputs[0]), expected_full);
-    assert_eq!(bytes_u32(&outputs[1]), split_expected.high_queue);
-    assert_eq!(bytes_u32(&outputs[2]), vec![split_expected.high_len]);
+    assert_eq!(bytes_u32(&outputs[1]), expected_high_queue);
+    assert_eq!(bytes_u32(&outputs[2]), vec![expected_high_len]);
     assert!(
-        split_expected.high_len > high_queue_capacity,
+        expected_high_len > high_queue_capacity,
         "Fix: this parity case must exercise high-queue overflow"
     );
 

@@ -2,6 +2,7 @@
 
 use vyre_foundation::ir::Program;
 use vyre_foundation::lower::LoweringError;
+use vyre_lower::pattern_audit::PatternAudit;
 
 pub(crate) fn validate_and_analyze(
     program: &Program,
@@ -12,7 +13,7 @@ pub(crate) fn validate_and_analyze(
         ))
     })?;
     let descriptor = lowered.descriptor;
-    let neutral = vyre_lower::audit::audit(&descriptor);
+    let neutral = vyre_lower::audit(&descriptor);
     let concrete = vyre_emit_naga::patterns::audit(&descriptor);
     tracing::trace!(
         target: "vyre_driver_wgpu::descriptor",
@@ -24,6 +25,7 @@ pub(crate) fn validate_and_analyze(
     Ok(descriptor)
 }
 
+// Inline: covers `validate_and_analyze`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -46,7 +48,7 @@ mod tests {
 
         assert_eq!(descriptor.dispatch.workgroup_size, [64, 1, 1]);
         assert_eq!(descriptor.bindings.slots.len(), 1);
-        assert!(vyre_lower::verify::verify(&descriptor).is_ok());
+        assert!(vyre_lower::verify(&descriptor).is_ok());
     }
 
     #[test]

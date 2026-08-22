@@ -1,4 +1,4 @@
-//! ROADMAP L3  -  parallel parse across file corpus.
+//! parallel parse across file corpus.
 //!
 //! Fan out `ParsedSourceLru::get_or_parse` across all available cores via
 //! `rayon::par_iter`.  Corpus-wide deduplication still happens because each

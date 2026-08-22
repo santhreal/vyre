@@ -1,71 +1,14 @@
 //! xtask dispatcher for the vyre workspace.
+//!
+//! Every subcommand is a gate, so dispatch is one lookup in the registry. The
+//! only name that is not a gate is `gates`, which is the runner.
 
 use std::env;
 use std::process;
 
-mod abstraction_gate;
-mod artifact_paths;
-mod backend_matrix;
-mod bench_crossback;
-mod bench_release;
-mod benchmark_evidence_semantics;
-mod binary;
-mod catalog;
-mod check_cat_a;
-mod check_tier_deps;
-mod compile;
-mod conformance_evidence_semantics;
-mod conformance_matrix;
-mod dedup_report;
-mod dep_drift;
-mod docs_check;
-mod dup_scan;
-mod feature_matrix;
-mod gate1;
-mod gates;
-mod hash;
-mod heuristic_audit;
-mod hot_path_scan;
-mod hygiene_matrix;
-mod implementation_family;
-mod json_output;
-mod launch_contract;
-mod launch_state;
-mod lego_audit;
-mod lego_quick;
-mod list_ops;
-mod manifest_walk;
-mod metadata_matrix;
-mod op_matrix;
-mod operation_schema;
-mod optimization_corpus;
-mod optimization_docs;
-mod optimization_matrix;
-mod output_arg;
-mod ownership;
-mod package_readiness;
-mod platform_boundary;
-mod print_composition;
-mod release_backend_rows;
-mod release_benchmarks;
-mod release_conformance;
-mod release_evidence;
-mod release_gate;
-mod release_train;
-mod release_workload_matrix;
-mod repo_boundary;
-mod research_key;
-mod research_source_ledger;
-mod shrink;
-mod subcommands;
-mod text_markers;
-mod toml_config;
-mod trace_f32;
-mod use_paths;
-mod verify_rewrite_proofs;
-mod version_matrix;
-mod vyre_release_gate;
-mod whats_similar;
+use xtask::gate::{self, GateCtx};
+use xtask::gates::sweep;
+use xtask::subcommands;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -79,11 +22,68 @@ fn main() {
         print!("{}", subcommands::help_text());
         process::exit(0);
     }
-    match subcommands::find(name) {
-        Some(entry) => (entry.run)(&args),
-        None => {
-            eprintln!("Fix: unknown subcommand '{name}'. See --help.");
+    if name == sweep::RUNNER {
+        sweep::run(&args[2..]);
+        return;
+    }
+    if name == "lego-audit" {
+        let mut runner_args = vec!["--subset".to_string(), "lego-audit".to_string()];
+        runner_args.extend(args[2..].iter().cloned());
+        sweep::run(&runner_args);
+        return;
+    }
+    let Some(gate) = subcommands::find(name) else {
+        eprintln!("Fix: unknown subcommand '{name}'. See --help.");
+        process::exit(1);
+    };
+    let ctx = GateCtx::new(xtask::checkout::checkout_root(), args[2..].to_vec());
+    // A delegated gate carries its options in the crate that implements them,
+    // so the request travels to the child and comes back as report notes. Every
+    // other gate is answered here, before it reads the tree.
+    if gate::help_requested(&ctx.args) && gate.package() == "xtask" {
+        print!("{}", gate::render(name, &gate::usage_report(&gate)));
+        return;
+    }
+    let Some(descriptor) = xtask::gate_metadata::descriptor(name) else {
+        eprintln!("Fix: gate `{name}` has no descriptor in GATE_METADATA");
+        process::exit(1);
+    };
+    let declared_artifacts = descriptor.artifacts;
+    let snapshot = xtask::artifact_gate::WorkspaceSnapshot::capture(&ctx.root);
+    let result = gate.run(&ctx);
+    let mutations =
+        snapshot.detect_mutations(&ctx.root, name, declared_artifacts, gate.writes(&ctx));
+    if !mutations.is_empty() {
+        for mutation in mutations {
+            eprintln!("Fix: {mutation}");
+        }
+        process::exit(1);
+    }
+    match result {
+        Err(error) => {
+            eprintln!("{error}");
             process::exit(1);
+        }
+        Ok(report) => {
+            if !gate::help_requested(&ctx.args) {
+                let contract_failures = report.contract_failures(descriptor);
+                if !contract_failures.is_empty() {
+                    for failure in contract_failures {
+                        eprintln!("Fix: gate `{name}` {failure}");
+                    }
+                    process::exit(1);
+                }
+            }
+            if ctx.has("--print-toolchain") && report.findings.is_empty() {
+                return;
+            }
+            print!("{}", gate::render(name, &report));
+            // A finding is a failure. There is no informational mode: a gate
+            // that reported a problem and exited 0 is how 32 gates judged
+            // nothing while reading as coverage.
+            if !report.findings.is_empty() {
+                process::exit(1);
+            }
         }
     }
 }

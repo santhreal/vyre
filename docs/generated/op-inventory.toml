@@ -1,0 +1,4191 @@
+# Generated from the live operation registry by `cargo xtask list-ops --write`.
+# Edit the registrations, not this file.
+schema_version = 1
+
+[[operation]]
+id = "vyre-libs::bitset::and"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "commutative", "idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::and_into"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::and_not"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::and_not_into"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::any"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::clear_bit"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 1
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::contains"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::copy"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::equal"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["commutative"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::four_russians_apply_byte_lut"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::four_russians_dense_matvec_byte_lut"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::not"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::or"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "commutative", "idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::or_into"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::popcount"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::select1_query"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::set_bit"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 1
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::stochastic_and_mul"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "commutative"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::subset_of"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::test_bit"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::xor"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "commutative", "self-inverse"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::xor_into"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["self-inverse"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::bitset::zero"
+tier = "libs"
+category = "bitset"
+kind = "program_buffers"
+buffers = 1
+bytes_extraction = false
+features = ["bitset"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::builder::indexed_map"
+tier = "libs"
+category = "builder"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["builder-ops"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::builder::strided_accumulate"
+tier = "libs"
+category = "builder"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["builder-ops"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::decode::base64"
+tier = "libs"
+category = "decode"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["decode"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::decode::encodex"
+tier = "libs"
+category = "decode"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["decode"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::decode::hex"
+tier = "libs"
+category = "decode"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["decode"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::decode::inflate_stored_block"
+tier = "libs"
+category = "decode"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["decode"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::decode::rle_segment_lengths"
+tier = "libs"
+category = "decode"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["decode"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::decode::ziftsieve_literal_copy"
+tier = "libs"
+category = "decode"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["decode"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::fixpoint::bitset_fixpoint"
+tier = "libs"
+category = "fixpoint"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["fixpoint"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::fixpoint::persistent_fixpoint"
+tier = "libs"
+category = "fixpoint"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["fixpoint"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::geom::clifford2_geometric_product"
+tier = "libs"
+category = "geom"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["geom"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::geom::tfn_scalar_mix"
+tier = "libs"
+category = "geom"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["geom"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::ast_walk_postorder"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::ast_walk_preorder"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::csr_backward_or_changed"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::csr_backward_traverse"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["inverse-of"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::csr_forward_or_changed"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::csr_forward_traverse"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["monotonic"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::csr_forward_traverse_excluding"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 8
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["monotonic"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::csr_frontier_degree_sum"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["bounded"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::csr_queue_strided_forward_traverse"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::dominator_frontier"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::dominator_frontier_pred_check"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::dominator_tree"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::dominator_tree_depth"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::dominator_tree_intersect_step"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::dominator_tree_lca"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::functor_apply"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::level_wave"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::monoidal_compose"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "identity"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::motif"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::path_reconstruct"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::persistent_bfs"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 11
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::persistent_bfs_step"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 8
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::scc_decompose"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::sheaf_diffusion_step"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::sum_product_evaluate"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::sum_product_evaluate_leveled"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 8
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::tensor_flow_forward"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["distributive"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::tensor_flow_propagate_edges"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::union_find"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::vast_descend_leftmost_leaf"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::vast_walk_postorder"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::vast_walk_preorder"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["monotonic"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::hash::adler32"
+tier = "libs"
+category = "hash"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hash"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::hash::blake3_compress"
+tier = "libs"
+category = "hash"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["hash"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::hash::blake3_g"
+tier = "libs"
+category = "hash"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["hash"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::hash::blake3_round"
+tier = "libs"
+category = "hash"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["hash"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::hash::crc32"
+tier = "libs"
+category = "hash"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hash"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::hash::fnv1a32"
+tier = "libs"
+category = "hash"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hash"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::hash::fnv1a64"
+tier = "libs"
+category = "hash"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hash"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::hash::multi_hash"
+tier = "libs"
+category = "hash"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hash"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::hash::ntt_butterfly_stage"
+tier = "libs"
+category = "hash"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hash"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::hash::sparse_fft_bin_hash"
+tier = "libs"
+category = "hash"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hash"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::label::nodeset_filter"
+tier = "libs"
+category = "label"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["label", "predicate"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::label::resolve_family"
+tier = "libs"
+category = "label"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["label"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::llm::logit_adjust"
+tier = "libs"
+category = "llm"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["llm"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::llm::nucleus_select"
+tier = "libs"
+category = "llm"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["llm"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::llm::paged_kv_append"
+tier = "libs"
+category = "llm"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["llm"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::llm::paged_kv_gather"
+tier = "libs"
+category = "llm"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["llm"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::llm::sample_token"
+tier = "libs"
+category = "llm"
+kind = "program_buffers"
+buffers = 9
+bytes_extraction = false
+features = ["llm"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::logical::nand"
+tier = "libs"
+category = "logical"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["logical"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::logical::nor"
+tier = "libs"
+category = "logical"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["logical"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::algebra::bool_semiring_matmul"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-algebra"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::algebra::join"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-algebra"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::algebra::meet"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-algebra"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::algebra::minplus_mul"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-algebra"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::algebra::sketch_mix"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-algebra"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::amg_jacobi_step"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::amg_v_cycle"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 11
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::amg_v_cycle::v_cycle_phase"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::atomic::atomic_add_u32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "commutative", "identity"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::atomic::atomic_and_u32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "commutative", "idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::atomic::atomic_compare_exchange_u32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::atomic::atomic_exchange_u32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["custom"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::atomic::atomic_max_u32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["absorbing", "associative", "commutative", "idempotent", "identity"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::atomic::atomic_min_u32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["absorbing", "associative", "commutative", "idempotent", "left-absorbing"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::atomic::atomic_or_u32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["absorbing", "associative", "commutative", "idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::atomic::atomic_xor_u32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "commutative", "self-inverse"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::atomic::lru_update_u32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 1
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::avg_floor"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::bellman_shortest_path"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "fixpoint"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::bhattacharyya_coefficient"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::bigint_add_carry"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::broadcast"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-broadcast"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::clamp_u32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::conformal_threshold"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::conv1d"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::conv::conv2d_3x3_direct"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::conv::im2col_3x3"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::dot"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::dot_partial"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::eigenvector_column_sign"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 1
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::fft::fft4_complex"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::fft::fft_convolve_circular_complex"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::fft::fft_radix2"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::fft::pointwise_complex_multiply_conjugate"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::fft::scale_conjugate_inverse"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::gaussian_rdp_step"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::givens_rotate_pair"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::hensel_lift_step"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::iht_threshold"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::interval_merge"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::jacobi_apply_rotation"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::linalg::matmul_strassen_2x2"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::lzcnt_u32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::matmul"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::matmul_bias"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::matmul_bias::scalar"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::matmul_bias_tiled"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::matmul_tiled"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::matrix_diagonal_extract"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::matrix_identity_fill"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 1
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::mori_zwanzig_project_step"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::mp_edge_clip"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::newton_schulz_poly5_f32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::qsvt_block_encode"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::quantized::i4x8_batched_matmul_f32_scaled"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::quantized::i4x8_batched_matmul_top1_f32_scaled"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::quantized::i4x8_batched_matvec_f32_scaled"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::quantized::i4x8_dot_f32_scaled"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::quantized::i4x8_dot_i32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::quantized::i4x8_matvec_f32_scaled"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::quantized::unpack_i4x8"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::randomized_projection_step"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::reduce_mean"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::reduce_variance"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::scallop_join"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "fixpoint"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::scan_prefix_sum"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-scan"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::semiring_gemm"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["distributive"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::sheaf_laplacian_eigenvalue"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::sheaf_laplacian_eigenvalue::power_iteration_phase"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::sinkhorn_iterate"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 10
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "fixpoint"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::softmax_step"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::square"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::succinct::rank1_query"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-succinct"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::succinct::rank1_superblocks"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-succinct"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::symmetric_eigen_jacobi"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::tensor_network_pair_contract"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::tensor_train_decompose"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 8
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::tzcnt_u32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::weighted_sum_fma_f32"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::math::wrapping_neg"
+tier = "libs"
+category = "math"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::attention"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::attention::absorb_values"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::attention::online_softmax"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::attention::quest_paging"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::attention::tile_scores"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::attention::turboquant"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::attention_max_pass"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::attention_reference"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::attention_sum_pass"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::attention_write_pass"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::cross_entropy"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::embedding"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::flash_attention"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::gelu"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::gqa_attention"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::layer_norm"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::layerwise_ln_scale"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::leaky_relu_sq"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::leaky_relu_sq_backward"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::linear"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::linear_4bit"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-linear-4bit"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::linear_4bit_affine_grouped"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-linear-4bit"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::linear_relu"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::linear_silu"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::linear_tiled"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::ln_scale_backward"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::logit_softcap"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::logit_softcap_backward"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::mlp_4x_leaky_sq"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::mlp_4x_leaky_sq::hidden_projection"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::mlp_4x_leaky_sq::output_projection"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::mlp_backward"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::moe_gate"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-moe"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::moe_gate::softmax_stats"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-moe"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::moe_gate::weight_write"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-moe"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::parallel_residual_block"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::partial_rope"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::partial_rope_backward"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::qk_gain"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::qk_gain_backward"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::quest_score_pages"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::quest_select_top_k"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::quest_zero_fill"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 1
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::relu"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::residual_add"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::residual_block_backward"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::rms_norm"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::rms_norm_linear"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::sigmoid_gate"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::silu"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::skip_gate"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::skip_gate_backward"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::softmax"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::softmax_top_k"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-moe"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::swiglu"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::top_k"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-moe"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::opt::homotopy_euler_predictor"
+tier = "libs"
+category = "opt"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["opt"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::optim::adamw_step"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::optim::ema_apply"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::optim::muon_update"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::optim::muoneq_r"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::optim::newton_schulz_5step"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::ast_binding_strength"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::ast_cfg_blocks"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::ast_cse_hash_probe"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::ast_cse_structural_hash"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::ast_shunting_yard"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::ast_shunting_yard_reduce"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::core_delimiter_match"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::line_splice_classify"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::planar_rewrite_exclusion_check"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::planar_rewrite_schedule"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::python312_extract_calls"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::python312_extract_decorators"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::python312_extract_imports"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::python312_extract_structure"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::python312_extract_with_blocks"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::python312_lexer"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::ssa_dominance_scan"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::whitespace_classify_word"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::aho_corasick"
+tier = "libs"
+category = "scan"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::bracket_match"
+tier = "libs"
+category = "pattern"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::compact_hits"
+tier = "libs"
+category = "pattern"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::cooperative_dfa"
+tier = "libs"
+category = "pattern"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::emit_hit"
+tier = "libs"
+category = "pattern"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::regex_dfa"
+tier = "libs"
+category = "pattern"
+kind = "program_buffers"
+buffers = 8
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::regex_scan"
+tier = "libs"
+category = "pattern"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::substring_search"
+tier = "libs"
+category = "scan"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::predicate::arg_of"
+tier = "libs"
+category = "predicate"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["predicate"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["inverse-of"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::predicate::call_to"
+tier = "libs"
+category = "predicate"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["predicate"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["monotonic"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::predicate::edge"
+tier = "libs"
+category = "predicate"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["predicate"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["distributive"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::predicate::in_file"
+tier = "libs"
+category = "predicate"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["predicate"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::predicate::in_function"
+tier = "libs"
+category = "predicate"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["predicate"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::predicate::in_package"
+tier = "libs"
+category = "predicate"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["predicate"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::predicate::literal_of"
+tier = "libs"
+category = "predicate"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["predicate"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["absorbing"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::predicate::node_kind_eq"
+tier = "libs"
+category = "predicate"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["predicate"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["identity"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::predicate::return_value_of"
+tier = "libs"
+category = "predicate"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["predicate"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["monotonic"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::predicate::size_argument_of"
+tier = "libs"
+category = "predicate"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["predicate"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["complement"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::quant::byte_shuffle"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::quant::gptq_round"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::quant::gptq_sdclip"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::quant::int4_batched_matmul_f32_scaled"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::quant::int4_batched_matmul_top1_f32_scaled"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::quant::int4_batched_matvec_f32_scaled"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::quant::int4_dot_f32_scaled"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::quant::int4_dot_i32"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::quant::int4_matvec_f32_scaled"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::quant::int6_pack"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::quant::int6_unpack"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::quant::int8_pack"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::quant::int8_unpack"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::all"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["absorbing", "associative", "commutative", "distributive", "idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::any"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["absorbing", "associative", "commutative", "idempotent", "lattice-absorption"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::count"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "bounded"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::count_non_zero"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["bounded", "monotonic"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::gather"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["monotonic"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::grid_stride_tree_sum_u32"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "commutative", "identity"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::histogram"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::max"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["absorbing", "associative", "commutative", "idempotent", "identity"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::min"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["absorbing", "associative", "commutative", "idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::radix_sort"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::range_counts_u32"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::scatter"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["inverse-of"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::segment_reduce_sum"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::sum"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "commutative", "identity"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::workgroup_any_u32"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::workgroup_max_f32"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["absorbing", "associative", "commutative", "idempotent", "identity"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::workgroup_max_u32"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["absorbing", "associative", "commutative", "idempotent", "identity"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::workgroup_min_f32"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["absorbing", "associative", "commutative", "idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::workgroup_min_u32"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["absorbing", "associative", "commutative", "idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::workgroup_sum_f32"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "commutative", "identity"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::workgroup_sum_u32"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "commutative", "identity"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::representation::unpack_4bit_f32"
+tier = "libs"
+category = "representation"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["representation"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::aliases_dataflow"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 14
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::auth_check_dominates"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::bounded_by_comparison"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::buffer_size_check"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::dominance_predecessors"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::flows_to"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::flows_to_to_sink"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 11
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::flows_to_with_sanitizer"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 14
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::format_string_check"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::integer_overflow_arith"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::label_by_family"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::lock_dominates"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::path_canonical"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::sanitized_by"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 8
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::sanitizer_dominates"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::sink_intersection"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::sql_param_bound"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::taint_flow"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::taint_kill"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::taint_pollution"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 11
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::unchecked_return"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::security::xss_escape"
+tier = "libs"
+category = "security"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["security"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::text::byte_histogram_256"
+tier = "libs"
+category = "text"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["text"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::text::char_class"
+tier = "libs"
+category = "text"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["text"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::text::encoding_classify"
+tier = "libs"
+category = "text"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["text"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::text::line_index"
+tier = "libs"
+category = "text"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["text"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::text::utf8_shape_counts"
+tier = "libs"
+category = "text"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["text"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::text::utf8_validate"
+tier = "libs"
+category = "text"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["text"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::vfs::resolve"
+tier = "libs"
+category = "vfs"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["vfs"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::visual::blur"
+tier = "libs"
+category = "visual"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["visual"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::visual::box_shadow"
+tier = "libs"
+category = "visual"
+kind = "program_buffers"
+buffers = 1
+bytes_extraction = false
+features = ["visual"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::visual::cell_grid"
+tier = "libs"
+category = "visual"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["visual"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::visual::composite"
+tier = "libs"
+category = "visual"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["visual"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::visual::downsample"
+tier = "libs"
+category = "visual"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["visual"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::visual::filter_chain"
+tier = "libs"
+category = "visual"
+kind = "program_buffers"
+buffers = 1
+bytes_extraction = false
+features = ["visual"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::visual::glass"
+tier = "libs"
+category = "visual"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["visual"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::visual::glyph_grid"
+tier = "libs"
+category = "visual"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["visual"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::visual::gradient"
+tier = "libs"
+category = "visual"
+kind = "program_buffers"
+buffers = 1
+bytes_extraction = false
+features = ["visual"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::visual::packed_rgba_map"
+tier = "libs"
+category = "visual"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["visual"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::visual::upsample"
+tier = "libs"
+category = "visual"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["visual"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-primitives::hardware::bit_reverse_u32"
+tier = "intrinsic"
+category = "hardware"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hardware"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-primitives::hardware::fma_f32"
+tier = "intrinsic"
+category = "hardware"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["hardware"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-primitives::hardware::inverse_sqrt_f32"
+tier = "intrinsic"
+category = "hardware"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hardware"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-primitives::hardware::popcount_u32"
+tier = "intrinsic"
+category = "hardware"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hardware"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-primitives::hardware::storage_barrier"
+tier = "intrinsic"
+category = "hardware"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hardware"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-primitives::hardware::subgroup_add"
+tier = "intrinsic"
+category = "hardware"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hardware"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-primitives::hardware::subgroup_ballot"
+tier = "intrinsic"
+category = "hardware"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hardware"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-primitives::hardware::subgroup_shuffle"
+tier = "intrinsic"
+category = "hardware"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["hardware"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-primitives::hardware::workgroup_barrier"
+tier = "intrinsic"
+category = "hardware"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["hardware"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]

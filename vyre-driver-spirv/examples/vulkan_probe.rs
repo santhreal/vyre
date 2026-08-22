@@ -1,9 +1,17 @@
-//! Minimal Vulkan probe example.
+//! Minimal Vulkan probe: acquire the SPIR-V backend, lower one program, dispatch
+//! it, and print what the device returned.
+//!
+//! The program is the one `tests/dispatch.rs` asserts against the CPU reference,
+//! so a probe that succeeds and a test that fails are talking about the same
+//! dispatch.
 
 #![allow(unsafe_code)]
 
 use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+
+#[path = "../tests/target_artifacts/elementwise.rs"]
+mod elementwise;
+use elementwise::{bytes_to_u32_values, elementwise_add_program, u32_values_to_bytes};
 
 fn main() {
     println!("Probing Vulkan dispatch...");
@@ -11,25 +19,9 @@ fn main() {
         .expect("Fix: Failed to acquire backend");
 
     println!("Building program...");
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("a", 0, DataType::U32).with_count(4),
-            BufferDecl::read("b", 1, DataType::U32).with_count(4),
-            BufferDecl::output("out", 2, DataType::U32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::add(
-                Expr::load("a", Expr::gid_x()),
-                Expr::load("b", Expr::gid_x()),
-            ),
-        )],
-    );
-
-    let a = vec![1u8, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0];
-    let b = vec![10u8, 0, 0, 0, 20, 0, 0, 0, 30, 0, 0, 0, 40, 0, 0, 0];
+    let program = elementwise_add_program(4);
+    let a = u32_values_to_bytes(&[1, 2, 3, 4]);
+    let b = u32_values_to_bytes(&[10, 20, 30, 40]);
 
     println!("Lowering to SPIR-V...");
     let spv = vyre_driver_spirv::SpirvBackend::program_to_spv(&program)
@@ -40,14 +32,10 @@ fn main() {
     match backend.dispatch(&program, &[a, b], &DispatchConfig::default()) {
         Ok(outputs) => {
             println!("Dispatch succeeded! {} output buffers", outputs.len());
-            for (i, out) in outputs.iter().enumerate() {
-                let vals: Vec<u32> = out
-                    .chunks_exact(4)
-                    .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-                    .collect();
-                println!("  output[{i}]: {vals:?}");
+            for (index, output) in outputs.iter().enumerate() {
+                println!("  output[{index}]: {:?}", bytes_to_u32_values(output));
             }
         }
-        Err(e) => println!("Dispatch failed: {e}"),
+        Err(error) => println!("Dispatch failed: {error}"),
     }
 }

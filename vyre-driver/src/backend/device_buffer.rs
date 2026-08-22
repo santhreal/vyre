@@ -219,6 +219,7 @@ pub fn default_dispatch_with_device_buffers(
 /// Compile-time confirmation that the trait is dyn-safe.
 const _ASSERT_DYN_SAFE: Option<&dyn DeviceBuffer> = None;
 
+// Inline: covers `unsupported_device_buffer`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -249,9 +250,9 @@ mod tests {
 
     #[test]
     fn validate_buffer_ownership_rejects_cross_backend() {
-        let cuda_buf = HostShimBuffer::allocate("cuda", 4);
-        let wgpu_buf = HostShimBuffer::allocate("wgpu", 4);
-        let result = validate_buffer_ownership("cuda", [cuda_buf.as_ref(), wgpu_buf.as_ref()]);
+        let a_buf = HostShimBuffer::allocate("backend-a", 4);
+        let b_buf = HostShimBuffer::allocate("backend-b", 4);
+        let result = validate_buffer_ownership("backend-a", [a_buf.as_ref(), b_buf.as_ref()]);
         assert!(matches!(
             result,
             Err(BackendError::UnsupportedFeature { .. })
@@ -260,12 +261,11 @@ mod tests {
 
     #[test]
     fn validate_buffer_ownership_accepts_same_backend() {
-        let a = HostShimBuffer::allocate("cuda", 4);
-        let b = HostShimBuffer::allocate("cuda", 8);
-        validate_buffer_ownership("cuda", [a.as_ref(), b.as_ref()])
+        let a = HostShimBuffer::allocate("backend-a", 4);
+        let b = HostShimBuffer::allocate("backend-a", 8);
+        validate_buffer_ownership("backend-a", [a.as_ref(), b.as_ref()])
             .expect("Fix: same-backend buffers must validate");
     }
-
     #[test]
     fn unsupported_device_buffer_marks_feature_correctly() {
         let err = unsupported_device_buffer("test-backend");

@@ -1,6 +1,10 @@
 # Canonical optimization ownership map.
 # Agents must choose one lane and stay inside its write set unless the main
 # integrator explicitly expands scope.
+#
+# Every write and avoid entry must match something in the tree, and every
+# `-p` package must be a workspace member. The `architecture-contract` gate
+# checks that on every run, so a lane cannot outlive the code it names.
 
 [lane.coordination]
 purpose = "Canonical roadmap, active claims, lane boundaries, and structural enforcement."
@@ -29,7 +33,7 @@ write = [
 ]
 avoid = [
   "vyre-driver-*",
-  "vyre-runtime/src/megakernel/**",
+  "vyre-runtime/src/resident_work_queue/**",
   "vyre-bench/**",
 ]
 required_commands = [
@@ -69,7 +73,7 @@ required_commands = [
 [lane.driver_cuda]
 purpose = "CUDA-only PTX lowering, CUDA stream/event/residency behavior, module cache, target-aware emission."
 layer = "Layer 2"
-release_role = "NVIDIA fast path for Vyre 0.4.1 release workloads."
+release_role = "NVIDIA native accelerator execution for Vyre release workloads."
 write = [
   "vyre-driver-cuda/src/**",
   "vyre-driver-cuda/tests/**",
@@ -80,8 +84,8 @@ required_commands = [
 ]
 required_evidence = [
   "release/evidence/backends/backend-matrix.json",
-  "release/evidence/features/feature-matrix.json",
-  "release/evidence/metadata/crate-metadata.json",
+  "release/evidence/metadata/feature-matrix.json",
+  "release/evidence/metadata/metadata-matrix.json",
   "release/evidence/benchmarks/release-workload-matrix.json",
   "release/evidence/conformance/conformance-matrix.json",
 ]
@@ -89,7 +93,7 @@ required_evidence = [
 [lane.driver_wgpu]
 purpose = "wgpu-only device, queue, naga/WGSL lowering, buffer pool, readback, pipeline behavior."
 layer = "Layer 2"
-release_role = "Portable GPU fallback path for Vyre 0.4.1 release workloads."
+release_role = "Portable GPU backend execution for Vyre release workloads."
 write = [
   "vyre-driver-wgpu/src/**",
   "vyre-driver-wgpu/tests/**",
@@ -99,8 +103,8 @@ required_commands = [
 ]
 required_evidence = [
   "release/evidence/backends/backend-matrix.json",
-  "release/evidence/features/feature-matrix.json",
-  "release/evidence/metadata/crate-metadata.json",
+  "release/evidence/metadata/feature-matrix.json",
+  "release/evidence/metadata/metadata-matrix.json",
   "release/evidence/conformance/conformance-matrix.json",
 ]
 
@@ -153,16 +157,16 @@ required_commands = [
   "cargo_full test -p vyre-lower -p vyre-emit-naga -p vyre-emit-ptx -p vyre-emit-spirv -p vyre-emit-metal",
 ]
 
-[lane.runtime_megakernel]
-purpose = "Persistent megakernel queue, scheduler, resident protocol, IO, recovery, runtime throughput."
+[lane.runtime_resident_work_queue]
+purpose = "Resident work queue, scheduler, resident protocol, IO, recovery, runtime throughput."
 layer = "Runtime"
 write = [
-  "vyre-runtime/src/megakernel/**",
-  "vyre-runtime/tests/megakernel*",
+  "vyre-runtime/src/resident_work_queue/**",
+  "vyre-runtime/tests/resident_work_queue*",
   "vyre-runtime/tests/*scheduler*",
 ]
 required_commands = [
-  "cargo_full test -p vyre-runtime megakernel",
+  "cargo_full test -p vyre-runtime resident_work_queue",
 ]
 
 [lane.runtime_residency]
@@ -205,83 +209,69 @@ required_commands = [
 purpose = "Graph/dataflow compiler seam: frontier policies, CSR contracts, semiring formulations, relation facts, and compressed domains."
 layer = "Graph/flow compiler seam"
 write = [
-  "vyre-primitives/src/graph/**",
-  "vyre-primitives/src/bitset/**",
-  "vyre-self-substrate/src/analysis/**",
-  "vyre-self-substrate/src/graph/**",
-  "vyre-libs/src/dataflow/**",
+  "vyre-libs/src/bitset/**",
+  "vyre-libs/src/analysis/**",
+  "vyre-libs/src/graph/**",
   "vyre-libs/src/security/**",
 ]
 avoid = [
   "vyre-driver-cuda/src/**",
   "vyre-driver-wgpu/src/**",
-  "vyre-runtime/src/megakernel/**",
+  "vyre-runtime/src/resident_work_queue/**",
 ]
 required_commands = [
-  "cargo_full test -p vyre-primitives graph",
-  "cargo_full test -p vyre-self-substrate dataflow",
+  "cargo_full test -p vyre-libs graph",
+  "cargo_full test -p vyre-libs analysis",
 ]
 
 [lane.parser_frontend]
 purpose = "Frontend seam: source validation, syntax parsing, source diagnostics, and backend-neutral typed-IR construction."
 layer = "Frontend research seam"
 write = [
-  "vyre-foundation/src/vast.rs",
+  "vyre-foundation/src/vast/mod.rs",
   "vyre-libs/src/parsing/**",
-  "vyre-frontend-c/src/**",
-  "vyre-frontend-rust/src/**",
   "vyre-libs/tests/*parser*",
   "vyre-libs/tests/*frontend*",
-  "examples/c_source_to_ir/**",
   "docs/ARCHITECTURE.md",
 ]
 avoid = [
   "vyre-driver-cuda/src/**",
   "vyre-driver-wgpu/src/**",
-  "vyre-runtime/src/megakernel/**",
+  "vyre-runtime/src/resident_work_queue/**",
 ]
 required_commands = [
   "cargo_full test -p vyre-libs parsing",
-  "cargo_full check -p vyre-frontend-c -p vyre-frontend-rust",
 ]
 
 [lane.scan_static]
 purpose = "Literal, regex, automata, decode-scan, and static scan primitives with shared result compaction."
 layer = "Scan/static analysis"
 write = [
-  "vyre-scan/src/**",
-  "vyre-libs/src/scan/**",
+  "vyre-libs/src/pattern/**",
   "vyre-libs/src/decode/**",
-  "vyre-primitives/src/matching/**",
   "vyre-libs/tests/*scan*",
   "vyre-libs/tests/*regex*",
 ]
 required_commands = [
-  "cargo_full test -p vyre-scan",
-  "cargo_full test -p vyre-libs scan",
-  "cargo_full test -p vyre-primitives matching",
+  "cargo_full test -p vyre-libs pattern",
 ]
 
 [lane.scan_automata]
 purpose = "Scan/automata seam: literal, regex, DFA/NFA/PFAC-style planners, resident automata databases, streaming scan state, and scan-to-flow finding relations."
 layer = "Scan/automata seam"
 write = [
-  "vyre-scan/src/**",
-  "vyre-libs/src/scan/**",
-  "vyre-primitives/src/matching/**",
-  "vyre-primitives/src/text/**",
+  "vyre-libs/src/pattern/**",
+  "vyre-libs/src/text/**",
   "vyre-libs/tests/*scan*",
   "vyre-libs/tests/*regex*",
   "release/evidence/benchmarks/**",
 ]
 avoid = [
   "vyre-libs/src/parsing/**",
-  "vyre-runtime/src/megakernel/**",
+  "vyre-runtime/src/resident_work_queue/**",
 ]
 required_commands = [
-  "cargo_full test -p vyre-scan",
-  "cargo_full test -p vyre-libs scan",
-  "cargo_full test -p vyre-primitives matching",
+  "cargo_full test -p vyre-libs pattern",
 ]
 
 [lane.security_dataflow]
@@ -289,15 +279,12 @@ purpose = "Security predicate tables, taint/dataflow facts, borrow facts, semiri
 layer = "Security/dataflow"
 write = [
   "vyre-libs/src/security/**",
-  "vyre-libs/src/dataflow/**",
-  "vyre-libs/src/borrowck/**",
-  "vyre-self-substrate/src/analysis/**",
+  "vyre-libs/src/analysis/**",
   "vyre-foundation/src/pass_substrate/**",
-  "vyre-foundation/src/transform/compiler/dataflow_fixpoint.rs",
 ]
 required_commands = [
   "cargo_full test -p vyre-libs security",
-  "cargo_full test -p vyre-self-substrate dataflow",
+  "cargo_full test -p vyre-libs analysis",
 ]
 
 [lane.security_reliability]
@@ -305,19 +292,15 @@ purpose = "Security and reliability seam: FFI safety, decode budgets, VAST valid
 layer = "Security/reliability"
 write = [
   "vyre-foundation/src/serial/**",
-  "vyre-foundation/src/vast.rs",
+  "vyre-foundation/src/vast/mod.rs",
   "vyre-driver/src/**",
   "vyre-driver-cuda/src/**",
   "vyre-driver-wgpu/src/**",
   "vyre-runtime/src/**",
   "vyre-libs/src/security/**",
-  "vyre-scan/src/**",
-  "vyre-libs/src/scan/**",
+  "vyre-libs/src/pattern/**",
   "scripts/**",
   "release/evidence/**",
-]
-avoid = [
-  "BACKLOG.md",
 ]
 required_commands = [
   "cargo_full test -p vyre-foundation wire",
@@ -332,13 +315,12 @@ layer = "NN/math"
 write = [
   "vyre-libs/src/nn/**",
   "vyre-libs/src/math/**",
-  "vyre-primitives/src/math/**",
-  "vyre-libs/tests/*matmul*",
+  "vyre-libs/tests/*quantized*",
   "vyre-libs/tests/*attention*",
 ]
 required_commands = [
   "cargo_full test -p vyre-libs matmul",
-  "cargo_full test -p vyre-primitives math",
+  "cargo_full test -p vyre-libs math",
 ]
 
 [lane.sparse_math_ai]
@@ -347,11 +329,9 @@ layer = "Sparse math/AI seam"
 write = [
   "vyre-libs/src/math/**",
   "vyre-libs/src/nn/**",
-  "vyre-primitives/src/math/**",
-  "vyre-libs/tests/*matmul*",
+  "vyre-libs/tests/*gemm*",
   "vyre-libs/tests/*attention*",
   "vyre-bench/src/**",
-  "docs/OWNERSHIP.md",
 ]
 avoid = [
   "vyre-libs/src/security/**",
@@ -368,16 +348,16 @@ purpose = "Cross-cutting evidence matrices, docs claims, conformance schemas, hy
 layer = "Testing/evidence"
 write = [
   "xtask/src/artifact_paths.rs",
-  "xtask/src/hot_path_scan.rs",
-  "xtask/src/launch_contract.rs",
+  "xtask/src/gates/hot_path_scan.rs",
+  "xtask/src/release/launch_contract.rs",
   "release/repo-boundary.toml",
-  "xtask/src/repo_boundary.rs",
-  "xtask/src/research_key.rs",
-  "xtask/src/research_source_ledger.rs",
+  "xtask/src/release/repo_boundary.rs",
+  "xtask/src/docs/research_key.rs",
+  "xtask/src/docs/research_source_ledger.rs",
   "docs/optimization/FRONTIER_LEADERBOARD_BASELINES.toml",
   "docs/optimization/RESEARCH_SOURCE_LEDGER.toml",
-  "xtask/src/release_evidence/expected_artifacts.rs",
-  "xtask/src/release_train.rs",
+  "xtask-evidence/src/release/release_evidence/expected_artifacts.rs",
+  "xtask/src/release/release_train.rs",
   "xtask/src/toml_config.rs",
   "xtask/src/**",
   "release/release-train.toml",
@@ -405,7 +385,7 @@ write = [
   "vyre-emit-ptx/src/**",
   "vyre-emit-spirv/src/**",
   "vyre-emit-metal/src/**",
-  "vyre-self-substrate/src/optimizer/**",
+  "vyre-pass-engine/src/optimizer/**",
   "vyre-driver/src/specialization.rs",
   "vyre-driver/src/launch_fusion.rs",
 ]
@@ -434,7 +414,7 @@ write = [
 ]
 avoid = [
   "vyre-driver-cuda/src/backend/**",
-  "vyre-driver-wgpu/src/backend_impl.rs",
+  "vyre-driver-wgpu/src/backend_dispatch.rs",
   "vyre-libs/src/parsing/**",
   "vyre-libs/src/security/**",
 ]
@@ -458,7 +438,7 @@ write = [
 ]
 avoid = [
   "vyre-driver-cuda/src/backend/**",
-  "vyre-runtime/src/megakernel/**",
+  "vyre-runtime/src/resident_work_queue/**",
   "release/evidence/final/**",
 ]
 required_commands = [
@@ -472,9 +452,8 @@ parent_axis = "coordination"
 support_reason = "Op/backend coverage files support coordination evidence and are not a separate implementation axis."
 write = [
   "docs/optimization/OP_MATRIX.toml",
-  "docs/catalog/**",
   "docs/generated/**",
 ]
 required_commands = [
-  "cargo_full check -p vyre-foundation -p vyre-primitives -p vyre-intrinsics -p vyre-libs",
+  "cargo_full check -p vyre-foundation -p vyre-primitives -p vyre-libs",
 ]

@@ -1,12 +1,14 @@
 //! Determinism contract.
 //!
-//! See `contracts/release.md`. Vyre's thesis is "same Program +
-//! same inputs → byte-identical outputs." This test proves the
-//! contract holds across repeated dispatches on the same backend for
-//! every proptest-generated program.
+//! The shipped contract is: same Program plus same inputs produce
+//! byte-identical outputs. This test proves the contract holds across
+//! repeated dispatches on the same backend for every proptest-generated
+//! program.
 //!
 //! The generator intentionally includes unused and conditionally-used buffers
 //! so bind-group reflection stays honest across lowered shader variants.
+
+#![cfg(feature = "device-tests")]
 
 use proptest::prelude::*;
 use std::sync::OnceLock;

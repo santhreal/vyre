@@ -1,17 +1,17 @@
 //! Parity test: vyre-primitives causal-graph primitives (adjustment_set,
 //! do_calculus do_intervention_delete_incoming) match CPU oracles.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::graph::adjustment_set::{
-    backdoor_descendants_check, backdoor_descendants_check_cpu,
-};
-use vyre_primitives::graph::do_calculus::{
-    do_intervention_delete_incoming, do_intervention_delete_incoming_cpu,
+use vyre_libs::graph::adjustment_set::backdoor_descendants_check;
+use vyre_libs::graph::do_calculus::intervention_delete_incoming;
+use vyre_reference::composition_witness::{
+    backdoor_descendants_check_witness as backdoor_descendants_check_cpu,
+    do_intervention_delete_incoming_witness as do_intervention_delete_incoming_cpu,
 };
 
 fn run_backdoor_check(candidate_z: &[u32], descendants_of_x: &[u32], n: u32) -> u32 {
@@ -54,7 +54,7 @@ fn cuda_backdoor_check_no_violation_disjoint() {
 }
 
 fn run_intervention(adjacency: &[u32], mask: &[u32], n: u32) -> Vec<u32> {
-    let program = do_intervention_delete_incoming("adj", "mask", "out", n);
+    let program = intervention_delete_incoming("adj", "mask", "out", n);
     let inputs: Vec<Vec<u8>> = vec![
         u32_bytes(adjacency),
         u32_bytes(mask),

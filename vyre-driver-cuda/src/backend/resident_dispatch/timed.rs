@@ -42,13 +42,9 @@ impl CudaBackend {
                 .elapsed_nanos_u64(started, "resident-dispatch wall latency")?;
             self.telemetry
                 .record_timed_dispatch(wall_ns, None, Some(enqueue_ns), Some(wait_ns));
-            return Ok(vyre_driver::TimedDispatchResult {
-                outputs,
-                wall_ns,
-                device_ns: None,
-                enqueue_ns: Some(enqueue_ns),
-                wait_ns: Some(wait_ns),
-            });
+            return Ok(vyre_driver::TimedDispatchResult::split_timed(
+                outputs, wall_ns, None, enqueue_ns, wait_ns,
+            ));
         }
         let started = std::time::Instant::now();
         let enqueue_started = std::time::Instant::now();
@@ -93,13 +89,9 @@ impl CudaBackend {
                 ptx_cache.misses,
             );
         }
-        Ok(vyre_driver::TimedDispatchResult {
-            outputs,
-            wall_ns,
-            device_ns,
-            enqueue_ns: Some(enqueue_ns),
-            wait_ns: Some(wait_ns),
-        })
+        Ok(vyre_driver::TimedDispatchResult::split_timed(
+            outputs, wall_ns, device_ns, enqueue_ns, wait_ns,
+        ))
     }
 
     pub(crate) fn dispatch_resident_outputs_with_ptx_key_into(

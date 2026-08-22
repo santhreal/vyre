@@ -1,0 +1,112 @@
+//! Exploded supergraph primitive (G3).
+//!
+//! # What this is
+//!
+//! IFDS / IDE reframes interprocedural dataflow as a reachability
+//! problem on the **exploded supergraph**: each `(proc, block,
+//! fact)` triple is a graph vertex, and the edges are the flow
+//! functions (GEN / KILL + summary + call-to-return). Once
+//! expanded, the analysis collapses to a BFS over this graph  -
+//! which is the exact shape
+//! [`crate::graph::csr_forward_traverse`] already handles.
+//!
+//! This module owns the **node encoding**  -  the bit-layout that
+//! packs `(proc_id, block_id, fact_id)` into a single `u32` node id
+//!  -  plus a CPU reference that builds the exploded CSR so tests in
+//! `vyre-libs::dataflow::ifds_gpu` can prove the GPU kernel produces
+//! byte-identical CSR output.
+//!
+//! # Bit layout
+//!
+//! ```text
+//!   bits 31..20   proc_id   (12 bits  -  4096 procedures per module)
+//!   bits 19..10   block_id  (10 bits  -  1024 blocks per procedure)
+//!   bits 9..0     fact_id   (10 bits  -  1024 facts per workgroup;
+//!                            matches FACTS_PER_WORKGROUP and the
+//!                            NFA subgroup sizing)
+//! ```
+//!
+//! This deliberately leaves no room for >4096 procedures in a
+//! single module. Any real codebase that exceeds that split along
+//! a module boundary first  -  doing interprocedural dataflow over
+//! 10 000+ procs in one pass is a different problem that we don't
+//! solve here and shouldn't pretend to.
+//!
+//! # Status
+//!
+//! Node encoding, CSR builder, and tests. The GPU Program wrapper
+//! (the actual kernel that walks edges in parallel) lives in
+//! `vyre-libs::dataflow::ifds_gpu` and composes this encoding with
+//! `csr_forward_traverse`.
+
+mod abi;
+mod canonicalize;
+mod dispatch_plan;
+mod encoding;
+mod layout;
+mod program_ir;
+#[cfg(test)]
+#[path = "../../../tests/internal/graph/exploded/reference_adapter.rs"]
+mod reference_adapter;
+mod validation;
+
+#[cfg(test)]
+#[path = "../../../tests/internal/graph/exploded/mod.rs"]
+mod tests;
+
+pub use abi::{
+    ifds_csr_dispatch_grid, IFDS_CSR_COL_IDX_BUFFER, IFDS_CSR_COL_LEN_BUFFER,
+    IFDS_CSR_EMPTY_DISPATCH_GRID, IFDS_CSR_GEN_BLOCK_BUFFER, IFDS_CSR_GEN_FACT_BUFFER,
+    IFDS_CSR_GEN_PROC_BUFFER, IFDS_CSR_INTER_DST_BLOCK_BUFFER, IFDS_CSR_INTER_DST_PROC_BUFFER,
+    IFDS_CSR_INTER_SRC_BLOCK_BUFFER, IFDS_CSR_INTER_SRC_PROC_BUFFER,
+    IFDS_CSR_INTRA_DST_BLOCK_BUFFER, IFDS_CSR_INTRA_PROC_BUFFER, IFDS_CSR_INTRA_SRC_BLOCK_BUFFER,
+    IFDS_CSR_KILLED_BUFFER, IFDS_CSR_KILL_BLOCK_BUFFER, IFDS_CSR_KILL_FACT_BUFFER,
+    IFDS_CSR_KILL_PROC_BUFFER, IFDS_CSR_ROW_CURSOR_BUFFER, IFDS_CSR_ROW_PTR_BUFFER,
+    IFDS_CSR_WORKGROUP_SIZE, OP_ID,
+};
+#[cfg(test)]
+pub use canonicalize::canonicalize_csr_within_rows;
+pub use canonicalize::canonicalize_csr_within_rows_in_place;
+pub use dispatch_plan::{
+    plan_ifds_csr_dispatch, split_ifds_rule_quads_into, split_ifds_rule_triples_into,
+    IfdsCsrDispatchPlan, IfdsCsrRuleColumns,
+};
+#[cfg(test)]
+pub use encoding::{decode_node, dense_to_encoded, encode_node, encoded_to_dense};
+pub use encoding::{
+    fits, BLOCK_BITS, FACTS_PER_WORKGROUP, FACT_BITS, MAX_BLOCK_ID, MAX_FACT_ID, MAX_PROC_ID,
+    PROC_BITS,
+};
+pub use layout::{
+    IfdsCsrLayout, IfdsCsrProgramCacheKey, IfdsCsrRuleInputFingerprint, IfdsCsrStaticInputKey,
+};
+pub use program_ir::build_ifds_csr_program;
+#[cfg(test)]
+pub use validation::{ifds_node_count_checked, ifds_node_count_saturating};
+pub use validation::{
+    max_ifds_col_count, validate_ifds_csr_inputs, validate_ifds_csr_layout,
+    validate_ifds_csr_readback,
+};
+
+/// Total node count of the exploded supergraph for the given dimensions.
+#[cfg(test)]
+#[must_use]
+pub fn ifds_node_count(num_procs: u32, blocks_per_proc: u32, facts_per_proc: u32) -> u32 {
+    ifds_node_count_saturating(num_procs, blocks_per_proc, facts_per_proc)
+}
+
+/// Helper: round-trip a dense index through the packed encoding and back.
+#[cfg(test)]
+#[must_use]
+pub fn round_trip_dense(dense: u32, blocks_per_proc: u32, facts_per_proc: u32) -> Option<u32> {
+    let encoded = dense_to_encoded(dense, blocks_per_proc, facts_per_proc)?;
+    encoded_to_dense(encoded, blocks_per_proc, facts_per_proc)
+}
+
+#[cfg(test)]
+pub use canonicalize::canonicalize_csr_within_rows as reference_canonicalize_csr_within_rows;
+#[cfg(test)]
+pub(crate) use reference_adapter::{
+    build_cpu_reference, try_build_cpu_reference, try_build_cpu_reference_into,
+    ExplodedIfdsCpuScratch,
+};

@@ -2,30 +2,19 @@
 
 #![cfg(feature = "nn-attention")]
 
+mod wire_words;
+use wire_words::{f32_bytes, f32_words as decode_f32};
+
 use std::collections::HashMap;
 
 use vyre::ir::Node;
-use vyre_foundation::transform::visit::walk_nodes;
+use vyre_foundation::visit::walk_nodes;
+use vyre_libs::math::dot_partial::OP_ID as DOT_PARTIAL_OP_ID;
 use vyre_libs::nn::attention::gqa_attention;
-use vyre_primitives::math::dot_partial::OP_ID as DOT_PARTIAL_OP_ID;
-use vyre_primitives::nn::attention_passes::{
+use vyre_libs::nn::attention_passes::{
     ATTENTION_MAX_PASS_OP_ID, ATTENTION_SUM_PASS_OP_ID, ATTENTION_WRITE_PASS_OP_ID,
 };
 use vyre_reference::value::Value;
-
-fn f32_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode_f32(bytes: &[u8]) -> Vec<f32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| f32::from_le_bytes(chunk.try_into().expect("four-byte F32 chunk")))
-        .collect()
-}
 
 /// GQA must compose canonical attention pass bodies, not duplicate their IR under copied op ids.
 #[test]
@@ -59,7 +48,7 @@ fn gqa_contains_dot_partial_children_owned_by_each_canonical_attention_pass() {
             let parent = source_region
                 .as_ref()
                 .expect("canonical dot-partial regions must record their attention-pass parent");
-            *dot_parents.entry(parent.name.clone()).or_default() += 1;
+            *dot_parents.entry(parent.as_str().to_string()).or_default() += 1;
         }
     });
 
@@ -92,7 +81,6 @@ fn gqa_single_token_broadcasts_distinct_kv_heads_to_their_query_groups() {
             Value::from(f32_bytes(&[1.0, 0.0, 0.0, 1.0, 1.0, 1.0, -1.0, 1.0])),
             Value::from(f32_bytes(&[1.0, 0.0, 0.0, 1.0])),
             Value::from(f32_bytes(&[10.0, 20.0, 30.0, 40.0])),
-            Value::from(vec![0u8; 8 * size_of::<f32>()]),
         ],
     )
     .expect("reference execution must evaluate canonical GQA composition");

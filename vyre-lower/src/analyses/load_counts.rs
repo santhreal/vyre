@@ -33,6 +33,40 @@ pub(crate) fn count_global_loads_by_slot<F>(
     }
 }
 
+/// Descriptor fixtures for the analyses whose precondition is a load count.
+///
+/// WHY: texture promotion and AoS-to-SoA layout each wrote out the same two
+/// helpers, doc comment included, so the op shape this traversal reads was
+/// stated twice and could drift on one side only. The shape belongs with the
+/// traversal that defines it.
+// Inline: supplies fixtures to the crate-private analysis tests that stay inline.
+#[cfg(test)]
+pub(crate) mod fixtures {
+    use crate::descriptor_builder::{body, descriptor, lit, load_global};
+    use crate::{BindingSlot, KernelBody, KernelDescriptor, LiteralValue};
+
+    /// One literal at pool index 0 followed by `count` loads of slot 0. This is
+    /// the whole op shape the precondition reads, so every eligibility case
+    /// differs only in its binding and its load count.
+    pub(crate) fn literal_then_loads(count: u32) -> KernelBody {
+        body()
+            .op(lit(0, 0))
+            .ops((1..=count).map(|result| load_global(0, 0, result)))
+            .literal(LiteralValue::U32(0))
+            .build()
+    }
+
+    /// A 32-thread kernel over one binding, loaded `load_count` times.
+    pub(crate) fn kernel(binding: BindingSlot, load_count: u32) -> KernelDescriptor {
+        descriptor("k")
+            .slot(binding)
+            .dispatch(32, 1, 1)
+            .body(literal_then_loads(load_count))
+            .build()
+    }
+}
+
+// Inline: covers the crate-private `count_global_loads_by_slot`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use rustc_hash::FxHashMap;
@@ -86,6 +120,47 @@ mod tests {
             counts.get(&7).copied(),
             Some(3),
             "Fix: load counting must include real structured child bodies without treating loop bound operands as child indices."
+        );
+    }
+
+    /// Both memory-placement analyses read their precondition through this
+    /// traversal, so they must agree on the count for the same descriptor,
+    /// nested bodies included.
+    ///
+    /// WHY: shared-memory promotion and constant-buffer promotion each carried
+    /// their own copy of this walk, differing only in the eligibility filter.
+    /// Two copies is two answers to "how many times is this binding read", and
+    /// a rewrite acts on whichever it asked. This goes red the moment either
+    /// one grows its own traversal again and drifts.
+    ///
+    /// It does not check the eligibility filters themselves; each analysis owns
+    /// its own and tests it.
+    #[test]
+    fn both_promotion_analyses_read_the_same_nested_load_count() {
+        use crate::descriptor_builder::{body, descriptor, global_ro, if_then, lit, SlotCount};
+        use vyre_foundation::ir::DataType;
+
+        let desc = descriptor("k")
+            .slot(global_ro(0, DataType::F32, "ro0").with_count(16))
+            .dispatch(32, 1, 1)
+            .body(
+                body()
+                    .op(lit(0, 0))
+                    .op(if_then(0, 0))
+                    .child(super::fixtures::literal_then_loads(3))
+                    .literal(LiteralValue::Bool(true)),
+            )
+            .build();
+
+        let shared = crate::analyses::analyze_shared_mem_promote(&desc);
+        let constant = crate::analyses::analyze_const_buffer_promote(&desc);
+        assert_eq!(
+            (
+                shared.candidates[0].access_count,
+                constant.candidates[0].load_count
+            ),
+            (3, 3),
+            "Fix: both placement analyses count loads through count_global_loads_by_slot, so a nested binding read three times must read as three on each side."
         );
     }
 }

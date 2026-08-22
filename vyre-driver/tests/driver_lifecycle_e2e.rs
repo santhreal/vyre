@@ -78,8 +78,12 @@ fn driver_low_level_plan_dispatch_readback() {
     let inputs = vec![a_bytes.clone(), b_bytes.clone()];
 
     let binding_plan = BindingPlan::build(&program).expect("Fix: lifecycle program must bind");
-    vyre_driver::validate_program_for_backend(&CpuRefBackend, &program, &DispatchConfig::default())
-        .expect("Fix: lifecycle program must pass backend validation");
+    vyre_driver::validation::validate_program_for_backend(
+        &CpuRefBackend,
+        &program,
+        &DispatchConfig::default(),
+    )
+    .expect("Fix: lifecycle program must pass backend validation");
 
     let launch = LaunchPlan::from_bindings(
         &program,

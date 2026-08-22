@@ -5,27 +5,12 @@
 //! `let __cse_N = E;` and replaces the duplicate occurrences with
 //! `Var(__cse_N)`.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::live_backend;
+use harness::self_optimizer::{body_of, run_pipeline};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver_cuda::CudaOptimizerDispatcher;
-use vyre_self_substrate::optimizer::pipeline_resident::gpu_pipeline_resident;
-
-fn run_pipeline(p: Program) -> Program {
-    let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
-    gpu_pipeline_resident(p, &dispatcher).expect("pipeline must succeed")
-}
-
-fn body_of(out: &Program) -> Vec<Node> {
-    match out.entry() {
-        [Node::Region { body, .. }] => body.as_ref().clone(),
-        entry => entry.to_vec(),
-    }
-}
 
 #[test]
 fn cuda_cross_scope_cse_hoists_shared_store_value() {

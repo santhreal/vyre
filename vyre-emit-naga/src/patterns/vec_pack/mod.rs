@@ -1,6 +1,5 @@
 //! Vec2/vec4 packing analysis for vyre kernels.
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B.1 item B1.
 //!
 //! Modern GPU shader languages (WGSL, GLSL/SPIR-V, CUDA C++) all
 //! support packed vector loads and stores: a single `vec4<f32>` load
@@ -26,8 +25,8 @@
 //! vyre-bank-conflict  -  all four analyses operate on KernelDescriptor
 //! and live one layer below the per-substrate emitters.
 
-pub mod analysis;
-pub mod plan;
+pub(crate) mod analysis;
+pub(crate) mod plan;
 
 pub use analysis::analyze;
 pub use plan::{PackGroup, PackKind, PackingPlan};

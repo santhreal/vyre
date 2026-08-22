@@ -2,23 +2,16 @@
 
 #![cfg(feature = "logical")]
 #![allow(deprecated)]
+
+mod wire_words;
 use proptest::prelude::*;
 use vyre_reference::value::Value;
-
-fn bytes(words: &[u32]) -> Vec<u8> {
-    words.iter().flat_map(|word| word.to_le_bytes()).collect()
-}
+use wire_words::u32_bytes as bytes;
 
 fn run(program: &vyre::Program, a: &[u32; 4], b: &[u32; 4]) -> [u32; 4] {
-    let outputs = vyre_reference::reference_eval(
-        program,
-        &[
-            Value::from(bytes(a)),
-            Value::from(bytes(b)),
-            Value::from(vec![0u8; 16]),
-        ],
-    )
-    .unwrap_or_else(|error| panic!("Fix: logical reference run failed: {error}"));
+    let outputs =
+        vyre_reference::reference_eval(program, &[Value::from(bytes(a)), Value::from(bytes(b))])
+            .unwrap_or_else(|error| panic!("Fix: logical reference run failed: {error}"));
     let raw = outputs[0].to_bytes();
     std::array::from_fn(|index| {
         let offset = index * 4;
@@ -39,7 +32,7 @@ proptest! {
     #[test]
     fn and_matches_bitwise_semantics(a in any::<[u32; 4]>(), b in any::<[u32; 4]>()) {
         prop_assert_eq!(
-            run(&vyre_libs::logical::and("a", "b", "out", 4), &a, &b),
+            run(&vyre_libs::bitset::and::bitset_and("a", "b", "out", 4), &a, &b),
             op_expected(&a, &b, |lhs, rhs| lhs & rhs)
         );
     }
@@ -47,7 +40,7 @@ proptest! {
     #[test]
     fn or_matches_bitwise_semantics(a in any::<[u32; 4]>(), b in any::<[u32; 4]>()) {
         prop_assert_eq!(
-            run(&vyre_libs::logical::or("a", "b", "out", 4), &a, &b),
+            run(&vyre_libs::bitset::or::bitset_or("a", "b", "out", 4), &a, &b),
             op_expected(&a, &b, |lhs, rhs| lhs | rhs)
         );
     }
@@ -55,7 +48,7 @@ proptest! {
     #[test]
     fn xor_matches_bitwise_semantics(a in any::<[u32; 4]>(), b in any::<[u32; 4]>()) {
         prop_assert_eq!(
-            run(&vyre_libs::logical::xor("a", "b", "out", 4), &a, &b),
+            run(&vyre_libs::bitset::xor::bitset_xor("a", "b", "out", 4), &a, &b),
             op_expected(&a, &b, |lhs, rhs| lhs ^ rhs)
         );
     }

@@ -98,10 +98,10 @@ fn regex_unsupported_diagnostic_registry_records_operator_fields() {
 /// distinctly detects (backreference, huge alternation, nested repeats as compile
 /// errors; capture extraction as a non-error verifier signal), plus the two
 /// pre-existing ones (lookaround, unicode class).
-#[cfg(feature = "matching-regex")]
+#[cfg(feature = "pattern-regex")]
 #[test]
 fn frontend_emits_registry_diagnostic_codes_from_real_patterns() {
-    use vyre_libs::scan::{RegexConstruct, compile_regex_set};
+    use vyre_libs::pattern::{compile_regex_set, RegexConstruct};
 
     // Compile-error constructs -> RegexCompileError::diagnostic_code().
     let cases: &[(&str, &str)] = &[
@@ -150,7 +150,7 @@ fn frontend_emits_registry_diagnostic_codes_from_real_patterns() {
 
     // The exported ONE-PLACE map agrees with the registry codes.
     assert_eq!(
-        vyre_libs::scan::regex_construct_diagnostic_code(RegexConstruct::HugeAlternation),
+        vyre_libs::pattern::regex_construct_diagnostic_code(RegexConstruct::HugeAlternation),
         "VYRE_SCAN_UNSUPPORTED_HUGE_ALTERNATION_BUDGET"
     );
 }

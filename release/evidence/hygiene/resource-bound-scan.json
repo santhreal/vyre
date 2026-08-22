@@ -1,59 +1,63 @@
 {
+  "source_fingerprint": "git:00da3989f3d836301c2176546db7d76135fa46ae:dirty=true:worktree=b4c40f65a32bd535f226ee7add243fbadee523d59d39500e09e95e67de94fd41",
   "schema_version": 1,
   "scan": "resource-bound",
   "findings": [
     {
-      "path": "structure-gate/src/lib.rs",
-      "line": 372,
-      "pattern": "unbounded_read",
-      "text": "let text = fs::read_to_string(&manifest)"
+      "path": "vyre-driver-cuda/src/stream.rs",
+      "line": 158,
+      "pattern": "std_thread_sleep",
+      "text": "std::thread::sleep(sleep.min(deadline - waited));"
     },
     {
-      "path": "structure-gate/src/lib.rs",
-      "line": 419,
-      "pattern": "unbounded_read",
-      "text": "let Ok(text) = fs::read_to_string(&path) else {"
+      "path": "vyre-driver-cuda/src/stream.rs",
+      "line": 158,
+      "pattern": "thread_sleep",
+      "text": "std::thread::sleep(sleep.min(deadline - waited));"
     },
     {
-      "path": "structure-gate/src/lib.rs",
-      "line": 651,
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 126,
       "pattern": "unbounded_read",
-      "text": "let Ok(text) = fs::read_to_string(&path) else {"
+      "text": "std::fs::read_to_string(root.join(relative)).is_ok_and(|source| {"
+    },
+    {
+      "path": "xtask/src/gates/hot_path_scan.rs",
+      "line": 16,
+      "pattern": "std_thread_sleep",
+      "text": "//! - `std::thread::sleep(...)` / `tokio::time::sleep(...)`  -  fixed"
+    },
+    {
+      "path": "xtask/src/gates/hot_path_scan.rs",
+      "line": 16,
+      "pattern": "thread_sleep",
+      "text": "//! - `std::thread::sleep(...)` / `tokio::time::sleep(...)`  -  fixed"
+    },
+    {
+      "path": "xtask/src/gates/hot_path_scan.rs",
+      "line": 16,
+      "pattern": "tokio_sleep",
+      "text": "//! - `std::thread::sleep(...)` / `tokio::time::sleep(...)`  -  fixed"
+    },
+    {
+      "path": "xtask/src/gates/hot_path_scan.rs",
+      "line": 226,
+      "pattern": "std_thread_sleep",
+      "text": "text: \"std::thread::sleep(\","
+    },
+    {
+      "path": "xtask/src/gates/hot_path_scan.rs",
+      "line": 226,
+      "pattern": "thread_sleep",
+      "text": "text: \"std::thread::sleep(\","
+    },
+    {
+      "path": "xtask/src/gates/hot_path_scan.rs",
+      "line": 231,
+      "pattern": "tokio_sleep",
+      "text": "text: \"tokio::time::sleep(\","
     }
   ],
-  "release_blocking_findings": [
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 372,
-      "pattern": "unbounded_read",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 419,
-      "pattern": "unbounded_read",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 651,
-      "pattern": "unbounded_read",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    }
-  ],
-  "blockers": [
-    "3 release-blocking `resource-bound` finding(s) remain"
-  ]
+  "release_blocking_findings": [],
+  "blockers": []
 }

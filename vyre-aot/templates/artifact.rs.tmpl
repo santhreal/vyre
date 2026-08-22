@@ -10,8 +10,9 @@ use std::path::{Component, Path, PathBuf};
 
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use vyre_megakernel::target::TargetModuleBundle;
-use vyre_megakernel::{ArtifactEnvelope, TargetResourceAccess, TargetResourceMemory};
+use vyre_megakernel::{
+    ArtifactEnvelope, TargetModuleBundle, TargetResourceAccess, TargetResourceMemory,
+};
 
 const MANIFEST_SCHEMA_VERSION: &str = "vyre-aot-manifest-v4";
 

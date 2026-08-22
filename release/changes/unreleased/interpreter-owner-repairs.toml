@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Test fixtures in vyre-libs reach the reference interpreter through byte buffers, and two integration tests declare the features their modules require."

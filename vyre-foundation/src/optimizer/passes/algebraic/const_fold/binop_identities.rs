@@ -44,7 +44,7 @@ pub(super) fn mul_operands(expr: &Expr) -> Option<(&Expr, &Expr)> {
 }
 
 /// True iff `expr` is an integer literal (u32 or i32). Used by the
-/// distributive expansion rule (ROADMAP A33) to gate the rewrite so
+/// distributive expansion rule to gate the rewrite so
 /// it only fires when one of the new sub-multiplications will fold
 /// in the next const-fold pass.
 fn lit_int(expr: &Expr) -> Option<()> {
@@ -83,8 +83,8 @@ pub(super) fn is_simple_pure(expr: &Expr) -> bool {
 /// collapse the operand to a constant `bool`, so they are only valid
 /// when reflexivity actually holds, which fails for IEEE-754 `NaN`:
 /// `NaN == NaN` is `false` and `NaN != NaN` is `true`, and both the
-/// reference oracle (`vyre-reference::binop_f32`) and the SPIR-V
-/// emitter (`OpFOrdEqual`) honor that. `x != x` is the canonical
+/// reference oracle (`vyre-reference::binop_f32`) and every target
+/// emitter honor that. `x != x` is the canonical
 /// hand-rolled NaN test, so folding it away type-blind is a real
 /// miscompile, not a corner case.
 ///
@@ -99,8 +99,8 @@ pub(super) fn is_simple_pure(expr: &Expr) -> bool {
 /// lane/workgroup builtins are always reflexive-safe.
 ///
 /// Recovering reflexive comparison folding for a *provably-integer*
-/// `Var` requires the type-fact substrate
-/// (`optimizer::fact_substrate::type_facts`) to be threaded into
+/// `Var` requires the type-fact cache
+/// (`optimizer::fact_cache::type_facts`) to be threaded into
 /// const_fold so the operand's `DataType` can be proven non-float
 /// before the fold fires; until then this declines `Var`, per the
 /// soundness-over-reach contract.
@@ -174,13 +174,6 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
                 if is_float_expr(left) {
                     return Some(Expr::fma(a.clone(), b.clone(), left.clone()));
                 }
-            }
-            // x + 0 → x,  0 + x → x
-            if is_zero(right) {
-                return Some(left.clone());
-            }
-            if is_zero(left) {
-                return Some(right.clone());
             }
 
             // ─── Algebraic Reassociation ─────────────────────────
@@ -263,7 +256,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         }
 
         BinOp::Sub => {
-            if left == right {
+            if left == right && is_reflexive_cmp_safe(left) {
                 return Some(Expr::u32(0));
             }
             if let Some((a, b)) = mul_operands(left) {
@@ -275,9 +268,6 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
                 if is_float_expr(left) {
                     return Some(Expr::fma(Expr::negate(a.clone()), b.clone(), left.clone()));
                 }
-            }
-            if is_zero(right) {
-                return Some(left.clone());
             }
 
             // ─── Distributive Law ──────────────────────────────────────────
@@ -366,7 +356,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
                 }
             }
 
-            // ─── Distributive expansion (ROADMAP A33) ────────────
+            // ─── Distributive expansion ────────────
             // Mul(c, Add(a, b)) → Add(Mul(c, a), Mul(c, b)) when `c` is
             // a literal and at least one of `a`/`b` is also a literal.
             // The "at least one literal sibling" guard guarantees at
@@ -411,7 +401,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
                 }
             }
 
-            // ─── Sign-preserving distributive expansion for subtraction (ROADMAP A33) ───
+            // ─── Sign-preserving distributive expansion for subtraction ───
             if let (
                 Some(()),
                 Expr::BinOp {
@@ -530,8 +520,8 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
             }
             // x / x is NOT folded to 1: it is unsound when x can be 0.
             // The reference oracle defines unsigned `0 / 0` as `u32::MAX`
-            // (`div_u32`), not 1, and the SPIR-V emitter's guarded
-            // `div_u32` Select agrees, so folding to 1 diverges from BOTH
+            // (`div_u32`), not 1, and the emitters' guarded division
+            // agrees, so folding to 1 diverges from BOTH
             // for u32 x=0; signed `0 / 0` errors in the oracle
             // (`div_i32`). const_fold is type- and value-blind here, so it
             // cannot prove x != 0 (or that x is unsigned). Decline.
@@ -552,45 +542,9 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         BinOp::BitXor if matches!(right, Expr::LitU32(0) | Expr::LitI32(0)) => Some(left.clone()),
         BinOp::BitXor if matches!(left, Expr::LitU32(0) | Expr::LitI32(0)) => Some(right.clone()),
 
-        // ── Shift fusion + shift-by-zero elimination ────────────
-        // (x << a) << b → x << (a + b) when a,b are literal.
-        // x << 0 → x,  x >> 0 → x.
+        // Shift identities and chained-shift fusion have one owner.
         BinOp::Shl | BinOp::Shr => {
-            if matches!(right, Expr::LitU32(0)) {
-                return Some(left.clone());
-            }
-            if let Expr::BinOp {
-                op: inner_op,
-                left: x,
-                right: inner_shift,
-            } = left
-            {
-                if *inner_op == op {
-                    if let (Expr::LitU32(a), Expr::LitU32(b)) = (inner_shift.as_ref(), right) {
-                        // Each shift masks its amount mod 32 and shifts bits off
-                        // the top, so the two compose into a single shift by
-                        // `(a & 31) + (b & 31)`. The IR's single shift ALSO masks
-                        // mod 32, so it can only represent a combined amount < 32;
-                        // for >= 32 every bit is shifted out of the 32-bit word
-                        // (the result is 0), which `x << k` cannot express
-                        // (it evaluates to `x << (k & 31)`, which is non-zero for
-                        // odd x). Only fuse while the combined amount stays in
-                        // range; otherwise leave the double shift for the backend,
-                        // which evaluates it correctly. The previous `.min(31)`
-                        // invented `x << 31`, miscompiling e.g. `(x << 16) << 16`
-                        // from 0 to `(x & 1) << 31`.
-                        let total = (a & 31) + (b & 31);
-                        if total < 32 {
-                            return Some(Expr::BinOp {
-                                op,
-                                left: x.clone(),
-                                right: Box::new(Expr::u32(total)),
-                            });
-                        }
-                    }
-                }
-            }
-            None
+            crate::optimizer::passes::algebraic::shift_fusion::reduce_shift(op, left, right)
         }
 
         // ─── Self-operand identities ─────────────────────────
@@ -614,13 +568,13 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         //      must not fold.
         //   2. IEEE-754 NaN: for a float `x` that is `NaN` at runtime,
         //      `x == x` is *false* and `x != x` is *true* (the
-        //      reference oracle and the SPIR-V `OpFOrdEqual` emitter
+        //      reference oracle and every target emitter
         //      both honor this), so folding type-blind would miscompile
         //      the canonical hand-rolled NaN check.
         // `is_reflexive_cmp_safe` admits only integer/bool literals and
         // the u32 builtins, it EXCLUDES `Var` (unknown type, may be a
         // float NaN) and `LitF32`. See its doc for how a provably-integer
-        // `Var` could be recovered via the type-fact substrate.
+        // `Var` could be recovered via the type-fact cache.
         BinOp::Eq if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(true)),
         BinOp::Ne if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(false)),
         // x < x → false,  x > x → false   -  same guards apply.
@@ -647,7 +601,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         BinOp::Min if left == right => Some(left.clone()),
         BinOp::Max if left == right => Some(left.clone()),
 
-        // ─── ROADMAP A35: range-based fold identities ────────
+        // ─── range-based fold identities ────────
         // For unsigned u32, every value lies in [0, u32::MAX], so:
         //   min(x, u32::MAX) → x  /  min(u32::MAX, x) → x
         //   max(x, 0)        → x  /  max(0, x) → x
@@ -719,7 +673,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         BinOp::And if left == right => Some(left.clone()),
         BinOp::Or if left == right => Some(left.clone()),
 
-        // ─── ROADMAP A25: chained-predicate boolean simplification ──
+        // ─── chained-predicate boolean simplification ──
         // x && !x → false  (contradiction)
         BinOp::And if matches!(right, Expr::UnOp { op: crate::ir::UnOp::LogicalNot, operand } if operand.as_ref() == left) => {
             Some(Expr::bool(false))
@@ -784,7 +738,7 @@ fn expr_scalar_literal(expr: &Expr) -> Option<ScalarLiteral> {
     }
 }
 
-// ─── ROADMAP A35: stronger range fold ─────────────────────────────
+// ─── stronger range fold ─────────────────────────────
 // Mod(x, N) where x.max < N -> x
 // We use a tiny single-block lookbehind to find if `x` was defined as `LitU32(c)` where `c < N`.
 pub(super) fn fold_mod_lookbehind(

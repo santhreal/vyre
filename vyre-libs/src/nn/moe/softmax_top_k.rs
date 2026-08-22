@@ -7,8 +7,13 @@ use super::topk_selection::{
     copy_top_k_indices_and_normalized_weights, init_top_k_slots, insert_top_k_candidate, BEST_IDXS,
     BEST_VALS,
 };
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+
+/// Canonical op id. It is the region generator name, the trap subject, and the
+/// child name a composition attributes this body to, so it is one constant
+/// rather than a literal repeated at each of those three sites.
+pub(crate) const OP_ID: &str = "vyre-libs::nn::softmax_top_k";
 
 /// Build a Program that computes softmax over `scores`, then returns the
 /// top-k indices and their normalized weights.
@@ -30,14 +35,70 @@ pub fn softmax_top_k(
     k: u32,
 ) -> Program {
     if k == 0 {
-        return crate::builder::invalid_builder_trap_program(
-            "vyre-libs::nn::softmax_top_k",
-            out_indices,
-            DataType::U32,
+        return trap_program(
+            OP_ID,
+            Some((out_indices, DataType::U32)),
             "Fix: softmax_top_k requires k > 0 so the selection scratch has at least one slot."
                 .to_string(),
         );
     }
+    Program::wrapped(
+        softmax_top_k_buffers(scores, out_indices, out_weights, n, k),
+        [1, 1, 1],
+        // The scan is serial over `n` and keeps its running best in read-write
+        // scratch, so one workgroup owns it, for the reason top_k states.
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
+                Expr::is_first_workgroup(),
+                softmax_top_k_body(scores, out_indices, out_weights, n, k),
+            )],
+        )],
+    )
+}
+
+/// Buffer table of the standalone operation, in binding order.
+fn softmax_top_k_buffers(
+    scores: &str,
+    out_indices: &str,
+    out_weights: &str,
+    n: u32,
+    k: u32,
+) -> Vec<BufferDecl> {
+    let mut buffers = vec![
+        BufferDecl::storage(scores, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
+        BufferDecl::output(out_indices, 1, DataType::U32).with_count(k),
+        BufferDecl::storage(out_weights, 2, BufferAccess::WriteOnly, DataType::F32).with_count(k),
+    ];
+    buffers.extend(softmax_top_k_scratch(3, k));
+    buffers
+}
+
+/// The selection scratch this body keeps its running best `k` in.
+///
+/// A composition that runs the body has to declare the same two buffers at its
+/// own binding indices, and a second spelling of them is a table that drifts
+/// from the body that reads it.
+pub(crate) fn softmax_top_k_scratch(first_binding: u32, k: u32) -> Vec<BufferDecl> {
+    vec![
+        BufferDecl::read_write(BEST_VALS, first_binding, DataType::F32).with_count(k),
+        BufferDecl::read_write(BEST_IDXS, first_binding + 1, DataType::U32).with_count(k),
+    ]
+}
+
+/// Softmax over `scores` followed by top-k selection, as region body nodes.
+///
+/// Serial by construction: the maximum, the exponential sum and the insertion
+/// sort are one pass each over `n`, on one invocation. A caller that wants this
+/// selection inside a larger operation runs these nodes as a child region
+/// rather than restating them.
+pub(crate) fn softmax_top_k_body(
+    scores: &str,
+    out_indices: &str,
+    out_weights: &str,
+    n: u32,
+    k: u32,
+) -> Vec<Node> {
     let mut body = init_top_k_slots(k);
 
     // max_val = max(scores)
@@ -87,17 +148,7 @@ pub fn softmax_top_k(
         Expr::var("sum"),
     ));
 
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(scores, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(out_indices, 1, DataType::U32).with_count(k),
-            BufferDecl::read_write(out_weights, 2, DataType::F32).with_count(k),
-            BufferDecl::read_write(BEST_VALS, 3, DataType::F32).with_count(k),
-            BufferDecl::read_write(BEST_IDXS, 4, DataType::U32).with_count(k),
-        ],
-        [1, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::softmax_top_k", body)],
-    )
+    body
 }
 
 fn fixture_f32_bytes(values: &[f32]) -> Vec<u8> {
@@ -114,59 +165,29 @@ fn softmax_top_k_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
         fixture_f32_bytes(&scores),
         vec![0u8; 4 * 2],
         vec![0u8; 4 * 2],
-        vec![0u8; 4 * 2],
-    ]]
-}
-
-fn softmax_top_k_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    let scores: [f32; 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-    let max = scores[7];
-    let exp_values = scores
-        .iter()
-        .map(|score| (*score - max).exp())
-        .collect::<Vec<f32>>();
-    let sum = exp_values.iter().copied().sum::<f32>();
-    let top_exp = [exp_values[7], exp_values[6]];
-    vec![vec![
-        fixture_u32_bytes(&[7, 6]),
-        fixture_f32_bytes(&[top_exp[0] / sum, top_exp[1] / sum]),
-        fixture_f32_bytes(&top_exp),
-        fixture_u32_bytes(&[7, 6]),
     ]]
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::topk_selection::{f32_from_bytes, u32_from_bytes};
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
-
-    fn u32_from_bytes(bytes: &[u8]) -> Vec<u32> {
-        vyre_primitives::wire::decode_u32_le_bytes_all(bytes)
-    }
-
-    fn f32_from_bytes(bytes: &[u8]) -> Vec<f32> {
-        vyre_primitives::wire::decode_f32_le_bytes_all(bytes)
-    }
 
     #[test]
     fn softmax_top_k_basic() {
         // scores = [1.0, 2.0, 3.0]  -  softmax ≈ [0.090, 0.245, 0.665]
         let scores = vec![1.0f32, 2.0, 3.0];
         let program = softmax_top_k("scores", "indices", "weights", 3, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "softmax_top_k",
             &program,
-            &[
-                Value::from(f32_bytes(&scores)),
-                Value::from(vec![0u8; 2 * 4]),
-                Value::from(vec![0u8; 2 * 4]),
-                Value::from(vec![0u8; 2 * 4]),
-            ],
-        )
-        .unwrap();
+            vec![f32_bytes(&scores), vec![0u8; 2 * 4], vec![0u8; 2 * 4]],
+        );
 
-        let indices = u32_from_bytes(&outputs[0].to_bytes());
-        let weights = f32_from_bytes(&outputs[1].to_bytes());
+        let indices = u32_from_bytes(&outputs[0]);
+        let weights = f32_from_bytes(&outputs[1]);
 
         assert_eq!(indices[0], 2); // 3.0 is max
         assert_eq!(indices[1], 1); // 2.0 is second
@@ -188,18 +209,13 @@ mod tests {
     fn softmax_top_k_weights_sum_to_one() {
         let scores: Vec<f32> = (1..=8).map(|i| i as f32).collect();
         let program = softmax_top_k("scores", "indices", "weights", 8, 3);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "softmax_top_k",
             &program,
-            &[
-                Value::from(f32_bytes(&scores)),
-                Value::from(vec![0u8; 3 * 4]),
-                Value::from(vec![0u8; 3 * 4]),
-                Value::from(vec![0u8; 3 * 4]),
-            ],
-        )
-        .unwrap();
+            vec![f32_bytes(&scores), vec![0u8; 3 * 4], vec![0u8; 3 * 4]],
+        );
 
-        let weights = f32_from_bytes(&outputs[1].to_bytes());
+        let weights = f32_from_bytes(&outputs[1]);
         let total: f32 = weights.iter().sum();
         // The top-3 weights don't sum to 1.0, but the internal sum is 1.0.
         // Just verify the weights are positive and ordered correctly.
@@ -210,17 +226,24 @@ mod tests {
     }
 }
 
+const EXPECTED_SOFTMAX_TOP_K_BUF0_BYTES: [u8; 8] = [0x07, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00];
+const EXPECTED_SOFTMAX_TOP_K_BUF1_BYTES: [u8; 8] = [0x8E, 0xE0, 0x21, 0x3F, 0x83, 0x34, 0x6E, 0x3E];
+const EXPECTED_SOFTMAX_TOP_K_BUF2_BYTES: [u8; 8] = [0x00, 0x00, 0x80, 0x3F, 0xB2, 0x5A, 0xBC, 0x3E];
+const EXPECTED_SOFTMAX_TOP_K_BUF3_BYTES: [u8; 8] = [0x07, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::nn::softmax_top_k",
-        build: Some(|| softmax_top_k("scores", "indices", "weights", 8, 2)),
-        test_inputs: Some(softmax_top_k_fixture_inputs),
-        expected_output: Some(softmax_top_k_fixture_expected),
-        category: Some("nn"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || softmax_top_k("scores", "indices", "weights", 8, 2),
+        Some(softmax_top_k_fixture_inputs),
+        Some(|| {
+            vec![vec![
+                EXPECTED_SOFTMAX_TOP_K_BUF0_BYTES.to_vec(),
+                EXPECTED_SOFTMAX_TOP_K_BUF1_BYTES.to_vec(),
+                EXPECTED_SOFTMAX_TOP_K_BUF2_BYTES.to_vec(),
+                EXPECTED_SOFTMAX_TOP_K_BUF3_BYTES.to_vec(),
+            ]]
+        }),
+    )
+    .with_category("nn")
 }

@@ -17,23 +17,23 @@
 //! crafted so canon's swap is the only legal reordering  -  i.e. the
 //! result form is unambiguous.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::live_backend;
+use harness::live_backend;
 use vyre::ir::{Expr, Node, Program};
-use vyre_driver_cuda::CudaOptimizerDispatcher;
-use vyre_self_substrate::optimizer::pipeline_resident::gpu_pipeline_resident;
+use vyre_driver_cuda::CudaProgramDispatcher;
+use vyre_pass_engine::optimizer::pipeline_resident::gpu_pipeline_resident;
 
 fn run_gpu_pipeline(p: Program) -> Program {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     gpu_pipeline_resident(p, &dispatcher).expect("gpu pipeline must succeed")
 }
 
 fn run_cpu_dce_only(p: Program) -> Program {
-    use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as cpu_dce;
+    use vyre_foundation::optimizer::passes::fusion_cse::dce::dce as cpu_dce;
     cpu_dce(p)
 }
 

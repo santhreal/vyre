@@ -5,6 +5,8 @@
 //! survives verified lowering and emits target code without a driver-owned
 //! definition or provider installation.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::DispatchConfig;
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

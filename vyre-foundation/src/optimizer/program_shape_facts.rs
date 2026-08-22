@@ -1,6 +1,6 @@
 //! Program-level static shape facts derived from `BufferDecl`s.
 //!
-//! Audit P0 #38: replaces ad-hoc shape recomputations across optimizer,
+//! replaces ad-hoc shape recomputations across optimizer,
 //! lowering, and validation with one derived analysis. Every `Program`
 //! produces exactly one `ProgramShapeFacts`; passes consume it instead of
 //! walking `BufferDecl`s themselves.
@@ -18,7 +18,7 @@ use std::sync::Arc;
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::program::Program;
 use rustc_hash::FxHashMap;
-use vyre_spec::data_type::DataType;
+use vyre_spec::DataType;
 
 use super::shape_facts;
 
@@ -104,9 +104,9 @@ impl BufferShapeFacts {
 
 /// Map of buffer-name → static facts. Built once per `Program`; immutable.
 ///
-/// Build with [`ProgramShapeFacts::derive`]. Pass it through optimizer
-/// `PassCtx`, lowering, and validation as a typed input  -  they all
-/// consume the same facts so a contradiction can never arise.
+/// Build with [`ProgramShapeFacts::derive`]. Pass it through lowering and
+/// validation as a typed input  -  they all consume the same facts so a
+/// contradiction can never arise.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ProgramShapeFacts {
     by_name: FxHashMap<Ident, BufferShapeFacts>,
@@ -115,7 +115,7 @@ pub struct ProgramShapeFacts {
 // Thread-local fingerprint-keyed cache so consumers that call derive
 // directly (e.g. `Autotune::transform`) reuse the previous result on the
 // same program instead of re-walking every BufferDecl. The
-// FactSubstrate caches own a separate `Arc<ProgramShapeFacts>` for
+// FactCache caches own a separate `Arc<ProgramShapeFacts>` for
 // shape+use bundles; this slot serves direct `derive()` callers.
 thread_local! {
     static SHAPE_FACTS_CACHE: std::cell::RefCell<Option<([u8; 32], std::rc::Rc<ProgramShapeFacts>)>> =

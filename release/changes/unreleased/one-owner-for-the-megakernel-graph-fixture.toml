@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Three megakernel suites build the producer and consumer graph from one shared fixture instead of three copies of the builder, which removed 114 duplicated lines from the crate."

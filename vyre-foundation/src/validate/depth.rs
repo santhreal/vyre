@@ -13,7 +13,7 @@ pub const DEFAULT_MAX_NESTING_DEPTH: usize = 64;
 /// class into ONE program (see surge's `fuse::dispatch::build`), so the
 /// statement-node ceiling must accommodate a fully fused bundle, not a
 /// single hand-written kernel. The value mirrors the GPU-native limit
-/// validator in `vyre-self-substrate`'s `optimizer::validate_via_encoded`
+/// validator in `vyre-pass-engine`'s `optimizer::validate_via_encoded`
 /// (`DEFAULT_MAX_NODE_COUNT = 100_000`), which is exercised at that scale by
 /// the substrate's corpus-parity integration evidence. The two MUST agree:
 /// a program the encoded validator blesses must not be rejected here, or
@@ -38,7 +38,11 @@ pub struct LimitState {
 
 /// Increment `limits` and emit errors if depth or node count exceeds defaults.
 #[inline]
-pub fn check_limits(limits: &mut LimitState, depth: usize, errors: &mut Vec<ValidationError>) {
+pub(crate) fn check_limits(
+    limits: &mut LimitState,
+    depth: usize,
+    errors: &mut Vec<ValidationError>,
+) {
     limits.node_count = limits.node_count.saturating_add(1);
     if limits.node_count > DEFAULT_MAX_NODE_COUNT && !limits.node_count_reported {
         limits.node_count_reported = true;
@@ -47,9 +51,8 @@ pub fn check_limits(limits: &mut LimitState, depth: usize, errors: &mut Vec<Vali
             ValidationPhase::Limits,
             ValidationLocation::Program,
             format!("program node count exceeds limit {DEFAULT_MAX_NODE_COUNT}"),
-            format!(
             "split the program into smaller kernels or run an optimization pass before lowering."
-        ),
+                .to_string(),
         ));
     }
     if depth > DEFAULT_MAX_NESTING_DEPTH && !limits.nesting_reported {
@@ -59,9 +62,8 @@ pub fn check_limits(limits: &mut LimitState, depth: usize, errors: &mut Vec<Vali
             ValidationPhase::Limits,
             ValidationLocation::Program,
             format!("program nesting depth {depth} exceeds max {DEFAULT_MAX_NESTING_DEPTH}"),
-            format!(
-                "flatten nested If/Loop/Block structures or split the program before lowering."
-            ),
+            "flatten nested If/Loop/Block structures or split the program before lowering."
+                .to_string(),
         ));
     }
 }
@@ -69,14 +71,14 @@ pub fn check_limits(limits: &mut LimitState, depth: usize, errors: &mut Vec<Vali
 /// Return true when the expression nesting depth is still within bounds.
 #[inline]
 #[must_use]
-pub fn check_expr_depth(depth: usize, errors: &mut Vec<ValidationError>) -> bool {
+pub(crate) fn check_expr_depth(depth: usize, errors: &mut Vec<ValidationError>) -> bool {
     if depth > DEFAULT_MAX_EXPR_DEPTH {
         errors.push(err(
             "V033",
             ValidationPhase::Limits,
             ValidationLocation::Program,
             format!("expression nesting depth {depth} exceeds max {DEFAULT_MAX_EXPR_DEPTH}"),
-            format!("split the expression into intermediate let-bindings before lowering."),
+            "split the expression into intermediate let-bindings before lowering.".to_string(),
         ));
         return false;
     }
@@ -93,7 +95,7 @@ pub fn check_expr_depth(depth: usize, errors: &mut Vec<ValidationError>) -> bool
 /// Returns the offending `depth` when it exceeds [`DEFAULT_MAX_CALL_DEPTH`].
 #[inline]
 #[must_use]
-pub fn max_call_depth(_op_id: &str, depth: usize) -> Result<usize, usize> {
+pub(crate) fn max_call_depth(_op_id: &str, depth: usize) -> Result<usize, usize> {
     if depth > DEFAULT_MAX_CALL_DEPTH {
         return Err(depth);
     }

@@ -1,15 +1,16 @@
-//! Contracts for the process-wide shared wgpu backend.
+//! Contracts for the process-wide shared wgpu backend and the one wgpu instance
+//! every acquisition in this crate uses.
 
-use std::sync::Arc;
+#![cfg(feature = "device-tests")]
 
+use std::collections::BTreeSet;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Barrier};
+
+mod harness;
+use harness::selected_adapter;
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
-
-fn selected_adapter(backend: &WgpuBackend) -> wgpu::Adapter {
-    vyre_driver_wgpu::runtime::device::adapter_for_info(backend.adapter_info()).expect(
-        "Fix: selected wgpu backend adapter must remain enumerable for live capability probing",
-    )
-}
 
 #[test]
 fn shared_backend_reuses_single_backend_instance() {
@@ -63,4 +64,143 @@ fn shared_backend_reports_same_capabilities_as_concrete_backend() {
         ],
         "Fix: shared backend max_workgroup_size must come from the live selected device limits"
     );
+}
+
+/// Acquiring and releasing a backend from many threads at once must finish on
+/// every thread.
+///
+/// A `wgpu::Instance` owns the Vulkan loader instance and loader startup is not
+/// reentrant, so two threads creating an instance together left one of them
+/// calling through a null dispatch pointer inside
+/// `vkEnumerateInstanceExtensionProperties`. That defect does not surface as a
+/// failed assertion: the process dies with SIGSEGV and takes the harness with
+/// it, so this test fails by disappearing. The barrier releases every thread
+/// into acquisition at once, which is the state that faulted.
+///
+/// Release is the other half, and it is the half that hung. While an instance
+/// enabled GL, teardown closed a cycle across the Vulkan loader lock, an EGL
+/// lock, and a thread-exit destructor `vkDestroyDevice` was joining, so a
+/// conformance run that acquired one backend per worker stopped for hours with
+/// no output. Each thread therefore drops its backend and reports afterwards,
+/// and the report is collected under a deadline: a thread stuck in teardown
+/// cannot be joined, so a regression has to fail as an expired wait rather than
+/// as a suite that never returns.
+#[test]
+fn concurrent_backend_acquisition_and_release_finishes_on_every_thread() {
+    let threads = std::thread::available_parallelism().map_or(8, |count| count.get().max(8));
+    let barrier = Arc::new(Barrier::new(threads));
+    let (report, reports) = std::sync::mpsc::channel();
+    for _ in 0..threads {
+        let barrier = Arc::clone(&barrier);
+        let report = report.clone();
+        std::thread::spawn(move || {
+            barrier.wait();
+            let acquired = WgpuBackend::acquire().map(|backend| {
+                let name = backend.adapter_info().name.clone();
+                drop(backend);
+                name
+            });
+            let _ = report.send(acquired);
+        });
+    }
+    drop(report);
+
+    let deadline = std::time::Duration::from_secs(120);
+    let mut adapters = BTreeSet::new();
+    for index in 0..threads {
+        match reports.recv_timeout(deadline) {
+            Ok(Ok(name)) => {
+                adapters.insert(name);
+            }
+            Ok(Err(error)) => {
+                panic!("Fix: concurrent wgpu acquisition failed on one of {threads} threads: {error}")
+            }
+            Err(error) => panic!(
+                "Fix: {index} of {threads} concurrent acquisitions reported within {deadline:?} ({error}). A thread that acquired a backend and did not report has not finished releasing it; instance and device teardown must not block on another thread's teardown."
+            ),
+        }
+    }
+    assert_eq!(
+        adapters.len(),
+        1,
+        "Fix: {threads} concurrent acquisitions selected {adapters:?}; adapter selection must not depend on which thread got there first."
+    );
+}
+
+/// One module constructs the wgpu instance.
+///
+/// The loader race above is unrepresentable only while a single owner holds the
+/// instance, and nothing in the type system stops a second `Instance::default()`
+/// from being added somewhere else in the crate. The construction sites are
+/// therefore read out of the crate source at run time, so a new one turns this
+/// red instead of reintroducing a segmentation fault under concurrency.
+#[test]
+fn only_the_device_acquisition_module_constructs_a_wgpu_instance() {
+    const OWNER: &str = "runtime/device/acquire.rs";
+    let root =
+        vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")).join("src");
+    let mut sources = Vec::new();
+    collect_rust_sources(&root, &mut sources);
+    assert!(
+        sources.len() > 1,
+        "Fix: the crate source walk found {} files under {}; the ownership check needs the real source tree.",
+        sources.len(),
+        root.display()
+    );
+
+    let mut sites = BTreeSet::new();
+    for source in &sources {
+        let text = std::fs::read_to_string(source).unwrap_or_else(|error| {
+            panic!(
+                "Fix: could not read {} for the instance-ownership check: {error}",
+                source.display()
+            )
+        });
+        for (index, line) in text.lines().enumerate() {
+            let code = line.split_once("//").map_or(line, |(before, _)| before);
+            if code.contains("Instance::default") || code.contains("Instance::new(") {
+                let relative = source.strip_prefix(&root).unwrap_or(source);
+                sites.insert(format!("{}:{}", relative.display(), index + 1));
+            }
+        }
+    }
+
+    let foreign = sites
+        .iter()
+        .filter(|site| !site.starts_with(OWNER))
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    assert!(
+        foreign.is_empty(),
+        "Fix: {foreign:?} construct a wgpu instance outside {OWNER}. The Vulkan loader cannot start up twice at once; call runtime::device::acquire::new_instance instead."
+    );
+    assert_eq!(
+        sites.len(),
+        1,
+        "Fix: expected exactly one wgpu instance construction site in this crate, found {sites:?}."
+    );
+}
+
+fn collect_rust_sources(directory: &Path, into: &mut Vec<PathBuf>) {
+    let entries = std::fs::read_dir(directory).unwrap_or_else(|error| {
+        panic!(
+            "Fix: could not walk {} for the instance-ownership check: {error}",
+            directory.display()
+        )
+    });
+    for entry in entries {
+        let path = entry
+            .unwrap_or_else(|error| {
+                panic!(
+                    "Fix: could not read an entry of {} for the instance-ownership check: {error}",
+                    directory.display()
+                )
+            })
+            .path();
+        if path.is_dir() {
+            collect_rust_sources(&path, into);
+        } else if path.extension().is_some_and(|extension| extension == "rs") {
+            into.push(path);
+        }
+    }
 }

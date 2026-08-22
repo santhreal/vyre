@@ -2,18 +2,17 @@
 //!
 //! Backends provide their cache keys and lineage cells; this module owns
 //! the shared causal-impact/provenance walk so the backend crates do not
-//! depend on self-substrate implementation modules directly.
+//! depend on the composition modules that implement it directly.
 
-#[cfg(feature = "self-substrate-adapters")]
-use vyre_self_substrate::do_calculus_change_impact::{
-    predict_impact_via_into, DoCalculusImpactScratch,
+#[cfg(feature = "libs-compositions")]
+use vyre_foundation::program_dispatch::{DispatchError as ProgramDispatchError, ProgramDispatcher};
+#[cfg(feature = "libs-compositions")]
+use vyre_libs::encoding::scallop_provenance::provenance_closure_via_into;
+#[cfg(feature = "libs-compositions")]
+use vyre_libs::reasoning::do_calculus_change_impact::{
+    predict_impact_via_into, project_impacted_lineage_entries_via_into, DoCalculusImpactScratch,
+    ImpactedLineageProjectionScratch,
 };
-#[cfg(feature = "self-substrate-adapters")]
-use vyre_self_substrate::optimizer::dispatcher::{
-    DispatchError as SelfSubstrateDispatchError, OptimizerDispatcher,
-};
-#[cfg(feature = "self-substrate-adapters")]
-use vyre_self_substrate::scallop_provenance::provenance_closure_via_into;
 
 /// Error raised by GPU-resident cache invalidation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,9 +36,9 @@ impl std::fmt::Display for CacheInvalidationError {
 
 impl std::error::Error for CacheInvalidationError {}
 
-#[cfg(feature = "self-substrate-adapters")]
-impl From<SelfSubstrateDispatchError> for CacheInvalidationError {
-    fn from(error: SelfSubstrateDispatchError) -> Self {
+#[cfg(feature = "libs-compositions")]
+impl From<ProgramDispatchError> for CacheInvalidationError {
+    fn from(error: ProgramDispatchError) -> Self {
         Self::new(error.to_string())
     }
 }
@@ -47,19 +46,21 @@ impl From<SelfSubstrateDispatchError> for CacheInvalidationError {
 /// Reusable scratch for shared pipeline-cache invalidation.
 #[derive(Debug, Default)]
 pub struct CacheInvalidationScratch {
-    #[cfg(feature = "self-substrate-adapters")]
+    #[cfg(feature = "libs-compositions")]
     impact: DoCalculusImpactScratch,
-    #[cfg(feature = "self-substrate-adapters")]
+    #[cfg(feature = "libs-compositions")]
     closure: Vec<u32>,
+    #[cfg(feature = "libs-compositions")]
+    projection: ImpactedLineageProjectionScratch,
 }
 
 /// Compute a 0/1 impact mask for cache entries.
 ///
-/// Production builds use the self-substrate implementation. Builds that
-/// explicitly disable `self-substrate-adapters` fail loudly instead of running
+/// Production builds run the composed implementation. Builds that
+/// explicitly disable `libs-compositions` fail loudly instead of running
 /// a hidden reference cache-invalidation path.
 pub fn impacted_entries_into(
-    #[cfg(feature = "self-substrate-adapters")] dispatcher: &dyn OptimizerDispatcher,
+    #[cfg(feature = "libs-compositions")] dispatcher: &dyn ProgramDispatcher,
     intervention_mask: &[u32],
     rule_adj: &[u32],
     state: &[u32],
@@ -70,11 +71,7 @@ pub fn impacted_entries_into(
     out: &mut Vec<u32>,
     _scratch: &mut CacheInvalidationScratch,
 ) -> Result<(), CacheInvalidationError> {
-    out.clear();
-    reserve_impact_mask(out, lineage_cells.len())?;
-    out.resize(lineage_cells.len(), 0);
-
-    #[cfg(not(feature = "self-substrate-adapters"))]
+    #[cfg(not(feature = "libs-compositions"))]
     {
         let _ = (
             intervention_mask,
@@ -84,15 +81,21 @@ pub fn impacted_entries_into(
             n,
             max_iterations,
             lineage_cells,
+            out,
             _scratch,
         );
         Err(CacheInvalidationError::new(
-            "vyre-driver cache invalidation requires the `self-substrate-adapters` feature. Fix: enable the feature; production builds must not run the reference cache-invalidation oracle.",
+            "vyre-driver cache invalidation requires the `libs-compositions` feature. Fix: enable the feature; production builds must not run the reference cache-invalidation oracle.",
         ))
     }
 
-    #[cfg(feature = "self-substrate-adapters")]
+    #[cfg(feature = "libs-compositions")]
     {
+        if lineage_cells.is_empty() {
+            out.clear();
+            return Ok(());
+        }
+
         let n_us = n as usize;
         let Some(matrix_len) = n_us.checked_mul(n_us) else {
             return Err(CacheInvalidationError::new(format!(
@@ -124,6 +127,8 @@ pub fn impacted_entries_into(
             )));
         }
 
+        reserve_impact_mask(out, lineage_cells.len())?;
+
         predict_impact_via_into(
             dispatcher,
             rule_adj,
@@ -131,7 +136,10 @@ pub fn impacted_entries_into(
             n,
             &mut _scratch.impact,
         )
-        .map_err(CacheInvalidationError::from)?;
+        .map_err(|err| {
+            out.clear();
+            CacheInvalidationError::from(err)
+        })?;
         provenance_closure_via_into(
             dispatcher,
             state,
@@ -140,41 +148,25 @@ pub fn impacted_entries_into(
             max_iterations,
             &mut _scratch.closure,
         )
-        .map_err(CacheInvalidationError::from)?;
+        .map_err(|err| {
+            out.clear();
+            CacheInvalidationError::from(err)
+        })?;
 
-        let impacted_rules = _scratch.impact.impact_mask();
-        let closure = &_scratch.closure;
-        if impacted_rules.len() < n_us || closure.len() < matrix_len {
-            return Err(CacheInvalidationError::new(format!(
-                "Fix: cache invalidation GPU outputs were undersized: impact_mask={}, closure={}, required n={n_us}, matrix={matrix_len}.",
-                impacted_rules.len(),
-                closure.len()
-            )));
-        }
+        project_impacted_lineage_entries_via_into(
+            dispatcher,
+            _scratch.impact.impact_mask(),
+            &_scratch.closure,
+            n,
+            lineage_cells,
+            &mut _scratch.projection,
+            out,
+        )
+        .map_err(|err| {
+            out.clear();
+            CacheInvalidationError::from(err)
+        })?;
 
-        for (entry_idx, &cell) in lineage_cells.iter().enumerate() {
-            let cell = cell as usize;
-            if cell >= n_us {
-                continue;
-            }
-            let row_start = cell * n_us;
-            let row = &closure[row_start..row_start + n_us];
-            // A cell is impacted if any
-            // provenance edge from it lands on an impacted node OR
-            // if the cell itself is in the (transitively) impacted
-            // set. Without the second clause, intervention seeds and
-            // their direct rule-adjacency closure stay unmarked when
-            // they have no outgoing provenance edges.
-            let directly_impacted = impacted_rules.get(cell).is_some_and(|&v| v != 0);
-            if directly_impacted
-                || row
-                    .iter()
-                    .zip(impacted_rules.iter())
-                    .any(|(&bitset, &impacted)| bitset != 0 && impacted != 0)
-            {
-                out[entry_idx] = 1;
-            }
-        }
         Ok(())
     }
 }
@@ -182,7 +174,7 @@ pub fn impacted_entries_into(
 /// Compute a 0/1 impact mask using temporary scratch.
 #[must_use]
 pub fn impacted_entries(
-    #[cfg(feature = "self-substrate-adapters")] dispatcher: &dyn OptimizerDispatcher,
+    #[cfg(feature = "libs-compositions")] dispatcher: &dyn ProgramDispatcher,
     intervention_mask: &[u32],
     rule_adj: &[u32],
     state: &[u32],
@@ -194,7 +186,7 @@ pub fn impacted_entries(
     let mut out = reserved_impact_mask(lineage_cells.len())?;
     let mut scratch = CacheInvalidationScratch::default();
     impacted_entries_into(
-        #[cfg(feature = "self-substrate-adapters")]
+        #[cfg(feature = "libs-compositions")]
         dispatcher,
         intervention_mask,
         rule_adj,
@@ -223,27 +215,13 @@ fn reserved_impact_mask(len: usize) -> Result<Vec<u32>, CacheInvalidationError> 
     Ok(out)
 }
 
-#[cfg(all(test, feature = "self-substrate-adapters"))]
+#[cfg(all(test, feature = "libs-compositions"))]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::Program;
-
-    struct EchoStateDispatcher;
-
-    impl OptimizerDispatcher for EchoStateDispatcher {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, SelfSubstrateDispatchError> {
-            Ok(vec![inputs.first().cloned().unwrap_or_default()])
-        }
-    }
-
+    use vyre_driver_reference::ReferenceEvalDispatcher;
     #[test]
     fn impact_mask_marks_lineage_intersection() {
-        let dispatcher = EchoStateDispatcher;
+        let dispatcher = ReferenceEvalDispatcher;
         let n = 3;
         let mut rule_adj = vec![0u32; 9];
         rule_adj[0 * 3 + 1] = 1;
@@ -262,18 +240,71 @@ mod tests {
             16,
             &[1, 2],
         )
-        .expect("Fix: test dispatcher must return one state output");
+        .expect("reference dispatcher must execute GPU cache invalidation composition");
         assert_eq!(mask, vec![1, 0]);
     }
 
     #[test]
     fn malformed_dimensions_do_not_panic() {
-        let dispatcher = EchoStateDispatcher;
+        let dispatcher = ReferenceEvalDispatcher;
         let err = impacted_entries(&dispatcher, &[1], &[], &[], &[], 32, 16, &[0, 1])
             .expect_err("malformed dimensions must fail loudly");
         assert!(
             err.to_string().contains("Fix:"),
             "cache invalidation dimension errors must be actionable"
         );
+    }
+
+    #[test]
+    fn empty_lineage_cells_clears_output_and_succeeds() {
+        let dispatcher = ReferenceEvalDispatcher;
+        let mut out = vec![42u32; 10];
+        let mut scratch = CacheInvalidationScratch::default();
+        impacted_entries_into(
+            &dispatcher,
+            &[1, 0],
+            &[0; 4],
+            &[0; 4],
+            &[0; 4],
+            2,
+            4,
+            &[],
+            &mut out,
+            &mut scratch,
+        )
+        .expect("empty lineage cells must succeed immediately");
+        assert!(
+            out.is_empty(),
+            "output must be cleared for empty lineage cells"
+        );
+    }
+
+    #[test]
+    fn transitive_impact_and_provenance_propagation_matches_exact_device_output() {
+        let dispatcher = ReferenceEvalDispatcher;
+        let n = 4;
+        let mut rule_adj = vec![0u32; 16];
+        // 0 -> 1 -> 2
+        rule_adj[0 * 4 + 1] = 1;
+        rule_adj[1 * 4 + 2] = 1;
+        let intervention_mask = vec![1, 0, 0, 0];
+
+        let mut state = vec![0u32; 16];
+        // Rule 2 affects lineage cell 3
+        state[2 * 4 + 3] = 1;
+        let join_rules = vec![0u32; 16];
+
+        let mask = impacted_entries(
+            &dispatcher,
+            &intervention_mask,
+            &rule_adj,
+            &state,
+            &join_rules,
+            n,
+            16,
+            &[0, 1, 2, 3],
+        )
+        .expect("transitive impact must execute on device");
+        assert_eq!(mask, vec![1, 1, 1, 0]);
     }
 }

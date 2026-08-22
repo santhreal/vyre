@@ -7,66 +7,25 @@
 //! and no absent pattern set (precision). This is the per-output-mode equivalent
 //! of `bounded_ranges_suffix3_prefilter_reference_eval_matches_cpu_oracle`.
 
+#![cfg(feature = "pattern-substring")]
+
+mod wire_words;
+use wire_words::decode_u32_words as decode_u32;
+
+mod presence_oracle;
+use presence_oracle::{random_haystack_unbounded as random_haystack, random_literals, Lcg};
 use std::collections::BTreeSet;
 
-use vyre_libs::scan::classic_ac::{
-    classic_ac_bounded_ranges_scan, classic_ac_candidate_end_byte_mask_words,
-    classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
-    classic_ac_compile, presence_bitmap_words,
-    try_build_ac_bounded_ranges_suffix3_presence_program,
+use vyre_libs::pattern::classic_ac::{
+    classic_ac_compile, presence_bitmap_words, try_build_ac_bounded_ranges_suffix3_presence_program,
 };
-use vyre_libs::scan::{pack_haystack_u32};
-use vyre_primitives::wire::{pack_u32_slice};
-
-struct Lcg(u64);
-impl Lcg {
-    fn next_u32(&mut self) -> u32 {
-        self.0 = self
-            .0
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
-        (self.0 >> 33) as u32
-    }
-    fn below(&mut self, n: u32) -> u32 {
-        if n == 0 {
-            0
-        } else {
-            self.next_u32() % n
-        }
-    }
-}
-
-/// Small alphabet so literals collide and the DFA / prefilter actually exercise
-/// shared prefixes, suffix2/suffix3 candidate gating, and overlapping matches.
-const ALPHABET: &[u8] = b"abcAB_0/-";
-
-fn random_literals(rng: &mut Lcg) -> Vec<Vec<u8>> {
-    let count = 1 + rng.below(8); // 1..=8 patterns
-    let mut set: BTreeSet<Vec<u8>> = BTreeSet::new();
-    for _ in 0..count {
-        let len = 1 + rng.below(6); // 1..=6 bytes
-        let mut lit = Vec::with_capacity(len as usize);
-        for _ in 0..len {
-            lit.push(ALPHABET[rng.below(ALPHABET.len() as u32) as usize]);
-        }
-        set.insert(lit);
-    }
-    set.into_iter().collect()
-}
-
-fn random_haystack(rng: &mut Lcg) -> Vec<u8> {
-    let len = rng.below(160); // 0..=159 bytes, includes empty + sub-pattern lengths
-    (0..len)
-        .map(|_| ALPHABET[rng.below(ALPHABET.len() as u32) as usize])
-        .collect()
-}
-
-fn decode_u32(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
-}
+use vyre_libs::pattern::pack_haystack_u32;
+use vyre_primitives::wire::pack_u32_slice;
+use vyre_reference::composition_witness::{
+    classic_ac_candidate_end_byte_mask_words_witness,
+    classic_ac_candidate_suffix2_mask_words_witness,
+    classic_ac_candidate_suffix3_bloom_words_witness,
+};
 
 fn presence_bit(bitmap: &[u32], pattern_id: u32) -> bool {
     let w = (pattern_id >> 5) as usize;
@@ -94,10 +53,17 @@ fn presence_program_reference_eval_matches_cpu_oracle_high_volume() {
         let lengths: Vec<u32> = literals.iter().map(|l| l.len() as u32).collect();
         let pattern_count = literals.len() as u32;
 
-        // CPU oracle: the set of pattern ids that occur in `haystack`.
-        let expected: BTreeSet<u32> = classic_ac_bounded_ranges_scan(&ac, &lengths, &haystack)
-            .into_iter()
-            .map(|(pid, _start, _end)| pid)
+        // Independent oracle: the set of literal ids occurring in the haystack.
+        let expected: BTreeSet<u32> = literals
+            .iter()
+            .enumerate()
+            .filter(|(_, literal)| {
+                !literal.is_empty()
+                    && haystack
+                        .windows(literal.len())
+                        .any(|window| window == literal.as_slice())
+            })
+            .map(|(pattern_id, _)| pattern_id as u32)
             .collect();
 
         let program = try_build_ac_bounded_ranges_suffix3_presence_program(&ac.dfa, pattern_count)
@@ -113,13 +79,21 @@ fn presence_program_reference_eval_matches_cpu_oracle_high_volume() {
             vyre_reference::value::Value::from(pack_u32_slice(&[haystack.len() as u32])),
             vyre_reference::value::Value::from(pack_u32_slice(&vec![0u32; presence_words])),
             vyre_reference::value::Value::from(pack_u32_slice(
-                &classic_ac_candidate_end_byte_mask_words(&ac.dfa),
+                &classic_ac_candidate_end_byte_mask_words_witness(
+                    &ac.dfa.transitions,
+                    &ac.dfa.output_offsets,
+                    ac.dfa.state_count,
+                ),
             )),
             vyre_reference::value::Value::from(pack_u32_slice(
-                &classic_ac_candidate_suffix2_mask_words(&ac.dfa),
+                &classic_ac_candidate_suffix2_mask_words_witness(
+                    &ac.dfa.transitions,
+                    &ac.dfa.output_offsets,
+                    ac.dfa.state_count,
+                ),
             )),
             vyre_reference::value::Value::from(pack_u32_slice(
-                &classic_ac_candidate_suffix3_bloom_words(&pattern_refs),
+                &classic_ac_candidate_suffix3_bloom_words_witness(&pattern_refs),
             )),
         ];
 

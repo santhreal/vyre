@@ -1,18 +1,17 @@
 //! Shared persistent cache for backend compiled-pipeline blobs.
 
 use super::hashing::{
-    dispatch_policy_cache_digest, dispatch_policy_cache_string, hex_encode,
-    normalized_program_cache_digest, try_normalized_program_cache_digest,
+    dispatch_policy_cache_digest, hex_encode, try_normalized_program_cache_digest,
     PipelineDeviceFingerprint,
 };
 use super::CURRENT_PIPELINE_CACHE_KEY_VERSION;
 use crate::backend::DispatchConfig;
-use std::sync::{Arc, MutexGuard};
+use std::sync::MutexGuard;
 use vyre_foundation::ir::Program;
 use vyre_spec::BackendId;
 
 /// Maximum persistent pipeline blob read into memory.
-pub const MAX_DISK_PIPELINE_BLOB_BYTES: u64 = 64 * 1024 * 1024;
+const MAX_DISK_PIPELINE_BLOB_BYTES: u64 = 64 * 1024 * 1024;
 
 /// Disk cache for compiled pipeline blobs keyed by program and device.
 pub struct DiskPipelineCache {
@@ -248,30 +247,22 @@ fn read_bounded(path: &std::path::Path, max_bytes: u64) -> std::io::Result<Vec<u
 }
 
 fn flush_paths(paths: &[std::path::PathBuf]) -> std::io::Result<()> {
-    let mut parents = Vec::new();
-    crate::allocation::try_reserve_vec_to_capacity(&mut parents, paths.len()).map_err(|error| {
-        std::io::Error::new(
-            std::io::ErrorKind::OutOfMemory,
-            format!(
-                "pipeline cache flush could not reserve {} parent path slot(s): {error}. Fix: flush fewer cache paths per batch.",
-                paths.len()
-            ),
-        )
-    })?;
     sync_files_bounded(
         paths,
         std::fs::File::sync_data,
         "disk cache file sync worker panicked",
     )?;
-    for path in paths {
-        if let Some(parent) = path.parent() {
-            parents.push(parent.to_path_buf());
-        }
-    }
-    parents.sort();
-    parents.dedup();
-    sync_parent_dirs(&parents)?;
-    Ok(())
+    let parents = crate::durable_fanout::parent_directories(paths, |parents, capacity| {
+        crate::allocation::try_reserve_vec_to_capacity(parents, capacity).map_err(|error| {
+            std::io::Error::new(
+                std::io::ErrorKind::OutOfMemory,
+                format!(
+                    "pipeline cache flush could not reserve {capacity} parent path slot(s): {error}. Fix: flush fewer cache paths per batch."
+                ),
+            )
+        })
+    })?;
+    sync_parent_dirs(&parents)
 }
 
 #[cfg(unix)]
@@ -293,40 +284,22 @@ fn sync_files_bounded(
     sync: fn(&std::fs::File) -> std::io::Result<()>,
     panic_message: &'static str,
 ) -> std::io::Result<()> {
-    if paths.is_empty() {
-        return Ok(());
-    }
-    let workers = std::thread::available_parallelism()
-        .map(usize::from)
-        .unwrap_or(1)
-        .clamp(1, 16);
-    for chunk in paths.chunks(workers) {
-        std::thread::scope(|scope| {
-            let mut handles = Vec::new();
-            crate::allocation::try_reserve_vec_to_capacity(&mut handles, chunk.len()).map_err(|error| {
-                std::io::Error::new(
-                    std::io::ErrorKind::OutOfMemory,
-                    format!(
-                        "pipeline cache sync could not reserve {} worker handle(s): {error}. Fix: lower pipeline cache sync fan-out.",
-                        chunk.len()
-                    ),
-                )
-            })?;
-            for path in chunk {
-                handles.push(scope.spawn(move || {
-                    let file = std::fs::File::open(path)?;
-                    sync(&file)
-                }));
-            }
-            for handle in handles {
-                handle
-                    .join()
-                    .map_err(|_| std::io::Error::other(panic_message))??;
-            }
-            Ok::<(), std::io::Error>(())
-        })?;
-    }
-    Ok(())
+    crate::durable_fanout::for_each_bounded(
+        paths,
+        |path| {
+            let file = std::fs::File::open(path)?;
+            sync(&file)
+        },
+        || std::io::Error::other(panic_message),
+        |requested, source| {
+            std::io::Error::new(
+                std::io::ErrorKind::OutOfMemory,
+                format!(
+                    "pipeline cache sync could not reserve {requested} worker handle(s): {source}. Fix: lower pipeline cache sync fan-out."
+                ),
+            )
+        },
+    )
 }
 
 /// Capability bits that participate in pipeline-cache identity.
@@ -629,9 +602,12 @@ impl PipelineCacheMissReason {
     }
 }
 
+// Inline: `vyre_driver::pipeline` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod pipeline_cache_key_tests {
     use super::*;
+    use std::sync::Arc;
 
     fn hash32(byte: u8) -> [u8; 32] {
         [byte; 32]
