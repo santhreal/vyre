@@ -16,9 +16,16 @@ pub(crate) mod target_compiler_contract;
 use target_compiler_contract::{single_lane_artifact, TargetExpectation};
 
 /// What this backend declares about the payload its registered compiler produces.
+///
+/// The id comes from [`vyre_driver_spirv::registered_backend_id`] and not from
+/// the `const`, because calling it is what keeps this crate's object file, and
+/// its registration, in a linked test binary. A `const` inlines at the use
+/// site and links nothing, which left the registry lookup reporting an
+/// unlinked backend on the Mach-O leg of the matrix while the ELF legs passed.
 pub(crate) fn spirv() -> TargetExpectation<'static> {
     TargetExpectation {
-        backend_id: vyre_driver_spirv::SPIRV_BACKEND_ID,
+        backend_id: vyre_driver_spirv::registered_backend_id()
+            .expect("Fix: this build must compile the SPIR-V registration."),
         format_identity: "spv",
         format_version: 1,
         entry_point: "main",
