@@ -4518,6 +4518,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   The shape version is raised, and a test pins the recorded field set to it so
   a rename turns the suite red until the version records that the shape
   changed.
+- The no-reinvention check reads the outcome tables a reviewer records into.
+  Two operations reached through one shared builder share that builder's
+  emitted shape, so the check reported the extraction it asks for as the defect
+  it asks to fix, and the only edit that could clear the finding was
+  withdrawing one of the two names. It now skips a pair recorded in
+  `IMPLEMENTATION_FAMILY_ROWS` or in `REVIEWED_DISTINCT_OPERATIONS`, which is
+  what the operand-shape check already did, and a test derives both populations
+  from the tables at run time.
 - The repository hygiene gate read the instruction redirects case-sensitively
   and reported both CLAUDE.md and GEMINI.md as policy files, because each opens
   its sentence with a capital letter. It also reported its own rule table and

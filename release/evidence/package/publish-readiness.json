@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:28ae095660810e84fc741bd8584ceb2c71e16470:dirty=true:worktree=e05bf18cfe20386144d459f3c4b8a691e08133d5a73032dee80f03fffd099f78",
+  "source_fingerprint": "git:5e5fe4098cbb5ad1422f191c4de75ac1006598ac:dirty=true:worktree=abc09396779a29bb3426bde0419971e4761880456a47c367ece88bdf96688ff2",
   "schema_version": 3,
   "release_train": {
     "vyre": "0.8.0",
@@ -753,8 +753,8 @@
       "package": "vyre-libs",
       "manifest": "vyre-libs/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 1290,
-      "file_list_digest": "blake3:7b886cb601f6ad50cc9fcba49f8853bccb6da487c0a9f6783fb2285738eb715b",
+      "file_count": 1293,
+      "file_list_digest": "blake3:f1d338ae29cf66104c71ac4e2beb3377f1193b8c80a7578cb0bfd56b973ea3dc",
       "rust_source_count": 712,
       "missing_required_files": [],
       "forbidden_files": [],
@@ -837,8 +837,8 @@
       "package": "vyre-driver-wgpu",
       "manifest": "vyre-driver-wgpu/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 219,
-      "file_list_digest": "blake3:bbd49278db19b22e61d19d8e9c7e3a6c31ba774af2f633cb0ca281502cbc9872",
+      "file_count": 220,
+      "file_list_digest": "blake3:54e40d8a00fd36cc5e57999cc78eaa3890764a067a3406146b3ead557f1cae34",
       "rust_source_count": 95,
       "missing_required_files": [],
       "forbidden_files": [],

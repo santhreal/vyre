@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:8d6478ebb2e87d93975cde88b9a5a937b3174184:dirty=false",
+  "source_fingerprint": "git:5e5fe4098cbb5ad1422f191c4de75ac1006598ac:dirty=true:worktree=abc09396779a29bb3426bde0419971e4761880456a47c367ece88bdf96688ff2",
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4297,
+  "scanned_files": 4300,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -3836,7 +3836,7 @@
     },
     {
       "path": "vyre-driver-wgpu/tests/shared_backend_contract.rs",
-      "line": 138,
+      "line": 187,
       "pattern": "source_inspection_test",
       "owner_lane": "driver_wgpu",
       "surface": "test",
@@ -6202,7 +6202,7 @@
     },
     {
       "path": "vyre-driver-wgpu/tests/shared_backend_contract.rs",
-      "line": 138,
+      "line": 187,
       "pattern": "source_inspection_test",
       "text": "test `only_the_device_acquisition_module_constructs_a_wgpu_instance` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "only_the_device_acquisition_module_constructs_a_wgpu_instance"
