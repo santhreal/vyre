@@ -139,15 +139,17 @@ fn two_level_star_2000() -> (u32, Vec<u32>, Vec<u32>) {
 
 /// PROBE, NOT A SOUNDNESS PROOF. Read the second paragraph before citing this test.
 ///
-/// At 2000 nodes `build_dce_bfs_program` spans TWO workgroups of 1024, and its
+/// At 2000 nodes `build_dce_bfs_program` spans more than one workgroup of the
+/// pass width, and its
 /// persistent loop shares ONE global `changed` word across them: a plain store
 /// clears it, gated on global `gid_x == 0`, so exactly one lane in the whole grid
 /// clears, and every group `atomic_or`s the same word. The only fences in the loop
 /// are workgroup-scoped, so nothing orders one group's set against another group's
 /// early-exit read. The graph here puts the entire second-level discovery on hub
-/// source 1500, which lane 1500 (workgroup 1) reaches at stride 0, and discovery is
+/// source 1500, which the global lane for that source reaches at its own stride,
+/// and discovery is
 /// attributed EXCLUSIVELY to whichever group's `atomic_or` on `frontier_out`
-/// actually flips the bit, so the hub's discovery can belong to workgroup 1 alone.
+/// actually flips the bit, so the hub's discovery can belong to that group alone.
 /// On real hardware workgroup 0 can then read a flag workgroup 1 has not yet set,
 /// take the early exit, store `converged = 1` and report a truncated closure as a
 /// true fixpoint.
@@ -156,10 +158,11 @@ fn two_level_star_2000() -> (u32, Vec<u32>, Vec<u32>) {
 /// That agreement is NOT evidence the site is sound. The reference interpreter runs
 /// each workgroup's ENTIRE persistent loop to completion before starting the next,
 /// so the groups never interleave WITHIN an iteration, and the race lives strictly
-/// there. Forward, workgroup 0's stride-1 pass covers the hub itself and wins every
-/// flip; reversed, workgroup 1 runs before the entry seeds `frontier_out` (the seed
-/// is gated `t < 63`, all in workgroup 0), so it finds an empty frontier, exits and
-/// contributes nothing. Both schedules hide the defect by construction, and no
+/// there. Forward, workgroup 0's own strides cover the hub itself and win every
+/// flip; reversed, the later groups run before the entry seeds `frontier_out` (the
+/// seed is gated on a global lane below the bitset word count, all in workgroup 0),
+/// so they find an empty frontier, exit and contribute nothing. Both schedules hide
+/// the defect by construction, and no
 /// workgroup order available to this interpreter can expose it.
 ///
 /// So what this pins is the REACH of the CPU-reference evidence, not the safety of
@@ -187,10 +190,11 @@ fn dce_bfs_multi_workgroup_agreement_is_a_backend_limit_not_a_soundness_proof() 
         .map(|buffer| buffer.count())
         .max()
         .expect("the BFS program must declare buffers");
-    assert_eq!(
-        span.div_ceil(program.workgroup_size()[0]),
-        2,
-        "this fixture must actually span two workgroups, or it probes nothing"
+    let groups = span.div_ceil(program.workgroup_size()[0]);
+    assert!(
+        groups > 1,
+        "this fixture must actually span more than one workgroup, or it probes nothing: span {span} at width {} is {groups} group(s)",
+        program.workgroup_size()[0]
     );
 
     // Every node is reachable: 0 -> 1500 -> all the rest. 2000 bits set.
