@@ -38,6 +38,23 @@ jobs:
           fi
           cargo +nightly-2026-08-07 install --locked cargo-public-api --version 0.51.0
 
+      # cross-target compiles the product crates for one triple per target_os
+      # the source branches on, and it fails closed when a triple is missing
+      # rather than judging fewer platforms than the tree declares. A triple
+      # that stops being named here fails that gate by name, which is the only
+      # reason this list needs no second owner. rust-toolchain.toml pins the
+      # toolchain every cargo run in this checkout uses, so the targets are
+      # added to that toolchain rather than to whichever one an action
+      # installed last.
+      - name: Install the cross targets the tree declares
+        run: |
+          rustup target add \
+            aarch64-linux-android \
+            aarch64-apple-ios \
+            x86_64-unknown-linux-gnu \
+            x86_64-apple-darwin \
+            x86_64-pc-windows-msvc
+
       # Runs every registered gate and holds each to the number pinned in
       # xtask/gate-baselines.toml. Registering a gate without a pin fails, and a
       # pin naming no gate fails, so neither list is maintained by hand and no

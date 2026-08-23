@@ -69,6 +69,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
+      # The prepublish subset carries cross-target, which fails closed on a
+      # triple the toolchain does not have. rust-toolchain.toml decides which
+      # toolchain the targets land on, so this runs inside the checkout.
+      - name: Install the cross targets the tree declares
+        run: |
+          rustup target add \
+            aarch64-linux-android \
+            aarch64-apple-ios \
+            x86_64-unknown-linux-gnu \
+            x86_64-apple-darwin \
+            x86_64-pc-windows-msvc
+
       # Both are descriptor-derived subsets. Each member is held to its pinned
       # finding count exactly as it is in the whole-registry sweep.
       - name: Pre-publish subset
