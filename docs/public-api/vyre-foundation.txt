@@ -729,6 +729,7 @@ pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::fm
 pub fn vyre_foundation::execution_plan::fusion::fuse_programs(programs: &[vyre_foundation::ir::Program]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_foundation::execution_plan::fusion::fuse_programs_vec(programs: alloc::vec::Vec<vyre_foundation::ir::Program>) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_foundation::execution_plan::fusion::merge_programs_shared(programs: &[vyre_foundation::ir::Program]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
+pub fn vyre_foundation::execution_plan::fusion::relies_on_single_invocation_workgroup(prog: &vyre_foundation::ir::Program) -> bool
 pub fn vyre_foundation::execution_plan::plan(program: &vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::execution_plan::ExecutionPlan, vyre_foundation::execution_plan::PlanError>
 pub fn vyre_foundation::execution_plan::plan_for_adapter(program: &vyre_foundation::ir::Program, adapter_caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::execution_plan::ExecutionPlan, vyre_foundation::execution_plan::PlanError>
 pub fn vyre_foundation::execution_plan::plan_with_options(program: &vyre_foundation::ir::Program, options: vyre_foundation::validate::ValidationOptions<'_>) -> core::result::Result<vyre_foundation::execution_plan::ExecutionPlan, vyre_foundation::execution_plan::PlanError>
@@ -852,6 +853,7 @@ pub fn vyre_foundation::ir::Expr::invocation_local_x() -> Self
 pub fn vyre_foundation::ir::Expr::invocation_local_y() -> Self
 pub fn vyre_foundation::ir::Expr::invocation_local_z() -> Self
 pub fn vyre_foundation::ir::Expr::is_finite(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::is_first_invocation() -> Self
 pub fn vyre_foundation::ir::Expr::is_first_workgroup() -> Self
 pub fn vyre_foundation::ir::Expr::is_inf(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::is_nan(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
