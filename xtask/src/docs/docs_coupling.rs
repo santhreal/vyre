@@ -105,7 +105,8 @@ impl crate::gate::GateBehavior for DocsCoupling {
             pages.len(),
             pages.iter().map(|page| page.covers.len()).sum::<usize>()
         );
-        match changed_paths(&ctx.root, ctx.flag("--base"))? {
+        let base = base_ref(ctx.flag("--base"), std::env::var(BASE_REF_VARIABLE).ok());
+        match changed_paths(&ctx.root, base.as_deref())? {
             Diff::Read(changed) => {
                 report.note(format!("{declared}, {} changed path(s)", changed.len()));
                 report
@@ -433,16 +434,28 @@ enum Diff {
     UnreachableBase(String),
 }
 
+/// The environment variable a pull request carries its base branch in.
+const BASE_REF_VARIABLE: &str = "GITHUB_BASE_REF";
+
+/// The ref this run compares against, from the flag or the event.
+///
+/// `--base` wins, then the pull-request variable, which is set on that event
+/// and empty on every other. Resolving it at the entry and not inside
+/// [`changed_paths`] keeps the environment on one edge of the gate: the diff
+/// reader answers from its arguments alone, so asking it for the worktree diff
+/// means the worktree diff on a runner whose event names a base branch too.
+fn base_ref(flag: Option<&str>, event: Option<String>) -> Option<String> {
+    flag.map(str::to_string)
+        .or(event)
+        .filter(|reference| !reference.is_empty())
+}
+
 /// Every path the diff touches, relative to the checkout root.
 ///
 /// With a base ref the comparison is the merge base with `HEAD`, which is the
 /// set a pull request proposes. Without one it is the index plus the worktree,
 /// which is the set a local caller is about to commit.
 fn changed_paths(root: &Path, base: Option<&str>) -> Result<Diff, GateError> {
-    let base = base
-        .map(str::to_string)
-        .or_else(|| std::env::var("GITHUB_BASE_REF").ok())
-        .filter(|reference| !reference.is_empty());
     let Some(reference) = base else {
         let mut paths = diff_names(root, &["diff", "--name-only", "HEAD"])?;
         paths.extend(diff_names(
@@ -730,6 +743,38 @@ mod tests {
             ),
         }
         assert!(matches!(changed_paths(root, None), Ok(Diff::Read(_))));
+    }
+
+    /// WHY: rule 4 read its base branch out of the process environment from
+    /// inside the diff reader, so a caller asking for the worktree diff got the
+    /// pull-request diff on any runner whose event set that variable. The gate
+    /// then compared against `origin/main`, which a depth-1 pull-request
+    /// checkout does not carry, and the whole lane went red for a fetch depth.
+    /// Resolution is one pure function and every combination is stated here, so
+    /// a second reader of the event cannot appear without this failing.
+    #[test]
+    fn the_base_ref_comes_from_the_flag_then_the_event_and_never_from_nothing() {
+        assert_eq!(
+            base_ref(Some("release"), Some("main".to_string())),
+            Some("release".to_string()),
+            "Fix: an explicit --base must win over the event"
+        );
+        assert_eq!(
+            base_ref(None, Some("main".to_string())),
+            Some("main".to_string()),
+            "Fix: a pull request compares against the branch it targets"
+        );
+        assert_eq!(
+            base_ref(None, Some(String::new())),
+            None,
+            "Fix: the variable is empty on every event that is not a pull request"
+        );
+        assert_eq!(
+            base_ref(Some(""), None),
+            None,
+            "Fix: an empty flag names no ref"
+        );
+        assert_eq!(base_ref(None, None), None);
     }
 
     /// WHY: an uncovered change must not demand a fragment. Editing a test or a
