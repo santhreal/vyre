@@ -8,7 +8,7 @@
 //! fast despite being serial. The GPU must amortize branch divergence via
 //! massive parallelism over independent program instances.
 
-use crate::api::case::{BenchCase, BenchContext, BenchError};
+use crate::api::case::{BaselineClass, BenchCase, BenchContext, BenchError};
 use crate::cases::harness::{
     verify_exact, CaseOps, ContractDescription, HarnessCase, WorkloadDescription,
 };
@@ -62,6 +62,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
         primitive: "Bytecode interpreter",
         baseline_crate: "vyre-bench",
         baseline_name: "in-tree scalar Rust match-dispatch interpreter loop (cpu_interpret)",
+        baseline_class: BaselineClass::CpuSota,
         min_speedup_x: 3.0,
     }),
 );

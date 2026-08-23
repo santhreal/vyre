@@ -171,10 +171,11 @@ impl BenchCase for MicroCase {
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
         self.contract.map(|contract| {
-            PerformanceContract::cpu_sota_min_speedup(
+            PerformanceContract::min_speedup(
                 contract.primitive,
                 contract.baseline_crate,
                 contract.baseline_name,
+                contract.baseline_class,
                 contract.min_speedup_x,
             )
         })

@@ -8,19 +8,20 @@
 //! per case.
 
 use crate::api::case::{
-    prepared_as, prepared_as_mut, BenchCase, BenchContext, BenchError, BenchId, BenchLayer,
-    BenchMetadata, BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract,
-    PreparedCase, WorkloadClass,
+    prepared_as, prepared_as_mut, BaselineClass, BenchCase, BenchContext, BenchError, BenchId,
+    BenchLayer, BenchMetadata, BenchRequirements, BenchRun, Correctness, DeterminismClass,
+    PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::suite::SuiteKind;
 use vyre_foundation::ir::Program;
 
-/// The CPU-baseline speedup floor a case is held to.
+/// The speedup floor a case is held to, and what the floor is measured against.
 #[derive(Clone, Copy)]
 pub(crate) struct ContractDescription {
     pub(crate) primitive: &'static str,
     pub(crate) baseline_crate: &'static str,
     pub(crate) baseline_name: &'static str,
+    pub(crate) baseline_class: BaselineClass,
     pub(crate) min_speedup_x: f64,
 }
 
@@ -218,10 +219,11 @@ impl<P: 'static> BenchCase for HarnessCase<P> {
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
         self.workload.contract.map(|contract| {
-            PerformanceContract::cpu_sota_min_speedup(
+            PerformanceContract::min_speedup(
                 contract.primitive,
                 contract.baseline_crate,
                 contract.baseline_name,
+                contract.baseline_class,
                 contract.min_speedup_x,
             )
         })
@@ -281,7 +283,7 @@ pub(crate) fn program_payload(prepared: &Program) -> Option<&Program> {
 #[cfg(test)]
 mod tests {
     use super::{ContractDescription, WorkloadDescription, HONEST_SUITES};
-    use crate::api::case::{BenchCase, BenchLayer, DeterminismClass, WorkloadClass};
+    use crate::api::case::{BaselineClass, BenchCase, BenchLayer, DeterminismClass, WorkloadClass};
     use crate::api::suite::SuiteKind;
     use crate::cases::harness::{CaseOps, HarnessCase};
 
@@ -295,6 +297,7 @@ mod tests {
             primitive: "x",
             baseline_crate: "y",
             baseline_name: "y 1.0",
+            baseline_class: BaselineClass::CpuSota,
             min_speedup_x: 7.0,
         }),
     );

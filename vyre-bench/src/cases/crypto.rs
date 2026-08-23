@@ -7,7 +7,7 @@
 //! CPU baseline: OpenSSL EVP AES-128-CTR, which routes through AES-NI on
 //! x86_64 hosts with AES acceleration.
 
-use crate::api::case::{BenchCase, BenchContext, BenchError};
+use crate::api::case::{BaselineClass, BenchCase, BenchContext, BenchError};
 use crate::cases::harness::{
     verify_exact, CaseOps, ContractDescription, HarnessCase, WorkloadDescription,
 };
@@ -91,6 +91,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
         primitive: "AES-CTR encryption",
         baseline_crate: "openssl",
         baseline_name: "OpenSSL 0.10.78 EVP path with hardware AES acceleration",
+        baseline_class: BaselineClass::CpuSota,
         min_speedup_x: 3.0,
     }),
 );

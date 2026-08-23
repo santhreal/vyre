@@ -39,10 +39,22 @@ pub struct BenchMetadata {
     pub owner_crate: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// What a recorded speedup is measured against.
+///
+/// A class is a provenance claim, not a difficulty rating: a reader multiplies
+/// the number by what the class names. `CpuSota` says a host implementation was
+/// timed, so a baseline dispatched on the device is never that class, however
+/// much host code prepared it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BaselineClass {
+    /// A host implementation of the same primitive.
     CpuSota,
+    /// A vendor or third-party device implementation of the same primitive.
     GpuSota,
+    /// The same program on the same device without the transformation under
+    /// test. It measures what a compiler pass removed, not what the device
+    /// beat.
+    SelfUnoptimized,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,19 +79,39 @@ impl PerformanceContract {
         baseline: impl Into<String>,
         min_speedup_x: f64,
     ) -> Self {
-        Self::cpu_sota_min_speedup_for_backends(
+        Self::min_speedup_for_backends(
             primitive,
             crate_name,
             baseline,
+            BaselineClass::CpuSota,
             min_speedup_x,
             ["cuda", "wgpu"],
         )
     }
 
-    fn cpu_sota_min_speedup_for_backends(
+    /// A floor against a named baseline, on both device backends.
+    pub fn min_speedup(
         primitive: impl Into<String>,
         crate_name: impl Into<String>,
         baseline: impl Into<String>,
+        class: BaselineClass,
+        min_speedup_x: f64,
+    ) -> Self {
+        Self::min_speedup_for_backends(
+            primitive,
+            crate_name,
+            baseline,
+            class,
+            min_speedup_x,
+            ["cuda", "wgpu"],
+        )
+    }
+
+    fn min_speedup_for_backends(
+        primitive: impl Into<String>,
+        crate_name: impl Into<String>,
+        baseline: impl Into<String>,
+        class: BaselineClass,
         min_speedup_x: f64,
         backend_ids: impl IntoIterator<Item = impl Into<String>>,
     ) -> Self {
@@ -88,7 +120,7 @@ impl PerformanceContract {
             baselines: vec![BaselineTarget {
                 name: baseline.into(),
                 crate_name: crate_name.into(),
-                class: BaselineClass::CpuSota,
+                class,
                 min_speedup_x,
                 backend_ids: backend_ids.into_iter().map(Into::into).collect(),
             }],

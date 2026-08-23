@@ -1,5 +1,6 @@
 //! Dense 256x256 f32 matrix multiplication.
 
+use crate::api::case::BaselineClass;
 use crate::cases::harness::ContractDescription;
 use crate::cases::micro::{MicroCase, MicroWork};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -13,6 +14,7 @@ pub(crate) static MATMUL: MicroCase = MicroCase {
         primitive: "f32 matmul 256x256",
         baseline_crate: "faer",
         baseline_name: "faer CPU matrix multiply baseline",
+        baseline_class: BaselineClass::CpuSota,
         min_speedup_x: 3.0,
     }),
     program,

@@ -195,6 +195,13 @@ pub(crate) enum ContractBackendIssue {
     NoApplicableBaseline { case_id: String, backend_id: String },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum BaselineProvenanceIssue {
+    HostClassWithDeviceTiming { case_id: String, class: String },
+    DeviceClassWithoutDeviceTiming { case_id: String, class: String },
+    UnknownClass { case_id: String, class: String },
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum CudaTelemetryLabelIssue {
     MissingLabel {

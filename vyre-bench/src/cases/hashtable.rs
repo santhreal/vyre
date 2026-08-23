@@ -8,7 +8,7 @@
 //! pointer-chasing patterns that exploit CPU caches. The GPU must overcome
 //! random-access memory latency via massive parallelism.
 
-use crate::api::case::{BenchCase, BenchContext, BenchError};
+use crate::api::case::{BaselineClass, BenchCase, BenchContext, BenchError};
 use crate::cases::harness::{
     verify_exact, CaseOps, ContractDescription, HarnessCase, WorkloadDescription,
 };
@@ -53,6 +53,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
         primitive: "Hash table probe",
         baseline_crate: "hashbrown",
         baseline_name: "hashbrown 0.17.0 prebuilt SwissTable probe",
+        baseline_class: BaselineClass::CpuSota,
         min_speedup_x: 10.0,
     }),
 );

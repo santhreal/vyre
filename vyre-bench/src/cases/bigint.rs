@@ -7,7 +7,7 @@
 //! Modular exponentiation is compute-bound with carry-chain dependencies.
 //! GPU must overcome serial multiply-chain via massive instance parallelism.
 
-use crate::api::case::{BenchCase, BenchContext, BenchError};
+use crate::api::case::{BaselineClass, BenchCase, BenchContext, BenchError};
 use crate::cases::harness::{
     verify_exact, CaseOps, ContractDescription, HarnessCase, WorkloadDescription,
 };
@@ -61,6 +61,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
         primitive: "Modular exponentiation",
         baseline_crate: "vyre-bench",
         baseline_name: "in-tree scalar u32-limb square-and-multiply modexp (cpu_modexp)",
+        baseline_class: BaselineClass::CpuSota,
         min_speedup_x: 2.0,
     }),
 );

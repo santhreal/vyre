@@ -1,4 +1,4 @@
-use crate::api::case::{BenchCase, BenchContext, BenchError, BenchRun, Correctness};
+use crate::api::case::{BaselineClass, BenchCase, BenchContext, BenchError, BenchRun, Correctness};
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::ResidentInputSet;
 use crate::cases::harness::{CaseOps, ContractDescription, HarnessCase, WorkloadDescription};
@@ -7,12 +7,15 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 static WORKLOAD: WorkloadDescription = WorkloadDescription {
     id: "foundation.optimizer.impact",
     name: "Optimizer Impact Analysis",
-    summary: "Measures GPU speedup from CSE and constant folding",
+    summary: "Measures device speedup from CSE and constant folding",
     tags: &["compute", "optimizer"],
     contract: Some(ContractDescription {
         primitive: "canonical semantic Program optimization",
         baseline_crate: "vyre-bench",
         baseline_name: "the same Program submitted without semantic optimization",
+        // Both arms are dispatched on the device under test, so the number is
+        // what the optimizer removed and not what the device beat.
+        baseline_class: BaselineClass::SelfUnoptimized,
         min_speedup_x: 1.0,
     }),
     ..WorkloadDescription::BASE

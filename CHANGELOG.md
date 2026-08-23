@@ -3831,6 +3831,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   whole module, so splitting an oversized module into submodules no longer
   reports its implementation tokens as deleted. The CUDA resident readback path
   is a marker of its own, citing the file that implements it.
+- A benchmark baseline class states where the baseline ran, and the recorded
+  timing has to agree with it. `foundation.optimizer.impact` dispatches the
+  same program twice, with and without the semantic optimizer, and filed the
+  pair as `CpuSota`; a class is a provenance claim, so a self-comparison read
+  as a speedup over a host implementation of the primitive. `BaselineClass`
+  gains `SelfUnoptimized`, every case declares its own class instead of
+  inheriting one, and release evidence is refused when a host class records a
+  dispatched baseline or a device class records none. The placement is an
+  exhaustive match, so a class added later does not compile until it says which
+  side it is on.
 - The benchmark harness builds its compile request from the probed backend
   profile instead of unknown device facts, so a case that uses subgroup
   intrinsics is measured on a device that has them rather than recorded as a

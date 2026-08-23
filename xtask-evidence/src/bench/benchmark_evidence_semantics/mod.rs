@@ -17,6 +17,7 @@ mod backend_identity;
 mod backend_suite_artifact_status;
 mod backend_suite_inventory;
 mod backend_suite_parity;
+mod baseline_provenance;
 mod case_summary;
 mod cpu_sota_100x;
 mod data;

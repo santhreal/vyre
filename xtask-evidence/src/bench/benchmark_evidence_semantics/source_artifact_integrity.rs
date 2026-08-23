@@ -3,17 +3,19 @@
 //! An aggregate that cites an artifact inherits everything wrong inside it, so
 //! the artifact is opened and its cases are checked before any count derived
 //! from it is believed: the summary against the cases, each case's backend
-//! against the artifact's selected backend, each optimization label against the
-//! counters that prove it, and the forbidden borrowed-resident escape hatch
-//! against the native dispatch the aggregate claims.
+//! against the artifact's selected backend, each baseline's class against the
+//! timing that class claims, each optimization label against the counters that
+//! prove it, and the forbidden borrowed-resident escape hatch against the
+//! native dispatch the aggregate claims.
 
 use serde_json::Value;
 
 use super::backend_identity::{backend_consistency_issues, contract_backend_issues};
+use super::baseline_provenance::baseline_provenance_issues;
 use super::case_summary::benchmark_report_summary_case_evidence_mismatch;
 use super::data::{
-    BackendConsistencyIssue, ContractBackendIssue, CudaForbiddenTelemetryIssue,
-    CudaTelemetryLabelIssue,
+    BackendConsistencyIssue, BaselineProvenanceIssue, ContractBackendIssue,
+    CudaForbiddenTelemetryIssue, CudaTelemetryLabelIssue,
 };
 use super::telemetry_labels::{cuda_forbidden_telemetry_issues, cuda_telemetry_label_issues};
 
@@ -59,6 +61,23 @@ pub(crate) fn inspect_source_artifact_case_integrity(
                 backend_id,
             } => issues.push(format!(
                 "source_artifact `{artifact}` case `{case_id}` backend `{backend_id}` has no applicable performance contract baseline"
+            )),
+        }
+    }
+    for issue in baseline_provenance_issues(report) {
+        match issue {
+            BaselineProvenanceIssue::HostClassWithDeviceTiming { case_id, class } => {
+                issues.push(format!(
+                "source_artifact `{artifact}` case `{case_id}` claims baseline class `{class}` and records a dispatched baseline; name the class the timing proves"
+            ))
+            }
+            BaselineProvenanceIssue::DeviceClassWithoutDeviceTiming { case_id, class } => {
+                issues.push(format!(
+                "source_artifact `{artifact}` case `{case_id}` claims baseline class `{class}` and records no baseline dispatch; a device baseline records the dispatch it ran"
+            ))
+            }
+            BaselineProvenanceIssue::UnknownClass { case_id, class } => issues.push(format!(
+                "source_artifact `{artifact}` case `{case_id}` records baseline class {class}, which is not a declared BaselineClass"
             )),
         }
     }

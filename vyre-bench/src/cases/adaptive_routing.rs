@@ -18,7 +18,8 @@ use super::triplet_pass::{
     TripletSpec,
 };
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, Correctness, WorkloadClass,
+    BaselineClass, BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, Correctness,
+    WorkloadClass,
 };
 use crate::api::metric::MetricPoint;
 use crate::api::suite::SuiteKind;
@@ -53,11 +54,12 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     min_input_bytes: Some(ITEM_COUNT as u64 * 12),
     feature_set: &["runtime.adaptive-routing", "resident"],
     contract: Some(ContractDescription {
-        primitive: "GPU-resident adaptive workload routing",
-        baseline_crate: "rayon",
-        baseline_name: "Rayon-parallel CPU scheduler over equivalent routing predicates",
-        min_speedup_x: 10.0,
-    }),
+            primitive: "GPU-resident adaptive workload routing",
+            baseline_crate: "rayon",
+            baseline_name: "Rayon-parallel CPU scheduler over equivalent routing predicates",
+            baseline_class: BaselineClass::CpuSota,
+            min_speedup_x: 10.0,
+        }),
     ..WorkloadDescription::BASE
 };
 

@@ -19,7 +19,7 @@ use super::conditional::{
     verify_sparse_outputs, ConditionalLabels, ConditionalPrepared, PatternStreams,
 };
 use super::harness::{CaseOps, ContractDescription, HarnessCase, WorkloadDescription};
-use crate::api::case::{BenchCase, BenchContext, BenchError, BenchRun, Correctness};
+use crate::api::case::{BaselineClass, BenchCase, BenchContext, BenchError, BenchRun, Correctness};
 use crate::api::metric::elapsed_ns;
 use crate::api::resident::{input_bytes_total, u32_counter_reset_program, ResidentInputSet};
 use rayon::prelude::*;
@@ -69,11 +69,12 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
     ],
     PATTERN_COUNT as u64 * 12 + RULE_COUNT as u64 * 40 + 4,
     Some(ContractDescription {
-        primitive: "YARA-like boolean rule-condition evaluation",
-        baseline_crate: "rayon",
-        baseline_name: "Rayon-parallel scalar short-circuit rule loop",
-        min_speedup_x: 100.0,
-    }),
+            primitive: "YARA-like boolean rule-condition evaluation",
+            baseline_crate: "rayon",
+            baseline_name: "Rayon-parallel scalar short-circuit rule loop",
+            baseline_class: BaselineClass::CpuSota,
+            min_speedup_x: 100.0,
+        }),
 );
 
 static OPS: CaseOps<ConditionalPrepared> = CaseOps {
