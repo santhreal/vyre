@@ -111,10 +111,13 @@ fn generated_hardware_registry_shapes_match_declared_surface() {
             expected.id
         );
         for (case_inputs, case_expected) in fixture_inputs.iter().zip(fixture_expected.iter()) {
+            // A fixture carries the host-supplied buffers only. The backend
+            // allocates the output, so counting it here would demand a zeroed
+            // placeholder the artifact ABI rejects.
             assert_eq!(
                 case_inputs.len(),
-                shape.total_buffers() as usize,
-                "{} fixture arity must match OpShape",
+                shape.input_buffers as usize,
+                "{} fixture arity must match the OpShape input count",
                 expected.id
             );
             assert_eq!(
@@ -162,7 +165,7 @@ fn generated_hardware_registry_is_stable_across_thousands_of_lookup_paths() {
         assert_eq!(entry.id, expected.id);
         assert_eq!(entry.category(), Some("hardware"));
         assert_eq!(shape, expected.shape);
-        assert_eq!(shape.total_buffers() as usize, fixture_inputs[case].len());
+        assert_eq!(shape.input_buffers as usize, fixture_inputs[case].len());
         assert_eq!(shape.output_buffers as usize, fixture_expected[case].len());
         assert_eq!(
             run_cpu(entry, &fixture_inputs[case]),
