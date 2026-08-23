@@ -42,9 +42,10 @@ pub const OP_ID: &str = "vyre-pass-engine::optimizer::dce_program";
 ///
 /// One workgroup suffices, because WORKGROUP 0'S LANES ALONE VISIT EVERY SOURCE:
 /// the step strides `src = gid_x() + stride * DCE_WORKGROUP_X` for
-/// `stride_count = ceil(node_count / DCE_WORKGROUP_X)` iterations, so lanes
-/// `0..DCE_WORKGROUP_X` cover the whole node range by themselves. Verified on
-/// device, not assumed: a 2000-node chain pinned to one workgroup reaches all 2000.
+/// `stride_count = ceil(node_count / DCE_WORKGROUP_X)` iterations, and the seed
+/// strides the frontier words the same way, so lanes `0..DCE_WORKGROUP_X` cover
+/// the whole node range by themselves at any width. Verified on device, not
+/// assumed: a 2000-node chain pinned to one workgroup reaches all 2000.
 ///
 /// More than one workgroup is UNSOUND, and the reason is not the obvious one. The
 /// obvious reading is a lost clear: one lane zeroes `changed[0]` with a plain
@@ -69,7 +70,15 @@ pub const OP_ID: &str = "vyre-pass-engine::optimizer::dce_program";
 /// tree already applies to scalar reductions that initialize their own output
 /// (`reduction_metrics.rs`), for the same reason: some programs cannot be split
 /// across unsynchronized workgroups.
-const DCE_WORKGROUP_X: u32 = 1024;
+///
+/// The width is the crate's portable workgroup width, which every sibling pass
+/// here already dispatches at. It is not a tuning choice either: one shader
+/// dialect this program lowers to caps a workgroup at 256 invocations, so a
+/// wider width makes the pass undispatchable on that backend rather than
+/// faster. Measured before this was 256: every `self_optimizer_dce_e2e` case
+/// failed on the wgpu backend with `workgroup_size axis 0 (requested 1024, max
+/// 256)`, so the self-hosted DCE pass had never run on that device at all.
+const DCE_WORKGROUP_X: u32 = super::arena_kernel::WORKGROUP_X;
 
 /// Parallel BFS step with per-thread strided loop. Thread
 /// `t = gid_x()` handles sources `t, t + WG, t + 2·WG, …` up to
@@ -83,7 +92,7 @@ const DCE_WORKGROUP_X: u32 = 1024;
 /// `0xFFFF_FFFF` (any-kind), the generic persistent-BFS caller
 /// passes the real allow_mask.
 fn parallel_csr_step_per_thread_masked(node_count: u32, allow_mask: u32) -> Vec<Node> {
-    let stride_count = (node_count + DCE_WORKGROUP_X - 1) / DCE_WORKGROUP_X;
+    let stride_count = node_count.div_ceil(DCE_WORKGROUP_X);
     vec![Node::loop_for(
         "stride",
         Expr::u32(0),
@@ -373,14 +382,32 @@ fn build_persistent_bfs_program_internal(
     ));
 
     let entry: Vec<Node> = vec![
-        // Seed frontier_out <- frontier_in.
-        Node::if_then(
-            Expr::lt(t.clone(), Expr::u32(words)),
-            vec![Node::store(
-                "frontier_out",
-                t.clone(),
-                Expr::load("frontier_in", t.clone()),
-            )],
+        // Seed frontier_out <- frontier_in, strided like the step: a graph with
+        // more frontier words than the workgroup has lanes must still be seeded
+        // whole, and one lane per word only covers `words <= DCE_WORKGROUP_X`.
+        // A truncated seed starts the traversal from a partial frontier and
+        // reports a fixpoint over a closure it never reached.
+        Node::loop_for(
+            "seed_stride",
+            Expr::u32(0),
+            Expr::u32(words.div_ceil(DCE_WORKGROUP_X).max(1)),
+            vec![
+                Node::let_bind(
+                    "seed_word",
+                    Expr::add(
+                        t.clone(),
+                        Expr::mul(Expr::var("seed_stride"), Expr::u32(DCE_WORKGROUP_X)),
+                    ),
+                ),
+                Node::if_then(
+                    Expr::lt(Expr::var("seed_word"), Expr::u32(words)),
+                    vec![Node::store(
+                        "frontier_out",
+                        Expr::var("seed_word"),
+                        Expr::load("frontier_in", Expr::var("seed_word")),
+                    )],
+                ),
+            ],
         ),
         // `converged` starts at 0 so a kernel that runs every iteration without
         // reaching a fixpoint leaves it 0. Only the early-exit branch sets it.
@@ -389,7 +416,7 @@ fn build_persistent_bfs_program_internal(
             vec![Node::store("converged", Expr::u32(0), Expr::u32(0))],
         ),
         // Workgroup-scoped, deliberately, and NOT an oversight. The seeding lanes
-        // are gated `t < words` and therefore all live in workgroup 0, which is
+        // stride within their own workgroup and so all live in workgroup 0, which is
         // also the only workgroup the answer depends on: see `DCE_WORKGROUP_X` for
         // why every other workgroup is a pure duplicate. A non-zero workgroup that
         // enters the traversal reading an unseeded `frontier_out` expands nothing
@@ -440,14 +467,18 @@ fn build_persistent_bfs_program_internal(
         )
         .with_count(1),
     );
-    buffers.push(BufferDecl::workgroup("wg_scratch", 256, DataType::U32));
+    buffers.push(BufferDecl::workgroup(
+        "wg_scratch",
+        DCE_WORKGROUP_X,
+        DataType::U32,
+    ));
 
     // The emitted width MUST be `DCE_WORKGROUP_X`, not a literal that merely
-    // matches it today. The stride in `parallel_csr_step_per_thread_masked` is
-    // built from that same const, and the redundancy invariant holds only while
-    // the two agree. Raise the const alone and the stride starts skipping whole
-    // lane ranges (`src = gid + stride * 2048` from 1024 lanes never visits
-    // 1024..2047) and the traversal silently returns a truncated closure.
+    // matches it today. The step stride, the seed stride and the workgroup
+    // scratch are all built from that same const, and the coverage invariant
+    // holds only while all of them agree. Pin the width to a literal and raise
+    // the const, and the strides start skipping whole lane ranges the emitted
+    // launch never has, so the traversal returns a truncated closure.
     Program::wrapped(
         buffers,
         [DCE_WORKGROUP_X, 1, 1],
