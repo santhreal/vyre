@@ -3923,6 +3923,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   that stated no exclusion at all. The bound on the output a failed benchmark
   child contributes to a report applies to the joined text, so a command
   writing on both streams no longer contributes twice the bound.
+- `graph::dominator_frontier_pred_check` clamps both CSR loop ends to the
+  extent of the buffer the loop indexes, so a caller or a fused producer cannot
+  ask it for four billion iterations that had nothing to read.
 - Three vyre-bench tests named vyre_driver_cuda, which the crate depends on
   only under cfg(not(target_os = "macos")). The macOS lane failed to resolve
   the crate and the whole benchmark harness stopped compiling there. Each test
@@ -7229,6 +7232,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   registered gate that carries its assertions and the injection that proved
   that gate red, and a row whose script is still tracked must record it as an
   operator action.
+- The self-hosted DCE pass declares the portable 256-invocation workgroup every
+  sibling pass uses, so it is dispatchable on a dialect that caps a workgroup
+  at 256, and its frontier seed strides instead of assuming one lane per word.
 - The sweep runner's name has one owner. `gates` was a literal in the
   dispatcher, in the generated help and in the check that every subcommand a
   workflow names is dispatchable, and that check compared against the gate
