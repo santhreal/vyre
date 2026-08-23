@@ -610,8 +610,16 @@ mod tests {
     }
 
     /// Every `p50` of one metric across every recorded bench file in the tree,
-    /// paired with the case id it came from.
-    fn recorded(metric: &str) -> Vec<(String, u64)> {
+    /// paired with the file and the case id it came from.
+    ///
+    /// The file is part of the answer because one case id appears in more than
+    /// one recording, with a different figure in each. Reading a metric by id
+    /// alone then answers from whichever file `read_dir` happened to yield
+    /// first, which is a filesystem fact: the same tree read the traffic rate
+    /// as 3623 on one host and 3788 on another, and the constant can only equal
+    /// one of them. The file list is sorted so a walk is a function of the
+    /// tree, and a metric is read out of the recording that named the case.
+    fn recorded(metric: &str) -> Vec<(std::path::PathBuf, String, u64)> {
         fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
             let Ok(entries) = std::fs::read_dir(dir) else {
                 return;
@@ -631,6 +639,7 @@ mod tests {
         walk(&bench.join("snapshots"), &mut files);
         walk(&bench.join("baselines"), &mut files);
         assert!(!files.is_empty(), "no recorded bench file was found");
+        files.sort();
 
         let mut found = Vec::new();
         for file in files {
@@ -651,7 +660,7 @@ mod tests {
                     .get("id")
                     .and_then(serde_json::Value::as_str)
                     .unwrap_or_default();
-                found.push((id.to_string(), p50));
+                found.push((file.clone(), id.to_string(), p50));
             }
         }
         found
@@ -666,9 +675,9 @@ mod tests {
     #[test]
     fn the_cost_weights_are_the_figures_the_recordings_hold() {
         let dispatches = recorded("dispatch_ns");
-        let (floor_case, floor) = dispatches
+        let (floor_file, floor_case, floor) = dispatches
             .iter()
-            .min_by_key(|(id, p50)| (*p50, id.as_str()))
+            .min_by_key(|(file, id, p50)| (*p50, file.as_path(), id.as_str()))
             .expect("a recorded dispatch must exist");
         assert_eq!(
             LAUNCH_COST_FLOOR_NS, *floor,
@@ -676,10 +685,15 @@ mod tests {
         );
 
         let rates = recorded("device_gb_s_x1000");
-        let (_, rate) = rates
+        let (_, _, rate) = rates
             .iter()
-            .find(|(id, _)| id == floor_case)
-            .expect("the case that fixes the floor must record its device rate");
+            .find(|(file, id, _)| file == floor_file && id == floor_case)
+            .unwrap_or_else(|| {
+                panic!(
+                    "the recording that fixes the floor must state its device rate: `{floor_case}` in {}",
+                    floor_file.display()
+                )
+            });
         assert_eq!(
             TRAFFIC_BYTES_PER_NS,
             rate.saturating_add(500).div_euclid(1_000),
