@@ -105,7 +105,10 @@ impl crate::gate::GateBehavior for DocsCoupling {
             pages.len(),
             pages.iter().map(|page| page.covers.len()).sum::<usize>()
         );
-        let base = base_ref(ctx.flag("--base"), std::env::var(BASE_REF_VARIABLE).ok());
+        let base = crate::checkout::requested_base_ref(
+            ctx.flag("--base"),
+            std::env::var(crate::checkout::BASE_REF_VARIABLE).ok(),
+        );
         match changed_paths(&ctx.root, base.as_deref())? {
             Diff::Read(changed) => {
                 report.note(format!("{declared}, {} changed path(s)", changed.len()));
@@ -434,27 +437,14 @@ enum Diff {
     UnreachableBase(String),
 }
 
-/// The environment variable a pull request carries its base branch in.
-const BASE_REF_VARIABLE: &str = "GITHUB_BASE_REF";
-
-/// The ref this run compares against, from the flag or the event.
-///
-/// `--base` wins, then the pull-request variable, which is set on that event
-/// and empty on every other. Resolving it at the entry and not inside
-/// [`changed_paths`] keeps the environment on one edge of the gate: the diff
-/// reader answers from its arguments alone, so asking it for the worktree diff
-/// means the worktree diff on a runner whose event names a base branch too.
-fn base_ref(flag: Option<&str>, event: Option<String>) -> Option<String> {
-    flag.map(str::to_string)
-        .or(event)
-        .filter(|reference| !reference.is_empty())
-}
-
 /// Every path the diff touches, relative to the checkout root.
 ///
 /// With a base ref the comparison is the merge base with `HEAD`, which is the
 /// set a pull request proposes. Without one it is the index plus the worktree,
-/// which is the set a local caller is about to commit.
+/// which is the set a local caller is about to commit. The name is resolved by
+/// [`crate::checkout::resolvable_base_ref`], so a revision this checkout
+/// already holds is compared against directly and only a bare branch name is
+/// looked for on `origin`.
 fn changed_paths(root: &Path, base: Option<&str>) -> Result<Diff, GateError> {
     let Some(reference) = base else {
         let mut paths = diff_names(root, &["diff", "--name-only", "HEAD"])?;
@@ -464,24 +454,14 @@ fn changed_paths(root: &Path, base: Option<&str>) -> Result<Diff, GateError> {
         )?);
         return Ok(Diff::Read(paths));
     };
-    let remote = format!("origin/{reference}");
-    if !ref_exists(root, &remote) {
-        return Ok(Diff::UnreachableBase(remote));
-    }
-    let range = format!("{remote}...HEAD");
+    let Some(resolved) = crate::checkout::resolvable_base_ref(root, reference) else {
+        return Ok(Diff::UnreachableBase(reference.to_string()));
+    };
+    let range = format!("{resolved}...HEAD");
     Ok(Diff::Read(diff_names(
         root,
         &["diff", "--name-only", &range],
     )?))
-}
-
-/// Whether this checkout holds the named ref.
-///
-/// `rev-parse --verify` is asked rather than inferred from a failing `diff`,
-/// because a diff can fail for reasons a fetch does not fix and the two
-/// answers need different fix lines.
-fn ref_exists(root: &Path, reference: &str) -> bool {
-    crate::checkout::git_ref_exists(root, reference)
 }
 
 /// One `git diff` invocation, as a set of paths.
@@ -735,7 +715,7 @@ mod tests {
             .unwrap_or(&root);
         match changed_paths(root, Some("no-such-base-ref-cbb0a1")) {
             Ok(Diff::UnreachableBase(reference)) => {
-                assert_eq!(reference, "origin/no-such-base-ref-cbb0a1");
+                assert_eq!(reference, "no-such-base-ref-cbb0a1");
             }
             other => panic!(
                 "Fix: an unreachable base must report itself, got {:?}",
@@ -745,36 +725,21 @@ mod tests {
         assert!(matches!(changed_paths(root, None), Ok(Diff::Read(_))));
     }
 
-    /// WHY: rule 4 read its base branch out of the process environment from
-    /// inside the diff reader, so a caller asking for the worktree diff got the
-    /// pull-request diff on any runner whose event set that variable. The gate
-    /// then compared against `origin/main`, which a depth-1 pull-request
-    /// checkout does not carry, and the whole lane went red for a fetch depth.
-    /// Resolution is one pure function and every combination is stated here, so
-    /// a second reader of the event cannot appear without this failing.
+    /// WHY: rule 4 must add a local base to the reachable set rather than
+    /// demand a fetch for it, because a caller who names a revision this
+    /// checkout holds is asking about that revision.
     #[test]
-    fn the_base_ref_comes_from_the_flag_then_the_event_and_never_from_nothing() {
-        assert_eq!(
-            base_ref(Some("release"), Some("main".to_string())),
-            Some("release".to_string()),
-            "Fix: an explicit --base must win over the event"
+    fn a_base_ref_this_checkout_holds_is_compared_against_directly() {
+        let root = std::env::current_dir().expect("Fix: the test runs inside the checkout.");
+        let root = root
+            .ancestors()
+            .find(|path| path.join(".git").exists())
+            .unwrap_or(&root);
+
+        assert!(
+            matches!(changed_paths(root, Some("HEAD")), Ok(Diff::Read(_))),
+            "Fix: `HEAD` resolves here, so it is a base and not a missing remote ref"
         );
-        assert_eq!(
-            base_ref(None, Some("main".to_string())),
-            Some("main".to_string()),
-            "Fix: a pull request compares against the branch it targets"
-        );
-        assert_eq!(
-            base_ref(None, Some(String::new())),
-            None,
-            "Fix: the variable is empty on every event that is not a pull request"
-        );
-        assert_eq!(
-            base_ref(Some(""), None),
-            None,
-            "Fix: an empty flag names no ref"
-        );
-        assert_eq!(base_ref(None, None), None);
     }
 
     /// WHY: an uncovered change must not demand a fragment. Editing a test or a

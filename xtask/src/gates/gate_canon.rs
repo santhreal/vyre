@@ -251,8 +251,12 @@ impl crate::gate::GateBehavior for GateCanon {
             current.len()
         ));
 
-        let Some(base) = base_revision(&ctx.root, ctx.flag("--base")) else {
-            let reference = requested_base(ctx.flag("--base")).unwrap_or_default();
+        let named = crate::checkout::requested_base_ref(
+            ctx.flag("--base"),
+            std::env::var(crate::checkout::BASE_REF_VARIABLE).ok(),
+        );
+        let Some(base) = base_revision(&ctx.root, named.as_deref()) else {
+            let reference = named.unwrap_or_default();
             report.find(Finding::new(
                 format!("`{reference}` is not in this checkout, so no direction can be judged against it"),
                 "fetch the base ref before running this gate: `actions/checkout` with `fetch-depth: 0`, or pass `--base REF` naming a ref this checkout holds",
@@ -274,37 +278,19 @@ impl crate::gate::GateBehavior for GateCanon {
     }
 }
 
-/// The ref the caller asked to compare against, before it is resolved.
-fn requested_base(flag: Option<&str>) -> Option<String> {
-    flag.map(str::to_string)
-        .or_else(|| std::env::var("GITHUB_BASE_REF").ok())
-        .filter(|reference| !reference.is_empty())
-}
-
-/// The ref that resolves in this checkout, given the name the caller supplied.
-///
-/// `GITHUB_BASE_REF` carries a bare branch name that only exists as a remote
-/// ref, so a bare name falls back to `origin/<name>`. Prefixing unconditionally
-/// told a caller who named a local revision to fetch a ref that was already in
-/// front of it.
-fn resolvable_base(root: &Path, named: &str) -> Option<String> {
-    if revision_exists(root, named) {
-        return Some(named.to_string());
-    }
-    let remote = format!("origin/{named}");
-    revision_exists(root, &remote).then_some(remote)
-}
-
 /// The revision every before-state is read from.
 ///
 /// With a base ref it is the merge base with `HEAD`, which is what a pull
 /// request proposes to change. Without one it is `HEAD`, so the comparison is
 /// the uncommitted worktree, which is what a local caller is about to commit.
-fn base_revision(root: &Path, flag: Option<&str>) -> Option<String> {
-    let Some(named) = requested_base(flag) else {
+/// The name arrives as an argument and is resolved by
+/// [`crate::checkout::resolvable_base_ref`], so this reader answers from its
+/// arguments alone.
+fn base_revision(root: &Path, named: Option<&str>) -> Option<String> {
+    let Some(named) = named else {
         return revision_exists(root, "HEAD").then(|| "HEAD".to_string());
     };
-    let reference = resolvable_base(root, &named)?;
+    let reference = crate::checkout::resolvable_base_ref(root, named)?;
     let output = Command::new("git")
         .arg("-C")
         .arg(root)
@@ -713,23 +699,30 @@ fn constant_findings(
 mod tests {
     use super::*;
 
-    /// WHY: `GITHUB_BASE_REF` carries a bare branch name that exists only as a
-    /// remote ref, so a bare name has to try `origin/<name>`. Prefixing before
-    /// looking told a caller who named a revision this checkout already holds
-    /// to go and fetch it, and the gate then reported one finding about the ref
-    /// instead of judging the tree.
+    /// WHY: this reader resolved the event variable itself, so on a pull request
+    /// it answered about the merge base to a caller who asked about the
+    /// worktree. The name now arrives as an argument, and `None` means `HEAD`
+    /// even on a runner whose event names a base branch.
     #[test]
-    fn resolves_a_local_revision_before_reaching_for_the_remote() {
+    fn the_base_revision_is_head_when_no_name_is_passed_and_a_merge_base_when_one_is() {
         let root = structure_gate::workspace_root();
+
         assert_eq!(
-            resolvable_base(&root, "HEAD"),
+            base_revision(&root, None),
             Some("HEAD".to_string()),
-            "a revision this checkout resolves is the base, unprefixed"
+            "Fix: without a name the comparison is the uncommitted worktree"
+        );
+        let merge_base = base_revision(&root, Some("HEAD"))
+            .expect("Fix: `HEAD` resolves here, so it has a merge base with itself");
+        assert_eq!(
+            merge_base.len(),
+            40,
+            "Fix: a base revision is the resolved commit, got `{merge_base}`"
         );
         assert_eq!(
-            resolvable_base(&root, "a-branch-no-checkout-has"),
+            base_revision(&root, Some("a-branch-no-checkout-has-6f1c2a")),
             None,
-            "a name that resolves neither locally nor on origin has no base"
+            "Fix: a name that resolves neither locally nor on origin has no base"
         );
     }
 
