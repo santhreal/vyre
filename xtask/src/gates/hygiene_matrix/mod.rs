@@ -70,6 +70,23 @@ pub const CARGO_WRAPPER_PATTERNS: &[&str] = &[
     "missing_cargo_wrapper",
 ];
 
+/// The hidden-fallback family as `(pattern name, matched text)`, lowercase.
+///
+/// A scan outside this gate reads the same excuses over a narrower surface, and
+/// the backend matrix carried five of these phrases as its own list: half the
+/// family, so a phrase added here reached the tree-wide scan and never reached
+/// the production driver scan. The vocabulary has one owner and one accessor.
+/// `gpu_unavailable_skip` is in the name list and not here because it is
+/// detected structurally rather than by a phrase.
+#[must_use]
+pub fn hidden_fallback_pattern_texts() -> Vec<(&'static str, &'static str)> {
+    records::BLOCKED_PATTERNS
+        .iter()
+        .copied()
+        .filter(|(name, _)| rules::is_hidden_fallback_pattern(name))
+        .collect()
+}
+
 /// Scans the release surface for hidden fallbacks, unbounded reads, missing
 /// panic contracts and undeclared thresholds, and owns the evidence artifacts.
 pub struct HygieneMatrix;

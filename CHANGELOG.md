@@ -6435,6 +6435,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   behind it and names the command that re-measures each backend, with the
   verdicts kept as notes, because one commit invalidates every recorded
   benchmark at once and each invalidated artifact then failed several checks.
+- The production backend scan reads every phrase the hidden-fallback family
+  declares. It carried five of them as its own list, so `silent gpu skip`,
+  `skipped: no gpu`, `cfg(not(feature = "gpu"))`, `synthetic gpu timing` and
+  the fake timing formula were reported by the tree-wide hygiene scan and never
+  read on the driver surface the release gate blocks on. The family has one
+  owner and publishes its phrases, the scan reads them through that accessor,
+  and a test derives the expected set from the owner so a phrase added there
+  fails until this scan reads it.
 - Acquiring the wgpu backend from two threads at once no longer kills the
   process. Every adapter query and device request built its own wgpu instance,
   and two overlapping instance constructions raced inside the Vulkan loader:

@@ -334,14 +334,6 @@ const UNRESOLVED_MARKERS: &[&str] = &[
     "tbd",
 ];
 
-const HIDDEN_FALLBACK_PATTERNS: &[&str] = &[
-    "cpu fallback",
-    "software fallback",
-    "fallback dispatch",
-    "falling back to cpu",
-    "fallback to cpu",
-];
-
 const BACKEND_PRODUCTION_SCAN_ROOTS: &[&str] = &[
     "vyre-driver/src",
     "vyre-driver-cuda/src",
@@ -878,6 +870,11 @@ fn capability_contract_blockers(rows: &[BackendCapabilityRow]) -> Vec<String> {
 
 /// Scan the production backend surface for hidden fallback language.
 ///
+/// The phrases come from the hygiene family that owns them. This scan kept its
+/// own five, which was half that family, so a phrase added to the tree-wide
+/// scan never reached the production driver surface and this gate certified a
+/// vocabulary it had never read.
+///
 /// The rows land in a committed artifact, so the walk that finds them is the
 /// shared one: it yields names in order, and readdir order would otherwise make
 /// the rendered artifact a property of the filesystem rather than of the source,
@@ -887,6 +884,7 @@ fn scan_hidden_fallback_language(
     workspace_root: &Path,
     blockers: &mut Vec<String>,
 ) -> (Vec<BackendSourceFinding>, Vec<String>) {
+    let phrases = xtask::gates::hygiene_matrix::hidden_fallback_pattern_texts();
     let mut findings = Vec::new();
     let mut scan_errors = Vec::new();
     for root in BACKEND_PRODUCTION_SCAN_ROOTS {
@@ -911,7 +909,7 @@ fn scan_hidden_fallback_language(
             if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
                 continue;
             }
-            scan_hidden_fallback_file(path, &mut findings, &mut scan_errors, blockers);
+            scan_hidden_fallback_file(path, &phrases, &mut findings, &mut scan_errors, blockers);
         }
     }
     (findings, scan_errors)
@@ -919,6 +917,7 @@ fn scan_hidden_fallback_language(
 
 fn scan_hidden_fallback_file(
     path: &Path,
+    phrases: &[(&'static str, &'static str)],
     findings: &mut Vec<BackendSourceFinding>,
     scan_errors: &mut Vec<String>,
     blockers: &mut Vec<String>,
@@ -941,12 +940,12 @@ fn scan_hidden_fallback_file(
             continue;
         }
         let lowered = line.to_ascii_lowercase();
-        for &pattern in HIDDEN_FALLBACK_PATTERNS {
-            if lowered.contains(pattern) {
+        for &(_, phrase) in phrases {
+            if lowered.contains(phrase) {
                 findings.push(BackendSourceFinding {
                     path: path.display().to_string(),
                     line: line_index + 1,
-                    pattern,
+                    pattern: phrase,
                 });
             }
         }
@@ -1398,6 +1397,63 @@ mod capability_contract_tests {
         assert!(
             !gpu_probe_device_meets_release_floor(&probe.nvidia_smi_device_details[0]),
             "Fix: the release-floor predicate must reject a device short of the derived memory floor."
+        );
+    }
+}
+
+#[cfg(test)]
+mod hidden_fallback_tests {
+    use super::*;
+
+    /// WHY: this scan carried five of the hidden-fallback family's phrases as
+    /// its own list, so the phrases it lacked were reported by the tree-wide
+    /// hygiene scan and never read on the production driver surface, which is a
+    /// gate certifying a vocabulary it never checked. The expectation is derived
+    /// from the owning family at run time, so a phrase added there fails here
+    /// until this scan reads it. What it does not catch is a phrase the family
+    /// detects structurally rather than by text.
+    #[test]
+    fn every_declared_hidden_fallback_phrase_is_read_on_the_production_surface() {
+        let workspace =
+            tempfile::tempdir().expect("Fix: create a temporary workspace for the scan.");
+        let root = workspace.path();
+        let phrases = xtask::gates::hygiene_matrix::hidden_fallback_pattern_texts();
+        assert!(
+            phrases.len() > 5,
+            "Fix: the hidden-fallback family must publish its phrases; got {phrases:?}"
+        );
+        for scan_root in BACKEND_PRODUCTION_SCAN_ROOTS {
+            fs::create_dir_all(root.join(scan_root))
+                .expect("Fix: create a production scan root in the fixture.");
+        }
+        let mut body = String::from("pub fn dispatch() {\n");
+        for (_, phrase) in &phrases {
+            body.push_str("    let excuse = ");
+            body.push_str(phrase);
+            body.push('\n');
+        }
+        body.push_str("}\n");
+        fs::write(
+            root.join(BACKEND_PRODUCTION_SCAN_ROOTS[0]).join("probe.rs"),
+            body,
+        )
+        .expect("Fix: write the fixture source.");
+
+        let mut blockers = Vec::new();
+        let (findings, scan_errors) = scan_hidden_fallback_language(root, &mut blockers);
+
+        assert!(
+            scan_errors.is_empty() && blockers.is_empty(),
+            "Fix: a readable fixture must scan without an error; errors={scan_errors:?} \
+             blockers={blockers:?}"
+        );
+        let read: std::collections::BTreeSet<&str> =
+            findings.iter().map(|finding| finding.pattern).collect();
+        let declared: std::collections::BTreeSet<&str> =
+            phrases.iter().map(|(_, phrase)| *phrase).collect();
+        assert_eq!(
+            read, declared,
+            "Fix: the production scan must read every phrase the hidden-fallback family declares"
         );
     }
 }
