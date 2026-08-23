@@ -6360,6 +6360,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   of raising on the first, and carry a pinned baseline; check-tier-deps no
   longer shells into python3 to validate the registry, so one owner answers for
   the contract.
+- Both history-reading gates resolve their base ref through one owner, so a
+  base revision the checkout already holds is compared against directly instead
+  of demanded from a remote.
 - Loop-invariant hoisting has one owner, so the resident pipeline no longer
   hoists a binding whose name a sibling loop also binds and produces a program
   the validator rejects, and a load from a read-only buffer now leaves the loop
@@ -7107,6 +7110,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   which already covered the two survivors and covers every document added
   since, so the gate reaches zero by describing what is there rather than by
   mourning what is not.
+- The bench dashboard breaks a timestamp tie by file name, so a fresh checkout,
+  where every snapshot carries the same timestamp, reports the same latest
+  snapshot on every machine.
 - The delegating-form closure check reads the source of the crate that owns it
   instead of a crate named in a literal, so the two prefix-scan facades in
   vyre-libs solvers are compared against the builders they forward to. Both
