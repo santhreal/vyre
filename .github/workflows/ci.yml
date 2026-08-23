@@ -105,6 +105,12 @@ jobs:
       # dies mid-compile reporting only that it received a shutdown signal. No
       # test binary is shared between packages, so nothing is rebuilt; rlibs and
       # build-script outputs are kept.
+      # Every package is run before the step decides. `bash -e` aborted the loop
+      # at the first failure, so a package early in the sort order hid every
+      # package after it: two teardown failures in `vyre-driver-cuda` kept
+      # `vyre-primitives` and everything alphabetically past it from ever
+      # running here, and the mismatch they carried surfaced in a coverage job
+      # that was pinned to an offline runner.
       - name: cargo_full test
         shell: bash
         run: |
@@ -114,8 +120,9 @@ jobs:
           # package name containing an invalid character.
           metadata="$(./cargo_full metadata --format-version 1 --no-deps)"
           target_dir="$(printf '%s' "$metadata" | jq -r .target_directory | tr -d '\r')"
+          failed=""
           for package in $(printf '%s' "$metadata" | jq -r '.packages[].name' | tr -d '\r' | sort); do
-            ./cargo_full test -p "$package"
+            ./cargo_full test -p "$package" || failed="$failed $package"
             # A test executable is the only artifact in deps/ with no file
             # extension (or `.exe` on Windows). Every rlib, rmeta and depfile
             # carries one and is kept, and build scripts are excluded by name so
@@ -123,6 +130,10 @@ jobs:
             find "$target_dir/debug/deps" -maxdepth 1 -type f \
               \( ! -name '*.*' -o -name '*.exe' \) ! -name 'build_script_*' -delete
           done
+          if [ -n "$failed" ]; then
+            echo "packages with failing tests:$failed" >&2
+            exit 1
+          fi
 
       # The only Metal device in this fleet is the macOS leg of this matrix, so
       # this is the lane that turns the admission on. The other legs leave it
