@@ -264,6 +264,7 @@ pub(crate) fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
             .boxed(),
         Just(Node::Return).boxed(),
         Just(Node::barrier()).boxed(),
+        Just(Node::logical_barrier(MemoryOrdering::SeqCst)).boxed(),
         prop::bool::ANY
             .prop_map(|well_formed| {
                 let extension: Arc<dyn NodeExtension> = if well_formed {

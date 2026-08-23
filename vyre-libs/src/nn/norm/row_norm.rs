@@ -16,7 +16,7 @@ pub(super) fn row_sum_squares_body(
         Expr::u32(row_len),
     );
     vec![
-        Node::let_bind("index", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("index", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(index.clone(), Expr::u32(total)),
             vec![

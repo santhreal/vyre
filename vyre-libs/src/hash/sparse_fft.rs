@@ -61,9 +61,9 @@ pub fn sparse_fft_bin_hash(signal: &str, bins: &str, a: u32, c: u32, b: u32, n: 
         );
     }
 
-    let local = Expr::LocalId { axis: 0 };
+    let local = Expr::LogicalWithinTileId { axis: 0 };
     let body = vec![Node::if_then(
-        Expr::is_first_workgroup(),
+        Expr::is_first_logical_tile(),
         vec![Node::loop_for(
             "chunk",
             Expr::u32(0),
@@ -336,14 +336,20 @@ mod tests {
     #[test]
     fn ir_uses_parallel_atomic_bin_accumulation() {
         let p = sparse_fft_bin_hash("sig", "bins", 7, 1, 8, 64);
-        let entry = format!("{:?}", p.entry());
+        let mut has_atomic = false;
+        let mut has_logical_lane = false;
+        vyre_foundation::visit::for_each_expr(p.entry(), |expr| match expr {
+            Expr::Atomic { .. } => has_atomic = true,
+            Expr::LogicalWithinTileId { .. } => has_logical_lane = true,
+            _ => {}
+        });
         assert!(
-            entry.contains("Atomic"),
-            "Fix: sparse_fft_bin_hash must use atomic bin accumulation instead of serial stores: {entry}"
+            has_atomic,
+            "Fix: sparse_fft_bin_hash must use atomic bin accumulation instead of serial stores"
         );
         assert!(
-            entry.contains("LocalId"),
-            "Fix: sparse_fft_bin_hash must distribute samples across local lanes: {entry}"
+            has_logical_lane,
+            "Fix: sparse_fft_bin_hash must distribute samples across logical within-tile lanes"
         );
     }
 

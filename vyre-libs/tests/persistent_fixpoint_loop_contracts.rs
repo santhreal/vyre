@@ -64,8 +64,8 @@ const CHANGED: &str = "changed";
 fn inert_transfer_body() -> Vec<Node> {
     vec![Node::store(
         NEXT,
-        Expr::InvocationId { axis: 0 },
-        Expr::load(CURRENT, Expr::InvocationId { axis: 0 }),
+        Expr::LogicalIndex { axis: 0 },
+        Expr::load(CURRENT, Expr::LogicalIndex { axis: 0 }),
     )]
 }
 
@@ -128,7 +128,7 @@ fn is_changed_clear(node: &Node) -> bool {
 }
 
 fn is_barrier(node: &Node) -> bool {
-    matches!(node, Node::Barrier { .. })
+    matches!(node, Node::LogicalBarrier { .. })
 }
 
 /// Locks out an unguarded loop back edge: the defect that let one warp clear
@@ -269,7 +269,7 @@ fn the_iteration_pays_exactly_three_barriers() {
     assert!(
         body.iter().all(|node| !matches!(
             node,
-            Node::Barrier {
+            Node::LogicalBarrier {
                 ordering: MemoryOrdering::GridSync
             }
         )),

@@ -47,7 +47,7 @@ proptest! {
         );
         prop_assert!(
             !contains_invocation_id(&program),
-            "large multi-block scan must use local/workgroup ids so fused overdispatch cannot address per-block scratch with a global lane for n={n}"
+            "large multi-block scan must use logical tile and within-tile ids so fused overdispatch cannot address per-tile scratch with a global point for n={n}"
         );
         prop_assert_eq!(
             grid_sync_barrier_count(&program),

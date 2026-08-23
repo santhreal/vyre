@@ -133,7 +133,7 @@ pub fn rle_segment_lengths(segment_count: u32) -> Program {
     }
 
     let body = vec![
-        Node::let_bind("seg_idx", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("seg_idx", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("seg_idx"), Expr::u32(segment_count)),
             vec![

@@ -88,7 +88,7 @@ const WS_CR: u32 = 0x0D;
 #[must_use]
 pub fn whitespace_classify_word(word_count: u32) -> Program {
     let body = vec![
-        Node::let_bind("word_idx", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("word_idx", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("word_idx"), Expr::u32(word_count)),
             vec![

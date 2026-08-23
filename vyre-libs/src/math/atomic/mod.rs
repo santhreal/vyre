@@ -270,7 +270,7 @@ pub(crate) fn build_atomic_serial(
     let body = vec![wrap_anonymous_region(
         op_id,
         vec![Node::if_then(
-            Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+            Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
             vec![Node::loop_for(
                 "i",
                 Expr::u32(0),
@@ -316,7 +316,7 @@ pub(crate) fn build_atomic_compare_exchange(
     let body = vec![wrap_anonymous_region(
         op_id,
         vec![Node::if_then(
-            Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+            Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
             vec![Node::loop_for(
                 "i",
                 Expr::u32(0),

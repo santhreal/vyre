@@ -33,7 +33,7 @@ pub fn stream_compact(
     if count == 0 {
         return trap_program(OP_ID, Some((compacted, DataType::U32)), "Fix: stream_compact requires count > 0 so live_count can be derived from the final lane.".to_string());
     }
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     let body = vec![
         Node::let_bind("flag", Expr::load(flags, t.clone())),

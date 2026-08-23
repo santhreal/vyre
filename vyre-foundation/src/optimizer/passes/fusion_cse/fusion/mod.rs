@@ -358,6 +358,10 @@ fn fuse_nodes_with_counts(
                 replacements.flush_all(&mut fused);
                 fused.push(Node::barrier_with_ordering(*ordering));
             }
+            Node::LogicalBarrier { ordering } => {
+                replacements.flush_all(&mut fused);
+                fused.push(Node::logical_barrier(*ordering));
+            }
             Node::IndirectDispatch {
                 count_buffer,
                 count_offset,
@@ -586,6 +590,9 @@ fn is_fusable_expr(expr: &Expr) -> bool {
         | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
         | Expr::SubgroupLocalId

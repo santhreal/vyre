@@ -2,11 +2,12 @@
 
 use vyre_foundation::ir::Node;
 use vyre_foundation::operation::{OperationRegistry, OperationTier};
+use vyre_foundation::{ElementPolicy, Uniformity};
 use vyre_primitives::hardware::all_entries;
 use vyre_primitives::hardware::catalog::intrinsic_facet;
 
-/// Positive: the linked catalog is deterministic, fully signed, and its
-/// fixtures are stable across repeated reads.
+/// WHY: every registry member must retain its signature, deterministic fixture,
+/// and typed physical-execution constraints as the intrinsic catalog grows.
 #[test]
 fn canonical_catalog_is_deterministic_and_fixture_complete() {
     let entries = all_entries().collect::<Vec<_>>();
@@ -28,12 +29,42 @@ fn canonical_catalog_is_deterministic_and_fixture_complete() {
         let signature = intrinsic.signature.as_ref().expect("intrinsic signature");
         assert_eq!(signature.inputs.len(), shape.input_buffers as usize);
         assert_eq!(signature.outputs.len(), shape.output_buffers as usize);
+        assert_eq!(
+            intrinsic.geometry_requirements.per_invocation_elements,
+            ElementPolicy::Scalar,
+            "{} must declare its one-element-per-physical-invocation contract",
+            intrinsic.id
+        );
         let program = intrinsic.program().expect("neutral intrinsic builder");
         match program.entry().first() {
             Some(Node::Region { generator, .. }) => {
                 assert_eq!(generator.as_str(), intrinsic.id);
             }
             _ => panic!("{} must build one canonical intrinsic region", intrinsic.id),
+        }
+        let constraints = intrinsic
+            .schedule_constraints()
+            .unwrap_or_else(|error| panic!("{} has invalid geometry: {error}", intrinsic.id));
+        if program.stats().has_node_barrier() {
+            assert_eq!(
+                constraints.subgroup_uniformity,
+                Uniformity::WorkgroupUniform,
+                "{} barrier semantics require workgroup-uniform execution",
+                intrinsic.id
+            );
+            assert!(
+                constraints.memory_ordering.is_some(),
+                "{} barrier semantics require a typed memory ordering",
+                intrinsic.id
+            );
+        }
+        if program.stats().subgroup_ops() {
+            assert_eq!(
+                constraints.subgroup_uniformity,
+                Uniformity::SubgroupUniform,
+                "{} subgroup semantics require subgroup-uniform execution",
+                intrinsic.id
+            );
         }
 
         let inputs = intrinsic.test_inputs.expect("deterministic inputs");

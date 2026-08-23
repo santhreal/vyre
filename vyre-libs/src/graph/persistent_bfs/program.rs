@@ -123,7 +123,7 @@ fn persistent_bfs_single_workgroup(
     density_active: Option<&str>,
 ) -> Program {
     let words = bitset_words(shape.node_count);
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
 
     let unrolled_iter = |iter: u32| -> Node {
         persistent_bfs_step_child_prefixed_with_active(
@@ -139,20 +139,20 @@ fn persistent_bfs_single_workgroup(
     };
 
     let mut entry: Vec<Node> = vec![
-        // Seed frontier_out from frontier_in. Gate on the GLOBAL leader `gid_x()==0`,
-        // NOT the per-workgroup leader `local_x()==0`: this is a single-workgroup
-        // kernel (node_count <= workgroup size; >256 goes to the grid-sync variant),
-        // so its intended dispatch is exactly one workgroup. If a caller over-dispatches
-        // it, or a driver rounds up to more than one workgroup, every EXTRA
-        // workgroup's `local_x()==0` leader would otherwise RE-SEED `frontier_out` back
-        // to `frontier_in`, clobbering the first workgroup's already-expanded frontier
-        // (the interpreter runs workgroups in order, so the last re-seed wins → the
-        // output collapses to the unexpanded seed). Guarding on `gid_x()==0` makes only
-        // the first workgroup seed; extra workgroups are inert (their unrolled steps are
-        // already no-ops because `wg_active` is only set to 1 under `gid_x()==0`), so the
-        // result is invariant to over-fire (whole-workgroup GPU dispatch never corrupts
-        // it). Transparent for the intended single-workgroup dispatch, where
-        // `gid_x()==0` and `local_x()==0` are the same lane.
+        // Seed frontier_out from frontier_in. Gate on the GLOBAL logical leader
+        // `LogicalIndex(0)==0`, not the per-tile leader
+        // `LogicalWithinTileId(0)==0`: this is a single-tile kernel (node_count
+        // <= workgroup size; >256 goes to the grid-sync variant), so its
+        // intended schedule contains one tile. If a caller over-dispatches it,
+        // or a driver rounds up to more than one workgroup, every extra tile's
+        // within-tile leader would otherwise re-seed `frontier_out` back to
+        // `frontier_in`, clobbering the first tile's already-expanded frontier.
+        // The interpreter runs tiles in order, so the last re-seed wins and the
+        // output collapses to the unexpanded seed. The global logical guard
+        // makes only the first tile seed; extra tiles are inert because
+        // `wg_active` is set to 1 only under the same guard. The result is
+        // invariant to whole-tile over-dispatch. In the intended schedule the
+        // global and within-tile zero points are the same point.
         Node::if_then(
             Expr::eq(t.clone(), Expr::u32(0)),
             vec![Node::loop_for(
@@ -176,18 +176,18 @@ fn persistent_bfs_single_workgroup(
         ),
         // Barrier clears fusion hazards from the plain store above before the
         // first atomic access inside the unrolled steps.
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
     ];
 
     // Record the frontier popcount after unrolled step `iter` into
-    // `density_active[iter]`. `Node::barrier()` makes every lane's in-place
+    // `density_active[iter]`. `Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst)` makes every lane's in-place
     // writes from the step visible before the leader popcounts the whole
     // bitset; the barrier and store are emitted ONLY for the density variant,
     // so the base program's IR is unchanged.
     let record_density_after = |step_index: Expr| -> Vec<Node> {
         match density_active {
             Some(density) => vec![
-                Node::barrier(),
+                Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
                 Node::if_then(
                     Expr::eq(t.clone(), Expr::u32(0)),
                     vec![Node::store(
@@ -267,7 +267,7 @@ fn persistent_bfs_single_workgroup(
     // was observed within budget (converged); `wg_active != 0` means the loop
     // exhausted `max_iters` while still growing, or `max_iters == 0` (in which
     // case `wg_active` is still its seed value 1). The leader that reads it here
-    // (`gid_x()==0`) is the same lane that wrote it last, so no barrier is needed.
+    // (`LogicalIndex(0)==0`) is the same point that wrote it last, so no barrier is needed.
     entry.push(Node::if_then(
         Expr::eq(t.clone(), Expr::u32(0)),
         vec![Node::store(
@@ -310,7 +310,7 @@ fn persistent_bfs_grid_sync_parallel(
     density_active: Option<&str>,
 ) -> Program {
     let words = bitset_words(shape.node_count);
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     const GRID_CHANGED_WORDS: u32 = 3;
     const GRID_ACTIVE_BASE: u32 = 1;
     let mut entry: Vec<Node> = vec![
@@ -364,7 +364,7 @@ fn persistent_bfs_grid_sync_parallel(
         );
         match density_active {
             // Record `density_active[iter] = popcount(frontier_out)` after this
-            // step. The global leader (`gid_x()==0`) serially sums the popcount of
+            // step. The global logical leader (`LogicalIndex(0)==0`) serially sums the popcount of
             // every frontier word and stores the total. This is a plain,
             // IDEMPOTENT write (like the `converged` publish): the grid-sync split
             // dispatch re-executes segments to a fixpoint, so an accumulating
@@ -621,9 +621,9 @@ fn try_persistent_bfs_batch_inner(
 ) -> Result<Program, String> {
     let words = bitset_words(shape.node_count).max(1);
     let total_words = checked_batch_frontier_words(words, query_count, BATCH_OP_ID)?;
-    let q = Expr::gid_y();
+    let q = Expr::logical_index(1);
     let base = Expr::mul(q.clone(), Expr::u32(words));
-    let lane = Expr::gid_x();
+    let lane = Expr::logical_index(0);
     let uses_grid_sync = persistent_bfs_batch_needs_grid_sync(shape);
 
     let mut entry: Vec<Node> = vec![
@@ -738,12 +738,12 @@ fn try_persistent_bfs_batch_inner(
             entry.push(grid_sync_barrier());
         }
         entry.push(Node::if_then(
-            Expr::eq(Expr::gid_x(), Expr::u32(0)),
+            Expr::eq(Expr::logical_index(0), Expr::u32(0)),
             vec![Node::store(
                 converged,
-                Expr::gid_y(),
+                Expr::logical_index(1),
                 Expr::select(
-                    Expr::eq(Expr::load(converged, Expr::gid_y()), Expr::u32(0)),
+                    Expr::eq(Expr::load(converged, Expr::logical_index(1)), Expr::u32(0)),
                     Expr::u32(1),
                     Expr::u32(0),
                 ),
@@ -788,7 +788,7 @@ fn persistent_bfs_batch_needs_grid_sync(shape: ProgramGraphShape) -> bool {
 }
 
 /// Record `density_active[q * max_iters + iter] = popcount(query q's frontier)`
-/// after a batch step. The per-query leader (`gid_x()==0` on query row `q`)
+/// after a batch step. The per-query leader (`LogicalIndex(0)==0` on query row `q`)
 /// serially sums the popcount of every word in that query's flat bitset region
 /// and stores the total. Like the single-query grid-sync path this is a plain,
 /// IDEMPOTENT write (recompute-and-store), so it lands the same value even when
@@ -804,11 +804,11 @@ fn persistent_bfs_batch_record_density(
     iter_index: Expr,
     word_var: &str,
 ) -> Node {
-    let q = Expr::gid_y();
+    let q = Expr::logical_index(1);
     let base = Expr::mul(q.clone(), Expr::u32(words));
     let density_index = Expr::add(Expr::mul(q, Expr::u32(max_iters)), iter_index);
     Node::if_then(
-        Expr::eq(Expr::gid_x(), Expr::u32(0)),
+        Expr::eq(Expr::logical_index(0), Expr::u32(0)),
         vec![
             Node::store(density, density_index.clone(), Expr::u32(0)),
             Node::loop_for(
@@ -835,7 +835,7 @@ fn persistent_bfs_batch_sync(uses_grid_sync: bool) -> Node {
     if uses_grid_sync {
         grid_sync_barrier()
     } else {
-        Node::barrier()
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst)
     }
 }
 
@@ -850,9 +850,9 @@ fn persistent_bfs_batch_parallel_step_body(
     uses_grid_sync: bool,
 ) -> Vec<Node> {
     let local = |name: &str| -> String { format!("{local_prefix}_{name}") };
-    let q = Expr::gid_y();
+    let q = Expr::logical_index(1);
     let base = Expr::mul(q.clone(), Expr::u32(words));
-    let src = Expr::gid_x();
+    let src = Expr::logical_index(0);
     let in_bounds = local("in_bounds");
     let word_idx = local("word_idx");
     let bit_mask = local("bit_mask");
@@ -945,7 +945,9 @@ fn persistent_bfs_batch_parallel_step_body(
         ),
     ]);
     if !uses_grid_sync {
-        body.push(Node::barrier());
+        body.push(Node::logical_barrier(
+            vyre_foundation::ir::MemoryOrdering::SeqCst,
+        ));
     }
     body
 }

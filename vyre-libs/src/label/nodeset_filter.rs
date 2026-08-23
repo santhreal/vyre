@@ -48,7 +48,7 @@ pub(crate) fn nodeset_filter_program(
     node_count: u32,
     filter: NodeSetFilter,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let words = node_count.div_ceil(32);
     let value = Expr::load(values, t.clone());
     let body = vec![Node::if_then(

@@ -92,7 +92,10 @@ pub fn sheaf_laplacian_eigenvalue(
         index_scratch: SHEAF_ARGMAX_SCRATCH,
         var: "eig_scan_i",
     };
-    let mut nodes = vec![Node::let_bind("local", Expr::LocalId { axis: 0 })];
+    let mut nodes = vec![Node::let_bind(
+        "local",
+        Expr::LogicalWithinTileId { axis: 0 },
+    )];
     nodes.extend(scan.nodes(|index| Expr::load(restriction_diag, index)));
     nodes.extend([
         Node::let_bind("eig_argmax", Expr::load(SHEAF_ARGMAX_SCRATCH, Expr::u32(0))),
@@ -101,7 +104,7 @@ pub fn sheaf_laplacian_eigenvalue(
         // without the whole body collapsing onto one lane.
         Node::if_then(
             Expr::and(
-                Expr::is_first_workgroup(),
+                Expr::is_first_logical_tile(),
                 Expr::eq(Expr::var("local"), Expr::u32(0)),
             ),
             vec![Node::store(
@@ -111,7 +114,7 @@ pub fn sheaf_laplacian_eigenvalue(
             )],
         ),
         Node::if_then(
-            Expr::is_first_workgroup(),
+            Expr::is_first_logical_tile(),
             vec![for_each_index(
                 cells,
                 LANES,

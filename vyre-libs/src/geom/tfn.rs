@@ -56,7 +56,7 @@ pub fn tfn_scalar_mix(
     }
 
     let cells = n_nodes * c_out;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let node = Expr::div(t.clone(), Expr::u32(c_out));
     let co = Expr::rem(t.clone(), Expr::u32(c_out));
 

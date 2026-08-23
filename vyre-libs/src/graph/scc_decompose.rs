@@ -72,7 +72,7 @@ pub(crate) fn try_dense_reachability_bitsets(
         )
     })?;
 
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let row_index = Expr::add(Expr::u32(pivot_row_offset), lane.clone());
     let word_index = Expr::div(lane.clone(), Expr::u32(32));
     let bit = Expr::shl(Expr::u32(1), Expr::bitand(lane.clone(), Expr::u32(31)));
@@ -175,7 +175,7 @@ pub fn scc_decompose(
     component_out: &str,
     pivot: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let words = bitset_words(node_count);
 
     // One bit address serves both bitsets: forward and backward reach share the

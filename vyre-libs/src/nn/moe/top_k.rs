@@ -63,7 +63,7 @@ pub fn top_k(input: &str, output_indices: &str, n: u32, k: u32) -> Program {
         // lane twice.
         vec![wrap_anonymous_region(
             "vyre-libs::nn::top_k",
-            vec![Node::if_then(Expr::is_first_invocation(), body)],
+            vec![Node::if_then(Expr::is_first_logical_point(), body)],
         )],
     )
 }

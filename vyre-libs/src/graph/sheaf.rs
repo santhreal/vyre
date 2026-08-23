@@ -98,7 +98,7 @@ pub fn try_sheaf_diffusion_step(
     }
 
     let cells = crate::plumbing::operand::shape::matrix_cells(OP_ID, n_nodes, d)?;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     // delta = damping · restriction_diag[t] · stalks[t]
     // stalks_next[t] = stalks[t] - delta

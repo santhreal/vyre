@@ -571,7 +571,7 @@ impl Grid2DComposer {
         F: FnOnce(&Grid2DShape, Expr, Expr, Expr) -> Vec<Node>,
     {
         let count = self.shape.pixel_count();
-        let idx = Expr::gid_x();
+        let idx = Expr::logical_index(0);
         let (py, px) = decompose_index(&idx, self.shape.safe_width());
         let inner_body = body_fn(&self.shape, idx.clone(), py, px);
 

@@ -153,7 +153,7 @@ pub fn blake3_compress(
         // from every invocation of workgroup 0 at once.
         vec![wrap_anonymous_region(
             OP_ID,
-            vec![Node::if_then(Expr::is_first_invocation(), body)],
+            vec![Node::if_then(Expr::is_first_logical_point(), body)],
         )],
     )
 }

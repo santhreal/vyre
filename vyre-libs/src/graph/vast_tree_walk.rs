@@ -207,7 +207,7 @@ fn preorder_body(nodes: &str, out: &str, node_count: u32, out_cap: u32, stride: 
             Expr::u32(node_count),
             vec![Node::if_then(
                 Expr::and(
-                    Expr::is_first_invocation(),
+                    Expr::is_first_logical_point(),
                     Expr::and(
                         Expr::var("active"),
                         Expr::and(
@@ -307,7 +307,7 @@ fn postorder_body(nodes: &str, out: &str, node_count: u32, out_cap: u32, stride:
             Expr::u32(node_count),
             vec![Node::if_then(
                 Expr::and(
-                    Expr::is_first_invocation(),
+                    Expr::is_first_logical_point(),
                     Expr::and(
                         Expr::var("active"),
                         Expr::and(
@@ -437,7 +437,7 @@ pub fn vast_descend_leftmost_leaf_program(node_count: u32) -> Program {
     ));
     body.push(Node::store("out_leaf", Expr::u32(0), Expr::var("n")));
     let guarded = vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         body,
     )];
     Program::wrapped(

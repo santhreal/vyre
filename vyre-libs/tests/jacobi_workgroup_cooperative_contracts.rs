@@ -6,7 +6,7 @@
 //! single-lane `[1, 1, 1]` dispatches or with the independent phases serialized.
 //!
 //! These tests prove:
-//! 1. Every program declares `[LANES, 1, 1]` workgroup geometry and binds `local` to `LocalId { axis: 0 }`.
+//! 1. Every program declares `[LANES, 1, 1]` workgroup geometry and binds `local` to `LogicalWithinTileId { axis: 0 }`.
 //! 2. In `jacobi_eigen_body`, identity seeding, column sign canonicalization, and diagonal extraction
 //!    are at top-level workgroup cooperative scope, while only the sequential Givens rotation is guarded
 //!    to lane 0.
@@ -36,15 +36,15 @@ fn check_local_id_binding(program: &Program) -> bool {
     program.entry().iter().any(|node| {
         any_descendant(node, &mut |inner| match inner {
             Node::Let { name, value } => {
-                name == "local" && matches!(value, Expr::LocalId { axis: 0 })
+                name == "local" && matches!(value, Expr::LogicalWithinTileId { axis: 0 })
             }
             _ => false,
         })
     })
 }
 
-/// The nodes one workgroup runs, with the guard that keeps every other
-/// workgroup out asserted on the way in.
+/// The nodes one logical tile runs, with the guard that keeps every other
+/// tile out asserted on the way in.
 ///
 /// The phase-placement contracts below read the scope the phases live in, so
 /// they would pass just as well against a body that dropped the guard. This is
@@ -61,8 +61,8 @@ fn workgroup_scope(body: &[Node]) -> &[Node] {
         Node::If { cond, then, .. } => {
             assert_eq!(
                 *cond,
-                Expr::is_first_workgroup(),
-                "Fix: the sweep must be guarded on the first workgroup"
+                Expr::is_first_logical_tile(),
+                "Fix: the sweep must be guarded on the first logical tile"
             );
             then
         }
@@ -196,7 +196,10 @@ fn jacobi_barriers_placed_at_data_boundaries() {
         )
         .expect("identity region pos");
     assert!(
-        matches!(body.get(identity_pos + 1), Some(Node::Barrier { .. })),
+        matches!(
+            body.get(identity_pos + 1),
+            Some(Node::LogicalBarrier { .. })
+        ),
         "a workgroup barrier must immediately follow cooperative identity fill"
     );
 
@@ -210,7 +213,7 @@ fn jacobi_barriers_placed_at_data_boundaries() {
     } = sweep_loop
     {
         assert!(
-            matches!(sweep_body.last(), Some(Node::Barrier { .. })),
+            matches!(sweep_body.last(), Some(Node::LogicalBarrier { .. })),
             "a workgroup barrier must follow each rotation sweep before the next sweep begins"
         );
     }

@@ -236,6 +236,9 @@ fn validate_node_inner(
         Node::Barrier { ordering } => {
             barrier::check_barrier(divergent, *ordering, &mut report.errors);
         }
+        Node::LogicalBarrier { ordering } => {
+            barrier::check_barrier(divergent, *ordering, &mut report.errors);
+        }
         Node::IndirectDispatch {
             count_buffer,
             count_offset,

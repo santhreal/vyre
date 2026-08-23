@@ -177,7 +177,7 @@ pub fn four_russians_apply_byte_lut(
     out: &str,
     words: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let mut body = vec![
         Node::let_bind("fr_lhs_word", Expr::load(lhs, t.clone())),
         Node::let_bind("fr_rhs_word", Expr::load(rhs, t.clone())),
@@ -260,7 +260,7 @@ pub fn four_russians_dense_matvec_byte_lut(
     tile_count: u32,
     dst_words: u32,
 ) -> Program {
-    let dst_word = Expr::InvocationId { axis: 0 };
+    let dst_word = Expr::LogicalIndex { axis: 0 };
     let tile_lut_words = dense_matvec_byte_lut_words(tile_count, dst_words);
     let frontier_words = frontier_words_for_byte_tiles(tile_count);
     let mut body = vec![Node::let_bind("fr_dense_acc", Expr::u32(0))];

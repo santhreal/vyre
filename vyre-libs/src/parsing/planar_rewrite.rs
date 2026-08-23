@@ -66,7 +66,7 @@ pub fn planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k
     }
 
     let cells = h.saturating_mul(w);
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     // Lane 0 loops over all (r, c) cells in row-major order. For each:
     //   if candidates[r,c] == 1:
@@ -186,7 +186,7 @@ pub fn planar_rewrite_exclusion_check_program(w: u32, k: u32) -> Program {
         Expr::var("conflict"),
     ));
     let guarded = vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         body,
     )];
     Program::wrapped(

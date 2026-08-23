@@ -170,7 +170,7 @@ mod tests {
         );
         assert!(
             !contains_invocation_zero_gate(&program),
-            "large scan_prefix_sum must not gate useful work behind InvocationId.x == 0"
+            "large scan_prefix_sum must not gate useful work behind LogicalIndex.x == 0"
         );
         assert!(program
             .buffers()
@@ -194,7 +194,7 @@ mod tests {
             );
             assert!(
                 !contains_invocation_zero_gate(&program),
-                "n={n}: large scan_prefix_sum must not gate useful work behind InvocationId.x == 0"
+                "n={n}: large scan_prefix_sum must not gate useful work behind LogicalIndex.x == 0"
             );
             assert!(
                 program
@@ -305,8 +305,8 @@ mod tests {
             Expr::BinOp { op, left, right } if *op == vyre_foundation::ir::BinOp::Eq => {
                 matches!(
                     (&**left, &**right),
-                    (Expr::InvocationId { axis: 0 }, Expr::LitU32(0))
-                        | (Expr::LitU32(0), Expr::InvocationId { axis: 0 })
+                    (Expr::LogicalIndex { axis: 0 }, Expr::LitU32(0))
+                        | (Expr::LitU32(0), Expr::LogicalIndex { axis: 0 })
                 )
             }
             Expr::BinOp { left, right, .. } => {

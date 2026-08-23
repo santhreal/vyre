@@ -179,6 +179,10 @@ impl CseCtx {
                 self.clear_observed_state();
                 Node::barrier_with_ordering(*ordering)
             }
+            Node::LogicalBarrier { ordering } => {
+                self.clear_observed_state();
+                Node::logical_barrier(*ordering)
+            }
             Node::IndirectDispatch {
                 count_buffer,
                 count_offset,
@@ -396,6 +400,9 @@ impl CseCtx {
             | Expr::BufferRef { .. }
             | Expr::BufLen { .. }
             | Expr::InvocationId { .. }
+            | Expr::LogicalIndex { .. }
+            | Expr::LogicalTileId { .. }
+            | Expr::LogicalWithinTileId { .. }
             | Expr::WorkgroupId { .. }
             | Expr::LocalId { .. }
             | Expr::SubgroupBallot { .. }

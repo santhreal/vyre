@@ -717,7 +717,7 @@ pub(crate) fn try_do_project_impacted_lineage_entries(
     } else {
         crate::plumbing::operand::shape::square_matrix_cells(PROJECT_LINEAGE_IMPACT_OP_ID, n)?
     };
-    let j = Expr::InvocationId { axis: 0 };
+    let j = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(j.clone(), Expr::u32(m)),
         vec![

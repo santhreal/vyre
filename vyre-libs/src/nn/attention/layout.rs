@@ -217,7 +217,7 @@ pub(crate) fn layout_move_program(spec: LayoutMove<'_>) -> Program {
         }],
     };
     let body = vec![
-        Node::let_bind("index", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("index", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(Expr::lt(index, Expr::u32(spec.count)), moved),
     ];
     Program::wrapped(

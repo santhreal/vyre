@@ -136,6 +136,44 @@ impl Expr {
         }
     }
 
+    /// Schedule-free logical domain index for one algorithm axis.
+    ///
+    /// This expression is valid in semantic library programs. Selected-schedule
+    /// lowering maps it to a physical invocation identity before emission.
+    #[must_use]
+    #[inline]
+    pub const fn logical_index(axis: u8) -> Self {
+        Self::LogicalIndex { axis }
+    }
+
+    /// Whether the current logical point is the first point on axis zero.
+    #[must_use]
+    #[inline]
+    pub fn is_first_logical_point() -> Self {
+        Self::eq(Self::LogicalIndex { axis: 0 }, Self::u32(0))
+    }
+
+    /// Schedule-free logical tile coordinate for one algorithm axis.
+    #[must_use]
+    #[inline]
+    pub const fn logical_tile_index(axis: u8) -> Self {
+        Self::LogicalTileId { axis }
+    }
+
+    /// Schedule-free coordinate within one logical cooperative tile.
+    #[must_use]
+    #[inline]
+    pub const fn logical_within_tile_index(axis: u8) -> Self {
+        Self::LogicalWithinTileId { axis }
+    }
+
+    /// Whether the current logical tile is the first tile on axis zero.
+    #[must_use]
+    #[inline]
+    pub fn is_first_logical_tile() -> Self {
+        Self::eq(Self::LogicalTileId { axis: 0 }, Self::u32(0))
+    }
+
     /// `global_invocation_id.x`
     #[must_use]
     #[inline]

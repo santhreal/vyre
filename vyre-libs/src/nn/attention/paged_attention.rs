@@ -552,7 +552,7 @@ pub fn paged_attention(spec: &PagedAttentionSpec<'_>) -> Result<Program, PagedAt
     let parent = Ident::from(PAGED_ATTENTION_OP_ID);
 
     let body = vec![
-        Node::let_bind("row_idx", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("row_idx", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(row_idx, Expr::u32(total_rows)),
             vec![
@@ -749,7 +749,7 @@ pub fn paged_cache_append(
     );
 
     let body = vec![
-        Node::let_bind("flat_idx", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("flat_idx", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(flat_idx.clone(), Expr::u32(chunk_count)),
             vec![

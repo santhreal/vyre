@@ -202,7 +202,7 @@ impl<'a> PrefilterGate<'a> {
     fn gate_nodes(&self, haystack: &str, haystack_len: &str, replay: Vec<Node>) -> Vec<Node> {
         match self.width {
             PrefilterWidth::Unfiltered => vec![
-                Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+                Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
                 Node::if_then(
                     Expr::lt(Expr::var("i"), Expr::load(haystack_len, Expr::u32(0))),
                     replay,

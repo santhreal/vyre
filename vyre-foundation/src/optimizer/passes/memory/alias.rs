@@ -123,6 +123,7 @@ fn has_unnameable_effect(node: &Node) -> bool {
     match node {
         // Publishes every prior write and admits every concurrent one.
         Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         // A grid synchronization point, so it is at least a barrier.
         | Node::AllReduce { .. }
         | Node::AllGather { .. }

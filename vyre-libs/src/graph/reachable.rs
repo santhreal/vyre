@@ -201,7 +201,7 @@ pub fn reachable_program(
             format!("Fix: reachable_program could not reserve {node_capacity} IR nodes: {error}"),
         );
     }
-    let lane = Expr::gid_x();
+    let lane = Expr::logical_index(0);
 
     entry.push(Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(words)),
@@ -312,9 +312,9 @@ pub fn reachable_program(
 
 fn reachable_wave_barrier(node_count: u32) -> Node {
     if node_count <= 256 {
-        Node::barrier()
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst)
     } else {
-        Node::barrier_with_ordering(MemoryOrdering::GridSync)
+        Node::logical_barrier(MemoryOrdering::GridSync)
     }
 }
 
@@ -325,7 +325,7 @@ fn reachable_forward_wave_node(
     local_prefix: &str,
 ) -> Node {
     let local = |name: &str| -> String { format!("{local_prefix}_{name}") };
-    let lane = Expr::gid_x();
+    let lane = Expr::logical_index(0);
     let word_idx = local("word_idx");
     let bit_mask = local("bit_mask");
     let src_word = local("src_word");

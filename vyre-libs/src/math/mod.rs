@@ -190,7 +190,7 @@ pub(crate) fn assert_local_id_0_bound(program: &vyre_foundation::ir::Program, ms
     let has_local_binding = program.entry().iter().any(|node| {
         any_descendant(node, &mut |inner| match inner {
             Node::Let { name, value } => {
-                name == "local" && matches!(value, Expr::LocalId { axis: 0 })
+                name == "local" && matches!(value, Expr::LogicalWithinTileId { axis: 0 })
             }
             _ => false,
         })

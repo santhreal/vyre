@@ -217,7 +217,7 @@ pub(crate) fn frontier_absorb_new_bits_body_prefixed_with_flag(
             format!("{local_prefix}_{name}")
         }
     };
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let final_word = words.saturating_sub(1);
     let old_visited = local("old_visited");
     let neighbor_word = local("neighbors");

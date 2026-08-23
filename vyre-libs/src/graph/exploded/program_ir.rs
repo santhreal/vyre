@@ -481,7 +481,10 @@ pub fn build_ifds_csr_program(
         IFDS_CSR_WORKGROUP_SIZE,
         vec![wrap_anonymous_region(
             OP_ID,
-            vec![Node::if_then(Expr::eq(Expr::gid_x(), Expr::u32(0)), entry)],
+            vec![Node::if_then(
+                Expr::eq(Expr::logical_index(0), Expr::u32(0)),
+                entry,
+            )],
         )],
     )
 }

@@ -23,7 +23,7 @@ pub fn ast_binding_strength(
     out_strengths: &str,
     num_tokens: Expr,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     let loop_body = vec![
         Node::let_bind("tok", Expr::load(tok_types, t.clone())),

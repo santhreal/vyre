@@ -297,7 +297,7 @@ pub fn node_effect_level(node: &Node) -> EffectLevel {
         Node::AsyncLoad { .. } => EffectLevel::ReadAtomic,
         Node::AsyncStore { .. } => EffectLevel::ReadWriteAtomic(AtomicOrdering::Release),
         Node::AsyncWait { .. } => EffectLevel::Synchronized(SyncScope::Workgroup),
-        Node::Barrier { ordering } => barrier_effect(*ordering),
+        Node::Barrier { ordering } | Node::LogicalBarrier { ordering } => barrier_effect(*ordering),
         Node::If {
             cond,
             then,

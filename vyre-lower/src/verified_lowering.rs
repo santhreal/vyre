@@ -1,22 +1,24 @@
 //! Canonical physical-kernel lowering boundary.
 //!
 //! This is the only production boundary from high-level `Program` IR to a
-//! validated `PhysicalKernel`: expand registered compositions, run the
-//! registered fallible semantic optimizer once, reject unresolved calls, lower
-//! to a `KernelDescriptor`, canonicalize representation order, and verify.
+//! validated `PhysicalKernel`: expand registered compositions, reject unresolved
+//! logical markers, run the registered fallible semantic optimizer once, reject
+//! unresolved calls, lower to a `KernelDescriptor`, canonicalize representation
+//! order, and verify.
 
 use crate::descriptor::KernelDescriptor;
 use crate::lower::lower;
 use crate::{verify_descriptor, VerifyFailure};
 use std::fmt;
 use vyre_foundation::{
-    ir::Program,
+    ir::{Expr, Node, Program},
     schedule::{SchedulePhaseId, SelectedSchedule},
+    visit::{for_each_expr, for_each_node},
 };
 
 /// Verified physical kernel IR. Construction is restricted to
-/// [`lower_physical`], so an unverified descriptor cannot enter target
-/// compilation.
+/// [`lower_scheduled`] and [`lower_physical`], so an unverified descriptor
+/// cannot enter target compilation.
 #[derive(Debug, Clone)]
 pub struct PhysicalKernel {
     descriptor: KernelDescriptor,
@@ -87,7 +89,7 @@ impl fmt::Display for PhysicalLoweringError {
 
 impl std::error::Error for PhysicalLoweringError {}
 
-fn prepare_physical_program(program: &Program) -> Result<Program, PhysicalLoweringError> {
+fn expand_semantic_program(program: &Program) -> Result<Program, PhysicalLoweringError> {
     let expanded = vyre_foundation::transform::inline::inline_composite_calls(program).map_err(
         |error| {
             PhysicalLoweringError::new(format!(
@@ -95,17 +97,56 @@ fn prepare_physical_program(program: &Program) -> Result<Program, PhysicalLoweri
             ))
         },
     )?;
-    let expanded = lower_single_rank_collectives_for_emit(expanded)?;
+    lower_single_rank_collectives_for_emit(expanded)
+}
+
+fn reject_logical_markers(program: &Program) -> Result<(), PhysicalLoweringError> {
+    let mut has_logical_identity = false;
+    for_each_expr(program.entry(), |expr| {
+        has_logical_identity |= matches!(
+            expr,
+            Expr::LogicalIndex { .. }
+                | Expr::LogicalTileId { .. }
+                | Expr::LogicalWithinTileId { .. }
+        );
+    });
+    if has_logical_identity {
+        return Err(PhysicalLoweringError::new(
+            "schedule-free logical identity reached physical descriptor lowering. Fix: lower the validated selected schedule before lower_physical().",
+        ));
+    }
+
+    let mut has_logical_barrier = false;
+    for_each_node(program.entry(), |node| {
+        has_logical_barrier |= matches!(node, Node::LogicalBarrier { .. });
+    });
+    if has_logical_barrier {
+        return Err(PhysicalLoweringError::new(
+            "schedule-free logical barrier reached physical descriptor lowering. Fix: lower the validated selected schedule before lower_physical().",
+        ));
+    }
+    Ok(())
+}
+
+fn prepare_expanded_physical_program(expanded: Program) -> Result<Program, PhysicalLoweringError> {
+    reject_logical_markers(&expanded)?;
     let optimized = vyre_foundation::optimizer::optimize(expanded).map_err(|error| {
         PhysicalLoweringError::new(format!(
             "registered semantic optimization failed before descriptor lowering: {error}. Fix: repair pass registration, legality, or convergence instead of emitting unoptimized IR."
         ))
     })?;
-    vyre_foundation::transform::inline::inline_calls(&optimized).map_err(|error| {
-        PhysicalLoweringError::new(format!(
-            "unresolved call remained after semantic optimization: {error}. Fix: register its composition body or eliminate the dead call before backend emission."
-        ))
-    })
+    let prepared =
+        vyre_foundation::transform::inline::inline_calls(&optimized).map_err(|error| {
+            PhysicalLoweringError::new(format!(
+                "unresolved call remained after semantic optimization: {error}. Fix: register its composition body or eliminate the dead call before backend emission."
+            ))
+        })?;
+    reject_logical_markers(&prepared)?;
+    Ok(prepared)
+}
+
+fn prepare_physical_program(program: &Program) -> Result<Program, PhysicalLoweringError> {
+    prepare_expanded_physical_program(expand_semantic_program(program)?)
 }
 
 fn lower_single_rank_collectives_for_emit(
@@ -151,17 +192,22 @@ pub fn lower_scheduled(
                 phase.0
             ))
         })?;
-    let mut scheduled = program.clone();
+    let expanded = expand_semantic_program(program)?;
+    let (mut scheduled, _) =
+        vyre_foundation::transform::schedule_lowering::lower_logical_schedule(expanded);
     scheduled.set_workgroup_size(selected.workgroup);
-    lower_physical(&scheduled)
+    let prepared = prepare_expanded_physical_program(scheduled)?;
+    lower_prepared_physical(prepared)
 }
 
-/// Construct verified physical kernel IR from a semantic [`Program`].
+/// Construct verified physical kernel IR from a physical [`Program`].
 ///
-/// The constructor expands compositions, optimizes once, lowers into the
-/// backend-neutral physical descriptor, canonicalizes representation order,
-/// and verifies the result. [`PhysicalKernel`] has no public raw-descriptor
-/// constructor, so every target receives a value that crossed this validator.
+/// The constructor expands compositions, rejects schedule-free markers,
+/// optimizes once, lowers into the backend-neutral physical descriptor,
+/// canonicalizes representation order, and verifies the result. Schedule-free
+/// semantic callers first use [`lower_scheduled`]. [`PhysicalKernel`] has no
+/// public raw-descriptor constructor, so every target receives a value that
+/// crossed this validator.
 ///
 /// # Errors
 ///
@@ -169,7 +215,10 @@ pub fn lower_scheduled(
 /// optimization, call resolution, descriptor lowering, canonicalization, or
 /// verification fails.
 pub fn lower_physical(program: &Program) -> Result<PhysicalLowering, PhysicalLoweringError> {
-    let program = prepare_physical_program(program)?;
+    lower_prepared_physical(prepare_physical_program(program)?)
+}
+
+fn lower_prepared_physical(program: Program) -> Result<PhysicalLowering, PhysicalLoweringError> {
     let descriptor = lower(&program).map_err(|error| {
         PhysicalLoweringError::new(format!(
             "KernelDescriptor lowering failed after semantic Program optimization: {error}. Fix: add the missing neutral descriptor mapping before any concrete backend emits this Program."
@@ -223,7 +272,8 @@ mod tests {
     use super::*;
     use crate::{KernelBody, KernelOpKind};
     use vyre_foundation::ir::{
-        BufferAccess, BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Ident, Node,
+        BufferAccess, BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Ident, MemoryOrdering,
+        Node,
     };
     use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform, SelectedSchedule};
 
@@ -271,6 +321,91 @@ mod tests {
         let error = lower_scheduled(&program, &schedule, SchedulePhaseId(9)).unwrap_err();
         assert!(error.message().contains("phase 9 is absent"));
         assert!(error.message().contains("Fix:"));
+    }
+    #[test]
+    fn selected_schedule_closes_every_logical_execution_marker() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(64),
+            ],
+            [64, 1, 1],
+            vec![
+                Node::store(
+                    "out",
+                    Expr::logical_index(0),
+                    Expr::add(
+                        Expr::logical_index(0),
+                        Expr::add(
+                            Expr::logical_tile_index(1),
+                            Expr::logical_within_tile_index(2),
+                        ),
+                    ),
+                ),
+                Node::logical_barrier(MemoryOrdering::Acquire),
+            ],
+        );
+        let schedule = SelectedSchedule::synthetic(1);
+
+        let lowered = lower_scheduled(&program, &schedule, SchedulePhaseId(0)).unwrap();
+        let mut logical = 0usize;
+        let mut physical_axes = [0usize; 3];
+        for_each_expr(lowered.program.entry(), |expr| match expr {
+            Expr::LogicalIndex { .. }
+            | Expr::LogicalTileId { .. }
+            | Expr::LogicalWithinTileId { .. } => logical += 1,
+            Expr::InvocationId { .. } => physical_axes[0] += 1,
+            Expr::WorkgroupId { .. } => physical_axes[1] += 1,
+            Expr::LocalId { .. } => physical_axes[2] += 1,
+            _ => {}
+        });
+        let mut logical_barriers = 0usize;
+        let mut physical_orderings = Vec::new();
+        for_each_node(lowered.program.entry(), |node| match node {
+            Node::LogicalBarrier { .. } => logical_barriers += 1,
+            Node::Barrier { ordering } => physical_orderings.push(*ordering),
+            _ => {}
+        });
+        assert_eq!(logical, 0);
+        assert_eq!(logical_barriers, 0);
+        assert_eq!(physical_axes, [2, 1, 1]);
+        assert_eq!(physical_orderings, [MemoryOrdering::Acquire]);
+    }
+
+    #[test]
+    fn raw_physical_lowering_rejects_unresolved_logical_markers() {
+        let cases = [
+            Program::wrapped(
+                Vec::new(),
+                [1, 1, 1],
+                vec![Node::let_bind("logical", Expr::logical_index(0))],
+            ),
+            Program::wrapped(
+                Vec::new(),
+                [1, 1, 1],
+                vec![Node::let_bind("logical", Expr::logical_tile_index(0))],
+            ),
+            Program::wrapped(
+                Vec::new(),
+                [1, 1, 1],
+                vec![Node::let_bind(
+                    "logical",
+                    Expr::logical_within_tile_index(0),
+                )],
+            ),
+            Program::wrapped(
+                Vec::new(),
+                [1, 1, 1],
+                vec![Node::logical_barrier(MemoryOrdering::SeqCst)],
+            ),
+        ];
+
+        for program in cases {
+            let error = lower_physical(&program).expect_err("logical marker must fail closed");
+            assert!(error.message().contains("schedule-free logical"));
+            assert!(error.message().contains("lower_physical"));
+            assert!(error.message().contains("Fix:"));
+        }
     }
 
     #[test]

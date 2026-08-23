@@ -532,7 +532,7 @@
         "bitset"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -1553,7 +1553,7 @@
         "bitset"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -3389,7 +3389,7 @@
         "graph"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -3491,7 +3491,7 @@
         "graph"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -3894,7 +3894,7 @@
         "graph"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -5529,7 +5529,7 @@
         "graph"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -6731,7 +6731,7 @@
         "graph"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -7001,7 +7001,7 @@
         "graph"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -7098,7 +7098,7 @@
         "graph"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -7292,7 +7292,7 @@
         "hash"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -7703,7 +7703,7 @@
         "hash"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -7799,7 +7799,7 @@
         "hash"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -8361,7 +8361,7 @@
         "hash"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:256",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -10192,7 +10192,7 @@
         "opt"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -12450,7 +12450,7 @@
         "opt"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:64",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -12541,7 +12541,7 @@
         "opt"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -12804,7 +12804,7 @@
         "opt"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -12904,7 +12904,7 @@
         "opt"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -12995,7 +12995,7 @@
         "opt"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -13729,7 +13729,7 @@
         "math-linalg"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -14489,7 +14489,7 @@
         "opt"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:64",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -14571,7 +14571,7 @@
         "opt"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:64",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -18865,7 +18865,7 @@
         "nn-kernels"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -22089,7 +22089,7 @@
         "nn-moe"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:256",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -24117,7 +24117,7 @@
         "nn-moe"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -24327,7 +24327,7 @@
         "nn-moe"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -36155,7 +36155,7 @@
         "text"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:1",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
         "element_policy": "any",
@@ -37434,7 +37434,7 @@
         "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
-        "element_policy": "any",
+        "element_policy": "scalar",
         "uniformity": "none",
         "cooperative_launch": false,
         "memory_ordering": null
@@ -37539,7 +37539,7 @@
         "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
-        "element_policy": "any",
+        "element_policy": "scalar",
         "uniformity": "none",
         "cooperative_launch": false,
         "memory_ordering": null
@@ -37626,7 +37626,7 @@
         "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
-        "element_policy": "any",
+        "element_policy": "scalar",
         "uniformity": "none",
         "cooperative_launch": false,
         "memory_ordering": null
@@ -37713,7 +37713,7 @@
         "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
-        "element_policy": "any",
+        "element_policy": "scalar",
         "uniformity": "none",
         "cooperative_launch": false,
         "memory_ordering": null
@@ -37800,7 +37800,7 @@
         "workgroup_width": "exactly:64",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
-        "element_policy": "any",
+        "element_policy": "scalar",
         "uniformity": "workgroup",
         "cooperative_launch": false,
         "memory_ordering": "wire:4"
@@ -37887,7 +37887,7 @@
         "workgroup_width": "exactly:64",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
-        "element_policy": "any",
+        "element_policy": "scalar",
         "uniformity": "subgroup",
         "cooperative_launch": false,
         "memory_ordering": null
@@ -37974,7 +37974,7 @@
         "workgroup_width": "exactly:64",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
-        "element_policy": "any",
+        "element_policy": "scalar",
         "uniformity": "subgroup",
         "cooperative_launch": false,
         "memory_ordering": null
@@ -38070,7 +38070,7 @@
         "workgroup_width": "exactly:64",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
-        "element_policy": "any",
+        "element_policy": "scalar",
         "uniformity": "subgroup",
         "cooperative_launch": false,
         "memory_ordering": null
@@ -38157,7 +38157,7 @@
         "workgroup_width": "exactly:64",
         "subgroup_width": "agnostic",
         "min_shared_bytes": 0,
-        "element_policy": "any",
+        "element_policy": "scalar",
         "uniformity": "workgroup",
         "cooperative_launch": false,
         "memory_ordering": "wire:4"

@@ -41,7 +41,7 @@ pub fn multi_hash_program(input: &str, out: &str, n: u32) -> Program {
 
 fn multi_hash_body(input: &str, out: &str, n: u32) -> Vec<Node> {
     vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         vec![
             Node::let_bind("crc", crc32_initial_expr()),
             Node::let_bind("fnv", fnv1a32_initial_expr()),

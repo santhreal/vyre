@@ -147,7 +147,7 @@ mod tests {
             [64, 1, 1],
             vec![Node::store(
                 handoff,
-                Expr::InvocationId { axis: 0 },
+                Expr::LogicalIndex { axis: 0 },
                 Expr::u32(0xAA),
             )],
         )
@@ -164,7 +164,7 @@ mod tests {
             [64, 1, 1],
             vec![Node::let_bind(
                 "byte",
-                Expr::load(handoff, Expr::InvocationId { axis: 0 }),
+                Expr::load(handoff, Expr::LogicalIndex { axis: 0 }),
             )],
         )
     }

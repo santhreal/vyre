@@ -77,7 +77,7 @@ pub fn try_jacobi_smooth_step(
 ) -> Result<Program, String> {
     let matrix_cells = crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n)?;
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(n)),
@@ -160,12 +160,12 @@ pub fn try_jacobi_smooth_step(
 
 /// Emit ONE weighted-Jacobi smoothing step as a SERIAL loop over all `n` rows,
 /// for callers that run the whole kernel on a single lane (e.g. [`crate::math::amg_v_cycle`],
-/// which composes several smoothing steps under one `InvocationId == 0` guard).
+/// which composes several smoothing steps under one `LogicalIndex == 0` guard).
 ///
 /// The per-cell arithmetic is byte-identical to [`jacobi_smooth_step`]'s per-lane body
 /// (`x_out[i] = x_in[i] + omega·(b[i] - Σ_j A[i,j]·x_in[j]) / diag`); the ONLY difference is that
-/// the row index is a loop counter instead of `InvocationId`, so one invocation updates every row.
-/// The per-lane [`jacobi_smooth_step`] builder is correct when dispatched with ≥`n` invocations;
+/// the row index is a loop counter instead of `LogicalIndex`, so one logical point updates every row.
+/// The per-point [`jacobi_smooth_step`] builder is correct when scheduled over at least `n` points;
 /// inlining it into a kernel dispatched with fewer lanes silently under-covers the rows, which is
 /// why single-lane composers must use this serial form. `tag` uniquifies the emitted binding names
 /// so several serial steps can be spliced into one region body without shadowing.

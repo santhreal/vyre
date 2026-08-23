@@ -37,7 +37,7 @@ fn count_grid_sync(nodes: &[Node]) -> usize {
     while let Some(node) = stack.pop() {
         if matches!(
             node,
-            Node::Barrier {
+            Node::LogicalBarrier {
                 ordering: MemoryOrdering::GridSync
             }
         ) {

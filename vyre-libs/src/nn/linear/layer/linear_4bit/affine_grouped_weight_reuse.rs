@@ -53,11 +53,11 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
     body.extend([
         Node::let_bind(
             "out_idx",
-            Expr::rem(Expr::WorkgroupId { axis: 0 }, Expr::u32(out_dim)),
+            Expr::rem(Expr::LogicalTileId { axis: 0 }, Expr::u32(out_dim)),
         ),
         Node::let_bind(
             "batch_tile",
-            Expr::div(Expr::WorkgroupId { axis: 0 }, Expr::u32(out_dim)),
+            Expr::div(Expr::LogicalTileId { axis: 0 }, Expr::u32(out_dim)),
         ),
         Node::let_bind(
             "batch_idx",
@@ -101,7 +101,7 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
             local.clone(),
             Expr::var("weight_value"),
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         Node::let_bind("local_acc", Expr::f32(0.0)),
         Node::loop_for(
             "chunk",

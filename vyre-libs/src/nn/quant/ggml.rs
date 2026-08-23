@@ -43,7 +43,7 @@ fn k_quant_unpack(
     let value_mask = (1_u32 << spec.bits_per_value) - 1;
     let row = Expr::var("i");
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(row.clone(), Expr::u32(n)),
             vec![
@@ -229,7 +229,7 @@ fn k_quant_linear(
         .ok_or_else(|| format!("Fix: {} packed word count overflows u32", spec.op_id))?;
     let i = Expr::var("i");
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(i.clone(), Expr::u32(out_dim)),
             vec![

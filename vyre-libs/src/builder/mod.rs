@@ -282,7 +282,7 @@ where
     let i = Expr::var("i");
     let (dst_index, value) = f(i.clone());
     let child_body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(i, Expr::u32(count)),
             vec![Node::store(output, dst_index, value)],
@@ -302,7 +302,7 @@ where
 
 /// Build a shared strided single-accumulator child region.
 ///
-/// The parent must bind `local = LocalId(0)` before this child. The child
+/// The parent must bind `local = LogicalWithinTileId(0)` before this child. The child
 /// accumulates `i = chunk * tile + local` for `chunk in 0..chunks`, guards
 /// `i < n`, and stores the lane-local accumulator into `scratch[local]`.
 pub(crate) fn strided_accumulate_child<F>(
@@ -322,7 +322,7 @@ where
     let idx = Expr::var("idx");
     let acc = Expr::var(acc_name);
     let child_body = vec![Node::if_then(
-        Expr::is_first_workgroup(),
+        Expr::is_first_logical_tile(),
         vec![
             Node::let_bind(acc_name, initial),
             strided_loop(
@@ -359,7 +359,7 @@ where
     let local = Expr::var("local");
     let idx = Expr::var("idx");
     let child_body = vec![Node::if_then(
-        Expr::is_first_workgroup(),
+        Expr::is_first_logical_tile(),
         vec![
             Node::let_bind(first_name, first_initial),
             Node::let_bind(second_name, second_initial),
@@ -382,7 +382,7 @@ where
 
 /// Build a shared strided writeback child region.
 ///
-/// The parent must bind `local = LocalId(0)` before this child. Optional
+/// The parent must bind `local = LogicalWithinTileId(0)` before this child. Optional
 /// `prelude` nodes run once in workgroup zero before the strided write loop,
 /// which lets row reductions load reduced scalars exactly once per lane.
 pub(crate) fn strided_writeback_child<F>(
@@ -408,7 +408,7 @@ where
     child_region(
         parent_op_id,
         STRIDED_WRITEBACK_OP_ID,
-        vec![Node::if_then(Expr::is_first_workgroup(), guarded)],
+        vec![Node::if_then(Expr::is_first_logical_tile(), guarded)],
     )
 }
 
@@ -552,7 +552,7 @@ mod tests {
             vec![wrap_anonymous_region(
                 "vyre-libs::test::row_reduction_user",
                 vec![
-                    Node::let_bind("local", Expr::LocalId { axis: 0 }),
+                    Node::let_bind("local", Expr::LogicalWithinTileId { axis: 0 }),
                     strided_writeback_child(
                         "vyre-libs::test::row_reduction_user",
                         4,

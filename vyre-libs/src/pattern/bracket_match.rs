@@ -75,7 +75,7 @@ fn bracket_match_bounded_stack(
     let body = vec![wrap_anonymous_region(
         BRACKET_MATCH_OP_ID,
         vec![Node::if_then(
-            Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+            Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
             vec![
                 Node::let_bind("depth", Expr::u32(0)),
                 Node::loop_for(
@@ -148,7 +148,7 @@ fn bracket_match_parallel(
     n: u32,
     max_depth: u32,
 ) -> Program {
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let lane_body = vec![
         Node::store(match_pairs, lane.clone(), Expr::u32(BRACKET_MATCH_NONE)),
         Node::let_bind("kind_self", Expr::load(kinds, lane.clone())),

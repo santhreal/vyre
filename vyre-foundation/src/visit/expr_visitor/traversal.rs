@@ -94,6 +94,11 @@ fn dispatch_expr<V: ExprVisitor>(visitor: &mut V, expr: &Expr) -> ControlFlow<V:
         Expr::InvocationId { axis } => visitor.visit_invocation_id(expr, (*axis).into()),
         Expr::WorkgroupId { axis } => visitor.visit_workgroup_id(expr, (*axis).into()),
         Expr::LocalId { axis } => visitor.visit_local_id(expr, (*axis).into()),
+        Expr::LogicalIndex { axis } => visitor.visit_logical_index(expr, (*axis).into()),
+        Expr::LogicalTileId { axis } => visitor.visit_logical_tile_id(expr, (*axis).into()),
+        Expr::LogicalWithinTileId { axis } => {
+            visitor.visit_logical_within_tile_id(expr, (*axis).into())
+        }
         Expr::BinOp { op, left, right } => visitor.visit_bin_op(expr, op, left, right),
         Expr::UnOp { op, operand } => visitor.visit_un_op(expr, op, operand),
         Expr::Call { op_id, args } => visitor.visit_call(expr, op_id, args),

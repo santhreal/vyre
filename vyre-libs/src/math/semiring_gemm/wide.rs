@@ -41,7 +41,7 @@ pub fn semiring_gemm_wide(
     w: u32,
 ) -> Program {
     let cells = m * n;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     let i_expr = Expr::div(t.clone(), Expr::u32(n));
     let j_expr = Expr::rem(t.clone(), Expr::u32(n));

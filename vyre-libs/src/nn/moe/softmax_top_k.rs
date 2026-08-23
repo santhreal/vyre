@@ -50,7 +50,7 @@ pub fn softmax_top_k(
         vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::if_then(
-                Expr::is_first_invocation(),
+                Expr::is_first_logical_point(),
                 softmax_top_k_body(scores, out_indices, out_weights, n, k),
             )],
         )],

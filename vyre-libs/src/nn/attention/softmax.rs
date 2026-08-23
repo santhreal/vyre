@@ -243,9 +243,20 @@ mod tests {
     #[test]
     fn softmax_lowers_and_keeps_its_region_generator_in_the_descriptor() {
         let program = softmax("input", "output", 4);
-        let descriptor = vyre_lower::lower_physical(&program)
+        let graph = vyre_foundation::ir::ProgramGraph::from_program(
+            "vyre-libs::nn::softmax",
+            program.clone(),
+        )
+        .expect("Fix: softmax must form a valid program graph.");
+        let logical = vyre_foundation::logical::LogicalProgramGraph::validate(
+            &graph,
+            &std::collections::BTreeMap::new(),
+        )
+        .expect("Fix: softmax must have a valid logical domain.");
+        let schedule = vyre_foundation::schedule::SelectedSchedule::from_logical(&logical);
+        let descriptor = vyre_lower::lower_scheduled(&program, &schedule, schedule.phases[0].id)
             .map(|lowered| lowered.into_descriptor())
-            .expect("Fix: the softmax program must lower to a verified descriptor.");
+            .expect("Fix: the softmax program must lower through a selected schedule.");
 
         let generators: Vec<&str> = descriptor
             .ops_iter()

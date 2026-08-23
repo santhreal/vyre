@@ -29,7 +29,7 @@ pub use ast_walk::{
 pub mod toposort;
 
 /// GPU-resident depth-wave dispatcher for bottom-up callee-before-caller
-/// computations. Composes `Node::Loop` + `Node::Barrier` with a per-lane depth
+/// computations. Composes `Node::Loop` + `Node::LogicalBarrier` with a per-lane depth
 /// predicate; no new sub-op.
 #[cfg(feature = "graph")]
 pub mod level_wave;

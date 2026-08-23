@@ -60,7 +60,7 @@ pub fn conformal_threshold(scores_sorted: &str, q_hat: &str, n: u32, k: u32) -> 
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::eq(t.clone(), Expr::u32(0)),
         vec![Node::store(

@@ -102,7 +102,7 @@ fn build_substring_program(
     // u32, the host-side `saturating_sub` pre-computes the cap value
     // safely and lets Expr::le do the comparison without Expr::add.
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::let_bind("haystack_len", Expr::buf_len(haystack)),
         Node::if_then(
             Expr::and(

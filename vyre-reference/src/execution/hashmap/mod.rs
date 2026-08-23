@@ -86,6 +86,8 @@ fn is_grid_sync_barrier(node: &Node) -> bool {
         node,
         Node::Barrier {
             ordering: MemoryOrdering::GridSync
+        } | Node::LogicalBarrier {
+            ordering: MemoryOrdering::GridSync
         }
     )
 }
@@ -492,6 +494,9 @@ fn eval_expr(
         Expr::InvocationId { axis } => axis_value(invocation.ids.global, *axis),
         Expr::WorkgroupId { axis } => axis_value(invocation.ids.workgroup, *axis),
         Expr::LocalId { axis } => axis_value(invocation.ids.local, *axis),
+        Expr::LogicalIndex { axis } => axis_value(invocation.ids.global, *axis),
+        Expr::LogicalTileId { axis } => axis_value(invocation.ids.workgroup, *axis),
+        Expr::LogicalWithinTileId { axis } => axis_value(invocation.ids.local, *axis),
         Expr::SubgroupLocalId => {
             #[cfg(feature = "subgroup-ops")]
             {

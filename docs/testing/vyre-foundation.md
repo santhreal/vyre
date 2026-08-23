@@ -146,6 +146,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `scalar_operator_agreement` | `vyre-foundation/tests/scalar_operator_agreement.rs` | None | `./cargo_full test -p vyre-foundation --test scalar_operator_agreement` |
 | `test` | `scan_database_wire_contract` | `vyre-foundation/tests/scan_database_wire_contract.rs` | None | `./cargo_full test -p vyre-foundation --test scan_database_wire_contract` |
 | `test` | `schedule_ir_contracts` | `vyre-foundation/tests/schedule_ir_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test schedule_ir_contracts` |
+| `test` | `schedule_lowering_contracts` | `vyre-foundation/tests/schedule_lowering_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test schedule_lowering_contracts` |
 | `test` | `scope_cow` | `vyre-foundation/tests/scope_cow.rs` | None | `./cargo_full test -p vyre-foundation --test scope_cow` |
 | `test` | `scope_rewrite_owner_contract` | `vyre-foundation/tests/scope_rewrite_owner_contract.rs` | None | `./cargo_full test -p vyre-foundation --test scope_rewrite_owner_contract` |
 | `test` | `section_190_compiler_bounds_determinism_autodiff_concurrency` | `vyre-foundation/tests/section_190_compiler_bounds_determinism_autodiff_concurrency.rs` | None | `./cargo_full test -p vyre-foundation --test section_190_compiler_bounds_determinism_autodiff_concurrency` |

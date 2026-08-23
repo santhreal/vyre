@@ -113,6 +113,9 @@ fn context() -> ProgramGraphIdentityContext {
 }
 
 /// Pins the complete identity framing so accidental byte-level schema drift requires an explicit version change.
+///
+/// Wire revision 8 moved this digest because graph identity embeds canonical
+/// program wire bytes containing schedule-free logical execution tags.
 #[test]
 fn canonical_composition_identity_matches_frozen_digest() {
     let identity = model_graph(8, "projection")
@@ -122,8 +125,8 @@ fn canonical_composition_identity_matches_frozen_digest() {
     assert_eq!(
         identity.digest,
         [
-            233, 179, 221, 38, 121, 114, 177, 17, 131, 17, 116, 24, 114, 152, 110, 76, 218, 164,
-            165, 128, 172, 171, 89, 26, 195, 25, 161, 177, 129, 70, 254, 116,
+            197, 180, 249, 115, 151, 242, 155, 53, 166, 48, 248, 25, 130, 15, 247, 47, 224, 251,
+            231, 168, 19, 42, 79, 249, 67, 134, 9, 89, 142, 100, 222, 54,
         ]
     );
 }

@@ -63,7 +63,7 @@ pub fn csr_frontier_degree_sum(shape: ProgramGraphShape) -> Program {
         shape.node_count,
         frontier_in,
         None,
-        Expr::InvocationId { axis: 0 },
+        Expr::LogicalIndex { axis: 0 },
         {
             let [off_lo, off_hi, deg] =
                 crate::builder::csr::CsrTraversalComposer::new(OP_ID, OP_ID, shape.node_count)

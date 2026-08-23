@@ -36,7 +36,7 @@ impl WorkgroupReductionScope {
     fn lane_guard(self, lane_expr: Expr) -> Expr {
         match self {
             Self::EveryWorkgroup => lane_expr,
-            Self::FirstWorkgroup => Expr::and(Expr::is_first_workgroup(), lane_expr),
+            Self::FirstWorkgroup => Expr::and(Expr::is_first_logical_tile(), lane_expr),
         }
     }
 }
@@ -358,9 +358,9 @@ impl<'a> WorkgroupReductionBuilder<'a> {
         let local = Expr::var("local");
         let idx = Expr::var("idx");
         let mut body = vec![
-            Node::let_bind("local", Expr::LocalId { axis: 0 }),
+            Node::let_bind("local", Expr::LogicalWithinTileId { axis: 0 }),
             Node::if_then(
-                Expr::is_first_workgroup(),
+                Expr::is_first_logical_tile(),
                 vec![
                     Node::let_bind("acc", fold.identity(&dtype)),
                     Node::loop_for(
@@ -387,11 +387,11 @@ impl<'a> WorkgroupReductionBuilder<'a> {
                     Node::store(scratch, local.clone(), Expr::var("acc")),
                 ],
             ),
-            Node::barrier(),
+            Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         ];
         body.extend(fold.tree(tile, scratch));
         body.push(Node::if_then(
-            Expr::and(Expr::is_first_workgroup(), Expr::eq(local, Expr::u32(0))),
+            Expr::and(Expr::is_first_logical_tile(), Expr::eq(local, Expr::u32(0))),
             vec![Node::store(
                 out,
                 Expr::u32(0),
@@ -453,7 +453,9 @@ where
                 }],
             )],
         ));
-        nodes.push(Node::barrier());
+        nodes.push(Node::logical_barrier(
+            vyre_foundation::ir::MemoryOrdering::SeqCst,
+        ));
         stride /= 2;
     }
     nodes

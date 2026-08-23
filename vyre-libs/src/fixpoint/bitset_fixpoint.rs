@@ -50,7 +50,7 @@ pub const NAME_CHANGED_FLAG: &str = "fp_changed";
 /// implementing the pattern.
 #[must_use]
 pub fn bitset_fixpoint(current: &str, next: &str, changed: &str, words: u32) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![
         Node::let_bind("c", Expr::load(current, t.clone())),
         Node::let_bind("n", Expr::load(next, t.clone())),
@@ -121,7 +121,7 @@ pub fn bitset_fixpoint_warm_start(
     seed: &str,
     words: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![
         // Warm-start: OR the seed into current so the run begins from
         // the previous converged state.

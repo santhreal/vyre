@@ -68,7 +68,7 @@ pub fn gqa_attention(
     let parent = Ident::from(OP_ID);
 
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(row_index, Expr::u32(q_rows)),
             vec![
@@ -263,7 +263,7 @@ pub fn gqa_attention_causal_typed(
     let scale = Expr::f32(1.0 / (head_dim as f32).sqrt());
     let parent = Ident::from(OP_ID);
     let body = vec![
-        Node::let_bind("row", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("row", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(row, Expr::u32(rows)),
             vec![

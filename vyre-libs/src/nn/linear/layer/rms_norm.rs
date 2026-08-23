@@ -117,10 +117,10 @@ pub fn try_rms_norm_linear(
         vec![wrap_anonymous_region(
             "vyre-libs::nn::rms_norm_linear",
             vec![
-                Node::let_bind("local_lane", Expr::LocalId { axis: 0 }),
-                Node::let_bind("global_lane", Expr::InvocationId { axis: 0 }),
+                Node::let_bind("local_lane", Expr::LogicalWithinTileId { axis: 0 }),
+                Node::let_bind("global_lane", Expr::LogicalIndex { axis: 0 }),
                 Node::if_then(Expr::eq(local_lane.clone(), Expr::u32(0)), mean_sq),
-                Node::barrier(),
+                Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
                 Node::if_then(
                     Expr::lt(global_lane.clone(), Expr::u32(out_dim)),
                     output_lane,

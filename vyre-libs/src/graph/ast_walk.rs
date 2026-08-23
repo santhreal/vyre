@@ -96,7 +96,7 @@ pub fn ast_walk_postorder(out: &str, node_count: u32) -> Program {
             // The loop emits the whole sequence, so one invocation owns it. The
             // grid a backend derives from the output length, and any fusion that
             // widens this arm, would otherwise repeat every store per invocation.
-            vec![Node::if_then(Expr::is_first_invocation(), body)],
+            vec![Node::if_then(Expr::is_first_logical_point(), body)],
         )],
     )
 }

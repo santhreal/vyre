@@ -160,6 +160,7 @@ impl TypeFactCtx {
                 }
                 Node::Return
                 | Node::Barrier { .. }
+                | Node::LogicalBarrier { .. }
                 | Node::IndirectDispatch { .. }
                 | Node::AllReduce { .. }
                 | Node::AllGather { .. }

@@ -47,7 +47,7 @@ pub fn quest_paging(
     // Single-invocation serial body so top-k selection is deterministic
     // regardless of backend. `num_pages` is small (typically ≤ 512 in
     // the KV-paging regime) so the O(num_pages · k) top-k is fine.
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let parent = Ident::from(OP_ID);
     let body = vec![
         wrap_child_region(
@@ -60,7 +60,7 @@ pub fn quest_paging(
             parent.clone(),
             quest_score_pages_body(query, page_metadata, scores, num_pages, d_head),
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         wrap_child_region(
             QUEST_SELECT_TOP_K_OP_ID,
             parent,

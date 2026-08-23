@@ -76,6 +76,9 @@ pub(super) fn emit_adjoint_expr(
         | Expr::LitI32(_)
         | Expr::LitBool(_)
         | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
         | Expr::SubgroupLocalId

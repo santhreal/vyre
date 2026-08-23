@@ -401,6 +401,7 @@ fn estimate_node_allocations(node: &Node, estimate: &mut IrAllocationEstimate) {
         | Node::Resume { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::TileLoad { .. }
         | Node::TileStore { .. }
         | Node::TileMatmul { .. }
@@ -492,6 +493,9 @@ fn estimate_expr_allocations(expr: &Expr, estimate: &mut IrAllocationEstimate) {
         | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
         | Expr::SubgroupLocalId

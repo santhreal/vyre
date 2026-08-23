@@ -79,7 +79,7 @@ pub fn try_intervention_delete_incoming(
     n: u32,
 ) -> Result<Program, String> {
     let cells = crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n)?;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     // Decode (i, j) from flat invocation t = i*n + j; only j matters.
     let j_expr = Expr::rem(t.clone(), Expr::u32(n));
@@ -236,7 +236,7 @@ pub(crate) fn try_impact_mask_from_closure(
         return Err(format!("Fix: {IMPACT_MASK_OP_ID} requires n > 0."));
     }
     let cells = crate::plumbing::operand::shape::square_matrix_cells(IMPACT_MASK_OP_ID, n)?;
-    let j = Expr::InvocationId { axis: 0 };
+    let j = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(j.clone(), Expr::u32(n)),
         vec![

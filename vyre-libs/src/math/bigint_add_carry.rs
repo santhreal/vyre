@@ -117,7 +117,7 @@ pub fn bigint_add_carry(limb_count: u32) -> Program {
     }
 
     let body = vec![
-        Node::let_bind("limb_idx", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("limb_idx", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("limb_idx"), Expr::u32(limb_count)),
             vec![

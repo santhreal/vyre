@@ -98,7 +98,7 @@ pub fn go_lexer(
     out_emit_flags: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
 
     let mut body = vec![
         Node::let_bind("byte", byte_load(haystack, t.clone())),
@@ -326,7 +326,7 @@ pub fn go_lexer(
 /// other.
 #[must_use]
 pub fn go_quote_flags(haystack: &str, out_quote_flags: &str, haystack_len: u32) -> Program {
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     // Count the run of backslashes ending at `t - 1`. The lane walks the whole
     // prefix because the IR has no backward loop; the string scan in `go_lexer`
     // already has the same per-lane cost profile.
@@ -434,7 +434,7 @@ pub fn go_compact_tokens(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     let last = haystack_len.saturating_sub(1);
 
     let body = vec![

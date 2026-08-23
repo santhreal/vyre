@@ -183,8 +183,8 @@ pub fn bellman_shortest_path(buffers: BellmanBuffers<'_>, extents: BellmanExtent
 /// One edge-relaxation step, the transfer function the convergence harness runs
 /// to a fixpoint.
 ///
-/// Lane `t` owns edge `t`, so the work is PARTITIONED by global invocation id
-/// rather than chunked: a launch wider than one workgroup really does place edge
+/// Logical point `t` owns edge `t`, so the work is partitioned by global logical index
+/// rather than chunked: a schedule wider than one workgroup places edge
 /// relaxation in groups above 0, and those groups are the only writers of the
 /// slots they own. That is what makes the shared-convergence-word race in
 /// [`persistent_fixpoint`] observable here rather than masked.
@@ -202,7 +202,7 @@ fn bellman_transfer_body(buffers: BellmanBuffers<'_>, extents: BellmanExtents) -
     let BellmanExtents {
         n_nodes, n_edges, ..
     } = extents;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(n_edges)),

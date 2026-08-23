@@ -43,29 +43,68 @@ fn derive_use_counts_async_operands() {
     assert_eq!(cache.use_count_of(&Ident::from("size")), 1);
 }
 
+/// WHY: physical and schedule-free point identities must contribute to the
+/// same per-buffer axis facts without either class masking an omitted sibling.
 #[test]
 fn derive_use_facts_records_buffer_accesses_and_index_axes() {
     let program = Program::wrapped(
         vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(64),
-            BufferDecl::read_write("out", 1, DataType::U32).with_count(64),
+            BufferDecl::read("physical_input", 0, DataType::U32).with_count(64),
+            BufferDecl::read("logical_input", 1, DataType::U32).with_count(64),
+            BufferDecl::read_write("physical_out", 2, DataType::U32).with_count(64),
+            BufferDecl::read_write("logical_out", 3, DataType::U32).with_count(64),
         ],
-        [8, 8, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_y(),
-            Expr::load("input", Expr::gid_x()),
-        )],
+        [8, 8, 8],
+        vec![
+            Node::store(
+                "physical_out",
+                Expr::gid_y(),
+                Expr::load("physical_input", Expr::gid_x()),
+            ),
+            Node::store(
+                "logical_out",
+                Expr::logical_index(1),
+                Expr::load("logical_input", Expr::logical_within_tile_index(2)),
+            ),
+        ],
     );
 
     let cache = FactCache::derive_use_only(&program);
     assert!(cache.has_fresh_use_facts_for(&program));
     assert!(!cache.is_fresh_for(&program));
     let facts = cache.use_facts().unwrap();
-    assert_eq!(facts.buffer_reads.get(&Ident::from("input")), Some(&1));
-    assert_eq!(facts.buffer_writes.get(&Ident::from("out")), Some(&1));
-    assert_eq!(facts.dominant_index_axis(&Ident::from("input")), Some(0));
-    assert_eq!(facts.dominant_index_axis(&Ident::from("out")), Some(1));
+    assert_eq!(
+        facts.buffer_reads.get(&Ident::from("physical_input")),
+        Some(&1)
+    );
+    assert_eq!(
+        facts.buffer_reads.get(&Ident::from("logical_input")),
+        Some(&1)
+    );
+    assert_eq!(
+        facts.buffer_writes.get(&Ident::from("physical_out")),
+        Some(&1)
+    );
+    assert_eq!(
+        facts.buffer_writes.get(&Ident::from("logical_out")),
+        Some(&1)
+    );
+    assert_eq!(
+        facts.dominant_index_axis(&Ident::from("physical_input")),
+        Some(0)
+    );
+    assert_eq!(
+        facts.dominant_index_axis(&Ident::from("physical_out")),
+        Some(1)
+    );
+    assert_eq!(
+        facts.dominant_index_axis(&Ident::from("logical_input")),
+        Some(2)
+    );
+    assert_eq!(
+        facts.dominant_index_axis(&Ident::from("logical_out")),
+        Some(1)
+    );
 }
 
 #[test]

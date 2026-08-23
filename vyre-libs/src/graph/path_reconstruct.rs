@@ -286,7 +286,7 @@ pub fn path_reconstruct(
         vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
                 body,
             )],
         )],
@@ -320,7 +320,7 @@ pub fn batched_path_reconstruct(parent_count: u32, target_count: u32, max_depth:
     let path_words = layout.path_words_u32;
 
     let body = vec![
-        Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("idx", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("idx"), Expr::u32(target_count)),
             vec![

@@ -334,7 +334,7 @@ pub fn matroid_intersection_full(
             // exactly one invocation executes it, making the kernel correct under ANY
             // dispatch grid (the canonical GPU idiom for a serial region).
             body: Arc::new(vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
                 nodes,
             )]),
         }],

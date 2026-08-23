@@ -68,7 +68,7 @@ pub fn softmax_step(pre_exp: &str, out: &str, n: u32) -> Program {
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::eq(t.clone(), Expr::u32(0)),
         vec![

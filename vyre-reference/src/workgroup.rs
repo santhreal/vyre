@@ -382,6 +382,9 @@ impl NodeVisitor for LocalSlots {
     fn visit_barrier(&mut self, _: &Node) -> ControlFlow<Self::Break> {
         Continue(())
     }
+    fn visit_logical_barrier(&mut self, _: &Node) -> ControlFlow<Self::Break> {
+        Continue(())
+    }
 
     fn visit_tile(&mut self, node: &Node) -> ControlFlow<Self::Break> {
         match node {

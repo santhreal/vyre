@@ -131,7 +131,7 @@ pub fn try_sum_product_evaluate(
     }
     let edge_buffer_count = n_edges.max(1);
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(n_nodes)),
         sum_product_pass_body(
@@ -170,9 +170,9 @@ pub fn try_sum_product_evaluate(
 
 /// The per-node evaluation body, shared by the single-pass
 /// [`sum_product_evaluate`] and the depth-leveled
-/// [`sum_product_evaluate_leveled`]. The lane index (`InvocationId`) is the
-/// node index; the caller/harness gates the node-in-range (and, for the
-/// leveled form, the depth-in-wave) predicate before running this body.
+/// [`sum_product_evaluate_leveled`]. The logical point index (`LogicalIndex`) is
+/// the node index; the caller gates the node-in-range (and, for the leveled
+/// form, the depth-in-wave) predicate before running this body.
 fn sum_product_pass_body(
     kinds: &str,
     child_offsets: &str,
@@ -183,7 +183,7 @@ fn sum_product_pass_body(
     out: &str,
     depths: Option<&str>,
 ) -> Vec<Node> {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let mut body = vec![
         Node::let_bind("kind", Expr::load(kinds, t.clone())),
         Node::let_bind("co", Expr::load(child_offsets, t.clone())),

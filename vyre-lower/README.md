@@ -17,8 +17,10 @@ This crate sits between vyre's frontend (which produces a high-level
   result-ids, and out-of-range pool or child-body indices.
 
 Whole-program target compilation uses `lower_scheduled` to freeze a validated
-selected phase before `lower_physical`. Pure emitters consume the verified
-descriptor without running another rewrite pipeline.
+selected phase, replace schedule-free logical identities and barriers with
+physical IR, and then call `lower_physical`. Raw physical lowering rejects any
+unresolved logical marker. Pure emitters consume the verified descriptor
+without running another rewrite pipeline.
 
 ## Quick start
 

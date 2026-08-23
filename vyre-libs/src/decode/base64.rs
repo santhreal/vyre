@@ -127,7 +127,7 @@ pub fn base64_decode_body(
         )];
     }
     let decoded_len = decoded_capacity(input_len);
-    let mut body = vec![Node::let_bind("j", Expr::InvocationId { axis: 0 })];
+    let mut body = vec![Node::let_bind("j", Expr::LogicalIndex { axis: 0 })];
     if input_len >= 2 {
         body.push(Node::if_then(
             Expr::eq(Expr::var("j"), Expr::u32(0)),

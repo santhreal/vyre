@@ -167,7 +167,11 @@ fn derive_nodes_uses(nodes: &[Node], facts: &mut UseFactBuilder, control_deps: &
                 derive_nodes_uses(body, facts, control_deps);
             }
             Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {}
-            Node::Return | Node::Barrier { .. } | Node::AsyncWait { .. } | Node::Resume { .. } => {}
+            Node::Return
+            | Node::Barrier { .. }
+            | Node::LogicalBarrier { .. }
+            | Node::AsyncWait { .. }
+            | Node::Resume { .. } => {}
         }
     }
 }
@@ -257,7 +261,11 @@ fn count_index_axes(index: &Expr, buffer: &Ident, facts: &mut UseFactBuilder) {
     let mut stack: SmallVec<[&Expr; 16]> = SmallVec::new();
     stack.push(index);
     while let Some(expr) = stack.pop() {
-        if let Expr::InvocationId { axis } | Expr::LocalId { axis } = expr {
+        if let Expr::InvocationId { axis }
+        | Expr::LocalId { axis }
+        | Expr::LogicalIndex { axis }
+        | Expr::LogicalWithinTileId { axis } = expr
+        {
             if let Some(slot) = facts
                 .buffer_index_axes
                 .entry(buffer.clone())

@@ -169,7 +169,7 @@ pub(crate) fn direct_attention_program(
         vec![wrap_region(
             generator,
             vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
                 nodes,
             )],
             None,
@@ -380,8 +380,8 @@ fn attention_program(
                 shape: vec![total_groups, tile],
             })?;
     let mut body = vec![
-        Node::let_bind("group", Expr::WorkgroupId { axis: 0 }),
-        Node::let_bind("lane", Expr::LocalId { axis: 0 }),
+        Node::let_bind("group", Expr::LogicalTileId { axis: 0 }),
+        Node::let_bind("lane", Expr::LogicalWithinTileId { axis: 0 }),
         Node::let_bind(
             "row",
             Expr::div(Expr::var("group"), Expr::u32(blocks_per_row)),
@@ -451,7 +451,7 @@ fn attention_program(
                 scalar_row
             },
         )]),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
     ];
     body.extend([
         Node::let_bind("max_val", Expr::load("attention_scratch", Expr::u32(0))),
@@ -510,7 +510,7 @@ fn attention_program(
     ]);
 
     let body = vec![Node::if_then(
-        Expr::lt(Expr::WorkgroupId { axis: 0 }, Expr::u32(total_groups)),
+        Expr::lt(Expr::LogicalTileId { axis: 0 }, Expr::u32(total_groups)),
         body,
     )];
 
@@ -612,7 +612,10 @@ fn attention_reference_program(
         // invocation.
         vec![wrap_region(
             generator,
-            vec![Node::if_then(Expr::is_first_invocation(), vec![outer_loop])],
+            vec![Node::if_then(
+                Expr::is_first_logical_point(),
+                vec![outer_loop],
+            )],
             None,
         )],
     ))

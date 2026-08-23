@@ -58,8 +58,8 @@ pub fn cooperative_dfa_scan_body_with_store(
     subgroup_size: u32,
     store_value: Expr,
 ) -> Vec<Node> {
-    let idx = Expr::InvocationId { axis: 0 };
-    let local_lane = Expr::LocalId { axis: 0 };
+    let idx = Expr::LogicalIndex { axis: 0 };
+    let local_lane = Expr::LogicalWithinTileId { axis: 0 };
     let effective_subgroup = subgroup_size.max(1);
     let round_count = effective_subgroup.ilog2();
 

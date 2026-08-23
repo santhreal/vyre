@@ -69,6 +69,9 @@ pub(super) fn is_simple_pure(expr: &Expr) -> bool {
             | Expr::LitBool(_)
             | Expr::Var(_)
             | Expr::InvocationId { .. }
+            | Expr::LogicalIndex { .. }
+            | Expr::LogicalTileId { .. }
+            | Expr::LogicalWithinTileId { .. }
             | Expr::WorkgroupId { .. }
             | Expr::LocalId { .. }
             | Expr::SubgroupLocalId
@@ -111,6 +114,9 @@ fn is_reflexive_cmp_safe(expr: &Expr) -> bool {
             | Expr::LitI32(_)
             | Expr::LitBool(_)
             | Expr::InvocationId { .. }
+            | Expr::LogicalIndex { .. }
+            | Expr::LogicalTileId { .. }
+            | Expr::LogicalWithinTileId { .. }
             | Expr::WorkgroupId { .. }
             | Expr::LocalId { .. }
             | Expr::SubgroupLocalId

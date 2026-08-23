@@ -190,7 +190,10 @@ fn frontier_word_block_offsets_single_workgroup(
     let scratch_a = format!("__{block_totals}_fwbo_scratch_a");
     let scratch_b = format!("__{block_totals}_fwbo_scratch_b");
     let mut body = Vec::new();
-    body.push(Node::let_bind("fwbo_lane", Expr::LocalId { axis: 0 }));
+    body.push(Node::let_bind(
+        "fwbo_lane",
+        Expr::LogicalWithinTileId { axis: 0 },
+    ));
     body.push(Node::store(&scratch_a, lane.clone(), Expr::u32(0)));
     body.push(Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(num_blocks)),
@@ -200,7 +203,7 @@ fn frontier_word_block_offsets_single_workgroup(
             Expr::load(block_totals, lane.clone()),
         )],
     ));
-    body.push(Node::Barrier {
+    body.push(Node::LogicalBarrier {
         ordering: MemoryOrdering::SeqCst,
     });
 

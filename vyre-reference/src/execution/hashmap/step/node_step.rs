@@ -135,7 +135,7 @@ pub(crate) fn step_nodes_frame<'a>(
                 scoped: true,
             });
         }
-        Node::Barrier { .. } => {
+        Node::Barrier { .. } | Node::LogicalBarrier { .. } => {
             invocation.waiting_at_barrier = true;
         }
         Node::IndirectDispatch {

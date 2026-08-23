@@ -214,9 +214,9 @@ fn rev_six_decoder_accepts_older_payloads_and_gates_the_new_reads_on_version() {
     };
 
     assert_eq!(
-        WIRE_FORMAT_VERSION, 7,
-        "Fix: this test encodes the rev-7 compatibility contract. If the version moved, decide \
-         what the new revision does to the three buffer fields and update this test."
+        WIRE_FORMAT_VERSION, 8,
+        "Fix: this test encodes the rev-8 compatibility contract. If the version moved, decide \
+         what the new revision does to the logical execution tags and the three buffer fields."
     );
     assert!(
         !wire_format_version_is_supported(3),
@@ -237,10 +237,14 @@ fn rev_six_decoder_accepts_older_payloads_and_gates_the_new_reads_on_version() {
     );
     assert!(
         wire_format_version_is_supported(7),
+        "Fix: rev-7 payloads must keep decoding."
+    );
+    assert!(
+        wire_format_version_is_supported(8),
         "Fix: the current revision must be readable by its own decoder."
     );
     assert!(
-        !wire_format_version_is_supported(8),
+        !wire_format_version_is_supported(9),
         "Fix: an unknown future revision must be refused with a version diagnostic, never parsed \
          on a guess."
     );
@@ -250,8 +254,8 @@ fn rev_six_decoder_accepts_older_payloads_and_gates_the_new_reads_on_version() {
     let mut relabelled = program.to_wire().expect("fixture must encode");
     assert_eq!(
         u16::from_le_bytes([relabelled[4], relabelled[5]]),
-        7,
-        "fixture must be stamped rev 7 before relabelling"
+        8,
+        "fixture must be stamped rev 8 before relabelling"
     );
     relabelled[4] = 5;
     relabelled[5] = 0;

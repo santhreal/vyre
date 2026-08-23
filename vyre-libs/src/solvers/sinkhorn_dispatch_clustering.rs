@@ -57,7 +57,7 @@ pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32)
     // We use one workgroup to cluster all regions.
     // Each thread handles some regions.
     let workgroup_size = 256;
-    let gid = Expr::gid_x();
+    let gid = Expr::logical_index(0);
 
     // Intermediate buffers for Sinkhorn vectors u (size m) and v (size n).
     // In a real production substrate, these might be scratchpad / shared memory.
@@ -70,7 +70,9 @@ pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32)
         Expr::lt(gid.clone(), Expr::u32(n)),
         vec![Node::store("v", gid.clone(), Expr::f32(1.0))],
     ));
-    body.push(Node::barrier());
+    body.push(Node::logical_barrier(
+        vyre_foundation::ir::MemoryOrdering::SeqCst,
+    ));
 
     // 2. Sinkhorn Loop
     body.push(Node::loop_for(
@@ -155,7 +157,7 @@ pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32)
                     ),
                 ],
             ),
-            Node::barrier(),
+            Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
             // v_j = b_j / sum_i (K_ij * u_i)
             Node::if_then(
                 Expr::lt(gid.clone(), Expr::u32(n)),
@@ -235,7 +237,7 @@ pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32)
                     ),
                 ],
             ),
-            Node::barrier(),
+            Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         ],
     ));
 

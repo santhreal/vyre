@@ -23,7 +23,7 @@ pub fn core_delimiter_match(
     open_tok_id: u32,
     close_tok_id: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let transform_logic = vec![
         Node::let_bind("running_depth", Expr::u32(0)),
         Node::loop_for(

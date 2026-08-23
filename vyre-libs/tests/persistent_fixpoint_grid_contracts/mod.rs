@@ -26,7 +26,7 @@ use vyre_reference::value::Value;
 
 /// Lane index every emitted body is indexed by.
 fn lane() -> Expr {
-    Expr::InvocationId { axis: 0 }
+    Expr::LogicalIndex { axis: 0 }
 }
 
 /// The top-level wave list: the body of the single generator `Region`

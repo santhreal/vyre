@@ -148,7 +148,7 @@ pub fn jacobi_apply_rotation(a: &str, eigenvectors: &str, n: u32, p: u32, q: u32
         vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
                 jacobi_apply_rotation_body(a, eigenvectors, n, &Expr::u32(p), &Expr::u32(q)),
             )],
         )],

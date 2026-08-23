@@ -59,6 +59,7 @@ The crate lives at `vyre-reference`. The `reference-semantics` owner maintains i
 | `test` | `hashmap_async_and_indirect_contracts` | `vyre-reference/tests/hashmap_async_and_indirect_contracts.rs` | None | `./cargo_full test -p vyre-reference --test hashmap_async_and_indirect_contracts` |
 | `test` | `hashmap_buffer_size_contracts` | `vyre-reference/tests/hashmap_buffer_size_contracts.rs` | None | `./cargo_full test -p vyre-reference --test hashmap_buffer_size_contracts` |
 | `test` | `hashmap_invocation_size_contracts` | `vyre-reference/tests/hashmap_invocation_size_contracts.rs` | None | `./cargo_full test -p vyre-reference --test hashmap_invocation_size_contracts` |
+| `test` | `logical_execution_markers` | `vyre-reference/tests/logical_execution_markers.rs` | None | `./cargo_full test -p vyre-reference --test logical_execution_markers` |
 | `test` | `oracle_program_edges` | `vyre-reference/tests/oracle_program_edges.rs` | None | `./cargo_full test -p vyre-reference --test oracle_program_edges` |
 | `test` | `quantized_buffer_contract` | `vyre-reference/tests/quantized_buffer_contract.rs` | None | `./cargo_full test -p vyre-reference --test quantized_buffer_contract` |
 | `test` | `reference_abi_predicates` | `vyre-reference/tests/reference_abi_predicates.rs` | None | `./cargo_full test -p vyre-reference --test reference_abi_predicates` |

@@ -60,6 +60,9 @@ pub mod collectives;
 /// shared by the compile-time planner cut and the dispatch-time split.
 pub mod grid_sync_split;
 
+/// Selected-schedule lowering from logical execution markers to physical IR.
+pub mod schedule_lowering;
+
 /// Contract classification for foundation transformations.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
@@ -99,6 +102,11 @@ pub const FOUNDATION_TRANSFORM_CLASSIFICATIONS: &[TransformDescriptor] = &[
         name: "grid_sync_split",
         class: TransformContractClass::RequiredLegalization,
         description: "Segments whole-grid synchronization barriers into sequential dispatches",
+    },
+    TransformDescriptor {
+        name: "schedule_lowering",
+        class: TransformContractClass::RequiredLegalization,
+        description: "Maps selected logical domain identities and synchronization to physical IR",
     },
     TransformDescriptor {
         name: "const_prop",

@@ -56,7 +56,7 @@ pub fn gaussian_rdp_step(alpha: &str, sigma_squared: &str, out: &str, count: u32
         );
     }
 
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let sigma_value = Expr::load(sigma_squared, lane.clone());
     let invalid_sigma = Expr::or(
         Expr::eq(sigma_value.clone(), Expr::u32(0)),

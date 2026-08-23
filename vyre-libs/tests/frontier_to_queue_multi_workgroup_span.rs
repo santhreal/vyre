@@ -3,9 +3,9 @@
 //! and it double-appends.
 //!
 //! Mechanism. The scan walks `q_src = q_iter * 256 + q_lane` where `q_lane` is
-//! the GLOBAL invocation id and `q_iter` runs to `ceil(node_count / 256)`. That
-//! covers `[0, node_count)` exactly once only when the grid is one workgroup. At
-//! `G` workgroups the lanes of group `g` re-derive `q_src` values that group 0
+//! the global logical point and `q_iter` runs to `ceil(node_count / 256)`. That
+//! covers `[0, node_count)` exactly once only when the schedule has one tile. At
+//! `G` tiles the points of tile `g` re-derive `q_src` values that tile 0
 //! already covered at a later `q_iter`, so every set frontier bit at or above
 //! index 256 is appended once PER covering group and `queue_len` is inflated by
 //! the same factor.

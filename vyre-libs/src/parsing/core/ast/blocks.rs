@@ -28,7 +28,7 @@ pub fn ast_cfg_blocks(
     num_statements: Expr,
     out_block_headers: &str, // Maps stmt -> enclosing control flow keyword token index
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     // We assume `statements` provides [start_tok, end_tok].
     // If start_tok is immediately preceded by an `if (expr)` or `while (expr)`,

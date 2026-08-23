@@ -103,8 +103,8 @@ pub fn prefix_scan_with_op_id(
     // This is a single-workgroup scan: `scratch_a` and `scratch_b` are
     // workgroup-scoped and hold exactly `lanes` slots, and the Blelloch sweep
     // between them is ordered by a workgroup barrier that means nothing across
-    // workgroups. The lane index used to be `InvocationId`, the GLOBAL id. That
-    // is the same number only when the launch is one workgroup wide. It is, for
+    // workgroups. The lane index used to be the global logical point. That is
+    // the same number as a within-tile index only when the launch is one workgroup wide. It is, for
     // `n <= lanes`, which is why every test of this builder passed; above that
     // the grid is `ceil(n / lanes)` workgroups, lanes `lanes..` index a
     // workgroup buffer that has `lanes` slots, and a device faults on the store
@@ -112,9 +112,9 @@ pub fn prefix_scan_with_op_id(
     //
     // A program that is only correct at one launch geometry must not read a
     // geometry-dependent id. The sibling bottom-out scan in
-    // `reduce::multi_block_prefix_scan` already fences on `WorkgroupId == 0`
-    // and reads `LocalId`; this now matches it, so extra workgroups are inert
-    // instead of out of bounds and the answer no longer depends on which grid
+    // `reduce::multi_block_prefix_scan` already fences on `LogicalTileId == 0`
+    // and reads `LogicalWithinTileId`; this now matches it, so extra workgroups
+    // are inert instead of out of bounds and the answer no longer depends on which grid
     // the driver infers.
     let lane = Expr::var("lane");
     let scratch_a = format!("__{out_buf}_scan_a");
@@ -128,9 +128,9 @@ pub fn prefix_scan_with_op_id(
         staged = Expr::add(staged, run_element(in_buf, &run_base, step, n));
     }
     let mut body = vec![
-        Node::let_bind("lane", Expr::LocalId { axis: 0 }),
+        Node::let_bind("lane", Expr::LogicalWithinTileId { axis: 0 }),
         Node::store(&scratch_a, lane.clone(), staged),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
     ];
 
     body.extend(blelloch_inclusive_sum_nodes(
@@ -181,7 +181,7 @@ pub fn prefix_scan_with_op_id(
         vec![wrap_anonymous_region(
             op_id,
             vec![Node::if_then(
-                Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+                Expr::eq(Expr::LogicalTileId { axis: 0 }, Expr::u32(0)),
                 body,
             )],
         )],

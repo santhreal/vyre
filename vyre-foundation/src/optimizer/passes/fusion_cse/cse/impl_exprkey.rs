@@ -28,6 +28,9 @@ impl CseCtx {
             Expr::InvocationId { axis } => ExprKey::InvocationId(*axis),
             Expr::WorkgroupId { axis } => ExprKey::WorkgroupId(*axis),
             Expr::LocalId { axis } => ExprKey::LocalId(*axis),
+            Expr::LogicalIndex { axis } => ExprKey::LogicalIndex(*axis),
+            Expr::LogicalTileId { axis } => ExprKey::LogicalTileId(*axis),
+            Expr::LogicalWithinTileId { axis } => ExprKey::LogicalWithinTileId(*axis),
             Expr::BinOp { op, left, right } => {
                 let mut l = self.intern_expr(left);
                 let mut r = self.intern_expr(right);

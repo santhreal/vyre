@@ -91,7 +91,7 @@ pub fn nfa_step(
         return trap_program(OP_ID, Some((out_buf, DataType::U32)), format!("Fix: num_states {num_states} exceeds MAX_STATES_PER_SUBGROUP={MAX_STATES_PER_SUBGROUP}; caller must tile at the composition layer."));
     }
 
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let lane_u32 = || lane.clone();
 
     let mut body: Vec<Node> = Vec::new();

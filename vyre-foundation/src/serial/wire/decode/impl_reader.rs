@@ -118,6 +118,9 @@ impl Reader<'_> {
             7 => Ok(Node::Barrier {
                 ordering: crate::memory_model::MemoryOrdering::from_wire_tag(self.u8()?)?,
             }),
+            25 => Ok(Node::LogicalBarrier {
+                ordering: crate::memory_model::MemoryOrdering::from_wire_tag(self.u8()?)?,
+            }),
             8 => Ok(Node::IndirectDispatch {
                 count_buffer: self.string()?.into(),
                 count_offset: self.u64()?,
@@ -527,6 +530,9 @@ impl Reader<'_> {
             6 => Ok(Expr::InvocationId { axis: self.u8()? }),
             7 => Ok(Expr::WorkgroupId { axis: self.u8()? }),
             8 => Ok(Expr::LocalId { axis: self.u8()? }),
+            23 => Ok(Expr::LogicalIndex { axis: self.u8()? }),
+            24 => Ok(Expr::LogicalTileId { axis: self.u8()? }),
+            25 => Ok(Expr::LogicalWithinTileId { axis: self.u8()? }),
             9 => {
                 let tag = self.u8()?;
                 let op = if tag == 0x80 {

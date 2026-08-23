@@ -393,7 +393,7 @@ pub fn mla_compress_kv(
 
     let i = Expr::var("i");
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(i.clone(), Expr::u32(kv_lora_rank)),
             vec![

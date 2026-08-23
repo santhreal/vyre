@@ -58,7 +58,7 @@ pub fn rk4_step(
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     // weighted = k1 + 2*k2 + 2*k3 + k4
     let weighted = Expr::add(
         Expr::add(

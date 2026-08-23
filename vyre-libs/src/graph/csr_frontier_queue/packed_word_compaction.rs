@@ -75,7 +75,7 @@ fn frontier_words_to_queue_parallel_program(
             "Fix: {op_id} requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
         ));
     }
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let words = bitset_words(node_count);
     let tail_bits = node_count & 31;
     let tail_mask = if tail_bits == 0 {

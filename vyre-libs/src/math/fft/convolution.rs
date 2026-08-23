@@ -99,7 +99,7 @@ pub fn fft_convolve_circular_complex(
         [1, 1, 1],
         vec![wrap_anonymous_region(
             OP_ID,
-            vec![Node::if_then(Expr::is_first_invocation(), entry)],
+            vec![Node::if_then(Expr::is_first_logical_point(), entry)],
         )],
     )
     .with_entry_op_id(OP_ID))
@@ -268,7 +268,7 @@ fn pointwise_complex_multiply_conjugate_program() -> Program {
         vec![wrap_anonymous_region(
             MULTIPLY_OP_ID,
             vec![Node::if_then(
-                Expr::is_first_invocation(),
+                Expr::is_first_logical_point(),
                 multiply_and_conjugate_body("signal_freq", "kernel_freq", "product_freq", n),
             )],
         )],
@@ -291,7 +291,7 @@ fn scale_conjugate_inverse_program() -> Program {
         vec![wrap_anonymous_region(
             SCALE_OP_ID,
             vec![Node::if_then(
-                Expr::is_first_invocation(),
+                Expr::is_first_logical_point(),
                 scale_conjugate_body_from("product_freq", "output", n),
             )],
         )],

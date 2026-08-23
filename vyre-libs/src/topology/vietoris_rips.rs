@@ -58,7 +58,7 @@ pub fn vietoris_rips_edge_filter(
     }
 
     let cells = n * n;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let i_expr = Expr::div(t.clone(), Expr::u32(n));
     let j_expr = Expr::rem(t.clone(), Expr::u32(n));
 

@@ -118,6 +118,15 @@ pub(crate) fn eval_frame_oracle(
                 Expr::InvocationId { axis } => values.push(eval_invocation_id(*axis, invocation)?),
                 Expr::WorkgroupId { axis } => values.push(eval_workgroup_id(*axis, invocation)?),
                 Expr::LocalId { axis } => values.push(eval_local_id(*axis, invocation)?),
+                Expr::LogicalIndex { axis } => {
+                    values.push(eval_invocation_id(*axis, invocation)?);
+                }
+                Expr::LogicalTileId { axis } => {
+                    values.push(eval_workgroup_id(*axis, invocation)?);
+                }
+                Expr::LogicalWithinTileId { axis } => {
+                    values.push(eval_local_id(*axis, invocation)?);
+                }
                 Expr::Load { buffer, index } => {
                     frames.push(Frame::Load { buffer });
                     frames.push(Frame::Expr(index));

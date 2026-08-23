@@ -135,7 +135,7 @@ pub fn utf8_shape_counts(histogram: &str, out: &str) -> Program {
         // the same saturating adds into the same two slots.
         vec![wrap_anonymous_region(
             UTF8_SHAPE_COUNTS_OP_ID,
-            vec![Node::if_then(Expr::is_first_invocation(), body)],
+            vec![Node::if_then(Expr::is_first_logical_point(), body)],
         )],
     )
 }

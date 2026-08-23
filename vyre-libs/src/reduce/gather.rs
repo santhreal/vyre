@@ -1,7 +1,7 @@
 //! `reduce_gather`  -  parallel gather over a u32 ValueSet.
 //!
-//! Each global invocation loads one index and, if in-range, copies
-//! `src[index]` into `dst[global_id]`.  Used by graph operations for
+//! Each global logical point loads one index and, if in-range, copies
+//! `src[index]` into `dst[logical_index]`. Used by graph operations for
 //! indirect access patterns (e.g. pulling node properties via edge
 //! indices).
 //!

@@ -15,9 +15,9 @@ const OUTPUT_PROJECTION_OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq::output_pr
 /// Build MLP with fused leaky_relu_sq activation (F32).
 ///
 /// This is a cooperative SINGLE-WORKGROUP kernel. Both projections walk their
-/// extent in fixed 256-wide strides off the GLOBAL invocation id,
-/// so the work is confined to the first workgroup and every lane at or above
-/// that width retires without touching memory. Coverage stays complete for any
+/// extent in fixed 256-wide strides off the global logical point,
+/// so the work is confined to the first tile and every point at or above
+/// that width retires without accessing memory. Coverage stays complete for any
 /// `model_dim` and `hidden_dim`, because the strided walk runs
 /// `ceil(extent / 256)` iterations.
 ///
@@ -61,7 +61,7 @@ pub fn mlp_4x_leaky_sq(
     // by `g * 256`, missing the low end of its own workgroup-private
     // `HIDDEN_SCRATCH` while still storing to `output`.
     //
-    // `Node::barrier()` stays OUTSIDE the gate on purpose, and the obvious
+    // `Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst)` stays OUTSIDE the gate on purpose, and the obvious
     // tidy-up of folding it inside is wrong. A workgroup barrier must be
     // reached workgroup-uniformly. Here the bound EQUALS the declared workgroup
     // width, so the predicate is uniform per group (group 0 all-true, every
@@ -69,11 +69,11 @@ pub fn mlp_4x_leaky_sq(
     // inside the gate and you make arrival conditional, which is barrier
     // divergence and undefined behaviour on real hardware.
     //
-    // `Expr::is_first_workgroup()` (`WorkgroupId == 0`) expresses the same
-    // predicate without depending on the bound matching the width, and is what
-    // `reduce::atomic_scalar` uses. Prefer it if this width ever changes.
+    // `Expr::is_first_logical_tile()` expresses the predicate without depending
+    // on the bound matching the width, and is what `reduce::atomic_scalar` uses.
+    // Prefer it if this width ever changes.
     let body = vec![
-        Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("lane", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("lane"), Expr::u32(256)),
             vec![wrap_child_region(
@@ -82,7 +82,7 @@ pub fn mlp_4x_leaky_sq(
                 hidden_projection_body(x, w1, b1, model_dim, hidden_dim),
             )],
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         Node::if_then(
             Expr::lt(Expr::var("lane"), Expr::u32(256)),
             vec![wrap_child_region(
@@ -267,7 +267,7 @@ fn hidden_projection_program() -> Program {
         vec![wrap_anonymous_region(
             HIDDEN_PROJECTION_OP_ID,
             vec![
-                Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
+                Node::let_bind("lane", Expr::LogicalIndex { axis: 0 }),
                 Node::if_then(
                     Expr::lt(Expr::var("lane"), Expr::u32(256)),
                     hidden_projection_body("x", "w1", "b1", 2, 4),
@@ -290,7 +290,7 @@ fn output_projection_program() -> Program {
         vec![wrap_anonymous_region(
             OUTPUT_PROJECTION_OP_ID,
             vec![
-                Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
+                Node::let_bind("lane", Expr::LogicalIndex { axis: 0 }),
                 Node::if_then(
                     Expr::lt(Expr::var("lane"), Expr::u32(256)),
                     output_projection_body("w2", "b2", "out", 2, 4),

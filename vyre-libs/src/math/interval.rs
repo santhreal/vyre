@@ -25,7 +25,7 @@ pub fn interval_merge_body(
     maxs_out: &str,
     lane_count: u32,
 ) -> Vec<Node> {
-    let lane = Expr::gid_x();
+    let lane = Expr::logical_index(0);
     vec![Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(lane_count)),
         vec![

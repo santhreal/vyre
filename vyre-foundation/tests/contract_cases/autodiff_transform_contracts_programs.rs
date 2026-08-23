@@ -11,11 +11,11 @@ pub(crate) fn square_via_local_program() -> Program {
             Node::let_bind(
                 "y",
                 Expr::mul(
-                    Expr::load("x", Expr::InvocationId { axis: 0 }),
-                    Expr::load("x", Expr::InvocationId { axis: 0 }),
+                    Expr::load("x", Expr::logical_index(0)),
+                    Expr::load("x", Expr::logical_index(0)),
                 ),
             ),
-            Node::store("out", Expr::InvocationId { axis: 0 }, Expr::var("y")),
+            Node::store("out", Expr::logical_index(0), Expr::var("y")),
         ],
     )
 }

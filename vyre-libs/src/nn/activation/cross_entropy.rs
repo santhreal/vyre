@@ -107,8 +107,8 @@ fn cross_entropy_body(
     let sum_exp = Expr::load("ce_scratch", Expr::u32(0));
 
     let mut body = vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
-        Node::let_bind("token", Expr::WorkgroupId { axis: 0 }),
+        Node::let_bind("local", Expr::LogicalWithinTileId { axis: 0 }),
+        Node::let_bind("token", Expr::LogicalTileId { axis: 0 }),
         Node::let_bind("base", Expr::mul(token.clone(), Expr::u32(vocab_size))),
         Node::if_then(
             Expr::lt(token.clone(), Expr::u32(n)),
@@ -145,7 +145,7 @@ fn cross_entropy_body(
                 },
             ],
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
     ];
     body.push(workgroup_tree::max_f32_child(
         OP_ID,
@@ -179,7 +179,7 @@ fn cross_entropy_body(
                 ),
             }],
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         Node::if_then(
             Expr::lt(token.clone(), Expr::u32(n)),
             vec![
@@ -225,7 +225,7 @@ fn cross_entropy_body(
                 },
             ],
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
     ]);
     body.push(workgroup_tree::sum_f32_child(
         OP_ID,

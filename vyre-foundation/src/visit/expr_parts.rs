@@ -43,6 +43,9 @@ pub fn expr_buffer_ref(expr: &Expr) -> ExprBufferRef<'_> {
         | Expr::LitBool(_)
         | Expr::Var(_)
         | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
         | Expr::BinOp { .. }
@@ -135,6 +138,9 @@ pub fn expr_children(expr: &Expr) -> ExprChildren<'_> {
         | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
         | Expr::SubgroupLocalId

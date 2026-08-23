@@ -72,7 +72,7 @@ pub(crate) fn blelloch_inclusive_sum_nodes(
 
     let mut nodes = vec![
         Node::store(scratch_b, lane.clone(), Expr::load(scratch_a, lane.clone())),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
     ];
 
     let mut stride = 1_u32;
@@ -89,7 +89,9 @@ pub(crate) fn blelloch_inclusive_sum_nodes(
                 ),
             )],
         ));
-        nodes.push(Node::barrier());
+        nodes.push(Node::logical_barrier(
+            vyre_foundation::ir::MemoryOrdering::SeqCst,
+        ));
         stride *= 2;
     }
 
@@ -97,7 +99,9 @@ pub(crate) fn blelloch_inclusive_sum_nodes(
         Expr::eq(lane.clone(), Expr::u32(0)),
         vec![Node::store(scratch_a, Expr::u32(lanes - 1), Expr::u32(0))],
     ));
-    nodes.push(Node::barrier());
+    nodes.push(Node::logical_barrier(
+        vyre_foundation::ir::MemoryOrdering::SeqCst,
+    ));
 
     let mut stride = lanes / 2;
     let mut round = 0_u32;
@@ -117,7 +121,9 @@ pub(crate) fn blelloch_inclusive_sum_nodes(
                 ),
             ],
         ));
-        nodes.push(Node::barrier());
+        nodes.push(Node::logical_barrier(
+            vyre_foundation::ir::MemoryOrdering::SeqCst,
+        ));
         stride /= 2;
         round += 1;
     }
@@ -133,7 +139,9 @@ pub(crate) fn blelloch_inclusive_sum_nodes(
             ),
         )],
     ));
-    nodes.push(Node::barrier());
+    nodes.push(Node::logical_barrier(
+        vyre_foundation::ir::MemoryOrdering::SeqCst,
+    ));
     nodes
 }
 
@@ -152,9 +160,9 @@ pub(crate) fn blelloch_inclusive_sum_nodes(
 /// comes from lane `block_lanes - 1` reading `scratch_a` after the sweep rather
 /// than from a separate accumulator.
 pub(crate) struct BlockScanPass<'a> {
-    /// Name bound to `LocalId { axis: 0 }`.
+    /// Name bound to `LogicalWithinTileId { axis: 0 }`.
     pub lane: &'a str,
-    /// Name bound to `WorkgroupId { axis: 0 }`.
+    /// Name bound to `LogicalTileId { axis: 0 }`.
     pub block: &'a str,
     /// Name bound to `block * block_lanes + lane`.
     pub global: &'a str,
@@ -183,8 +191,8 @@ impl BlockScanPass<'_> {
         let in_range = Expr::lt(global.clone(), Expr::u32(self.in_range));
 
         let mut nodes = vec![
-            Node::let_bind(self.lane, Expr::LocalId { axis: 0 }),
-            Node::let_bind(self.block, Expr::WorkgroupId { axis: 0 }),
+            Node::let_bind(self.lane, Expr::LogicalWithinTileId { axis: 0 }),
+            Node::let_bind(self.block, Expr::LogicalTileId { axis: 0 }),
             Node::let_bind(
                 self.global,
                 Expr::add(
@@ -194,7 +202,7 @@ impl BlockScanPass<'_> {
             ),
             Node::store(self.scratch_a, lane.clone(), Expr::u32(0)),
             Node::if_then(in_range.clone(), stage),
-            Node::barrier(),
+            Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         ];
 
         nodes.extend(blelloch_inclusive_sum_nodes(
@@ -257,14 +265,14 @@ mod tests {
     fn the_sweep_publishes_its_result_before_returning() {
         let nodes = blelloch_inclusive_sum_nodes("scratch_a", "scratch_b", &Expr::var("lane"), 8);
         assert!(
-            matches!(nodes.last(), Some(Node::Barrier { .. })),
+            matches!(nodes.last(), Some(Node::LogicalBarrier { .. })),
             "the sweep must end on a barrier so a cross-lane read is safe on the next statement, got {:?}",
             nodes.last()
         );
         let stores_after_last_barrier = nodes
             .iter()
             .rev()
-            .take_while(|node| !matches!(node, Node::Barrier { .. }))
+            .take_while(|node| !matches!(node, Node::LogicalBarrier { .. }))
             .count();
         assert_eq!(
             stores_after_last_barrier, 0,

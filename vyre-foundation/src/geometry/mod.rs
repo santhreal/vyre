@@ -247,7 +247,9 @@ fn program_memory_ordering(
 
     let mut ordering = None;
     crate::visit::for_each_node(program.entry(), |node| {
-        if let crate::ir::Node::Barrier { ordering: required } = node {
+        if let crate::ir::Node::Barrier { ordering: required }
+        | crate::ir::Node::LogicalBarrier { ordering: required } = node
+        {
             include(&mut ordering, *required);
         }
     });
@@ -372,13 +374,14 @@ fn compose_elements(
     if matches!(left, Multiple(0)) || matches!(right, Multiple(0)) {
         return Err(GeometryConstraintConflict::ZeroElementMultiple);
     }
+    let left_policy = left;
     let left = match left {
         Any => return Ok(right),
         Scalar => 1,
         Multiple(value) => value,
     };
     let right = match right {
-        Any => return Ok(Multiple(left)),
+        Any => return Ok(left_policy),
         Scalar => 1,
         Multiple(value) => value,
     };

@@ -113,7 +113,7 @@ fn rms_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> Pr
             ],
         ),
         Node::let_bind("rms", inverse_rms_expr(Expr::var("sum_sq"), n, eps)),
-        Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("idx", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("idx"), Expr::u32(n)),
             vec![Node::Store {

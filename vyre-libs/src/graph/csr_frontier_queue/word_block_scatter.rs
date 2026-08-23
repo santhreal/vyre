@@ -116,7 +116,7 @@ fn frontier_word_queue_scatter_program(
     } else {
         (1_u32 << tail_bits) - 1
     };
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let mut block_offset_body = Vec::new();
     match block_offset_source {
         FrontierWordBlockOffsetSource::SumPreviousTotals { block_totals } => {

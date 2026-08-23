@@ -92,15 +92,15 @@ mod tests {
     /// A transfer body in which lane 0 publishes the value of the LAST element and
     /// nothing else writes: `if t == 0 { next[last] = 9 }`.
     ///
-    /// Partitioned by global invocation id in the strictest sense: exactly one lane
-    /// produces `next[last]`, and under the harness's ping-pong exactly one lane
+    /// Partitioned by global logical point in the strictest sense: exactly one point
+    /// produces `next[last]`, and under the harness's ping-pong exactly one point
     /// (the one whose compare covers `last`) copies it into `current[last]`. Above
     /// one workgroup those are lanes in DIFFERENT groups, which is what makes the
     /// shared convergence flag observable rather than masked. The fixpoint is
     /// unambiguous: the store is idempotent, so `current[last] == 9`.
     fn publish_last_element_body(next: &str, last: u32) -> Vec<Node> {
         vec![Node::if_then(
-            Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+            Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
             vec![Node::store(next, Expr::u32(last), Expr::u32(9))],
         )]
     }

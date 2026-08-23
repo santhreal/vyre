@@ -183,6 +183,15 @@ impl Node {
         Self::Return
     }
 
+    /// Schedule-free synchronization boundary.
+    ///
+    /// Selected-schedule lowering chooses the physical barrier represented by
+    /// this semantic ordering boundary before descriptor construction.
+    #[must_use]
+    pub const fn logical_barrier(ordering: MemoryOrdering) -> Self {
+        Self::LogicalBarrier { ordering }
+    }
+
     /// Workgroup barrier statement.
     ///
     /// # Examples

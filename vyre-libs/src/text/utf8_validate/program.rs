@@ -36,7 +36,7 @@ fn utf8_validate_with_source_type(
     n: u32,
     source_type: DataType,
 ) -> Program {
-    let idx = Expr::InvocationId { axis: 0 };
+    let idx = Expr::LogicalIndex { axis: 0 };
     let body = vec![wrap_anonymous_region(
         OP_ID,
         vec![

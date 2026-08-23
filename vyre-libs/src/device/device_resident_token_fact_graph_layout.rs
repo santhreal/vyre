@@ -93,7 +93,7 @@ pub fn device_resident_token_fact_graph_program(
         .map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)?;
     let edge_count = u32::try_from(layout.edge_count)
         .map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)?;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::store(
         out_buf,
         t.clone(),

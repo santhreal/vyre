@@ -62,7 +62,7 @@ pub fn clifford2_product(lhs: &str, rhs: &str, out: &str, n_pairs: u32) -> Progr
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let base = Expr::mul(t.clone(), Expr::u32(MV_COMPONENTS));
 
     let load_l = |off: u32| Expr::load(lhs, Expr::add(base.clone(), Expr::u32(off)));

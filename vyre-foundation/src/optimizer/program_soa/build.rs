@@ -270,7 +270,7 @@ fn walk_node(node: &Node, parent: Option<NodeIndex>, facts: &mut ProgramFacts) {
         Node::Return => {
             record_node(facts, NodeKind::Return, parent);
         }
-        Node::Barrier { .. } => {
+        Node::Barrier { .. } | Node::LogicalBarrier { .. } => {
             record_node(facts, NodeKind::Barrier, parent);
         }
         Node::Block(body) => {
@@ -442,6 +442,9 @@ fn walk_expr(expr: &Expr, owning_node: NodeIndex, facts: &mut ProgramFacts) {
         | Expr::LitF32(_)
         | Expr::LitBool(_)
         | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
         | Expr::SubgroupLocalId

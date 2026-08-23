@@ -138,7 +138,7 @@ pub fn givens_rotate_columns(
         vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
                 vec![givens_rotate_pair(
                     matrix,
                     "giv_k",

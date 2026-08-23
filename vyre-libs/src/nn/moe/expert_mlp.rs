@@ -61,7 +61,7 @@ pub fn expert_mlp(
     );
 
     let body = vec![
-        Node::let_bind("o", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("o", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(o.clone(), Expr::u32(out_dim)),
             vec![

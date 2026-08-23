@@ -4,10 +4,10 @@
 //! reductions, workgroup tree folds, multi-phase statistical pipelines, and prefix
 //! scans) shares a single composition model:
 //!
-//! 1. **Index Space Mapping**: Local lane binding (`local = LocalId(0)`), strided
+//! 1. **Index Space Mapping**: Local lane binding (`local = LogicalWithinTileId(0)`), strided
 //!    chunk iteration (`chunk * tile + local`), and bounds guarding (`idx < n`).
 //! 2. **Phase Execution**: One or more reduction phases executing in order. Each
-//!    phase runs a strided accumulation child, a workgroup barrier (`Node::barrier()`),
+//!    phase runs a strided accumulation child, a workgroup barrier (`Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst)`),
 //!    one or more scratch-tree reduction children, and an optional guarded publication
 //!    from lane 0 of workgroup 0.
 //! 3. **Fence Optimization**: An intra-kernel workgroup barrier fences published
@@ -137,15 +137,20 @@ impl ReductionComposer {
             writeback,
         } = self;
         let phase_count = phases.len();
-        let mut body = vec![Node::let_bind("local", Expr::LocalId { axis: 0 })];
+        let mut body = vec![Node::let_bind(
+            "local",
+            Expr::LogicalWithinTileId { axis: 0 },
+        )];
         for (index, phase) in phases.into_iter().enumerate() {
             body.push(phase.accumulate);
-            body.push(Node::barrier());
+            body.push(Node::logical_barrier(
+                vyre_foundation::ir::MemoryOrdering::SeqCst,
+            ));
             body.extend(phase.reductions);
             if !phase.publish.is_empty() {
                 body.push(Node::if_then(
                     Expr::and(
-                        Expr::is_first_workgroup(),
+                        Expr::is_first_logical_tile(),
                         Expr::eq(Expr::var("local"), Expr::u32(0)),
                     ),
                     phase.publish,
@@ -156,7 +161,9 @@ impl ReductionComposer {
                 // value none of them loads.
                 let read_later = index + 1 < phase_count || writeback.is_some();
                 if read_later {
-                    body.push(Node::barrier());
+                    body.push(Node::logical_barrier(
+                        vyre_foundation::ir::MemoryOrdering::SeqCst,
+                    ));
                 }
             }
         }
@@ -236,9 +243,9 @@ impl ReductionComposer {
 
         // Per-lane Welford accumulation over grid-stride chunks.
         let mut body = vec![
-            Node::let_bind("local", Expr::LocalId { axis: 0 }),
+            Node::let_bind("local", Expr::LogicalWithinTileId { axis: 0 }),
             Node::if_then(
-                Expr::is_first_workgroup(),
+                Expr::is_first_logical_tile(),
                 vec![
                     Node::let_bind("n_i", Expr::u32(0)),
                     Node::let_bind("M1_i", Expr::f32(0.0)),
@@ -294,11 +301,11 @@ impl ReductionComposer {
                     Node::store("var_m2_scratch", local.clone(), Expr::var("M2_i")),
                 ],
             ),
-            Node::barrier(),
+            Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         ];
 
         // Workgroup-local tree reduction for Welford triples.
-        let wg0_guard = Expr::is_first_workgroup();
+        let wg0_guard = Expr::is_first_logical_tile();
         let base_stride = tile.next_power_of_two() / 2;
         let steps = (base_stride as f32).log2() as u32 + 1;
         body.push(Node::loop_for(
@@ -441,7 +448,7 @@ impl ReductionComposer {
                         ],
                     )],
                 ),
-                Node::barrier(),
+                Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
             ],
         ));
         // Publish: lane 0 of workgroup 0 computes variance from accumulated M2.
@@ -456,7 +463,7 @@ impl ReductionComposer {
         };
         body.push(Node::if_then(
             Expr::and(
-                Expr::is_first_workgroup(),
+                Expr::is_first_logical_tile(),
                 Expr::eq(Expr::var("local"), Expr::u32(0)),
             ),
             vec![Node::store(
@@ -740,9 +747,12 @@ mod tests {
         .with_phase(phase_terminal)
         .build();
 
-        let format_terminal = format!("{:?}", program_terminal.entry());
-        // Barrier after accumulate exists
-        assert!(format_terminal.contains("Barrier"));
+        let terminal_has_barrier = program_terminal.entry().iter().any(|node| {
+            vyre_foundation::visit::any_descendant(node, &mut |candidate| {
+                matches!(candidate, Node::LogicalBarrier { .. })
+            })
+        });
+        assert!(terminal_has_barrier);
 
         // 2. Multi-phase -> intermediate phase publish has trailing barrier.
         let phase1 = ReductionPhase::new(
@@ -767,8 +777,12 @@ mod tests {
         .with_phases([phase1, phase2])
         .build();
 
-        let format_multi = format!("{:?}", program_multi.entry());
-        assert!(format_multi.contains("Barrier"));
+        let multi_has_barrier = program_multi.entry().iter().any(|node| {
+            vyre_foundation::visit::any_descendant(node, &mut |candidate| {
+                matches!(candidate, Node::LogicalBarrier { .. })
+            })
+        });
+        assert!(multi_has_barrier);
     }
 
     #[test]

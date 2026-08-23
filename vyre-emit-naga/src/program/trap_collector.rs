@@ -137,6 +137,9 @@ impl NodeVisitor for TrapTagCollector {
     fn visit_barrier(&mut self, _: &Node) -> ControlFlow<()> {
         Continue(())
     }
+    fn visit_logical_barrier(&mut self, _: &Node) -> ControlFlow<()> {
+        Continue(())
+    }
 
     fn visit_block(&mut self, _: &Node, _: &[Node]) -> ControlFlow<()> {
         Continue(())

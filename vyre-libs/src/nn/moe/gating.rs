@@ -56,7 +56,7 @@ pub fn moe_gate(
     phases.push(ReductionPhase {
         accumulate: Node::if_then(
             Expr::and(
-                Expr::is_first_workgroup(),
+                Expr::is_first_logical_tile(),
                 Expr::eq(Expr::var("local"), Expr::u32(0)),
             ),
             vec![wrap_child_region(

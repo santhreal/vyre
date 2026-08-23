@@ -63,7 +63,7 @@ fn workgroup_lineage_loop(
     transfer_body: Vec<Node>,
     compare_body: Vec<Node>,
 ) -> Vec<Node> {
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let changed = spec.changed;
     let cell_chunks = spec.cell_chunks();
     vec![Node::loop_for(
@@ -103,7 +103,7 @@ pub(crate) fn single_word_lineage_body(spec: &LineageFixpoint<'_>) -> Vec<Node> 
     let cells = spec.cells();
     let cell = Expr::add(
         Expr::mul(Expr::var("__sj_chunk"), Expr::u32(spec.lanes)),
-        Expr::InvocationId { axis: 0 },
+        Expr::LogicalIndex { axis: 0 },
     );
     workgroup_lineage_loop(
         spec,
@@ -122,7 +122,7 @@ pub(crate) fn single_word_lineage_body(spec: &LineageFixpoint<'_>) -> Vec<Node> 
 }
 
 pub(crate) fn single_word_lineage_grid_sync_body(spec: &LineageFixpoint<'_>) -> Vec<Node> {
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let cells = spec.cells();
     let mut body = Vec::new();
     for iter in 0..spec.max_iterations {
@@ -262,7 +262,7 @@ pub(crate) fn wide_lineage_body(spec: &LineageFixpoint<'_>) -> Vec<Node> {
     let cells = spec.cells();
     let cell = Expr::add(
         Expr::mul(Expr::var("__sjw_chunk"), Expr::u32(spec.lanes)),
-        Expr::InvocationId { axis: 0 },
+        Expr::LogicalIndex { axis: 0 },
     );
     workgroup_lineage_loop(
         spec,
@@ -443,7 +443,7 @@ fn wide_compare_body(
 }
 
 pub(crate) fn wide_lineage_grid_sync_body(spec: &LineageFixpoint<'_>) -> Vec<Node> {
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let cells = spec.cells();
     let mut body = Vec::new();
     for iter in 0..spec.max_iterations {
@@ -481,7 +481,7 @@ pub(crate) fn wide_lineage_grid_sync_body(spec: &LineageFixpoint<'_>) -> Vec<Nod
 }
 
 fn workgroup_barrier() -> Node {
-    Node::Barrier {
+    Node::LogicalBarrier {
         ordering: MemoryOrdering::SeqCst,
     }
 }

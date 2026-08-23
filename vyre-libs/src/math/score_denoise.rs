@@ -61,7 +61,7 @@ pub fn score_denoise_step(
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let a = Expr::load(alpha, Expr::u32(0));
     let b = Expr::load(beta, Expr::u32(0));
     let s = Expr::load(sigma, Expr::u32(0));

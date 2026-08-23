@@ -137,7 +137,7 @@ fn node_kind(node: &Node) -> &'static str {
         Node::If { .. } => "a conditional",
         Node::Loop { .. } => "a loop",
         Node::Block(_) => "a bare block",
-        Node::Barrier { .. } => "a barrier",
+        Node::Barrier { .. } | Node::LogicalBarrier { .. } => "a barrier",
         Node::Return => "a return",
         _ => "a non-region node",
     }

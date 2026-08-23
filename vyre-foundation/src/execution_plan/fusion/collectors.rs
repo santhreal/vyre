@@ -124,6 +124,7 @@ pub(super) fn collect_buffer_targets(
         Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {}
         Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::AsyncWait { .. }
         | Node::Resume { .. }
         | Node::Opaque(_) => {}

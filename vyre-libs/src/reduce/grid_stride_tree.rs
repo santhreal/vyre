@@ -76,7 +76,7 @@ pub fn grid_stride_tree_sum_u32(
 
 fn single_block_tree_sum_u32(values: &str, out: &str, count: u32, tile: u32) -> Program {
     let scratch = "__single_tree_scratch";
-    let local = Expr::LocalId { axis: 0 };
+    let local = Expr::LogicalWithinTileId { axis: 0 };
 
     let body = vec![
         Node::let_bind("local", local.clone()),
@@ -93,7 +93,7 @@ fn single_block_tree_sum_u32(values: &str, out: &str, count: u32, tile: u32) -> 
                 Expr::load(values, local.clone()),
             )],
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         sum_u32_child(
             SUM_U32_OP_ID,
             tile,
@@ -129,8 +129,8 @@ fn pass1_block_reduction(
     blocks: u32,
 ) -> Program {
     let scratch = "__gst_pass1_scratch";
-    let local = Expr::LocalId { axis: 0 };
-    let block = Expr::WorkgroupId { axis: 0 };
+    let local = Expr::LogicalWithinTileId { axis: 0 };
+    let block = Expr::LogicalTileId { axis: 0 };
     // The grid is fixed by the caller, so a thread covers the input by striding
     // the whole grid instead of owning one element. Both the stride and the
     // trip count are known here, which keeps the loop bound free of any device
@@ -178,7 +178,7 @@ fn pass1_block_reduction(
             ],
         ),
         Node::store(scratch, local.clone(), Expr::var("acc")),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         sum_u32_child(
             SUM_U32_OP_ID,
             tile,
@@ -218,10 +218,10 @@ fn pass1_block_reduction(
 
 fn pass2_combine_reduction(partials: &str, out: &str, num_blocks: u32, tile: u32) -> Program {
     let scratch = "__gst_pass2_scratch";
-    let local = Expr::LocalId { axis: 0 };
+    let local = Expr::LogicalWithinTileId { axis: 0 };
 
     let body = vec![Node::if_then(
-        Expr::is_first_workgroup(),
+        Expr::is_first_logical_tile(),
         vec![
             Node::let_bind("local", local.clone()),
             // Branch, not select: `Expr::select` evaluates both arms, so a lane
@@ -237,7 +237,7 @@ fn pass2_combine_reduction(partials: &str, out: &str, num_blocks: u32, tile: u32
                     Expr::load(partials, local.clone()),
                 )],
             ),
-            Node::barrier(),
+            Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
             sum_u32_child(
                 SUM_U32_OP_ID,
                 tile,

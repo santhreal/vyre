@@ -49,9 +49,9 @@ fn attention_default_maps_one_workgroup_to_a_query_row() {
     assert_eq!(program.workgroup_size(), [256, 1, 1]);
     let body = root_region_body(&program);
 
-    // The kernel body sits inside `if WorkgroupId.x < total_groups { ... }`,
-    // the guard that retires workgroups past the last row-block, so the
-    // bindings are one level down rather than at the top of the region.
+    // The kernel body sits inside `if LogicalTileId.x < total_groups { ... }`,
+    // the guard that retires tiles past the last row-block, so the bindings are
+    // one level down rather than at the top of the region.
     assert!(
         matches!(body, [Node::If { .. }]),
         "Fix: attention must guard its whole body on the workgroup bound, got {body:?}"
@@ -60,26 +60,26 @@ fn attention_default_maps_one_workgroup_to_a_query_row() {
     let binding = |name: &str| -> Option<&Expr> { find_let(body, name) };
 
     assert!(
-        matches!(binding("group"), Some(Expr::WorkgroupId { axis: 0 })),
-        "Fix: attention must bind `group` to the x workgroup id, got {:?}",
+        matches!(binding("group"), Some(Expr::LogicalTileId { axis: 0 })),
+        "Fix: attention must bind `group` to the x logical tile id, got {:?}",
         binding("group")
     );
     assert!(
-        matches!(binding("lane"), Some(Expr::LocalId { axis: 0 })),
-        "Fix: attention must bind `lane` to the x local id, got {:?}",
+        matches!(binding("lane"), Some(Expr::LogicalWithinTileId { axis: 0 })),
+        "Fix: attention must bind `lane` to the x within-tile logical id, got {:?}",
         binding("lane")
     );
     assert!(
         binding("row").is_some(),
-        "Fix: attention must derive a query row from the workgroup id"
+        "Fix: attention must derive a query row from the logical tile id"
     );
     assert_eq!(
-        count_invocation_id_lets(body, "idx"),
+        count_logical_index_lets(body, "idx"),
         0,
         "Fix: attention must not use the old one-invocation-per-output-element idx kernel."
     );
     assert_eq!(
-        count_invocation_id_lets(body, "i"),
+        count_logical_index_lets(body, "i"),
         0,
         "Fix: attention must not fall back to the one-invocation-per-row kernel."
     );
@@ -157,19 +157,19 @@ fn find_let<'a>(nodes: &'a [Node], name: &str) -> Option<&'a Expr> {
 }
 
 #[cfg(feature = "nn-attention")]
-fn count_invocation_id_lets(nodes: &[Node], name: &str) -> usize {
+fn count_logical_index_lets(nodes: &[Node], name: &str) -> usize {
     nodes
         .iter()
         .map(|node| match node {
             Node::Let {
                 name: let_name,
-                value: Expr::InvocationId { .. },
+                value: Expr::LogicalIndex { .. },
             } if let_name.as_str() == name => 1,
             Node::If {
                 then, otherwise, ..
-            } => count_invocation_id_lets(then, name) + count_invocation_id_lets(otherwise, name),
-            Node::Loop { body, .. } | Node::Block(body) => count_invocation_id_lets(body, name),
-            Node::Region { body, .. } => count_invocation_id_lets(body, name),
+            } => count_logical_index_lets(then, name) + count_logical_index_lets(otherwise, name),
+            Node::Loop { body, .. } | Node::Block(body) => count_logical_index_lets(body, name),
+            Node::Region { body, .. } => count_logical_index_lets(body, name),
             _ => 0,
         })
         .sum()

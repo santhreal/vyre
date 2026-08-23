@@ -60,7 +60,7 @@ pub fn csr_forward_or_changed_body_prefixed(
     );
 
     vec![Node::if_then(
-        Expr::eq(Expr::local_x(), Expr::u32(0)),
+        Expr::eq(Expr::logical_within_tile_index(0), Expr::u32(0)),
         vec![Node::loop_for(
             src.as_str(),
             Expr::u32(0),

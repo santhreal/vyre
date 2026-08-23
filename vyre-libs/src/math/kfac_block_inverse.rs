@@ -54,7 +54,7 @@ pub fn kfac_block_inverse(
         );
     };
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let n_expr = Expr::u32(n);
 
     // Each thread t handles one block

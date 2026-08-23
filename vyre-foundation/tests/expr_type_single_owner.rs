@@ -158,6 +158,17 @@ fn recorded_answers() -> Vec<(&'static str, Expr, Option<DataType>)> {
             Some(DataType::U32),
         ),
         ("LocalId", Expr::LocalId { axis: 0 }, Some(DataType::U32)),
+        ("LogicalIndex", Expr::logical_index(0), Some(DataType::U32)),
+        (
+            "LogicalTileId",
+            Expr::logical_tile_index(0),
+            Some(DataType::U32),
+        ),
+        (
+            "LogicalWithinTileId",
+            Expr::logical_within_tile_index(0),
+            Some(DataType::U32),
+        ),
         // Arithmetic unifies its operands rather than taking one side's width.
         (
             "BinOp",

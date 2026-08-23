@@ -451,6 +451,9 @@ fn rewrite_expr(expr: &Expr, env: &ConstEnv) -> Expr {
         | Expr::LitBool(_)
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
         | Expr::SubgroupLocalId

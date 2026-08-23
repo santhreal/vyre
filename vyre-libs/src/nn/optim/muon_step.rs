@@ -28,7 +28,7 @@ pub(crate) fn muon_step_program(
     let nesterov = Expr::add(g, Expr::mul(Expr::f32(momentum), new_m.clone()));
     let new_p = Expr::sub(p, Expr::mul(Expr::f32(lr_scale), nesterov));
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(i.clone(), Expr::u32(n)),
             vec![

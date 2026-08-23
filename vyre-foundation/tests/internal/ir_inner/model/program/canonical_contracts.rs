@@ -173,6 +173,7 @@ fn nested_bodies(node: &Node) -> Vec<&[Node]> {
         | Node::Broadcast { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::TileLoad { .. }
         | Node::TileStore { .. }
         | Node::TileMatmul { .. }
@@ -311,6 +312,7 @@ fn wrap_in_transparent_blocks(program: &Program) -> Program {
                 | Node::Broadcast { .. }
                 | Node::Return
                 | Node::Barrier { .. }
+                | Node::LogicalBarrier { .. }
                 | Node::TileLoad { .. }
                 | Node::TileStore { .. }
                 | Node::TileMatmul { .. }

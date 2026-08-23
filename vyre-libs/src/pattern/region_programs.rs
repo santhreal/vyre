@@ -54,7 +54,7 @@ pub fn dedup_regions_flag_program(
     survivors: &str,
     count: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(count)),
         dedup_regions_cluster_nodes(pids, starts, ends, survivors, None, count, t.clone()),
@@ -95,7 +95,7 @@ pub fn dedup_regions_cluster_program(
     merged_ends: &str,
     count: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(count)),
         dedup_regions_cluster_nodes(
@@ -253,7 +253,7 @@ pub fn region_sort_program(
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let pid_eq = Expr::eq(Expr::var("pid_j"), Expr::var("pid_i"));
     let start_eq = Expr::eq(Expr::var("start_j"), Expr::var("start_i"));
     let lower_key = Expr::or(
@@ -364,7 +364,7 @@ pub fn cap_regions_per_pattern_flag_program(
     k: u32,
     count: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(count)),
         vec![
@@ -438,7 +438,7 @@ pub fn compact_first_per_region_pattern_flag_program(
     survivors: &str,
     count: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(count)),
         vec![

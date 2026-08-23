@@ -66,7 +66,10 @@ impl CalleeExpander<'_> {
             | Expr::LitI32(_)
             | Expr::LitF32(_)
             | Expr::LitBool(_)
-            | Expr::BufLen { .. } => Ok((Vec::new(), expr.clone())),
+            | Expr::BufLen { .. }
+            | Expr::LogicalIndex { .. }
+            | Expr::LogicalTileId { .. }
+            | Expr::LogicalWithinTileId { .. } => Ok((Vec::new(), expr.clone())),
             Expr::BinOp { op, left, right } => self.binop(*op, left, right),
             Expr::UnOp { op, operand } => self.unop(op.clone(), operand),
             Expr::Fma { a, b, c } => self.fma(a, b, c),

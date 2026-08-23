@@ -40,6 +40,7 @@ pub(super) fn has_divergent_invocation_gated_store(
         | Node::Broadcast { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::AsyncLoad { .. }
         | Node::AsyncStore { .. }
         | Node::AsyncWait { .. }
@@ -147,6 +148,7 @@ fn node_has_launch_geometry_dependent_write(
         | Node::Broadcast { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::AsyncLoad { .. }
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
@@ -171,6 +173,9 @@ fn cond_depends_on_invocation_id(expr: &Expr) -> bool {
         Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize => true,
         Expr::BinOp { left, right, .. } => {
@@ -228,6 +233,9 @@ fn expr_depends_on_launch_geometry(expr: &Expr, launch_vars: &FxHashSet<Ident>) 
         Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize => true,
         Expr::Var(name) => launch_vars.contains(name),

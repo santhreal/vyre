@@ -168,7 +168,7 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
         vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::if_then(
-                Expr::is_first_invocation(),
+                Expr::is_first_logical_point(),
                 vec![
                     Node::loop_for(
                         "node",

@@ -34,6 +34,15 @@ use crate::ir::{Expr, Ident, Node, Program};
 /// Every hook answers with `None` for "unchanged", which is what keeps
 /// [`rewrite_node`] from cloning a subtree it did not touch.
 pub trait NodeRewrite {
+    /// Replace one complete node before rewriting any of its positions.
+    ///
+    /// The replacement is final and is not traversed again. Use this only when
+    /// one semantic node lowers directly to one representation node.
+    fn whole_node(&mut self, node: &Node) -> Option<Node> {
+        let _ = node;
+        None
+    }
+
     /// Called once per node, before any of that node's positions.
     ///
     /// A policy whose decision depends on the node as a whole, rather than on
@@ -137,6 +146,9 @@ pub fn rewrite_body<R: NodeRewrite>(body: &[Node], rewrite: &mut R) -> Option<Ve
 /// optimization.
 pub fn rewrite_node<R: NodeRewrite>(node: &Node, rewrite: &mut R) -> Option<Node> {
     rewrite.enter(node);
+    if let Some(replacement) = rewrite.whole_node(node) {
+        return Some(replacement);
+    }
     match node {
         Node::Let { name, value } => {
             let new_name = rewrite.binding(name);
@@ -316,6 +328,7 @@ pub fn rewrite_node<R: NodeRewrite>(node: &Node, rewrite: &mut R) -> Option<Node
         | Node::TileDecl { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::IndirectDispatch { .. }
         | Node::AllReduce { .. }
         | Node::AllGather { .. }

@@ -105,7 +105,7 @@ pub fn p2m_step(
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let cell = t.clone();
 
     let body = vec![Node::if_then(
@@ -192,7 +192,7 @@ pub fn p2m_zeroth_f32_step(
         );
     }
 
-    let cell = Expr::InvocationId { axis: 0 };
+    let cell = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(cell.clone(), Expr::u32(n_cells)),
         vec![
@@ -261,7 +261,7 @@ pub fn m2l_zeroth_f32_step(
         }
     };
 
-    let target = Expr::InvocationId { axis: 0 };
+    let target = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(target.clone(), Expr::u32(n_cells)),
         vec![
@@ -347,7 +347,7 @@ pub fn l2p_zeroth_f32_step(
         );
     }
 
-    let region = Expr::InvocationId { axis: 0 };
+    let region = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(region.clone(), Expr::u32(n_regions)),
         vec![

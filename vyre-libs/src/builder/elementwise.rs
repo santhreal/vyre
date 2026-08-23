@@ -159,7 +159,7 @@ impl ElementwiseComposer {
     where
         F: FnOnce(Expr) -> Vec<Node>,
     {
-        let loop_idx = Expr::InvocationId { axis: 0 };
+        let loop_idx = Expr::LogicalIndex { axis: 0 };
         let inner_nodes = body_fn(loop_idx.clone());
         let loop_body = vec![Node::if_then(
             Expr::lt(loop_idx, Expr::u32(self.count)),

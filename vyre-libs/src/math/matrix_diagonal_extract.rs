@@ -61,7 +61,10 @@ pub fn matrix_diagonal_extract(matrix: &str, diagonal: &str, n: u32) -> Program 
         Ok(cells) => cells,
         Err(message) => return trap_program(OP_ID, Some((diagonal, DataType::F32)), message),
     };
-    let mut body = vec![Node::let_bind("local", Expr::LocalId { axis: 0 })];
+    let mut body = vec![Node::let_bind(
+        "local",
+        Expr::LogicalWithinTileId { axis: 0 },
+    )];
     body.extend(matrix_diagonal_extract_body(matrix, diagonal, n, LANES));
     Program::wrapped(
         vec![
@@ -144,7 +147,7 @@ mod tests {
         let program = matrix_diagonal_extract("m", "diag", 4);
         crate::math::assert_local_id_0_bound(
             &program,
-            "Fix: matrix_diagonal_extract must bind `local` to LocalId { axis: 0 }.",
+            "Fix: matrix_diagonal_extract must bind `local` to LogicalWithinTileId { axis: 0 }.",
         );
     }
 }

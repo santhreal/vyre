@@ -53,7 +53,7 @@ pub fn functor_apply_sized(
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(target_n_cols)),

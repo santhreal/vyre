@@ -20,7 +20,7 @@ pub fn byte_histogram_256_body(input: &str, histogram: &str, count: u32) -> Vec<
     };
 
     vec![
-        Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("lane", Expr::LogicalIndex { axis: 0 }),
         // Gate the per-lane zero-fill against the bin count. The intended dispatch is
         // one 256-lane workgroup (lane 0..255 = the 256 bins), but whole-workgroup GPU
         // dispatch rounds up, so a >256-lane dispatch would otherwise OOB-write the
@@ -30,7 +30,7 @@ pub fn byte_histogram_256_body(input: &str, histogram: &str, count: u32) -> Vec<
             Expr::lt(Expr::var("lane"), Expr::buf_len(histogram)),
             vec![Node::store(histogram, Expr::var("lane"), Expr::u32(0))],
         ),
-        Node::Barrier {
+        Node::LogicalBarrier {
             ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
         },
         Node::loop_for(
@@ -57,7 +57,7 @@ pub fn byte_histogram_256_body(input: &str, histogram: &str, count: u32) -> Vec<
                 ),
             ],
         ),
-        Node::Barrier {
+        Node::LogicalBarrier {
             ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
         },
     ]

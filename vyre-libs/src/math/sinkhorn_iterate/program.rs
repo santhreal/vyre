@@ -96,9 +96,9 @@ pub fn sinkhorn_iterate(buffers: SinkhornBuffers<'_>, extents: SinkhornExtents) 
 
 /// One full Sinkhorn sweep: `Kv`, then `u`, then `Ktu`, then `v`.
 ///
-/// Every composed pass is PARTITIONED by global invocation id, not chunked: the
+/// Every composed pass is partitioned by global logical point, not chunked: the
 /// gemms gate on `t < out_cells` (`m` for `Kv`, `n` for `Ktu`) and the scales on
-/// `t < count`, and each lane sums over the shared dimension internally. So the
+/// `t < count`, and each point sums over the shared dimension internally. So the
 /// widest lane gate here is `max(m, n)`, which is what decides whether groups
 /// above 0 own any state. It is NOT `m * n`: nothing walks the kernel matrices
 /// one cell per lane, so a launch made multi-workgroup only by the size of `k`
@@ -135,7 +135,7 @@ pub(super) fn sinkhorn_transfer_body(
         }
         body
     };
-    let seq_cst = || Node::Barrier {
+    let seq_cst = || Node::LogicalBarrier {
         ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
     };
 

@@ -128,7 +128,7 @@ pub fn incremental_invalidation_program(
     let plan = plan_incremental_invalidation(changed_spans, dependency_regions)?;
     let total_regions = u32::try_from(plan.waves.iter().map(|w| w.region_ids.len()).sum::<usize>())
         .unwrap_or(u32::MAX);
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::store(
         wave_out,
         t.clone(),

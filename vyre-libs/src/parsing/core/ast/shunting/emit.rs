@@ -335,7 +335,7 @@ pub fn ast_shunting_yard_reduce_program() -> Program {
         Expr::u32(0),
     ));
     let guarded = vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         body,
     )];
     Program::wrapped(

@@ -224,116 +224,114 @@ fn entry_points() -> Vec<(&'static str, Program)> {
 /// result: an `Expr::select` evaluates both arms, so the discarded arm was
 /// issuing a load past the table. The values it computes are unchanged.
 ///
-/// Value semantics, workgroup tiling, memory layout, and ABI contracts across all
-/// 26 members are preserved unchanged.
+/// Wire revision 8 and the schedule-free identity migration change canonical
+/// bytes for all 26 members. Their value semantics, logical coverage, memory
+/// layout, ABI contracts, and selected-schedule lowering remain separately
+/// covered by the clone-family structure and conformance tests below.
 const EXPECTED: [(&str, &str); 26] = [
     (
         "recurrent_gated_delta/f32",
-        "b5243ad8be818a97a70d3964b892eb1ac495f8de5f6bed8d26a9252eba15e9cc",
+        "ad8b55452abc8c9df84f0761d0587ea4984ba5a41df32c3c916f4ce07cf89951",
     ),
     (
         "recurrent_gated_delta/f16",
-        "c769cc83d2e7804bfa52c974f039a5fd88e9f6f1f18b7fe5b0cb02825925b8b0",
+        "c38e3b21d68ef9bb3efdf15efca165c124b485cb66ddd6894e497abcf7d9015f",
     ),
     (
         "chunked_gated_delta/f32",
-        "b1037852078f03e033964cee03ebd2cf151de663b76302674b328e3d6768a080",
+        "fe22980f42fe08d5c3610cddfec551a1c76067eba0a57fc0574329bfe2cab5da",
     ),
     (
         "chunked_gated_delta/f16",
-        "4ed59de3ec45030af5ed245fecbad6036e17839401c14ba2aa9ebcd571e9e53b",
+        "80cff7b1dc0ba82f93328564a81736edd8060e8f7aea79c08ed93215b3707ae4",
     ),
     (
         "mla_decode",
-        "cb69d981fbb62eeffb8b84dafc6a04284281bd82aafee0b0502c3ccb606a04e3",
+        "5412b78d2afafe632acb95b1b416a63bf02bab635b384d84d0db8f07b3488d4c",
     ),
     (
         "flash_attention_2",
-        "9aa03a353c3b87f76975cbde281077446d1b3c9f22ff5ec4d6b00bff65e17f92",
+        "7402fdb74be1269dfec4e03de7366056b91cbb8dd435b53cdd07bb8b3eeeb5fe",
     ),
     (
         "softmax",
-        "cf69d5908f9190581a5b8eeb23c4c60f4b2828f870a5ee2904d9604216e125b8",
+        "6d2fa3148318eb1226505ccd2ca1783b980362ad11e866234cc2cc92cf269e11",
     ),
     (
         "layer_norm",
-        "7431d2f6951e9a8a081209cff20520140411b3aacfac1d09c6d1b5f0670e2d30",
+        "f234e6b1a719f9063d66447858b5513c4c8a05f4b596edab6ae0d1542a84f520",
     ),
     (
         "flash_attention",
-        "5aa2a2cf9aa224dff5f228eba6fd9cc57473f570baf4445d4f3bcca19cc4fc5d",
+        "8b73bdbc78a63a193fdc0729cade1d66dad5000aa3fa354f03f0a032a589b7f3",
     ),
     (
         "flash_attention/direct",
-        "4a277768597960cf686844d7ac398e09991fbc616c438bf5fb4c4fa7326363f2",
+        "c17caada022b988ee65cea65295a63a69a6068760a1de7ac491af4260b6caa48",
     ),
     (
         "attention",
-        "ac08103ff84292714c0f476ad65827006e61c61afa0dc5669e40aaf1a8037f98",
+        "60042fcbb8e8dd457fdee8892444385e6ff6829e00d6eb911eaf37460da488f6",
     ),
     (
         "attention/direct",
-        "514240c2d5ec2fce566d2a3c3cc4359b037f466a653df9a73f357c6e5349cce6",
+        "938f7860fba056a234be7fb71a5addce1afa86bc477dc1450ac72c1d20cecd3f",
     ),
-    // Re-pinned when the serial body of this program started naming the
-    // invocation it runs in rather than its workgroup. Its only caller pins a
-    // one-wide geometry, so the guard selects the same lane and the emitted
-    // result is unchanged; the guard expression itself is what moved.
     (
         "attention_reference",
-        "110f7cbd16990e8eae92dde872db7e1c39754d6728158ff1082e39ccd9712c4d",
+        "545af0d3fdec13aad5f12dbe9138e38469a84ac8685dc5d08dd313acfe48c61d",
     ),
     (
         "gqa_attention",
-        "c28f389e6c6ef79dc5f16f71cbe1b771445dcf4e0db0627e8f05f3751d5f21cb",
+        "7862f7ad5a76c2dbd7bf14537afe6631b1cda172b281e43f4d0a3ce3d83ad73d",
     ),
     (
         "gqa_attention_causal",
-        "1732d07ea3ee4a67a56206bff92a034916e2717b22e5ea8dd1ea2afaceb88106",
+        "c50f04a2406c4306abd7f2ca4acce4bb2c87c9fda97dff5afbdb411d8bf9b354",
     ),
     (
         "gqa_attention_causal/f16",
-        "414f71575b504f9d87994410e3c3886e55441df8b998eaeea1117250c54d1cda",
+        "c78843c159351f55aacefd2e32d608b98adc30ad8829f0d68404a03b00e709b9",
     ),
     (
         "kv_cache_append",
-        "5fe0316e53a89d4089ab3053aec66b4dae56378bcbaac60ff6279b8be2490a0c",
+        "386b4d87caea752653c3e7181c89d9193d3a56812e3c49ec101c9c9ab5c5f401",
     ),
     (
         "kv_cache_append/f16",
-        "78b68a761f0b9ebd6992b575eab928f214386a5c8979bc3130f715beae355bb9",
+        "5b27b531ea22186fb596b31db7cb7d844a2ca59a6a3a2e40cbf7f73dd505fdb0",
     ),
     (
         "attention_head_to_token",
-        "60289c54e895c5bfbf48377ba4fc8afb8e5c252990a6e922fdde0c2595de6f35",
+        "3b858c86cbf42d4cbed3c030e180b9fa66adf340a16ae8276d2aabceb4bd33ce",
     ),
     (
         "attention_head_to_token/f16",
-        "6ad7f7c541c13f9649900b593be298c2aa946ec35f2211f074219557b8dc5b1d",
+        "bf36c0779d9a8a0c13d8d69ed0de61119cedb255a552a09e03c79c4ddfa3dc7f",
     ),
     (
         "attention_token_to_head",
-        "3362251830e9e647e40b09a77ecdf7b9c421ffd765634efc5889df7ada55f97b",
+        "8d2d6708cdd1f013106a3c96be900b7b11a5fc7b8e2b7bad51a04d2092e0065e",
     ),
     (
         "quest_paging",
-        "75169e0495b1fa25ec835237ec6bd09c0158e0f6374bb266b46b148e1bb42a2d",
+        "789ba90607c500f07a2afeb2c801583c963095ec25e48d5daf8fb87bfda9a913",
     ),
     (
         "partial_rope",
-        "2d83f47ff07aa25d653d22c9c1b545afd0190201ca838868f8957e2dbf5017fc",
+        "8615b7abe62de44bb463702a7ccb59b3d6481bae0c6fcbaafafef06a01a404f5",
     ),
     (
         "qk_gain",
-        "43ad8ebe8e28e11286d16661d777d87027a47bba2bc3d6c8ed975fe094762f62",
+        "6babe9ba069f25db576dd122bafd5b069351cf11059b95a61a98d7cdbd6f0849",
     ),
     (
         "turboquant_attention",
-        "66b2497f36135d83c98c22a8e388469626cbfef5f47eb9c2f313488834ad5426",
+        "9b570a1cbab55be4a9c87f218a8bdf7b45f07830672c32c630700f1ff9d94e20",
     ),
     (
         "mla_compress_kv",
-        "5e8d2fec52e53b4b7896113a343f9c508e34797a8de3cccf66725971f9234a36",
+        "77142f2dbccf10bd4c82c6bda5b6961ffb4af97d050aeb5c21f49e704f06c0aa",
     ),
 ];
 

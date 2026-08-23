@@ -33,15 +33,15 @@ const ANY_SCRATCH: &str = "bitset_any_scratch";
 #[must_use]
 pub fn bitset_any(input: &str, out: &str, words: u32) -> Program {
     let mut body = vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
+        Node::let_bind("local", Expr::LogicalWithinTileId { axis: 0 }),
         Node::let_bind("found", Expr::u32(0)),
         Node::if_then(
-            Expr::is_first_workgroup(),
+            Expr::is_first_logical_tile(),
             vec![Node::store(ANY_SCRATCH, Expr::var("local"), Expr::u32(0))],
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         Node::if_then(
-            Expr::is_first_workgroup(),
+            Expr::is_first_logical_tile(),
             vec![for_each_index(
                 words,
                 PORTABLE_WORKGROUP_INVOCATIONS,
@@ -58,7 +58,7 @@ pub fn bitset_any(input: &str, out: &str, words: u32) -> Program {
                 )],
             )],
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
     ];
     // A max over lane verdicts is the OR of them: the slot is 1 exactly when some lane saw a set
     // bit, which is the answer, and it costs a log-depth tree instead of a second serial pass.
@@ -70,7 +70,7 @@ pub fn bitset_any(input: &str, out: &str, words: u32) -> Program {
     ));
     body.push(Node::if_then(
         Expr::and(
-            Expr::is_first_workgroup(),
+            Expr::is_first_logical_tile(),
             Expr::eq(Expr::var("local"), Expr::u32(0)),
         ),
         vec![Node::store(

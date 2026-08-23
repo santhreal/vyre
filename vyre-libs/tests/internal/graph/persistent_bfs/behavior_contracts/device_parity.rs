@@ -86,7 +86,7 @@ fn read_named_output(program: &Program, outputs: &[Vec<u8>], name: &str) -> Vec<
 ///
 /// The single-workgroup program (`node_count <= 256`) is one kernel launch, so
 /// the reference interpreter runs it directly. The grid-sync program
-/// (`node_count > 256`) carries `Node::Barrier { ordering: GridSync }`, which the
+/// (`node_count > 256`) contains a `Node::LogicalBarrier` with `GridSync`, which the
 /// interpreter cannot execute in one pass (variables bound in one segment are
 /// read in the next, carried through buffers). It routes through
 /// [`dispatch_with_grid_sync_split`] on [`CpuRefBackend`], the same non-native

@@ -125,7 +125,10 @@ pub fn eigenvector_column_sign(eigenvectors: &str, n: u32) -> Program {
             return trap_program(OP_ID, Some((eigenvectors, DataType::F32)), message);
         }
     };
-    let mut body = vec![Node::let_bind("local", Expr::LocalId { axis: 0 })];
+    let mut body = vec![Node::let_bind(
+        "local",
+        Expr::LogicalWithinTileId { axis: 0 },
+    )];
     body.extend(eigenvector_column_sign_body(eigenvectors, n, LANES));
     Program::wrapped(
         vec![
@@ -206,7 +209,7 @@ mod tests {
         let program = eigenvector_column_sign("evec", 4);
         crate::math::assert_local_id_0_bound(
             &program,
-            "Fix: eigenvector_column_sign must bind `local` to LocalId { axis: 0 }.",
+            "Fix: eigenvector_column_sign must bind `local` to LogicalWithinTileId { axis: 0 }.",
         );
     }
 }

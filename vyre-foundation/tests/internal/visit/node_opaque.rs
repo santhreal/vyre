@@ -117,6 +117,10 @@ impl NodeVisitor for CountingNodeVisitor {
         self.count += 1;
         Continue(())
     }
+    fn visit_logical_barrier(&mut self, _: &Node) -> ControlFlow<Self::Break> {
+        self.count += 1;
+        Continue(())
+    }
     fn visit_block(&mut self, _: &Node, _: &[Node]) -> ControlFlow<Self::Break> {
         self.count += 1;
         Continue(())

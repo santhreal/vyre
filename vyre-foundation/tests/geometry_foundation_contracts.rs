@@ -36,6 +36,26 @@ fn geometry_requirements_builder_methods_compose() {
     assert_eq!(req.subgroup_uniformity, Uniformity::SubgroupUniform);
 }
 
+/// WHY: `Any` is the identity requirement and must not erase the distinction
+/// between exactly one element and an arbitrary multiple of one.
+#[test]
+fn agnostic_composition_preserves_scalar_element_policy() {
+    let scalar = GeometryRequirements::agnostic().with_element_policy(ElementPolicy::Scalar);
+    let any = GeometryRequirements::agnostic();
+
+    assert_eq!(
+        scalar
+            .compose(any)
+            .expect("scalar composed with agnostic geometry"),
+        scalar
+    );
+    assert_eq!(
+        any.compose(scalar)
+            .expect("agnostic geometry composed with scalar"),
+        scalar
+    );
+}
+
 #[test]
 fn schedule_constraints_compose_every_neutral_dimension() {
     let left = GeometryRequirements::cooperative(CooperativeWidth::AtLeast(64))
@@ -135,6 +155,32 @@ fn program_semantics_derive_width_scratch_uniformity_and_cooperative_launch() {
     );
     assert!(constraints.requires_cooperative_launch);
     assert_eq!(constraints.memory_ordering, Some(MemoryOrdering::GridSync));
+}
+
+/// WHY: schedule-free barriers must retain every ordering and uniformity fact
+/// that target admission reads after logical scheduling.
+#[test]
+fn logical_barriers_preserve_every_declared_ordering_requirement() {
+    let orderings: Vec<_> = (0..=u8::MAX)
+        .filter_map(|tag| MemoryOrdering::from_wire_tag(tag).ok())
+        .collect();
+    assert!(!orderings.is_empty());
+
+    for ordering in orderings {
+        let program =
+            Program::wrapped(Vec::new(), [1, 1, 1], vec![Node::logical_barrier(ordering)]);
+        let constraints =
+            GeometryRequirements::from_program(&program).expect("logical ordering is bounded");
+        assert_eq!(constraints.memory_ordering, Some(ordering));
+        assert_eq!(
+            constraints.subgroup_uniformity,
+            Uniformity::WorkgroupUniform
+        );
+        assert_eq!(
+            constraints.requires_cooperative_launch,
+            ordering == MemoryOrdering::GridSync
+        );
+    }
 }
 
 #[test]

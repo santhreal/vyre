@@ -58,7 +58,10 @@ pub fn matrix_identity_fill(matrix: &str, n: u32) -> Program {
         Ok(cells) => cells,
         Err(message) => return trap_program(OP_ID, Some((matrix, DataType::F32)), message),
     };
-    let mut body = vec![Node::let_bind("local", Expr::LocalId { axis: 0 })];
+    let mut body = vec![Node::let_bind(
+        "local",
+        Expr::LogicalWithinTileId { axis: 0 },
+    )];
     body.extend(matrix_identity_fill_body(matrix, n, LANES));
     Program::wrapped(
         vec![BufferDecl::output(matrix, 0, DataType::F32).with_count(cells)],
@@ -136,7 +139,7 @@ mod tests {
         let program = matrix_identity_fill("m", 4);
         crate::math::assert_local_id_0_bound(
             &program,
-            "Fix: matrix_identity_fill must bind `local` to LocalId { axis: 0 }.",
+            "Fix: matrix_identity_fill must bind `local` to LogicalWithinTileId { axis: 0 }.",
         );
     }
 }

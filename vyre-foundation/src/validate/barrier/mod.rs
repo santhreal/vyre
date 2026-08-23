@@ -1,10 +1,10 @@
 //! Barrier placement validation.
 //!
-//! Workgroup barriers in GPU shaders must only appear in uniform control
-//! flow: every thread in the workgroup must reach the barrier or none
-//! must reach it. This module checks that barrier nodes are not placed
-//! inside divergent branches, catching a class of bugs that would
-//! otherwise deadlock or produce undefined behavior on the GPU.
+//! Physical and logical synchronization barriers must appear only in uniform
+//! control flow: every invocation in the workgroup must reach the barrier or
+//! none must reach it. This module rejects barrier nodes inside divergent
+//! branches, which would otherwise deadlock or produce undefined device
+//! behavior.
 
 use crate::validate::{ValidationLocation, ValidationPhase};
 mod exit_uniformity;
@@ -29,8 +29,8 @@ use crate::visit::any_descendant;
 ///
 /// `check_barrier` is `pub(crate)`; it's exercised indirectly through
 /// [`crate::validate::rule_pipeline::validate`] when a program contains a
-/// `Node::Barrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst }` inside a divergent `Node::If`. See the unit tests on
-/// [`crate::validate::rule_pipeline::validate`] for a runnable example.
+/// physical or logical barrier inside a divergent `Node::If`. See the unit
+/// tests on [`crate::validate::rule_pipeline::validate`] for a runnable example.
 ///
 /// # Errors
 ///
@@ -188,15 +188,15 @@ pub(crate) fn check_loop_back_edge(
     };
     // GUARD: is the exit ordered against the back edge? Strict, and it must stay
     // strict. Only a barrier that is UNCONDITIONALLY executed after the exit
-    // orders anything, which is why this counts `Node::Barrier` at spliced
-    // straight-line depth and nothing else. A barrier inside an `If` orders
-    // nothing for an invocation that skips the branch, and one inside a nested
-    // `Loop` is not executed at all when its trip count is zero. Crediting
-    // either would accept the exact race this rule exists to refuse, while
+    // orders anything, which is why this counts an unconditional physical or
+    // logical barrier at spliced straight-line depth and nothing else. A barrier
+    // inside an `If` orders nothing for an invocation that skips the branch, and
+    // one inside a nested `Loop` is not executed when its trip count is zero.
+    // Crediting either would accept the exact race this rule exists to refuse, while
     // looking more thorough than the correct check.
     if steps[last_exit + 1..]
         .iter()
-        .any(|node| matches!(node, Node::Barrier { .. }))
+        .any(|node| matches!(node, Node::Barrier { .. } | Node::LogicalBarrier { .. }))
     {
         return;
     }
@@ -254,7 +254,9 @@ fn splice_straight_line<'a>(nodes: &'a [Node], out: &mut Vec<&'a Node>) {
 /// side by side invites merging them, and merging them in either direction is a
 /// defect: permissive guarding accepts the race, strict triggering misses it.
 fn contains_barrier_anywhere(node: &Node) -> bool {
-    any_descendant(node, &mut |n| matches!(n, Node::Barrier { .. }))
+    any_descendant(node, &mut |n| {
+        matches!(n, Node::Barrier { .. } | Node::LogicalBarrier { .. })
+    })
 }
 
 /// True when executing `node` can leave the kernel.

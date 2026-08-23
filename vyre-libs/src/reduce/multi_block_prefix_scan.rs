@@ -316,7 +316,7 @@ fn try_exclusive_difference_pass(
     block_lanes: u32,
 ) -> Result<Program, String> {
     output_byte_range(n, "exclusive difference pass")?;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(n)),
         vec![Node::store(
@@ -398,7 +398,10 @@ fn try_guarded_single_block_scan(
     let scratch_b = format!("__{output}_guarded_scan_b");
 
     let mut scan_body = Vec::new();
-    scan_body.push(Node::let_bind("lane", Expr::LocalId { axis: 0 }));
+    scan_body.push(Node::let_bind(
+        "lane",
+        Expr::LogicalWithinTileId { axis: 0 },
+    ));
     scan_body.push(Node::store(&scratch_a, lane.clone(), Expr::u32(0)));
     scan_body.push(Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(n)),
@@ -408,7 +411,7 @@ fn try_guarded_single_block_scan(
             Expr::load(input, lane.clone()),
         )],
     ));
-    scan_body.push(Node::Barrier {
+    scan_body.push(Node::LogicalBarrier {
         ordering: MemoryOrdering::SeqCst,
     });
 
@@ -433,7 +436,7 @@ fn try_guarded_single_block_scan(
         "vyre multi_block_prefix_scan guarded single-block output",
     )?;
     let body = vec![
-        Node::let_bind("block", Expr::WorkgroupId { axis: 0 }),
+        Node::let_bind("block", Expr::LogicalTileId { axis: 0 }),
         Node::if_then(Expr::eq(block, Expr::u32(0)), scan_body),
     ];
     let buffers = vec![
@@ -618,8 +621,8 @@ fn try_pass_c_broadcast_offsets(
     let offset = Expr::var("offset");
 
     let body = vec![
-        Node::let_bind("lane", Expr::LocalId { axis: 0 }),
-        Node::let_bind("block", Expr::WorkgroupId { axis: 0 }),
+        Node::let_bind("lane", Expr::LogicalWithinTileId { axis: 0 }),
+        Node::let_bind("block", Expr::LogicalTileId { axis: 0 }),
         Node::let_bind(
             "global",
             Expr::add(

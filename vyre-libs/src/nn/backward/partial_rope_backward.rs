@@ -98,7 +98,7 @@ pub fn partial_rope_backward(
     let passthrough = Expr::load(grad_out, i.clone());
 
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(i.clone(), Expr::u32(total)),
             vec![

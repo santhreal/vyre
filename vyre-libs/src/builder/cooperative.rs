@@ -162,7 +162,7 @@ impl Argmax<'_> {
         let scope = WorkgroupReductionScope::FirstWorkgroup;
         let mut nodes = vec![
             Node::if_then(
-                Expr::is_first_workgroup(),
+                Expr::is_first_logical_tile(),
                 vec![
                     Node::store(
                         self.key_scratch,
@@ -172,9 +172,9 @@ impl Argmax<'_> {
                     Node::store(self.index_scratch, Expr::var("local"), Expr::u32(u32::MAX)),
                 ],
             ),
-            Node::barrier(),
+            Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
             Node::if_then(
-                Expr::is_first_workgroup(),
+                Expr::is_first_logical_tile(),
                 vec![for_each_index(
                     self.count,
                     self.tile,
@@ -189,14 +189,14 @@ impl Argmax<'_> {
                     )],
                 )],
             ),
-            Node::barrier(),
+            Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         ];
         nodes.push(
             self.key_kind
                 .max_child(self.op_id, self.tile, self.key_scratch, scope),
         );
         nodes.push(Node::if_then(
-            Expr::is_first_workgroup(),
+            Expr::is_first_logical_tile(),
             vec![for_each_index(
                 self.count,
                 self.tile,
@@ -217,7 +217,9 @@ impl Argmax<'_> {
                 )],
             )],
         ));
-        nodes.push(Node::barrier());
+        nodes.push(Node::logical_barrier(
+            vyre_foundation::ir::MemoryOrdering::SeqCst,
+        ));
         nodes.push(min_u32_child(
             self.op_id,
             self.tile,

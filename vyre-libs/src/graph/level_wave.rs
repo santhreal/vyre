@@ -17,7 +17,7 @@
 //!   ordering before invoking this primitive).
 //! - `Node::Loop` (vyre-foundation IR primitive)  -  outer per-depth
 //!   loop.
-//! - `Node::Barrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst }`  -  synchronisation between depth waves.
+//! - `Node::LogicalBarrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst }`  -  synchronisation between depth waves.
 //! - `Expr::eq` + `Node::if_then`  -  depth predicate per lane.
 //!
 //! No new sub-op invented. The caller composes its own per-lane work
@@ -65,7 +65,7 @@ fn depth_wave_body(
     depth: Expr,
     lane_count: u32,
 ) -> Vec<Node> {
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     // The range check MUST control-flow-nest the depth load, not `Expr::and` it:
     // `and(lane < lane_count, load(depth_buf, lane) == depth)` evaluates BOTH operands
     // (the IR has no short-circuit), so `load(depth_buf, lane)` reads `depth_buf` for the
@@ -140,7 +140,7 @@ pub fn level_wave_program_with_buffers(
 /// order using GPU-side level-wave dispatch.
 ///
 /// `step_body`: per-function body. Reads/writes any caller-declared
-/// buffer via `Expr::InvocationId { axis: 0 }` to address the function
+/// buffer via `Expr::LogicalIndex { axis: 0 }` to address the function
 /// being visited.
 ///
 /// `depth_buf`: name of the buffer containing per-function depth in the
@@ -201,7 +201,7 @@ pub fn level_wave_program_with_buffers_and_op_id(
                     Expr::var("__lw_depth__"),
                     lane_count,
                 );
-                loop_body.push(Node::Barrier {
+                loop_body.push(Node::LogicalBarrier {
                     ordering: MemoryOrdering::SeqCst,
                 });
                 loop_body
@@ -217,7 +217,7 @@ pub fn level_wave_program_with_buffers_and_op_id(
                 lane_count,
             ));
             if depth + 1 < max_depth {
-                waves.push(Node::Barrier {
+                waves.push(Node::LogicalBarrier {
                     ordering: MemoryOrdering::GridSync,
                 });
             }
@@ -246,7 +246,7 @@ inventory::submit! {
         OP_ID,
         || {
             level_wave_program_with_buffers(
-                vec![Node::store("out", Expr::InvocationId { axis: 0 }, Expr::u32(1))],
+                vec![Node::store("out", Expr::LogicalIndex { axis: 0 }, Expr::u32(1))],
                 "depths",
                 vec![BufferDecl::output("out", 1, DataType::U32).with_count(4)],
                 4,
@@ -293,7 +293,7 @@ mod tests {
             any_descendant(node, &mut |n| {
                 matches!(
                     n,
-                    Node::Barrier {
+                    Node::LogicalBarrier {
                         ordering: MemoryOrdering::GridSync
                     }
                 )
@@ -383,7 +383,7 @@ mod tests {
     fn multi_block_program_uses_top_level_grid_sync_waves() {
         let step = vec![Node::store(
             "out",
-            Expr::InvocationId { axis: 0 },
+            Expr::LogicalIndex { axis: 0 },
             Expr::u32(1),
         )];
         let program = level_wave_program(step, "depths", 4, LEVEL_WAVE_WORKGROUP_SIZE[0] + 1);
@@ -397,7 +397,7 @@ mod tests {
             body.iter()
                 .filter(|node| matches!(
                     node,
-                    Node::Barrier {
+                    Node::LogicalBarrier {
                         ordering: MemoryOrdering::GridSync,
                     }
                 ))
@@ -451,14 +451,18 @@ mod tests {
 
     #[test]
     fn callee_before_caller_builds_nonempty_program() {
-        let body = vec![Node::barrier()];
+        let body = vec![Node::logical_barrier(
+            vyre_foundation::ir::MemoryOrdering::SeqCst,
+        )];
         let program = build_callee_before_caller_program(body, "depths", 4, 16);
         assert_ne!(program.entry().len(), 0);
     }
 
     #[test]
     fn callee_before_caller_zero_depth_still_builds() {
-        let body = vec![Node::barrier()];
+        let body = vec![Node::logical_barrier(
+            vyre_foundation::ir::MemoryOrdering::SeqCst,
+        )];
         let program = build_callee_before_caller_program(body, "depths", 0, 1);
         assert_eq!(program.workgroup_size(), [256, 1, 1]);
         assert!(!program.buffers().is_empty());
@@ -468,7 +472,7 @@ mod tests {
     fn callee_before_caller_commits_children_before_parents() {
         use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr};
 
-        let t = Expr::InvocationId { axis: 0 };
+        let t = Expr::LogicalIndex { axis: 0 };
         let step_body = vec![
             Node::let_bind("c", Expr::load("callee", t.clone())),
             Node::store(

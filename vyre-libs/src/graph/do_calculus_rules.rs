@@ -35,7 +35,7 @@ pub fn try_rule2_reverse_incoming(
     n: u32,
 ) -> Result<Program, String> {
     let cells = crate::plumbing::operand::shape::square_matrix_cells(RULE2_OP_ID, n)?;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let row = Expr::div(t.clone(), Expr::u32(n));
     let col = Expr::rem(t.clone(), Expr::u32(n));
     let not_self = Expr::ne(row.clone(), col.clone());
@@ -94,8 +94,8 @@ pub fn try_rule2_reverse_incoming(
 /// Unlike the two per-cell-map do-calculus surgeries (intervention / rule 2),
 /// Rule 3 has a **data-dependent output size** (`k × k`, stride `k ≠ n`) and so
 /// requires a compaction (prefix scan of the kept indices) followed by a gather.
-/// The compaction/gather is done by a **single serialized lane** (`InvocationId
-/// == 0`), which makes the kept order deterministic (ascending original index,
+/// The compaction/gather is done by a **single serialized logical point**
+/// (`LogicalIndex == 0`), which makes the kept order deterministic (ascending original index,
 /// byte-identical to the CPU oracle) rather than the nondeterministic
 /// atomic-append order a parallel compaction would produce.
 #[must_use]
@@ -124,7 +124,7 @@ pub fn try_rule3_subgraph(
 ) -> Result<Program, String> {
     let cells = crate::plumbing::operand::shape::square_matrix_cells(RULE3_OP_ID, n)?;
 
-    let lane0 = Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0));
+    let lane0 = Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0));
 
     // Pass 1, compaction: walk nodes in ascending order, appending each kept
     // original index to `kept[k]` and counting `k`. Deterministic order.

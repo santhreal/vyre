@@ -103,7 +103,7 @@ pub fn dominator_tree_depth(node_count: u32, idom: &str, depth: &str) -> Program
         vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
                 dominator_tree_depth_body(node_count, idom, depth),
             )],
         )],

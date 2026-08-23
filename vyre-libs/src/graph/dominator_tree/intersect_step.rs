@@ -172,7 +172,7 @@ pub fn dominator_tree_lca_program(node_count: u32) -> Program {
     ));
     body.push(Node::store("out_lca", Expr::u32(0), Expr::var("a")));
     let guarded = vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         body,
     )];
     Program::wrapped(
@@ -244,7 +244,7 @@ pub fn dominator_tree_intersect_step(
         vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
                 body,
             )],
         )],

@@ -4,7 +4,7 @@
 //! but it cannot see hazards introduced when independently valid nodes are
 //! fused into the same kernel. This pass walks node sequences and rejects
 //! mixed atomic / non-atomic access to the same buffer unless an explicit
-//! `Node::Barrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst }` separates them.
+//! physical or logical synchronization barrier separates them.
 //!
 //! # Sole owner of `V116`
 //!
@@ -46,7 +46,7 @@ fn validate_sequence(nodes: &[Node], errors: &mut Vec<ValidationError>) {
 
     for node in nodes {
         match node {
-            Node::Barrier { .. } => {
+            Node::Barrier { .. } | Node::LogicalBarrier { .. } => {
                 reads_since_barrier.clear();
                 atomics_since_barrier.clear();
             }
@@ -222,6 +222,7 @@ pub(crate) fn collect_node_accesses(node: &Node, accesses: &mut NodeAccesses) {
         | Node::Resume { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::Opaque(_) => {}
         Node::AsyncWait { .. } => {}
     }
@@ -254,7 +255,7 @@ pub(crate) fn collect_expr_accesses(expr: &Expr, accesses: &mut NodeAccesses) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{BufferAccess, BufferDecl, DataType, Program};
+    use crate::ir::{BufferAccess, BufferDecl, DataType, MemoryOrdering, Program};
 
     fn validate(program: &Program) -> Vec<ValidationError> {
         let mut errors = Vec::new();
@@ -288,25 +289,30 @@ mod tests {
     }
 
     #[test]
-    fn barrier_clears_atomic_plain_alias_hazard() {
-        let program = Program::wrapped(
-            vec![BufferDecl::storage(
-                "state",
-                0,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )],
-            [1, 1, 1],
-            vec![
-                Node::let_bind("plain", Expr::load("state", Expr::u32(0))),
-                Node::barrier(),
-                Node::let_bind(
-                    "atomic_old",
-                    Expr::atomic_add("state", Expr::u32(0), Expr::u32(1)),
-                ),
-            ],
-        );
+    fn physical_and_logical_barriers_clear_atomic_plain_alias_hazards() {
+        for barrier in [
+            Node::barrier(),
+            Node::logical_barrier(MemoryOrdering::SeqCst),
+        ] {
+            let program = Program::wrapped(
+                vec![BufferDecl::storage(
+                    "state",
+                    0,
+                    BufferAccess::ReadWrite,
+                    DataType::U32,
+                )],
+                [1, 1, 1],
+                vec![
+                    Node::let_bind("plain", Expr::load("state", Expr::u32(0))),
+                    barrier,
+                    Node::let_bind(
+                        "atomic_old",
+                        Expr::atomic_add("state", Expr::u32(0), Expr::u32(1)),
+                    ),
+                ],
+            );
 
-        assert!(validate(&program).is_empty());
+            assert!(validate(&program).is_empty());
+        }
     }
 }

@@ -56,7 +56,7 @@ pub fn linear_4bit(
     let weight_f32 = Expr::cast(DataType::F32, nibble);
 
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(i.clone(), Expr::u32(out_dim)),
             vec![

@@ -43,7 +43,7 @@ pub const NODE_KIND_TRAP: u32 = 1 << 9;
 pub const NODE_KIND_RESUME: u32 = 1 << 10;
 /// `Node::Return`.
 pub const NODE_KIND_RETURN: u32 = 1 << 11;
-/// `Node::Barrier`.
+/// `Node::Barrier` or `Node::LogicalBarrier`.
 pub const NODE_KIND_BARRIER: u32 = 1 << 12;
 /// `Node::Block`.
 pub const NODE_KIND_BLOCK: u32 = 1 << 13;
@@ -428,7 +428,7 @@ fn walk_node(
             *kinds |= NODE_KIND_RETURN;
             ir.control_flow();
         }
-        Node::Barrier { ordering } => {
+        Node::Barrier { ordering } | Node::LogicalBarrier { ordering } => {
             *kinds |= NODE_KIND_BARRIER;
             // Grid scope is the one barrier ordering that is not a scheduling
             // detail: it rendezvous across workgroups, so a target without a
@@ -548,7 +548,10 @@ fn walk_expr(
         | Expr::Var(_)
         | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
-        | Expr::InvocationId { .. } => {}
+        | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. } => {}
     }
 }
 

@@ -28,7 +28,7 @@ fn every_return_is_preceded_by_a_grid_sync_at_the_same_top_level() {
     for (index, node) in waves.iter().enumerate() {
         if matches!(
             node,
-            Node::Barrier {
+            Node::LogicalBarrier {
                 ordering: MemoryOrdering::GridSync
             }
         ) {
@@ -143,7 +143,7 @@ fn wave_fences_are_grid_sync_and_never_workgroup_scope() {
     assert_eq!(
         count_nodes(&program, |node| matches!(
             node,
-            Node::Barrier {
+            Node::LogicalBarrier {
                 ordering: MemoryOrdering::GridSync
             }
         )),
@@ -153,7 +153,7 @@ fn wave_fences_are_grid_sync_and_never_workgroup_scope() {
     assert_eq!(
         count_nodes(
             &program,
-            |node| matches!(node, Node::Barrier { ordering } if !matches!(
+            |node| matches!(node, Node::LogicalBarrier { ordering } if !matches!(
                 ordering,
                 MemoryOrdering::GridSync
             ))
@@ -203,7 +203,7 @@ fn exactly_max_iterations_waves_are_emitted() {
         assert_eq!(
             count_nodes(&program, |node| matches!(
                 node,
-                Node::Barrier {
+                Node::LogicalBarrier {
                     ordering: MemoryOrdering::GridSync
                 }
             )),

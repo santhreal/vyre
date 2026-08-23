@@ -152,7 +152,7 @@ pub fn adler32_program(input: &str, out: &str, n: u32) -> Program {
 
 fn adler32_body(input: &str, out: &str, n: u32) -> Vec<Node> {
     vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         vec![
             Node::let_bind("a", adler32_initial_a_expr()),
             Node::let_bind("b", adler32_initial_b_expr()),

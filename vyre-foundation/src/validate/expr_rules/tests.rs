@@ -103,6 +103,9 @@ fn expr_match_guard_stays_exhaustive() {
             | Expr::Load { .. }
             | Expr::BufLen { .. }
             | Expr::InvocationId { .. }
+            | Expr::LogicalIndex { .. }
+            | Expr::LogicalTileId { .. }
+            | Expr::LogicalWithinTileId { .. }
             | Expr::WorkgroupId { .. }
             | Expr::LocalId { .. }
             | Expr::SubgroupLocalId

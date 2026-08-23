@@ -138,7 +138,7 @@ pub fn go_extract_packages_and_imports(
     out_imports: &str,
     out_import_counts: &str,
 ) -> Program {
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     let body = vec![
         emit_keyword_span_record_nodes(
             haystack,
@@ -252,7 +252,7 @@ pub fn go_extract_declarations(
     out_decls: &str,
     out_decl_counts: &str,
 ) -> Program {
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     let decl_span = GoDeclSpan {
         tok_types,
         tok_starts,

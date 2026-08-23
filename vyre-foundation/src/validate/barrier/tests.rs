@@ -77,6 +77,28 @@ fn a_barrier_after_the_exit_is_accepted() {
     );
 }
 
+/// Logical barriers trigger and discharge the same loop back-edge obligation.
+#[test]
+fn logical_barrier_orders_a_logical_lane_exit() {
+    let mut errors = Vec::new();
+    check_loop_back_edge(
+        &[
+            Node::logical_barrier(MemoryOrdering::SeqCst),
+            Node::If {
+                cond: Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
+                then: vec![Node::Return],
+                otherwise: Vec::new(),
+            },
+            Node::logical_barrier(MemoryOrdering::SeqCst),
+        ],
+        &mut errors,
+    );
+    assert!(
+        errors.is_empty(),
+        "a logical barrier on the back edge discharges the logical exit obligation: {errors:?}"
+    );
+}
+
 /// A loop with no barrier has no cross-invocation communication to order.
 #[test]
 fn an_exit_in_a_loop_with_no_barrier_is_accepted() {

@@ -19,7 +19,7 @@ pub const QUEST_SELECT_TOP_K_OP_ID: &str = "vyre-libs::nn::quest_select_top_k";
 /// Emit the body that zero-fills the full page queue.
 #[must_use]
 pub fn quest_zero_fill_body(io_queue: &str, num_pages: u32) -> Vec<Node> {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     vec![Node::loop_for(
         "loop_idx",
         Expr::u32(0),
@@ -65,7 +65,7 @@ pub fn quest_score_pages_body(
     num_pages: u32,
     d_head: u32,
 ) -> Vec<Node> {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let score_body = if d_head <= 8 {
         (0..d_head)
             .map(|lane| {
@@ -208,7 +208,7 @@ pub fn quest_select_top_k(
         vec![wrap_anonymous_region(
             QUEST_SELECT_TOP_K_OP_ID,
             vec![Node::if_then(
-                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
                 quest_select_top_k_body(scores, io_queue, num_pages, k, score_sentinel),
             )],
         )],

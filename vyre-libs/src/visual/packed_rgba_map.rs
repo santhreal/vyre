@@ -17,7 +17,7 @@ pub fn packed_rgba_map_node(input: &str, output: &str, count: u32) -> Node {
     wrap_anonymous_region(
         OP_ID,
         vec![
-            Node::let_bind("idx", Expr::gid_x()),
+            Node::let_bind("idx", Expr::logical_index(0)),
             Node::if_then(
                 Expr::lt(Expr::var("idx"), Expr::u32(count)),
                 vec![
@@ -59,7 +59,7 @@ pub(crate) fn build_pixel_pipeline(
                 OP_ID,
                 Ident::from(op_id),
                 vec![
-                    Node::let_bind("idx", Expr::gid_x()),
+                    Node::let_bind("idx", Expr::logical_index(0)),
                     Node::if_then(Expr::lt(Expr::var("idx"), Expr::u32(pixel_count)), body),
                 ],
             )],

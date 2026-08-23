@@ -204,7 +204,7 @@ pub fn ntt_butterfly_stage(data: &str, twiddles: &str, n: u32, stage_log: u32) -
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     // For lane t in [0, half): compute pair (i, i + butterfly_distance)
     // with i = (t / butterfly_distance) * 2 * butterfly_distance + (t % butterfly_distance)
     // This places butterflies at distance butterfly_distance apart.

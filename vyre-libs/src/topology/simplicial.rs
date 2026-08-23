@@ -69,7 +69,7 @@ pub fn simplicial_triangle_message(
     }
 
     let cells = n_triangles * d;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let tri = Expr::div(t.clone(), Expr::u32(d));
     let dim = Expr::rem(t.clone(), Expr::u32(d));
 

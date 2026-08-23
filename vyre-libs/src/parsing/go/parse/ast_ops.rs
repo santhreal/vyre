@@ -59,7 +59,7 @@ fn go_extract_span_program(
     op_id: &str,
     body: Vec<Node>,
 ) -> Program {
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     Program::wrapped(
         vec![
             BufferDecl::storage(tok_types, 0, BufferAccess::ReadOnly, DataType::U32),
@@ -92,7 +92,7 @@ fn go_extract_keyword_calls(
     keyword: &[u8],
     op_id: &str,
 ) -> Program {
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     let body = vec![emit_keyword_span_record_nodes(
         haystack,
         tok_types,
@@ -123,7 +123,7 @@ pub fn go_extract_channel_sends(
     out_ops: &str,
     out_counts: &str,
 ) -> Program {
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     let next = Expr::add(t.clone(), Expr::u32(1));
     let after = Expr::add(t.clone(), Expr::u32(2));
     let body = vec![Node::if_then(
@@ -198,7 +198,7 @@ pub fn go_extract_channel_receives(
     out_ops: &str,
     out_counts: &str,
 ) -> Program {
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     let next = Expr::add(t.clone(), Expr::u32(1));
     // Saturating: at t == 0 this stays 0 and the guard below is written so the
     // token at 0 can never be its own predecessor.
@@ -270,7 +270,7 @@ pub fn go_extract_channel_creations(
     out_ops: &str,
     out_counts: &str,
 ) -> Program {
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     let body = vec![Node::if_then(
         Expr::lt(Expr::add(t.clone(), Expr::u32(2)), num_tokens.clone()),
         vec![Node::if_then(

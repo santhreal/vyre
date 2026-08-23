@@ -154,7 +154,7 @@ pub(crate) fn execute_node<'a>(
         } => eval_loop(var, from, to, body, invocation, memory, program),
         Node::Return => eval_return(invocation),
         Node::Block(nodes) => eval_block(nodes, invocation),
-        Node::Barrier { .. } => eval_barrier(invocation),
+        Node::Barrier { .. } | Node::LogicalBarrier { .. } => eval_barrier(invocation),
         Node::IndirectDispatch {
             count_buffer,
             count_offset,

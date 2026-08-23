@@ -154,9 +154,9 @@ fn scratch_names(program: &Program) -> Vec<String> {
 /// Total store executions into `targets` across every lane of the workgroup.
 ///
 /// Walks the Program once per lane, evaluating each enclosing `If` condition
-/// with that lane's invocation id. Every guard the scans emit is arithmetic over
-/// the lane index and literals, so this is exact rather than an estimate; a
-/// guard the evaluator cannot fold is treated as taken, which can only
+/// with that lane's logical identity. Every guard the scans emit is arithmetic
+/// over the lane index and literals, so this is exact rather than an estimate;
+/// a guard the evaluator cannot fold is treated as taken, which can only
 /// overcount.
 fn executed_stores(program: &Program, targets: Vec<String>) -> u32 {
     let lanes = program.workgroup_size()[0];
@@ -216,7 +216,10 @@ fn count_node(node: &Node, lane: u32, targets: &[String], env: &mut HashMap<Stri
 fn fold(expr: &Expr, lane: u32, env: &HashMap<String, u32>) -> Option<u32> {
     match expr {
         Expr::LitU32(word) => Some(*word),
-        Expr::InvocationId { axis: 0 } | Expr::LocalId { axis: 0 } => Some(lane),
+        Expr::InvocationId { axis: 0 }
+        | Expr::LocalId { axis: 0 }
+        | Expr::LogicalIndex { axis: 0 }
+        | Expr::LogicalWithinTileId { axis: 0 } => Some(lane),
         Expr::Var(name) => env.get(name.as_str()).copied(),
         Expr::BinOp { op, left, right } => {
             let left = fold(left, lane, env)?;

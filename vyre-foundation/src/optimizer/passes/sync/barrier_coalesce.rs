@@ -158,6 +158,17 @@ fn push_coalesced(out: &mut Vec<Node>, node: Node, changed: &mut bool) {
                 new_last;
             *changed = true;
         }
+        (
+            Some(Node::LogicalBarrier { ordering: prev }),
+            Node::LogicalBarrier { ordering: curr },
+        ) => {
+            let joined = join_ordering(*prev, *curr);
+            let new_last = Node::LogicalBarrier { ordering: joined };
+            *out.last_mut().unwrap_or_else(|| {
+                unreachable!("non-empty by match arm above (Some(LogicalBarrier))")
+            }) = new_last;
+            *changed = true;
+        }
         _ => out.push(node),
     }
 }
@@ -168,6 +179,7 @@ fn sequence_has_consecutive_barriers(body: &[Node]) -> bool {
         matches!(
             (&pair[0], &pair[1]),
             (Node::Barrier { .. }, Node::Barrier { .. })
+                | (Node::LogicalBarrier { .. }, Node::LogicalBarrier { .. })
         )
     })
 }
@@ -190,20 +202,21 @@ mod tests {
         Program::wrapped(vec![buf()], [1, 1, 1], entry)
     }
 
-    /// Count `Node::Barrier` occurrences anywhere in the program entry tree.
-    /// Lets tests assert post-coalesce barrier count even though
-    /// `Program::wrapped` puts everything inside an outer Region.
+    /// Count physical and logical barrier occurrences anywhere in the program entry tree.
     fn count_barriers(node: &Node) -> usize {
         crate::test_ir_inspect::count_nodes(std::slice::from_ref(node), |candidate| {
-            matches!(candidate, Node::Barrier { .. })
+            matches!(
+                candidate,
+                Node::Barrier { .. } | Node::LogicalBarrier { .. }
+            )
         })
     }
 
-    /// The ordering of the first `Node::Barrier` at any depth, in source order.
+    /// The ordering of the first physical or logical barrier at any depth.
     fn first_barrier_ordering(node: &Node) -> Option<MemoryOrdering> {
         let mut first = None;
         crate::visit::for_each_node(std::slice::from_ref(node), |candidate| {
-            if let Node::Barrier { ordering } = candidate {
+            if let Node::Barrier { ordering } | Node::LogicalBarrier { ordering } = candidate {
                 first = first.or(Some(*ordering));
             }
         });
@@ -279,13 +292,13 @@ mod tests {
     fn coalesces_three_consecutive_barriers_to_one_with_join() {
         // Acquire + Release + AcqRel → AcqRel
         let entry = vec![
-            Node::Barrier {
+            Node::LogicalBarrier {
                 ordering: MemoryOrdering::Acquire,
             },
-            Node::Barrier {
+            Node::LogicalBarrier {
                 ordering: MemoryOrdering::Release,
             },
-            Node::Barrier {
+            Node::LogicalBarrier {
                 ordering: MemoryOrdering::AcqRel,
             },
         ];

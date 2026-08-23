@@ -60,7 +60,7 @@ pub fn moe_layer_route_and_accumulate(
     //
     // We use a single invocation per output dimension.
     let body = vec![
-        Node::let_bind("j", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("j", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(j.clone(), Expr::u32(out_dim)),
             vec![

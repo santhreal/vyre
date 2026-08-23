@@ -198,6 +198,13 @@ fn inert_samples() -> Vec<ExprSample> {
         sample("InvocationId", None, Expr::InvocationId { axis: 0 }),
         sample("WorkgroupId", None, Expr::WorkgroupId { axis: 0 }),
         sample("LocalId", None, Expr::LocalId { axis: 0 }),
+        sample("LogicalIndex", None, Expr::logical_index(0)),
+        sample("LogicalTileId", None, Expr::logical_tile_index(0)),
+        sample(
+            "LogicalWithinTileId",
+            None,
+            Expr::logical_within_tile_index(0),
+        ),
         sample(
             "BinOp",
             None,

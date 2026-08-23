@@ -164,7 +164,7 @@ pub fn try_rank1_superblocks(
                 ),
             ],
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
     ];
     chunk.extend(blelloch_inclusive_sum_nodes(
         RANK_BLOCK_SCRATCH,
@@ -176,7 +176,7 @@ pub fn try_rank1_superblocks(
     // scan less this lane's own staged popcount, offset by every earlier chunk.
     chunk.push(Node::if_then(
         Expr::and(
-            Expr::is_first_workgroup(),
+            Expr::is_first_logical_tile(),
             Expr::lt(block.clone(), Expr::u32(blocks)),
         ),
         vec![Node::store(
@@ -187,7 +187,9 @@ pub fn try_rank1_superblocks(
     ));
     // The carry advances only once every lane has read it, and the next chunk
     // stages over the scan scratch only once the carry has read it.
-    chunk.push(Node::barrier());
+    chunk.push(Node::logical_barrier(
+        vyre_foundation::ir::MemoryOrdering::SeqCst,
+    ));
     chunk.push(Node::if_then(
         Expr::eq(local.clone(), Expr::u32(tile - 1)),
         vec![Node::store(
@@ -196,15 +198,17 @@ pub fn try_rank1_superblocks(
             Expr::add(carry.clone(), inclusive),
         )],
     ));
-    chunk.push(Node::barrier());
+    chunk.push(Node::logical_barrier(
+        vyre_foundation::ir::MemoryOrdering::SeqCst,
+    ));
 
     let body = vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
+        Node::let_bind("local", Expr::LogicalWithinTileId { axis: 0 }),
         Node::if_then(
             Expr::eq(local.clone(), Expr::u32(0)),
             vec![Node::store(RANK_CARRY, Expr::u32(0), Expr::u32(0))],
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         Node::loop_for(
             "rank_chunk",
             Expr::u32(0),
@@ -213,7 +217,7 @@ pub fn try_rank1_superblocks(
         ),
         Node::if_then(
             Expr::and(
-                Expr::is_first_workgroup(),
+                Expr::is_first_logical_tile(),
                 Expr::eq(local.clone(), Expr::u32(0)),
             ),
             vec![Node::store(superblocks, Expr::u32(out_count - 1), carry)],
@@ -287,7 +291,7 @@ pub fn try_rank1_query(
     block_words: u32,
 ) -> Result<Program, SuccinctBuildError> {
     let sb_count = superblock_count(word_count, block_words)?;
-    let q = Expr::InvocationId { axis: 0 };
+    let q = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(q.clone(), Expr::u32(query_count)),
         vec![

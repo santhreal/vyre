@@ -113,7 +113,7 @@ pub fn ssa_dominance_scan(
 /// Build the standalone dominance-scan primitive.
 #[must_use]
 pub fn ssa_dominance_scan_program(num_nodes: u32, phi_words: u32) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     // Control-flow nest the lane guard: `t < num_nodes` must gate the `ast_opcodes[t]`
     // load via an `if_then`, NOT an `Expr::and`: a data-flow AND evaluates both
     // operands, so `load(ast_opcodes, t)` would execute for over-fired lanes

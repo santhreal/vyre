@@ -99,7 +99,7 @@ pub fn try_dominator_frontier(
         )
     });
     let offset_count = offset_count?;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let dominator_is_seed = when_bit_set(
         seed,
         &Expr::var("n"),
@@ -293,7 +293,7 @@ pub fn dominator_frontier_pred_check_program() -> Program {
         Expr::var("dominates_a_predecessor"),
     ));
     let guarded = vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         body,
     )];
     Program::wrapped(

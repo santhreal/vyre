@@ -112,8 +112,8 @@ pub fn nfa_sharded_programs(
 pub const HAYSTACK_LEN_BUF: &str = "nfa_haystack_len";
 
 /// Canonical buffer name for the runtime-supplied per-workgroup cursor
-/// bound. Each workgroup walks bytes from `WorkgroupId(0)` up to
-/// `min(haystack_len, WorkgroupId(0) + max_scan_bytes)`. Set to
+/// bound. Each workgroup walks bytes from `LogicalTileId(0)` up to
+/// `min(haystack_len, LogicalTileId(0) + max_scan_bytes)`. Set to
 /// `u32::MAX` for unbounded scans (legacy behavior - every workgroup
 /// walks to the end of the haystack, giving O(N²) total work).
 ///
@@ -224,8 +224,8 @@ pub fn nfa_scan_with_plan(
     // empty haystack; consumers should not special-case it at the
     // call site.
 
-    let lane = Expr::LocalId { axis: 0 };
-    let start = Expr::WorkgroupId { axis: 0 };
+    let lane = Expr::LogicalWithinTileId { axis: 0 };
+    let start = Expr::LogicalTileId { axis: 0 };
     let lane_u32 = || lane.clone();
     let start_u32 = || start.clone();
     let num_states = plan.num_states;
@@ -242,7 +242,7 @@ pub fn nfa_scan_with_plan(
     let haystack_len_expr = || Expr::load(HAYSTACK_LEN_BUF, Expr::u32(0));
 
     // Per-workgroup cursor cap. The cursor loop runs from
-    // `start = WorkgroupId(0)` to `min(haystack_len, start + max_scan_bytes)`.
+    // `start = LogicalTileId(0)` to `min(haystack_len, start + max_scan_bytes)`.
     // Without this bound, each workgroup walks to the end of the haystack
     // (O(N) per workgroup × N workgroups = O(N²)). With a bound matched
     // to the longest possible pattern match, total work drops to O(N × bound).

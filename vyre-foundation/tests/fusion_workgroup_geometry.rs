@@ -321,6 +321,39 @@ fn a_serial_arm_guarded_on_its_invocation_is_still_widened() {
     );
 }
 
+/// WHY: widening a logical-tile guard changes which physical workgroups may
+/// enter the stateful arm, the same hazard as a physical workgroup guard.
+#[test]
+fn a_serial_arm_guarded_on_its_logical_tile_is_not_widened() {
+    let message = geometry_error(fuse_programs(&[
+        independent_arm("wide_logical", 256),
+        serial_arm("serial_logical", 1, Expr::is_first_logical_tile()),
+    ]));
+    assert!(
+        message.contains("read-write storage") && message.contains("workgroup identity"),
+        "a logical tile guard has the same widening hazard as a physical workgroup guard: {message}"
+    );
+}
+
+/// WHY: a logical point guard makes a logical-tile-gated arm exact after
+/// workgroup widening and must override the conservative tile-only rule.
+#[test]
+fn a_serial_arm_guarded_on_its_logical_point_is_still_widened() {
+    let fused = fuse_programs(&[
+        independent_arm("wide_logical", 256),
+        serial_arm(
+            "serial_logical",
+            1,
+            Expr::and(
+                Expr::is_first_logical_tile(),
+                Expr::is_first_logical_point(),
+            ),
+        ),
+    ])
+    .expect("a logical-point-exact serial arm is safe under any workgroup");
+    assert_eq!(fused.workgroup_size(), [256, 1, 1]);
+}
+
 /// Read-write storage alone is not the hazard.
 ///
 /// `independent_arm` writes read-write storage at its own global index. Every

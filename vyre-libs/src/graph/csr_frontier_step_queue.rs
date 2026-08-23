@@ -215,7 +215,7 @@ impl CsrQueueStepSpec<'_> {
 }
 
 fn csr_queue_step_body(spec: &CsrQueueStepSpec<'_>) -> Vec<Node> {
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     match spec.lanes {
         CsrQueueLanes::Scalar => {
             let idx = spec.var("idx");

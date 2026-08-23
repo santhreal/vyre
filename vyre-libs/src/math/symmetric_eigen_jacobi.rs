@@ -123,7 +123,7 @@ pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32)
     let serial = |body: Vec<Node>| {
         Node::if_then(
             Expr::and(
-                Expr::is_first_workgroup(),
+                Expr::is_first_logical_tile(),
                 Expr::eq(Expr::var("local"), Expr::u32(0)),
             ),
             body,
@@ -150,19 +150,19 @@ pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32)
             )],
         )]),
         // Publish the rotation to the lanes that search over it next sweep.
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
     ]);
 
     vec![Node::if_then(
-        Expr::is_first_workgroup(),
+        Expr::is_first_logical_tile(),
         vec![
-            Node::let_bind("local", Expr::LocalId { axis: 0 }),
+            Node::let_bind("local", Expr::LogicalWithinTileId { axis: 0 }),
             // The accumulator seed, the sign canonicalization and the diagonal
             // read-out each touch cells no other lane touches, so they run across
             // the workgroup at the width this program declares. Only the rotation
             // is serial, and it is serial because the next sweep reads it.
             matrix_identity_fill_region(OP_ID, eigenvectors, n, LANES),
-            Node::barrier(),
+            Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
             Node::loop_for("jac_sweep", Expr::u32(0), Expr::u32(sweeps), sweep),
             eigenvector_column_sign_region(OP_ID, eigenvectors, n, LANES),
             matrix_diagonal_extract_region(OP_ID, a, eigenvalues, n, LANES),

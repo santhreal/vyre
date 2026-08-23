@@ -110,7 +110,7 @@ pub fn try_ddnnf_evaluate(
         ));
     }
 
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let child_index = Expr::add(Expr::var("child_base"), Expr::var("k"));
     let body = vec![Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(n_nodes)),

@@ -2,10 +2,24 @@
 use std::collections::{BTreeMap, BTreeSet};
 use vyre_debug::fixtures::loop_carry_smoke;
 use vyre_debug::{carrier_summary, find_uncarriered_assigns};
-use vyre_foundation::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node, Program, ProgramGraph};
+use vyre_foundation::logical::LogicalProgramGraph;
+use vyre_foundation::schedule::SelectedSchedule;
 
 #[path = "program_fixtures/mod.rs"]
 mod program_fixtures;
+
+fn lower_library_program(program: &Program) -> vyre_lower::KernelDescriptor {
+    let graph = ProgramGraph::from_program("vyre-debug::loop-carrier", program.clone())
+        .expect("library fixture must form a valid graph");
+    let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
+        .expect("library fixture must have a valid logical domain");
+    let schedule = SelectedSchedule::from_logical(&logical);
+    let phase = schedule.phases[0].id;
+    vyre_lower::lower_scheduled(program, &schedule, phase)
+        .expect("library fixture must lower through its selected schedule")
+        .into_descriptor()
+}
 
 #[test]
 fn find_uncarriered_assigns_smoke_program_returns_empty() {
@@ -61,9 +75,7 @@ fn find_uncarriered_assigns_flags_a_loop_with_no_carrier() {
 #[test]
 fn carrier_summary_counts_match_descriptor_walk() {
     let p = vyre_libs::parsing::python::lex::python312_lexer("hs", "tt", "ts", "tl", "tc", 4);
-    let desc = vyre_lower::lower_physical(&p)
-        .map(|lowered| lowered.into_descriptor())
-        .unwrap();
+    let desc = lower_library_program(&p);
     let summary = carrier_summary(&desc);
 
     // Walk the descriptor directly and build the ground-truth maps.
@@ -113,9 +125,7 @@ fn carrier_summary_counts_match_descriptor_walk() {
 #[test]
 fn carrier_summary_includes_function_locals() {
     let p = vyre_libs::parsing::python::lex::python312_lexer("hs", "tt", "ts", "tl", "tc", 4);
-    let desc = vyre_lower::lower_physical(&p)
-        .map(|lowered| lowered.into_descriptor())
-        .unwrap();
+    let desc = lower_library_program(&p);
     let summary = carrier_summary(&desc);
     // Derive the expected names from the descriptor the summary just walked
     // rather than pinning one lexer's variable spelling: a local recorded here

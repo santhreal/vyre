@@ -86,7 +86,7 @@ pub fn newton_schulz_y_step(y_curr: &str, yzy: &str, y_next: &str, n: u32) -> Pr
     }
 
     let cells = n * n;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     // value = (3 * y_curr[t] - yzy[t]) / 2
     let three_y = Expr::mul(Expr::u32(3), Expr::load(y_curr, t.clone()));
@@ -152,7 +152,7 @@ pub fn newton_schulz_poly5_f32(mat: &str, output: &str, rows: u32, cols: u32) ->
     });
 
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(Expr::lt(i.clone(), Expr::u32(total)), iter_body),
     ];
 

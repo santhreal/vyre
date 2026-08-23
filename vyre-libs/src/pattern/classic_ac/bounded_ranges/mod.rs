@@ -124,7 +124,7 @@ pub(in crate::pattern) fn candidate_end_gate_nodes(
 ) -> Vec<Node> {
     let i = Expr::var("i");
     vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(i.clone(), Expr::load(haystack_len, Expr::u32(0))),
             vec![

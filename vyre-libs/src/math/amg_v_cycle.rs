@@ -2,8 +2,8 @@
 //!
 //! Composes the Jacobi smoother (`jacobi_smooth_step_serial_body`) with restriction and
 //! prolongation to solve linear systems $Ax = b$ across multiple scales. The whole V-cycle is a
-//! single-threaded serial algorithm run under one `InvocationId == 0` lane guard (see the region
-//! body), so it inlines the SERIAL smoother form, not the per-lane `jacobi_smooth_step` builder.
+//! single-threaded serial algorithm run under one `LogicalIndex == 0` point guard (see the
+//! region body), so it inlines the SERIAL smoother form, not the per-point `jacobi_smooth_step` builder.
 //!
 //! Sequence (2-level):
 //! 1. Pre-smooth: $x = \text{smooth}(A, b, x, \omega)$
@@ -282,12 +282,12 @@ pub fn amg_v_cycle(
                 // the dispatch grid from buffer shapes and the production consumer dispatches
                 // ceil(n/256) workgroups of size 1, far fewer lanes than there are rows, so a
                 // per-lane body would under-cover the vector. Guard the whole body to
-                // `InvocationId == 0` so the one dispatched lane runs the entire serial V-cycle at
+                // `LogicalIndex == 0` so one scheduled point runs the entire serial V-cycle at
                 // any grid (the canonical GPU serial-region idiom, cf. matroid, sheaf,
                 // path_reconstruct). No GridSync barriers are needed (or safe) under this guard:
                 // a single lane sees its own writes sequentially.
                 body: Arc::new(vec![Node::if_then(
-                    Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                    Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
                     nodes,
                 )]),
             }],
@@ -348,7 +348,7 @@ inventory::submit! {
                 vec![wrap_anonymous_region(
                     V_CYCLE_PHASE_OP_ID,
                     vec![Node::if_then(
-                        Expr::is_first_invocation(),
+                        Expr::is_first_logical_point(),
                         vec![Node::loop_for(
                             "idx",
                             Expr::u32(0),

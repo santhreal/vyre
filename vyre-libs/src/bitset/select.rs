@@ -24,7 +24,7 @@ pub fn select1_query(
     word_count: u32,
     query_count: u32,
 ) -> Program {
-    let q = Expr::InvocationId { axis: 0 };
+    let q = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(q.clone(), Expr::u32(query_count)),
         vec![

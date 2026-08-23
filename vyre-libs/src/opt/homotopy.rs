@@ -74,7 +74,7 @@ pub fn homotopy_euler_predictor(
     }
 
     let cells = n_paths * n_dim;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     // x_pred[i] = x_curr[i] + fixed_mul_16_16(dt, v[i])
     let value = Expr::add(

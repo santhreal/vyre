@@ -345,6 +345,7 @@ pub(crate) fn collective_buffers(node: &Node) -> [Option<&Ident>; 2] {
         | Node::Return
         | Node::Block(_)
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::Region { .. }
         | Node::IndirectDispatch { .. }
         | Node::AsyncLoad { .. }

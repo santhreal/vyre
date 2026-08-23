@@ -41,12 +41,13 @@ pub(super) fn exits_after_last_barrier_are_uniform(
 ) -> bool {
     let Some(last_barrier) = steps
         .iter()
-        .rposition(|node| matches!(node, Node::Barrier { .. }))
+        .rposition(|node| matches!(node, Node::Barrier { .. } | Node::LogicalBarrier { .. }))
     else {
         return false;
     };
-    let Node::Barrier { ordering } = steps[last_barrier] else {
-        return false;
+    let ordering = match steps[last_barrier] {
+        Node::Barrier { ordering } | Node::LogicalBarrier { ordering } => ordering,
+        _ => return false,
     };
     let mut state = ExitUniformityState {
         scope: scope.clone(),
@@ -225,7 +226,7 @@ fn analyze_exit_node(
             has_return: true,
             all_collective: path_uniform,
         },
-        Node::Barrier { ordering } => {
+        Node::Barrier { ordering } | Node::LogicalBarrier { ordering } => {
             if barrier_acquires(*ordering) {
                 state.dirty_buffers.clear();
                 state.loads_settled = true;

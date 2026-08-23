@@ -160,6 +160,10 @@ pub fn put_node(out: &mut Vec<u8>, node: &Node) -> Result<(), WireEncodeErr> {
             put_u8(out, 7);
             put_u8(out, ordering.wire_tag());
         }
+        Node::LogicalBarrier { ordering } => {
+            put_u8(out, 25);
+            put_u8(out, ordering.wire_tag());
+        }
         Node::IndirectDispatch {
             count_buffer,
             count_offset,

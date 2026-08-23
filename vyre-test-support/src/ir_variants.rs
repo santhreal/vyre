@@ -289,6 +289,11 @@ fn inert_samples() -> Vec<NodeSample> {
             Node::barrier_with_ordering(MemoryOrdering::SeqCst),
         ),
         sample(
+            "LogicalBarrier",
+            None,
+            Node::logical_barrier(MemoryOrdering::SeqCst),
+        ),
+        sample(
             "IndirectDispatch",
             None,
             Node::indirect_dispatch("fixture_counts", 0),

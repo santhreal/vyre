@@ -43,8 +43,8 @@ pub fn conv1d_node(input: &str, output: &str, weights: &str, params: &str) -> No
             Node::let_bind("count", Expr::load(params, Expr::u32(0))),
             Node::let_bind("stride", Expr::load(params, Expr::u32(1))),
             Node::let_bind("radius", Expr::load(params, Expr::u32(2))),
-            // Output index from global invocation id.
-            Node::let_bind("idx", Expr::gid_x()),
+            // Output index from the global logical point.
+            Node::let_bind("idx", Expr::logical_index(0)),
             // Bounds check.
             Node::if_then(
                 Expr::lt(Expr::var("idx"), Expr::var("count")),
@@ -319,7 +319,7 @@ mod tests {
     }
 
     /// count > 256 spans more than one workgroup of the `[256,1,1]` dispatch, so
-    /// this exercises the GLOBAL `gid_x` element indexing + clamped boundary
+    /// this exercises global logical-point indexing plus clamped boundary handling
     /// across the workgroup seam with a 5-tap (radius 2) kernel.
     #[test]
     fn conv1d_program_ir_matches_cpu_reference_across_workgroup_seam() {

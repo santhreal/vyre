@@ -42,7 +42,7 @@ pub(crate) fn build_matmul_2d_linear(
             shape: vec![m, n],
         })?;
 
-    let idx = Expr::InvocationId { axis: 0 };
+    let idx = Expr::LogicalIndex { axis: 0 };
     let row_expr = Expr::div(idx.clone(), Expr::u32(n));
     let col_expr = Expr::rem(idx.clone(), Expr::u32(n));
 
@@ -189,7 +189,7 @@ pub(crate) fn build_batched_3d_contraction(
     let local_idx = Expr::var("local_idx");
 
     let body = vec![
-        Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("idx", Expr::LogicalIndex { axis: 0 }),
         Node::let_bind(
             "batch_idx",
             Expr::div(idx.clone(), Expr::u32(out_batch_stride)),
@@ -318,7 +318,7 @@ pub(crate) fn build_batched_rows_contraction(
     };
 
     let body = vec![
-        Node::let_bind("index", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("index", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(index.clone(), Expr::u32(output_count)),
             vec![
@@ -410,7 +410,7 @@ pub(crate) fn build_block_1d_contraction(
     let initial_acc = bias.map_or_else(|| Expr::u32(0), |b| Expr::load(b, lane.clone()));
 
     let body = vec![
-        Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("lane", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(lane.clone(), Expr::u32(out_dim)),
             vec![
@@ -501,7 +501,7 @@ pub(crate) fn build_matvec_contraction(
     semiring: &ContractionSemiring,
     workgroup_size: [u32; 3],
 ) -> Result<Program, TensorRefError> {
-    let row = Expr::InvocationId { axis: 0 };
+    let row = Expr::LogicalIndex { axis: 0 };
     let row_base = Expr::mul(row.clone(), Expr::u32(n));
 
     let combined = semiring.combine_expr(
@@ -645,7 +645,7 @@ pub(crate) fn build_strassen_2x2(
     // every invocation of the grid a backend derives from the output length, and
     // in every invocation a fusion widens this arm to. One invocation owns the
     // contraction, so the guard names it.
-    let body = vec![Node::if_then(Expr::is_first_invocation(), body)];
+    let body = vec![Node::if_then(Expr::is_first_logical_point(), body)];
     let region = if generator.starts_with("anonymous::") {
         wrap_anonymous_region(generator, body)
     } else {
@@ -673,7 +673,7 @@ pub(crate) fn build_strassen_one_level(
         })?;
 
     let body = vec![
-        Node::let_bind("flat", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("flat", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("flat"), Expr::u32(total)),
             vec![

@@ -54,7 +54,7 @@ pub fn radix_sort(input: &str, output: &str, count: u32, bits: u32) -> Program {
         BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32).with_count(count),
     ];
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let mask = if bits == 32 {
         u32::MAX
     } else if bits == 0 {

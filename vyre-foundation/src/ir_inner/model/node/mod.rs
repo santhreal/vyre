@@ -73,6 +73,7 @@ pub fn node_op_id(node: &Node) -> &'static str {
         Node::Return => "vyre.node.return",
         Node::Block(_) => "vyre.node.block",
         Node::Barrier { .. } => "vyre.node.barrier",
+        Node::LogicalBarrier { .. } => "vyre.node.logical_barrier",
         Node::Region { .. } => "vyre.node.region",
         Node::IndirectDispatch { .. } => "vyre.node.indirect_dispatch",
         Node::AsyncLoad { .. } => "vyre.node.async_load",

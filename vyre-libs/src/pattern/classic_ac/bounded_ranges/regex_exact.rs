@@ -70,7 +70,7 @@ pub(in crate::pattern) fn regex_exact_ranges_program(
     ));
 
     let invocation = vec![
-        Node::let_bind("origin", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("origin", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(origin.clone(), Expr::load(haystack_len, Expr::u32(0))),
             vec![

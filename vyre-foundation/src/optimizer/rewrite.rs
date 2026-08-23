@@ -139,6 +139,9 @@ pub(crate) fn rewrite_expr<'a>(
                     | Expr::BufferRef { .. }
                     | Expr::BufLen { .. }
                     | Expr::InvocationId { .. }
+                    | Expr::LogicalIndex { .. }
+                    | Expr::LogicalTileId { .. }
+                    | Expr::LogicalWithinTileId { .. }
                     | Expr::WorkgroupId { .. }
                     | Expr::LocalId { .. }
                     | Expr::SubgroupLocalId

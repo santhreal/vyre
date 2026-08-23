@@ -56,7 +56,7 @@ pub fn bhattacharyya_per_element(p: &str, q: &str, out_per_elem: &str, n: u32) -
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     // Integer square root via Newton iteration: x_{k+1} = (x_k + n/x_k) / 2
     // 4 iterations from x_0 = n give ~2 ulps for u32 values up to 2^31.

@@ -419,7 +419,7 @@ pub fn crc32_finalize_expr(crc: Expr) -> Expr {
 
 fn crc32_body(input: &str, out: &str, n: u32) -> Vec<Node> {
     vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         vec![
             Node::let_bind("crc", crc32_initial_expr()),
             Node::loop_for(
@@ -434,7 +434,7 @@ fn crc32_body(input: &str, out: &str, n: u32) -> Vec<Node> {
 }
 
 fn crc32_chunk_body(input: &str, out: &str, n: u32, chunk_size: u32) -> Vec<Node> {
-    let gid = Expr::InvocationId { axis: 0 };
+    let gid = Expr::LogicalIndex { axis: 0 };
     vec![Node::if_then(
         Expr::lt(gid.clone(), Expr::u32(crc32_chunk_count(n, chunk_size))),
         vec![
@@ -467,13 +467,13 @@ fn crc32_chunk_body(input: &str, out: &str, n: u32, chunk_size: u32) -> Vec<Node
             ),
             Node::store(
                 out,
-                Expr::mul(Expr::InvocationId { axis: 0 }, Expr::u32(2)),
+                Expr::mul(Expr::LogicalIndex { axis: 0 }, Expr::u32(2)),
                 crc32_finalize_expr(Expr::var("crc")),
             ),
             Node::store(
                 out,
                 Expr::add(
-                    Expr::mul(Expr::InvocationId { axis: 0 }, Expr::u32(2)),
+                    Expr::mul(Expr::LogicalIndex { axis: 0 }, Expr::u32(2)),
                     Expr::u32(1),
                 ),
                 Expr::var("chunk_len"),
@@ -483,7 +483,7 @@ fn crc32_chunk_body(input: &str, out: &str, n: u32, chunk_size: u32) -> Vec<Node
 }
 
 fn crc32_pair_reduce_body(input: &str, out: &str, pair_count: u32) -> Vec<Node> {
-    let gid = Expr::InvocationId { axis: 0 };
+    let gid = Expr::LogicalIndex { axis: 0 };
     let output_pairs = crc32_pair_reduce_output_pairs(pair_count);
     let mut body = vec![
         Node::let_bind("left_pair", Expr::mul(gid.clone(), Expr::u32(2))),

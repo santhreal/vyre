@@ -67,6 +67,11 @@ layouts, aliases, effects, dependencies and point bounds before schedule
 search. Library compositions cross this boundary through their typed graph
 value contracts.
 
+Ordinary library compositions contain schedule-free logical domain, tile and
+within-tile identities plus logical barriers. Selected-schedule lowering is the
+single boundary that introduces physical invocation, workgroup, local and
+barrier IR. Descriptor construction rejects unresolved logical markers.
+
 The foundation schedule schema records phase fission and fusion, axis splitting,
 tiling, reorder, vectorization and hierarchy mapping, memory placement,
 prefetch, bounded producer/consumer pipelines, recomputation, persistent

@@ -29,7 +29,8 @@ pub const MAGIC: &[u8; 4] = b"VYRE";
 /// dialect-manifest section after the header for rev-3+ readers. Rev
 /// 2 was never released; versions go 1 to 3 directly.
 /// Rev 7 adds Tile values and tile operation node variants.
-pub const WIRE_FORMAT_VERSION: u16 = 7;
+/// Rev 8 adds schedule-free logical identity and synchronization variants.
+pub const WIRE_FORMAT_VERSION: u16 = 8;
 
 /// Oldest schema version this decoder reads.
 ///

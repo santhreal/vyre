@@ -64,7 +64,7 @@ pub fn emit_hit_with_layout(
     let base = Expr::mul(lane.clone(), Expr::u32(4));
     let max_capacity = Expr::div(Expr::buf_len(out_hits), Expr::u32(4));
     let body = vec![
-        Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("lane", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(lane.clone(), Expr::buf_len(rule_id)),
             vec![Node::if_then(
@@ -146,7 +146,7 @@ pub fn compact_hits_with_layout(
     max_capacity: u32,
 ) -> Program {
     let body = vec![
-        Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("lane", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::eq(Expr::var("lane"), Expr::u32(0)),
             vec![

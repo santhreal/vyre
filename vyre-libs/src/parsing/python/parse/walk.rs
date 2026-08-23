@@ -201,7 +201,7 @@ impl<'a> TokenPass<'a> {
                     self.op_id,
                     self.child_op_id,
                     vec![Node::if_then(
-                        Expr::lt(Expr::InvocationId { axis: 0 }, Expr::u32(self.haystack_len)),
+                        Expr::lt(Expr::LogicalIndex { axis: 0 }, Expr::u32(self.haystack_len)),
                         body,
                     )],
                 )],

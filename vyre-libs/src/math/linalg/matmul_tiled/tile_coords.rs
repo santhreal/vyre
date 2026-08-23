@@ -22,16 +22,19 @@ pub(crate) fn bind_output_tile_coordinates(
             "local",
             Expr::add(
                 Expr::add(
-                    Expr::LocalId { axis: 0 },
-                    Expr::mul(Expr::LocalId { axis: 1 }, Expr::u32(tile.x_lanes)),
+                    Expr::LogicalWithinTileId { axis: 0 },
+                    Expr::mul(
+                        Expr::LogicalWithinTileId { axis: 1 },
+                        Expr::u32(tile.x_lanes),
+                    ),
                 ),
                 Expr::mul(
-                    Expr::LocalId { axis: 2 },
+                    Expr::LogicalWithinTileId { axis: 2 },
                     Expr::u32(tile.x_lanes.saturating_mul(tile.y_lanes)),
                 ),
             ),
         ),
-        Node::let_bind("tile_block", Expr::WorkgroupId { axis: 0 }),
+        Node::let_bind("tile_block", Expr::LogicalTileId { axis: 0 }),
         Node::let_bind("tile_cols", Expr::u32(shape.n.div_ceil(tile.out_cols))),
         Node::let_bind(
             "tile_row_base",

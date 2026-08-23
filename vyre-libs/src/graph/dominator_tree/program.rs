@@ -139,7 +139,7 @@ pub fn try_dominator_tree_program(
         )
     })?;
 
-    let lane0 = Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0));
+    let lane0 = Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0));
 
     // ------------------------------------------------------------------
     // Serial CHK-by-LCA kernel on lane 0.

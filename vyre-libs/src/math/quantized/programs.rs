@@ -25,7 +25,7 @@ pub fn unpack_i4x8(packed_words: &str, out_lanes: &str, lane_count: u32) -> Prog
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let word_count = i4_packed_words(lane_count);
     let body = vec![
         Node::let_bind(
@@ -179,7 +179,7 @@ pub fn i4x8_matvec_f32_scaled(
         );
     }
 
-    let row = Expr::InvocationId { axis: 0 };
+    let row = Expr::LogicalIndex { axis: 0 };
     let words_per_row = i4_packed_words(cols);
     let body = i4_matvec_scaled_body(
         weights_packed,
@@ -235,7 +235,7 @@ pub fn i4x8_batched_matvec_f32_scaled(
         );
     }
 
-    let item = Expr::InvocationId { axis: 0 };
+    let item = Expr::LogicalIndex { axis: 0 };
     let words_per_row = i4_packed_words(cols);
     let total_outputs = batch * rows;
     let row = Expr::rem(item.clone(), Expr::u32(rows));
@@ -299,7 +299,7 @@ pub fn i4x8_batched_matmul_f32_scaled(
         );
     }
 
-    let item = Expr::InvocationId { axis: 0 };
+    let item = Expr::LogicalIndex { axis: 0 };
     let words_per_row = i4_packed_words(cols);
     let total_outputs = batch * rows;
     let row = Expr::rem(item.clone(), Expr::u32(rows));
@@ -376,7 +376,7 @@ pub fn i4x8_batched_matmul_top1_f32_scaled(
         );
     }
 
-    let batch_index = Expr::InvocationId { axis: 0 };
+    let batch_index = Expr::LogicalIndex { axis: 0 };
     let words_per_row = i4_packed_words(cols);
     let body = vec![
         Node::let_bind("i4_top1_batch", batch_index.clone()),

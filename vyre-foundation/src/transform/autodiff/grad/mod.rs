@@ -71,7 +71,7 @@ pub fn grad_with_pullback(
 
     // Build the backward body.
     let mut body: Vec<Node> = Vec::new();
-    let i_expr = Expr::InvocationId { axis: 0 };
+    let i_expr = Expr::logical_index(0);
     let mut pullbacks = PullbackMap::default();
     let forward_nodes = program.entry();
     let mut adjoint_env: AdjointEnv = AdjointEnv::new(&grad_source_set, program);
@@ -579,6 +579,9 @@ fn emit_adjoint_node(
         // Barrier  -  pass through.
         Node::Barrier { ordering } => {
             body.push(Node::barrier_with_ordering(*ordering));
+        }
+        Node::LogicalBarrier { ordering } => {
+            body.push(Node::logical_barrier(*ordering));
         }
         // Block  -  unwrap and recurse.
         Node::Block(nodes) => {

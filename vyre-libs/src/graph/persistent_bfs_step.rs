@@ -44,11 +44,11 @@ pub fn persistent_bfs_step_body_prefixed(
 ) -> Vec<Node> {
     let local_changed = format!("{local_prefix}_local_changed");
     let any_changed = format!("{local_prefix}_any_changed");
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     vec![
         Node::let_bind(local_changed.as_str(), Expr::u32(0)),
-        Node::store(scratch, Expr::local_x(), Expr::u32(0)),
-        Node::barrier(),
+        Node::store(scratch, Expr::logical_within_tile_index(0), Expr::u32(0)),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         Node::if_then(
             Expr::lt(t, Expr::u32(shape.node_count)),
             vec![csr_forward_or_changed_child_prefixed(
@@ -60,10 +60,14 @@ pub fn persistent_bfs_step_body_prefixed(
                 &format!("{local_prefix}_csr"),
             )],
         ),
-        Node::store(scratch, Expr::local_x(), Expr::var(local_changed.as_str())),
-        Node::barrier(),
+        Node::store(
+            scratch,
+            Expr::logical_within_tile_index(0),
+            Expr::var(local_changed.as_str()),
+        ),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         Node::if_then(
-            Expr::eq(Expr::local_x(), Expr::u32(0)),
+            Expr::eq(Expr::logical_within_tile_index(0), Expr::u32(0)),
             vec![
                 Node::let_bind(any_changed.as_str(), Expr::u32(0)),
                 workgroup_any_u32_child_prefixed(
@@ -82,7 +86,7 @@ pub fn persistent_bfs_step_body_prefixed(
                 ),
             ],
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
     ]
 }
 
@@ -173,11 +177,11 @@ fn persistent_bfs_step_body_prefixed_with_active(
 ) -> Vec<Node> {
     let local_changed = format!("{local_prefix}_local_changed");
     let any_changed = format!("{local_prefix}_any_changed");
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     vec![
         Node::let_bind(local_changed.as_str(), Expr::u32(0)),
-        Node::store(scratch, Expr::local_x(), Expr::u32(0)),
-        Node::barrier(),
+        Node::store(scratch, Expr::logical_within_tile_index(0), Expr::u32(0)),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         Node::if_then(
             Expr::and(
                 Expr::ne(Expr::load(active_scratch, Expr::u32(0)), Expr::u32(0)),
@@ -192,10 +196,14 @@ fn persistent_bfs_step_body_prefixed_with_active(
                 &format!("{local_prefix}_csr"),
             )],
         ),
-        Node::store(scratch, Expr::local_x(), Expr::var(local_changed.as_str())),
-        Node::barrier(),
+        Node::store(
+            scratch,
+            Expr::logical_within_tile_index(0),
+            Expr::var(local_changed.as_str()),
+        ),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         Node::if_then(
-            Expr::eq(Expr::local_x(), Expr::u32(0)),
+            Expr::eq(Expr::logical_within_tile_index(0), Expr::u32(0)),
             vec![
                 Node::let_bind(any_changed.as_str(), Expr::u32(0)),
                 workgroup_any_u32_child_prefixed(
@@ -219,7 +227,7 @@ fn persistent_bfs_step_body_prefixed_with_active(
                 ),
             ],
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
     ]
 }
 

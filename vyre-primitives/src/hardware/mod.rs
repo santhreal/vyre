@@ -70,6 +70,11 @@ macro_rules! submit_hardware_intrinsic {
                 Some($inputs),
                 Some($expected),
             )
+            .with_geometry_requirements(
+                vyre_foundation::GeometryRequirements::agnostic().with_element_policy(
+                    vyre_foundation::ElementPolicy::Scalar,
+                ),
+            )
             .with_explicit_effects($effects)
             .with_explicit_capabilities($caps)
         }

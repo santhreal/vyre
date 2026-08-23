@@ -129,6 +129,10 @@ impl NodeSink for FallbackWireHasher<'_> {
                 h.update(b"n:Barrier\0");
                 mix_wire_fallback_hashable(h, ordering);
             }
+            Node::LogicalBarrier { ordering } => {
+                h.update(b"n:LogicalBarrier\0");
+                mix_wire_fallback_hashable(h, ordering);
+            }
             Node::Block(_) => {
                 h.update(b"n:Block\0");
             }
@@ -236,6 +240,18 @@ impl ExprSink for FallbackWireHasher<'_> {
             }
             Expr::LocalId { axis } => {
                 h.update(b"e:LocalId\0");
+                h.update(&[*axis]);
+            }
+            Expr::LogicalIndex { axis } => {
+                h.update(b"e:LogicalIndex\0");
+                h.update(&[*axis]);
+            }
+            Expr::LogicalTileId { axis } => {
+                h.update(b"e:LogicalTileId\0");
+                h.update(&[*axis]);
+            }
+            Expr::LogicalWithinTileId { axis } => {
+                h.update(b"e:LogicalWithinTileId\0");
                 h.update(&[*axis]);
             }
             Expr::BinOp { op, .. } => {

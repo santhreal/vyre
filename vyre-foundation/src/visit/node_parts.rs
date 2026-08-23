@@ -95,6 +95,7 @@ pub fn node_shape(node: &Node) -> NodeShape {
         | Node::Trap { .. } => NodeShape::OPERANDS,
         Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::IndirectDispatch { .. }
         | Node::AsyncWait { .. }
         | Node::Resume { .. }
@@ -192,6 +193,7 @@ pub fn node_scalars(node: &Node) -> NodeScalars<'_> {
         | Node::Region { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::IndirectDispatch { .. }
         | Node::AllReduce { .. }
         | Node::AllGather { .. }
@@ -280,6 +282,7 @@ pub fn node_tag(node: &Node) -> Option<&Ident> {
         | Node::Region { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::IndirectDispatch { .. }
         | Node::AllReduce { .. }
         | Node::AllGather { .. }
@@ -384,6 +387,7 @@ pub fn node_buffer_refs(node: &Node) -> BufferRefs<'_> {
         | Node::Resume { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::Block(_)
         | Node::Region { .. }
         | Node::TileMatmul { .. }

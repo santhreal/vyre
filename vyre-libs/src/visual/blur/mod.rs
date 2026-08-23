@@ -212,7 +212,7 @@ fn gaussian_blur_pass(
         crate::math::conv1d::OP_ID,
         parent,
         vec![
-            Node::let_bind("idx", Expr::gid_x()),
+            Node::let_bind("idx", Expr::logical_index(0)),
             Node::if_then(Expr::lt(Expr::var("idx"), Expr::u32(count)), {
                 let (py, px) = crate::builder::stencil::decompose_index(&Expr::var("idx"), width);
                 let mut body = vec![

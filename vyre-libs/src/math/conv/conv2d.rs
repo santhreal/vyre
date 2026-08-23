@@ -47,7 +47,7 @@ pub fn conv2d_3x3_direct(
     // Per-output body: one invocation per output pixel.
     let (y, x) = crate::builder::stencil::decompose_index(&Expr::var("flat"), w);
     let body = vec![
-        Node::let_bind("flat", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("flat", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("flat"), Expr::u32(elements)),
             vec![

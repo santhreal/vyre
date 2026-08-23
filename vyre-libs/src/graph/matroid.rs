@@ -75,7 +75,7 @@ pub fn try_matroid_exchange_bfs_step(
 ) -> Result<Program, String> {
     let dense_cells = crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n)?;
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     // Lane t computes frontier_out[t]:
     //   1 iff (visited[t] == 0)  AND  ∃ k. frontier_in[k] == 1 AND adj[k, t] == 1

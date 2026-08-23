@@ -85,6 +85,7 @@ pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: LiveSet) -> Live
             }
             Node::Return => kept.push(Node::Return),
             Node::Barrier { ordering } => kept.push(Node::Barrier { ordering }),
+            Node::LogicalBarrier { ordering } => kept.push(Node::LogicalBarrier { ordering }),
             Node::IndirectDispatch {
                 count_buffer,
                 count_offset,

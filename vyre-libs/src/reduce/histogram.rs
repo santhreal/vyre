@@ -1,6 +1,6 @@
 //! `reduce_histogram`  -  parallel atomic histogram over a u32 ValueSet.
 //!
-//! Each global invocation owns one output bin and scans the input stream,
+//! Each global logical point owns one output bin and scans the input stream,
 //! storing that bin's count. Used by radix_sort, frequency analysis, and label
 //! distribution.
 //!
@@ -46,7 +46,7 @@ pub fn histogram(input: &str, output: &str, count: u32, num_bins: u32) -> Progra
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(num_bins)),
@@ -102,7 +102,7 @@ pub fn histogram_atomic_scatter(input: &str, output: &str, count: u32, num_bins:
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![
         Node::let_bind("bin", Expr::load(input, t.clone())),
         Node::if_then(

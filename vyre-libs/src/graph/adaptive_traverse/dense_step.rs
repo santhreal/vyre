@@ -114,7 +114,7 @@ pub fn adaptive_dense_step(
             Ok(counts) => counts,
             Err(trap) => return trap,
         };
-    let d = Expr::InvocationId { axis: 0 };
+    let d = Expr::LogicalIndex { axis: 0 };
     let body = dense_reverse_scan_body(frontier_in, frontier_out, adj_rows_dense, &d, words, "");
 
     Program::wrapped(

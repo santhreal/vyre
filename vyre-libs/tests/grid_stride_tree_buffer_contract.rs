@@ -82,7 +82,7 @@ fn every_storage_buffer_binding_is_unique() {
 
 /// The two fused passes need a grid-level fence between them.
 ///
-/// Pass 1 writes `partials[workgroup_id]` and pass 2 reads every entry, so a
+/// Pass 1 writes `partials[logical_tile_id]` and pass 2 reads every entry, so a
 /// workgroup-scoped barrier orders only the block that wrote its own slot. A
 /// `SeqCst` barrier here lets pass 2 read slots no block has written yet, which
 /// surfaces as a wrong sum rather than as a dispatch error.
@@ -93,7 +93,7 @@ fn the_fused_reduction_carries_a_grid_level_fence() {
 
     fn orderings(nodes: &[Node], out: &mut Vec<String>) {
         for node in nodes {
-            if let Node::Barrier { ordering } = node {
+            if let Node::LogicalBarrier { ordering } = node {
                 out.push(format!("{ordering:?}"));
             }
             for body in child_bodies(node) {

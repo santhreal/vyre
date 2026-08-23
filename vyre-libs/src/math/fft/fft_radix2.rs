@@ -189,7 +189,7 @@ pub(super) fn radix2_program(
     // a 1D grid from the output length, and a fusion widens this arm to the fused
     // workgroup, either of which would otherwise give every invocation its own
     // copy of the same read-modify-write chain.
-    let body = vec![Node::if_then(Expr::is_first_invocation(), body)];
+    let body = vec![Node::if_then(Expr::is_first_logical_point(), body)];
     let entry = if op_id == OP_ID {
         wrap_anonymous_region(OP_ID, body)
     } else {

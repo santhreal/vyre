@@ -235,19 +235,25 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         let depth = self.current_depth();
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
         let divergent = self.current_divergent();
-        let Node::Barrier { ordering } = node else {
-            self.errors.push(err(
-                "V129",
-                ValidationPhase::Memory,
-                ValidationLocation::Program,
-                "malformed barrier visitor dispatch".to_string(),
-                "rebuild the program through the structured IR builder before validation."
-                    .to_string(),
-            ));
-            return ControlFlow::Continue(());
+        let ordering = match node {
+            Node::Barrier { ordering } | Node::LogicalBarrier { ordering } => *ordering,
+            _ => {
+                self.errors.push(err(
+                    "V129",
+                    ValidationPhase::Memory,
+                    ValidationLocation::Program,
+                    "malformed barrier visitor dispatch".to_string(),
+                    "rebuild the program through the structured IR builder before validation."
+                        .to_string(),
+                ));
+                return ControlFlow::Continue(());
+            }
         };
-        barrier::check_barrier(divergent, *ordering, &mut self.errors);
+        barrier::check_barrier(divergent, ordering, &mut self.errors);
         ControlFlow::Continue(())
+    }
+    fn visit_logical_barrier(&mut self, node: &Node) -> ControlFlow<Self::Break> {
+        self.visit_barrier(node)
     }
 
     fn visit_collective(&mut self, node: &Node) -> ControlFlow<Self::Break> {

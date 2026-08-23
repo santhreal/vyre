@@ -73,7 +73,7 @@ pub fn sos_gram_construct(
             format!("Fix: sos_gram_construct m*m overflows u32 for m={m}."),
         );
     };
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     // `gram[t] = p_coeffs[monomial_pairs[t]]`, but `monomial_pairs[t]` is DATA and may
     // point OUTSIDE p_coeffs (nothing validates the pair indices are < coeff_count). The

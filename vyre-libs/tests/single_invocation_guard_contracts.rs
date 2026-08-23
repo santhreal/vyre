@@ -1,11 +1,11 @@
-//! Every registered single-invocation program must guard on the invocation.
+//! Every registered single-point program must guard on the logical point.
 //!
 //! Defect class this closes: a program that keeps a running result in
-//! read-write storage and admits that body with `workgroup_id.x == 0` alone.
-//! The guard is exact only while the workgroup holds one invocation. A fusion
-//! widens an arm to the fused workgroup, so the same body then runs once per
-//! added invocation over the same slots, and the result is wrong in a way only
-//! a differential sees: the buffer is populated and the shapes match.
+//! read-write storage and admits that body with `LogicalTileId.x == 0` alone.
+//! The guard is exact only while the tile holds one point. Fusion can widen an
+//! arm, so the same body then runs once per added point over the same slots, and
+//! the result is wrong in a way only a differential sees: the buffer is
+//! populated and the shapes match.
 //!
 //! Measured before this was closed: `nn::top_k` fused behind a 256-wide
 //! elementwise arm named one input lane twice, on one host and not another.
@@ -25,7 +25,7 @@ fn declared_invocations(workgroup: [u32; 3]) -> u64 {
 }
 
 #[test]
-fn a_single_invocation_program_guards_on_its_invocation_not_its_workgroup() {
+fn a_single_point_program_guards_on_its_point_not_its_tile() {
     let mut offenders = Vec::new();
     let mut checked = 0usize;
 
@@ -50,11 +50,10 @@ fn a_single_invocation_program_guards_on_its_invocation_not_its_workgroup() {
     );
     assert!(
         offenders.is_empty(),
-        "Fix: {} single-invocation operation(s) keep a running result in read-write storage under \
-         a guard on workgroup identity alone: {}. Guard the body on the invocation as well, the \
-         `workgroup_id.x == 0 && local_id.x == 0` form, which is the same lane in the declared \
-         geometry and the only lane under any wider one. {} of {} single-invocation program(s) \
-         checked.",
+        "Fix: {} single-point operation(s) keep a running result in read-write storage under \
+         a guard on logical tile identity alone: {}. Guard the body on `LogicalIndex.x == 0`, \
+         which selects the same point in the declared geometry and only one point under any wider \
+         schedule. {} of {} single-point program(s) checked.",
         offenders.len(),
         offenders.join(", "),
         offenders.len(),

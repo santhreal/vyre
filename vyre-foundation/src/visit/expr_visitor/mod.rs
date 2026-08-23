@@ -69,6 +69,22 @@ pub trait ExprVisitor {
     fn visit_local_id(&mut self, _expr: &Expr, _axis: u32) -> ControlFlow<Self::Break> {
         ControlFlow::Continue(())
     }
+    /// Schedule-free logical domain index.
+    fn visit_logical_index(&mut self, _expr: &Expr, _axis: u32) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+    /// Schedule-free logical tile index.
+    fn visit_logical_tile_id(&mut self, _expr: &Expr, _axis: u32) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+    /// Schedule-free index within a logical tile.
+    fn visit_logical_within_tile_id(
+        &mut self,
+        _expr: &Expr,
+        _axis: u32,
+    ) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
     /// Subgroup invocation id (lane index within subgroup).
     fn visit_subgroup_local_id(&mut self, _expr: &Expr) -> ControlFlow<Self::Break> {
         ControlFlow::Continue(())

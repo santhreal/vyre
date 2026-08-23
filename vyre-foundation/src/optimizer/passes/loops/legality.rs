@@ -139,6 +139,7 @@ fn node_unsummarisable_effect(node: &Node) -> bool {
         // Buffer operands captured by `collect_touched_buffers`; no Expr
         // operand that could hide an opaque payload.
         Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::Return
         | Node::IndirectDispatch { .. }
         | Node::AsyncWait { .. }

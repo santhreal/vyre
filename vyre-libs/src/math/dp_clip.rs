@@ -83,7 +83,7 @@ pub fn dp_clip_per_sample(
             format!("Fix: dp_clip_per_sample b*d overflows u32: b={b}, d={d}."),
         );
     };
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let i_expr = Expr::div(t.clone(), Expr::u32(d));
 
     let g = Expr::load(grads, t.clone());

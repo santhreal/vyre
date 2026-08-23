@@ -28,7 +28,7 @@ pub fn python312_extract_structure(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let mut body = vec![
         Node::let_bind("tok", load_u32(tok_types, t.clone())),
         Node::let_bind("emit_kind", Expr::u32(0)),
@@ -199,7 +199,7 @@ pub fn python312_extract_imports(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let name = DottedName {
         tok_types,
         haystack_len,
@@ -294,7 +294,7 @@ pub fn python312_extract_with_blocks(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let name = DottedName {
         tok_types,
         haystack_len,

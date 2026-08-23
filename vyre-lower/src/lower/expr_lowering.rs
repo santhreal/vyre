@@ -53,6 +53,11 @@ impl LowerCtx {
             Expr::LocalId { axis } => {
                 self.builtin_axis(body, KernelOpKind::LocalInvocationId, *axis)
             }
+            Expr::LogicalIndex { .. }
+            | Expr::LogicalTileId { .. }
+            | Expr::LogicalWithinTileId { .. } => Err(LowerError::InvalidProgram(
+                "schedule-free logical identity reached physical descriptor lowering. Fix: lower the validated selected schedule before lower_physical().".to_string(),
+            )),
             Expr::BinOp { op, left, right } => {
                 // Subgroup/wave ops are spelled as binary ops at the Program
                 // level but have dedicated subgroup KernelOps (and emit to

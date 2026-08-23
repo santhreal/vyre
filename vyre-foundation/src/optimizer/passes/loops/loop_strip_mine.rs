@@ -253,6 +253,7 @@ fn collect_names(nodes: &[Node], out: &mut Vec<Ident>) {
             | Node::Resume { .. }
             | Node::Return
             | Node::Barrier { .. }
+            | Node::LogicalBarrier { .. }
             | Node::Opaque(_) => {}
         }
     }

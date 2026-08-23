@@ -124,7 +124,7 @@ impl ProgramStats {
     pub fn has_node_store(&self) -> bool {
         self.has_any_node_kind(NODE_KIND_STORE)
     }
-    /// True when the program contains at least one `Node::Barrier`.
+    /// True when the program contains at least one physical or logical barrier.
     #[inline]
     #[must_use]
     pub fn has_node_barrier(&self) -> bool {

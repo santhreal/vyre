@@ -242,7 +242,7 @@ pub fn persistent_fixpoint(
     words: u32,
     max_iterations: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     // Per-iteration body composed of:
     //   (a) zero `changed[0]` so this iteration's compare starts clean.
@@ -265,7 +265,7 @@ pub fn persistent_fixpoint(
             Expr::atomic_exchange(changed, Expr::u32(0), Expr::u32(0)),
         )],
     ));
-    iter_body.push(Node::Barrier {
+    iter_body.push(Node::LogicalBarrier {
         ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
     });
     iter_body.extend(transfer_body);
@@ -278,7 +278,7 @@ pub fn persistent_fixpoint(
         "_pf_set",
         words,
     ));
-    iter_body.push(Node::Barrier {
+    iter_body.push(Node::LogicalBarrier {
         ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
     });
     // Termination reads `changed[0]` after the barrier above, so this
@@ -327,7 +327,7 @@ pub fn persistent_fixpoint(
             // is not concurrently written without synchronization. This
             // barrier is what discharges that requirement here; the
             // grid form has no clear at all and so needs nothing.
-            body.push(Node::Barrier {
+            body.push(Node::LogicalBarrier {
                 ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
             });
             body
@@ -503,7 +503,7 @@ pub fn persistent_fixpoint_grid(
     words: u32,
     max_iterations: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let mut entry: Vec<Node> = Vec::with_capacity(max_iterations as usize * 5);
     for iter in 0..max_iterations {
         // The caller's body is spliced once per wave. Flat splicing
@@ -653,7 +653,7 @@ pub fn routed_persistent_fixpoint(
 /// has one exact fence representation.
 #[must_use]
 pub fn grid_sync_barrier() -> Node {
-    Node::barrier_with_ordering(vyre_foundation::ir::MemoryOrdering::GridSync)
+    Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::GridSync)
 }
 
 /// Test-only count of grid-wide fences in `nodes`, through every nesting construct.
@@ -676,7 +676,7 @@ pub(crate) fn count_grid_sync(nodes: &[Node]) -> usize {
     while let Some(node) = stack.pop() {
         if matches!(
             node,
-            Node::Barrier {
+            Node::LogicalBarrier {
                 ordering: vyre_foundation::ir::MemoryOrdering::GridSync
             }
         ) {

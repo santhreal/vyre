@@ -28,7 +28,7 @@ pub fn segment_reduce_sum(
         return trap_program(OP_ID, Some((output, DataType::U32)), format!("Fix: segment_reduce_sum requires 0 < num_segments <= 256, got {num_segments}. For larger counts, tile the dispatch across multiple work-groups."));
     }
 
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
 
     let body = vec![
         Node::let_bind("start", Expr::load(segment_offsets, lane.clone())),

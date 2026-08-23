@@ -173,7 +173,7 @@ fn fnv1a32_program_bounded(
     let body = vec![wrap_anonymous_region(
         FNV1A32_OP_ID,
         vec![Node::if_then(
-            Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+            Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
             vec![
                 Node::let_bind("h", fnv1a32_initial_expr()),
                 Node::loop_for(
@@ -289,7 +289,7 @@ fn fnv1a64_program_bounded(
     let body = vec![wrap_anonymous_region(
         FNV1A64_OP_ID,
         vec![Node::if_then(
-            Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+            Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
             vec![
                 Node::let_bind("h_lo", Expr::u32(FNV1A64_OFFSET_LO)),
                 Node::let_bind("h_hi", Expr::u32(FNV1A64_OFFSET_HI)),

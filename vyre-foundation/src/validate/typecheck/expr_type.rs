@@ -113,6 +113,9 @@ pub(crate) fn expr_type<E: TypeEnv + ?Sized>(expr: &Expr, env: &mut E) -> Option
                 Expr::LitU32(_)
                 | Expr::BufLen { .. }
                 | Expr::InvocationId { .. }
+                | Expr::LogicalIndex { .. }
+                | Expr::LogicalTileId { .. }
+                | Expr::LogicalWithinTileId { .. }
                 | Expr::WorkgroupId { .. }
                 | Expr::LocalId { .. }
                 | Expr::SubgroupLocalId

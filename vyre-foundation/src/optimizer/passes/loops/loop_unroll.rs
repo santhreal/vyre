@@ -254,6 +254,7 @@ fn node_unroll_cost(node: &Node) -> Option<u32> {
         Node::Region { body, .. } => unroll_body_cost(body),
         Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::IndirectDispatch { .. }
         | Node::AsyncLoad { .. }
         | Node::AsyncStore { .. }

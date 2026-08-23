@@ -39,6 +39,7 @@ pub fn child_bodies(node: &Node) -> [&[Node]; 2] {
         | Node::Store { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::IndirectDispatch { .. }
         | Node::AllReduce { .. }
         | Node::AllGather { .. }
@@ -97,6 +98,7 @@ pub fn child_bodies_mut(node: &mut Node) -> SmallVec<[&mut Vec<Node>; 2]> {
         | Node::Store { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::IndirectDispatch { .. }
         | Node::AllReduce { .. }
         | Node::AllGather { .. }

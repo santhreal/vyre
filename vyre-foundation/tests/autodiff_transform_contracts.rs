@@ -11,6 +11,7 @@ use autodiff_transform_contracts_programs::{
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::transform::autodiff::{grad, grad_with_pullback, AutodiffError};
 use vyre_foundation::validate::validate;
+use vyre_foundation::visit::for_each_expr;
 
 #[test]
 fn grad_with_pullback_is_public_and_populates_top_level_nodes() {
@@ -30,6 +31,31 @@ fn grad_with_pullback_is_public_and_populates_top_level_nodes() {
         .collect::<Vec<_>>();
     assert!(names.contains(&"grad_out"));
     assert!(names.contains(&"grad_x"));
+}
+
+/// WHY: autodiff is a semantic transform, so a logical input program must not
+/// acquire physical execution identity before schedule lowering.
+#[test]
+fn generated_reverse_program_preserves_schedule_free_indexing() {
+    let backward = grad(&square_via_local_program(), &["out"], &["x"])
+        .expect("square program must be differentiable");
+    let mut logical_points = 0usize;
+    let mut physical_points = 0usize;
+    for_each_expr(backward.entry(), |expr| match expr {
+        Expr::LogicalIndex { axis: 0 } => logical_points += 1,
+        Expr::InvocationId { .. } | Expr::WorkgroupId { .. } | Expr::LocalId { .. } => {
+            physical_points += 1;
+        }
+        _ => {}
+    });
+    assert!(
+        logical_points > 0,
+        "autodiff-generated indexing must remain schedulable"
+    );
+    assert_eq!(
+        physical_points, 0,
+        "a semantic IR transform must not introduce physical execution identity"
+    );
 }
 
 #[test]

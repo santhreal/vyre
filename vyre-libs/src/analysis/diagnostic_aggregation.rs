@@ -109,7 +109,7 @@ pub fn compact_diagnostic_aggregation_program(
         max_records,
         raw_record_bytes_per_item,
     )?;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::store(
         compact_out,
         t.clone(),

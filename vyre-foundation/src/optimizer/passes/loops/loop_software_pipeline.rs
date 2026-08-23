@@ -325,6 +325,9 @@ fn expr_visit_check(expr: &Expr, name: &Ident, reads_name: &mut bool) -> bool {
         | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. } => true,
         Expr::BinOp { left, right, .. } => {

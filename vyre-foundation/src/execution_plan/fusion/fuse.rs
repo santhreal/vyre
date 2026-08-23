@@ -448,9 +448,11 @@ fn reject_workgroup_geometry_change(
 /// barrier hidden inside an unrecognised nesting variant makes a fused arm look
 /// unsynchronized when it is not.
 fn has_barrier(nodes: &[Node]) -> bool {
-    nodes
-        .iter()
-        .any(|node| any_descendant(node, &mut |n| matches!(n, Node::Barrier { .. })))
+    nodes.iter().any(|node| {
+        any_descendant(node, &mut |n| {
+            matches!(n, Node::Barrier { .. } | Node::LogicalBarrier { .. })
+        })
+    })
 }
 
 /// Does this program's serial body rely on being one invocation wide?
@@ -482,9 +484,12 @@ fn keeps_state_in_read_write_storage(prog: &Program) -> bool {
         .any(|buf| buf.access() == BufferAccess::ReadWrite)
 }
 
-/// Does this arm decide what to run from its workgroup identity?
+/// Does this arm decide what to run from its physical workgroup or logical tile
+/// identity?
 fn guards_on_workgroup_identity(prog: &Program) -> bool {
-    compares_against(prog, &|expr| matches!(expr, Expr::WorkgroupId { .. }))
+    compares_against(prog, &|expr| {
+        matches!(expr, Expr::WorkgroupId { .. } | Expr::LogicalTileId { .. })
+    })
 }
 
 /// Does this arm decide what to run from its invocation identity?
@@ -493,7 +498,13 @@ fn guards_on_workgroup_identity(prog: &Program) -> bool {
 /// workgroup, and a guard on the global invocation is exact across the launch.
 fn guards_on_invocation_identity(prog: &Program) -> bool {
     compares_against(prog, &|expr| {
-        matches!(expr, Expr::LocalId { .. } | Expr::InvocationId { .. })
+        matches!(
+            expr,
+            Expr::LocalId { .. }
+                | Expr::InvocationId { .. }
+                | Expr::LogicalIndex { .. }
+                | Expr::LogicalWithinTileId { .. }
+        )
     })
 }
 
@@ -547,7 +558,7 @@ fn flatten_arm_entries(
             } else {
                 crate::memory_model::MemoryOrdering::SeqCst
             };
-            combined_entry.push(Node::barrier_with_ordering(ordering));
+            combined_entry.push(Node::logical_barrier(ordering));
         }
     }
     combined_entry

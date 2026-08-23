@@ -83,7 +83,7 @@ pub fn tt_contract_step(
         );
     };
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(r_next)),
         vec![

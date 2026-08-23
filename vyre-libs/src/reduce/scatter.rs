@@ -1,6 +1,6 @@
 //! `reduce_scatter`  -  parallel scatter over a u32 ValueSet.
 //!
-//! Each global invocation loads one source value and, if the index is
+//! Each global logical point loads one source value and, if the index is
 //! in-range, writes it to `dst[index]`.  Used by graph operations for
 //! indirect access patterns (e.g. distributing edge properties into
 //! node slots).

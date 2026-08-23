@@ -74,7 +74,7 @@ pub fn try_csr_forward_or_changed_parallel_batch(
         changed,
         edge_kind_mask,
         query_count,
-        Expr::InvocationId { axis: 1 },
+        Expr::LogicalIndex { axis: 1 },
         query_count,
         Vec::new(),
         Vec::new(),

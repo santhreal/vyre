@@ -52,7 +52,7 @@ pub fn box_shadow(
         vec![wrap_anonymous_region(
             OP_ID,
             vec![
-                Node::let_bind("idx", Expr::gid_x()),
+                Node::let_bind("idx", Expr::logical_index(0)),
                 Node::if_then(
                     Expr::lt(Expr::var("idx"), Expr::u32(count)),
                     vec![

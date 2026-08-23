@@ -27,7 +27,7 @@ pub fn python312_extract_calls(
     out_kw_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let name = DottedName {
         tok_types,
         haystack_len,

@@ -119,6 +119,9 @@ impl NodeVisitor for AsyncResumeRejector {
     fn visit_barrier(&mut self, _: &Node) -> ControlFlow<&'static str> {
         Continue(())
     }
+    fn visit_logical_barrier(&mut self, _: &Node) -> ControlFlow<&'static str> {
+        Continue(())
+    }
 
     fn visit_block(&mut self, _: &Node, _: &[Node]) -> ControlFlow<&'static str> {
         Continue(())

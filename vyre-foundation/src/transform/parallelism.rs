@@ -154,6 +154,7 @@ fn collect_node_access(root: &Node, access: &mut AccessSet) {
             | Node::Broadcast { .. }
             | Node::Return
             | Node::Barrier { .. }
+            | Node::LogicalBarrier { .. }
             | Node::AsyncLoad { .. }
             | Node::AsyncStore { .. }
             | Node::AsyncWait { .. }

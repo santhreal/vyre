@@ -207,7 +207,7 @@ pub fn union_find_program(
     node_count: u32,
     edge_count: u32,
 ) -> Program {
-    let lane = Expr::gid_x();
+    let lane = Expr::logical_index(0);
     let body = vec![Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(edge_count)),
         union_roots_body(parent, edge_a, edge_b, "uf_edge", node_count),

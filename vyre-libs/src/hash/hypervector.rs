@@ -99,7 +99,7 @@ pub fn hypervector_majority_bundle(stacked: &str, out: &str, dim_words: u32, k: 
         ));
     };
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let threshold = k / 2; // ties (count == threshold) round to 0.
 
     let body = vec![Node::if_then(

@@ -261,8 +261,8 @@ pub fn tensor_train_decompose_step(
     // body would put the eigensolve's barriers inside a non-uniform branch, which the reference
     // rejects and a backend deadlocks on.
     let serial = Expr::and(
-        Expr::is_first_workgroup(),
-        Expr::eq(Expr::LocalId { axis: 0 }, Expr::u32(0)),
+        Expr::is_first_logical_tile(),
+        Expr::eq(Expr::LogicalWithinTileId { axis: 0 }, Expr::u32(0)),
     );
     let mut buffers = vec![
         BufferDecl::storage(input_matrix, 0, BufferAccess::ReadOnly, DataType::F32)
@@ -284,14 +284,14 @@ pub fn tensor_train_decompose_step(
             OP_ID,
             vec![
                 Node::if_then(serial.clone(), gram),
-                Node::barrier(),
+                Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
                 // 2. Eigendecompose the Gram matrix. ONE-PLACE: `symmetric_eigen_jacobi` owns the
                 // only Program-emitting spelling of the symmetric Jacobi eigendecomposition in this
                 // crate, and the child region records that composition edge in the IR rather than
                 // leaving the nodes spliced in bare where no audit can distinguish them from a
                 // hand-rolled eigensolve.
                 jacobi_eigen_region(OP_ID, "tt_ata", "tt_evec", "tt_eval", n),
-                Node::barrier(),
+                Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
                 Node::if_then(serial, svd),
             ],
         )],

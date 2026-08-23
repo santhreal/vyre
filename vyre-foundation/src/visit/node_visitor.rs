@@ -97,6 +97,8 @@ pub trait NodeVisitor {
     fn visit_return(&mut self, node: &Node) -> ControlFlow<Self::Break>;
     /// Barrier node.
     fn visit_barrier(&mut self, node: &Node) -> ControlFlow<Self::Break>;
+    /// Schedule-free logical barrier node.
+    fn visit_logical_barrier(&mut self, node: &Node) -> ControlFlow<Self::Break>;
     /// Distributed collective node.
     fn visit_collective(&mut self, node: &Node) -> ControlFlow<Self::Break> {
         let _ = node;
@@ -245,6 +247,7 @@ pub(crate) fn dispatch_node<V: NodeVisitor>(visitor: &mut V, node: &Node) -> Con
         | Node::Broadcast { .. } => visitor.visit_collective(node),
         Node::Return => visitor.visit_return(node),
         Node::Barrier { .. } => visitor.visit_barrier(node),
+        Node::LogicalBarrier { .. } => visitor.visit_logical_barrier(node),
         Node::Block(body) => visitor.visit_block(node, body),
         Node::Region {
             generator,

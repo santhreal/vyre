@@ -1,11 +1,11 @@
 //! Substrate-neutral verified lowering for Vyre.
 //!
-//! `lower_physical` runs the canonical semantic `Program` optimizer once,
-//! expands representation-only constructs, builds verified physical kernel IR,
-//! and returns the only type accepted by megakernel target compilation. Raw
-//! descriptor fixtures use `verify_descriptor`, whose bounded canonicalization
-//! only orders pure
-//! same-body dependencies needed by emitters.
+//! `lower_scheduled` applies a validated selected phase to schedule-free
+//! `Program` IR and delegates to `lower_physical`, which expands and optimizes
+//! already physical IR before building verified physical kernel IR. The result
+//! is the only type accepted by megakernel target compilation. Raw descriptor
+//! fixtures use `verify_descriptor`, whose bounded canonicalization only orders
+//! pure same-body dependencies needed by emitters.
 //!
 //! ```text
 //! vyre-foundation Program
@@ -56,9 +56,9 @@ pub use audit::{
 /// Verify a raw descriptor, apply bounded representation canonicalization, and
 /// verify the emitter-ready result.
 ///
-/// This boundary does not perform semantic optimization. Production `Program`
-/// callers use [`lower_physical`]; descriptor fixtures and tooling use this
-/// function before invoking a pure emitter.
+/// This boundary does not perform semantic optimization. Production semantic
+/// `Program` callers use [`lower_scheduled`]; descriptor fixtures and tooling
+/// use this function before invoking a pure emitter.
 pub fn verify_descriptor(desc: &KernelDescriptor) -> Result<KernelDescriptor, VerifyFailure> {
     if let Err(errors) = verify::verify(desc) {
         return Err(VerifyFailure::Input(errors));

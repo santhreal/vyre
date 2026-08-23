@@ -140,7 +140,7 @@ pub fn blake3_g_program(state: &str, message: &str, out: &str) -> Program {
         // still admits exactly one.
         vec![wrap_anonymous_region(
             BLAKE3_G_OP_ID,
-            vec![Node::if_then(Expr::is_first_invocation(), body)],
+            vec![Node::if_then(Expr::is_first_logical_point(), body)],
         )],
     )
 }
@@ -168,7 +168,7 @@ pub fn blake3_round_program(state: &str, message: &str, out: &str) -> Program {
         // One invocation owns the whole round, for the reason blake3_g_program states.
         vec![wrap_anonymous_region(
             BLAKE3_ROUND_OP_ID,
-            vec![Node::if_then(Expr::is_first_invocation(), body)],
+            vec![Node::if_then(Expr::is_first_logical_point(), body)],
         )],
     )
 }

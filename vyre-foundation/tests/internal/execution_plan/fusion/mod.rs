@@ -70,7 +70,7 @@ fn barrier_inserted_for_read_then_atomic() {
     let barrier_positions: Vec<usize> = body
         .iter()
         .enumerate()
-        .filter(|(_, n)| matches!(n, Node::Barrier { .. }))
+        .filter(|(_, n)| matches!(n, Node::LogicalBarrier { .. }))
         .map(|(i, _)| i)
         .collect();
     assert_eq!(
@@ -111,7 +111,7 @@ fn divergent_invocation_gated_writer_upgrades_barrier_to_grid_sync() {
     let has_grid_sync = body.iter().any(|node| {
         matches!(
             node,
-            Node::Barrier {
+            Node::LogicalBarrier {
                 ordering: crate::memory_model::MemoryOrdering::GridSync,
                 ..
             }
@@ -166,7 +166,7 @@ fn launch_indexed_writer_upgrades_raw_barrier_to_grid_sync() {
     let has_grid_sync = body.iter().any(|node| {
         matches!(
             node,
-            Node::Barrier {
+            Node::LogicalBarrier {
                 ordering: crate::memory_model::MemoryOrdering::GridSync,
                 ..
             }
@@ -207,7 +207,7 @@ fn uniform_cross_arm_writer_uses_workgroup_barrier() {
     let has_workgroup_barrier = body.iter().any(|node| {
         matches!(
             node,
-            Node::Barrier {
+            Node::LogicalBarrier {
                 ordering: crate::memory_model::MemoryOrdering::SeqCst,
                 ..
             }
@@ -216,7 +216,7 @@ fn uniform_cross_arm_writer_uses_workgroup_barrier() {
     let has_grid_sync = body.iter().any(|node| {
         matches!(
             node,
-            Node::Barrier {
+            Node::LogicalBarrier {
                 ordering: crate::memory_model::MemoryOrdering::GridSync,
                 ..
             }

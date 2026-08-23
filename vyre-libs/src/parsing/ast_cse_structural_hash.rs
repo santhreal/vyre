@@ -60,7 +60,7 @@ pub fn ast_cse_structural_hash(
 /// Build the standalone structural-hash CSE primitive.
 #[must_use]
 pub fn ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![
         Node::if_then(
             Expr::lt(t.clone(), Expr::u32(hash_set_capacity)),
@@ -73,7 +73,7 @@ pub fn ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -
                 ),
             ],
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         Node::if_then(
             Expr::eq(t.clone(), Expr::u32(0)),
             vec![Node::loop_for(
@@ -154,7 +154,7 @@ pub fn ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -
 ///
 /// The dedup wave runs one lane per AST node and races for slots, so it claims
 /// with compare-exchange and reads the winner's index atomically. The standalone
-/// probe runs under `InvocationId == 0`, where a plain load and store observe
+/// probe runs under `LogicalIndex == 0`, where a plain load and store observe
 /// the same order and an atomic would only buy a fence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SlotAccess {
@@ -309,7 +309,7 @@ pub fn ast_cse_hash_probe_program(hash_set_capacity: u32) -> Program {
         SlotAccess::SingleLane,
     );
     let guarded = vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         body,
     )];
     Program::wrapped(

@@ -44,7 +44,7 @@ fn max_writable_count(program: &Program) -> u64 {
 fn names_grid_varying_index(program: &Program) -> bool {
     let mut found = false;
     walk_exprs(program, |expr| {
-        if matches!(expr, Expr::WorkgroupId { .. } | Expr::InvocationId { .. }) {
+        if matches!(expr, Expr::LogicalTileId { .. } | Expr::LogicalIndex { .. }) {
             found = true;
         }
     });
@@ -60,11 +60,11 @@ fn store_only_program(workgroup_size: [u32; 3], entry: Vec<Node>) -> Program {
 }
 
 #[test]
-fn a_first_workgroup_guard_counts_as_naming_the_grid() {
+fn a_first_logical_tile_guard_counts_as_naming_the_grid() {
     let guarded = store_only_program(
         [1, 1, 1],
         vec![Node::if_then(
-            Expr::is_first_workgroup(),
+            Expr::is_first_logical_tile(),
             vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
         )],
     );
@@ -79,7 +79,7 @@ fn a_first_workgroup_guard_counts_as_naming_the_grid() {
     );
     assert!(
         !names_grid_varying_index(&unguarded),
-        "Fix: a body with no workgroup or invocation id must not read as grid-varying"
+        "Fix: a body with no logical tile or point index must not read as grid-varying"
     );
     assert!(
         max_writable_count(&unguarded) > lanes(&unguarded),
@@ -92,7 +92,7 @@ fn a_first_workgroup_guard_counts_as_naming_the_grid() {
             generator: Ident::from("control"),
             source_region: None,
             body: std::sync::Arc::new(vec![Node::if_then(
-                Expr::is_first_workgroup(),
+                Expr::is_first_logical_tile(),
                 vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
             )]),
         }],
@@ -147,7 +147,7 @@ fn every_multi_workgroup_registered_program_names_a_grid_varying_index() {
     );
     assert!(
         offenders.is_empty(),
-        "{} of {} multi-workgroup compositions write global memory identically in every workgroup: {}. Fix: index the writes by a grid-varying id, or wrap the body in Node::if_then(Expr::is_first_workgroup(), ..).",
+        "{} of {} multi-workgroup compositions write global memory identically in every workgroup: {}. Fix: index the writes by a grid-varying logical identity, or wrap the body in Node::if_then(Expr::is_first_logical_tile(), ..).",
         offenders.len(),
         examined.len(),
         offenders.join(", ")

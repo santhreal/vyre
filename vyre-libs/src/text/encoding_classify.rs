@@ -30,7 +30,7 @@ pub const ENC_BINARY: u32 = 255;
 #[must_use]
 pub fn encoding_classify_body(histogram: &str, output: &str, count: u32) -> Vec<Node> {
     vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         {
             let mut body = vec![
                 Node::let_bind("null_count", Expr::load(histogram, Expr::u32(0))),

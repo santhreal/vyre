@@ -26,7 +26,7 @@ pub fn toposort_program(
     queue_scratch: &str,
     order_out: &str,
 ) -> Program {
-    let lane0 = Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0));
+    let lane0 = Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0));
 
     let csr =
         crate::builder::csr::CsrTraversalComposer::new(OP_ID, OP_ID, node_count).with_buffers(

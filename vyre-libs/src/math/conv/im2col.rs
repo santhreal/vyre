@@ -52,7 +52,7 @@ pub fn im2col_3x3(input: &str, output: &str, h: u32, w: u32) -> Result<Program, 
         .collect();
     let (y, x) = crate::builder::stencil::decompose_index(&Expr::var("flat"), w);
     let body = vec![
-        Node::let_bind("flat", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("flat", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("flat"), Expr::u32(pixels)),
             vec![

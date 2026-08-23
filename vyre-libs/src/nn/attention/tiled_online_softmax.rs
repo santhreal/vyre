@@ -206,8 +206,8 @@ pub(super) fn tiled_online_softmax_body(
         )],
     ));
     vec![
-        Node::let_bind(spec.item_var, Expr::InvocationId { axis: 0 }),
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
+        Node::let_bind(spec.item_var, Expr::LogicalIndex { axis: 0 }),
+        Node::let_bind("local", Expr::LogicalWithinTileId { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var(spec.item_var), Expr::u32(spec.item_count)),
             per_item,
@@ -487,7 +487,7 @@ pub fn attention_tile_scores_program() -> Program {
         Expr::load("score_tile", Expr::u32(1)),
     ));
     let guarded = vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         body,
     )];
     Program::wrapped(
@@ -527,7 +527,7 @@ pub fn attention_absorb_values_program() -> Program {
         Expr::load("o_acc", Expr::u32(1)),
     ));
     let guarded = vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         body,
     )];
     Program::wrapped(

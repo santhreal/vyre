@@ -6,7 +6,7 @@
 //!
 //! Each test:
 //! 1. Builds a vyre `Program` with a specific control-flow shape.
-//! 2. Runs `vyre_lower::lower_physical`.
+//! 2. Runs the physical or selected-schedule lowering boundary appropriate to the fixture.
 //! 3. Calls `vyre_emit_naga::emit` to produce a `naga::Module`.
 //! 4. Calls `naga::valid::Validator` with all flags + capabilities.
 //! 5. Asserts validation succeeds (no NotInScope, no DanglingResultRef,
@@ -399,6 +399,10 @@ fn loop_carrier_with_let_bind_shadowing_in_body() {
 
 #[test]
 fn dump_python312_lexer_naga() {
+    use std::collections::BTreeMap;
+    use vyre_foundation::ir::ProgramGraph;
+    use vyre_foundation::logical::LogicalProgramGraph;
+    use vyre_foundation::schedule::SelectedSchedule;
     use vyre_libs::parsing::python::lex::python312_lexer;
     let prog = python312_lexer(
         "haystack",
@@ -408,8 +412,14 @@ fn dump_python312_lexer_naga() {
         "out_counts",
         256,
     );
-    let lk =
-        vyre_lower::lower_physical(&prog).expect("python312_lexer lower_physical must succeed");
+    let graph = ProgramGraph::from_program("python312_lexer", prog.clone())
+        .expect("python312_lexer must form a valid program graph");
+    let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
+        .expect("python312_lexer must have a valid logical domain");
+    let schedule = SelectedSchedule::from_logical(&logical);
+    let phase = schedule.phases[0].id;
+    let lk = vyre_lower::lower_scheduled(&prog, &schedule, phase)
+        .expect("python312_lexer selected schedule must lower");
     let module = vyre_emit_naga::emit(lk.descriptor()).expect("python312_lexer emit must succeed");
     let wgsl = naga::back::wgsl::write_string(
         &module,

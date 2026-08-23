@@ -83,7 +83,7 @@ pub fn hex_decode_body(input: &str, output: &str, table: &str, input_len: u32) -
     }
     let output_len = hex_decoded_capacity(input_len);
     vec![
-        Node::let_bind("pair", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("pair", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("pair"), Expr::u32(output_len)),
             vec![Node::store(

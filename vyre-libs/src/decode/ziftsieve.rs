@@ -90,7 +90,7 @@ pub fn ziftsieve_literal_copy_body(buffers: ZiftsieveBuffers<'_>, seq_count: u32
         seq_literal_offset,
     } = buffers;
     vec![
-        Node::let_bind("seq_idx", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("seq_idx", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("seq_idx"), Expr::u32(seq_count)),
             vec![

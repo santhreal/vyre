@@ -58,7 +58,7 @@ pub(crate) fn indexed_move_program(
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     // Out-of-range index handling must MATCH the CPU reference explicitly, not rely
     // on an implicit "output buffer is zero-initialized" runtime contract (that is
     // the bitset_test_bit divergence class, a skipped lane silently reads dst's

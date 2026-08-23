@@ -267,6 +267,7 @@ fn record_nodes_transport_plan(nodes: &[Node], plan: &mut CollectiveTransportPla
                 | Node::Store { .. }
                 | Node::Return
                 | Node::Barrier { .. }
+                | Node::LogicalBarrier { .. }
                 | Node::IndirectDispatch { .. }
                 | Node::AsyncLoad { .. }
                 | Node::AsyncStore { .. }

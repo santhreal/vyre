@@ -264,6 +264,7 @@ fn walk_node(node: &Node, state: &mut InFlight, found: &mut Vec<Finding>) -> Seq
         | Node::Assign { .. }
         | Node::Store { .. }
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::IndirectDispatch { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }

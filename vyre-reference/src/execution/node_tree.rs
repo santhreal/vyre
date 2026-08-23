@@ -19,7 +19,10 @@ pub(crate) fn contains_barrier(nodes: &[Node]) -> bool {
 /// reached only through a Region body read as ABSENT.
 fn node_contains_barrier(node: &Node) -> bool {
     any_descendant(node, &mut |candidate| {
-        matches!(candidate, Node::Barrier { .. })
+        matches!(
+            candidate,
+            Node::Barrier { .. } | Node::LogicalBarrier { .. }
+        )
     })
 }
 

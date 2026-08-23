@@ -173,7 +173,7 @@ impl<'a> TableStateMachineComposer<'a> {
         valid_len: Expr,
     ) -> Vec<Node> {
         vec![Node::if_then(
-            Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+            Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
             vec![
                 Node::let_bind(self.state_var, Expr::u32(0)),
                 Node::loop_for(
@@ -216,7 +216,7 @@ impl<'a> TableStateMachineComposer<'a> {
             Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
         );
         vec![
-            Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+            Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
             Node::if_then(
                 Expr::lt(i.clone(), Expr::buf_len(haystack)),
                 vec![
@@ -252,7 +252,7 @@ impl<'a> TableStateMachineComposer<'a> {
         let tile_width = tile_width.max(1).next_power_of_two();
         let tile_count = tiled_scan_tile_count_expr(valid_len.clone(), tile_width);
         vec![Node::if_then(
-            Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+            Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
             vec![
                 Node::let_bind(self.state_var, Expr::u32(0)),
                 Node::let_bind("decode_scan_ping", Expr::u32(0)),

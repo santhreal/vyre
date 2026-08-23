@@ -76,7 +76,7 @@ pub fn frontier_to_queue(
             "Fix: frontier_to_queue requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
         ));
     }
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let words = bitset_words(node_count);
     let lanes = 256_u32;
     let scan_iters = node_count.div_ceil(lanes).max(1);
@@ -86,7 +86,7 @@ pub fn frontier_to_queue(
             Expr::eq(Expr::var("q_lane"), Expr::u32(0)),
             vec![Node::store(queue_len, Expr::u32(0), Expr::u32(0))],
         ),
-        Node::barrier_with_ordering(MemoryOrdering::SeqCst),
+        Node::logical_barrier(MemoryOrdering::SeqCst),
         // Only the lanes of the FIRST workgroup scan. Beyond that width the
         // strided walk below would re-cover source nodes group 0 already
         // covered, double-appending them and inflating `queue_len`.
@@ -165,7 +165,7 @@ pub fn frontier_to_queue_parallel(
             "Fix: frontier_to_queue_parallel requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
         ));
     }
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let words = bitset_words(node_count);
     let body = vec![
         Node::let_bind("qp_src", lane),

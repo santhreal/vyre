@@ -23,6 +23,8 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{Program, ProgramGraph};
+use vyre_foundation::logical::LogicalProgramGraph;
+use vyre_foundation::schedule::SelectedSchedule;
 use vyre_foundation::transform::grid_sync_split::contains_grid_sync;
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
@@ -69,7 +71,18 @@ fn validated(program: Program) -> ValidatedCompileRequest {
 }
 
 fn emit_wgsl(program: &Program) -> Result<naga::Module, String> {
-    let lowered = vyre_lower::lower_physical(program).map_err(|error| format!("{error:?}"))?;
+    let graph = ProgramGraph::from_program("taint_pollution_emit", program.clone())
+        .map_err(|error| format!("{error:?}"))?;
+    let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
+        .map_err(|error| format!("{error:?}"))?;
+    let schedule = SelectedSchedule::from_logical(&logical);
+    let phase = schedule
+        .phases
+        .first()
+        .ok_or_else(|| "selected schedule has no phase".to_string())?
+        .id;
+    let lowered = vyre_lower::lower_scheduled(program, &schedule, phase)
+        .map_err(|error| format!("{error:?}"))?;
     vyre_emit_naga::emit(lowered.descriptor()).map_err(|error| format!("{error}"))
 }
 

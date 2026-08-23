@@ -30,7 +30,7 @@ fn indexed_map_program() -> Program {
 fn strided_accumulate_program() -> Program {
     let tile = 4;
     let body = vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
+        Node::let_bind("local", Expr::LogicalWithinTileId { axis: 0 }),
         strided_accumulate_child(
             STRIDED_ACCUMULATE_OP_ID,
             tile,
@@ -41,14 +41,14 @@ fn strided_accumulate_program() -> Program {
             "scratch",
             |idx, acc| Expr::add(acc, Expr::load("values", idx)),
         ),
-        Node::barrier(),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         // The result is one value, so exactly one workgroup may write it. A
         // dispatch is rounded up to whole workgroups, and a second workgroup
         // reduces lanes outside the input: its accumulator is the identity, and
         // an unguarded store would publish that instead of the answer.
         Node::if_then(
             Expr::and(
-                Expr::is_first_workgroup(),
+                Expr::is_first_logical_tile(),
                 Expr::eq(Expr::var("local"), Expr::u32(0)),
             ),
             vec![Node::store(

@@ -33,7 +33,7 @@ impl ProgramEffects {
     pub const HOST_IO: Self = Self(1 << 2);
     /// Nested GPU dispatch  -  `Node::IndirectDispatch`.
     pub const GPU_DISPATCH: Self = Self(1 << 3);
-    /// Synchronization  -  `Node::Barrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst }`.
+    /// Physical or logical synchronization barrier.
     pub const BARRIER: Self = Self(1 << 4);
     /// Async load fetching from streaming storage  -
     /// `Node::AsyncLoad`.
@@ -173,7 +173,7 @@ fn walk_node(node: &Node, effects: &mut ProgramEffects) {
             *effects |= ProgramEffects::TRAP;
             walk_expr(address, effects);
         }
-        Node::Barrier { .. } => {
+        Node::Barrier { .. } | Node::LogicalBarrier { .. } => {
             *effects |= ProgramEffects::BARRIER;
         }
         Node::Block(nodes) => {
@@ -197,6 +197,9 @@ fn walk_expr(expr: &Expr, effects: &mut ProgramEffects) {
         | Expr::LitBool(_)
         | Expr::Var(_)
         | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
         | Expr::SubgroupLocalId

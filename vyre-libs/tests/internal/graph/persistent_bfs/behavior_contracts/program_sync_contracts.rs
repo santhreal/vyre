@@ -51,7 +51,7 @@ fn large_persistent_bfs_program_uses_grid_sync_parallel_steps() {
 
 fn contains_grid_sync(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| match node {
-        Node::Barrier {
+        Node::LogicalBarrier {
             ordering: MemoryOrdering::GridSync,
         } => true,
         Node::If {

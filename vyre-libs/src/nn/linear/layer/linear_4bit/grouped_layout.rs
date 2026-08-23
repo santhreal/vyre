@@ -192,11 +192,11 @@ pub(super) fn broadcast_from_lane0(name: &str) -> Expr {
     Expr::subgroup_shuffle(Expr::var(name), Expr::u32(0))
 }
 
-/// The workgroup lane decomposition every grouped INT4 lowering opens with:
-/// the local invocation, the warp that owns one output, and the lane within it.
+/// The tile-point decomposition every grouped INT4 lowering opens with:
+/// the within-tile logical point, the subgroup that owns one output, and its lane.
 pub(super) fn lane_decomposition() -> Vec<Node> {
     vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
+        Node::let_bind("local", Expr::LogicalWithinTileId { axis: 0 }),
         Node::let_bind(
             "warp",
             Expr::div(

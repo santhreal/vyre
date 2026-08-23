@@ -57,7 +57,7 @@ pub fn try_qsvt_block_encode(
     n: u32,
 ) -> Result<Program, String> {
     let cells = crate::plumbing::operand::shape::square_matrix_cells(OP_ID, n)?;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let n_v = Expr::load(norm, Expr::u32(0));
     let safe_norm = Expr::select(Expr::eq(n_v.clone(), Expr::u32(0)), Expr::u32(1), n_v);
     let value = Expr::div(

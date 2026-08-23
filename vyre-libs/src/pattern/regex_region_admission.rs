@@ -165,7 +165,7 @@ pub(crate) fn anchored_region_walk_body(
     ));
 
     vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(Expr::lt(Expr::var("i"), haystack_len), per_position),
     ]
 }

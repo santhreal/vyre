@@ -157,7 +157,7 @@ pub fn depthwise_causal_conv1d(
         }
     };
     let body = vec![
-        Node::let_bind("index", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("index", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(index.clone(), Expr::u32(total)),
             vec![
@@ -444,7 +444,7 @@ pub fn depthwise_causal_conv1d_update(
         },
     ];
     let body = vec![
-        Node::let_bind("dispatch_index", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("dispatch_index", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("dispatch_index"), Expr::u32(output_count)),
             output_body,

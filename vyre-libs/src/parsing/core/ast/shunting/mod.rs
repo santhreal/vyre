@@ -105,7 +105,7 @@ fn ast_shunting_yard_program(
 ) -> Program {
     let token_capacity = token_capacity.clamp(1, MAX_TOK_SCAN);
     let statement_capacity = statement_capacity.map(|capacity| capacity.clamp(1, MAX_TOK_SCAN));
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let val_stack_base = Expr::mul(t.clone(), Expr::u32(STACK_SLOTS_PER_STATEMENT));
     let op_stack_base = Expr::mul(t.clone(), Expr::u32(STACK_SLOTS_PER_STATEMENT));
 

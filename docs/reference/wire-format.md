@@ -21,10 +21,10 @@ itself instead of surfacing as an arbitrary parse failure further in.
 | Constant | Value |
 |---|---|
 | `MAGIC` | `b"VYRE"` |
-| `WIRE_FORMAT_VERSION` | 7 |
+| `WIRE_FORMAT_VERSION` | 8 |
 | `MIN_SUPPORTED_WIRE_FORMAT_VERSION` | 4 |
 
-This decoder reads versions 4 through 7 and writes 7. Version 2 was never
+This decoder reads versions 4 through 8 and writes 8. Version 2 was never
 released.
 
 ## Bounds are checked before allocation
@@ -58,7 +58,6 @@ rejected before the stack frame is pushed.
 Lengths are written as `u32` rather than `usize` so the blob does not
 depend on the pointer width of the host that produced it.
 
-
 ## Tile values and nodes
 
 Version 7 introduces first-class tile values and dedicated tile nodes (`TileLoad`,
@@ -66,6 +65,14 @@ Version 7 introduces first-class tile values and dedicated tile nodes (`TileLoad
 extents, layout swizzle permutation vectors, origin vectors, and elementwise
 input lists are bounds-checked symmetrically in the encoder and decoder against
 `MAX_TENSOR_RANK` and `MAX_ARGS` before serialization or allocation.
+
+## Logical execution markers
+
+Version 8 adds schedule-free logical domain, tile, and within-tile identities
+plus logical barriers. Selected-schedule lowering replaces every logical marker
+with its physical invocation, workgroup, local, or barrier form before
+descriptor construction. A logical marker at physical lowering is rejected.
+
 ## What is proved
 
 `vyre/tests/wire_v1_round_trip.rs` covers the round trip, encoder

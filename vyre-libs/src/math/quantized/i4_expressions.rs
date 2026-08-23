@@ -89,7 +89,7 @@ pub(super) fn i4_dot_accumulation_body(
     final_store: Node,
 ) -> Vec<Node> {
     vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         vec![
             Node::let_bind("i4_dot_acc", accumulator_zero),
             Node::loop_for(

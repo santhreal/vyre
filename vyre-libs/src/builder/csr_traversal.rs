@@ -461,7 +461,7 @@ impl<'a> CsrTraversalComposer<'a> {
             self.node_count,
         ));
 
-        let t = Expr::InvocationId { axis: 0 };
+        let t = Expr::LogicalIndex { axis: 0 };
         let active_body =
             self.emit_edge_expand(frontier_out, Expr::var("src"), |word| word, Vec::new);
         let body = vec![active_source_lane(
@@ -507,7 +507,7 @@ impl<'a> CsrTraversalComposer<'a> {
             self.node_count,
         ));
 
-        let t = Expr::InvocationId { axis: 0 };
+        let t = Expr::LogicalIndex { axis: 0 };
         let active_body =
             self.emit_edge_expand(frontier_out, Expr::var("src"), |word| word, Vec::new);
         let body = vec![active_source_lane(
@@ -542,7 +542,7 @@ impl<'a> CsrTraversalComposer<'a> {
             self.node_count,
         ));
 
-        let t = Expr::InvocationId { axis: 0 };
+        let t = Expr::LogicalIndex { axis: 0 };
         let mut body = vec![Node::let_bind("src", t.clone())];
         body.extend(self.emit_backward_scan(Expr::var("src"), frontier_in, frontier_out, Vec::new));
 
@@ -559,7 +559,7 @@ impl<'a> CsrTraversalComposer<'a> {
     /// Build parallel in-place backward expansion program with atomic changed flag.
     #[must_use]
     pub fn build_parallel_backward_or_changed(&self, frontier_out: &str, changed: &str) -> Program {
-        let src = Expr::InvocationId { axis: 0 };
+        let src = Expr::LogicalIndex { axis: 0 };
         let body =
             self.emit_backward_scan_full(src.clone(), frontier_out, frontier_out, Vec::new, || {
                 vec![Node::let_bind(
@@ -616,7 +616,7 @@ impl<'a> CsrTraversalComposer<'a> {
                 format!("{}_{name}", self.prefix)
             }
         };
-        let src = Expr::gid_x();
+        let src = Expr::logical_index(0);
         let in_bounds = local("in_bounds");
         let word_idx = local("word_idx");
         let bit_mask = local("bit_mask");
@@ -677,7 +677,7 @@ impl<'a> CsrTraversalComposer<'a> {
                     Expr::load(frontier_out, Expr::var(word_idx.as_str())),
                 ),
                 Node::let_bind(src_active.as_str(), src_active_expr),
-                Node::barrier_with_ordering(ordering),
+                Node::logical_barrier(ordering),
                 Node::if_then(
                     Expr::ne(Expr::var(src_active.as_str()), Expr::u32(0)),
                     edge_scan(),
@@ -702,7 +702,7 @@ impl<'a> CsrTraversalComposer<'a> {
         ));
 
         vec![Node::if_then(
-            Expr::lt(Expr::gid_x(), Expr::u32(self.node_count)),
+            Expr::lt(Expr::logical_index(0), Expr::u32(self.node_count)),
             body,
         )]
     }
@@ -724,8 +724,8 @@ impl<'a> CsrTraversalComposer<'a> {
                 self.builder_name
             ));
         }
-        let src = Expr::InvocationId { axis: 0 };
-        let query = Expr::InvocationId { axis: 1 };
+        let src = Expr::LogicalIndex { axis: 0 };
+        let query = Expr::LogicalIndex { axis: 1 };
         let words = bitset_words(self.node_count);
         let total_words = checked_batched_frontier_words(words, query_count)?;
         let query_word_base = Expr::mul(query, Expr::u32(words));
@@ -832,7 +832,7 @@ mod tests {
             "fout",
             "changed",
             4,
-            Expr::InvocationId { axis: 1 },
+            Expr::LogicalIndex { axis: 1 },
             4,
             Vec::new(),
             Vec::new(),

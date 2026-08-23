@@ -151,7 +151,7 @@ pub fn count_sketch_update(table: &str, hashes: &str, signs: &str, d: u32, w: u3
         );
     };
 
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(d)),
         vec![

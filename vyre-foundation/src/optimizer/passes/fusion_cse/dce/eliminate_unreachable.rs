@@ -49,6 +49,7 @@ pub(crate) fn eliminate_unreachable(nodes: Vec<Node>) -> Vec<Node> {
                 value,
             } => out.push(Node::store(&buffer, index, value)),
             Node::Barrier { ordering } => out.push(Node::barrier_with_ordering(ordering)),
+            Node::LogicalBarrier { ordering } => out.push(Node::logical_barrier(ordering)),
             Node::IndirectDispatch {
                 count_buffer,
                 count_offset,

@@ -52,7 +52,7 @@ pub fn adaptive_sparse_dense_step(
     };
     let physical_edge_count = edge_count.max(1);
 
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let dense_cutover = dense_cutover_nodes(node_count, dense_threshold_pct);
     let dense_body = super::dense_step::dense_reverse_scan_body(
         frontier_in,

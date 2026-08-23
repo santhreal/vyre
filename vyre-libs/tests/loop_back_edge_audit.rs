@@ -67,11 +67,11 @@ use vyre_libs::reduce::workgroup_tree::{
 /// `next` and flag growth, which is the monotone shape those builders exist for.
 fn transfer_body() -> Vec<Node> {
     vec![Node::if_then(
-        Expr::lt(Expr::InvocationId { axis: 0 }, Expr::u32(4)),
+        Expr::lt(Expr::LogicalIndex { axis: 0 }, Expr::u32(4)),
         vec![Node::store(
             "next",
-            Expr::InvocationId { axis: 0 },
-            Expr::load("current", Expr::InvocationId { axis: 0 }),
+            Expr::LogicalIndex { axis: 0 },
+            Expr::load("current", Expr::LogicalIndex { axis: 0 }),
         )],
     )]
 }
@@ -165,7 +165,7 @@ fn synchronizing_programs(max_iters: u32) -> Vec<(&'static str, Program)> {
 /// Barriers anywhere under `nodes`.
 fn has_barrier(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| match node {
-        Node::Barrier { .. } => true,
+        Node::Barrier { .. } | Node::LogicalBarrier { .. } => true,
         Node::If {
             then, otherwise, ..
         } => has_barrier(then) || has_barrier(otherwise),
@@ -338,7 +338,7 @@ fn exit_proof_and_exit_free_bodies_are_where_they_were_measured() {
         synchronizing_loop_bodies(program.entry(), &mut bodies);
         for (index, body) in bodies.iter().enumerate() {
             let entry = format!("{label} body {index}");
-            if matches!(body.last(), Some(Node::Barrier { .. })) {
+            if matches!(body.last(), Some(Node::LogicalBarrier { .. })) {
                 exit_proof.push(entry);
             } else {
                 exit_free.push(entry);
@@ -390,7 +390,7 @@ fn a_body_with_an_early_exit_ends_with_a_barrier() {
         synchronizing_loop_bodies(program.entry(), &mut bodies);
         for (index, body) in bodies.iter().enumerate() {
             let returns = returns_at_any_depth(body);
-            let exit_proof = matches!(body.last(), Some(Node::Barrier { .. }));
+            let exit_proof = matches!(body.last(), Some(Node::LogicalBarrier { .. }));
             assert!(
                 returns == 0 || exit_proof,
                 "{label} body {index} holds {returns} early exit(s) and does NOT \

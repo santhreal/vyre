@@ -79,7 +79,7 @@ pub fn turboquant_attention(
     };
 
     // Per output lane d: walk i in 0..seq_len, accumulate score*V.
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     let inner_body = vec![
         Node::let_bind("d", t.clone()),

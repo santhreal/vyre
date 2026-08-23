@@ -115,7 +115,7 @@ pub fn inflate_stored_non_stored_trap_nodes() -> [Node; 3] {
 #[must_use]
 pub fn inflate_stored_body(input: &str, output: &str, inflated_len_buffer: &str) -> Vec<Node> {
     let mut body = vec![
-        Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("lane", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::eq(Expr::var("lane"), Expr::u32(0)),
             vec![Node::store(inflated_len_buffer, Expr::u32(0), Expr::u32(0))],
@@ -278,7 +278,7 @@ fn fused_scan_program(
         |index, value| Some(Node::store(&decoded, index, value)),
     );
     let mut entry = vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
         vec![Node::store(INFLATED_LEN_BUFFER, Expr::u32(0), Expr::u32(0))],
     )];
     entry.extend(inflate_stored_header_nodes(&input));
@@ -287,7 +287,7 @@ fn fused_scan_program(
         vec![
             Node::if_then(inflate_stored_len_is_valid_expr(), {
                 let mut body = vec![Node::if_then(
-                    Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                    Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
                     vec![Node::store(
                         INFLATED_LEN_BUFFER,
                         Expr::u32(0),

@@ -120,6 +120,15 @@ pub enum FlatExpr {
     LocalId {
         axis: u8,
     },
+    LogicalIndex {
+        axis: u8,
+    },
+    LogicalTileId {
+        axis: u8,
+    },
+    LogicalWithinTileId {
+        axis: u8,
+    },
     BinOp {
         op: BinOp,
         left: ExprId,
@@ -263,6 +272,9 @@ impl ExprArena {
             FlatExpr::InvocationId { axis } => Expr::InvocationId { axis },
             FlatExpr::WorkgroupId { axis } => Expr::WorkgroupId { axis },
             FlatExpr::LocalId { axis } => Expr::LocalId { axis },
+            FlatExpr::LogicalIndex { axis } => Expr::LogicalIndex { axis },
+            FlatExpr::LogicalTileId { axis } => Expr::LogicalTileId { axis },
+            FlatExpr::LogicalWithinTileId { axis } => Expr::LogicalWithinTileId { axis },
             FlatExpr::BinOp { op, left, right } => Expr::BinOp {
                 op,
                 left: Box::new(self.rebuild(left)),
@@ -370,6 +382,9 @@ impl ExprArena {
             Expr::InvocationId { axis } => FlatExpr::InvocationId { axis: *axis },
             Expr::WorkgroupId { axis } => FlatExpr::WorkgroupId { axis: *axis },
             Expr::LocalId { axis } => FlatExpr::LocalId { axis: *axis },
+            Expr::LogicalIndex { axis } => FlatExpr::LogicalIndex { axis: *axis },
+            Expr::LogicalTileId { axis } => FlatExpr::LogicalTileId { axis: *axis },
+            Expr::LogicalWithinTileId { axis } => FlatExpr::LogicalWithinTileId { axis: *axis },
             Expr::BinOp { op, left, right } => FlatExpr::BinOp {
                 op: *op,
                 left: self.intern(left),

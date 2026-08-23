@@ -190,7 +190,7 @@ fn line_splice_classify_with_source_type(byte_count: u32, source_type: DataType)
     };
 
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(i.clone(), Expr::u32(byte_count)),
             vec![

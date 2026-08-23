@@ -309,6 +309,9 @@ impl LowerCtx {
                 });
                 Ok(())
             }
+            Node::LogicalBarrier { .. } => Err(LowerError::InvalidProgram(
+                "schedule-free logical barrier reached physical descriptor lowering. Fix: lower the validated selected schedule before lower_physical().".to_string(),
+            )),
             Node::IndirectDispatch {
                 count_buffer,
                 count_offset,

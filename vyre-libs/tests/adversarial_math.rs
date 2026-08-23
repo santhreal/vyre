@@ -75,9 +75,9 @@ fn conv1d_program_uses_current_ir_entrypoints_and_select_clamp() {
     assert!(
         matches!(
             node_binds_expr_named(body, "idx"),
-            Some(Expr::InvocationId { axis: 0 })
+            Some(Expr::LogicalIndex { axis: 0 })
         ),
-        "conv1d must use Expr::gid_x/InvocationId x for dispatch indexing"
+        "conv1d must use the x logical index for dispatch indexing"
     );
 
     let src_idx = node_binds_expr_named(body, "src_idx").expect("src_idx binding must exist");

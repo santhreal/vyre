@@ -394,6 +394,7 @@ impl Program {
                     | Node::Broadcast { .. }
                     | Node::Return
                     | Node::Barrier { .. }
+                    | Node::LogicalBarrier { .. }
                     | Node::AsyncLoad { .. }
                     | Node::AsyncStore { .. }
                     | Node::AsyncWait { .. }

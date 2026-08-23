@@ -66,7 +66,12 @@ pub(crate) fn validate_expr(
                 ));
             }
         }
-        Expr::InvocationId { axis } | Expr::WorkgroupId { axis } | Expr::LocalId { axis } => {
+        Expr::InvocationId { axis }
+        | Expr::WorkgroupId { axis }
+        | Expr::LocalId { axis }
+        | Expr::LogicalIndex { axis }
+        | Expr::LogicalTileId { axis }
+        | Expr::LogicalWithinTileId { axis } => {
             if *axis > 2 {
                 report.errors.push(err(
                     "V068",

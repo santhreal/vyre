@@ -151,7 +151,7 @@ pub fn python312_lexer(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![
         Node::let_bind("ch", load_byte(haystack, t.clone())),
         Node::let_bind(

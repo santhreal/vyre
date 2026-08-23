@@ -2901,6 +2901,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   match wire format in `match_triples.rs`; `support.rs`, which was named for a
   shape rather than a concern, is gone. Reported metrics, error strings, and
   readback ranges are unchanged.
+- Library compositions now use schedule-free logical domain identities and
+  barriers; selected-schedule lowering introduces physical invocation geometry
+  and synchronization, and unresolved logical markers fail before backend
+  emission.
 - Repository checks that lived in shell scripts are registered gates with
   pinned finding counts. The frozen contract snapshots, the backend extension
   rule, the readback ring routing, the program wire field classification, the

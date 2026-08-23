@@ -180,9 +180,9 @@ fn try_line_index_with_source_type(
 fn correct_flag_barrier(program: Program) -> Program {
     fn demote_boundary(node: &Node) -> Node {
         match node {
-            Node::Barrier {
+            Node::LogicalBarrier {
                 ordering: vyre_foundation::ir::MemoryOrdering::GridSync,
-            } => Node::barrier_with_ordering(vyre_foundation::ir::MemoryOrdering::SeqCst),
+            } => Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
             other => other.clone(),
         }
     }
@@ -237,7 +237,7 @@ fn line_start_flags_program(
     source_type: DataType,
     block_lanes: u32,
 ) -> Result<Program, String> {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let prev_idx = Expr::add(t.clone(), Expr::u32(u32::MAX));
     let output_bytes = output_byte_range(n, "line_index line-start-flags output")?;
     let load_byte = |index: Expr| {
@@ -433,7 +433,7 @@ mod tests {
             let is_grid_sync = |node: &Node| {
                 matches!(
                     node,
-                    Node::Barrier {
+                    Node::LogicalBarrier {
                         ordering: vyre_foundation::ir::MemoryOrdering::GridSync
                     }
                 )

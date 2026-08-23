@@ -302,7 +302,7 @@ fn linear_4bit_affine_grouped_batch_impl(
             "linear_out_idx",
             Expr::add(
                 Expr::mul(
-                    Expr::WorkgroupId { axis: 0 },
+                    Expr::LogicalTileId { axis: 0 },
                     Expr::u32(AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP),
                 ),
                 Expr::var("warp"),
@@ -433,7 +433,7 @@ mod tests {
             | Node::ReduceScatter { .. }
             | Node::Broadcast { .. }
             | Node::Return
-            | Node::Barrier { .. }
+            | Node::LogicalBarrier { .. }
             | Node::Resume { .. }
             | Node::Opaque(_) => false,
             _ => false,

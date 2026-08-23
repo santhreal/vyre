@@ -246,13 +246,13 @@ pub fn try_bool_semiring_matmul(
             vec![wrap_anonymous_region(
                 BOOL_MATMUL_OP_ID,
                 vec![Node::if_then(
-                    Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                    Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
                     stores,
                 )],
             )],
         ));
     }
-    let cell = Expr::InvocationId { axis: 0 };
+    let cell = Expr::LogicalIndex { axis: 0 };
     let row = Expr::div(cell.clone(), Expr::u32(cols.max(1)));
     let col = Expr::rem(cell.clone(), Expr::u32(cols.max(1)));
     let body = vec![Node::if_then(

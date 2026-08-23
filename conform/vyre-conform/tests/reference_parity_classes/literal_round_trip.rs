@@ -15,7 +15,11 @@
 //! image and is opaque here, so a dialect that loses a literal inside its own
 //! text is that dialect's golden corpus to catch, not this.
 
-use vyre_foundation::ir::Program;
+use std::collections::BTreeMap;
+
+use vyre_foundation::ir::{Program, ProgramGraph};
+use vyre_foundation::logical::LogicalProgramGraph;
+use vyre_foundation::schedule::SelectedSchedule;
 use vyre_lower::LiteralValue;
 use vyre_megakernel::{
     ArtifactNodeId, FusionGroupId, TargetModuleBundle, TargetModuleImage,
@@ -23,14 +27,25 @@ use vyre_megakernel::{
 };
 use vyre_registry_link::operation::live_operation_registry;
 
-fn image_for(program: &Program) -> Option<TargetModuleImage> {
-    let lowered = vyre_lower::lower_physical(program).ok()?;
+fn image_for(operation_id: &str, program: &Program) -> Result<TargetModuleImage, String> {
+    let graph = ProgramGraph::from_program(operation_id, program.clone())
+        .map_err(|error| format!("invalid program graph: {error}"))?;
+    let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
+        .map_err(|error| format!("invalid logical domain: {error}"))?;
+    let schedule = SelectedSchedule::from_logical(&logical);
+    let phase = schedule
+        .phases
+        .first()
+        .map(|phase| phase.id)
+        .ok_or_else(|| "selected schedule has no phase".to_string())?;
+    let lowered = vyre_lower::lower_scheduled(program, &schedule, phase)
+        .map_err(|error| format!("selected-schedule lowering failed: {error}"))?;
     let program = lowered
         .program
         .to_wire()
-        .expect("Fix: a physical lowering's program must encode to the canonical wire.");
+        .map_err(|error| format!("physical program encoding failed: {error}"))?;
     let descriptor = lowered.into_descriptor();
-    Some(TargetModuleImage {
+    Ok(TargetModuleImage {
         group: FusionGroupId(0),
         stage: 0,
         nodes: vec![ArtifactNodeId(0)],
@@ -59,8 +74,12 @@ fn every_registered_op_descriptor_survives_the_target_module_bundle() {
         let Some(program) = operation.program() else {
             continue;
         };
-        let Some(image) = image_for(&program) else {
-            continue;
+        let image = match image_for(operation.id, &program) {
+            Ok(image) => image,
+            Err(error) => {
+                lost.push(format!("{}: {error}", operation.id));
+                continue;
+            }
         };
         let expected = image.descriptor.clone();
         let bundle = TargetModuleBundle::new(vec![image]);
@@ -178,11 +197,11 @@ fn a_finite_f32_literal_written_in_the_non_finite_escape_is_refused() {
 
 #[test]
 fn a_bundle_written_under_an_earlier_schema_is_refused_by_version() {
-    let program = live_operation_registry()
+    let (operation_id, program) = live_operation_registry()
         .iter()
-        .find_map(|operation| operation.program())
+        .find_map(|operation| operation.program().map(|program| (operation.id, program)))
         .expect("Fix: the operation registry must carry at least one buildable program.");
-    let image = image_for(&program)
+    let image = image_for(operation_id, &program)
         .expect("Fix: a registered program must lower before this contract can be judged.");
     let bytes = TargetModuleBundle::new(vec![image])
         .to_bytes()

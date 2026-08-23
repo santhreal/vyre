@@ -325,7 +325,7 @@ mod tests {
         let mut barrier_count = 0usize;
         fn count_barriers(node: &Node, n: &mut usize) {
             match node {
-                Node::Barrier { .. } => *n += 1,
+                Node::LogicalBarrier { .. } => *n += 1,
                 Node::Region { body, .. } => {
                     for child in body.iter() {
                         count_barriers(child, n);

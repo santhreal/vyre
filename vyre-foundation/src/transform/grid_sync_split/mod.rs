@@ -157,6 +157,9 @@ fn node_contains_grid_sync(node: &Node) -> bool {
             Node::Barrier {
                 ordering: MemoryOrdering::GridSync,
                 ..
+            } | Node::LogicalBarrier {
+                ordering: MemoryOrdering::GridSync,
+                ..
             }
         )
     })
@@ -183,6 +186,9 @@ fn innermost_loop_over_grid_sync(nodes: &[Node], enclosing: Option<&Ident>) -> O
         if matches!(
             node,
             Node::Barrier {
+                ordering: MemoryOrdering::GridSync,
+                ..
+            } | Node::LogicalBarrier {
                 ordering: MemoryOrdering::GridSync,
                 ..
             }
@@ -291,6 +297,9 @@ fn is_grid_sync_fence(node: &Node) -> bool {
     matches!(
         node,
         Node::Barrier {
+            ordering: MemoryOrdering::GridSync,
+            ..
+        } | Node::LogicalBarrier {
             ordering: MemoryOrdering::GridSync,
             ..
         }

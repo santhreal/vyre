@@ -7,7 +7,7 @@
 //! one workgroup (a `[1, 1, 1]` dispatch of `WORKGROUP_SIZE` lanes) is meant to run it.
 //!
 //! To stay correct even when a caller (or a shape-inferred grid) fires extra workgroups, the whole
-//! accumulate loop is gated on `WorkgroupId == 0` (the canonical "first workgroup" predicate, shared
+//! accumulate loop is gated on `LogicalTileId == 0` (the canonical first-tile predicate, shared
 //! with `reduce::workgroup_tree`'s `FirstWorkgroup` scope). Extra workgroups then no-op instead of
 //! double-counting the non-idempotent sums. See `atomic_grid_stride_u32`.
 //!
@@ -241,7 +241,7 @@ where
     V: Fn(Expr) -> Expr,
     A: Fn(&str, Expr) -> Expr,
 {
-    let lane = Expr::InvocationId { axis: 0 };
+    let lane = Expr::LogicalIndex { axis: 0 };
     let chunk_count = Expr::div(
         Expr::add(Expr::u32(count), Expr::u32(WORKGROUP_SIZE - 1)),
         Expr::u32(WORKGROUP_SIZE),
@@ -252,10 +252,10 @@ where
             Expr::eq(lane.clone(), Expr::u32(0)),
             vec![Node::store(out, Expr::u32(0), Expr::u32(identity))],
         ),
-        Node::Barrier {
+        Node::LogicalBarrier {
             ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
         },
-        // Gate the ENTIRE grid-stride loop on `WorkgroupId == 0`, the canonical "first workgroup"
+        // Gate the ENTIRE grid-stride loop on `LogicalTileId == 0`, the canonical first-tile
         // predicate this codebase already uses for single-workgroup reductions (see
         // `reduce::workgroup_tree::WorkgroupReductionScope::FirstWorkgroup` and the subgroup lowering
         // pass). The predicate is loop-invariant, so it gates the loop once rather than being
@@ -269,7 +269,7 @@ where
         // workgroups closed. The `lane == 0` init and the barrier stay unconditional so the barrier
         // is reached uniformly by every lane in every workgroup.
         Node::if_then(
-            Expr::is_first_workgroup(),
+            Expr::is_first_logical_tile(),
             vec![Node::loop_for(
                 "chunk",
                 Expr::u32(0),

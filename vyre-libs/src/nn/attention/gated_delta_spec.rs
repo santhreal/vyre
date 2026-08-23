@@ -286,7 +286,7 @@ pub(super) fn head_partition(
     ];
     guarded.extend(body);
     vec![
-        Node::let_bind("head_index", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("head_index", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("head_index"), Expr::u32(counts.head)),
             guarded,

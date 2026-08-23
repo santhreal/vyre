@@ -403,6 +403,9 @@ pub const fn vyre_foundation::execution_plan::SchedulingPolicy::standard() -> Se
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::use_persistent_megakernel(&self, _node_count: usize) -> bool
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::use_persistent_runtime(&self, _node_count: usize) -> bool
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::worker_workgroup_size(&self, worker_count: u32, max_workgroup_size_x: u32) -> u32
+pub const fn vyre_foundation::ir::Expr::logical_index(axis: u8) -> Self
+pub const fn vyre_foundation::ir::Expr::logical_tile_index(axis: u8) -> Self
+pub const fn vyre_foundation::ir::Expr::logical_within_tile_index(axis: u8) -> Self
 pub const fn vyre_foundation::ir::LinearType::forbids_drop(self) -> bool
 pub const fn vyre_foundation::ir::LinearType::forbids_reuse(self) -> bool
 pub const fn vyre_foundation::ir::MemoryOrdering::is_valid_for_atomic_rmw(self) -> bool
@@ -412,6 +415,7 @@ pub const fn vyre_foundation::ir::MemoryOrdering::requires_grid_sync(self) -> bo
 pub const fn vyre_foundation::ir::MemoryOrdering::wire_tag(self) -> u8
 pub const fn vyre_foundation::ir::Node::barrier() -> Self
 pub const fn vyre_foundation::ir::Node::barrier_with_ordering(ordering: vyre_foundation::ir::MemoryOrdering) -> Self
+pub const fn vyre_foundation::ir::Node::logical_barrier(ordering: vyre_foundation::ir::MemoryOrdering) -> Self
 pub const fn vyre_foundation::ir::Node::return_() -> Self
 pub const fn vyre_foundation::logical::LogicalProgramGraph<'a>::graph(&self) -> &'a vyre_foundation::ir::ProgramGraph
 pub const fn vyre_foundation::lower::ProgramEffects::bits(self) -> u32
@@ -881,6 +885,8 @@ pub fn vyre_foundation::ir::Expr::invocation_local_y() -> Self
 pub fn vyre_foundation::ir::Expr::invocation_local_z() -> Self
 pub fn vyre_foundation::ir::Expr::is_finite(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::is_first_invocation() -> Self
+pub fn vyre_foundation::ir::Expr::is_first_logical_point() -> Self
+pub fn vyre_foundation::ir::Expr::is_first_logical_tile() -> Self
 pub fn vyre_foundation::ir::Expr::is_first_workgroup() -> Self
 pub fn vyre_foundation::ir::Expr::is_inf(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::is_nan(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
@@ -2384,6 +2390,7 @@ pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::body(&mut self, pa
 pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::enter(&mut self, node: &vyre_foundation::ir::Node)
 pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::operand(&mut self, expr: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::ir::Expr>
 pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::tag(&mut self, name: &vyre_foundation::ir::Ident) -> core::option::Option<vyre_foundation::ir::Ident>
+pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::whole_node(&mut self, node: &vyre_foundation::ir::Node) -> core::option::Option<vyre_foundation::ir::Node>
 pub fn vyre_foundation::transform::rewrite_walk::extend_with_rewritten_scope<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R, out: &mut alloc::vec::Vec<vyre_foundation::ir::Node>)
 pub fn vyre_foundation::transform::rewrite_walk::reachable_prefix(body: &[vyre_foundation::ir::Node]) -> &[vyre_foundation::ir::Node]
 pub fn vyre_foundation::transform::rewrite_walk::rewrite_body<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::Node>>
@@ -2392,6 +2399,7 @@ pub fn vyre_foundation::transform::rewrite_walk::rewrite_program_entry(program: 
 pub fn vyre_foundation::transform::rewrite_walk::rewrite_scope<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R) -> alloc::vec::Vec<vyre_foundation::ir::Node>
 pub fn vyre_foundation::transform::rewrite_walk::rewrite_scope_opt<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::Node>>
 pub fn vyre_foundation::transform::rewrite_walk::visit_scope<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R)
+pub fn vyre_foundation::transform::schedule_lowering::lower_logical_schedule(program: vyre_foundation::ir::Program) -> (vyre_foundation::ir::Program, bool)
 pub fn vyre_foundation::validate::BackendValidationCapabilities::backend_capabilities(&self) -> vyre_foundation::validate::BackendCapabilities
 pub fn vyre_foundation::validate::BackendValidationCapabilities::backend_name(&self) -> &'static str
 pub fn vyre_foundation::validate::BackendValidationCapabilities::max_shared_memory_bytes(&self) -> u32
@@ -2467,6 +2475,9 @@ pub fn vyre_foundation::visit::ExprVisitor::visit_lit_i32(&mut self, _expr: &vyr
 pub fn vyre_foundation::visit::ExprVisitor::visit_lit_u32(&mut self, _expr: &vyre_foundation::ir::Expr, _value: u32) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_load(&mut self, _expr: &vyre_foundation::ir::Expr, _buffer: &vyre_foundation::ir::Ident, _index: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_local_id(&mut self, _expr: &vyre_foundation::ir::Expr, _axis: u32) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_foundation::visit::ExprVisitor::visit_logical_index(&mut self, _expr: &vyre_foundation::ir::Expr, _axis: u32) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_foundation::visit::ExprVisitor::visit_logical_tile_id(&mut self, _expr: &vyre_foundation::ir::Expr, _axis: u32) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_foundation::visit::ExprVisitor::visit_logical_within_tile_id(&mut self, _expr: &vyre_foundation::ir::Expr, _axis: u32) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_opaque_expr(&mut self, _expr: &vyre_foundation::ir::Expr, _extension: &dyn vyre_foundation::ir::ExprNode) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_select(&mut self, _expr: &vyre_foundation::ir::Expr, _cond: &vyre_foundation::ir::Expr, _true_val: &vyre_foundation::ir::Expr, _false_val: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_sequence(&mut self, _parts: &[vyre_foundation::ir::Expr]) -> core::ops::control_flow::ControlFlow<Self::Break>
@@ -2491,6 +2502,7 @@ pub fn vyre_foundation::visit::NodeVisitor::visit_collective(&mut self, node: &v
 pub fn vyre_foundation::visit::NodeVisitor::visit_if(&mut self, node: &vyre_foundation::ir::Node, cond: &vyre_foundation::ir::Expr, then_nodes: &[vyre_foundation::ir::Node], otherwise: &[vyre_foundation::ir::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_indirect_dispatch(&mut self, node: &vyre_foundation::ir::Node, count_buffer: &vyre_foundation::ir::Ident, count_offset: u64) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_let(&mut self, node: &vyre_foundation::ir::Node, name: &vyre_foundation::ir::Ident, value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_foundation::visit::NodeVisitor::visit_logical_barrier(&mut self, node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_loop(&mut self, node: &vyre_foundation::ir::Node, var: &vyre_foundation::ir::Ident, from: &vyre_foundation::ir::Expr, to: &vyre_foundation::ir::Expr, body: &[vyre_foundation::ir::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_opaque_node(&mut self, node: &vyre_foundation::ir::Node, extension: &dyn vyre_foundation::ir::NodeExtension) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_region(&mut self, node: &vyre_foundation::ir::Node, generator: &vyre_foundation::ir::Ident, source_region: &core::option::Option<vyre_foundation::ir::Ident>, body: &[vyre_foundation::ir::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
@@ -2672,6 +2684,7 @@ pub mod vyre_foundation::transform::inline
 pub mod vyre_foundation::transform::licm
 pub mod vyre_foundation::transform::parallelism
 pub mod vyre_foundation::transform::rewrite_walk
+pub mod vyre_foundation::transform::schedule_lowering
 pub mod vyre_foundation::validate
 pub mod vyre_foundation::validate::limits
 pub mod vyre_foundation::validate::linear_type
@@ -3315,6 +3328,12 @@ pub vyre_foundation::ir::Expr::Load::buffer: vyre_foundation::ir::Ident
 pub vyre_foundation::ir::Expr::Load::index: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::Expr::LocalId
 pub vyre_foundation::ir::Expr::LocalId::axis: u8
+pub vyre_foundation::ir::Expr::LogicalIndex
+pub vyre_foundation::ir::Expr::LogicalIndex::axis: u8
+pub vyre_foundation::ir::Expr::LogicalTileId
+pub vyre_foundation::ir::Expr::LogicalTileId::axis: u8
+pub vyre_foundation::ir::Expr::LogicalWithinTileId
+pub vyre_foundation::ir::Expr::LogicalWithinTileId::axis: u8
 pub vyre_foundation::ir::Expr::Opaque(alloc::sync::Arc<dyn vyre_foundation::ir::ExprNode>)
 pub vyre_foundation::ir::Expr::Select
 pub vyre_foundation::ir::Expr::Select::cond: alloc::boxed::Box<vyre_foundation::ir::Expr>
@@ -3413,6 +3432,8 @@ pub vyre_foundation::ir::Node::IndirectDispatch::count_offset: u64
 pub vyre_foundation::ir::Node::Let
 pub vyre_foundation::ir::Node::Let::name: vyre_foundation::ir::Ident
 pub vyre_foundation::ir::Node::Let::value: vyre_foundation::ir::Expr
+pub vyre_foundation::ir::Node::LogicalBarrier
+pub vyre_foundation::ir::Node::LogicalBarrier::ordering: vyre_foundation::ir::MemoryOrdering
 pub vyre_foundation::ir::Node::Loop
 pub vyre_foundation::ir::Node::Loop::body: alloc::vec::Vec<vyre_foundation::ir::Node>
 pub vyre_foundation::ir::Node::Loop::from: vyre_foundation::ir::Expr
@@ -4108,6 +4129,12 @@ pub vyre_foundation::optimizer::expr_arena::FlatExpr::Load::buffer: vyre_foundat
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Load::index: vyre_foundation::optimizer::expr_arena::ExprId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::LocalId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::LocalId::axis: u8
+pub vyre_foundation::optimizer::expr_arena::FlatExpr::LogicalIndex
+pub vyre_foundation::optimizer::expr_arena::FlatExpr::LogicalIndex::axis: u8
+pub vyre_foundation::optimizer::expr_arena::FlatExpr::LogicalTileId
+pub vyre_foundation::optimizer::expr_arena::FlatExpr::LogicalTileId::axis: u8
+pub vyre_foundation::optimizer::expr_arena::FlatExpr::LogicalWithinTileId
+pub vyre_foundation::optimizer::expr_arena::FlatExpr::LogicalWithinTileId::axis: u8
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Opaque(vyre_foundation::optimizer::expr_arena::OpaqueId)
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Select
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Select::cond: vyre_foundation::optimizer::expr_arena::ExprId

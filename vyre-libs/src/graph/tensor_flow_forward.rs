@@ -179,7 +179,7 @@ pub fn try_tensor_flow_forward(
             "{OP_ID} context_limit={context_limit} field_limit={field_limit} overflows per-node tensor lane count. Fix: shard context or field dimensions."
         )
     })?;
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let words = try_tensor_words(shape.node_count, context_limit, field_limit)?;
 
     // X axis handles Node_ID resolution
@@ -312,7 +312,7 @@ pub fn tensor_flow_propagate_edges_program() -> Program {
         // repeat the sweep per invocation.
         vec![wrap_anonymous_region(
             TENSOR_FLOW_PROPAGATE_EDGES_OP_ID,
-            vec![Node::if_then(Expr::is_first_invocation(), body)],
+            vec![Node::if_then(Expr::is_first_logical_point(), body)],
         )],
     )
 }

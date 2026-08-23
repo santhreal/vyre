@@ -165,10 +165,9 @@ fn the_encoder_stamps_the_current_schema_version() {
         "encoded programs must carry the current schema version"
     );
     assert_eq!(
-        WIRE_FORMAT_VERSION, 7,
-        "Fix: rev 7 added Tile values and tile operation node variants. If the version moved again, \
-         decide what the new revision does to that layout before touching this number, because the \
-         relabel test below depends on it."
+        WIRE_FORMAT_VERSION, 8,
+        "Fix: rev 8 added schedule-free logical identity and barrier variants. If the version moved again, \
+         decide what the new revision does to their tag layout before touching this number."
     );
 }
 

@@ -2,9 +2,86 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::ProgramGraph;
+use vyre_foundation::ir::{
+    BufferDecl, DataType, Expr, MemoryOrdering, Node, Program, ProgramGraph,
+};
 use vyre_foundation::logical::{LogicalProgramGraph, LOGICAL_ALGORITHM_VERSION};
-use vyre_foundation::operation::{OperationRegistry, OperationTier};
+use vyre_foundation::operation::{OperationRegistration, OperationRegistry, OperationTier};
+use vyre_foundation::schedule::{SchedulePhaseId, SelectedSchedule};
+use vyre_foundation::visit::{for_each_expr, for_each_node};
+use vyre_lower::lower_scheduled;
+
+const LOGICAL_EXPANSION_OP_ID: &str = "test::operation_registry::logical_expansion";
+
+fn logical_expansion_program() -> Program {
+    Program::wrapped(
+        vec![BufferDecl::output("result", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![
+            Node::store(
+                "result",
+                Expr::u32(0),
+                Expr::add(
+                    Expr::logical_index(0),
+                    Expr::add(
+                        Expr::logical_tile_index(1),
+                        Expr::logical_within_tile_index(2),
+                    ),
+                ),
+            ),
+            Node::logical_barrier(MemoryOrdering::SeqCst),
+        ],
+    )
+}
+
+inventory::submit! {
+    OperationRegistration::new_unconstrained(
+        LOGICAL_EXPANSION_OP_ID,
+        OperationTier::External,
+        Some(logical_expansion_program),
+        None,
+        None,
+    )
+}
+
+#[test]
+fn selected_schedule_legalizes_markers_introduced_by_call_expansion() {
+    let caller = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::call(LOGICAL_EXPANSION_OP_ID, Vec::new()),
+        )],
+    );
+    let lowered = lower_scheduled(&caller, &SelectedSchedule::synthetic(1), SchedulePhaseId(0))
+        .expect("selected-schedule lowering must legalize expanded composition bodies");
+
+    let mut logical = 0usize;
+    let mut physical_axes = [0usize; 3];
+    for_each_expr(lowered.program.entry(), |expr| match expr {
+        Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. } => logical += 1,
+        Expr::InvocationId { .. } => physical_axes[0] += 1,
+        Expr::WorkgroupId { .. } => physical_axes[1] += 1,
+        Expr::LocalId { .. } => physical_axes[2] += 1,
+        _ => {}
+    });
+    let mut logical_barriers = 0usize;
+    let mut physical_barriers = 0usize;
+    for_each_node(lowered.program.entry(), |node| match node {
+        Node::LogicalBarrier { .. } => logical_barriers += 1,
+        Node::Barrier { .. } => physical_barriers += 1,
+        _ => {}
+    });
+
+    assert_eq!(logical, 0);
+    assert_eq!(logical_barriers, 0);
+    assert_eq!(physical_axes, [1, 1, 1]);
+    assert_eq!(physical_barriers, 1);
+}
 
 #[test]
 fn library_fixtures_are_canonical_semantic_registrations() {
@@ -38,7 +115,28 @@ fn library_fixtures_are_canonical_semantic_registrations() {
             .program()
             .expect("Fix: library compositions must provide a neutral Program builder");
         assert_eq!(program.entry_op_id(), Some(entry.id), "{}", entry.id);
-        let graph = match ProgramGraph::from_program(entry.id, program) {
+        let mut physical_markers = Vec::new();
+        for_each_expr(program.entry(), |expr| {
+            if matches!(
+                expr,
+                Expr::InvocationId { .. } | Expr::WorkgroupId { .. } | Expr::LocalId { .. }
+            ) {
+                physical_markers.push(format!("{expr:?}"));
+            }
+        });
+        for_each_node(program.entry(), |node| {
+            if matches!(node, Node::Barrier { .. }) {
+                physical_markers.push(format!("{node:?}"));
+            }
+        });
+        assert!(
+            physical_markers.is_empty(),
+            "{} bypasses schedule-free library IR with physical markers: {}",
+            entry.id,
+            physical_markers.join(", ")
+        );
+
+        let graph = match ProgramGraph::from_program(entry.id, program.clone()) {
             Ok(graph) => graph,
             Err(error) => {
                 domain_failures.push(format!("{}: invalid graph: {error}", entry.id));
@@ -52,6 +150,44 @@ fn library_fixtures_are_canonical_semantic_registrations() {
                 continue;
             }
         };
+        let schedule = SelectedSchedule::from_logical(&logical);
+        let Some(phase) = schedule.phases.first().map(|phase| phase.id) else {
+            domain_failures.push(format!("{}: selected schedule has no phase", entry.id));
+            continue;
+        };
+        let scheduled = match lower_scheduled(&program, &schedule, phase) {
+            Ok(lowered) => lowered.program,
+            Err(error) => {
+                domain_failures.push(format!(
+                    "{}: selected-schedule lowering failed: {error}",
+                    entry.id
+                ));
+                continue;
+            }
+        };
+        let mut unresolved_logical = Vec::new();
+        for_each_expr(scheduled.entry(), |expr| {
+            if matches!(
+                expr,
+                Expr::LogicalIndex { .. }
+                    | Expr::LogicalTileId { .. }
+                    | Expr::LogicalWithinTileId { .. }
+            ) {
+                unresolved_logical.push(format!("{expr:?}"));
+            }
+        });
+        for_each_node(scheduled.entry(), |node| {
+            if matches!(node, Node::LogicalBarrier { .. }) {
+                unresolved_logical.push(format!("{node:?}"));
+            }
+        });
+        if !unresolved_logical.is_empty() {
+            domain_failures.push(format!(
+                "{}: selected-schedule lowering left logical markers: {}",
+                entry.id,
+                unresolved_logical.join(", ")
+            ));
+        }
         assert_eq!(LOGICAL_ALGORITHM_VERSION, 2);
         assert_eq!(logical.regions().len(), 1, "{}", entry.id);
         let domain = &logical.regions()[0];

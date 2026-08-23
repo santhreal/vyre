@@ -34,6 +34,12 @@ Library registrations are checked as a registry-derived set. Each registered
 composition must build a `ProgramGraph` and a complete logical region without a
 separate library-specific domain path.
 
+Ordinary library programs use `LogicalIndex`, `LogicalTileId`,
+`LogicalWithinTileId`, and `LogicalBarrier`. They contain no physical
+invocation, workgroup, local, or barrier markers before schedule selection.
+The linked operation registry checks this closure for every library-tier
+registration.
+
 ## Selected schedule boundary
 
 `SCHEDULE_IR_VERSION = 1` authenticates the backend-neutral schedule. The
@@ -49,6 +55,10 @@ Artifact validation replays every transform from immutable source phases.
 Changed preconditions, provenance, phase geometry, ordering or resource bounds
 reject the artifact before `vyre-lower` applies the selected phase workgroup and
 constructs a `PhysicalKernel`.
+
+`lower_scheduled` maps logical domain, tile, within-tile, and barrier markers to
+physical invocation, workgroup, local, and barrier IR before descriptor
+construction. `lower_physical` rejects any unresolved logical marker.
 
 The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 9`.
 

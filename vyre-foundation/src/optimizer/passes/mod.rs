@@ -121,6 +121,9 @@ pub fn expr_is_atomic_free(expr: &crate::ir::Expr) -> bool {
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize
         | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
         | Expr::BufferRef { .. }
@@ -193,6 +196,9 @@ fn classify(expr: &crate::ir::Expr, rules: ReexecutionRules<'_>) -> bool {
         | Expr::LitBool(_)
         | Expr::Var(_)
         | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. } => true,
         Expr::BinOp { left, right, .. } => classify(left, rules) && classify(right, rules),

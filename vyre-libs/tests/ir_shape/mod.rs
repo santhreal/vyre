@@ -62,8 +62,8 @@ fn expr_is_invocation_zero(expr: &vyre_foundation::ir::Expr) -> bool {
     match expr {
         Expr::BinOp { op, left, right } if *op == BinOp::Eq => matches!(
             (&**left, &**right),
-            (Expr::InvocationId { axis: 0 }, Expr::LitU32(0))
-                | (Expr::LitU32(0), Expr::InvocationId { axis: 0 })
+            (Expr::LogicalIndex { axis: 0 }, Expr::LitU32(0))
+                | (Expr::LitU32(0), Expr::LogicalIndex { axis: 0 })
         ),
         Expr::BinOp { left, right, .. } => {
             expr_is_invocation_zero(left) || expr_is_invocation_zero(right)
@@ -139,7 +139,7 @@ fn node_contains_invocation_id(node: &vyre_foundation::ir::Node) -> bool {
 fn expr_contains_invocation_id(expr: &vyre_foundation::ir::Expr) -> bool {
     use vyre_foundation::ir::Expr;
     match expr {
-        Expr::InvocationId { .. } => true,
+        Expr::LogicalIndex { .. } => true,
         Expr::Load { index, .. } | Expr::UnOp { operand: index, .. } => {
             expr_contains_invocation_id(index)
         }
@@ -194,7 +194,7 @@ fn node_grid_sync_barrier_count(node: &vyre_foundation::ir::Node) -> usize {
     use vyre_foundation::ir::MemoryOrdering;
     use vyre_foundation::ir::Node;
     match node {
-        Node::Barrier {
+        Node::LogicalBarrier {
             ordering: MemoryOrdering::GridSync,
         } => 1,
         Node::Block(children) => children.iter().map(node_grid_sync_barrier_count).sum(),
