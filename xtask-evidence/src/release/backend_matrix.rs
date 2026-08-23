@@ -10,6 +10,7 @@ use vyre_driver::{
     acquire, acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
 };
 use xtask::artifact_gate::Inspection;
+use xtask::tree_walk;
 
 const MAX_BACKEND_EVIDENCE_TEXT_BYTES: u64 = 4_194_304;
 
@@ -875,6 +876,13 @@ fn capability_contract_blockers(rows: &[BackendCapabilityRow]) -> Vec<String> {
     blockers
 }
 
+/// Scan the production backend surface for hidden fallback language.
+///
+/// The rows land in a committed artifact, so the walk that finds them is the
+/// shared one: it yields names in order, and readdir order would otherwise make
+/// the rendered artifact a property of the filesystem rather than of the source,
+/// which the artifact comparison reads as staleness. A second recursive walk
+/// here was also a second answer to which directories a gate reads.
 fn scan_hidden_fallback_language(
     workspace_root: &Path,
     blockers: &mut Vec<String>,
@@ -882,57 +890,31 @@ fn scan_hidden_fallback_language(
     let mut findings = Vec::new();
     let mut scan_errors = Vec::new();
     for root in BACKEND_PRODUCTION_SCAN_ROOTS {
-        scan_hidden_fallback_dir(
-            &workspace_root.join(root),
-            &mut findings,
-            &mut scan_errors,
-            blockers,
-        );
-    }
-    (findings, scan_errors)
-}
-
-fn scan_hidden_fallback_dir(
-    root: &Path,
-    findings: &mut Vec<BackendSourceFinding>,
-    scan_errors: &mut Vec<String>,
-    blockers: &mut Vec<String>,
-) {
-    let entries = match fs::read_dir(root) {
-        Ok(entries) => entries,
-        Err(error) => {
-            let message = format!(
-                "hidden fallback scan could not read directory `{}`: {error}",
-                root.display()
-            );
-            blockers.push(message.clone());
-            scan_errors.push(message);
-            return;
-        }
-    };
-    for entry in entries {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(error) => {
-                let message = format!(
-                    "hidden fallback scan could not read entry in `{}`: {error}",
-                    root.display()
-                );
-                blockers.push(message.clone());
-                scan_errors.push(message);
+        let root = workspace_root.join(root);
+        for entry in tree_walk::pruned(&root, tree_walk::BUILD_OUTPUT_AND_VCS) {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(error) => {
+                    let message = format!(
+                        "hidden fallback scan could not read under `{}`: {error}",
+                        root.display()
+                    );
+                    blockers.push(message.clone());
+                    scan_errors.push(message);
+                    continue;
+                }
+            };
+            if !entry.file_type().is_file() {
                 continue;
             }
-        };
-        let path = entry.path();
-        if path.is_dir() {
-            scan_hidden_fallback_dir(&path, findings, scan_errors, blockers);
-            continue;
+            let path = entry.path();
+            if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                continue;
+            }
+            scan_hidden_fallback_file(path, &mut findings, &mut scan_errors, blockers);
         }
-        if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
-            continue;
-        }
-        scan_hidden_fallback_file(&path, findings, scan_errors, blockers);
     }
+    (findings, scan_errors)
 }
 
 fn scan_hidden_fallback_file(

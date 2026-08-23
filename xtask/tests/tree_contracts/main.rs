@@ -37,3 +37,4 @@ mod relation_import_certificates;
 mod subcommand_dispatch;
 mod test_mutation_hygiene;
 mod testing_guides;
+mod tree_walk_order;

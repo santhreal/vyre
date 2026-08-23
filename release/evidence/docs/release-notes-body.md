@@ -4207,6 +4207,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   so a gate whose job is to report a finding aborted the sweep instead. An
   undocumented panic in xtask is itself a hygiene-matrix release blocker, and
   the unreadable file is now a Finding naming the path and the io error.
+- A generated evidence artifact is a function of the source, not of the
+  filesystem that holds it. The shared tree walk yielded readdir order, so
+  `hygiene-matrix.json` rendered its 329 finding rows in whatever sequence a
+  directory listed, and regenerating the artifact on another machine reported
+  it stale for a tree nobody had changed. The walk now yields names in order,
+  which is where the answer belongs because every gate that judges the tree
+  reads it through that one walk, and the backend matrix drops its own
+  recursive scan for it.
 - The command-hygiene scan reads authored documents only. CHANGELOG.md and the
   release notes beside it are generated from release/changes, and a released
   entry records what a version did rather than telling a reader what to run, so

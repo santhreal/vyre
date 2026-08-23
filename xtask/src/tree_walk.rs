@@ -9,6 +9,13 @@
 //!
 //! The walk results are yielded unchanged. A gate reports an unreadable subtree
 //! in its own words, and swallowing the error here would let one read as empty.
+//!
+//! Entries are yielded in name order within each directory. `walkdir` otherwise
+//! yields readdir order, which is a property of the filesystem rather than of
+//! the tree: a gate that renders a list of findings into a committed artifact
+//! then produced different bytes from the same source on two machines, and the
+//! comparison read that as a stale artifact. Ordering here rather than in each
+//! renderer keeps one answer for what walking this tree means.
 
 use std::path::Path;
 
@@ -43,6 +50,7 @@ pub fn pruned_by(
     mut keep: impl FnMut(&str) -> bool,
 ) -> impl Iterator<Item = walkdir::Result<DirEntry>> {
     WalkDir::new(root)
+        .sort_by_file_name()
         .into_iter()
         .filter_entry(move |entry| keep(entry.file_name().to_string_lossy().as_ref()))
 }
