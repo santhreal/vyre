@@ -409,17 +409,9 @@ fn declared_test_admissions(
             .get("path")
             .and_then(toml::Value::as_str)
             .map_or_else(|| format!("tests/{name}.rs"), str::to_string);
-        let required = table
-            .get("required-features")
-            .and_then(toml::Value::as_array)
-            .map(|entries| {
-                entries
-                    .iter()
-                    .filter_map(toml::Value::as_str)
-                    .map(str::to_string)
-                    .collect()
-            })
-            .unwrap_or_default();
+        let required = crate::toml_text::string_array(table.get("required-features"))
+            .into_iter()
+            .collect();
         declared.insert(PathBuf::from(format!("{member_path}/{relative}")), required);
     }
     declared

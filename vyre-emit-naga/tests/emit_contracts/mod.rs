@@ -53,9 +53,21 @@ fn async_copy_desc(kind: KernelOpKind) -> KernelDescriptor {
 
 /// One binding, two literals, one `StoreGlobal`: the smallest descriptor that
 /// still emits a global variable and a statement.
-pub(crate) fn single_store_desc(id: &str) -> KernelDescriptor {
+///
+/// `element_type` and `count` are the only things a store-route case varies,
+/// so every such case builds this one descriptor rather than its own copy of
+/// the same op list.
+pub(crate) fn single_store_desc_of(
+    id: &str,
+    element_type: DataType,
+    count: Option<u32>,
+) -> KernelDescriptor {
+    let mut slot = global_rw(0, element_type, "out");
+    if let Some(count) = count {
+        slot = slot.with_count(count);
+    }
     descriptor(id)
-        .slots([global_rw(0, DataType::U32, "out")])
+        .slots([slot])
         .dispatch(64, 1, 1)
         .body(
             body()
@@ -67,6 +79,10 @@ pub(crate) fn single_store_desc(id: &str) -> KernelDescriptor {
                 .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
         )
         .build()
+}
+
+pub(crate) fn single_store_desc(id: &str) -> KernelDescriptor {
+    single_store_desc_of(id, DataType::U32, None)
 }
 
 #[path = "../support/naga_probe.rs"]

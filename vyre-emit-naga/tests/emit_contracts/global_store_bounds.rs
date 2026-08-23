@@ -128,21 +128,7 @@ fn assert_every_storage_store_is_guarded(module: &naga::Module, case: &str) {
 }
 
 fn store_route_descriptors() -> Vec<KernelDescriptor> {
-    let scalar = |id: &str, element_type: DataType| {
-        descriptor(id)
-            .slots([global_rw(0, element_type, "out").with_count(4)])
-            .dispatch(64, 1, 1)
-            .body(
-                body()
-                    .ops([
-                        lit(0, 0),
-                        lit(1, 1),
-                        effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
-                    ])
-                    .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
-            )
-            .build()
-    };
+    let scalar = |id: &str, element_type: DataType| single_store_desc_of(id, element_type, Some(4));
     let vector = |id: &str, width: u8| {
         // One value id per lane, all reading the same literal: the route walks
         // `operands[2..]`, so a short operand list is a descriptor error rather
