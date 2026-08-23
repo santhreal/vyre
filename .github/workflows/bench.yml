@@ -27,13 +27,20 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin main
-          git checkout origin/main
-          git checkout - -- vyre-foundation/benches
-          if ! grep -q 'name = "optimizer_pipeline"' vyre-foundation/Cargo.toml; then
-            printf '\n[[bench]]\nname = "optimizer_pipeline"\nharness = false\n' >> vyre-foundation/Cargo.toml
+          baseline_root="$RUNNER_TEMP/vyre-main"
+          mkdir -p "$baseline_root"
+          git archive origin/main | tar -x -C "$baseline_root"
+          mkdir -p "$baseline_root/vyre-foundation/benches"
+          cp -a vyre-foundation/benches/. "$baseline_root/vyre-foundation/benches/"
+          if ! grep -q 'name = "optimizer_pipeline"' "$baseline_root/vyre-foundation/Cargo.toml"; then
+            printf '\n[[bench]]\nname = "optimizer_pipeline"\nharness = false\n' >> "$baseline_root/vyre-foundation/Cargo.toml"
           fi
-          ./cargo_full bench -p vyre-foundation --bench optimizer_pipeline -- --save-baseline main
-          git checkout -f -
+          (
+            cd "$baseline_root"
+            ./cargo_full bench -p vyre-foundation --bench optimizer_pipeline -- --save-baseline main
+          )
+          mkdir -p target/criterion
+          cp -a "$baseline_root/target/criterion/." target/criterion/
 
       - name: Compare PR against baseline
         run: |
