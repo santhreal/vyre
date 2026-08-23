@@ -2101,6 +2101,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the published alias.
 - Partial RoPE is emitted by the attention layout base, so one builder now owns
   every guarded element move in the attention and paged-cache families.
+- One builder turns a benchmark contract description into a contract. The two
+  case shapes each held an identical copy of the construction, so threading the
+  baseline class through both pushed `vyre-bench` past its duplication pin, and
+  a third case shape would have copied it again. Descriptions are now built by
+  naming the comparison, `cpu_sota` or `self_unoptimized`, and both shapes
+  reach the contract through the description itself.
 - ExternalIfdsSecurityBuffers borrows its ten buffer names and publishes them
   as ExternalIfdsSecurityBuffers::CANONICAL. The ten-argument positional
   constructor is gone; build the record from CANONICAL or from a struct
@@ -7261,6 +7267,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   workflow. The name is now `xtask::gates::sweep::RUNNER`, the check accepts
   every gate plus the runner, and it still fails on a workflow step naming a
   subcommand nothing dispatches.
+- The benchmark target registry lists exactly the baseline classes the source
+  defines. `docs/optimization/BENCH_TARGETS.toml` offered
+  `reference_correctness`, which no `BaselineClass` variant declares, and
+  omitted `SelfUnoptimized`, which one does; the test that read the list
+  asserted the stale triple back. `BaselineClass` now owns the registry keys
+  through an exhaustive match and publishes the set, so a class added later
+  does not compile until it names its key and the registry does not pass until
+  it lists it.
 - The crates whose suites workspace-tests runs are read from the ownership
   registry by layer at run time, so a crate added to a contract layer is tested
   instead of silently uncovered, and a layer that names no crate is a finding

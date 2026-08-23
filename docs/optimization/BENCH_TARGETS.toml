@@ -4,10 +4,11 @@
 
 schema = 1
 
+# The set `vyre_bench::api::case::BaselineClass` defines, by its registry key.
 baseline_class_values = [
   "cpu_sota",
   "gpu_sota",
-  "reference_correctness",
+  "self_unoptimized",
 ]
 
 [release_workload_identity]

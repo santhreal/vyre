@@ -57,6 +57,49 @@ pub enum BaselineClass {
     SelfUnoptimized,
 }
 
+impl BaselineClass {
+    /// Every class, in declaration order.
+    ///
+    /// The registry in `docs/optimization/BENCH_TARGETS.toml` lists the same
+    /// set, and a test compares the two, so the taxonomy a target may claim is
+    /// the taxonomy the source defines.
+    pub const ALL: [Self; 3] = [Self::CpuSota, Self::GpuSota, Self::SelfUnoptimized];
+
+    /// The name this class carries in the benchmark target registry.
+    ///
+    /// Exhaustive with no catch-all: a class added later does not compile until
+    /// it declares the name the registry has to list, and the index check below
+    /// refuses an `ALL` that does not list every class it declares.
+    #[must_use]
+    pub const fn registry_key(self) -> &'static str {
+        match self {
+            Self::CpuSota => "cpu_sota",
+            Self::GpuSota => "gpu_sota",
+            Self::SelfUnoptimized => "self_unoptimized",
+        }
+    }
+
+    /// This class's position in [`Self::ALL`].
+    const fn index(self) -> usize {
+        match self {
+            Self::CpuSota => 0,
+            Self::GpuSota => 1,
+            Self::SelfUnoptimized => 2,
+        }
+    }
+}
+
+const _: () = {
+    let mut position = 0;
+    while position < BaselineClass::ALL.len() {
+        assert!(
+            BaselineClass::ALL[position].index() == position,
+            "BaselineClass::ALL must list every class once, in index order"
+        );
+        position += 1;
+    }
+};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BaselineTarget {
     pub name: String,

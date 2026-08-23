@@ -97,6 +97,10 @@ fn test_189_2_statistical_policy_per_benchmark_target() {
         "Fix: BENCH_TARGETS.toml must contain all canonical targets"
     );
 
+    // Derived from the enum rather than typed here: the registry once listed a
+    // `reference_correctness` class no variant defined, and a hardcoded triple
+    // asserted that stale taxonomy back. A class added to the enum now fails
+    // this until the registry lists it.
     let baseline_classes = targets
         .get("baseline_class_values")
         .and_then(TomlValue::as_array)
@@ -106,9 +110,14 @@ fn test_189_2_statistical_policy_per_benchmark_target() {
                 .collect::<BTreeSet<_>>()
         })
         .expect("Fix: baseline_class_values must exist");
-    assert!(baseline_classes.contains("cpu_sota"));
-    assert!(baseline_classes.contains("gpu_sota"));
-    assert!(baseline_classes.contains("reference_correctness"));
+    let declared = vyre_bench::api::case::BaselineClass::ALL
+        .iter()
+        .map(|class| class.registry_key())
+        .collect::<BTreeSet<_>>();
+    assert_eq!(
+        baseline_classes, declared,
+        "Fix: BENCH_TARGETS.toml baseline_class_values must be exactly the classes BaselineClass defines"
+    );
 
     for t in target_list {
         let id = t
