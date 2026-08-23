@@ -4455,6 +4455,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   CONTRIBUTING.md carries no host-local build settings, the placement charter
   points at docs/architecture/crates.md, and the vyre-primitives page lists
   only the paths and features the crate still declares.
+- `gate-canon` reads the base revision of the baseline file through the fields
+  that revision wrote. Reading it with the current row shape made the gate
+  unrunnable against any base older than the last schema change, so the
+  registered sweep reported that the gate could not run instead of whether a
+  pinned count had risen. The working-tree copy is still held to exactly `name`
+  and `findings` with every count zero.
 - A cached pipeline outlived the emitter that produced it. The wgpu early
   pipeline cache and the CUDA PTX source cache, including its on-disk half,
   keyed each entry on the program, the adapter and a lowering label that a

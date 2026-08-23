@@ -73,6 +73,32 @@ pub(crate) struct BaselineFile {
     pub(crate) gate: Vec<Baseline>,
 }
 
+/// One row as a past revision of the baseline file wrote it.
+///
+/// The working-tree copy is held to exactly `name` and `findings`, every count
+/// zero. A past revision is a record this gate does not own: the file pinned
+/// `output_lines` before findings were countable and carried nonzero counts
+/// before they were all closed, so reading it with [`Baseline`] made the whole
+/// comparison unrunnable against any base older than the last schema change.
+/// That is how the required sweep failed instead of reporting: `main` still
+/// carries `output_lines`, and a gate that cannot run judges nothing.
+///
+/// A row is compared when the base revision recorded a count for it. A row that
+/// recorded none pinned no count there, so there is no direction to judge.
+#[derive(Debug, Deserialize)]
+struct HistoricalBaseline {
+    /// Name of the gate the row pinned.
+    name: String,
+    /// The count that revision pinned, when it pinned one.
+    findings: Option<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+struct HistoricalBaselineFile {
+    #[serde(default)]
+    gate: Vec<HistoricalBaseline>,
+}
+
 /// The baseline file under a checkout root.
 #[must_use]
 pub fn baseline_path(root: &Path) -> PathBuf {
@@ -99,6 +125,21 @@ fn parse_baselines(text: &str, source: &str) -> Result<Vec<Baseline>, GateError>
         }
     }
     Ok(file.gate)
+}
+
+/// Every pinned count one past revision of the baseline file recorded.
+fn historical_pins(text: &str, source: &str) -> Result<BTreeMap<String, usize>, GateError> {
+    let file: HistoricalBaselineFile = toml::from_str(text).map_err(|error| {
+        GateError::new(
+            format!("cannot parse {source}: {error}"),
+            "read that revision by hand; a past baseline file must at least be TOML carrying a `gate` array",
+        )
+    })?;
+    Ok(file
+        .gate
+        .into_iter()
+        .filter_map(|row| row.findings.map(|findings| (row.name, findings)))
+        .collect())
 }
 
 /// Every pinned row in the working tree.
@@ -514,11 +555,7 @@ fn baseline_findings(
     let Some(text) = at_revision(root, base, BASELINES) else {
         return Ok(Vec::new());
     };
-    let before = parse_baselines(&text, &format!("{base}:{BASELINES}"))?;
-    let pinned: BTreeMap<&str, usize> = before
-        .iter()
-        .map(|row| (row.name.as_str(), row.findings))
-        .collect();
+    let pinned = historical_pins(&text, &format!("{base}:{BASELINES}"))?;
     let mut findings = Vec::new();
     for row in current {
         let Some(was) = pinned.get(row.name.as_str()) else {
@@ -870,6 +907,36 @@ mod tests {
         assert!(
             parse_baselines(nonzero, "fixture").is_err(),
             "a row with non-zero findings must fail to parse"
+        );
+    }
+
+    /// WHY: the direction clauses need a before, and the before is whatever the
+    /// base revision wrote. Reading it with the working-tree row type made this
+    /// gate unrunnable against `main`, which still pins `output_lines`, so the
+    /// required sweep reported that the gate could not run rather than whether
+    /// a pin had risen. Every past shape is read here and the working-tree
+    /// shape stays strict, so leniency cannot leak forward.
+    #[test]
+    fn a_past_revision_is_read_through_the_fields_it_wrote() {
+        let past = "[[gate]]\nname = \"dup-scan\"\noutput_lines = 34\nfindings = 3\n\n\
+                    [[gate]]\nname = \"gate1\"\noutput_lines = 7\n\n\
+                    [[gate]]\nname = \"dep-drift\"\nfindings = 0\nstatus = \"red\"\n";
+        let pins = historical_pins(past, "base:fixture")
+            .expect("a past revision is read through the fields it wrote");
+        assert_eq!(pins.get("dup-scan").copied(), Some(3));
+        assert_eq!(pins.get("dep-drift").copied(), Some(0));
+        assert_eq!(
+            pins.get("gate1").copied(),
+            None,
+            "a row that pinned no count offers no direction to judge"
+        );
+        assert!(
+            parse_baselines(past, "fixture").is_err(),
+            "the working-tree copy is still held to exactly `name` and `findings`"
+        );
+        assert!(
+            historical_pins("gate = 3\n", "base:fixture").is_err(),
+            "a past revision that is not a baseline file at all is still a failure"
         );
     }
 }
