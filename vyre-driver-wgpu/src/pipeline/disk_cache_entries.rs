@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 #[cfg(test)]
-use std::sync::{Mutex, OnceLock};
+use std::sync::{LazyLock, Mutex};
 
 /// Delete the on-disk cache entries `impact_mask` marks as reached.
 ///
@@ -56,12 +56,12 @@ pub(crate) fn cache_entry_path(dir: &Path, key: &str, suffix: &str) -> PathBuf {
 }
 
 #[cfg(test)]
-static TEST_DISK_PIPELINE_CACHE_ROOT: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
+static TEST_DISK_PIPELINE_CACHE_ROOT: LazyLock<Mutex<Option<PathBuf>>> =
+    LazyLock::new(|| Mutex::new(None));
 
 #[cfg(test)]
 pub(crate) fn set_test_disk_pipeline_cache_root(path: Option<PathBuf>) -> Option<PathBuf> {
     let mut guard = TEST_DISK_PIPELINE_CACHE_ROOT
-        .get_or_init(|| Mutex::new(None))
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     std::mem::replace(&mut *guard, path)
@@ -70,7 +70,6 @@ pub(crate) fn set_test_disk_pipeline_cache_root(path: Option<PathBuf>) -> Option
 pub(crate) fn disk_pipeline_cache_dir() -> PathBuf {
     #[cfg(test)]
     if let Some(root) = TEST_DISK_PIPELINE_CACHE_ROOT
-        .get_or_init(|| Mutex::new(None))
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
         .clone()

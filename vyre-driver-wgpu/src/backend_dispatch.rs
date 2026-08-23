@@ -389,9 +389,11 @@ impl WgpuBackend {
 
     /// Process-wide shared backend handle.
     pub fn shared() -> Result<Arc<Self>, vyre_driver::BackendError> {
-        static SHARED: std::sync::OnceLock<Result<Arc<WgpuBackend>, String>> =
-            std::sync::OnceLock::new();
-        match SHARED.get_or_init(|| Self::new().map(Arc::new).map_err(|e| e.to_string())) {
+        static SHARED: std::sync::LazyLock<Result<Arc<WgpuBackend>, String>> =
+            std::sync::LazyLock::new(|| {
+                WgpuBackend::new().map(Arc::new).map_err(|e| e.to_string())
+            });
+        match &*SHARED {
             Ok(arc) => Ok(arc.clone()),
             Err(msg) => Err(vyre_driver::BackendError::new(msg.clone())),
         }

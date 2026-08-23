@@ -1,7 +1,7 @@
 use std::future::Future;
 use std::ops::Deref;
 use std::pin::Pin;
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
+use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
 use std::task::{Context, Poll, Wake, Waker};
 use std::thread::{self, Thread};
 use vyre_driver::BackendError;
@@ -148,25 +148,25 @@ pub(crate) fn poll_device_wait_for(
 struct CachedRuntime {
     device_queue: Arc<(wgpu::Device, wgpu::Queue)>,
     adapter_info: wgpu::AdapterInfo,
-    #[cfg(test)]
+    #[cfg(all(test, feature = "device-tests"))]
     enabled_features: EnabledFeatures,
 }
 
-static CACHED_RUNTIME: OnceLock<Result<CachedRuntime>> = OnceLock::new();
+static CACHED_RUNTIME: LazyLock<Result<CachedRuntime>> = LazyLock::new(|| {
+    #[cfg(all(test, feature = "device-tests"))]
+    let ((device, queue), adapter_info, enabled_features) = init_device()?;
+    #[cfg(not(all(test, feature = "device-tests")))]
+    let ((device, queue), adapter_info, _enabled_features) = init_device()?;
+    Ok(CachedRuntime {
+        device_queue: Arc::new((device, queue)),
+        adapter_info,
+        #[cfg(all(test, feature = "device-tests"))]
+        enabled_features,
+    })
+});
 
 fn cached_runtime() -> &'static Result<CachedRuntime> {
-    CACHED_RUNTIME.get_or_init(|| {
-        #[cfg(test)]
-        let ((device, queue), adapter_info, enabled_features) = init_device()?;
-        #[cfg(not(test))]
-        let ((device, queue), adapter_info, _enabled_features) = init_device()?;
-        Ok(CachedRuntime {
-            device_queue: Arc::new((device, queue)),
-            adapter_info,
-            #[cfg(test)]
-            enabled_features,
-        })
-    })
+    &CACHED_RUNTIME
 }
 
 /// Acquire the singleton device/queue pair.
@@ -183,7 +183,7 @@ fn cached_runtime() -> &'static Result<CachedRuntime> {
 /// - using a dedicated discrete GPU while a test fixture is holding
 ///   the integrated GPU singleton;
 /// - recovering from device loss (recovery swaps the backend's local
-///   device; the singleton's `OnceLock` cannot be replaced in-place).
+///   device; the singleton's `LazyLock` cannot be replaced in-place).
 ///
 /// The singleton survives because a handful of test fixtures want one
 /// shared GPU handle across all tests to amortize init cost. Consumers
@@ -215,7 +215,7 @@ pub fn cached_adapter_info() -> Result<&'static wgpu::AdapterInfo> {
 }
 
 /// Acquire the enabled feature snapshot for the singleton runtime device.
-#[cfg(test)]
+#[cfg(all(test, feature = "device-tests"))]
 pub(crate) fn cached_enabled_features() -> Result<&'static EnabledFeatures> {
     cached_runtime()
         .as_ref()
@@ -224,12 +224,17 @@ pub(crate) fn cached_enabled_features() -> Result<&'static EnabledFeatures> {
 }
 
 /// Return true when the device is the singleton cached device.
-#[cfg(test)]
+///
+/// Asking the question initializes the singleton, because the cell holds its
+/// own initializer. Every caller is a device test that already acquired it, so
+/// the answer is the comparison and not a probe, and on a host with no adapter
+/// the initializer errors and the answer is false.
+#[cfg(all(test, feature = "device-tests"))]
 #[inline]
 pub(crate) fn is_cached_device(device: &wgpu::Device) -> bool {
-    CACHED_RUNTIME
-        .get()
-        .and_then(|res| res.as_ref().ok())
+    cached_runtime()
+        .as_ref()
+        .ok()
         .map(|runtime| &runtime.device_queue.0 == device)
         .unwrap_or(false)
 }
@@ -612,13 +617,16 @@ pub(super) fn wait_for_gpu<T>(future: impl Future<Output = T>) -> T {
     }
 }
 
-// Inline: the suite drives the `#[cfg(test)]` `cached_enabled_features`, `is_cached_device`, which
-// an integration test does not compile.
+// Inline: the suite drives the crate-private `cached_enabled_features`,
+// `is_cached_device`, which an integration test does not compile. The two
+// singleton tests open a real device, so hardware admits them and the rest of
+// this module is host arithmetic that runs in every lane.
 #[cfg(test)]
 mod tests {
     use super::*;
 
     /// The cached-device helper now returns a stable singleton.
+    #[cfg(feature = "device-tests")]
     #[test]
     fn cached_device_is_singleton() {
         let first = cached_device().expect("Fix: GPU must be available for runtime tests");
@@ -633,6 +641,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "device-tests")]
     #[test]
     fn cached_adapter_info_uses_cached_runtime() {
         let info = cached_adapter_info().expect("Fix: cached adapter info must share GPU init");
