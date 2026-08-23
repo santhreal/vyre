@@ -227,13 +227,23 @@ pub fn try_dominator_frontier(
 }
 
 /// Body of the predecessor-dominance check.
+///
+/// Both loops walk a CSR range whose ends are loaded from an offsets buffer, so
+/// a caller, or a producer fused ahead of this op, decides how many iterations
+/// run. One `u32` asks for four billion, and every iteration past the target
+/// buffer's extent could only read a slot that does not exist. Each end is
+/// clamped to the extent of the buffer its loop indexes, which drops exactly
+/// the iterations that had nothing to read.
 #[must_use]
 pub fn dominator_frontier_pred_check_body(candidate: Expr, n: Expr) -> Vec<Node> {
     vec![
         Node::let_bind("pred_start", Expr::load("pred_offsets", candidate.clone())),
         Node::let_bind(
             "pred_end",
-            Expr::load("pred_offsets", Expr::add(candidate, Expr::u32(1))),
+            Expr::min(
+                Expr::load("pred_offsets", Expr::add(candidate, Expr::u32(1))),
+                Expr::buf_len("pred_targets"),
+            ),
         ),
         Node::loop_for(
             "p",
@@ -246,7 +256,10 @@ pub fn dominator_frontier_pred_check_body(candidate: Expr, n: Expr) -> Vec<Node>
                     Node::let_bind("dom_start_pred", Expr::load("dom_offsets", n.clone())),
                     Node::let_bind(
                         "dom_end_pred",
-                        Expr::load("dom_offsets", Expr::add(n, Expr::u32(1))),
+                        Expr::min(
+                            Expr::load("dom_offsets", Expr::add(n, Expr::u32(1))),
+                            Expr::buf_len("dom_targets"),
+                        ),
                     ),
                     Node::loop_for(
                         "d_pred",

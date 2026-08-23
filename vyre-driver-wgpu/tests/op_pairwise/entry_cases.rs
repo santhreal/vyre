@@ -21,12 +21,31 @@ fn entry_cases(entry: &UnifiedEntry) -> Vec<Vec<Vec<u8>>> {
     cases
 }
 
-fn compatible_pairs() -> &'static [(usize, usize)] {
-    static PAIRS: LazyLock<Vec<(usize, usize)>> = LazyLock::new(|| {
+/// Every ordered pair that composes, validates, and has a usable oracle.
+///
+/// Building this list is the fixed cost of both proptests, and it is quadratic
+/// in the registry: every ordered pair is composed, and every pair that
+/// composes runs the reference on every witness combination. One fused program
+/// whose loop trip count comes from its producer's output held that walk for
+/// over an hour with the interpreter at 100% of one core and the device idle,
+/// and the enumeration is not a case, so nothing reported it. Every oracle call
+/// here is bounded, and a pair that passes the ceiling is carried out as a
+/// finding rather than dropped: an oracle that cannot answer on a fixture is
+/// the same unbounded trip count on the device.
+struct PairSpace {
+    /// Pairs whose reference answered for every witness combination.
+    pairs: Vec<(usize, usize)>,
+    /// Pairs whose reference passed the ceiling, by operation id.
+    unbounded: Vec<(&'static str, &'static str)>,
+}
+
+fn pair_space() -> &'static PairSpace {
+    static SPACE: LazyLock<PairSpace> = LazyLock::new(|| {
         let entries = all_entries_vec();
         let cases = entries.iter().map(entry_cases).collect::<Vec<_>>();
 
         let mut pairs = Vec::new();
+        let mut unbounded = Vec::new();
         for a_idx in 0..entries.len() {
             for b_idx in 0..entries.len() {
                 let a = &entries[a_idx];
@@ -47,13 +66,24 @@ fn compatible_pairs() -> &'static [(usize, usize)] {
                         a.id, b.id
                     );
                 }
-                let all_witnesses_run = cases[a_idx].iter().all(|a_case| {
-                    cases[b_idx].iter().all(|b_case| {
+                let mut answered = true;
+                let mut timed_out = false;
+                for a_case in &cases[a_idx] {
+                    for b_case in &cases[b_idx] {
                         let inputs = build_fused_inputs(&composition, a_case, b_case);
-                        try_run_reference(a.id, b.id, &composition.program, &inputs).is_ok()
-                    })
-                });
-                if all_witnesses_run {
+                        match bounded_run_reference(a.id, b.id, &composition.program, &inputs) {
+                            Oracle::Answered(_) => {}
+                            Oracle::Declined(_) => answered = false,
+                            Oracle::TimedOut => {
+                                answered = false;
+                                timed_out = true;
+                            }
+                        }
+                    }
+                }
+                if timed_out {
+                    unbounded.push((a.id, b.id));
+                } else if answered {
                     pairs.push((a_idx, b_idx));
                 }
             }
@@ -62,13 +92,50 @@ fn compatible_pairs() -> &'static [(usize, usize)] {
             !pairs.is_empty(),
             "Fix: pairwise composition found zero compatible op pairs; repair op metadata or composition wiring."
         );
-        pairs
+        PairSpace { pairs, unbounded }
     });
-    PAIRS.as_slice()
+    &SPACE
+}
+
+fn compatible_pairs() -> &'static [(usize, usize)] {
+    pair_space().pairs.as_slice()
 }
 
 fn compatible_pair_count() -> usize {
     compatible_pairs().len()
+}
+
+/// Every fused pair whose reference passed the ceiling during enumeration.
+///
+/// Reported by its own contract rather than by whichever proptest happened to
+/// draw it: the enumeration touches the whole pair space, so it sees offenders
+/// no sampled case is guaranteed to reach.
+fn unbounded_pairs() -> &'static [(&'static str, &'static str)] {
+    pair_space().unbounded.as_slice()
+}
+
+/// No fused pair may need an unbounded reference run.
+///
+/// A fusion wires a producer's output into a consumer's input, so a consumer
+/// whose loop trip count is read from that input takes its bound from computed
+/// data. One `u32` asks for four billion iterations, which spins on the device
+/// exactly as it does in the interpreter. Bound the trip count by the extents of
+/// the buffer the body indexes.
+#[test]
+fn every_fused_pair_answers_inside_the_oracle_ceiling() {
+    let unbounded = unbounded_pairs();
+    assert!(
+        unbounded.is_empty(),
+        "Fix: {} fused pair(s) did not answer inside {:?}: {}. The trip count comes from computed \
+         data, so bound it by the extents of the buffer the body indexes.",
+        unbounded.len(),
+        oracle_deadline(),
+        unbounded
+            .iter()
+            .map(|(a, b)| format!("{a} -> {b}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
 }
 
 fn compatible_pair_by_index(idx: usize) -> (&'static UnifiedEntry, &'static UnifiedEntry) {
