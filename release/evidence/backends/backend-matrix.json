@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:c09214c207a78d1a73c44853adb53961d3147326:dirty=false",
+  "source_fingerprint": "git:24b6787218f58a17d5385c7390750b02f68f1f50:dirty=false",
   "schema_version": 3,
   "cuda_first": true,
   "wgpu_fallback_present": true,
@@ -392,7 +392,7 @@
       "path": "vyre-driver-wgpu/src/runtime/device/selector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 19561,
+      "source_bytes": 19598,
       "implementation_tokens": [
         "has_real_gpu_adapter",
         "DeviceType::Cpu"
