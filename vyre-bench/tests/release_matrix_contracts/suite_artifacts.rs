@@ -1,5 +1,11 @@
 use super::*;
 
+// The device floors are read from the crate that derives them from the
+// registered catalog. A copy here restated a flat 16384 MiB after production
+// stopped asserting a device class, so this file rejected recordings the release
+// gate admits.
+use vyre_bench::release_floor::{min_cuda_release_memory_mib, RELEASE_COMPUTE_CAPABILITY_FLOOR};
+
 /// Lowest workload-family inventory either release suite may claim.
 ///
 /// `release/evidence/docs/benchmark-doc-proof.md` binds both suites to at least
@@ -7,16 +13,6 @@ use super::*;
 /// satisfied by an empty `release-workload-matrix.json`, so truncating the
 /// matrix would narrow the release claim instead of turning this gate red.
 const RELEASE_WORKLOAD_FAMILY_FLOOR: usize = 12;
-
-/// Release-class recorded device memory floor, in MiB. This matches the
-/// producer and release-gate minimum rather than a particular device's capacity.
-const RELEASE_GPU_MEMORY_FLOOR_MIB: usize = 16 * 1024;
-
-/// Lowest compute capability the release backends are probed against.
-///
-/// The backend matrix records CUDA release support at sm_80 and above, so a
-/// recorded run below it did not exercise the release path.
-const RELEASE_COMPUTE_CAPABILITY_FLOOR: (usize, usize) = (8, 0);
 
 /// One recorded accelerator identity.
 ///
@@ -28,8 +24,8 @@ const RELEASE_COMPUTE_CAPABILITY_FLOOR: (usize, usize) = (8, 0);
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 struct RecordedDevice {
     model: String,
-    memory_total_mib: usize,
-    compute_capability: (usize, usize),
+    memory_total_mib: u64,
+    compute_capability: (u64, u64),
     driver_version: String,
     cuda_version: String,
 }
@@ -38,10 +34,10 @@ impl RecordedDevice {
     fn from_status(status: &Value) -> Self {
         Self {
             model: json_str(status, "gpu_model").to_owned(),
-            memory_total_mib: json_usize(status, "gpu_memory_total_mib"),
+            memory_total_mib: json_u64(status, "gpu_memory_total_mib"),
             compute_capability: (
-                json_usize(status, "gpu_compute_capability_major"),
-                json_usize(status, "gpu_compute_capability_minor"),
+                json_u64(status, "gpu_compute_capability_major"),
+                json_u64(status, "gpu_compute_capability_minor"),
             ),
             driver_version: json_str(status, "nvidia_driver_version").to_owned(),
             cuda_version: json_str(status, "nvidia_cuda_version").to_owned(),
@@ -56,10 +52,10 @@ impl RecordedDevice {
             .iter()
             .map(|device| Self {
                 model: json_str(device, "name").to_owned(),
-                memory_total_mib: json_usize(device, "memory_total_mib"),
+                memory_total_mib: json_u64(device, "memory_total_mib"),
                 compute_capability: (
-                    json_usize(device, "compute_capability_major"),
-                    json_usize(device, "compute_capability_minor"),
+                    json_u64(device, "compute_capability_major"),
+                    json_u64(device, "compute_capability_minor"),
                 ),
                 driver_version: json_str(environment, "nvidia_driver_version").to_owned(),
                 cuda_version: json_str(environment, "nvidia_cuda_version").to_owned(),
@@ -70,9 +66,9 @@ impl RecordedDevice {
 
 fn recorded_device_json(
     name: &str,
-    memory_total_mib: usize,
-    compute_capability_major: usize,
-    compute_capability_minor: usize,
+    memory_total_mib: u64,
+    compute_capability_major: u64,
+    compute_capability_minor: u64,
 ) -> Value {
     serde_json::json!({
         "name": name,
@@ -141,9 +137,10 @@ impl SuiteProvenance {
             !recorded.model.trim().is_empty(),
             "Fix: {suite} status `{path}` must record the probed device model."
         );
+        let memory_floor_mib = min_cuda_release_memory_mib();
         assert!(
-            recorded.memory_total_mib >= RELEASE_GPU_MEMORY_FLOOR_MIB,
-            "Fix: {suite} status `{path}` records {} MiB of device memory, below the release floor of {RELEASE_GPU_MEMORY_FLOOR_MIB} MiB.",
+            recorded.memory_total_mib >= memory_floor_mib,
+            "Fix: {suite} status `{path}` records {} MiB of device memory, below the release floor of {memory_floor_mib} MiB.",
             recorded.memory_total_mib
         );
         assert!(
@@ -630,4 +627,10 @@ fn json_usize(json: &Value, key: &str) -> usize {
         .unwrap_or_else(|| panic!("Fix: JSON field `{key}` must be an unsigned integer."))
         .try_into()
         .unwrap_or_else(|_| panic!("Fix: JSON field `{key}` must fit usize."))
+}
+
+fn json_u64(json: &Value, key: &str) -> u64 {
+    json[key]
+        .as_u64()
+        .unwrap_or_else(|| panic!("Fix: JSON field `{key}` must be an unsigned integer."))
 }

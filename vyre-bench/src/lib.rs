@@ -18,6 +18,8 @@ pub mod probes;
 /// The benchmark registry and metadata catalog.
 #[allow(missing_docs)]
 pub mod registry;
+/// The device class a release measurement may have been taken on.
+pub mod release_floor;
 /// Parity release matrix verification logic.
 #[allow(missing_docs)]
 pub mod release_matrix;

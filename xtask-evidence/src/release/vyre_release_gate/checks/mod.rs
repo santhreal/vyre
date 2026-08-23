@@ -135,13 +135,13 @@ pub(crate) fn release_workload_matrix(
     )
 }
 
-pub(crate) use crate::gpu_release_floor::{
+pub(crate) use vyre_bench::release_floor::{
     min_cuda_release_memory_mib, RELEASE_COMPUTE_CAPABILITY_FLOOR,
 };
 
 /// Whether `device` meets release qualification floors: a non-empty name plus
 /// the memory and compute-capability floors owned by
-/// [`crate::gpu_release_floor::device_meets_release_floor`].
+/// [`vyre_bench::release_floor::device_meets_release_floor`].
 pub(crate) fn is_qualifying_gpu_device(device: &serde_json::Value) -> bool {
     let has_name = device
         .get("name")
@@ -159,7 +159,7 @@ pub(crate) fn is_qualifying_gpu_device(device: &serde_json::Value) -> bool {
         _ => None,
     };
     has_name
-        && crate::gpu_release_floor::device_meets_release_floor(
+        && vyre_bench::release_floor::device_meets_release_floor(
             device
                 .get("memory_total_mib")
                 .and_then(serde_json::Value::as_u64),

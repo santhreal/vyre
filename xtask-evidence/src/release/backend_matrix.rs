@@ -522,10 +522,10 @@ fn probe_backend_matrix(scan: SourceScan) -> (BackendMatrix, Vec<String>) {
         .iter()
         .any(gpu_probe_device_meets_release_floor)
     {
-        let (major, minor) = crate::gpu_release_floor::RELEASE_COMPUTE_CAPABILITY_FLOOR;
+        let (major, minor) = vyre_bench::release_floor::RELEASE_COMPUTE_CAPABILITY_FLOOR;
         blockers.push(format!(
             "nvidia-smi did not report a CUDA GPU meeting the release floor: >={} MiB VRAM and compute capability >={major}.{minor}",
-            crate::gpu_release_floor::min_cuda_release_memory_mib()
+            vyre_bench::release_floor::min_cuda_release_memory_mib()
         ));
     }
     let capability_rows = collect_backend_capability_rows(&backends, &gpu_probe);
@@ -659,7 +659,7 @@ fn collect_backend_capability_rows(
     });
 
     let max_memory = max_cuda_memory_mib(gpu_probe);
-    let memory_floor_mib = crate::gpu_release_floor::min_cuda_release_memory_mib();
+    let memory_floor_mib = vyre_bench::release_floor::min_cuda_release_memory_mib();
     let memory_supported = max_memory.is_some_and(|mib| mib >= memory_floor_mib);
     rows.push(BackendCapabilityRow {
         backend_id: "cuda".to_string(),
@@ -786,14 +786,14 @@ fn max_cuda_memory_mib(gpu_probe: &GpuProbe) -> Option<u64> {
 
 /// Whether a live `nvidia-smi` device clears the release floors.
 ///
-/// The comparison itself belongs to `crate::gpu_release_floor`; this only
+/// The comparison itself belongs to `vyre_bench::release_floor`; this only
 /// widens the probe's `u32` capability pair to the shape that owner takes.
 fn gpu_probe_device_meets_release_floor(device: &GpuProbeDevice) -> bool {
     let compute_capability = device
         .compute_capability_major
         .zip(device.compute_capability_minor)
         .map(|(major, minor)| (u64::from(major), u64::from(minor)));
-    crate::gpu_release_floor::device_meets_release_floor(
+    vyre_bench::release_floor::device_meets_release_floor(
         device.memory_total_mib,
         compute_capability,
     )
@@ -1355,7 +1355,7 @@ mod capability_contract_tests {
             acquire_ok: true,
             acquire_error: None,
         }];
-        let short_by_one = crate::gpu_release_floor::min_cuda_release_memory_mib() - 1;
+        let short_by_one = vyre_bench::release_floor::min_cuda_release_memory_mib() - 1;
         let probe = GpuProbe {
             nvidia_smi_ok: true,
             nvidia_smi_devices: vec!["GPU 0: NVIDIA A2".to_string()],
@@ -1388,7 +1388,7 @@ mod capability_contract_tests {
             Some(
                 format!(
                     "no live NVIDIA device reported >={} MiB memory",
-                    crate::gpu_release_floor::min_cuda_release_memory_mib()
+                    vyre_bench::release_floor::min_cuda_release_memory_mib()
                 )
                 .as_str()
             ),
