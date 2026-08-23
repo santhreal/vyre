@@ -321,9 +321,7 @@ fn case_modification_expansion(line: &str) -> Option<char> {
     let mut index = 0;
     while let Some(open) = line[index..].find("${") {
         let start = index + open + 2;
-        let Some(close) = line[start..].find('}') else {
-            return None;
-        };
+        let close = line[start..].find('}')?;
         let end = start + close;
         if let Some(operator) = case_modification_operator(&line[start..end]) {
             return Some(operator);
