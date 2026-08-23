@@ -4,6 +4,16 @@
 //! algorithm written twice or a shared IR idiom. The check reports the pair; the
 //! reviewer records which it is, as a shared builder or as a reviewed-distinct
 //! row.
+//!
+//! A recorded outcome closes the pair. `IMPLEMENTATION_FAMILY_ROWS` says the
+//! two names reach one builder, which is the extraction this check asks for, and
+//! `REVIEWED_DISTINCT_OPERATIONS` says the two algorithms were read side by side
+//! and kept apart. Reporting either again asks for work already done, and the
+//! only way to clear it would be to withdraw one of the operations.
+
+use xtask::gates::implementation_family::{
+    reviewed_distinct_operations, same_implementation_family,
+};
 
 use super::*;
 
@@ -61,6 +71,11 @@ pub(super) fn no_reinvention_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo, &OpInfo
             }
             // Direct composition: if one composes the other, it is composed.
             if a.children.contains(&b.id) || b.children.contains(&a.id) {
+                continue;
+            }
+            if same_implementation_family(&a.id, &b.id)
+                || reviewed_distinct_operations(&a.id, &b.id).is_some()
+            {
                 continue;
             }
             let sim = structural_similarity(&a.fingerprint, &b.fingerprint);
@@ -148,6 +163,55 @@ mod tests {
             pairs.len(),
             1,
             "shared-child operations without machine distinction must not be bypassed"
+        );
+    }
+
+    /// The two outcomes this check asks a reviewer to record close the pair.
+    ///
+    /// WHY: a shared-builder row is the extraction the finding demands, and a
+    /// reviewed-distinct row is the other recorded verdict. Reporting either
+    /// again asks for work already done, and the only edit that would clear it
+    /// is withdrawing an operation. The population comes from the tables at run
+    /// time, so a row recorded later is covered without being named here.
+    #[test]
+    fn a_recorded_outcome_closes_a_pair() {
+        use xtask::gates::implementation_family::{
+            IMPLEMENTATION_FAMILY_ROWS, REVIEWED_DISTINCT_OPERATIONS,
+        };
+
+        let entry: Vec<u8> = (0..60u8).collect();
+        let mut shared: Option<(&'static str, &'static str)> = None;
+        for (index, (id, family)) in IMPLEMENTATION_FAMILY_ROWS.iter().enumerate() {
+            let partner = IMPLEMENTATION_FAMILY_ROWS
+                .iter()
+                .skip(index + 1)
+                .find(|(other, claimed)| claimed == family && other != id);
+            if let Some((other, _)) = partner {
+                shared = Some((*id, *other));
+                break;
+            }
+        }
+        let (left, right) =
+            shared.expect("Fix: the family table must group at least two operations");
+        let ops = vec![
+            op_with_fingerprint(left, entry.clone()),
+            op_with_fingerprint(right, entry.clone()),
+        ];
+        assert!(
+            no_reinvention_pairs(&ops).is_empty(),
+            "Fix: `{left}` and `{right}` reach one builder, so the shape they share is that builder and not a second implementation"
+        );
+
+        let &(reviewed_left, reviewed_right, _) = REVIEWED_DISTINCT_OPERATIONS
+            .first()
+            .expect("Fix: the reviewed-distinct table must record at least one pair");
+        let ops = vec![
+            op_with_fingerprint(reviewed_left, entry.clone()),
+            op_with_fingerprint(reviewed_right, entry),
+        ];
+        assert!(
+            no_reinvention_pairs(&ops).is_empty(),
+            "Fix: `{reviewed_left}` and `{reviewed_right}` were read side by side and recorded as distinct"
         );
     }
 
