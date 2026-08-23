@@ -75,9 +75,9 @@ pub const OP_ID: &str = "vyre-pass-engine::optimizer::dce_program";
 /// here already dispatches at. It is not a tuning choice either: one shader
 /// dialect this program lowers to caps a workgroup at 256 invocations, so a
 /// wider width makes the pass undispatchable on that backend rather than
-/// faster. Measured before this was 256: every `self_optimizer_dce_e2e` case
-/// failed on the wgpu backend with `workgroup_size axis 0 (requested 1024, max
-/// 256)`, so the self-hosted DCE pass had never run on that device at all.
+/// faster. Measured before this was 256: every device end-to-end case of this
+/// pass was refused on that target with `workgroup_size axis 0 (requested
+/// 1024, max 256)`, so the self-hosted DCE pass had never run there at all.
 const DCE_WORKGROUP_X: u32 = super::arena_kernel::WORKGROUP_X;
 
 /// Parallel BFS step with per-thread strided loop. Thread
