@@ -16,6 +16,11 @@ use crate::api::suite::SuiteKind;
 use vyre_foundation::ir::Program;
 
 /// The speedup floor a case is held to, and what the floor is measured against.
+///
+/// Built through one of the constructors below rather than field by field: the
+/// class is a provenance claim, so a case says which comparison it is making by
+/// naming it, and a case that wants a third kind of baseline has to add the
+/// constructor for it.
 #[derive(Clone, Copy)]
 pub(crate) struct ContractDescription {
     pub(crate) primitive: &'static str,
@@ -23,6 +28,56 @@ pub(crate) struct ContractDescription {
     pub(crate) baseline_name: &'static str,
     pub(crate) baseline_class: BaselineClass,
     pub(crate) min_speedup_x: f64,
+}
+
+impl ContractDescription {
+    /// A floor over a host implementation of the same primitive.
+    pub(crate) const fn cpu_sota(
+        primitive: &'static str,
+        baseline_crate: &'static str,
+        baseline_name: &'static str,
+        min_speedup_x: f64,
+    ) -> Self {
+        Self {
+            primitive,
+            baseline_crate,
+            baseline_name,
+            baseline_class: BaselineClass::CpuSota,
+            min_speedup_x,
+        }
+    }
+
+    /// A floor over the same program on the same device without the
+    /// transformation under test.
+    pub(crate) const fn self_unoptimized(
+        primitive: &'static str,
+        baseline_crate: &'static str,
+        baseline_name: &'static str,
+        min_speedup_x: f64,
+    ) -> Self {
+        Self {
+            primitive,
+            baseline_crate,
+            baseline_name,
+            baseline_class: BaselineClass::SelfUnoptimized,
+            min_speedup_x,
+        }
+    }
+
+    /// The performance contract this description states.
+    ///
+    /// Both case shapes reach the contract through here. Each holding its own
+    /// copy of the call meant the class argument had to be threaded through two
+    /// identical bodies, and a case shape added later would have copied a third.
+    pub(crate) fn performance_contract(self) -> PerformanceContract {
+        PerformanceContract::min_speedup(
+            self.primitive,
+            self.baseline_crate,
+            self.baseline_name,
+            self.baseline_class,
+            self.min_speedup_x,
+        )
+    }
 }
 
 /// Everything about a benchmark case that is data rather than code.
@@ -218,15 +273,9 @@ impl<P: 'static> BenchCase for HarnessCase<P> {
     }
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
-        self.workload.contract.map(|contract| {
-            PerformanceContract::min_speedup(
-                contract.primitive,
-                contract.baseline_crate,
-                contract.baseline_name,
-                contract.baseline_class,
-                contract.min_speedup_x,
-            )
-        })
+        self.workload
+            .contract
+            .map(ContractDescription::performance_contract)
     }
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
@@ -283,7 +332,7 @@ pub(crate) fn program_payload(prepared: &Program) -> Option<&Program> {
 #[cfg(test)]
 mod tests {
     use super::{ContractDescription, WorkloadDescription, HONEST_SUITES};
-    use crate::api::case::{BaselineClass, BenchCase, BenchLayer, DeterminismClass, WorkloadClass};
+    use crate::api::case::{BenchCase, BenchLayer, DeterminismClass, WorkloadClass};
     use crate::api::suite::SuiteKind;
     use crate::cases::harness::{CaseOps, HarnessCase};
 
@@ -293,13 +342,7 @@ mod tests {
         "does x to y",
         &["honest", "branchy"],
         4_096,
-        Some(ContractDescription {
-            primitive: "x",
-            baseline_crate: "y",
-            baseline_name: "y 1.0",
-            baseline_class: BaselineClass::CpuSota,
-            min_speedup_x: 7.0,
-        }),
+        Some(ContractDescription::cpu_sota("x", "y", "y 1.0", 7.0)),
     );
 
     static OPS: CaseOps<()> = CaseOps {

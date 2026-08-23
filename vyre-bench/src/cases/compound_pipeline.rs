@@ -18,8 +18,7 @@ use super::triplet_pass::{
     TripletSpec,
 };
 use crate::api::case::{
-    BaselineClass, BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, Correctness,
-    WorkloadClass,
+    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, Correctness, WorkloadClass,
 };
 use crate::api::metric::MetricPoint;
 use crate::api::suite::SuiteKind;
@@ -54,13 +53,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     min_vram_bytes: Some(ITEM_COUNT as u64 * 16),
     min_input_bytes: Some(ITEM_COUNT as u64 * 12),
     feature_set: &["compound.pipeline", "resident"],
-    contract: Some(ContractDescription {
-            primitive: "fused compound rule/dataflow filtering",
-            baseline_crate: "rayon",
-            baseline_name: "Rayon-parallel staged CPU filter with equivalent predicates",
-            baseline_class: BaselineClass::CpuSota,
-            min_speedup_x: 10.0,
-        }),
+    contract: Some(ContractDescription::cpu_sota("fused compound rule/dataflow filtering", "rayon", "Rayon-parallel staged CPU filter with equivalent predicates", 10.0)),
     ..WorkloadDescription::BASE
 };
 

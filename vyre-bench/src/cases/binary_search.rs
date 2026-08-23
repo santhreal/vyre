@@ -1,7 +1,7 @@
 //! `search.binary.u32.1m`  -  divergent binary search over a sorted table.
 
 use super::byte_pack::u32_bytes;
-use crate::api::case::{BaselineClass, BenchCase, BenchContext, BenchError};
+use crate::api::case::{BenchCase, BenchContext, BenchError};
 use crate::cases::harness::{
     verify_exact, CaseOps, ContractDescription, HarnessCase, WorkloadDescription,
 };
@@ -38,13 +38,12 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
     "Divergent binary search: 1M queries against a sorted 1M-entry u32 table",
     &["honest", "cpu-favorable", "branchy", "cache"],
     (KEY_COUNT as u64 + QUERY_COUNT as u64 * 2) * 4,
-    Some(ContractDescription {
-        primitive: "Divergent binary search",
-        baseline_crate: "rayon",
-        baseline_name: "Rust slice::binary_search with Rayon parallel query partitioning",
-        baseline_class: BaselineClass::CpuSota,
-        min_speedup_x: 3.0,
-    }),
+    Some(ContractDescription::cpu_sota(
+        "Divergent binary search",
+        "rayon",
+        "Rust slice::binary_search with Rayon parallel query partitioning",
+        3.0,
+    )),
 );
 
 static OPS: CaseOps<BinarySearchPrepared> = CaseOps {

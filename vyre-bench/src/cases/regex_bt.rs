@@ -4,7 +4,7 @@
 //! with backtracking go superlinear (O(2^n)). GPU parallelism should dominate
 //! by evaluating all NFA states simultaneously.
 
-use crate::api::case::{BaselineClass, BenchCase, BenchContext, BenchError};
+use crate::api::case::{BenchCase, BenchContext, BenchError};
 use crate::cases::harness::{
     verify_exact, CaseOps, ContractDescription, HarnessCase, WorkloadDescription,
 };
@@ -53,13 +53,12 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
     "Catastrophic backtracking: (a+)+b pattern on hostile 'aaaa...' input",
     &["honest", "regex", "adversarial"],
     (TOTAL_WORDS as u64 + INSTANCE_COUNT as u64) * 4,
-    Some(ContractDescription {
-        primitive: "Catastrophic backtracking regex",
-        baseline_crate: "pcre2",
-        baseline_name: "PCRE2 10.44 (backtracking engine)",
-        baseline_class: BaselineClass::CpuSota,
-        min_speedup_x: 3.0,
-    }),
+    Some(ContractDescription::cpu_sota(
+        "Catastrophic backtracking regex",
+        "pcre2",
+        "PCRE2 10.44 (backtracking engine)",
+        3.0,
+    )),
 );
 
 static OPS: CaseOps<RegexBacktrackingPrepared> = CaseOps {

@@ -4,7 +4,6 @@
 //! simplified proxy that does Q * K^T * V sequentially for the cell, which is
 //! what the CPU reference computes as well.
 
-use crate::api::case::BaselineClass;
 use crate::cases::harness::ContractDescription;
 use crate::cases::micro::{MicroCase, MicroWork};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -14,13 +13,12 @@ pub(crate) static ATTENTION: MicroCase = MicroCase {
     name: "Attention 64x64",
     summary: "Self-Attention QKV block (64 seq, 64 dim)",
     tags: &["compute", "memory-bound"],
-    contract: Some(ContractDescription {
-        primitive: "attention proxy 64x64",
-        baseline_crate: "rayon",
-        baseline_name: "rayon CPU attention baseline",
-        baseline_class: BaselineClass::CpuSota,
-        min_speedup_x: 1.5,
-    }),
+    contract: Some(ContractDescription::cpu_sota(
+        "attention proxy 64x64",
+        "rayon",
+        "rayon CPU attention baseline",
+        1.5,
+    )),
     program,
     fixture,
     reference,

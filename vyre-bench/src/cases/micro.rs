@@ -170,15 +170,7 @@ impl BenchCase for MicroCase {
     }
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
-        self.contract.map(|contract| {
-            PerformanceContract::min_speedup(
-                contract.primitive,
-                contract.baseline_crate,
-                contract.baseline_name,
-                contract.baseline_class,
-                contract.min_speedup_x,
-            )
-        })
+        self.contract.map(ContractDescription::performance_contract)
     }
 
     fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {

@@ -7,7 +7,7 @@
 //! CPU baseline: OpenSSL EVP AES-128-CTR, which routes through AES-NI on
 //! x86_64 hosts with AES acceleration.
 
-use crate::api::case::{BaselineClass, BenchCase, BenchContext, BenchError};
+use crate::api::case::{BenchCase, BenchContext, BenchError};
 use crate::cases::harness::{
     verify_exact, CaseOps, ContractDescription, HarnessCase, WorkloadDescription,
 };
@@ -87,13 +87,12 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
     &["honest", "crypto", "compute-bound"],
     // Plaintext in, ciphertext out.
     TOTAL_WORDS as u64 * 4 * 2,
-    Some(ContractDescription {
-        primitive: "AES-CTR encryption",
-        baseline_crate: "openssl",
-        baseline_name: "OpenSSL 0.10.78 EVP path with hardware AES acceleration",
-        baseline_class: BaselineClass::CpuSota,
-        min_speedup_x: 3.0,
-    }),
+    Some(ContractDescription::cpu_sota(
+        "AES-CTR encryption",
+        "openssl",
+        "OpenSSL 0.10.78 EVP path with hardware AES acceleration",
+        3.0,
+    )),
 );
 
 static OPS: CaseOps<AesCtrPrepared> = CaseOps {
