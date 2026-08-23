@@ -21,8 +21,7 @@ fn store_predicates(ptx: &str) -> Vec<String> {
     ptx.lines()
         .filter(|line| line.contains(" st.global"))
         .map(|line| {
-            line.trim()
-                .split_whitespace()
+            line.split_whitespace()
                 .next()
                 .filter(|token| token.starts_with('@'))
                 .unwrap_or_default()
