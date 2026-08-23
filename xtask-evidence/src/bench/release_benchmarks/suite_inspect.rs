@@ -123,15 +123,19 @@ fn fused_execution_dag_from_report(report: &Value, case_id: &str) -> Result<Valu
     }))
 }
 
+/// Rename the file component of a repository-relative artifact path.
+///
+/// The result is an artifact identity: it is written into evidence, compared
+/// against the declared artifact list, and cited by other artifacts, so it
+/// reads the same on every host. Rebuilding it through `Path::join` used the
+/// host separator, so a Windows run derived
+/// `release/evidence/benchmarks\wgpu-workload-01-condition-eval.json` and
+/// matched no declaration.
 pub(super) fn prefixed_benchmark_artifact(path: &str, prefix: &str) -> String {
-    let path = Path::new(path);
-    let Some(file_name) = path.file_name().and_then(|file| file.to_str()) else {
-        return format!("{prefix}-{path}", path = path.display());
-    };
-    let file_name = format!("{prefix}-{file_name}");
-    path.parent()
-        .map(|parent| parent.join(&file_name).display().to_string())
-        .unwrap_or(file_name)
+    match path.rsplit_once('/') {
+        Some((parent, file_name)) => format!("{parent}/{prefix}-{file_name}"),
+        None => format!("{prefix}-{path}"),
+    }
 }
 
 pub(super) fn write_backend_suite(

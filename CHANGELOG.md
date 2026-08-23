@@ -3847,6 +3847,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   dispatched baseline or a device class records none. The placement is an
   exhaustive match, so a class added later does not compile until it says which
   side it is on.
+- A per-backend benchmark artifact path is built as a repository-relative POSIX
+  identity, so a recording made on Windows names the same artifact the
+  declaration lists.
 - The benchmark harness builds its compile request from the probed backend
   profile instead of unknown device facts, so a case that uses subgroup
   intrinsics is measured on a device that has them rather than recorded as a
@@ -3898,6 +3901,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   five vyre-libs test modules declared with an explicit path were analyzed as
   production code and their host reference helpers were reported as shipped
   host oracles.
+- The tree declares LF line endings, so a checkout on any platform holds the
+  bytes the artifact generators write and a recorded artifact still parses its
+  provenance head.
 - A failed benchmark's captured output has its host root stripped before it is
   trimmed to the blocker's byte bound, not after. Trimming first could land
   inside an absolute path a child had echoed, leaving a fragment that no longer
@@ -4089,6 +4095,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Validating an operation schema document now reports what the document gets
   wrong even when the live registry does not assemble, and names the field that
   differs rather than one sentence about the whole file.
+- The documentation-coupling gate resolves its base ref at the entry, so asking
+  it for the worktree diff no longer returns a pull-request diff against a ref
+  the checkout does not carry.
 - The docs-references gate now reads every tracked Markdown file rather than
   the root, .github and docs pages only, resolves a relative path against the
   crate that owns the document as well as the workspace root, and exempts

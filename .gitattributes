@@ -1,0 +1,12 @@
+# A recorded artifact is compared against the bytes its generator writes, and
+# every generator in this tree writes LF. A checkout that rewrites line endings
+# makes that comparison report a difference the tree does not hold: on the
+# Windows legs of the matrix the provenance head parsed off no artifact at all,
+# because `{\n  "source_fingerprint"` never matches a CRLF file.
+* text=auto eol=lf
+
+# cmd.exe reads batch files line by line and wants CRLF.
+*.cmd text eol=crlf
+
+# Fuzz corpora are wire bytes.
+*.vir0 binary

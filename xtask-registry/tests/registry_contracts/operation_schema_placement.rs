@@ -308,9 +308,12 @@ fn a_member_without_a_package_name_is_an_error_naming_the_manifest() {
     let mut errors = Vec::new();
     read(root, &ids, &mut errors);
 
+    let named = root.join("libs").join("Cargo.toml");
     assert!(
-        errors.iter().any(|error| error.contains("libs/Cargo.toml")
-            && error.contains("declares no `package.name`")),
+        errors
+            .iter()
+            .any(|error| error.contains(&named.display().to_string())
+                && error.contains("declares no `package.name`")),
         "{errors:?}"
     );
 }
@@ -338,9 +341,12 @@ fn a_source_file_over_the_read_cap_is_an_error_naming_the_file() {
     let mut errors = Vec::new();
     read(root, &ids, &mut errors);
 
+    let named = root.join("libs").join("src").join("lib.rs");
     assert!(
-        errors.iter().any(|error| error.contains("libs/src/lib.rs")
-            && error.contains("over the 4194304 byte read cap")),
+        errors
+            .iter()
+            .any(|error| error.contains(&named.display().to_string())
+                && error.contains("over the 4194304 byte read cap")),
         "{errors:?}"
     );
 }
