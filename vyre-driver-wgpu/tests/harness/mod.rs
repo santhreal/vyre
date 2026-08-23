@@ -77,6 +77,15 @@ pub(crate) fn emit_validated_wgsl(program: &Program) -> String {
 }
 
 pub(crate) fn add_one_program(words: u32) -> Program {
+    add_one_program_at_width(words, 64)
+}
+
+/// The same program at a caller-chosen workgroup width.
+///
+/// A capability report is only true if a launch at the width it names reaches
+/// the device, so a contract that checks the report has to declare the width
+/// instead of inheriting one.
+pub(crate) fn add_one_program_at_width(words: u32, workgroup_x: u32) -> Program {
     let idx = Expr::gid_x();
     let in_bounds = Expr::lt(idx.clone(), Expr::u32(words));
     Program::wrapped(
@@ -86,7 +95,7 @@ pub(crate) fn add_one_program(words: u32) -> Program {
                 .with_count(words)
                 .with_output_byte_range(0..(words as usize * 4)),
         ],
-        [64, 1, 1],
+        [workgroup_x, 1, 1],
         vec![
             Node::if_then(
                 in_bounds,

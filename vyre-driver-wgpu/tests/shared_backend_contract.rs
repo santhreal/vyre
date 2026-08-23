@@ -24,8 +24,18 @@ fn shared_backend_reuses_single_backend_instance() {
     assert_eq!(first.id(), "wgpu");
 }
 
+/// The reported workgroup ceiling is what this backend can launch.
+///
+/// The earlier form of this contract demanded the report equal the raw device
+/// limits, which on a device advertising `max_compute_workgroup_size_x = 1024`
+/// asserted a capability the WGSL dialect refuses: a module declaring
+/// `@workgroup_size(1024)` exceeds the 256 invocations per workgroup the
+/// dialect admits, so every dispatch at the asserted width failed to compile.
+/// A report is therefore checked against what a launch does. The ceiling never
+/// exceeds the device, a launch at the ceiling runs, and the raw device limit
+/// above it is refused rather than accepted and then failed inside the driver.
 #[test]
-fn shared_backend_reports_same_capabilities_as_concrete_backend() {
+fn reported_workgroup_ceiling_is_what_the_backend_can_launch() {
     let shared = WgpuBackend::shared().expect("Fix: shared backend requires a configured GPU");
     let concrete = WgpuBackend::new().expect("Fix: concrete backend requires a configured GPU");
     let adapter = selected_adapter(&shared);
@@ -55,15 +65,54 @@ fn shared_backend_reports_same_capabilities_as_concrete_backend() {
             adapter_limits.min_subgroup_size
         );
     }
+    let reported = shared.max_workgroup_size();
+    let device = [
+        shared.device_limits().max_compute_workgroup_size_x,
+        shared.device_limits().max_compute_workgroup_size_y,
+        shared.device_limits().max_compute_workgroup_size_z,
+    ];
+    for axis in 0..3 {
+        assert!(
+            reported[axis] <= device[axis],
+            "Fix: reported workgroup ceiling axis {axis} is {} but the selected device admits {}; a backend must not report an extent the device cannot run",
+            reported[axis],
+            device[axis]
+        );
+        assert!(
+            reported[axis] > 0,
+            "Fix: reported workgroup ceiling axis {axis} is zero, so no launch is expressible"
+        );
+    }
+
+    let words = reported[0];
+    let at_ceiling = harness::add_one_program_at_width(words, reported[0]);
+    let outputs = shared
+        .dispatch_borrowed(
+            &at_ceiling,
+            &[&harness::add_one_input(words)],
+            &vyre_driver::DispatchConfig::default(),
+        )
+        .expect("Fix: a launch at the reported workgroup ceiling must reach the device");
     assert_eq!(
-        shared.max_workgroup_size(),
-        [
-            shared.device_limits().max_compute_workgroup_size_x,
-            shared.device_limits().max_compute_workgroup_size_y,
-            shared.device_limits().max_compute_workgroup_size_z,
-        ],
-        "Fix: shared backend max_workgroup_size must come from the live selected device limits"
+        outputs[0],
+        harness::add_one_expected(words),
+        "Fix: a launch at the reported workgroup ceiling must compute its result"
     );
+
+    if device[0] > reported[0] {
+        let above = harness::add_one_program_at_width(words, device[0]);
+        let refused = shared.dispatch_borrowed(
+            &above,
+            &[&harness::add_one_input(words)],
+            &vyre_driver::DispatchConfig::default(),
+        );
+        assert!(
+            refused.is_err(),
+            "Fix: the raw device width {} is above the dialect ceiling {} and must be refused, not reported as admissible",
+            device[0],
+            reported[0]
+        );
+    }
 }
 
 /// Acquiring and releasing a backend from many threads at once must finish on
