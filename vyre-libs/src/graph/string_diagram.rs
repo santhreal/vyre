@@ -55,7 +55,7 @@ const EXPECTED_STRING_DIAGRAM_OUTPUT_BYTES: [u8; 16] =
     [0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 5, 0, 0, 0, 7, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || monoidal_compose("f", "g", "out", 2, 2, 2),
         Some(|| {

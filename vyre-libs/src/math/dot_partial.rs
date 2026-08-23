@@ -87,7 +87,7 @@ pub fn dot_partial_program(q_buffer: &str, k_buffer: &str, out: &str, d: u32) ->
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || dot_partial_program("q", "k", "out", 2),
         Some(|| {

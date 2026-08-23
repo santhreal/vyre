@@ -167,7 +167,7 @@ pub fn bigint_add_carry(limb_count: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || bigint_add_carry(4),
         Some(|| {

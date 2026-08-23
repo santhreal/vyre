@@ -269,7 +269,7 @@ fn pass2_combine_reduction(partials: &str, out: &str, num_blocks: u32, tile: u32
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         SUM_U32_OP_ID,
         || grid_stride_tree_sum_u32("values", "out", 4, 4, 1),
         Some(|| {

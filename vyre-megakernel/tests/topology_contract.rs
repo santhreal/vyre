@@ -214,11 +214,11 @@ fn occupancy_exceeded_rejects_resident_partition_candidate() {
 }
 
 // ============================================================================
-// 6. Schema 7 preservation and artifact round-trip
+// 6. Schema 9 preservation and artifact round-trip
 // ============================================================================
 
 #[test]
-fn artifact_encoding_preserves_schema_7_and_compiled_topology_schedule() {
+fn artifact_encoding_preserves_schema_9_and_compiled_topology_schedule() {
     let graph = independent_two_arm_graph();
     let device = device_default().with_concurrent_queues(4);
 
@@ -234,7 +234,7 @@ fn artifact_encoding_preserves_schema_7_and_compiled_topology_schedule() {
 
     let artifact = compile(&request).expect("compilation must succeed");
     assert_eq!(artifact.schema_version(), ARTIFACT_SCHEMA_VERSION);
-    assert_eq!(artifact.schema_version(), 7);
+    assert_eq!(artifact.schema_version(), 9);
 
     let wire_bytes = artifact.to_bytes().expect("artifact must encode");
     let decoded = Artifact::from_bytes(&wire_bytes).expect("artifact must decode");
@@ -242,11 +242,17 @@ fn artifact_encoding_preserves_schema_7_and_compiled_topology_schedule() {
     assert_eq!(decoded, artifact);
     assert_eq!(decoded.digest(), artifact.digest());
     assert_eq!(decoded.selected_plan(), artifact.selected_plan());
+    decoded.selected_plan().schedule.validate().unwrap();
+    assert_eq!(
+        decoded.selected_plan().schedule.phases.len(),
+        decoded.fusion().len(),
+        "one selected schedule phase must describe each emitted fusion group"
+    );
 
-    // Verify stale schema version is rejected
+    // Verify the immediately preceding schema is rejected.
     let mut stale_bytes = wire_bytes.clone();
-    stale_bytes[4..6].copy_from_slice(&6u16.to_le_bytes());
-    let error = Artifact::from_bytes(&stale_bytes).expect_err("stale schema version 6 must fail");
+    stale_bytes[4..6].copy_from_slice(&8u16.to_le_bytes());
+    let error = Artifact::from_bytes(&stale_bytes).expect_err("stale schema version 8 must fail");
     assert_eq!(error.diagnostic.code.as_str(), "MKC015_VERSION_SKEW");
 }
 
@@ -310,6 +316,16 @@ fn topology_ranking_prefers_concurrent_over_sequential_when_device_has_queues() 
     let art_concurrent = compile(&req_concurrent).expect("concurrent compilation must succeed");
     let art_sequential = compile(&req_sequential).expect("sequential compilation must succeed");
 
+    assert_ne!(
+        art_concurrent.selected_plan().topology,
+        art_sequential.selected_plan().topology,
+        "fixture must select two distinct schedule topologies"
+    );
+    assert_ne!(
+        art_concurrent.digest(),
+        art_sequential.digest(),
+        "artifact identity must authenticate the selected schedule topology"
+    );
     assert!(
         art_concurrent.selected_plan().selection_cost.total <= art_sequential.selected_plan().selection_cost.total,
         "Concurrent queue topology must be cheaper than or equal to sequential baseline (CQ: {}, Seq: {})",

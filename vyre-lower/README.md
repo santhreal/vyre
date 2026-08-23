@@ -16,8 +16,9 @@ This crate sits between vyre's frontend (which produces a high-level
 - A structural verifier (`verify`) that catches dangling refs, duplicate
   result-ids, and out-of-range pool or child-body indices.
 
-Production `Program` callers use `lower_verified`. Pure emitters consume the
-verified descriptor without running another rewrite pipeline.
+Whole-program target compilation uses `lower_scheduled` to freeze a validated
+selected phase before `lower_physical`. Pure emitters consume the verified
+descriptor without running another rewrite pipeline.
 
 ## Quick start
 
@@ -124,7 +125,7 @@ opportunities without mutating the descriptor.
 - Per-kind minimum operand counts.
 
 Errors are collected so one call reports every violation.
-`lower_verified` verifies both the initial descriptor and the descriptor after
+`lower_physical` verifies both the initial descriptor and the descriptor after
 bounded representation canonicalization before any pure target emitter
 receives it.
 
@@ -147,7 +148,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Consume verified semantic programs and own the single backend-neutral lowering boundary and pre-emission transforms.
+Consume validated selected schedule phases and semantic programs, then own the single validated PhysicalKernel lowering boundary plus its backend-neutral pre-emission transforms.
 
 ### Boundaries
 

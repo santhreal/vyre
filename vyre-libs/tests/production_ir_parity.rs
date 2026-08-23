@@ -150,8 +150,15 @@ fn path_reconstruct_real_ir_matches_root_and_cycle_oracles() {
 
     for &(parent, target, max_depth) in cases {
         let (expected_path, expected_len) = path_reconstruct_witness(parent, target, max_depth);
-        let program =
-            path_reconstruct::path_reconstruct("parent", "target", "path", "length", max_depth);
+        let parent_count = u32::try_from(parent.len()).expect("fixture parent count must fit u32");
+        let program = path_reconstruct::path_reconstruct(
+            "parent",
+            "target",
+            "path",
+            "length",
+            parent_count,
+            max_depth,
+        );
         let outputs = evaluate(
             &program,
             vec![

@@ -520,7 +520,7 @@ const EXPECTED_SUM_PRODUCT_ALL_NODES_OUTPUT_BYTES: [u8; 16] =
     [0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 5, 0, 0, 0, 10, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || sum_product_evaluate(
             "kinds",
@@ -562,7 +562,7 @@ inventory::submit! {
 // child_counts, children, weights, leaf_values, out (seeded zero). reference_eval
 // returns the sole RW buffer `out` = [2.0, 3.0, 5.0, 10.0] in 16.16.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID_LEVELED,
         || sum_product_evaluate_leveled(
             "depths",

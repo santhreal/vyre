@@ -238,7 +238,7 @@ const EXPECTED_CALLS_KWARGS: [u8; 128] = pack_words_padded_bytes([10, 1]);
 const EXPECTED_CALLS_KW_COUNTS: [u8; 4] = 2u32.to_le_bytes();
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || python312_extract_calls(
             "tok_types", "tok_starts", "tok_lens", "out_calls", "out_call_counts", "out_kwargs", "out_kw_counts", 16

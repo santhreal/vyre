@@ -275,8 +275,8 @@ graph TD
 | `vyre-libs` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-libs` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
 | `vyre-libs` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-lower` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-megakernel` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
+| `vyre-lower` | `vyre-foundation` | typed IR plus validated backend-neutral selected schedule phases | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
+| `vyre-megakernel` | `vyre-foundation` | typed graph, logical-domain, neutral schedule IR and validation, diagnostics, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-megakernel` | `vyre-lower` | single verified selected-module representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
 | `vyre-pass-engine` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-pass-engine` | `vyre-libs` | product operation builders | None | `always` | `normal` | `false` | `false` | `private` | `product-libraries` |

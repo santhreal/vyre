@@ -619,7 +619,7 @@ fn attention_reference_program(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::nn::attention",
         || attention("q", "k", "v", "out", 2, 4),
         Some(|| {
@@ -648,7 +648,7 @@ const EXPECTED_REFERENCE_ATTENTION_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         REFERENCE_OP_ID,
         || attention_reference("q", "k", "v", "out", 2, 2),
         Some(|| {

@@ -106,7 +106,7 @@ pub fn homotopy_euler_predictor(
 const EXPECTED_HOMOTOPY_OUTPUT_BYTES: [u8; 8] = [0, 0, 7, 0, 0, 0, 10, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || homotopy_euler_predictor("x_curr", "v", "dt_scaled", "x_pred", 1, 2),
         Some(|| {

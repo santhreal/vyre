@@ -445,7 +445,7 @@ fn canonical_online_softmax_attention_program() -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         canonical_online_softmax_attention_program,
         // Zero Q and K make every key equally likely, so each row returns the
@@ -549,7 +549,7 @@ pub fn attention_absorb_values_program() -> Program {
 const EXPECTED_ATTENTION_TILE_SCORES_BYTES: [u8; 8] = [0, 0, 224, 64, 0, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         ATTENTION_TILE_SCORES_OP_ID,
         attention_tile_scores_program,
         Some(|| vec![vec![
@@ -564,7 +564,7 @@ inventory::submit! {
 const EXPECTED_ATTENTION_ABSORB_VALUES_BYTES: [u8; 8] = [0, 0, 0, 64, 0, 0, 160, 64];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         ATTENTION_ABSORB_VALUES_OP_ID,
         attention_absorb_values_program,
         Some(|| vec![vec![

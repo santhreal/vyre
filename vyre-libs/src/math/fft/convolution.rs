@@ -317,7 +317,7 @@ fn scale_conjugate_inverse_inputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         MULTIPLY_OP_ID,
         pointwise_complex_multiply_conjugate_program,
         Some(pointwise_complex_multiply_conjugate_inputs),
@@ -338,7 +338,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         SCALE_OP_ID,
         scale_conjugate_inverse_program,
         Some(scale_conjugate_inverse_inputs),
@@ -359,7 +359,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || fft_convolve_circular_complex(
             "signal",

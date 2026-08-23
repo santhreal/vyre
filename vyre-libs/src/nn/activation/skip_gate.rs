@@ -61,7 +61,7 @@ pub fn skip_gate(gate: &str, branch: &str, skip: &str, output: &str, n: u32) -> 
 const EXPECTED_SKIP_GATE_OUTPUT_BYTES: [u8; 8] = [0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0xA0, 0x41];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || skip_gate("gate", "branch", "skip", "output", 2),
         Some(|| {

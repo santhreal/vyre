@@ -215,7 +215,7 @@ const EXPECTED_FILTER_CHAIN_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || filter_chain("pixels", 4, 1.0, 1.0, 1.0, 0.0),
         Some(|| {

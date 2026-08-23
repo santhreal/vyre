@@ -150,7 +150,7 @@ pub fn turboquant_attention(
 const EXPECTED_TURBOQUANT_OUTPUT_BYTES: [u8; 8] = [0x00, 0x00, 0x40, 0x40, 0x00, 0x00, 0xE0, 0x40];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || turboquant_attention("q", "kp", "vp", "out", 2, 2),
         Some(|| {

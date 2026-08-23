@@ -10,7 +10,7 @@ const EXPECTED_PERSISTENT_BFS_CHANGED_BYTES: [u8; 4] = [1, 0, 0, 0];
 const EXPECTED_PERSISTENT_BFS_CONVERGED_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || persistent_bfs(ProgramGraphShape::new(4, 4), "fin", "fout", 0xFFFF_FFFF, 4),
         Some(|| {

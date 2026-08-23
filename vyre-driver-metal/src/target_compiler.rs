@@ -24,7 +24,7 @@ fn emit_metal_module(
     selected: &vyre_megakernel::SelectedLowering,
     _profile: &TargetProfile,
 ) -> Result<EmittedDialectModule, TargetCompileError> {
-    let artifact = vyre_emit_metal::emit_artifact(&selected.descriptor)
+    let artifact = vyre_emit_metal::emit_artifact(selected.descriptor())
         .map_err(|error| TargetCompileError::Emission(format!("Metal emission failed: {error}")))?;
     let entry_point = artifact.entry_point.clone();
     let bytes = serde_json::to_vec(&artifact).map_err(|error| {

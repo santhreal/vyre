@@ -54,7 +54,7 @@ const EXPECTED_SWIGLU_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || swiglu("gate", "up", "output", 4),
         Some(|| {

@@ -96,7 +96,7 @@ pub fn downsample_2x(input: &str, output: &str, width: u32, height: u32) -> Prog
 const EXPECTED_DOWNSAMPLE_2X_OUTPUT_BYTES: [u8; 16] = [0xFF; 16];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || downsample_2x("input", "output", 4, 4),
         Some(|| {

@@ -45,7 +45,7 @@ vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # `python-parser` is required by
 # carrier_scope_regression::dump_python312_lexer_naga, which builds the real
 # `vyre_libs::parsing::python::lex::python312_lexer` megakernel and drives it
-# through lower_verified into vyre_emit_naga::emit to regression-test
+# through lower_physical into vyre_emit_naga::emit to regression-test
 # loop-carrier scope handling on a real-world program. `parsing::python` is
 # gated behind `python-parser` (vyre-libs/Cargo.toml), so without this the test
 # binary fails to compile (E0433: no `python` in `parsing`).

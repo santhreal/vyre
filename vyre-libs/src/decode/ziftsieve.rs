@@ -250,7 +250,7 @@ fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
 const EXPECTED_ZIFTSIEVE_LITERAL_BYTES: [u8; 12] = [65, 0, 0, 0, 66, 0, 0, 0, 67, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             ziftsieve_literal_copy(

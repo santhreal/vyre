@@ -4,7 +4,7 @@
 use vyre_foundation::operation::{OperationRegistration, OperationTier};
 
 inventory::submit! {
-    OperationRegistration::library(
+    OperationRegistration::library_unconstrained(
         "vyre-libs::math::gelu",
         build_gelu,
         Some(FIXTURE_INPUTS),
@@ -32,15 +32,21 @@ and no second place to declare an operation.
 | `expected_output` | deterministic fixture outputs, or a reference-oracle projection |
 | `laws` | algebraic or semantic law identifiers |
 | `tolerance` | numerical comparison policy |
+| `geometry_requirements` | recorded neutral schedule-constraint decision |
 
-Three constructors set the tier for you. `OperationRegistration::library`
-is Category A, owned by `vyre-libs`.
-`OperationRegistration::primitive` is Category C, owned by
-`vyre-primitives`. `OperationRegistration::new` takes the tier explicitly.
+The constructor states the schedule decision in its name.
+`library_unconstrained`, `intrinsic_unconstrained`, and
+`primitive_unconstrained` record that semantics add no constraint beyond the
+canonical program. `new_unconstrained` accepts an explicit tier.
 
 `tolerance` defaults to `TolerancePolicy::EXACT`, which is byte identity.
 `TolerancePolicy::f32_ulp(n)` accepts drift measured in ULPs, and the
 operation owns that number rather than a backend deciding it.
+
+`schedule_constraints()` composes the recorded decision with constraints
+derived from the canonical program. Workgroup and subgroup widths, uniformity,
+shared scratch, cooperative launch, memory ordering, and element policy appear
+in the generated operation schema.
 
 ## Effects are derived, not declared
 
@@ -52,9 +58,9 @@ declaring a `ReadWrite` buffer, because nothing asks it to claim anything.
 
 ## The inventory
 
-`docs/generated/OP_SCHEMA.json` is the live catalog at schema version 4:
-363 operations, 165 intrinsic and 198 library. It is generated from the
-registry, so it is the file to read and not a file to edit.
+`docs/generated/OP_SCHEMA.json` is the generated live catalog. Each row includes
+the registry contract, effective schedule constraints, backend support, and
+composition chain.
 
 Reading it is how you check whether an operation already exists before
 adding one. See [the placement rule](../lego-block-rule.md) for what to do

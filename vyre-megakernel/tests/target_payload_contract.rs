@@ -121,6 +121,34 @@ fn neutral_envelope_and_target_payload_round_trip_exactly() {
     assert_eq!(decoded.neutral().geometry()[0].workgroup_size, [8, 1, 1]);
 }
 
+/// WHY: a target payload implements one selected neutral schedule. Changing
+/// that schedule must change target identity even when emitted bytes match.
+#[test]
+fn target_identity_includes_the_neutral_schedule() {
+    let first = neutral_artifact([8, 1, 1]);
+    let second = neutral_artifact([16, 1, 1]);
+    let first_payload = TargetPayload::new(
+        &first,
+        format(1),
+        profile(1),
+        vec![entry_point()],
+        vec![9, 8, 7],
+    )
+    .expect("first target payload must validate");
+    let mut second_entry = entry_point();
+    second_entry.workgroup_size = [16, 1, 1];
+    let second_payload = TargetPayload::new(
+        &second,
+        format(1),
+        profile(1),
+        vec![second_entry],
+        vec![9, 8, 7],
+    )
+    .expect("second target payload must validate");
+
+    assert_ne!(first_payload.digest(), second_payload.digest());
+}
+
 /// Regression: target bytes materialized from one neutral artifact must not attach to another digest.
 #[test]
 fn target_payload_rejects_a_different_neutral_artifact_digest() {
@@ -220,9 +248,9 @@ fn corrupted_target_payload_identity_is_rejected() {
 #[test]
 fn target_module_bundle_rejects_noncanonical_module_order() {
     let program = Program::wrapped(Vec::new(), [1, 1, 1], Vec::new());
-    let descriptor = vyre_lower::lower_verified(&program)
+    let descriptor = vyre_lower::lower_physical(&program)
         .expect("fixture lowering must succeed")
-        .descriptor;
+        .into_descriptor();
     let program = program.to_wire().expect("fixture Program must encode");
     let image = |stage, group| TargetModuleImage {
         group: FusionGroupId(group),

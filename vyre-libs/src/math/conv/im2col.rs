@@ -113,7 +113,7 @@ const EXPECTED_IM2COL_OUTPUT_BYTES: [u8; 576] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             im2col_3x3("input", "output", 4, 4)

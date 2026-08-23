@@ -31,7 +31,7 @@ const EXPECTED_LEAKY_RELU_SQ_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || leaky_relu_sq("input", "output", 4),
         Some(|| {

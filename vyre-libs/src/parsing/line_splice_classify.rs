@@ -321,17 +321,14 @@ const EXPECTED_LINE_SPLICE_CLASSIFY_BYTES: [u8; 1024] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || line_splice_classify(256),
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             let mut bytes = vec![120 | (120 << 8) | (120 << 16) | (120 << 24); 64];
             bytes[0] = 97 | (92 << 8) | (10 << 16) | (98 << 24);
-            vec![vec![
-                to_bytes(&bytes),                // bytes_in
-                to_bytes(&[0; 256]),             // kept_mask_out
-            ]]
+            vec![vec![to_bytes(&bytes)]] // bytes_in
         }),
         Some(|| {
             vec![vec![EXPECTED_LINE_SPLICE_CLASSIFY_BYTES.to_vec()]]

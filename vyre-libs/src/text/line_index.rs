@@ -292,7 +292,7 @@ fn line_start_flags_program(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         LINE_INDEX_OP_ID,
         || line_index("source", "lines", 5),
         Some(|| {

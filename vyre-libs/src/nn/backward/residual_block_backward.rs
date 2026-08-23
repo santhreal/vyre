@@ -36,7 +36,7 @@ const EXPECTED_RESIDUAL_BLOCK_BACKWARD_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || residual_block_backward("grad_out", "grad_x", "grad_attn", "grad_mlp", 4),
         Some(|| {

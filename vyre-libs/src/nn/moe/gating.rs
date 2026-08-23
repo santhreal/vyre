@@ -212,7 +212,7 @@ const EXPECTED_WEIGHT_WRITE_OUTPUT_BYTES: [u8; 8] =
     [0xE6, 0xEE, 0x0A, 0x3F, 0x53, 0x71, 0x4C, 0x3E];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || moe_gate("scores", "indices", "weights", 8, 2),
         // Buffer order: scores (read-only f32 × 8), indices
@@ -278,7 +278,7 @@ fn weight_write_program() -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         SOFTMAX_STATS_OP_ID,
         softmax_stats_program,
         Some(|| {
@@ -293,7 +293,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         WEIGHT_WRITE_OP_ID,
         weight_write_program,
         Some(|| {

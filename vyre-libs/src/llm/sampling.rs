@@ -573,7 +573,7 @@ const EXPECTED_NUCLEUS_WEIGHTS_BYTES: [u8; 8] = [162, 106, 249, 62, 94, 71, 151,
 const EXPECTED_NUCLEUS_KEPT_BYTES: [u8; 8] = [0, 0, 128, 63, 152, 69, 27, 63];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         LOGIT_ADJUST_OP_ID,
         logit_adjust_fixture_program,
         Some(|| vec![vec![
@@ -586,7 +586,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         NUCLEUS_SELECT_OP_ID,
         nucleus_select_fixture_program,
         Some(|| {
@@ -615,7 +615,7 @@ fn sample_token_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         SAMPLE_TOKEN_OP_ID,
         sample_token_fixture_program,
         Some(sample_token_fixture_inputs),

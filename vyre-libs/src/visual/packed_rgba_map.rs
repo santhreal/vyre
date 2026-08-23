@@ -72,7 +72,7 @@ const EXPECTED_PACKED_RGBA_MAP_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || packed_rgba_map("in", "out", 4),
         Some(|| {

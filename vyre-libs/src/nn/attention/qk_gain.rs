@@ -73,7 +73,7 @@ const EXPECTED_QK_GAIN_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || qk_gain("q_in", "q_out", "gain", 2, 1, 2),
         Some(|| {

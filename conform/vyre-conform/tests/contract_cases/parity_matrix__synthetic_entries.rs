@@ -22,7 +22,7 @@ const SYNTHETIC_CALLEE_INPUTS: &[vyre_foundation::dialect_lookup::TypedParam] =
     }];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::new(
+    vyre_foundation::operation::OperationRegistration::new_unconstrained(
         SYNTHETIC_CALLEE_OP_ID,
         vyre_foundation::operation::OperationTier::External,
         None,

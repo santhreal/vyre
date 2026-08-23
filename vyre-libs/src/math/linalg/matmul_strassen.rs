@@ -73,7 +73,7 @@ pub fn matmul_strassen_2x2(a: &str, b: &str, c: &str) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || matmul_strassen_2x2("a", "b", "c"),
         Some(|| {

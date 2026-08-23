@@ -284,7 +284,7 @@ fn wrap_megakernel_program(workgroup_size_x: u32, slot_count: u32, body: Vec<Nod
 
 fn prepare_megakernel_program(program: Program) -> Program {
     // Barrier elision is infallible because its working buffers are bounded by
-    // the IR node count. Semantic optimization runs once in `lower_verified`.
+    // the IR node count. Semantic optimization runs once in `lower_physical`.
     super::planner::elide_value_flow_barriers(program).0
 }
 

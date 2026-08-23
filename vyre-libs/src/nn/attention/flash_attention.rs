@@ -94,7 +94,7 @@ const EXPECTED_FLASH_ATTENTION_OUTPUT_BYTES: [u8; 36] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::nn::flash_attention",
         || {
             flash_attention("q", "k", "v", "out", 9, 1).unwrap_or_else(|error| {

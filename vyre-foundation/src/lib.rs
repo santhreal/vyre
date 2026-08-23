@@ -14,11 +14,15 @@ pub mod diagnostics;
 pub mod fp_parity;
 /// Target-neutral launch geometry requirements and lowering strategy.
 pub(crate) mod geometry;
+/// Versioned schedule-free logical algorithm stage.
+pub mod logical;
 /// Canonical semantic operation registration and target facet views.
 pub mod operation;
+/// Versioned backend-neutral selected schedule stage.
+pub mod schedule;
 pub use geometry::{
-    CooperativeWidth, ElementPolicy, GeometryLoweringError, GeometryRequirements, GeometryStrategy,
-    LaunchGeometry, Uniformity,
+    CooperativeWidth, ElementPolicy, GeometryConstraintConflict, GeometryLoweringError,
+    GeometryRequirements, GeometryStrategy, LaunchGeometry, Uniformity,
 };
 
 pub mod ir {

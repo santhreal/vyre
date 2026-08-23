@@ -35,7 +35,7 @@ const LANES: &str = "docs/optimization/OWNERSHIP.toml";
 /// generator's own test compares the two constants directly. That drift shipped
 /// once, with the generator on 3 and the checker still demanding 2, back when
 /// the checker was a Python script whose number could only be compared as text.
-pub const OPERATION_SCHEMA_VERSION: i64 = 4;
+pub const OPERATION_SCHEMA_VERSION: i64 = 5;
 
 /// Tokens the document must still contain, each naming a live boundary.
 const REQUIRED_TOKENS: &[&str] = &[

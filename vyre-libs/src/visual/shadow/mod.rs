@@ -187,7 +187,7 @@ const EXPECTED_BOX_SHADOW_OUTPUT_BYTES: [u8; 256] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || box_shadow("out", 8, 8, 2, 2, 4, 4, 2.0, 0x80_000000),
         Some(|| {

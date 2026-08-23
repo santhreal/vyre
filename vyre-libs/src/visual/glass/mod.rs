@@ -253,7 +253,7 @@ impl GlassHalfResPipeline {
 const EXPECTED_GLASS_OUTPUT_BYTES: [u8; 64] = [0xFF; 64];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             tag_program(

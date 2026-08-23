@@ -9,6 +9,7 @@ use vyre_foundation::optimizer::AdapterCaps;
 use vyre_foundation::validate;
 use vyre_foundation::{
     CooperativeWidth, ElementPolicy, GeometryRequirements, GeometryStrategy, LaunchGeometry,
+    Uniformity,
 };
 
 /// Quality class for backend timing data exposed through [`DeviceProfile`].
@@ -327,6 +328,41 @@ impl GeometryStrategy for DeviceProfile {
         requirements: &GeometryRequirements,
         problem_elements: u32,
     ) -> Vec<LaunchGeometry> {
+        if requirements.min_shared_bytes > 0 && !self.has_shared_memory {
+            return Vec::new();
+        }
+        if (requirements.requires_cooperative_launch
+            || requirements
+                .memory_ordering
+                .is_some_and(vyre_foundation::ir::MemoryOrdering::requires_grid_sync))
+            && !self.supports_cooperative_launch
+        {
+            return Vec::new();
+        }
+        if requirements.subgroup_uniformity == Uniformity::SubgroupUniform
+            && self.subgroup_size == 0
+        {
+            return Vec::new();
+        }
+        match requirements.subgroup_width {
+            CooperativeWidth::Agnostic => {}
+            CooperativeWidth::AtLeast(minimum) => {
+                if minimum == 0 || self.subgroup_size < minimum {
+                    return Vec::new();
+                }
+            }
+            CooperativeWidth::Exactly(exact) => {
+                if exact == 0 || self.subgroup_size != exact {
+                    return Vec::new();
+                }
+            }
+        }
+        if matches!(
+            requirements.per_invocation_elements,
+            ElementPolicy::Multiple(0)
+        ) {
+            return Vec::new();
+        }
         if requirements.min_shared_bytes > self.max_shared_memory_bytes
             && self.max_shared_memory_bytes > 0
         {

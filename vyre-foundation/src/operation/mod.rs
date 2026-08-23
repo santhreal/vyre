@@ -49,8 +49,8 @@ pub struct SemanticOperation {
     pub laws: &'static [&'static str],
     /// Numerical comparison policy.
     pub tolerance: TolerancePolicy,
-    /// Optional target-neutral execution geometry requirements.
-    pub geometry_requirements: Option<crate::geometry::GeometryRequirements>,
+    /// Recorded target-neutral schedule constraints.
+    pub geometry_requirements: crate::geometry::GeometryRequirements,
     /// Source file that owns the registration.
     pub source_file: &'static str,
     /// Optional explicit closed effects.
@@ -64,6 +64,24 @@ impl SemanticOperation {
     #[must_use]
     pub fn program(self) -> Option<Program> {
         self.build.map(|build| build().with_entry_op_id(self.id))
+    }
+
+    /// Derive the effective neutral schedule constraints from the recorded
+    /// decision and the canonical program.
+    ///
+    /// # Errors
+    ///
+    /// Returns a stable conflict when the recorded decision contradicts semantics.
+    pub fn schedule_constraints(
+        self,
+    ) -> Result<crate::geometry::GeometryRequirements, crate::geometry::GeometryConstraintConflict>
+    {
+        match self.program() {
+            Some(program) => self.geometry_requirements.compose(
+                crate::geometry::GeometryRequirements::from_program(&program)?,
+            ),
+            None => Ok(self.geometry_requirements),
+        }
     }
 
     /// Derive target-neutral capability requirements transitively over `Expr::Call`.
@@ -183,8 +201,8 @@ pub struct OperationRegistration {
     pub laws: &'static [&'static str],
     /// Numerical comparison policy.
     pub tolerance: TolerancePolicy,
-    /// Optional target-neutral execution geometry requirements.
-    pub geometry_requirements: Option<crate::geometry::GeometryRequirements>,
+    /// Recorded target-neutral schedule constraints.
+    pub geometry_requirements: crate::geometry::GeometryRequirements,
     /// Source file that owns the registration.
     pub source_file: &'static str,
     /// Optional explicit closed effects.
@@ -194,10 +212,10 @@ pub struct OperationRegistration {
 }
 
 impl OperationRegistration {
-    /// Construct a neutral operation registration with exact comparison policy.
+    /// Construct an explicitly unconstrained neutral operation registration.
     #[must_use]
     #[track_caller]
-    pub const fn new(
+    pub const fn new_unconstrained(
         id: &'static str,
         tier: OperationTier,
         build: Option<fn() -> Program>,
@@ -215,23 +233,23 @@ impl OperationRegistration {
             expected_output,
             laws: &[],
             tolerance: TolerancePolicy::EXACT,
-            geometry_requirements: None,
+            geometry_requirements: crate::geometry::GeometryRequirements::agnostic(),
             source_file: Location::caller().file(),
             explicit_effects: None,
             explicit_capabilities: None,
         }
     }
 
-    /// Construct a Category A composition registration.
+    /// Construct an explicitly unconstrained Category A composition registration.
     #[must_use]
     #[track_caller]
-    pub const fn library(
+    pub const fn library_unconstrained(
         id: &'static str,
         build: fn() -> Program,
         test_inputs: Option<OperationFixtures>,
         expected_output: Option<OperationFixtures>,
     ) -> Self {
-        Self::new(
+        Self::new_unconstrained(
             id,
             OperationTier::Library,
             Some(build),
@@ -240,17 +258,17 @@ impl OperationRegistration {
         )
     }
 
-    /// Construct a Category C intrinsic hardware operation registration.
+    /// Construct an explicitly unconstrained Category C intrinsic registration.
     #[must_use]
     #[track_caller]
-    pub const fn intrinsic(
+    pub const fn intrinsic_unconstrained(
         id: &'static str,
         signature: Signature,
         build: Option<fn() -> Program>,
         test_inputs: Option<OperationFixtures>,
         expected_output: Option<OperationFixtures>,
     ) -> Self {
-        Self::new(
+        Self::new_unconstrained(
             id,
             OperationTier::Intrinsic,
             build,
@@ -261,16 +279,16 @@ impl OperationRegistration {
         .with_category("hardware")
     }
 
-    /// Construct a Category C registration owned by `vyre-primitives`.
+    /// Construct an explicitly unconstrained Category C primitive registration.
     #[must_use]
     #[track_caller]
-    pub const fn primitive(
+    pub const fn primitive_unconstrained(
         id: &'static str,
         build: fn() -> Program,
         test_inputs: Option<OperationFixtures>,
         expected_output: Option<OperationFixtures>,
     ) -> Self {
-        Self::new(
+        Self::new_unconstrained(
             id,
             OperationTier::Intrinsic,
             Some(build),
@@ -331,7 +349,7 @@ impl OperationRegistration {
         mut self,
         requirements: crate::geometry::GeometryRequirements,
     ) -> Self {
-        self.geometry_requirements = Some(requirements);
+        self.geometry_requirements = requirements;
         self
     }
 
@@ -349,9 +367,9 @@ impl OperationRegistration {
         self
     }
 
-    /// Return the execution geometry requirements when declared.
+    /// Return the recorded schedule-constraint decision.
     #[must_use]
-    pub const fn geometry_requirements(&self) -> Option<crate::geometry::GeometryRequirements> {
+    pub const fn declared_schedule_constraints(&self) -> crate::geometry::GeometryRequirements {
         self.geometry_requirements
     }
 
@@ -359,6 +377,24 @@ impl OperationRegistration {
     #[must_use]
     pub fn program(&self) -> Option<Program> {
         self.build.map(|build| build().with_entry_op_id(self.id))
+    }
+
+    /// Derive the effective neutral schedule constraints from the recorded
+    /// decision and canonical program semantics.
+    ///
+    /// # Errors
+    ///
+    /// Returns a stable conflict when the recorded decision contradicts semantics.
+    pub fn schedule_constraints(
+        &self,
+    ) -> Result<crate::geometry::GeometryRequirements, crate::geometry::GeometryConstraintConflict>
+    {
+        match self.program() {
+            Some(program) => self.geometry_requirements.compose(
+                crate::geometry::GeometryRequirements::from_program(&program)?,
+            ),
+            None => Ok(self.geometry_requirements),
+        }
     }
 
     /// Direct (local) required capabilities without call-graph transitive propagation.

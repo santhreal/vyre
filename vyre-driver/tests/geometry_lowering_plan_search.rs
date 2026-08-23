@@ -7,6 +7,7 @@
 //! 3. Parity across lowering widths (1024 vs 256) for multi-block operations.
 
 use vyre_driver::{DeviceProfile, DeviceTimingQuality};
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::{
     CooperativeWidth, ElementPolicy, GeometryRequirements, GeometryStrategy, LaunchGeometry,
     Uniformity,
@@ -119,18 +120,53 @@ fn strategy_ranks_geometries_according_to_device_limits() {
 #[test]
 fn exact_width_requirements_fail_closed_on_unsupported_profiles() {
     let profile_256 = test_profile_256();
-    let exact_1024_req = GeometryRequirements {
-        cooperative_width: CooperativeWidth::Exactly(1024),
-        min_shared_bytes: 0,
-        per_invocation_elements: ElementPolicy::Scalar,
-        subgroup_uniformity: Uniformity::None,
-    };
+    let exact_1024_req = GeometryRequirements::cooperative(CooperativeWidth::Exactly(1024))
+        .with_element_policy(ElementPolicy::Scalar);
 
     let lowered = profile_256.lower_geometry(&exact_1024_req, 4096);
     assert!(
         lowered.is_err(),
         "Profile with max_invocations=256 must reject Exactly(1024) requirement"
     );
+}
+
+#[test]
+fn strategy_admits_or_rejects_every_neutral_schedule_constraint() {
+    let profile = test_profile_256();
+    let exact_subgroup =
+        GeometryRequirements::agnostic().with_subgroup_width(CooperativeWidth::Exactly(32));
+    assert!(!profile.rank_geometries(&exact_subgroup, 1024).is_empty());
+
+    for requirements in [
+        GeometryRequirements::agnostic().with_subgroup_width(CooperativeWidth::Exactly(64)),
+        GeometryRequirements::agnostic().with_subgroup_width(CooperativeWidth::AtLeast(64)),
+        GeometryRequirements::agnostic().with_cooperative_launch(),
+        GeometryRequirements::agnostic().with_memory_ordering(MemoryOrdering::GridSync),
+        GeometryRequirements::agnostic().with_element_policy(ElementPolicy::Multiple(0)),
+    ] {
+        assert!(
+            profile.rank_geometries(&requirements, 1024).is_empty(),
+            "unsupported schedule constraint must reject every geometry: {requirements:?}"
+        );
+    }
+
+    let mut without_shared_memory = profile;
+    without_shared_memory.has_shared_memory = false;
+    assert!(without_shared_memory
+        .rank_geometries(
+            &GeometryRequirements::agnostic().with_min_shared_bytes(4),
+            1024
+        )
+        .is_empty());
+
+    let mut without_subgroup_facts = profile;
+    without_subgroup_facts.subgroup_size = 0;
+    assert!(without_subgroup_facts
+        .rank_geometries(
+            &GeometryRequirements::agnostic().with_subgroup_uniformity(Uniformity::SubgroupUniform),
+            1024
+        )
+        .is_empty());
 }
 
 /// Simulated plan search candidate with measured execution time.

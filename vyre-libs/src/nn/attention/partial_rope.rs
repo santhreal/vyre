@@ -233,7 +233,7 @@ const EXPECTED_PARTIAL_ROPE_OUTPUT_BYTES: [u8; 32] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || partial_rope("input", "cos", "sin", "output", 1, 2, 4, 2),
         Some(|| {

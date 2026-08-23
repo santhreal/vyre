@@ -169,7 +169,7 @@ const EXPECTED_SSA_DOMINANCE_SCAN_PHIS_BYTES: [u8; 32] = [
 const EXPECTED_SSA_DOMINANCE_SCAN_COUNT_BYTES: [u8; 4] = [4, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || ssa_dominance_scan_program(4, 8),
         Some(|| vec![vec![

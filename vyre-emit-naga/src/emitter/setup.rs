@@ -602,8 +602,8 @@ mod tests {
             [1, 1, 1],
             vec![Node::store("out", Expr::u32(0), Expr::buf_len("input"))],
         );
-        let descriptor = vyre_lower::lower_verified(&program)
-            .map(|lowered| lowered.descriptor)
+        let descriptor = vyre_lower::lower_physical(&program)
+            .map(|lowered| lowered.into_descriptor())
             .expect("Fix: counted storage buf_len program must lower");
         let module =
             emit_uncached(&descriptor).expect("Fix: counted storage buf_len descriptor must emit");

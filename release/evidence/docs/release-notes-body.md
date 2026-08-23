@@ -1822,9 +1822,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   that only a plain global or shared store is maskable by a `@%p` instruction
   predicate. Adding a variant now fails to compile until both facts are stated
   for it, rather than defaulting to no child body and removable.
-- Launch geometry is a lowering decision produced by backend GeometryStrategy
-  from neutral GeometryRequirements rather than hardcoded in library
-  operations.
+- Every operation now records neutral workgroup, subgroup, uniformity,
+  shared-scratch, cooperative-launch, memory-order, and element schedule
+  constraints that compose before target geometry selection.
 - `scripts/check_layering.sh` discarded `cargo tree` stderr, so a cargo that
   could not resolve the workspace printed a green result and exited 0. It now
   derives every workspace member, requires a `docs/CRATE_OWNERSHIP.toml`
@@ -3243,6 +3243,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   with a `path` attribute pointing into `src/bin/`, which compiled the same
   layout rules twice and put a shared module in the directory reserved for
   binary roots. Both binaries now use `xtask::rule_tree`.
+- Compilation now crosses validated whole-program graph, versioned logical
+  domains, selected schedule, physical kernel, and authenticated target payload
+  stages; logical regions include positive typed extents, layouts, reduction
+  axes, aliases, effects, dependencies, and bounded parallel, sequential,
+  reduction, or retained-state semantics, while unresolved runtime extents fail
+  before search.
 - The C11 typedef annotation path now composes registered row phases instead of
   inlining them: c11_identifier_row_hash,
   c11_identifier_row_hash_packed_haystack,
@@ -3282,6 +3288,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   four codes carried the placeholder text `Program validation error 0NN` with
   the corrective action `See diagnostic output`, which the catalog replaces
   with the invariant each emission site actually checks.
+- Selected plans now authenticate a versioned backend-neutral phase schedule
+  with typed transform preconditions, deterministic replay, inverse/source
+  provenance, exact per-phase geometry, and checked resource bounds before
+  physical lowering.
 - `visit` is split by what is being visited. `node` owns the per-variant `Node`
   decisions a traversal cannot re-derive safely - which bodies a variant nests,
   which scalar name it binds and what it does to that name, which operands it
@@ -7172,7 +7182,7 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   file at run time, so a new gate is covered without being listed anywhere.
 - The CUDA release memory floor is derived from the registered benchmark
   catalog instead of asserted as a device class. It was a flat 16384 MiB
-  restated at five call sites while the largest registered workload declares
+  restated at several call sites while the largest registered workload declares
   1024 MiB of resident bytes, so the number rejected hardware that runs every
   workload correctly and at full occupancy. It is now the largest declared
   working set plus a fixed CUDA context reserve, which also closes the class: a

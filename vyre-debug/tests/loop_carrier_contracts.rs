@@ -10,8 +10,8 @@ mod program_fixtures;
 #[test]
 fn find_uncarriered_assigns_smoke_program_returns_empty() {
     let p = loop_carry_smoke();
-    let desc = vyre_lower::lower_verified(&p)
-        .map(|lowered| lowered.descriptor)
+    let desc = vyre_lower::lower_physical(&p)
+        .map(|lowered| lowered.into_descriptor())
         .unwrap();
     let uncarriered = find_uncarriered_assigns(&p, &desc);
     assert!(uncarriered.is_empty());
@@ -31,8 +31,8 @@ fn find_uncarriered_assigns_flags_a_loop_with_no_carrier() {
             ),
         ],
     );
-    let mut desc = vyre_lower::lower_verified(&p)
-        .map(|lowered| lowered.descriptor)
+    let mut desc = vyre_lower::lower_physical(&p)
+        .map(|lowered| lowered.into_descriptor())
         .unwrap();
 
     // Manually strip LoopCarrier from the descriptor.
@@ -61,8 +61,8 @@ fn find_uncarriered_assigns_flags_a_loop_with_no_carrier() {
 #[test]
 fn carrier_summary_counts_match_descriptor_walk() {
     let p = vyre_libs::parsing::python::lex::python312_lexer("hs", "tt", "ts", "tl", "tc", 4);
-    let desc = vyre_lower::lower_verified(&p)
-        .map(|lowered| lowered.descriptor)
+    let desc = vyre_lower::lower_physical(&p)
+        .map(|lowered| lowered.into_descriptor())
         .unwrap();
     let summary = carrier_summary(&desc);
 
@@ -113,8 +113,8 @@ fn carrier_summary_counts_match_descriptor_walk() {
 #[test]
 fn carrier_summary_includes_function_locals() {
     let p = vyre_libs::parsing::python::lex::python312_lexer("hs", "tt", "ts", "tl", "tc", 4);
-    let desc = vyre_lower::lower_verified(&p)
-        .map(|lowered| lowered.descriptor)
+    let desc = vyre_lower::lower_physical(&p)
+        .map(|lowered| lowered.into_descriptor())
         .unwrap();
     let summary = carrier_summary(&desc);
     // Derive the expected names from the descriptor the summary just walked

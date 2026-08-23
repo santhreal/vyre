@@ -19,7 +19,7 @@ pub fn avg_floor(a: &str, b: &str, out: &str, size: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || avg_floor("a", "b", "out", 4),
         Some(|| {

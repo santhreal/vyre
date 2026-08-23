@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use vyre_foundation::ir::DataType;
+use vyre_foundation::{ir::DataType, schedule::SelectedSchedule};
 
 use crate::error::{failure, serialization_failure, CompileError, CompilerFailureKind};
 use crate::frame;
@@ -13,7 +13,7 @@ use crate::request::{SearchBudget, SearchWork};
 use crate::{cost, legality};
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 7;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 9;
 
 /// Canonical executable-node payload.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -276,6 +276,10 @@ pub enum PlanMeasurement {
 /// Immutable compiler-selected whole-program plan.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SelectedPlan {
+    /// Executable queue or resident-partition topology selected by search.
+    pub topology: crate::candidate::ExecutionTopology,
+    /// Versioned backend-neutral phase and transform schedule selected by search.
+    pub schedule: SelectedSchedule,
     /// Selected fusion groups.
     pub fusion: Vec<FusionRecord>,
     /// Required dependency-completion boundaries.
@@ -296,6 +300,140 @@ pub struct SelectedPlan {
     pub execution: ExecutionMode,
     /// Whether a device measurement chose this plan over its finalists.
     pub measurement: PlanMeasurement,
+}
+
+impl SelectedPlan {
+    /// Validate the immutable selected-schedule stage and its bounded search
+    /// provenance.
+    ///
+    /// # Errors
+    ///
+    /// Returns a malformed-artifact diagnostic when topology cardinalities,
+    /// search accounting, or measurement provenance are inconsistent.
+    pub fn validate(&self) -> Result<(), CompileError> {
+        let invalid = |path: &str, message: String, fix: &str| {
+            failure(
+                CompilerFailureKind::MalformedArtifact,
+                format!("artifact.body.selected_plan.{path}"),
+                message,
+                fix,
+            )
+        };
+        self.schedule.validate().map_err(|error| {
+            invalid(
+                "schedule",
+                error.to_string(),
+                "re-run bounded schedule search and persist only a validated neutral schedule",
+            )
+        })?;
+        match self.topology {
+            crate::candidate::ExecutionTopology::Sequential => {}
+            crate::candidate::ExecutionTopology::ConcurrentQueue { queues } if queues > 0 => {}
+            crate::candidate::ExecutionTopology::ResidentPartition { partitions, .. }
+                if partitions > 0 => {}
+            crate::candidate::ExecutionTopology::ConcurrentQueue { .. } => {
+                return Err(invalid(
+                    "topology.queues",
+                    "concurrent queue topology contains zero queues".to_string(),
+                    "select at least one executable queue",
+                ));
+            }
+            crate::candidate::ExecutionTopology::ResidentPartition { .. } => {
+                return Err(invalid(
+                    "topology.partitions",
+                    "resident topology contains zero partitions".to_string(),
+                    "select at least one resident partition",
+                ));
+            }
+        }
+        if self.candidates_explored == 0 {
+            return Err(invalid(
+                "candidates_explored",
+                "selected schedule records no explored legal candidate".to_string(),
+                "record the executable unfused baseline candidate",
+            ));
+        }
+        if self.candidates_explored != self.search_work.candidates_explored {
+            return Err(invalid(
+                "search_work.candidates_explored",
+                format!(
+                    "selected plan records {} explored candidates but search work records {}",
+                    self.candidates_explored, self.search_work.candidates_explored
+                ),
+                "derive both fields from the same bounded search result",
+            ));
+        }
+        for (path, actual, limit) in [
+            (
+                "search_work.candidates_explored",
+                u64::from(self.search_work.candidates_explored),
+                u64::from(self.search_budget.max_candidates),
+            ),
+            (
+                "search_work.cpu_work",
+                self.search_work.cpu_work,
+                self.search_budget.max_cpu_work,
+            ),
+            (
+                "search_work.target_compilations",
+                u64::from(self.search_work.target_compilations),
+                u64::from(self.search_budget.max_target_compilations),
+            ),
+            (
+                "search_work.measurements",
+                u64::from(self.search_work.measurements),
+                u64::from(self.search_budget.max_measurements)
+                    .saturating_mul(u64::from(self.search_work.target_compilations)),
+            ),
+        ] {
+            if actual > limit {
+                return Err(invalid(
+                    path,
+                    format!("search charged {actual} units against a limit of {limit}"),
+                    "record a schedule selected within its authenticated search budget",
+                ));
+            }
+        }
+        match self.measurement {
+            PlanMeasurement::Measured {
+                launches,
+                median_ns,
+            } => {
+                if launches == 0 || median_ns == 0 {
+                    return Err(invalid(
+                        "measurement",
+                        "measured selection contains a zero launch count or device time"
+                            .to_string(),
+                        "record positive measured launches and device nanoseconds",
+                    ));
+                }
+                if launches > self.search_work.measurements {
+                    return Err(invalid(
+                        "measurement.launches",
+                        format!(
+                            "winning finalist records {launches} launches but the search records only {} measurements",
+                            self.search_work.measurements
+                        ),
+                        "derive winning launch count from the recorded search samples",
+                    ));
+                }
+            }
+            PlanMeasurement::Unbudgeted | PlanMeasurement::UntimedDevice
+                if self.search_work.measurements != 0 =>
+            {
+                return Err(invalid(
+                    "measurement",
+                    format!(
+                        "unmeasured selection records {} on-device measurements",
+                        self.search_work.measurements
+                    ),
+                    "record measured evidence when samples selected the plan, or record zero samples",
+                ));
+            }
+            PlanMeasurement::Unbudgeted | PlanMeasurement::UntimedDevice => {}
+        }
+        Ok(())
+    }
 }
 
 /// Deterministic identities establishing how an artifact was produced.
@@ -471,6 +609,7 @@ impl Artifact {
             payload,
             digest: Digest(decoded.digest),
         };
+        artifact.payload.selected_plan.validate()?;
         // A compiled artifact cannot carry a duplicate resource name because graph
         // value names are unique, so this is a check on decoded bytes rather than on
         // this crate's own output. Refusing here keeps every consumer's name lookup
@@ -514,6 +653,7 @@ mod tests {
 
     use super::*;
     use crate::cost::CostBreakdown;
+    use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform};
 
     fn payload(resources: Vec<ResourceRecord>) -> ArtifactPayload {
         ArtifactPayload {
@@ -521,12 +661,17 @@ mod tests {
             nodes: Vec::new(),
             dependencies: Vec::new(),
             selected_plan: SelectedPlan {
+                topology: crate::ExecutionTopology::Sequential,
+                schedule: SelectedSchedule::synthetic(1),
                 fusion: Vec::new(),
                 barriers: Vec::new(),
                 materializations: Vec::new(),
-                candidates_explored: 0,
+                candidates_explored: 1,
                 search_budget: SearchBudget::new(1, 1, 0, 0, 1),
-                search_work: SearchWork::default(),
+                search_work: SearchWork {
+                    candidates_explored: 1,
+                    ..SearchWork::default()
+                },
                 selection_cost: CostBreakdown::default(),
                 pruned_fusions: Vec::new(),
                 execution: ExecutionMode::Static,
@@ -563,10 +708,162 @@ mod tests {
         }
     }
 
-    fn decode(resources: Vec<ResourceRecord>) -> Result<Artifact, CompileError> {
-        let payload = payload(resources);
+    fn decode_payload(payload: ArtifactPayload) -> Result<Artifact, CompileError> {
         let framed = encode_payload(&payload).expect("fixture payload must frame");
         Artifact::from_bytes(&framed.bytes)
+    }
+
+    fn decode(resources: Vec<ResourceRecord>) -> Result<Artifact, CompileError> {
+        decode_payload(payload(resources))
+    }
+
+    /// WHY: topology cardinality is part of the selected schedule. A zero
+    /// cardinality used to deserialize successfully and reached target lowering
+    /// as an execution topology that could not launch.
+    #[test]
+    fn selected_schedule_rejects_every_zero_topology_cardinality() {
+        for topology in [
+            crate::ExecutionTopology::ConcurrentQueue { queues: 0 },
+            crate::ExecutionTopology::ResidentPartition {
+                partitions: 0,
+                mode: crate::ResidentPartitionMode::FixedSpatialMask,
+            },
+        ] {
+            let mut invalid = payload(Vec::new());
+            invalid.selected_plan.topology = topology;
+            let error =
+                decode_payload(invalid).expect_err("zero topology cardinality must not decode");
+            assert!(
+                error
+                    .diagnostic
+                    .location
+                    .as_ref()
+                    .and_then(|location| location.path.as_deref())
+                    .is_some_and(|path| path.starts_with("artifact.body.selected_plan.topology")),
+                "diagnostic must identify selected topology: {error}"
+            );
+        }
+    }
+
+    /// WHY: selected phase state and transform proof rows are authenticated
+    /// together. A stale or edited phase must not reach physical lowering even
+    /// when the surrounding artifact frame was recomputed.
+    #[test]
+    fn selected_schedule_rejects_mutated_phase_and_transform_provenance() {
+        let mut valid = payload(Vec::new());
+        valid
+            .selected_plan
+            .schedule
+            .apply(ScheduleTransform::SetWorkgroup {
+                phase: SchedulePhaseId(0),
+                shape: [32, 1, 1],
+            })
+            .unwrap();
+
+        let mut phase_mutation = valid.clone();
+        phase_mutation.selected_plan.schedule.phases[0].workgroup[0] = 64;
+        let phase_error =
+            decode_payload(phase_mutation).expect_err("mutated phase geometry must fail replay");
+        assert!(phase_error.diagnostic.message.contains("replay"));
+
+        let mut provenance_mutation = valid;
+        provenance_mutation.selected_plan.schedule.transforms[0]
+            .provenance
+            .inverse
+            .previous_identity[0] ^= 1;
+        let provenance_error = decode_payload(provenance_mutation)
+            .expect_err("mutated transform provenance must fail replay");
+        assert!(provenance_error.diagnostic.message.contains("evidence"));
+    }
+
+    /// WHY: duplicated candidate accounting can authenticate two incompatible
+    /// answers for the same bounded search. Decode must reject the disagreement
+    /// before any target consumes the schedule.
+    #[test]
+    fn selected_schedule_rejects_inconsistent_candidate_accounting() {
+        let mut invalid = payload(Vec::new());
+        invalid.selected_plan.search_work.candidates_explored = 2;
+        let error =
+            decode_payload(invalid).expect_err("candidate accounting disagreement must fail");
+        assert!(
+            error
+                .diagnostic
+                .message
+                .contains("records 1 explored candidates"),
+            "diagnostic must state both accounting owners: {error}"
+        );
+    }
+
+    /// WHY: measurement samples are charged per target compilation actually
+    /// performed. Unused compilation budget cannot authenticate samples for a
+    /// finalist that was never compiled.
+    #[test]
+    fn selected_schedule_rejects_measurements_without_compiled_finalists() {
+        let mut invalid = payload(Vec::new());
+        invalid.selected_plan.search_budget = SearchBudget::new(1, 1, 2, 1, 1);
+        invalid.selected_plan.search_work.target_compilations = 1;
+        invalid.selected_plan.search_work.measurements = 2;
+        let error =
+            decode_payload(invalid).expect_err("samples without a compiled finalist must fail");
+        assert!(
+            error
+                .diagnostic
+                .location
+                .as_ref()
+                .and_then(|location| location.path.as_deref())
+                .is_some_and(|path| path.ends_with("search_work.measurements")),
+            "diagnostic must identify measurement accounting: {error}"
+        );
+    }
+
+    /// WHY: a measured schedule with no launch or no elapsed device time is not
+    /// measurement evidence and must not deserialize as one.
+    #[test]
+    fn selected_schedule_rejects_zero_measurement_evidence() {
+        for measurement in [
+            PlanMeasurement::Measured {
+                launches: 0,
+                median_ns: 1,
+            },
+            PlanMeasurement::Measured {
+                launches: 1,
+                median_ns: 0,
+            },
+        ] {
+            let mut invalid = payload(Vec::new());
+            invalid.selected_plan.measurement = measurement;
+            let error =
+                decode_payload(invalid).expect_err("zero measurement evidence must not decode");
+            assert!(
+                error
+                    .diagnostic
+                    .message
+                    .contains("zero launch count or device time"),
+                "diagnostic must identify invalid measurement evidence: {error}"
+            );
+        }
+    }
+
+    /// WHY: unbudgeted and untimed plans cannot authenticate device samples
+    /// that their measurement state states were never used.
+    #[test]
+    fn selected_schedule_rejects_samples_on_every_unmeasured_state() {
+        for measurement in [PlanMeasurement::Unbudgeted, PlanMeasurement::UntimedDevice] {
+            let mut invalid = payload(Vec::new());
+            invalid.selected_plan.search_budget = SearchBudget::new(1, 1, 1, 1, 1);
+            invalid.selected_plan.search_work.target_compilations = 1;
+            invalid.selected_plan.search_work.measurements = 1;
+            invalid.selected_plan.measurement = measurement;
+            let error = decode_payload(invalid)
+                .expect_err("unmeasured schedules with device samples must not decode");
+            assert!(
+                error
+                    .diagnostic
+                    .message
+                    .contains("unmeasured selection records 1 on-device measurements"),
+                "diagnostic must identify contradictory measurement state: {error}"
+            );
+        }
     }
 
     #[test]

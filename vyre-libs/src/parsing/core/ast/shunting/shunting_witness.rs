@@ -39,7 +39,7 @@ static EXPECTED_SHUNTING_SCRATCH_VAL_STACK_BYTES: [u8; 25_600] = [0u8; 25_600];
 static EXPECTED_SHUNTING_SCRATCH_OP_STACK_BYTES: [u8; 25_600] = [0u8; 25_600];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || ast_shunting_yard_with_capacity(
             "tok_types", "statements", Expr::u32(100),
@@ -47,15 +47,12 @@ inventory::submit! {
             "scratch_val_stack", "scratch_op_stack",
             MAX_TOK_SCAN, 100
         ),
-        Some(|| vec![vec![
-            shunting_token_fixture(),
-            shunting_statement_fixture(),
-            vec![0u8; MAX_TOK_SCAN as usize * 4 * 4],
-            vec![0u8; 4],
-            vec![0u8; 100 * 4],
-            vec![0u8; 6_400 * 4],
-            vec![0u8; 6_400 * 4],
-        ]]),
+        Some(|| {
+            vec![vec![
+                shunting_token_fixture(),
+                shunting_statement_fixture(),
+            ]]
+        }),
         Some(|| vec![vec![
             EXPECTED_SHUNTING_AST_NODES_BYTES.to_vec(),
             EXPECTED_SHUNTING_COUNT_BYTES.to_vec(),

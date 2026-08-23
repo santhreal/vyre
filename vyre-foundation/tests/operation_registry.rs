@@ -16,7 +16,7 @@ fn fixture_program() -> Program {
 }
 
 inventory::submit! {
-    OperationRegistration::new(
+    OperationRegistration::new_unconstrained(
         OP_ID,
         OperationTier::External,
         Some(fixture_program),

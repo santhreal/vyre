@@ -69,8 +69,8 @@ fn validated(program: Program) -> ValidatedCompileRequest {
 }
 
 fn emit_wgsl(program: &Program) -> Result<naga::Module, String> {
-    let lowered = vyre_lower::lower_verified(program).map_err(|error| format!("{error:?}"))?;
-    vyre_emit_naga::emit(&lowered.descriptor).map_err(|error| format!("{error}"))
+    let lowered = vyre_lower::lower_physical(program).map_err(|error| format!("{error:?}"))?;
+    vyre_emit_naga::emit(lowered.descriptor()).map_err(|error| format!("{error}"))
 }
 
 /// The premise. If fusion stops inserting the fence this whole file is vacuous,

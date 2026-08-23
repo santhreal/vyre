@@ -43,7 +43,7 @@ const EXPECTED_LN_SCALE_BACKWARD_GRAD_SCALE_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || ln_scale_backward("input", "scale", "grad_out", "grad_x", "grad_scale", 4),
         Some(|| {

@@ -197,9 +197,25 @@ pub fn segment_reduce_sum_via_with_scratch_into(
     bump_reduction_metrics_calls();
 
     let num_segments = validate_segment_offsets(input, segment_offsets)?;
-    let program = segment_reduce_sum("input", "segment_offsets", "output", num_segments);
+    let input_count = u32::try_from(input.len().max(1)).map_err(|_| {
+        DispatchError::BadInputs(format!(
+            "Fix: segment_reduce_sum_via input length {} exceeds u32.",
+            input.len()
+        ))
+    })?;
+    let program = segment_reduce_sum(
+        "input",
+        "segment_offsets",
+        "output",
+        input_count,
+        num_segments,
+    );
     ensure_input_slots(&mut scratch.inputs, 3);
-    write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
+    if input.is_empty() {
+        write_zero_bytes(&mut scratch.inputs[0], std::mem::size_of::<u32>());
+    } else {
+        write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
+    }
     write_u32_slice_le_bytes(&mut scratch.inputs[1], segment_offsets);
     write_zero_bytes(
         &mut scratch.inputs[2],
@@ -513,6 +529,10 @@ mod tests {
         assert_eq!(
             segment_reduce_sum_via(&ReduceDispatcher, &[1, 2, 3, 4, 5], &[0, 2, 5]).unwrap(),
             vec![3, 12]
+        );
+        assert_eq!(
+            segment_reduce_sum_via(&ReduceDispatcher, &[], &[0, 0, 0]).unwrap(),
+            vec![0, 0]
         );
         assert_eq!(
             histogram_atomic_scatter_via(&ReduceDispatcher, &[0, 1, 2, 1, 9], 4).unwrap(),

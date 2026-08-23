@@ -1,4 +1,4 @@
-use vyre_foundation::ir::ProgramGraph;
+use vyre_foundation::logical::LogicalProgramGraph;
 
 use crate::{
     build_barriers, build_materializations, domain_digest, facts::PlanningFacts, failure,
@@ -17,8 +17,8 @@ pub(crate) struct ArtifactPlan {
 }
 
 /// Everything one candidate needs to become a recorded plan.
-pub(crate) struct PlanInputs<'a> {
-    pub(crate) graph: &'a ProgramGraph,
+pub(crate) struct PlanInputs<'a, 'graph> {
+    pub(crate) logical: &'a LogicalProgramGraph<'graph>,
     pub(crate) dependencies: &'a [DependencyEdge],
     pub(crate) facts: &'a PlanningFacts,
     pub(crate) selection: &'a Selection,
@@ -30,9 +30,9 @@ pub(crate) struct PlanInputs<'a> {
     pub(crate) measurement: PlanMeasurement,
 }
 
-pub(crate) fn plan(inputs: PlanInputs<'_>) -> Result<ArtifactPlan, CompileError> {
+pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileError> {
     let PlanInputs {
-        graph,
+        logical,
         dependencies,
         facts,
         selection,
@@ -43,6 +43,7 @@ pub(crate) fn plan(inputs: PlanInputs<'_>) -> Result<ArtifactPlan, CompileError>
         work,
         measurement,
     } = inputs;
+    let graph = logical.graph();
     let candidate = &selection.candidate;
     let node_groups: Vec<FusionGroupId> = candidate
         .node_groups
@@ -103,22 +104,34 @@ pub(crate) fn plan(inputs: PlanInputs<'_>) -> Result<ArtifactPlan, CompileError>
     let barriers = build_barriers(dependencies, &node_groups, &stages)?;
     let materializations = build_materializations(graph, &node_groups, &stages);
     let execution = execution_mode(device, external, selection.cost.launches);
+    let schedule = candidate.selected_schedule(facts).map_err(|error| {
+        failure(
+            CompilerFailureKind::InvalidProgram,
+            "planner.schedule",
+            error.to_string(),
+            "repair schedule candidate generation before selecting an artifact",
+        )
+    })?;
+    let selected_plan = SelectedPlan {
+        topology: candidate.topology(),
+        schedule,
+        fusion,
+        barriers,
+        materializations,
+        candidates_explored: work.candidates_explored,
+        search_budget: budget,
+        search_work: work,
+        selection_cost: selection.cost,
+        pruned_fusions: pruned_fusions.to_vec(),
+        execution,
+        measurement,
+    };
+    selected_plan.validate()?;
     Ok(ArtifactPlan {
         node_groups,
         stages,
         geometry,
-        selected_plan: SelectedPlan {
-            fusion,
-            barriers,
-            materializations,
-            candidates_explored: work.candidates_explored,
-            search_budget: budget,
-            search_work: work,
-            selection_cost: selection.cost,
-            pruned_fusions: pruned_fusions.to_vec(),
-            execution,
-            measurement,
-        },
+        selected_plan,
     })
 }
 

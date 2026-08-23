@@ -21,7 +21,7 @@ pub fn reduce_count(bitset: &str, out: &str, words: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || reduce_count("bitset", "out", 2),
         Some(|| {

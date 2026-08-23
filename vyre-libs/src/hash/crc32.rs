@@ -615,7 +615,7 @@ fn crc32_byte_shift_matrix() -> [u32; 32] {
 const EXPECTED_CRC32_OUTPUT_BYTES: [u8; 4] = [0xC2, 0x41, 0x24, 0x35];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         CRC32_OP_ID,
         || crc32_program("input", "out", 3),
         Some(|| {

@@ -1,11 +1,18 @@
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+use vyre_foundation::{
+    logical::LogicalProgramGraph,
+    schedule::{
+        MappingLevel, ScheduleLegalityError, SchedulePhaseId, ScheduleTransform, SelectedSchedule,
+    },
+};
 
 use crate::facts::{DataflowEdge, PlanningFacts};
 
 /// Spatial and concurrency execution topology of a candidate plan.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum ExecutionTopology {
+pub enum ExecutionTopology {
     /// Sequential stage execution on a single queue (the baseline topology).
     Sequential,
     /// Concurrent execution of independent stages/arms across concurrent hardware queues/streams.
@@ -31,7 +38,7 @@ impl Default for ExecutionTopology {
 /// Mode governing spatial placement and forward progress for resident partitions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum ResidentPartitionMode {
+pub enum ResidentPartitionMode {
     /// Fixed hardware-enforceable spatial mask across compute units.
     /// Only legal when the target exposes an enforceable spatial partitioning capability.
     FixedSpatialMask,
@@ -49,11 +56,25 @@ pub(crate) struct CandidatePlan {
     pub(crate) workgroup_width: Option<u32>,
     /// Execution topology proposed for this candidate.
     pub(crate) topology: ExecutionTopology,
+    /// Typed neutral schedule transformed by candidate search.
+    pub(crate) schedule: SelectedSchedule,
+    /// Fail-closed transform diagnostic retained until candidate rejection.
+    pub(crate) schedule_error: Option<ScheduleLegalityError>,
 }
 
 impl CandidatePlan {
     #[must_use]
     pub(crate) fn baseline(node_count: usize) -> Self {
+        Self::baseline_with_schedule(SelectedSchedule::synthetic(node_count))
+    }
+
+    #[must_use]
+    pub(crate) fn baseline_for(logical: &LogicalProgramGraph<'_>) -> Self {
+        Self::baseline_with_schedule(SelectedSchedule::from_logical(logical))
+    }
+
+    fn baseline_with_schedule(schedule: SelectedSchedule) -> Self {
+        let node_count = schedule.phases.len();
         Self {
             node_groups: (0..node_count)
                 .map(|index| u32::try_from(index).unwrap_or(u32::MAX))
@@ -61,6 +82,8 @@ impl CandidatePlan {
             fused_edges: Vec::new(),
             workgroup_width: None,
             topology: ExecutionTopology::Sequential,
+            schedule,
+            schedule_error: None,
         }
     }
 
@@ -98,34 +121,83 @@ impl CandidatePlan {
         let mut fused_edges = edges.to_vec();
         fused_edges.sort_by_key(|edge| (edge.from, edge.to, edge.value));
         fused_edges.dedup();
+        let (schedule, schedule_error) =
+            schedule_for_groups(SelectedSchedule::synthetic(node_count), &node_groups);
         Self {
             node_groups,
             fused_edges,
             workgroup_width: None,
             topology: ExecutionTopology::Sequential,
+            schedule,
+            schedule_error,
         }
+    }
+
+    #[must_use]
+    pub(crate) fn from_edges_for(
+        logical: &LogicalProgramGraph<'_>,
+        edges: &[DataflowEdge],
+    ) -> Self {
+        let mut candidate = Self::from_edges(logical.graph().nodes().len(), edges);
+        let (schedule, schedule_error) = schedule_for_groups(
+            SelectedSchedule::from_logical(logical),
+            &candidate.node_groups,
+        );
+        candidate.schedule = schedule;
+        candidate.schedule_error = schedule_error;
+        candidate
     }
 
     /// Same grouping launched at `width` instead of the declared widths.
     #[must_use]
     pub(crate) fn with_workgroup_width(&self, width: Option<u32>) -> Self {
-        Self {
-            node_groups: self.node_groups.clone(),
-            fused_edges: self.fused_edges.clone(),
-            workgroup_width: width,
-            topology: self.topology,
-        }
+        let mut candidate = self.clone();
+        candidate.workgroup_width = width;
+        candidate
     }
 
     /// Same grouping executed with `topology`.
     #[must_use]
     pub(crate) fn with_topology(&self, topology: ExecutionTopology) -> Self {
-        Self {
-            node_groups: self.node_groups.clone(),
-            fused_edges: self.fused_edges.clone(),
-            workgroup_width: self.workgroup_width,
-            topology,
+        let mut candidate = self.clone();
+        candidate.topology = topology;
+        if candidate.schedule_error.is_none() {
+            let phases = candidate
+                .schedule
+                .phases
+                .iter()
+                .map(|phase| phase.id)
+                .collect::<Vec<_>>();
+            for phase in phases {
+                let transform = match topology {
+                    ExecutionTopology::Sequential | ExecutionTopology::ConcurrentQueue { .. } => {
+                        None
+                    }
+                    ExecutionTopology::ResidentPartition {
+                        partitions,
+                        mode: ResidentPartitionMode::FixedSpatialMask,
+                    } => Some(ScheduleTransform::SpatialPartition {
+                        phase,
+                        partitions,
+                        level: MappingLevel::ComputeUnitPartition,
+                    }),
+                    ExecutionTopology::ResidentPartition {
+                        partitions,
+                        mode: ResidentPartitionMode::BoundedWorkQueue,
+                    } => Some(ScheduleTransform::PersistentQueue {
+                        phase,
+                        capacity: partitions,
+                    }),
+                };
+                if let Some(transform) = transform {
+                    if let Err(error) = candidate.schedule.apply(transform) {
+                        candidate.schedule_error = Some(error);
+                        break;
+                    }
+                }
+            }
         }
+        candidate
     }
 
     #[must_use]
@@ -185,6 +257,66 @@ impl CandidatePlan {
             .saturating_mul(u64::from(workgroup[2]))
             .max(1)
     }
+
+    pub(crate) fn selected_schedule(
+        &self,
+        facts: &PlanningFacts,
+    ) -> Result<SelectedSchedule, ScheduleLegalityError> {
+        if let Some(error) = &self.schedule_error {
+            return Err(error.clone());
+        }
+        let mut schedule = self.schedule.clone();
+        let phases = schedule
+            .phases
+            .iter()
+            .filter_map(|phase| {
+                phase
+                    .source_regions
+                    .first()
+                    .map(|region| (phase.id, *region))
+            })
+            .collect::<Vec<_>>();
+        for (phase, region) in phases {
+            let group = self
+                .node_groups
+                .get(region as usize)
+                .copied()
+                .ok_or(ScheduleLegalityError::MissingRegion(region))?;
+            schedule.apply(ScheduleTransform::SetWorkgroup {
+                phase,
+                shape: self.group_workgroup(group, facts),
+            })?;
+        }
+        schedule.validate()?;
+        Ok(schedule)
+    }
+
+    #[must_use]
+    pub(crate) fn schedule_error(&self) -> Option<&ScheduleLegalityError> {
+        self.schedule_error.as_ref()
+    }
+}
+
+fn schedule_for_groups(
+    mut schedule: SelectedSchedule,
+    node_groups: &[u32],
+) -> (SelectedSchedule, Option<ScheduleLegalityError>) {
+    let mut phases_by_group = BTreeMap::<u32, Vec<SchedulePhaseId>>::new();
+    for (node, group) in node_groups.iter().copied().enumerate() {
+        phases_by_group
+            .entry(group)
+            .or_default()
+            .push(SchedulePhaseId(u32::try_from(node).unwrap_or(u32::MAX)));
+    }
+    for phases in phases_by_group
+        .into_values()
+        .filter(|phases| phases.len() > 1)
+    {
+        if let Err(error) = schedule.apply(ScheduleTransform::Fuse { phases }) {
+            return (schedule, Some(error));
+        }
+    }
+    (schedule, None)
 }
 
 fn root(parent: &mut [usize], mut node: usize) -> usize {

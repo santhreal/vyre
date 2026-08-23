@@ -39,7 +39,7 @@ pub fn is_bitset_equal_program(program: &Program) -> bool {
 const EXPECTED_BITSET_EQUAL_OUTPUT_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || bitset_equal("lhs", "rhs", "out", 2),
         Some(crate::bitset::relation::bitset_relation_2word_fixture_inputs),

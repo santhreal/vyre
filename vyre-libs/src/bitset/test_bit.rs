@@ -46,7 +46,7 @@ pub fn bitset_test_bit(buf: &str, bit_idx: u32, out_scalar: &str, words: u32) ->
 const EXPECTED_BITSET_TEST_BIT_OUTPUT_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || bitset_test_bit("buf", 0, "out", 1),
         Some(|| {

@@ -172,19 +172,9 @@ fn sequence_has_consecutive_barriers(body: &[Node]) -> bool {
     })
 }
 
-/// Join two `MemoryOrderings` to the strictest of the pair. Mirrors the
-/// composition rule used by `effect_lattice::SyncScope::join` and the
-/// per-ordering composition table documented in the module doc.
+/// Join two `MemoryOrderings` to the strictest of the pair.
 fn join_ordering(a: MemoryOrdering, b: MemoryOrdering) -> MemoryOrdering {
-    use MemoryOrdering::{AcqRel, Acquire, GridSync, Relaxed, Release, SeqCst};
-    match (a, b) {
-        (GridSync, _) | (_, GridSync) => GridSync,
-        (SeqCst, _) | (_, SeqCst) => SeqCst,
-        (AcqRel, _) | (_, AcqRel) | (Acquire, Release) | (Release, Acquire) => AcqRel,
-        (Acquire, Acquire) => Acquire,
-        (Release, Release) => Release,
-        (Relaxed, x) | (x, Relaxed) => x,
-    }
+    a.join(b)
 }
 
 #[cfg(test)]

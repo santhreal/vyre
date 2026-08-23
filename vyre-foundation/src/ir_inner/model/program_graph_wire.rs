@@ -22,6 +22,16 @@ impl ProgramGraph {
     /// Each node keeps its existing VIR0 [`Program`] encoding. Graph framing
     /// adds stable diagnostic names, typed identities, ports, and retained transitions.
     pub fn to_wire(&self) -> Result<Vec<u8>, ProgramGraphError> {
+        self.encode_wire(false)
+    }
+
+    /// Encode complete graph semantics while excluding physical workgroup
+    /// geometry from each executable node.
+    pub(crate) fn logical_wire(&self) -> Result<Vec<u8>, ProgramGraphError> {
+        self.encode_wire(true)
+    }
+
+    fn encode_wire(&self, normalize_workgroups: bool) -> Result<Vec<u8>, ProgramGraphError> {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(MAGIC);
         bytes.extend_from_slice(&VERSION.to_le_bytes());
@@ -48,10 +58,17 @@ impl ProgramGraph {
                 )));
             }
             put_string(&mut bytes, &node.name)?;
-            let program = node
-                .program
-                .to_wire()
-                .map_err(|error| wire_error(format!("node `{}` Program: {error}", node.name)))?;
+            let program = if normalize_workgroups && node.program.workgroup_size_is_schedule_only()
+            {
+                node.program.with_rewritten_workgroup_size_and_entry(
+                    [1, 1, 1],
+                    node.program.entry().to_vec(),
+                )
+            } else {
+                node.program.clone()
+            }
+            .to_wire()
+            .map_err(|error| wire_error(format!("node `{}` Program: {error}", node.name)))?;
             put_bytes(&mut bytes, &program, "Program bytes")?;
             put_len(&mut bytes, node.inputs.len(), "input port count")?;
             for input in &node.inputs {

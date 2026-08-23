@@ -5,11 +5,11 @@ package = "vyre-megakernel"
 path = "vyre-megakernel"
 owner = "megakernel-compiler"
 layer = "compiler-boundary"
-responsibility = "Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, emit a megakernel Artifact and TargetPayloads, and never claim a measured winner that no clock produced. Does not own admission, execution, or lifecycle policy."
+responsibility = "Construct foundation-owned selected schedules through bounded whole-ProgramGraph search, and own immutable Artifact identity and authenticated TargetPayload construction. Does not own logical semantics, schedule schemas, physical-kernel lowering, admission, execution, or lifecycle policy."
 
 [[crate.dependency]]
 package = "vyre-foundation"
-purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+purpose = "typed graph, logical-domain, neutral schedule IR and validation, diagnostics, and semantic optimization contracts"
 features = []
 conditions = ["always"]
 kinds = ["normal"]
@@ -125,7 +125,7 @@ package = "vyre-foundation"
 path = "vyre-foundation"
 owner = "foundation-ir"
 layer = "foundation"
-responsibility = "Own typed IR and ProgramGraph contracts, validation, diagnostics, serialization, semantic operation registration, and backend-neutral optimization."
+responsibility = "Own validated ProgramGraph, versioned schedule-free LogicalProgramGraph domains, versioned backend-neutral schedule IR and transform legality, semantic identity, neutral schedule-constraint composition, diagnostics, serialization, semantic operation registration, and backend-neutral optimization."
 
 [[crate.dependency]]
 package = "vyre-macros"
@@ -1511,11 +1511,11 @@ package = "vyre-lower"
 path = "vyre-lower"
 owner = "lowering"
 layer = "lowering"
-responsibility = "Consume verified semantic programs and own the single backend-neutral lowering boundary and pre-emission transforms."
+responsibility = "Consume validated selected schedule phases and semantic programs, then own the single validated PhysicalKernel lowering boundary plus its backend-neutral pre-emission transforms."
 
 [[crate.dependency]]
 package = "vyre-foundation"
-purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+purpose = "typed IR plus validated backend-neutral selected schedule phases"
 features = []
 conditions = ["always"]
 kinds = ["normal"]

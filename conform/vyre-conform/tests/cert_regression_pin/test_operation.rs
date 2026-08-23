@@ -30,7 +30,7 @@ const TEST_IDENTITY_U32_SIGNATURE: Signature = Signature {
 };
 
 inventory::submit! {
-    OperationRegistration::new(
+    OperationRegistration::new_unconstrained(
         TEST_IDENTITY_U32_OP,
         OperationTier::External,
         None,

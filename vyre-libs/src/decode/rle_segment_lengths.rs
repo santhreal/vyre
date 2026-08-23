@@ -261,7 +261,7 @@ const EXPECTED_RLE_LENS_BYTES: [u8; 12] = [2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0];
 const EXPECTED_RLE_SYMS_BYTES: [u8; 12] = [65, 0, 0, 0, 88, 0, 0, 0, 66, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || rle_segment_lengths(3),
         Some(|| {

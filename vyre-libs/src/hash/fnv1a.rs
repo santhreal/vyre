@@ -406,7 +406,7 @@ const EXPECTED_FNV1A_32_OUTPUT_BYTES: [u8; 4] = [0x2C, 0x29, 0x0C, 0xE4];
 const EXPECTED_FNV1A_64_OUTPUT_BYTES: [u8; 8] = [0x8C, 0xEC, 0x01, 0x86, 0x4C, 0xDC, 0x63, 0xAF];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         FNV1A32_OP_ID,
         || fnv1a32_program("input", "out", 1),
         Some(|| {
@@ -422,7 +422,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         FNV1A64_OP_ID,
         || fnv1a64_program("input", "out"),
         Some(|| {

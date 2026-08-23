@@ -138,7 +138,7 @@ const EXPECTED_SUBSTRING_MATCHES_BYTES: [u8; 32] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         SCAN_SUBSTRING_OP_ID,
         || substring_search("haystack", "needle", "matches", 8, 3),
         Some(|| {

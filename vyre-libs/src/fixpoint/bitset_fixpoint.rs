@@ -168,7 +168,7 @@ pub const OP_ID_WARM_START: &str = "vyre-libs::fixpoint::bitset_fixpoint_warm_st
 const EXPECTED_BITSET_FIXPOINT_OUTPUT_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || bitset_fixpoint("current", "next", NAME_CHANGED_FLAG, 1),
         Some(|| {

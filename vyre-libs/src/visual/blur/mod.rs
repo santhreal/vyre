@@ -341,7 +341,7 @@ fn gaussian_blur_pass(
 const EXPECTED_BLUR_OUTPUT_BYTES: [u8; 64] = [0xFF; 64];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || gaussian_blur_2pass("input", "output", "scratch", 4, 4, 1, 0.8).horizontal,
         Some(|| {

@@ -2,11 +2,13 @@
 //!
 //! # Ownership
 //!
-//! This crate owns the whole-program compile seam:
-//! - input: a validated typed [`ProgramGraph`], immutable [`ExternalFacts`], and
-//!   explicit [`SearchBudget`]
-//! - output: one versioned immutable [`Artifact`] plus optional [`TargetPayload`]
-//!   values in an [`ArtifactEnvelope`]
+//! This crate owns the selected-schedule and target-payload stages:
+//! - input: a validated schedule-free
+//!   [`LogicalProgramGraph`](vyre_foundation::logical::LogicalProgramGraph),
+//!   immutable [`ExternalFacts`], and explicit [`SearchBudget`]
+//! - output: one validated [`SelectedPlan`] in a versioned immutable [`Artifact`]
+//!   plus optional authenticated [`TargetPayload`] values in an
+//!   [`ArtifactEnvelope`]
 //!
 //! Device admission, materialization, submission, queues, residency, and recovery
 //! are consumers of this compiler product and do not alter artifact identity.
@@ -42,6 +44,7 @@ mod select;
 /// Target compiler facets over compiler-selected modules and canonical ABI.
 pub(crate) mod target;
 
+pub use candidate::{ExecutionTopology, ResidentPartitionMode};
 pub use compile::{compile, compile_measured, FinalistEvaluator};
 pub use device_facts::DeviceFacts;
 pub use envelope::{

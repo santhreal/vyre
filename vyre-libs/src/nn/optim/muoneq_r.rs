@@ -46,7 +46,7 @@ const EXPECTED_MUONEQ_R_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || muoneq_r("params", "grads", "momentum", "output", 4, 4, 2, 0.02, 0.95),
         Some(|| {

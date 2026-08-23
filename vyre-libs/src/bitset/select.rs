@@ -112,7 +112,7 @@ const EXPECTED_SELECT1_QUERY_OUTPUT_BYTES: [u8; 20] =
     [0, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 63, 0, 0, 0, 80, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || select1_query("bits", "queries", "out", 4, 5),
         Some(|| {

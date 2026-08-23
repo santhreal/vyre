@@ -232,7 +232,7 @@ const EXPECTED_SOFTMAX_TOP_K_BUF2_BYTES: [u8; 8] = [0x00, 0x00, 0x80, 0x3F, 0xB2
 const EXPECTED_SOFTMAX_TOP_K_BUF3_BYTES: [u8; 8] = [0x07, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || softmax_top_k("scores", "indices", "weights", 8, 2),
         Some(softmax_top_k_fixture_inputs),

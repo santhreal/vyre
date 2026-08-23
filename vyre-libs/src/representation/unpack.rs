@@ -27,7 +27,7 @@ const EXPECTED_UNPACK_NIBBLE_U32_F32_OUTPUT_BYTES: [u8; 64] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::representation::unpack_4bit_f32",
         || unpack_4bit_f32("input", "output", 16),
         Some(|| {

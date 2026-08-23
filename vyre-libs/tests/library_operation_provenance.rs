@@ -112,7 +112,7 @@ fn every_exemption_names_an_operation_this_crate_registers() {
         .map(|path| std::fs::read_to_string(path).expect("Fix: crate source must be readable"))
         .collect();
     assert!(
-        text.contains("OperationRegistration::library"),
+        text.contains("OperationRegistration::library_unconstrained"),
         "no registration text was read. Fix: the source walk found nothing, so this test is \
          measuring nothing."
     );

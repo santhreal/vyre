@@ -22,7 +22,7 @@ pub fn bitset_copy(target: &str, source: &str, words: u32) -> Program {
 const EXPECTED_BITSET_COPY_OUTPUT_BYTES: [u8; 8] = [0xAD, 0xDE, 0x00, 0x00, 0xEF, 0xBE, 0x00, 0x00];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || bitset_copy("target", "source", 2),
         Some(|| {

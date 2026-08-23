@@ -242,7 +242,7 @@ pub fn level_wave_program_with_buffers_and_op_id(
 const EXPECTED_LEVEL_WAVE_OUTPUT_BYTES: [u8; 16] = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             level_wave_program_with_buffers(

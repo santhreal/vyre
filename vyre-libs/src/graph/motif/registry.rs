@@ -10,7 +10,7 @@ const EXPECTED_MOTIF_HITS_BYTES: [u8; 16] = [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
 const EXPECTED_MOTIF_WITNESS_BYTES: [u8; 16] = [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || motif(ProgramGraphShape::new(4, 4), &[MotifEdge { from: 0, to: 1, kind_mask: 1 }], "witness"),
         Some(|| {

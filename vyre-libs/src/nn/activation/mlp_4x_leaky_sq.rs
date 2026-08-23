@@ -229,7 +229,7 @@ const EXPECTED_OUTPUT_PROJECTION_OUTPUT_BYTES: [u8; 8] =
     [0x33, 0x33, 0x83, 0x40, 0x52, 0xB8, 0xBE, 0x40];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             mlp_4x_leaky_sq("x", "w1", "b1", "w2", "b2", "out", 2, 4)
@@ -301,7 +301,7 @@ fn output_projection_program() -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         HIDDEN_PROJECTION_OP_ID,
         hidden_projection_program,
         Some(|| vec![vec![
@@ -317,7 +317,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OUTPUT_PROJECTION_OP_ID,
         output_projection_program,
         Some(|| vec![vec![

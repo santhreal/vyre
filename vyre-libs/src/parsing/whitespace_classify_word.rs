@@ -230,17 +230,14 @@ const EXPECTED_WHITESPACE_CLASSIFY_WORD_OUTPUT_BYTES: [u8; 1024] = {
 };
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || whitespace_classify_word(256),
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             let mut words = vec![0x78787878; 256];
             words[0] = 0x20 | (0x09 << 8) | (0x78 << 16) | (0x0A << 24);
-            vec![vec![
-                to_bytes(&words),                // bytes_in
-                to_bytes(&[0; 256]),             // whitespace_mask_out
-            ]]
+            vec![vec![to_bytes(&words)]] // bytes_in
         }),
         Some(|| vec![vec![EXPECTED_WHITESPACE_CLASSIFY_WORD_OUTPUT_BYTES.to_vec()]]),
     )

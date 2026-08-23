@@ -65,7 +65,7 @@ fn a_registration_places_the_operation_in_its_crate_behind_its_module_features()
     write(&root.join("libs/src/math/mod.rs"), "pub mod square;\n");
     write(
         &root.join("libs/src/math/square.rs"),
-        "const OP_ID: &str = \"libs::math::square\";\ninventory::submit! {\n    OperationRegistration::library(OP_ID, builder)\n}\n",
+        "const OP_ID: &str = \"libs::math::square\";\ninventory::submit! {\n    OperationRegistration::library_unconstrained(OP_ID, builder)\n}\n",
     );
 
     let ids = BTreeSet::from(["libs::math::square"]);
@@ -91,7 +91,7 @@ fn a_crate_that_only_names_the_id_is_not_the_defining_crate() {
     write(&root.join("libs/src/lib.rs"), "pub mod square;\n");
     write(
         &root.join("libs/src/square.rs"),
-        "inventory::submit! {\n    OperationRegistration::library(\"libs::square\", builder)\n}\n",
+        "inventory::submit! {\n    OperationRegistration::library_unconstrained(\"libs::square\", builder)\n}\n",
     );
     write(&root.join("tooling/src/lib.rs"), "pub mod audit;\n");
     write(
@@ -129,7 +129,7 @@ fn an_id_passed_to_a_registering_macro_places_in_the_invoking_module() {
     );
     write(
         &root.join("libs/src/bitset/word.rs"),
-        "inventory::submit! {\n    OperationRegistration::library(\"libs::bitset::and\", builder)\n}\n",
+        "inventory::submit! {\n    OperationRegistration::library_unconstrained(\"libs::bitset::and\", builder)\n}\n",
     );
 
     let ids = BTreeSet::from(["libs::bitset::or_into"]);
@@ -158,11 +158,11 @@ fn a_test_only_module_is_not_a_definition_site() {
     );
     write(
         &root.join("libs/src/real.rs"),
-        "inventory::submit! {\n    OperationRegistration::library(\"libs::real\", builder)\n}\n",
+        "inventory::submit! {\n    OperationRegistration::library_unconstrained(\"libs::real\", builder)\n}\n",
     );
     write(
         &root.join("libs/src/fixtures.rs"),
-        "inventory::submit! {\n    OperationRegistration::library(\"libs::ghost\", builder)\n}\n",
+        "inventory::submit! {\n    OperationRegistration::library_unconstrained(\"libs::ghost\", builder)\n}\n",
     );
 
     let ids = BTreeSet::from(["libs::real", "libs::ghost"]);
@@ -192,7 +192,7 @@ fn a_directory_no_declaration_names_carries_no_module() {
     write(&root.join("libs/src/reduce.rs"), "pub fn sum() {}\n");
     write(
         &root.join("libs/src/matching/mod.rs"),
-        "inventory::submit! {\n    OperationRegistration::library(\"libs::matching::dfa\", builder)\n}\n",
+        "inventory::submit! {\n    OperationRegistration::library_unconstrained(\"libs::matching::dfa\", builder)\n}\n",
     );
 
     let ids = BTreeSet::from(["libs::matching::dfa"]);
@@ -217,7 +217,7 @@ fn an_unparseable_workspace_manifest_is_an_error_naming_the_file() {
     write(&root.join("Cargo.toml"), "[workspace\nmembers = [\n");
     write(
         &root.join("libs/src/lib.rs"),
-        "inventory::submit! {\n    OperationRegistration::library(\"libs::real\", builder)\n}\n",
+        "inventory::submit! {\n    OperationRegistration::library_unconstrained(\"libs::real\", builder)\n}\n",
     );
 
     let ids = BTreeSet::from(["libs::real"]);
@@ -265,7 +265,7 @@ fn a_placement_names_the_package_not_the_member_directory() {
     workspace_named(root, &[("conform/vyre-conform", "vyre-conform")]);
     write(
         &root.join("conform/vyre-conform/src/lib.rs"),
-        "inventory::submit! {\n    OperationRegistration::library(\"vyre-conform::probe\", builder)\n}\n",
+        "inventory::submit! {\n    OperationRegistration::library_unconstrained(\"vyre-conform::probe\", builder)\n}\n",
     );
 
     let ids = BTreeSet::from(["vyre-conform::probe"]);
@@ -301,7 +301,7 @@ fn a_member_without_a_package_name_is_an_error_naming_the_manifest() {
     );
     write(
         &root.join("libs/src/lib.rs"),
-        "inventory::submit! {\n    OperationRegistration::library(\"libs::real\", builder)\n}\n",
+        "inventory::submit! {\n    OperationRegistration::library_unconstrained(\"libs::real\", builder)\n}\n",
     );
 
     let ids = BTreeSet::from(["libs::real"]);
@@ -330,7 +330,7 @@ fn a_source_file_over_the_read_cap_is_an_error_naming_the_file() {
     workspace(root, &["libs"]);
     let mut oversized = String::with_capacity(4 * 1024 * 1024 + 128);
     oversized.push_str(
-        "inventory::submit! {\n    OperationRegistration::library(\"libs::real\", builder)\n}\n",
+        "inventory::submit! {\n    OperationRegistration::library_unconstrained(\"libs::real\", builder)\n}\n",
     );
     while oversized.len() <= 4 * 1024 * 1024 {
         oversized.push_str("// padding to cross the read cap\n");
@@ -361,7 +361,7 @@ fn an_intrinsic_registration_places_the_operation_in_its_defining_crate() {
         &root.join("primitives/src/hardware.rs"),
         "const OP_ID: &str = \"primitives::hardware::bit_reverse_u32\";\n\
          inventory::submit! {\n\
-             OperationRegistration::intrinsic(OP_ID, SIG, None, None, None)\n\
+             OperationRegistration::intrinsic_unconstrained(OP_ID, SIG, None, None, None)\n\
          }\n",
     );
 

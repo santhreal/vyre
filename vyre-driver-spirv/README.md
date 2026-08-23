@@ -4,7 +4,7 @@ SPIR-V backend adapter for [Vyre](https://crates.io/crates/vyre).
 
 ## What it does
 
-Routes `Program` values through canonical verified lowering and the shared
+Routes `Program` values through canonical physical lowering and the shared
 `vyre-emit-spirv` writer. This crate owns backend registration and Vulkan
 execution, not SPIR-V serialization.
 
@@ -21,7 +21,7 @@ let spirv_words = SpirvBackend::program_to_spv(&Program::empty())?;
 ## Relationship to runtime drivers
 
 `vyre-driver-spirv` registers the backend and owns Vulkan device execution.
-Verified lowering belongs to `vyre-lower`; SPIR-V byte construction belongs to
+Physical lowering belongs to `vyre-lower`; SPIR-V byte construction belongs to
 `vyre-emit-spirv`.
 
 ## License

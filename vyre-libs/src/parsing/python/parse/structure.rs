@@ -407,7 +407,7 @@ const EXPECTED_STRUCTURE_RECORDS: [u8; 384] = pack_words_padded_bytes([1, 4, 1, 
 const EXPECTED_STRUCTURE_COUNTS: [u8; 4] = 6u32.to_le_bytes();
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         STRUCTURE_OP_ID,
         || python312_extract_structure("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         Some(structure_fixture_inputs),
@@ -423,7 +423,7 @@ const EXPECTED_IMPORTS_RECORDS: [u8; 384] = pack_words_padded_bytes([1, 7, 2, 0,
 const EXPECTED_IMPORTS_COUNTS: [u8; 4] = 6u32.to_le_bytes();
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         IMPORTS_OP_ID,
         || python312_extract_imports("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         Some(import_fixture_inputs),
@@ -439,7 +439,7 @@ const EXPECTED_WITH_BLOCKS_RECORDS: [u8; 384] = pack_words_padded_bytes([11, 3, 
 const EXPECTED_WITH_BLOCKS_COUNTS: [u8; 4] = 6u32.to_le_bytes();
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         WITH_BLOCKS_OP_ID,
         || python312_extract_with_blocks("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         Some(with_fixture_inputs),

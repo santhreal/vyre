@@ -222,7 +222,7 @@ const EXPECTED_AST_WALK_POSTORDER_OUTPUT_BYTES: [u8; 32] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         PREORDER_OP_ID,
         || ast_walk_preorder("nodes", "out", 6, 8),
         Some(harness_inputs),
@@ -232,7 +232,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         POSTORDER_OP_ID,
         || ast_walk_postorder_nodes("nodes", "out", 6, 8),
         Some(harness_inputs),

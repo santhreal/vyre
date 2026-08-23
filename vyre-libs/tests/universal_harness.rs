@@ -123,6 +123,20 @@ fn check_oracle(entry: &SemanticOperation, program: &Program, _fingerprint: Hash
         .zip(expected_cases.into_iter())
         .enumerate()
     {
+        let reference_input_count = program
+            .buffers()
+            .iter()
+            .filter(|buffer| vyre_reference::is_reference_input(buffer))
+            .count();
+        assert_eq!(
+            input_bytes.len(),
+            reference_input_count,
+            "[harness] {} (case {}): test_inputs must supply exactly one value per \
+             vyre_reference::is_reference_input buffer",
+            entry.id,
+            case_idx
+        );
+
         let reference_inputs = input_bytes
             .iter()
             .map(|bytes| Value::Bytes(bytes.as_slice().into()))

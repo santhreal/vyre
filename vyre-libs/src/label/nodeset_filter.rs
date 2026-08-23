@@ -92,7 +92,7 @@ pub(crate) fn nodeset_filter_program(
 const EXPECTED_NODESET_FILTER_OUTPUT_BYTES: [u8; 4] = [6, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || nodeset_filter("values", "nodeset", 4, NodeSetFilter::Intersects(0b0010)),
         Some(|| {

@@ -19,7 +19,7 @@ macro_rules! define_synthesized_logical_binary {
             }
 
             inventory::submit! {
-                vyre_foundation::operation::OperationRegistration::library(
+                vyre_foundation::operation::OperationRegistration::library_unconstrained(
                     OP_ID,
                     || $function("a", "b", "out", 4),
                     Some(|| {

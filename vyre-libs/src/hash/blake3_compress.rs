@@ -164,7 +164,7 @@ const EXPECTED_BLAKE3_COMPRESS_OUTPUT_BYTES: [u8; 32] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || blake3_compress("cv_in", "msg", "params", "cv_out"),
         Some(|| {

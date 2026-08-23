@@ -200,7 +200,7 @@ fn char_class_with_source_type(
 const EXPECTED_CHAR_CLASS_OUTPUT_BYTES: [u8; 12] = [3, 0, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         CHAR_CLASS_OP_ID,
         || char_class("source", "classified", 3),
         Some(|| {

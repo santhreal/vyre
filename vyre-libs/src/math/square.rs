@@ -18,7 +18,7 @@ pub fn square(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::math::square",
         || square("input", "output", 4),
         Some(|| {

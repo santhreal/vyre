@@ -357,7 +357,7 @@ pub fn layer_norm(input: &str, output: &str, n: u32, eps: f32) -> Program {
 const EXPECTED_LAYER_NORM_OUTPUT_BYTES: [u8; 16] = [0u8; 16];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::nn::layer_norm",
         || layer_norm("input", "output", 4, 1e-5),
         Some(|| {

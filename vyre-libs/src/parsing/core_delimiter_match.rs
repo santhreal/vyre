@@ -75,13 +75,13 @@ const EXPECTED_CORE_DELIMITER_MATCH_BYTES: [u8; 32] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || core_delimiter_match("tok_types", "tok_depths", 8, 12, 13),
         Some(|| {
             let tokens: [u32; 8] = [12, 12, 0, 0, 0, 13, 13, 0];
             let bytes = vyre_primitives::wire::pack_u32_slice(&tokens);
-            vec![vec![bytes, vec![0u8; 4 * 8]]]
+            vec![vec![bytes]]
         }),
         Some(|| {
             vec![vec![EXPECTED_CORE_DELIMITER_MATCH_BYTES.to_vec()]]

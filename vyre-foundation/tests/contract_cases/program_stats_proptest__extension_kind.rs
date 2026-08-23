@@ -22,6 +22,7 @@ const CAP_ASYNC_DISPATCH: u32 = 1 << 4;
 const CAP_INDIRECT_DISPATCH: u32 = 1 << 5;
 const CAP_TENSOR_OPS: u32 = 1 << 6;
 const CAP_TRAP: u32 = 1 << 7;
+const CAP_WORKGROUP_GEOMETRY: u32 = 1 << 10;
 
 // ─── simple opaque test types (no wire-roundtrip needed here) ───
 vyre_test_support::test_expr_extension! {

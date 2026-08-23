@@ -172,7 +172,7 @@ fn dot_reference(lhs: &str, rhs: &str, out: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || dot("lhs", "rhs", "out", 256).unwrap_or_else(|error| trap_program(OP_ID, None, format!("Fix: dot fixture must build: {error}"))),
         Some(|| vec![vec![

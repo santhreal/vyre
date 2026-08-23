@@ -796,7 +796,7 @@ const EXPECTED_PERSISTENT_FIXPOINT_STATE_BYTES: [u8; 4] = [7, 0, 0, 0];
 const EXPECTED_PERSISTENT_FIXPOINT_CONVERGED_BYTES: [u8; 4] = [0, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             persistent_fixpoint(

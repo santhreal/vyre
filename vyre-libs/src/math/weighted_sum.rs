@@ -70,7 +70,7 @@ pub fn weighted_sum_fma_f32(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             weighted_sum_fma_f32("weights", "values", "output", 4)

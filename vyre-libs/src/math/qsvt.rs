@@ -83,7 +83,7 @@ pub fn try_qsvt_block_encode(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || qsvt_block_encode("a", "norm", "a_scaled", 4),
         Some(|| {

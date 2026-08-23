@@ -53,7 +53,7 @@ const EXPECTED_SIGMOID_GATE_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || sigmoid_gate("gate", "branch", "output", 4),
         Some(|| {

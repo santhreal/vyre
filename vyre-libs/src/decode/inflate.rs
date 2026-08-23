@@ -349,7 +349,7 @@ const EXPECTED_INFLATE_DATA_BYTES: [u8; 40] = [
 const EXPECTED_INFLATE_LEN_BYTES: [u8; 4] = [5, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || inflate_stored_block("input", "output", 10),
         Some(fixture_inputs),

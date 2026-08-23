@@ -63,7 +63,7 @@ pub fn mp_upper_edge(m: u32, n: u32, sigma_sq: f64) -> f64 {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             mp_edge_clip("a", "b", "out", 4)

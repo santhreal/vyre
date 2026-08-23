@@ -50,7 +50,7 @@ pub fn upsample_2x(input: &str, output: &str, width: u32, height: u32) -> Progra
 const EXPECTED_UPSAMPLE_2X_OUTPUT_BYTES: [u8; 64] = [0xFF; 64];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || upsample_2x("input", "output", 4, 4),
         Some(|| {

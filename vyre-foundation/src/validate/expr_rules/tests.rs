@@ -46,7 +46,7 @@ const CALL_SIGNATURE: Signature = Signature {
 };
 
 inventory::submit! {
-    OperationRegistration::new(
+    OperationRegistration::new_unconstrained(
         CALL_OP_ID,
         OperationTier::External,
         None,

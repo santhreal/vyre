@@ -53,7 +53,7 @@ assert_eq!(module.entry_points[0].name, "main");
 
 - `emit(&desc) -> Result<naga::Module, EmitError>`: emit the verified
   descriptor exactly as supplied. Production callers obtain it from
-  `vyre_lower::lower_verified`; descriptor-producing tools use
+  `vyre_lower::lower_physical`; descriptor-producing tools use
   `vyre_lower::verify_descriptor`.
 
 ## Substrate-specific patterns

@@ -67,6 +67,59 @@ pub(crate) fn validate_schema(
                 op.id, op.category
             ));
         }
+        for (scope, width) in [
+            (
+                "workgroup",
+                op.schedule_constraints.workgroup_width.as_str(),
+            ),
+            ("subgroup", op.schedule_constraints.subgroup_width.as_str()),
+        ] {
+            if !valid_width(width) {
+                errors.push(format!(
+                    "operation `{}` has invalid {scope} schedule width `{width}`",
+                    op.id
+                ));
+            }
+        }
+        if !valid_element_policy(&op.schedule_constraints.element_policy) {
+            errors.push(format!(
+                "operation `{}` has invalid element schedule policy `{}`",
+                op.id, op.schedule_constraints.element_policy
+            ));
+        }
+        if !matches!(
+            op.schedule_constraints.uniformity.as_str(),
+            "none" | "subgroup" | "workgroup"
+        ) {
+            errors.push(format!(
+                "operation `{}` has invalid schedule uniformity `{}`",
+                op.id, op.schedule_constraints.uniformity
+            ));
+        }
+        if op
+            .schedule_constraints
+            .memory_ordering
+            .as_deref()
+            .is_some_and(|ordering| {
+                !matches!(
+                    ordering,
+                    "wire:0" | "wire:1" | "wire:2" | "wire:3" | "wire:4" | "wire:5"
+                )
+            })
+        {
+            errors.push(format!(
+                "operation `{}` has invalid schedule memory ordering",
+                op.id
+            ));
+        }
+        if op.schedule_constraints.cooperative_launch
+            && op.schedule_constraints.memory_ordering.as_deref() != Some("wire:5")
+        {
+            errors.push(format!(
+                "operation `{}` requires cooperative launch without grid-sync ordering",
+                op.id
+            ));
+        }
         let signature_valid = match op.signature.kind.as_str() {
             "program_buffers" => {
                 !op.signature.buffers.is_empty()
@@ -191,6 +244,26 @@ pub(crate) fn validate_schema(
     }
 }
 
+fn valid_width(value: &str) -> bool {
+    if value == "agnostic" {
+        return true;
+    }
+    let Some((kind, raw)) = value.split_once(':') else {
+        return false;
+    };
+    matches!(kind, "at-least" | "exactly") && raw.parse::<u32>().is_ok_and(|width| width > 0)
+}
+
+fn valid_element_policy(value: &str) -> bool {
+    if matches!(value, "any" | "scalar") {
+        return true;
+    }
+    value
+        .strip_prefix("multiple:")
+        .and_then(|raw| raw.parse::<u32>().ok())
+        .is_some_and(|multiple| multiple > 0)
+}
+
 /// Every way `schema` disagrees with the live registry, named field by field.
 ///
 /// One sentence saying the document differs told a reader to regenerate and
@@ -286,7 +359,7 @@ fn divergences(schema: &OperationSchema, expected: &OperationSchema) -> Vec<Stri
 mod tests {
     use super::*;
     use crate::docs::operation_schema::schema::{
-        OperationRecord, OperationSignature, OracleContract,
+        OperationRecord, OperationSignature, OracleContract, ScheduleConstraintsRecord,
     };
 
     fn record(id: &str) -> OperationRecord {
@@ -303,6 +376,15 @@ mod tests {
                 bytes_extraction: false,
             },
             features: vec!["math-linalg".to_string()],
+            schedule_constraints: ScheduleConstraintsRecord {
+                workgroup_width: "agnostic".to_string(),
+                subgroup_width: "agnostic".to_string(),
+                min_shared_bytes: 0,
+                element_policy: "any".to_string(),
+                uniformity: "none".to_string(),
+                cooperative_launch: false,
+                memory_ordering: None,
+            },
             oracle: OracleContract {
                 reference_eval: false,
                 flat_reference_facet: false,

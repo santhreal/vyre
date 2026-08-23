@@ -55,8 +55,8 @@ fn root_delta(diff: &DescriptorDiff) -> i64 {
 fn generated_root_op_count_deltas_match_controlled_mutations() {
     for seed in 0..512u32 {
         let program = seed_program(seed);
-        let before = vyre_lower::lower_verified(&program)
-            .map(|lowered| lowered.descriptor)
+        let before = vyre_lower::lower_physical(&program)
+            .map(|lowered| lowered.into_descriptor())
             .expect("Fix: seed program must lower.");
         let mut after = before.clone();
         let appended = 1 + (seed as usize % 11);
@@ -81,8 +81,8 @@ fn generated_root_op_count_deltas_match_controlled_mutations() {
 fn generated_descriptor_diffs_round_trip_through_json() {
     for seed in 0..256u32 {
         let program = seed_program(seed ^ 0x5eed_5eed);
-        let before = vyre_lower::lower_verified(&program)
-            .map(|lowered| lowered.descriptor)
+        let before = vyre_lower::lower_physical(&program)
+            .map(|lowered| lowered.into_descriptor())
             .expect("Fix: seed program must lower.");
         let mut after = before.clone();
         let appended = 1 + (seed as usize % 7);

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 /// fails when the two drift. That drift shipped once already, with the generator
 /// on 3 and the checker still demanding 2, back when the checker was a Python
 /// script whose number could only be compared as text.
-pub(crate) const SCHEMA_VERSION: u32 = 4;
+pub(crate) const SCHEMA_VERSION: u32 = 5;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub(crate) struct OperationSchema {
@@ -30,11 +30,23 @@ pub(crate) struct OperationRecord {
     pub(crate) category: String,
     pub(crate) signature: OperationSignature,
     pub(crate) features: Vec<String>,
+    pub(crate) schedule_constraints: ScheduleConstraintsRecord,
     pub(crate) oracle: OracleContract,
     pub(crate) backend_support: BTreeMap<String, BackendSupport>,
     pub(crate) target_facets: Vec<String>,
     pub(crate) laws: Vec<String>,
     pub(crate) composition_chain: Vec<CompositionStep>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub(crate) struct ScheduleConstraintsRecord {
+    pub(crate) workgroup_width: String,
+    pub(crate) subgroup_width: String,
+    pub(crate) min_shared_bytes: u32,
+    pub(crate) element_policy: String,
+    pub(crate) uniformity: String,
+    pub(crate) cooperative_launch: bool,
+    pub(crate) memory_ordering: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

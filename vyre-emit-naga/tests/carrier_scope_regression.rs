@@ -6,7 +6,7 @@
 //!
 //! Each test:
 //! 1. Builds a vyre `Program` with a specific control-flow shape.
-//! 2. Runs `vyre_lower::lower_verified`.
+//! 2. Runs `vyre_lower::lower_physical`.
 //! 3. Calls `vyre_emit_naga::emit` to produce a `naga::Module`.
 //! 4. Calls `naga::valid::Validator` with all flags + capabilities.
 //! 5. Asserts validation succeeds (no NotInScope, no DanglingResultRef,
@@ -19,9 +19,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 fn assert_emits_clean(prog: Program, label: &str) {
     // Verified lowering owns semantic optimization and descriptor canonicalization.
-    let lk = vyre_lower::lower_verified(&prog)
-        .unwrap_or_else(|e| panic!("{label}: lower_verified failed: {e}"));
-    let module = vyre_emit_naga::emit(&lk.descriptor)
+    let lk = vyre_lower::lower_physical(&prog)
+        .unwrap_or_else(|e| panic!("{label}: lower_physical failed: {e}"));
+    let module = vyre_emit_naga::emit(lk.descriptor())
         .unwrap_or_else(|e| panic!("{label}: emit failed: {e}"));
     let res = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
@@ -409,8 +409,8 @@ fn dump_python312_lexer_naga() {
         256,
     );
     let lk =
-        vyre_lower::lower_verified(&prog).expect("python312_lexer lower_verified must succeed");
-    let module = vyre_emit_naga::emit(&lk.descriptor).expect("python312_lexer emit must succeed");
+        vyre_lower::lower_physical(&prog).expect("python312_lexer lower_physical must succeed");
+    let module = vyre_emit_naga::emit(lk.descriptor()).expect("python312_lexer emit must succeed");
     let wgsl = naga::back::wgsl::write_string(
         &module,
         &naga::valid::Validator::new(

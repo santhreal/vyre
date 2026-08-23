@@ -104,7 +104,7 @@ pub fn tfn_scalar_mix(
 const EXPECTED_TFN_OUTPUT_BYTES: [u8; 8] = [0, 0, 2, 0, 0, 0, 3, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || tfn_scalar_mix("features", "weights", "out", 1, 2, 2),
         Some(|| {

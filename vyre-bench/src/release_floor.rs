@@ -8,10 +8,10 @@
 //! derivation is this crate's: a reader in the release tooling and a reader in
 //! the recorded-artifact contracts both ask here, and neither restates a number.
 //!
-//! It used to be a flat 16384 MiB, restated at five call sites. No case came
-//! close to needing it: the largest declared working set in the catalog is
-//! 128 MiB. The number rejected every consumer card in the fleet on a claim
-//! about what class of device the published figures came from, and it made
+//! It used to be a flat 16384 MiB, restated at several call sites. The largest
+//! declared working set in the catalog is 1024 MiB. The number rejected every
+//! consumer card in the fleet on a claim about what class of device the
+//! published figures came from, and it made
 //! release evidence impossible to record on hardware that runs every workload
 //! correctly and at full occupancy.
 //!

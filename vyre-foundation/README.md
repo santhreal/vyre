@@ -1,8 +1,8 @@
 # vyre-foundation
 
-The IR: program and node and expression, the type system, the memory
-model, the wire format, validation, visiting, the optimizer, the
-execution plan, program dispatch.
+The semantic IR, validated whole-program graph and logical domains, versioned
+backend-neutral selected schedule, type and memory systems, wire formats,
+validation, visitors, optimizer, execution plan and program dispatch.
 
 Not here: application semantics. No operation knows what a neural
 network is. Almost every crate depends on this one, so a domain
@@ -44,7 +44,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Own typed IR and ProgramGraph contracts, validation, diagnostics, serialization, semantic operation registration, and backend-neutral optimization.
+Own validated ProgramGraph, versioned schedule-free LogicalProgramGraph domains, versioned backend-neutral schedule IR and transform legality, semantic identity, neutral schedule-constraint composition, diagnostics, serialization, semantic operation registration, and backend-neutral optimization.
 
 ### Boundaries
 

@@ -213,7 +213,7 @@ const EXPECTED_HISTOGRAM_BYTES: [u8; 1024] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         BYTE_HISTOGRAM_256_OP_ID,
         || byte_histogram_256("bytes", "histogram", 5),
         Some(|| {

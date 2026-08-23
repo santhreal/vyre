@@ -14,11 +14,14 @@ pub const OP_ID: &str = "vyre-libs::reduce::segment_reduce_sum";
 /// Build a Program: `output[seg] = Σ input[offsets[seg]..offsets[seg+1]]`.
 ///
 /// Invalid segment counts lower to an explicit trap program.
+/// `input_count` fixes the typed input-buffer extent used by logical-domain
+/// validation and resource planning.
 #[must_use]
 pub fn segment_reduce_sum(
     input: &str,
     segment_offsets: &str,
     output: &str,
+    input_count: u32,
     num_segments: u32,
 ) -> Program {
     if num_segments == 0 || num_segments > 256 {
@@ -48,7 +51,8 @@ pub fn segment_reduce_sum(
 
     Program::wrapped(
         vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(input_count),
             BufferDecl::storage(segment_offsets, 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(num_segments + 1),
             BufferDecl::storage(output, 2, BufferAccess::ReadWrite, DataType::U32)
@@ -66,9 +70,9 @@ pub fn segment_reduce_sum(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
-        || segment_reduce_sum("input", "segment_offsets", "output", 2),
+        || segment_reduce_sum("input", "segment_offsets", "output", 5, 2),
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
@@ -191,7 +195,7 @@ mod tests {
     }
     #[test]
     fn emitted_program_has_expected_buffers() {
-        let p = segment_reduce_sum("input", "segment_offsets", "output", 4);
+        let p = segment_reduce_sum("input", "segment_offsets", "output", 8, 4);
         assert_eq!(p.workgroup_size, [256, 1, 1]);
         let names: Vec<&str> = p.buffers.iter().map(|b| b.name()).collect();
         assert_eq!(names, vec!["input", "segment_offsets", "output"]);
@@ -199,13 +203,13 @@ mod tests {
 
     #[test]
     fn zero_segments_traps() {
-        let p = segment_reduce_sum("input", "segment_offsets", "output", 0);
+        let p = segment_reduce_sum("input", "segment_offsets", "output", 1, 0);
         assert!(p.stats().trap());
     }
 
     #[test]
     fn over_limit_segments_traps() {
-        let p = segment_reduce_sum("input", "segment_offsets", "output", 257);
+        let p = segment_reduce_sum("input", "segment_offsets", "output", 1, 257);
         assert!(p.stats().trap());
     }
 }

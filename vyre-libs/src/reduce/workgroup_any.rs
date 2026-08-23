@@ -84,7 +84,7 @@ pub fn workgroup_any_u32(values: &str, out: &str, count: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         WORKGROUP_ANY_U32_OP_ID,
         || workgroup_any_u32("values", "out", 4),
         Some(|| vec![vec![

@@ -61,7 +61,7 @@ impl TargetCompiler for FixtureTargetCompiler {
                     entry_point: "main".to_string(),
                     grid_size: [1, 1, 1],
                     dynamic_shared_bytes: 0,
-                    workgroup_size: selected.descriptor.dispatch.workgroup_size,
+                    workgroup_size: selected.descriptor().dispatch.workgroup_size,
                     resource_bindings: selected.canonical_bindings.clone(),
                     bytes: b"target-payload-fixture".to_vec(),
                 })
@@ -142,7 +142,9 @@ pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> ArtifactEnvelo
         .value;
     let group = &neutral.fusion()[0];
     let program = Program::from_wire(&neutral.nodes()[0].program).unwrap();
-    let descriptor = vyre_lower::lower_verified(&program).unwrap().descriptor;
+    let descriptor = vyre_lower::lower_physical(&program)
+        .unwrap()
+        .into_descriptor();
     let program = program.to_wire().unwrap();
     let module_bytes = TargetModuleBundle::new(vec![TargetModuleImage {
         group: group.id,

@@ -93,7 +93,7 @@ const EXPECTED_FUNCTOR_APPLY_OUTPUT_BYTES: [u8; 16] =
     [20, 0, 0, 0, 30, 0, 0, 0, 10, 0, 0, 0, 40, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || functor_apply("source_row", "mapping", "target_row", 4),
         Some(|| {

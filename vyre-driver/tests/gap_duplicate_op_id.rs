@@ -14,7 +14,7 @@ fn duplicate_program() -> Program {
 }
 
 inventory::submit! {
-    OperationRegistration::new(
+    OperationRegistration::new_unconstrained(
         DUPLICATE_ID,
         OperationTier::External,
         Some(duplicate_program),
@@ -24,7 +24,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    OperationRegistration::new(
+    OperationRegistration::new_unconstrained(
         DUPLICATE_ID,
         OperationTier::External,
         Some(duplicate_program),

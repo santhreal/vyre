@@ -188,7 +188,7 @@ pub fn scallop_join(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || scallop_join("state", "next", "join_rules", "changed", 2, 1, 4),
         Some(|| {

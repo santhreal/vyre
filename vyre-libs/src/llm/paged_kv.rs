@@ -359,7 +359,7 @@ const EXPECTED_PAGED_KV_APPEND_OUTPUT_BYTES: [u8; 32] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         PAGED_KV_GATHER_OP_ID,
         gather_fixture_program,
         Some(|| vec![vec![
@@ -374,7 +374,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         PAGED_KV_APPEND_OP_ID,
         append_fixture_program,
         Some(|| vec![vec![

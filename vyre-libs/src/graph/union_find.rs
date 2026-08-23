@@ -337,7 +337,7 @@ pub fn validate_union_find_inputs(
 const EXPECTED_UNION_FIND_OUTPUT_BYTES: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || union_find_program("parent", "edge_a", "edge_b", 4, 2),
         Some(|| {

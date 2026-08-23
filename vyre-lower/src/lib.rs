@@ -1,9 +1,10 @@
 //! Substrate-neutral verified lowering for Vyre.
 //!
-//! `lower_verified` runs the canonical semantic `Program` optimizer once,
-//! expands representation-only constructs, builds a neutral
-//! `KernelDescriptor`, and verifies the result. Raw descriptor fixtures use
-//! `verify_descriptor`, whose bounded canonicalization only orders pure
+//! `lower_physical` runs the canonical semantic `Program` optimizer once,
+//! expands representation-only constructs, builds verified physical kernel IR,
+//! and returns the only type accepted by megakernel target compilation. Raw
+//! descriptor fixtures use `verify_descriptor`, whose bounded canonicalization
+//! only orders pure
 //! same-body dependencies needed by emitters.
 //!
 //! ```text
@@ -56,7 +57,7 @@ pub use audit::{
 /// verify the emitter-ready result.
 ///
 /// This boundary does not perform semantic optimization. Production `Program`
-/// callers use [`lower_verified`]; descriptor fixtures and tooling use this
+/// callers use [`lower_physical`]; descriptor fixtures and tooling use this
 /// function before invoking a pure emitter.
 pub fn verify_descriptor(desc: &KernelDescriptor) -> Result<KernelDescriptor, VerifyFailure> {
     if let Err(errors) = verify::verify(desc) {
@@ -246,7 +247,9 @@ pub use target::{
     required_subgroup_capabilities, validate_workgroup_size, EmissionTargetCapabilities,
     SubgroupCapabilities, WorkgroupLimitViolation, WorkgroupLimits,
 };
-pub use verified_lowering::{lower_verified, LowerVerifiedError, VerifiedLowering};
+pub use verified_lowering::{
+    lower_physical, lower_scheduled, PhysicalKernel, PhysicalLowering, PhysicalLoweringError,
+};
 /// Re-exported so consumers matching/constructing `KernelOpKind::SubgroupReduce`
 /// can name the reduction operator without depending on `vyre-foundation`.
 pub use vyre_foundation::ir::SubgroupReduceOp;

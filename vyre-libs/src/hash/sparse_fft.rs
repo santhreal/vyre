@@ -111,7 +111,7 @@ const EXPECTED_SPARSE_FFT_OUTPUT_BYTES: [u8; 16] =
     [6, 0, 0, 0, 8, 0, 0, 0, 10, 0, 0, 0, 12, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || sparse_fft_bin_hash("signal", "bins", 1, 0, 4, 8),
         Some(|| {

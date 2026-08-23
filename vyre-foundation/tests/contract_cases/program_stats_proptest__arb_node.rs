@@ -107,17 +107,20 @@ fn manual_walk_expr(
         Expr::Opaque(_) => {
             *opaque = opaque.saturating_add(1);
         }
+        Expr::SubgroupLocalId | Expr::SubgroupSize => {
+            *bits |= CAP_SUBGROUP_OPS | CAP_WORKGROUP_GEOMETRY;
+        }
+        Expr::WorkgroupId { .. } | Expr::LocalId { .. } => {
+            *bits |= CAP_WORKGROUP_GEOMETRY;
+        }
         Expr::LitU32(_)
         | Expr::LitI32(_)
         | Expr::LitF32(_)
         | Expr::LitBool(_)
         | Expr::Var(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => {}
+        | Expr::InvocationId { .. } => {}
         _ => {}
     }
 }

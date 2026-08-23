@@ -13,7 +13,7 @@ pub fn wrapping_neg(a: &str, out: &str, size: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || wrapping_neg("a", "out", 4),
         Some(|| {

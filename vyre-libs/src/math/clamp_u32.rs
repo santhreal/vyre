@@ -31,7 +31,7 @@ pub fn clamp_u32(input: &str, lo: &str, hi: &str, out: &str, n: u32) -> Program 
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || clamp_u32("input", "lo", "hi", "out", 4),
         Some(|| {

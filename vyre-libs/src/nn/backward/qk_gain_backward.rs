@@ -37,7 +37,7 @@ const EXPECTED_QK_GAIN_BACKWARD_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || qk_gain_backward("gain", "grad_out", "grad_q", 2, 1, 2),
         Some(|| {

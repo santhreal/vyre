@@ -284,7 +284,7 @@ const EXPECTED_GRADIENT_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || linear_gradient(
             "output", 4, 1, 90.0,

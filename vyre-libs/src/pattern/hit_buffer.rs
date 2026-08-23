@@ -289,7 +289,7 @@ mod emit_then_compact_tests {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         EMIT_HIT_OP_ID,
         || emit_hit(
             "rule_id",
@@ -311,7 +311,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         COMPACT_HITS_OP_ID,
         || compact_hits("out_hits", "out_cursor", DEFAULT_MAX_HITS),
         Some(compact_hits_inputs),

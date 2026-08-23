@@ -114,7 +114,7 @@ pub fn predict_interval(y: u32, q_hat: u32) -> (u32, u32) {
     (lo, hi)
 }
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             conformal_threshold("scores", "q_hat", 4, 2)

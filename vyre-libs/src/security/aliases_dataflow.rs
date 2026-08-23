@@ -253,7 +253,7 @@ fn witness_inputs() -> Vec<Vec<u8>> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         witness_program,
         Some(|| vec![witness_inputs()]),

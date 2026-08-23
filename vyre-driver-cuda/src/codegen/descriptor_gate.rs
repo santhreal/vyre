@@ -25,13 +25,13 @@ pub(crate) fn validate_and_analyze(
 fn lower_for_cuda_emit(program: &Program) -> Result<vyre_lower::KernelDescriptor, String> {
     let trace = crate::instrumentation::cuda_stage_trace_enabled();
     let start = std::time::Instant::now();
-    let descriptor = vyre_lower::lower_verified(program)
+    let descriptor = vyre_lower::lower_physical(program)
         .map_err(|error| {
             format!(
-                "verified lowering failed before CUDA PTX emission: {error}. Fix: repair the source Program or pass a verified KernelDescriptor artifact."
+                "physical lowering failed before CUDA PTX emission: {error}. Fix: repair the source Program or add the missing neutral mapping before PTX emission."
             )
         })?
-        .descriptor;
+        .into_descriptor();
     if trace {
         tracing::debug!(
             "[cuda-codegen] +{}ms lower ops={} bindings={}",
@@ -84,7 +84,7 @@ mod tests {
 
         let error = validate_and_analyze(&program, 90).expect_err("zero dispatch must fail");
 
-        assert!(error.contains("verified lowering failed"));
+        assert!(error.contains("physical lowering failed"));
         assert!(error.contains("KernelDescriptor"));
         assert!(error.contains("Fix:"));
     }

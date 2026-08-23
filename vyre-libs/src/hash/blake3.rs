@@ -195,7 +195,7 @@ fn store_state_nodes(out: &str) -> Vec<Node> {
 const EXPECTED_BLAKE3_ZERO_OUTPUT_BYTES: [u8; 64] = [0; 64];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         BLAKE3_G_OP_ID,
         || blake3_g_program("state", "message", "out"),
         Some(|| {
@@ -213,7 +213,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         BLAKE3_ROUND_OP_ID,
         || blake3_round_program("state", "message", "out"),
         Some(|| {

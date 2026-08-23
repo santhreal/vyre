@@ -117,7 +117,7 @@ const EXPECTED_STOCHASTIC_AND_MUL_OUTPUT_BYTES: [u8; 8] =
     [0xF0, 0x00, 0x00, 0xF0, 0xAA, 0xAA, 0x00, 0x00];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || stochastic_and_mul("a", "b", "out", 2),
         Some(|| {

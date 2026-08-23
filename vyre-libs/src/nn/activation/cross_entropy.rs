@@ -260,7 +260,7 @@ const EXPECTED_CROSS_ENTROPY_OUTPUT_BYTES: [u8; 8] =
     [0x81, 0xEA, 0xEB, 0x3E, 0xCE, 0x71, 0xC5, 0x3F];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || cross_entropy("logits", "targets", "loss", 2, 4),
         Some(|| {

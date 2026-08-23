@@ -5,8 +5,8 @@ use crate::candidate::{CandidatePlan, ExecutionTopology, ResidentPartitionMode};
 use crate::dependency_order::group_stages;
 use crate::facts::PlanningFacts;
 use crate::{
-    workgroup_scratch_declarations, ArtifactNodeId, ArtifactValueId, DependencyEdge,
-    DependencyEndpoint, DependencyKind, DeviceFacts, FusionGroupId,
+    ArtifactNodeId, ArtifactValueId, DependencyEdge, DependencyEndpoint, DependencyKind,
+    DeviceFacts, FusionGroupId,
 };
 /// Stable reason that prevents two graph nodes from sharing one generated kernel.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -426,16 +426,12 @@ pub fn analyze_fusion_pair(
     FusionDecision::Legal
 }
 
-/// Does this program reason about the size of its own workgroup?
+/// Whether changing the declared workgroup would change program semantics.
 ///
-/// A barrier orders the invocations of one workgroup and a workgroup-scoped
-/// buffer is sized for one workgroup, so either one fixes the geometry the
-/// program was written for. `reject_workgroup_geometry_change` in
-/// `vyre-foundation` owns the same judgement for the merge itself and asks the
-/// same two questions; this reads the megakernel's own scratch accessor so the
-/// two agree on what a workgroup buffer is.
+/// The semantic IR owner classifies geometry observability. Fusion uses the
+/// same classification as logical identity and schedule-width search.
 fn pins_workgroup_geometry(program: &Program) -> bool {
-    program.stats().has_node_barrier() || workgroup_scratch_declarations(program).next().is_some()
+    !program.workgroup_size_is_schedule_only()
 }
 
 #[cfg(test)]
@@ -513,6 +509,16 @@ mod tests {
     fn bindings() -> BTreeMap<String, u64> {
         BTreeMap::from([("items".into(), 64)])
     }
+
+    fn planning_facts(
+        graph: &ProgramGraph,
+        dependencies: &[DependencyEdge],
+    ) -> crate::facts::PlanningFacts {
+        let bindings = bindings();
+        let logical =
+            vyre_foundation::logical::LogicalProgramGraph::validate(graph, &bindings).unwrap();
+        derive_planning_facts(&logical, dependencies, &bindings).unwrap()
+    }
     fn test_device() -> DeviceFacts {
         DeviceFacts::new(BackendCapabilities::default(), 256)
             .with_occupancy(128, 4096)
@@ -526,7 +532,7 @@ mod tests {
     fn test_insufficient_concurrent_queues() {
         let graph = independent_two_arm_graph();
         let norm = normalize(&graph).unwrap();
-        let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
+        let facts = planning_facts(&graph, &norm.dependencies);
         let candidate = CandidatePlan::baseline(2)
             .with_topology(ExecutionTopology::ConcurrentQueue { queues: 8 });
         let device = test_device().with_concurrent_queues(4);
@@ -542,7 +548,7 @@ mod tests {
     fn test_insufficient_compute_units() {
         let graph = independent_two_arm_graph();
         let norm = normalize(&graph).unwrap();
-        let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
+        let facts = planning_facts(&graph, &norm.dependencies);
         let candidate =
             CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
                 partitions: 16,
@@ -561,7 +567,7 @@ mod tests {
     fn test_unenforceable_spatial_masking() {
         let graph = independent_two_arm_graph();
         let norm = normalize(&graph).unwrap();
-        let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
+        let facts = planning_facts(&graph, &norm.dependencies);
         let candidate =
             CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
                 partitions: 2,
@@ -580,7 +586,7 @@ mod tests {
     fn test_requires_cooperative_launch() {
         let graph = independent_two_arm_graph();
         let norm = normalize(&graph).unwrap();
-        let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
+        let facts = planning_facts(&graph, &norm.dependencies);
         let candidate =
             CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
                 partitions: 2,
@@ -599,14 +605,11 @@ mod tests {
     fn test_no_independent_concurrency() {
         let graph = independent_two_arm_graph();
         let norm = normalize(&graph).unwrap();
-        let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
+        let facts = planning_facts(&graph, &norm.dependencies);
         // 1 group only
-        let candidate = CandidatePlan {
-            node_groups: vec![0, 0],
-            fused_edges: Vec::new(),
-            workgroup_width: None,
-            topology: ExecutionTopology::ConcurrentQueue { queues: 2 },
-        };
+        let mut candidate = CandidatePlan::baseline(2)
+            .with_topology(ExecutionTopology::ConcurrentQueue { queues: 2 });
+        candidate.node_groups = vec![0, 0];
         let decision = analyze_topology_legality(
             &candidate,
             &graph,
@@ -634,7 +637,7 @@ mod tests {
         );
         let graph = two_arm_graph(prog_with_fence, copy_program("in_b", "out_b"));
         let norm = normalize(&graph).unwrap();
-        let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
+        let facts = planning_facts(&graph, &norm.dependencies);
         let candidate = CandidatePlan::baseline(2)
             .with_topology(ExecutionTopology::ConcurrentQueue { queues: 2 });
         let decision = analyze_topology_legality(
@@ -667,7 +670,7 @@ mod tests {
         );
         let graph = two_arm_graph(prog_with_scratch, copy_program("in_b", "out_b"));
         let norm = normalize(&graph).unwrap();
-        let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
+        let facts = planning_facts(&graph, &norm.dependencies);
         let candidate =
             CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
                 partitions: 2,
@@ -691,7 +694,7 @@ mod tests {
     fn test_legal_independent_concurrency() {
         let graph = independent_two_arm_graph();
         let norm = normalize(&graph).unwrap();
-        let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
+        let facts = planning_facts(&graph, &norm.dependencies);
         let candidate_cq = CandidatePlan::baseline(2)
             .with_topology(ExecutionTopology::ConcurrentQueue { queues: 2 });
         let decision_cq = analyze_topology_legality(

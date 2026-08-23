@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 ./cargo_full test -p vyre-foundation
 ```
 
-Own typed IR and ProgramGraph contracts, validation, diagnostics, serialization, semantic operation registration, and backend-neutral optimization.
+Own validated ProgramGraph, versioned schedule-free LogicalProgramGraph domains, versioned backend-neutral schedule IR and transform legality, semantic identity, neutral schedule-constraint composition, diagnostics, serialization, semantic operation registration, and backend-neutral optimization.
 
 The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 `foundation` testing contract.
@@ -87,6 +87,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `licm_hoist_scope_safety` | `vyre-foundation/tests/licm_hoist_scope_safety.rs` | None | `./cargo_full test -p vyre-foundation --test licm_hoist_scope_safety` |
 | `test` | `licm_speculation_bounds` | `vyre-foundation/tests/licm_speculation_bounds.rs` | None | `./cargo_full test -p vyre-foundation --test licm_speculation_bounds` |
 | `test` | `linear_type_validation` | `vyre-foundation/tests/linear_type_validation.rs` | None | `./cargo_full test -p vyre-foundation --test linear_type_validation` |
+| `test` | `logical_stage_identity` | `vyre-foundation/tests/logical_stage_identity.rs` | None | `./cargo_full test -p vyre-foundation --test logical_stage_identity` |
 | `test` | `loop_fusion_atomic_expected_scalar_dependency` | `vyre-foundation/tests/loop_fusion_atomic_expected_scalar_dependency.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_atomic_expected_scalar_dependency` |
 | `test` | `loop_fusion_binding_collision` | `vyre-foundation/tests/loop_fusion_binding_collision.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_binding_collision` |
 | `test` | `loop_fusion_pair_after_a_refusal` | `vyre-foundation/tests/loop_fusion_pair_after_a_refusal.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_pair_after_a_refusal` |
@@ -144,6 +145,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `rewrite_driver_descends_into_async_offset` | `vyre-foundation/tests/rewrite_driver_descends_into_async_offset.rs` | None | `./cargo_full test -p vyre-foundation --test rewrite_driver_descends_into_async_offset` |
 | `test` | `scalar_operator_agreement` | `vyre-foundation/tests/scalar_operator_agreement.rs` | None | `./cargo_full test -p vyre-foundation --test scalar_operator_agreement` |
 | `test` | `scan_database_wire_contract` | `vyre-foundation/tests/scan_database_wire_contract.rs` | None | `./cargo_full test -p vyre-foundation --test scan_database_wire_contract` |
+| `test` | `schedule_ir_contracts` | `vyre-foundation/tests/schedule_ir_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test schedule_ir_contracts` |
 | `test` | `scope_cow` | `vyre-foundation/tests/scope_cow.rs` | None | `./cargo_full test -p vyre-foundation --test scope_cow` |
 | `test` | `scope_rewrite_owner_contract` | `vyre-foundation/tests/scope_rewrite_owner_contract.rs` | None | `./cargo_full test -p vyre-foundation --test scope_rewrite_owner_contract` |
 | `test` | `section_190_compiler_bounds_determinism_autodiff_concurrency` | `vyre-foundation/tests/section_190_compiler_bounds_determinism_autodiff_concurrency.rs` | None | `./cargo_full test -p vyre-foundation --test section_190_compiler_bounds_determinism_autodiff_concurrency` |

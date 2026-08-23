@@ -90,7 +90,7 @@ pub fn alpha_over(fg: &str, bg: &str, output: &str, count: u32) -> Program {
 const EXPECTED_ALPHA_OVER_OUTPUT_BYTES: [u8; 8] = [0xFF, 0x00, 0x7F, 0xFF, 0x00, 0xFF, 0x00, 0xFF];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || alpha_over("fg", "bg", "out", 2),
         Some(|| {

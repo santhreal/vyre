@@ -171,7 +171,7 @@ pub fn pack_params(count: u32, stride: u32, radius: u32) -> Vec<u32> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || conv1d_program(8, 1),
         Some(|| {

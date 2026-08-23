@@ -103,7 +103,7 @@ const EXPECTED_EMBEDDING_OUTPUT_BYTES: [u8; 24] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || embedding("table", "tokens", "output", 2, 3),
         Some(|| {

@@ -1,6 +1,6 @@
 {
-  "schema_version": 4,
-  "authority": "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
+  "schema_version": 5,
+  "authority": "canonical OperationRegistration records and effective neutral schedule constraints joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
   "operation_count": 349,
   "tier_counts": {
     "intrinsic": 9,
@@ -76,6 +76,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -158,6 +167,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -247,6 +265,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -325,6 +352,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -412,6 +448,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1024,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -486,6 +531,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -573,6 +627,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -651,6 +714,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -740,6 +812,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -838,6 +919,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -925,6 +1015,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -1003,6 +1102,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -1090,6 +1198,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -1172,6 +1289,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -1252,6 +1378,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -1339,6 +1474,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -1408,6 +1552,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -1495,6 +1648,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -1585,6 +1747,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -1663,6 +1834,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -1750,6 +1930,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -1832,6 +2021,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -1903,6 +2101,15 @@
       "features": [
         "bitset"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -1981,6 +2188,15 @@
       "features": [
         "builder-ops"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -2073,6 +2289,15 @@
       "features": [
         "builder-ops"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:4",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 16,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -2174,6 +2399,15 @@
       "features": [
         "decode"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -2261,6 +2495,15 @@
       "features": [
         "decode"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -2368,6 +2611,15 @@
       "features": [
         "decode"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -2455,6 +2707,15 @@
       "features": [
         "decode"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -2542,6 +2803,15 @@
       "features": [
         "decode"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -2647,6 +2917,15 @@
       "features": [
         "decode"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -2734,6 +3013,15 @@
       "features": [
         "fixpoint"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -2821,6 +3109,15 @@
       "features": [
         "fixpoint"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -2908,6 +3205,15 @@
       "features": [
         "geom"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -2995,6 +3301,15 @@
       "features": [
         "geom"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -3073,6 +3388,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -3166,6 +3490,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -3294,6 +3627,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -3417,6 +3759,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -3542,6 +3893,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -3665,6 +4025,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -3799,6 +4168,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -3924,6 +4302,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -4040,6 +4427,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -4154,6 +4550,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -4264,6 +4669,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -4378,6 +4792,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -4476,6 +4899,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -4581,6 +5013,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -4673,6 +5114,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -4760,6 +5210,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -4838,6 +5297,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -4925,6 +5393,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -5051,6 +5528,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -5108,7 +5594,7 @@
             "access": "ReadOnly",
             "memory": "Readonly",
             "element": "U32",
-            "count": 0,
+            "count": 4,
             "pipeline_live_out": false
           },
           {
@@ -5147,6 +5633,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -5306,6 +5801,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1028,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -5498,6 +6002,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1024,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -5595,6 +6108,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -5691,6 +6213,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -5814,6 +6345,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -5946,6 +6486,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -6069,6 +6618,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -6172,6 +6730,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -6259,6 +6826,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -6337,6 +6913,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -6415,6 +7000,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -6503,6 +7097,15 @@
       "features": [
         "graph"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -6583,6 +7186,15 @@
       "features": [
         "hash"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -6679,6 +7291,15 @@
       "features": [
         "hash"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -7081,6 +7702,15 @@
       "features": [
         "hash"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -7168,6 +7798,15 @@
       "features": [
         "hash"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -7286,6 +7925,15 @@
       "features": [
         "hash"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -7364,6 +8012,15 @@
       "features": [
         "hash"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -7442,6 +8099,15 @@
       "features": [
         "hash"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -7520,6 +8186,15 @@
       "features": [
         "hash"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -7598,6 +8273,15 @@
       "features": [
         "hash"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -7676,6 +8360,15 @@
       "features": [
         "hash"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -7755,6 +8448,15 @@
         "label",
         "predicate"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -7835,6 +8537,15 @@
       "features": [
         "label"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -7929,6 +8640,15 @@
       "features": [
         "llm"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -8030,6 +8750,15 @@
       "features": [
         "llm"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -8117,6 +8846,15 @@
       "features": [
         "llm"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -8204,6 +8942,15 @@
       "features": [
         "llm"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -8345,6 +9092,15 @@
       "features": [
         "llm"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": true,
+        "memory_ordering": "wire:5"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -8457,6 +9213,15 @@
       "features": [
         "logical"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -8544,6 +9309,15 @@
       "features": [
         "logical"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -8636,6 +9410,15 @@
         "opt",
         "math-algebra"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -8728,6 +9511,15 @@
         "opt",
         "math-algebra"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -8820,6 +9612,15 @@
         "opt",
         "math-algebra"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -8912,6 +9713,15 @@
         "opt",
         "math-algebra"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -8995,6 +9805,15 @@
         "opt",
         "math-algebra"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -9104,6 +9923,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -9267,6 +10095,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -9354,6 +10191,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -9445,6 +10291,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -9540,6 +10395,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -9644,6 +10508,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -9735,6 +10608,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -9828,6 +10710,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -9925,6 +10816,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -10022,6 +10922,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -10118,6 +11027,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -10195,6 +11113,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -10286,6 +11213,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -10405,6 +11341,15 @@
         "opt",
         "fixpoint"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -10501,6 +11446,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -10601,6 +11555,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -10684,6 +11647,15 @@
         "opt",
         "math-broadcast"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -10784,6 +11756,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -10866,6 +11847,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -10966,6 +11956,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -11057,6 +12056,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -11139,6 +12147,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -11240,6 +12257,15 @@
         "opt",
         "math-linalg"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1024,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -11341,6 +12367,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -11414,6 +12449,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -11496,6 +12540,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -11619,6 +12672,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 96,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -11741,6 +12803,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -11832,6 +12903,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -11914,6 +12994,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -12005,6 +13094,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -12087,6 +13185,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -12187,6 +13294,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -12278,6 +13394,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -12396,6 +13521,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -12478,6 +13612,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -12585,6 +13728,15 @@
         "opt",
         "math-linalg"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -12667,6 +13819,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -12759,6 +13920,15 @@
         "opt",
         "math-linalg"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -12860,6 +14030,15 @@
         "opt",
         "math-linalg"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -12961,6 +14140,15 @@
         "opt",
         "math-linalg"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -13080,6 +14268,15 @@
         "opt",
         "math-linalg"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 256,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -13195,6 +14392,15 @@
         "opt",
         "math-linalg"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 256,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -13282,6 +14488,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -13355,6 +14570,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -13446,6 +14670,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -13537,6 +14770,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -13619,6 +14861,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -13710,6 +14961,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -13819,6 +15079,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -13928,6 +15197,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -14028,6 +15306,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -14137,6 +15424,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -14228,6 +15524,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -14328,6 +15633,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -14410,6 +15724,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -14501,6 +15824,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -14592,6 +15924,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1024,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -14711,6 +16052,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 3072,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -14812,6 +16162,15 @@
         "opt",
         "fixpoint"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -14913,6 +16272,15 @@
         "opt",
         "math-scan"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:4",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 32,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -15009,6 +16377,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -15129,6 +16506,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 512,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -15226,6 +16612,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -15381,6 +16776,15 @@
         "opt",
         "fixpoint"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -15468,6 +16872,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -15550,6 +16963,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -15656,6 +17078,15 @@
         "opt",
         "math-succinct"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -15766,6 +17197,15 @@
         "opt",
         "math-succinct"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:2",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 20,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -15880,6 +17320,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 512,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -16016,6 +17465,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -16154,6 +17612,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 512,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -16291,6 +17758,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -16382,6 +17858,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -16464,6 +17949,15 @@
         "geom",
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -16564,6 +18058,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -16664,6 +18167,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 16,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -16791,6 +18303,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1536,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -16901,6 +18422,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -17016,6 +18546,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 16,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -17116,6 +18655,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -17207,6 +18755,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -17307,6 +18864,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -17437,6 +19003,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -17555,6 +19130,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -17673,6 +19257,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1032,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -17774,6 +19367,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -17906,6 +19508,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:128",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1536,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -18003,6 +19614,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -18103,6 +19723,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -18242,6 +19871,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:4",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 40,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -18353,6 +19991,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -18440,6 +20087,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -18531,6 +20187,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -18631,6 +20296,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -18737,6 +20411,15 @@
         "nn-kernels",
         "nn-linear-4bit"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -18856,6 +20539,15 @@
         "nn-kernels",
         "nn-linear-4bit"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "subgroup",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -18956,6 +20648,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -19056,6 +20757,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -19174,6 +20884,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 256,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -19293,6 +21012,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -19375,6 +21103,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -19466,6 +21203,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -19593,6 +21339,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 16,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -19703,6 +21458,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -19803,6 +21567,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -19921,6 +21694,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -20040,6 +21822,15 @@
         "nn-kernels",
         "nn-moe"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1064,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -20167,6 +21958,15 @@
         "nn-kernels",
         "nn-moe"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1024,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -20288,6 +22088,15 @@
         "nn-kernels",
         "nn-moe"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -20393,6 +22202,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -20498,6 +22316,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -20598,6 +22425,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -20689,6 +22525,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -20780,6 +22625,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -20871,6 +22725,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -20953,6 +22816,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -21026,6 +22898,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -21108,6 +22989,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -21199,6 +23089,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -21299,6 +23198,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -21399,6 +23307,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:4",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 20,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -21523,6 +23440,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 4,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -21614,6 +23540,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -21696,6 +23631,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -21796,6 +23740,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -21910,6 +23863,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -22010,6 +23972,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1028,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -22145,6 +24116,15 @@
         "nn-kernels",
         "nn-moe"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -22236,6 +24216,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -22337,6 +24326,15 @@
         "nn-kernels",
         "nn-moe"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -22433,6 +24431,15 @@
       "features": [
         "opt"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -22533,6 +24540,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -22615,6 +24631,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -22720,6 +24745,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -22820,6 +24854,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -22902,6 +24945,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -22997,6 +25049,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -23087,6 +25148,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -23186,6 +25256,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -23303,6 +25382,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:8",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -23365,7 +25453,7 @@
             "access": "ReadOnly",
             "memory": "Readonly",
             "element": "U32",
-            "count": 0,
+            "count": 65536,
             "pipeline_live_out": false
           },
           {
@@ -23374,7 +25462,7 @@
             "access": "ReadOnly",
             "memory": "Readonly",
             "element": "U32",
-            "count": 0,
+            "count": 200,
             "pipeline_live_out": false
           },
           {
@@ -23434,6 +25522,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -23553,6 +25650,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -23639,6 +25745,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -23720,6 +25835,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -23801,6 +25925,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -23882,6 +26015,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -24013,6 +26155,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -24126,6 +26277,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -24239,6 +26399,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -24352,6 +26521,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -24465,6 +26643,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -24578,6 +26765,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -24700,6 +26896,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -24781,6 +26986,15 @@
         "go-parser",
         "python-parser"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -24881,6 +27095,15 @@
         "pattern-regex",
         "pattern-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -24972,6 +27195,15 @@
         "pattern-regex",
         "pattern-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -25063,6 +27295,15 @@
         "pattern-regex",
         "pattern-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -25163,6 +27404,15 @@
         "pattern-regex",
         "pattern-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:4",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "subgroup",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -25290,6 +27540,15 @@
         "pattern-regex",
         "pattern-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -25426,6 +27685,15 @@
         "pattern-regex",
         "pattern-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:128",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "subgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -25549,6 +27817,15 @@
         "pattern-regex",
         "pattern-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:32",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "subgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -25645,6 +27922,15 @@
         "pattern-regex",
         "pattern-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -25768,6 +28054,15 @@
       "features": [
         "predicate"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -25898,6 +28193,15 @@
       "features": [
         "predicate"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -26033,6 +28337,15 @@
       "features": [
         "predicate"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -26118,6 +28431,15 @@
       "features": [
         "predicate"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -26208,6 +28530,15 @@
       "features": [
         "predicate"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -26298,6 +28629,15 @@
       "features": [
         "predicate"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -26388,6 +28728,15 @@
       "features": [
         "predicate"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -26478,6 +28827,15 @@
       "features": [
         "predicate"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -26608,6 +28966,15 @@
       "features": [
         "predicate"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -26743,6 +29110,15 @@
       "features": [
         "predicate"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -26837,6 +29213,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -26933,6 +29318,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -27015,6 +29409,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -27124,6 +29527,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -27238,6 +29650,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -27343,6 +29764,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -27457,6 +29887,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -27553,6 +29992,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -27658,6 +30106,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -27745,6 +30202,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -27850,6 +30316,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -27937,6 +30412,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -28028,6 +30512,15 @@
         "nn-attention",
         "nn-kernels"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -28106,6 +30599,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -28190,6 +30692,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -28274,6 +30785,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -28355,6 +30875,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -28445,6 +30974,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -28534,6 +31072,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:4",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 16,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -28621,6 +31168,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -28699,6 +31255,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -28783,6 +31348,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -28884,6 +31458,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 2048,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -28967,6 +31550,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -29045,6 +31637,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -29132,6 +31733,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -29191,7 +31801,7 @@
             "access": "ReadOnly",
             "memory": "Readonly",
             "element": "U32",
-            "count": 0,
+            "count": 5,
             "pipeline_live_out": false
           },
           {
@@ -29221,6 +31831,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -29299,6 +31918,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -29381,6 +32009,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -29468,6 +32105,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:4",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 16,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -29561,6 +32207,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:4",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 16,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -29654,6 +32309,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:4",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 16,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -29746,6 +32410,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:4",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 16,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -29838,6 +32511,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:4",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 16,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -29929,6 +32611,15 @@
       "features": [
         "reduce"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:4",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 16,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -30011,6 +32702,15 @@
       "features": [
         "representation"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -30197,6 +32897,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": true,
+        "memory_ordering": "wire:5"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -30359,6 +33068,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -30487,6 +33205,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -30579,6 +33306,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -30707,6 +33443,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -30835,6 +33580,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -30999,6 +33753,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1024,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": true,
+        "memory_ordering": "wire:5"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -31215,6 +33978,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1024,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": true,
+        "memory_ordering": "wire:5"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -31342,6 +34114,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -31452,6 +34233,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": true,
+        "memory_ordering": "wire:5"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -31545,6 +34335,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -31642,6 +34441,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -31734,6 +34542,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -31871,6 +34688,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -31963,6 +34789,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -32064,6 +34899,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": true,
+        "memory_ordering": "wire:5"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -32166,6 +35010,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -32294,6 +35147,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -32386,6 +35248,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -32550,6 +35421,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 1024,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": true,
+        "memory_ordering": "wire:5"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -32667,6 +35547,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -32759,6 +35648,15 @@
       "features": [
         "security"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -32842,6 +35740,15 @@
       "features": [
         "text"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -32929,6 +35836,15 @@
       "features": [
         "text"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -33007,6 +35923,15 @@
       "features": [
         "text"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -33122,6 +36047,15 @@
       "features": [
         "text"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:256",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 2048,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -33220,6 +36154,15 @@
       "features": [
         "text"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:1",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -33298,6 +36241,15 @@
       "features": [
         "text"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -33385,6 +36337,15 @@
       "features": [
         "vfs"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -33463,6 +36424,15 @@
       "features": [
         "visual"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -33537,6 +36507,15 @@
       "features": [
         "visual"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -33615,6 +36594,15 @@
       "features": [
         "visual"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -33707,6 +36695,15 @@
       "features": [
         "visual"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -33790,6 +36787,15 @@
       "features": [
         "visual"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -33859,6 +36865,15 @@
       "features": [
         "visual"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -33942,6 +36957,15 @@
       "features": [
         "visual"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -34057,6 +37081,15 @@
       "features": [
         "visual"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -34131,6 +37164,15 @@
       "features": [
         "visual"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -34214,6 +37256,15 @@
       "features": [
         "visual"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -34292,6 +37343,15 @@
       "features": [
         "visual"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -34370,6 +37430,15 @@
       "features": [
         "hardware"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -34466,6 +37535,15 @@
       "features": [
         "hardware"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -34544,6 +37622,15 @@
       "features": [
         "hardware"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -34622,6 +37709,15 @@
       "features": [
         "hardware"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -34700,6 +37796,15 @@
       "features": [
         "hardware"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -34778,6 +37883,15 @@
       "features": [
         "hardware"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "subgroup",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -34856,6 +37970,15 @@
       "features": [
         "hardware"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "subgroup",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -34943,6 +38066,15 @@
       "features": [
         "hardware"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "subgroup",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
@@ -35021,6 +38153,15 @@
       "features": [
         "hardware"
       ],
+      "schedule_constraints": {
+        "workgroup_width": "exactly:64",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "workgroup",
+        "cooperative_launch": false,
+        "memory_ordering": "wire:4"
+      },
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,

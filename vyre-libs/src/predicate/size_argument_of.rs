@@ -46,7 +46,7 @@ mod tests {
 const EXPECTED_SIZE_ARGUMENT_OF_OUTPUT_BYTES: [u8; 4] = [5, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || size_argument_of(ProgramGraphShape::new(4, 4), "fin", "fout"),
         Some(|| {

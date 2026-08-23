@@ -31,7 +31,7 @@ macro_rules! define_bit_count_u32_op {
             }
 
             inventory::submit! {
-                vyre_foundation::operation::OperationRegistration::library(
+                vyre_foundation::operation::OperationRegistration::library_unconstrained(
                     OP_ID,
                     || $function("input", "out", 4),
                     Some(|| {

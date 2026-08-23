@@ -346,7 +346,7 @@ const EXPECTED_AST_CSE_HASH_PROBE_TABLE_BYTES: [u8; 64] = {
 const EXPECTED_AST_CSE_HASH_PROBE_COUNT_BYTES: [u8; 4] = [0, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         AST_CSE_HASH_PROBE_OP_ID,
         || ast_cse_hash_probe_program(8),
         Some(|| vec![vec![
@@ -380,7 +380,7 @@ const EXPECTED_AST_CSE_STRUCTURAL_HASH_SET_BYTES: [u8; 64] = [
 const EXPECTED_AST_CSE_STRUCTURAL_HASH_MODIFIED_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || ast_cse_structural_hash_program(2, 8),
         Some(|| vec![vec![

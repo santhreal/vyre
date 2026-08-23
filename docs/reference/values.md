@@ -22,6 +22,14 @@ is a configuration symbol such as `batch`, `sequence` or `hidden`, bound by
 graph configuration rather than by the topology. A shape is a `Vec` in
 declaration order; rank is its length.
 
+At the logical compiler boundary, a positive known dimension becomes a static
+logical extent. A symbolic dimension becomes a graph-value extent containing
+the value identity, axis, symbol and compile-request bound. A zero extent marks
+an unresolved runtime buffer and rejects compilation until caller evidence
+specializes it. The enclosing logical region records its row-major index map
+and layout, reduction axes, aliases, effects, producer dependencies and
+overflow-checked positive point bound.
+
 ## Access
 
 | Variant | Buffer |

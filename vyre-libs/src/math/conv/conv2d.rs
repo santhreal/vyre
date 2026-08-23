@@ -96,7 +96,7 @@ pub fn conv2d_3x3_direct(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             conv2d_3x3_direct("input", "kernel", "output", 4, 4)

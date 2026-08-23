@@ -61,7 +61,7 @@ mod tests {
 const EXPECTED_EDGE_OUTPUT_BYTES: [u8; 4] = [2, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || edge(ProgramGraphShape::new(4, 2), "fin", "fout", 0xFFFF_FFFF),
         Some(|| {

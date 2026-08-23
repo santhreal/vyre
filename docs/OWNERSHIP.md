@@ -299,7 +299,7 @@ Consume verified lowering products and emit SPIR-V artifacts through the shared 
 
 ### `vyre-foundation`
 
-Own typed IR and ProgramGraph contracts, validation, diagnostics, serialization, semantic operation registration, and backend-neutral optimization.
+Own validated ProgramGraph, versioned schedule-free LogicalProgramGraph domains, versioned backend-neutral schedule IR and transform legality, semantic identity, neutral schedule-constraint composition, diagnostics, serialization, semantic operation registration, and backend-neutral optimization.
 
 - Path: `vyre-foundation`
 - Owner: `foundation-ir`
@@ -337,7 +337,7 @@ Enforce source-level project policies without depending on runtime crates.
 
 ### `vyre-lower`
 
-Consume verified semantic programs and own the single backend-neutral lowering boundary and pre-emission transforms.
+Consume validated selected schedule phases and semantic programs, then own the single validated PhysicalKernel lowering boundary plus its backend-neutral pre-emission transforms.
 
 - Path: `vyre-lower`
 - Owner: `lowering`
@@ -346,7 +346,7 @@ Consume verified semantic programs and own the single backend-neutral lowering b
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
-| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-foundation` | typed IR plus validated backend-neutral selected schedule phases | `public` | `foundation-ir` |
 
 ### `vyre-macros`
 
@@ -359,7 +359,7 @@ Provide compile-time registration and declaration macros without depending on ru
 
 ### `vyre-megakernel`
 
-Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, emit a megakernel Artifact and TargetPayloads, and never claim a measured winner that no clock produced. Does not own admission, execution, or lifecycle policy.
+Construct foundation-owned selected schedules through bounded whole-ProgramGraph search, and own immutable Artifact identity and authenticated TargetPayload construction. Does not own logical semantics, schedule schemas, physical-kernel lowering, admission, execution, or lifecycle policy.
 
 - Path: `vyre-megakernel`
 - Owner: `megakernel-compiler`
@@ -368,7 +368,7 @@ Explore and select legal whole-ProgramGraph fusion schedules under explicit Sear
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
-| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-foundation` | typed graph, logical-domain, neutral schedule IR and validation, diagnostics, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-lower` | single verified selected-module representation lowering | `private` | `lowering` |
 
 ### `vyre-pass-engine`

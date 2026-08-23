@@ -17,7 +17,7 @@ const EXPECTED_DOM_TREE_STEP_IDOM_BYTES: [u8; 16] =
 const EXPECTED_DOM_TREE_STEP_CHANGED_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || dominator_tree_program(4, 4, 4, "idom"),
         Some(|| {
@@ -42,7 +42,7 @@ inventory::submit! {
 // The forest is a chain `0 <- 1 <- 2` with node 3 not yet reached, so the
 // witness covers the upward walk and the `IDOM_NONE` guard that stops it.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         DEPTH_OP_ID,
         || dominator_tree_depth(4, "idom", "dt_depth"),
         Some(|| {
@@ -59,7 +59,7 @@ inventory::submit! {
 // takes the first-predecessor branch on nodes 1 and 2, both arms of the LCA
 // descent on node 3, and reports movement.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         INTERSECT_STEP_OP_ID,
         || dominator_tree_intersect_step(4, 4, "idom", "dt_depth"),
         Some(|| {

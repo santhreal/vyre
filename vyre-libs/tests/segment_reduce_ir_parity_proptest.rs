@@ -34,11 +34,18 @@ fn offsets_from_lengths(lengths: &[u32]) -> (Vec<u32>, u32) {
 }
 
 fn run_ir(input: &[u32], offsets: &[u32], num_segments: u32) -> Vec<u32> {
-    let program = segment_reduce_sum("input", "segment_offsets", "output", num_segments);
-    let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
     // Guard: an all-empty layout has total==0; the IR never loads `input`, but hand it one dummy
     // element so the RO buffer is non-degenerate.
     let input_arg: &[u32] = if input.is_empty() { &[0u32] } else { input };
+    let input_count = u32::try_from(input_arg.len()).expect("proptest input count must fit u32");
+    let program = segment_reduce_sum(
+        "input",
+        "segment_offsets",
+        "output",
+        input_count,
+        num_segments,
+    );
+    let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
     let outputs = vyre_reference::reference_eval(
         &program,
         &[

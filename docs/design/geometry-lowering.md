@@ -34,25 +34,32 @@ An operation declares requirements and invariants. A backend decides numbers.
 ```
 GeometryRequirements {
     cooperative_width: CooperativeWidth,
+    subgroup_width: CooperativeWidth,
     min_shared_bytes: u32,
     per_invocation_elements: ElementPolicy,
     subgroup_uniformity: Uniformity,
+    requires_cooperative_launch: bool,
+    memory_ordering: Option<MemoryOrdering>,
 }
 ```
 
-- `CooperativeWidth` is `Agnostic` when the algorithm is correct at any width,
-  or `AtLeast(n)` when a cooperative step needs at least `n` invocations to
-  exchange data, or `Exactly(n)` when the algorithm is written around one width.
-  A scan that reduces in a tree is `Agnostic` above its radix; saying so is what
-  lets a backend pick.
-- `min_shared_bytes` is what the algorithm needs, not what a device has.
-- `ElementPolicy` states whether elements per invocation may be raised by the
-  backend, and any divisibility the algorithm requires.
-- `Uniformity` states which values must be uniform across a subgroup, so a
-  backend that widens a workgroup does not break a subgroup-uniform assumption.
+- `cooperative_width` constrains total workgroup width. `Agnostic` permits every
+  admitted width, `AtLeast(n)` sets a floor, and `Exactly(n)` fixes a
+  semantics-dependent width.
+- `subgroup_width` applies the same constraint lattice to subgroup width.
+- `min_shared_bytes` states the workgroup scratch required by semantics.
+- `per_invocation_elements` states scalar or divisibility constraints.
+- `subgroup_uniformity` states the scope that must remain uniform.
+- `requires_cooperative_launch` admits schedules with grid-wide barriers.
+- `memory_ordering` states the strongest atomic or barrier ordering required.
 
-No operation names an invocation count, a tile size, or a stage count. A gate
-enforces that.
+Constraint composition takes the stronger compatible value in each dimension.
+Conflicting exact widths and an exact width below a required minimum produce
+stable `GeometryConstraintConflict` variants before schedule search.
+
+An exact width is a semantic invariant, not a preferred target policy. The
+registry derives observable lane geometry from the canonical program and
+rejects a conflicting declaration.
 
 ### What a backend decides
 
@@ -89,6 +96,12 @@ concrete limit, and a backend never raises a profile limit to admit a geometry.
 
 `vyre-libs` and `vyre-primitives` stop declaring geometry and declare
 requirements instead.
+
+Every operation registration selects an explicitly unconstrained constructor or
+records stronger requirements with `with_geometry_requirements`. The registry
+derives semantic constraints from the canonical program and composes them with
+that decision. `docs/generated/OP_SCHEMA.json` records the effective result for
+every linked operation.
 
 ### Search
 

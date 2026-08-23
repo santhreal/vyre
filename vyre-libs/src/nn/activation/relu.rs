@@ -33,7 +33,7 @@ const EXPECTED_RELU_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::nn::relu",
         || relu("input", "output", 4),
         Some(|| vec![vec![

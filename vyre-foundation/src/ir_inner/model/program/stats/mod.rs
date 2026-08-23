@@ -1,5 +1,5 @@
 use super::Program;
-use crate::ir::{DataType, Expr, Node};
+use crate::ir::{BufferAccess, DataType, Expr, Node};
 
 const CAP_SUBGROUP_OPS: u32 = 1 << 0;
 const CAP_F16: u32 = 1 << 1;
@@ -11,6 +11,7 @@ const CAP_TENSOR_OPS: u32 = 1 << 6;
 const CAP_TRAP: u32 = 1 << 7;
 const CAP_DISTRIBUTED_COLLECTIVES: u32 = 1 << 8;
 const CAP_GRID_SYNC: u32 = 1 << 9;
+const CAP_WORKGROUP_GEOMETRY: u32 = 1 << 10;
 
 // Bit positions for `ProgramStats::node_kinds_present`. Mirrors the
 // variant declaration order in `ir_inner::model::generated::Node` and
@@ -534,8 +535,11 @@ fn walk_expr(
             ir.instruction();
         }
         Expr::SubgroupLocalId | Expr::SubgroupSize => {
-            *bits |= CAP_SUBGROUP_OPS;
+            *bits |= CAP_SUBGROUP_OPS | CAP_WORKGROUP_GEOMETRY;
             ir.instruction();
+        }
+        Expr::WorkgroupId { .. } | Expr::LocalId { .. } => {
+            *bits |= CAP_WORKGROUP_GEOMETRY;
         }
         Expr::LitU32(_)
         | Expr::LitI32(_)
@@ -544,9 +548,25 @@ fn walk_expr(
         | Expr::Var(_)
         | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. } => {}
+        | Expr::InvocationId { .. } => {}
+    }
+}
+
+impl Program {
+    /// Whether the declared workgroup width is a schedule choice rather than
+    /// an observable part of this program's semantics.
+    #[must_use]
+    pub fn workgroup_size_is_schedule_only(&self) -> bool {
+        self.workgroup_size[1] == 1
+            && self.workgroup_size[2] == 1
+            && self
+                .buffers
+                .iter()
+                .all(|buffer| buffer.access != BufferAccess::Workgroup)
+            && !self.stats().has_node_barrier()
+            && !self.stats().subgroup_ops()
+            && !self.stats().workgroup_geometry()
+            && !self.non_composable_with_self
     }
 }
 

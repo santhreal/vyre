@@ -55,9 +55,9 @@ fn an_attribute_inside_a_string_literal_gates_nothing() {
 fn a_fixture_registration_is_not_a_production_registration() {
     let source = "/// Registrations look like `#[cfg(test)]` gated code below.\n\
                   const OP_ID: &str = \"libs::real::op\";\n\
-                  inventory::submit! {\n    OperationRegistration::library(OP_ID, builder)\n}\n\
+                  inventory::submit! {\n    OperationRegistration::library_unconstrained(OP_ID, builder)\n}\n\
                   #[cfg(test)]\nmod tests {\n    inventory::submit! {\n        \
-                  OperationRegistration::library(\"libs::ghost::op\", builder)\n    }\n}\n";
+                  OperationRegistration::library_unconstrained(\"libs::ghost::op\", builder)\n    }\n}\n";
 
     let parsed: Vec<String> = parse_registrations(source)
         .into_iter()

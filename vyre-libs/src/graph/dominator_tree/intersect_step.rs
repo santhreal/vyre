@@ -191,7 +191,7 @@ pub fn dominator_tree_lca_program(node_count: u32) -> Program {
 const EXPECTED_DOMINATOR_TREE_LCA_BYTES: [u8; 4] = [3, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         DOMINATOR_TREE_LCA_OP_ID,
         || dominator_tree_lca_program(4),
         Some(|| vec![vec![

@@ -1709,8 +1709,8 @@ pub fn vyre_libs::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::p
 pub fn vyre_libs::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::static_input_key(&self, parent: &[u32]) -> core::result::Result<vyre_libs::graph::path_reconstruct::PathReconstructStaticInputKey, alloc::string::String>
 pub fn vyre_libs::graph::path_reconstruct::PathReconstructDispatchPlan::program(&self) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::path_reconstruct::PathReconstructDispatchPlan::static_input_key(&self, parent: &[u32]) -> core::result::Result<vyre_libs::graph::path_reconstruct::PathReconstructStaticInputKey, alloc::string::String>
-pub fn vyre_libs::graph::path_reconstruct::batched_path_reconstruct(target_count: u32, max_depth: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::graph::path_reconstruct::path_reconstruct(parent: &str, target: &str, path_out: &str, path_len: &str, max_depth: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::graph::path_reconstruct::batched_path_reconstruct(parent_count: u32, target_count: u32, max_depth: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::graph::path_reconstruct::path_reconstruct(parent: &str, target: &str, path_out: &str, path_len: &str, parent_count: u32, max_depth: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::path_reconstruct::plan_batched_path_reconstruct_dispatch(parent_len: usize, target_len: usize, max_depth: u32) -> core::result::Result<vyre_libs::graph::path_reconstruct::BatchedPathReconstructDispatchPlan, alloc::string::String>
 pub fn vyre_libs::graph::path_reconstruct::plan_path_reconstruct_dispatch(parent_len: usize, max_depth: u32) -> core::result::Result<vyre_libs::graph::path_reconstruct::PathReconstructDispatchPlan, alloc::string::String>
 pub fn vyre_libs::graph::path_reconstruct::validate_batched_path_reconstruct_layout(target_len: usize, max_depth: u32) -> core::result::Result<vyre_libs::graph::path_reconstruct::BatchedPathReconstructLayout, alloc::string::String>
@@ -2410,7 +2410,7 @@ pub fn vyre_libs::reduce::reduction_metrics::reduce_sum_via(dispatcher: &dyn vyr
 pub fn vyre_libs::reduce::reduction_metrics::segment_reduce_sum_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, input: &[u32], segment_offsets: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::program_dispatch::resident::DispatchError>
 pub fn vyre_libs::reduce::reduction_metrics::segment_reduce_sum_via_with_scratch_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, input: &[u32], segment_offsets: &[u32], scratch: &mut vyre_libs::reduce::reduction_metrics::ReductionMetricsGpuScratch, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::resident::DispatchError>
 pub fn vyre_libs::reduce::scatter::scatter(src: &str, indices: &str, dst: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::reduce::segment_reduce::segment_reduce_sum(input: &str, segment_offsets: &str, output: &str, num_segments: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduce::segment_reduce::segment_reduce_sum(input: &str, segment_offsets: &str, output: &str, input_count: u32, num_segments: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::sum::reduce_sum(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::workgroup_any::workgroup_any_u32(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::workgroup_any::workgroup_any_u32_body(values: &str, out_var: &str, count: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
@@ -3979,6 +3979,7 @@ pub vyre_libs::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::layo
 pub vyre_libs::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::len_words: usize
 pub vyre_libs::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::max_depth: u32
 pub vyre_libs::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::parent_words: usize
+pub vyre_libs::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::parent_words_u32: u32
 pub vyre_libs::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::path_words: usize
 pub vyre_libs::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::target_words: usize
 pub vyre_libs::graph::path_reconstruct::BatchedPathReconstructLayout::path_words: usize
@@ -3988,6 +3989,7 @@ pub vyre_libs::graph::path_reconstruct::PathReconstructDispatchPlan::grid: [u32;
 pub vyre_libs::graph::path_reconstruct::PathReconstructDispatchPlan::len_words: usize
 pub vyre_libs::graph::path_reconstruct::PathReconstructDispatchPlan::max_depth: u32
 pub vyre_libs::graph::path_reconstruct::PathReconstructDispatchPlan::parent_words: usize
+pub vyre_libs::graph::path_reconstruct::PathReconstructDispatchPlan::parent_words_u32: u32
 pub vyre_libs::graph::path_reconstruct::PathReconstructDispatchPlan::path_words: usize
 pub vyre_libs::graph::path_reconstruct::PathReconstructDispatchPlan::target_words: usize
 pub vyre_libs::graph::path_reconstruct::PathReconstructStaticInputKey::batched: bool

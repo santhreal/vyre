@@ -109,7 +109,7 @@ const EXPECTED_LINEAR_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::nn::linear",
         || {
             linear("x", "w", "b", "out", 4, 4)
@@ -144,7 +144,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::nn::linear_tiled",
         || {
             linear_tiled("x", "w", "b", "out", 4, 4, 2)

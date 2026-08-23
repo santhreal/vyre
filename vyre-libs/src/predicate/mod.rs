@@ -208,7 +208,7 @@ macro_rules! define_tag_family_predicate {
                 vyre_reference::composition_witness::resolve_family_witness(node_tags, $family)
             }
             inventory::submit! {
-                vyre_foundation::operation::OperationRegistration::library(
+                vyre_foundation::operation::OperationRegistration::library_unconstrained(
                     OP_ID,
                     || $function("tags", "nodeset", 4),
                     Some(|| crate::predicate::traversal::tag_family_fixture_inputs($fixture_tags)),
@@ -272,7 +272,7 @@ macro_rules! define_fixed_forward_edge_predicate {
             }
 
             inventory::submit! {
-                vyre_foundation::operation::OperationRegistration::library(
+                vyre_foundation::operation::OperationRegistration::library_unconstrained(
                     OP_ID,
                     || $function(ProgramGraphShape::new(4, $edge_count), "fin", "fout"),
                     Some(|| crate::predicate::traversal::forward_edge_fixture_inputs($fixture_edge_offsets, $fixture_edge_targets, $fixture_edge_masks)),

@@ -264,7 +264,7 @@ pub fn jacobi_smooth_step_serial_body(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || jacobi_smooth_step("a", "b", "x", "omega", "out", 1),
         Some(|| {

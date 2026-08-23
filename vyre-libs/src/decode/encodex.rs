@@ -133,7 +133,7 @@ const EXPECTED_ENCODEX_ENC_2: [u8; 4] = [2, 0, 0, 0];
 const EXPECTED_ENCODEX_ENC_3: [u8; 4] = [4, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || encodex_gpu("input", "output", 5),
         Some(fixture_inputs),

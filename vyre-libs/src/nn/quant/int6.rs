@@ -80,7 +80,7 @@ const EXPECTED_INT6_PACK_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         UNPACK_OP_ID,
         || int6_unpack("packed", "scale", "zero", "output", 4, 4),
         Some(|| {
@@ -98,7 +98,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         PACK_OP_ID,
         || int6_pack("input", "output", 4),
         Some(|| {

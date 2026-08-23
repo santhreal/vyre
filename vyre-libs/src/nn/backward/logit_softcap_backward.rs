@@ -38,7 +38,7 @@ const EXPECTED_LOGIT_SOFTCAP_BACKWARD_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || logit_softcap_backward("input", "grad_out", "grad_in", 4, 30.0),
         Some(|| {

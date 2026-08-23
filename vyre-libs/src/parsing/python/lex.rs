@@ -588,7 +588,7 @@ const EXPECTED_LEXER_TOK_LENS_BYTES: [u8; 64] = [
 const EXPECTED_LEXER_COUNTS_BYTES: [u8; 4] = [9, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::parsing::python312_lexer",
         || python312_lexer("haystack", "tok_types", "tok_starts", "tok_lens", "counts", 16),
         Some(lexer_fixture_inputs),

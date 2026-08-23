@@ -310,7 +310,7 @@ fn composed_programs_and_bodies_are_non_empty() {
         "vyre-libs::graph::exploded_build_ifds_csr"
     );
 
-    let batched = batched_path_reconstruct(3, 4);
+    let batched = batched_path_reconstruct(4, 3, 4);
     assert_eq!(
         program_generator(&batched),
         "vyre-libs::graph::batched_path_reconstruct"

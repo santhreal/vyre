@@ -92,7 +92,7 @@ Assertions:
 
 - workspace.members is a non-empty array of explicit paths and includes vyre-megakernel.
 - release/release-train.toml declares versions.vyre.
-- docs/generated/OP_SCHEMA.json declares schema_version 4 and is internally coherent: operation_count equals the operation row count and the tier counts sum to it.
+- docs/generated/OP_SCHEMA.json declares schema_version 5 and is internally coherent: operation_count equals the operation row count and the tier counts sum to it.
 - release/evidence/backends/backend-matrix.json has an empty blockers array and a preferred_backend_id with a matching probe row.
 - docs/CRATE_OWNERSHIP.toml carries a vyre-megakernel crate row whose responsibility names ProgramGraph, and keeps no planned.vyre-megakernel entry.
 - docs/optimization/OWNERSHIP.toml declares [lane.*] tables, each with a purpose, a layer, at least one write glob and at least one required command; every write and avoid pattern is repository-relative and matches something in the tree; every -p in a required command names a package a workspace manifest declares.
@@ -110,7 +110,7 @@ Findings:
 
 - architectural-invariants.yml fails on every tree today. read_text on docs/ARCHITECTURE.md raises before any live authority is read, so the six assertions that would still pass never run. Splitting them across two gates is what makes the surviving ones reachable again.
 - validate raises on the first failure, so a tree with ten violations reports one. The gate collects findings instead, which is also what makes the pinned count meaningful.
-- OPERATION_SCHEMA_VERSION = 4 is duplicated here and in xtask-registry/src/docs/operation_schema/mod.rs. The gate reads the Rust constant instead of restating the number.
+- OPERATION_SCHEMA_VERSION = 5 is duplicated here and in xtask-registry/src/docs/operation_schema/mod.rs. The gate reads the Rust constant instead of restating the number.
 
 ### scripts/bench/cross_backend_comparison.sh
 

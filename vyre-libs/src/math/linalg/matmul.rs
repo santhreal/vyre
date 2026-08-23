@@ -408,7 +408,7 @@ mod tests {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::math::matmul",
         || matmul("a", "b", "out", 4, 4, 4),
         Some(|| {
@@ -447,7 +447,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID_BIAS,
         || matmul_bias("a", "b", "bias", "out", 2, 2, 2),
         Some(super::matmul_bias_2x2_fixture_inputs),
@@ -459,7 +459,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::math::matmul_bias::scalar",
         || matmul_bias("a", "b", "bias", "out", 1, 1, 1),
         Some(|| {

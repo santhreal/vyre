@@ -187,6 +187,16 @@ fn schema_rows_cover_every_required_operation_contract() {
             kind => panic!("Fix: {id} has unknown signature kind `{kind}`"),
         }
         assert!(!operation["features"].as_array().unwrap().is_empty());
+        let constraints = operation["schedule_constraints"].as_object().unwrap();
+        assert!(!constraints["workgroup_width"].as_str().unwrap().is_empty());
+        assert!(!constraints["subgroup_width"].as_str().unwrap().is_empty());
+        assert!(!constraints["element_policy"].as_str().unwrap().is_empty());
+        assert!(!constraints["uniformity"].as_str().unwrap().is_empty());
+        assert!(constraints["min_shared_bytes"].is_u64());
+        assert!(constraints["cooperative_launch"].is_boolean());
+        assert!(
+            constraints["memory_ordering"].is_null() || constraints["memory_ordering"].is_string()
+        );
         let reference_supported =
             operation["backend_support"]["reference"]["status"] == "supported";
         assert_eq!(
@@ -290,6 +300,36 @@ fn duplicate_operation_id_fails_closed() {
     assert_mutation_rejected("empty or duplicated", |schema| {
         let operations = schema["operations"].as_array_mut().unwrap();
         operations[1]["id"] = operations[0]["id"].clone();
+    });
+}
+
+/// Every width decision is positive or explicitly agnostic.
+#[test]
+fn invalid_schedule_width_fails_closed() {
+    for field in ["workgroup_width", "subgroup_width"] {
+        assert_mutation_rejected("invalid", |schema| {
+            schema["operations"][0]["schedule_constraints"][field] =
+                Value::String("exactly:0".to_string());
+        });
+    }
+}
+
+/// Cooperative launch is inseparable from grid-scope ordering.
+#[test]
+fn cooperative_launch_without_grid_ordering_fails_closed() {
+    assert_mutation_rejected("cooperative launch", |schema| {
+        schema["operations"][0]["schedule_constraints"]["cooperative_launch"] = Value::Bool(true);
+        schema["operations"][0]["schedule_constraints"]["memory_ordering"] =
+            Value::String("wire:4".to_string());
+    });
+}
+
+/// Unknown ordering tags cannot enter the generated operation contract.
+#[test]
+fn unknown_schedule_ordering_fails_closed() {
+    assert_mutation_rejected("memory ordering", |schema| {
+        schema["operations"][0]["schedule_constraints"]["memory_ordering"] =
+            Value::String("wire:255".to_string());
     });
 }
 

@@ -110,6 +110,7 @@ mod tests {
                 bytes_extraction: true,
             },
             features: vec!["f32".to_string()],
+            schedule_constraints: Default::default(),
             oracle: crate::docs::operation_schema::schema::OracleContract {
                 reference_eval: true,
                 flat_reference_facet: true,

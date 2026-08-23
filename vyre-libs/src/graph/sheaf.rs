@@ -132,7 +132,7 @@ pub fn try_sheaf_diffusion_step(
 const EXPECTED_SHEAF_DIFFUSION_OUTPUT_BYTES: [u8; 4] = [0, 0, 5, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || sheaf_diffusion_step("stalks", "restriction_diag", "damping", "stalks_next", 1, 1),
         Some(|| {

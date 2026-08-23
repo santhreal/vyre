@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 ./cargo_full test -p vyre-megakernel
 ```
 
-Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, emit a megakernel Artifact and TargetPayloads, and never claim a measured winner that no clock produced. Does not own admission, execution, or lifecycle policy.
+Construct foundation-owned selected schedules through bounded whole-ProgramGraph search, and own immutable Artifact identity and authenticated TargetPayload construction. Does not own logical semantics, schedule schemas, physical-kernel lowering, admission, execution, or lifecycle policy.
 
 The crate lives at `vyre-megakernel`. The `megakernel-compiler` owner maintains its
 `compiler-boundary` testing contract.

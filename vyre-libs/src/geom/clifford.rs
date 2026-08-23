@@ -179,7 +179,7 @@ const EXPECTED_CLIFFORD_OUTPUT_BYTES: [u8; 32] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || clifford2_product("lhs", "rhs", "out", 2),
         Some(|| {

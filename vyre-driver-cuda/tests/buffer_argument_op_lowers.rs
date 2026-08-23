@@ -83,7 +83,7 @@ const LOOKUP_SIG: Signature = Signature {
 };
 
 inventory::submit! {
-    OperationRegistration::new(
+    OperationRegistration::new_unconstrained(
         LOOKUP_OP_ID,
         OperationTier::External,
         Some(table_lookup),
@@ -97,9 +97,9 @@ inventory::submit! {
 /// The call resolves, and the callee's read moves onto the caller's buffer.
 #[test]
 fn a_buffer_argument_retargets_the_read_onto_the_callers_table() {
-    let prepared = vyre_lower::lower_verified(&caller())
+    let prepared = vyre_lower::lower_physical(&caller())
         .unwrap_or_else(|error| {
-            panic!("buffer-argument op must survive verified lowering: {error}")
+            panic!("buffer-argument op must survive physical lowering: {error}")
         })
         .program;
     let dump = format!("{:?}", prepared.entry());

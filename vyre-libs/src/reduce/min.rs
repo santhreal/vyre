@@ -15,7 +15,7 @@ pub fn reduce_min(values: &str, out: &str, count: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || reduce_min("values", "out", 4),
         Some(|| {

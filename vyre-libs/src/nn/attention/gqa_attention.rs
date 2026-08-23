@@ -334,7 +334,7 @@ pub fn gqa_attention_causal_typed(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             gqa_attention("q", "k", "v", "out", 2, 1, 2, 2)

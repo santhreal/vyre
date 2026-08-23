@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use thiserror::Error;
-use vyre_foundation::{execution_plan::fusion::merge_programs_shared, ir::Program};
+use vyre_foundation::{
+    execution_plan::fusion::merge_programs_shared, ir::Program, schedule::SchedulePhase,
+};
 use vyre_lower::{KernelDescriptor, MemoryClass};
 
 use crate::{
@@ -35,8 +37,10 @@ pub struct SelectedLowering {
     pub stage: u32,
     /// Typed graph node identities in deterministic emission order.
     pub nodes: Vec<ArtifactNodeId>,
-    /// Verified backend-neutral descriptor consumed by concrete emitters.
-    pub descriptor: KernelDescriptor,
+    /// Exact backend-neutral selected schedule phase lowered into this kernel.
+    pub schedule_phase: SchedulePhase,
+    /// Verified backend-neutral physical kernel consumed by concrete emitters.
+    physical: vyre_lower::PhysicalKernel,
     /// Canonical ABI slice for this selected group.
     pub abi: ArtifactAbi,
     /// Canonical descriptor-to-artifact resource association.
@@ -44,6 +48,14 @@ pub struct SelectedLowering {
     /// Authoritative logical invocation span before target grid projection.
     pub logical_element_count: u32,
     program: Program,
+}
+
+impl SelectedLowering {
+    /// Borrow the verified physical descriptor.
+    #[must_use]
+    pub const fn descriptor(&self) -> &KernelDescriptor {
+        self.physical.descriptor()
+    }
 }
 
 /// Canonical target-module bundle schema carried inside one target payload.
@@ -66,7 +78,7 @@ pub struct TargetModuleImage {
     pub nodes: Vec<ArtifactNodeId>,
     /// Canonical optimized Program wire consumed without semantic re-lowering.
     pub program: Vec<u8>,
-    /// Verified lowering product consumed by materializers without re-lowering.
+    /// Verified physical descriptor consumed by materializers without re-lowering.
     pub descriptor: KernelDescriptor,
     /// Target entry-point name.
     pub entry_point: String,
@@ -282,8 +294,8 @@ pub struct EmittedTargetModule {
     pub bytes: Vec<u8>,
 }
 
-/// Compile all selected groups through one verified lowering boundary and
-/// package canonical target bytes.
+/// Compile all selected groups through the validated physical-kernel boundary
+/// and package canonical target bytes.
 pub fn compile_selected_modules(
     artifact: &Artifact,
     format: TargetPayloadFormat,
@@ -298,14 +310,31 @@ pub fn compile_selected_modules(
     let mut entries = Vec::with_capacity(modules.len());
     for module in modules {
         let program = fuse_selected_module(&module)?;
-        let lowered = vyre_lower::lower_verified(&program).map_err(|error| {
-            TargetCompileError::Emission(format!(
-                "verified lowering failed for fusion group {}: {error}",
+        let source_region = module.nodes.first().ok_or_else(|| {
+            TargetCompileError::InvalidArtifact(format!(
+                "fusion group {} has no source region for schedule lowering",
                 module.group.0
             ))
         })?;
-        let descriptor = lowered.descriptor;
-        let bindings = selected_resource_bindings(artifact, &module, &descriptor)?;
+        let schedule = &artifact.selected_plan().schedule;
+        let schedule_phase = schedule
+            .phase_for_region(source_region.0)
+            .cloned()
+            .ok_or_else(|| {
+                TargetCompileError::InvalidArtifact(format!(
+                    "fusion group {} has no selected schedule phase",
+                    module.group.0
+                ))
+            })?;
+        let lowered = vyre_lower::lower_scheduled(&program, schedule, schedule_phase.id).map_err(
+            |error| {
+                TargetCompileError::Emission(format!(
+                    "verified physical lowering failed for fusion group {}: {error}",
+                    module.group.0
+                ))
+            },
+        )?;
+        let bindings = selected_resource_bindings(artifact, &module, lowered.kernel.descriptor())?;
         let abi = selected_abi(artifact, &module);
         let logical_element_count =
             selected_logical_element_count(artifact, &module, &lowered.program);
@@ -314,7 +343,8 @@ pub fn compile_selected_modules(
             group: module.group,
             stage: module.stage,
             nodes: module.nodes,
-            descriptor,
+            schedule_phase,
+            physical: lowered.kernel,
             abi,
             canonical_bindings: bindings,
             logical_element_count,
@@ -347,7 +377,7 @@ pub fn compile_selected_modules(
             stage: selected.stage,
             nodes: selected.nodes.clone(),
             program,
-            descriptor: selected.descriptor.clone(),
+            descriptor: selected.descriptor().clone(),
             entry_point,
             bytes: emitted.bytes,
         });

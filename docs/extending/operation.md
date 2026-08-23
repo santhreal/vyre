@@ -2,7 +2,7 @@
 
 ```rust
 inventory::submit! {
-    OperationRegistration::new(
+    OperationRegistration::new_unconstrained(
         OPERATION_ID,
         OperationTier::External,
         Some(build_operation),
@@ -44,12 +44,16 @@ between `Intrinsic` and `Library` is not free: see
 
 ## What the record owns and what it must not
 
-A registration owns the stable operation id, the semantic tier, the neutral
-`Program` builder, fixtures, laws and tolerance.
+A registration contains the stable operation id, semantic tier, neutral
+`Program` builder, fixtures, laws, tolerance, and one schedule-constraint
+decision. Use an unconstrained constructor only when the canonical program
+contains every semantic width, uniformity, scratch, cooperative-launch, and
+memory-order requirement. Attach stronger neutral constraints with
+`with_geometry_requirements`.
 
-A semantic record carries no target compiler and no host function. Those
-live elsewhere by ownership, not by convention: target identities, format
-names, compilers and materializers belong to concrete target crates.
+A semantic record contains no target compiler or host function. Target
+identities, formats, compilers, and materializers remain in concrete target
+crates.
 
 ## Reference support is separate and optional
 

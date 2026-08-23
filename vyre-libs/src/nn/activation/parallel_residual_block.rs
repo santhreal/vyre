@@ -52,7 +52,7 @@ const EXPECTED_PARALLEL_RESIDUAL_BLOCK_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             parallel_residual_block("x", "attn", "mlp", "out", 4)

@@ -99,8 +99,9 @@ fn path_reconstruct_oob_parent_terminates_early() {
 fn path_reconstruct_zero_max_depth_emits_trap_program() {
     // Primitive builders are infallible: invalid shapes become IR traps,
     // not host panics. Verify max_depth == 0 produces a trap node.
-    let p =
-        vyre_libs::graph::path_reconstruct::path_reconstruct("parent", "target", "out", "len", 0);
+    let p = vyre_libs::graph::path_reconstruct::path_reconstruct(
+        "parent", "target", "out", "len", 1, 0,
+    );
     let entry = p.entry();
     let has_trap = entry.iter().any(|n| {
         use vyre_foundation::ir::Node;

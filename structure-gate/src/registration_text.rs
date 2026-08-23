@@ -16,18 +16,16 @@ use crate::source_scan::{
     is_word_byte, mask_comments_and_strings, opaque_span, skip_comments_and_space, skip_opaque,
 };
 
-/// Tier implied by each `OperationRegistration` constructor.
+/// Tier implied by each explicit schedule-decision constructor.
 ///
-/// `new` takes the tier as its second argument, so it is read there rather
-/// than assumed. Guessing it wrong is worse than not knowing: mapping
-/// `primitive` to `Library` once reported all 122 of one crate's intrinsics as
-/// misplaced compositions and buried the real findings. `primitive` names the
-/// owning crate, `vyre-primitives`, and builds `OperationTier::Intrinsic`.
+/// `new_unconstrained` takes the tier as its second argument, so it is read
+/// there. The other constructors state both semantic tier and the absence of an
+/// additional declared schedule constraint.
 const CONSTRUCTOR_TIERS: &[(&str, Option<&str>)] = &[
-    ("::primitive(", Some("Intrinsic")),
-    ("::intrinsic(", Some("Intrinsic")),
-    ("::library(", Some("Library")),
-    ("::new(", None),
+    ("::primitive_unconstrained(", Some("Intrinsic")),
+    ("::intrinsic_unconstrained(", Some("Intrinsic")),
+    ("::library_unconstrained(", Some("Library")),
+    ("::new_unconstrained(", None),
 ];
 
 pub(crate) fn identifier_continues_before(text: &str, at: usize) -> bool {
@@ -337,7 +335,7 @@ inventory::submit! {
 const ADLER32_OP_ID: &str = "vyre-foundation::hash::adler32";
 
 fn registration() -> OperationRegistration {
-    vyre_foundation::operation::OperationRegistration::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive_unconstrained(
         ADLER32_OP_ID,
         || adler32_program("input", "out", 3),
         Some(|| { vec![vec![vec![1u8]]] }),
@@ -362,7 +360,7 @@ fn registration() -> OperationRegistration {
     fn a_new_registration_reads_its_tier_argument() {
         let parsed = parse_registrations(
             r#"
-    OperationRegistration::new(
+    OperationRegistration::new_unconstrained(
         "vyre-primitives::hardware::fma_f32",
         OperationTier::Intrinsic,
         Some(fma_f32_program),
@@ -385,7 +383,7 @@ fn registration() -> OperationRegistration {
     fn a_constructor_registration_with_an_inline_id_is_parsed() {
         let parsed = parse_registrations(
             r#"
-    OperationRegistration::library("vyre-libs::nn::attention", builder)
+    OperationRegistration::library_unconstrained("vyre-libs::nn::attention", builder)
 "#,
         );
 
@@ -403,7 +401,7 @@ fn registration() -> OperationRegistration {
         let parsed = parse_registrations(
             r#"
     inventory::submit! {
-        vyre_foundation::operation::OperationRegistration::intrinsic(
+        vyre_foundation::operation::OperationRegistration::intrinsic_unconstrained(
             OP_ID,
             crate::hardware::catalog::U32_UNARY_SIGNATURE,
             Some(|| bit_reverse_u32("input", "out", 4)),
@@ -480,7 +478,7 @@ inventory::submit! {
             mod tests {
                 const ECHO_ID: &str = "test::reference_echo";
                 fn fixture() {
-                    OperationRegistration::library(ECHO_ID);
+                    OperationRegistration::library_unconstrained(ECHO_ID);
                 }
             }
             "#,
@@ -494,13 +492,13 @@ inventory::submit! {
         let parsed = parse_registrations(
             r#"
             fn install() {
-                OperationRegistration::library("vyre-libs::hash::crc32");
+                OperationRegistration::library_unconstrained("vyre-libs::hash::crc32");
             }
 
             #[cfg(test)]
             mod tests {
                 fn fixture() {
-                    OperationRegistration::library("test::call_u32");
+                    OperationRegistration::library_unconstrained("test::call_u32");
                 }
             }
             "#,
@@ -522,7 +520,7 @@ inventory::submit! {
             #[cfg(feature = "test-utils")]
             mod utils {
                 fn install() {
-                    OperationRegistration::library("vyre-libs::hash::fnv1a32");
+                    OperationRegistration::library_unconstrained("vyre-libs::hash::fnv1a32");
                 }
             }
             "#,
@@ -544,7 +542,7 @@ inventory::submit! {
             #[cfg(all(test, feature = "gpu"))]
             mod tests {
                 fn fixture() {
-                    OperationRegistration::library("test::reference_panic");
+                    OperationRegistration::library_unconstrained("test::reference_panic");
                 }
             }
             "#,
@@ -561,7 +559,7 @@ inventory::submit! {
             mod tests;
 
             fn install() {
-                OperationRegistration::library("vyre-libs::hash::adler32");
+                OperationRegistration::library_unconstrained("vyre-libs::hash::adler32");
             }
             "#,
         );
@@ -638,13 +636,13 @@ inventory::submit! {
 
             #[cfg(feature = "inventory-registry")]
             inventory::submit! {
-                OperationRegistration::primitive(ADLER32_OP_ID, builder)
+                OperationRegistration::primitive_unconstrained(ADLER32_OP_ID, builder)
             }
 
             #[cfg(test)]
             mod tests {
                 fn fixture() {
-                    OperationRegistration::library("test::reference_echo");
+                    OperationRegistration::library_unconstrained("test::reference_echo");
                 }
             }
             "#,
@@ -669,7 +667,7 @@ inventory::submit! {
                 "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled";
 
             inventory::submit! {
-                OperationRegistration::primitive(I4_MATVEC_F32_SCALED_OP_ID, builder)
+                OperationRegistration::primitive_unconstrained(I4_MATVEC_F32_SCALED_OP_ID, builder)
             }
             "#,
         );
@@ -694,7 +692,7 @@ inventory::submit! {
             const OP_ID: usize = "vyre-libs::hash::adler32".len();
 
             inventory::submit! {
-                OperationRegistration::primitive(OP_ID, builder)
+                OperationRegistration::primitive_unconstrained(OP_ID, builder)
             }
             "#,
         );
@@ -707,12 +705,12 @@ inventory::submit! {
         let parsed = parse_registrations(
             r#"
             const DESCRIPTION: &str =
-                "OperationRegistration::library(\"test::string\")";
-            // OperationRegistration::library("test::line_comment");
-            /* outer OperationRegistration::library("test::block_comment");
-               /* nested OperationRegistration::library("test::nested_comment"); */
+                "OperationRegistration::library_unconstrained(\"test::string\")";
+            // OperationRegistration::library_unconstrained("test::line_comment");
+            /* outer OperationRegistration::library_unconstrained("test::block_comment");
+               /* nested OperationRegistration::library_unconstrained("test::nested_comment"); */
             */
-            OperationRegistration::library("vyre-libs::hash::crc32");
+            OperationRegistration::library_unconstrained("vyre-libs::hash::crc32");
             "#,
         );
 
@@ -761,7 +759,7 @@ inventory::submit! {
         let parsed = parse_registrations(
             r#"
             fn install() {
-                OperationRegistration::library("vyre-libs::hash::crc32");
+                OperationRegistration::library_unconstrained("vyre-libs::hash::crc32");
             }
 
             #[cfg(test)]
@@ -771,7 +769,7 @@ inventory::submit! {
                 }
 
                 fn fixture() {
-                    OperationRegistration::library("test::reference_echo");
+                    OperationRegistration::library_unconstrained("test::reference_echo");
                 }
             }
             "#,
@@ -818,11 +816,11 @@ inventory::submit! {
             r#"
 fn λ() {}
 const OP: &str = "vyre-libs::unicode::library";
-OperationRegistration::library(OP);
+OperationRegistration::library_unconstrained(OP);
 
 #[cfg(test)]
 mod δοκιμή {
-    OperationRegistration::library("test::unicode_fixture");
+    OperationRegistration::library_unconstrained("test::unicode_fixture");
 }
 
 const INTRINSIC: &str = "vyre-primitives::unicode::intrinsic";
@@ -854,7 +852,7 @@ submit_hardware_intrinsic! {
     fn registration_tokens_inside_unicode_identifiers_are_ignored() {
         let parsed = parse_registrations(
             r#"
-λOperationRegistration::library("bad::constructor");
+λOperationRegistration::library_unconstrained("bad::constructor");
 OperationRegistrationλ::library("bad::constructor_suffix");
 λsubmit_hardware_intrinsic! {
     id: "bad::macro",
@@ -866,8 +864,8 @@ submit_hardware_intrinsicλ! {
 }
 λconst BAD: &str = "bad::const";
 constλ BAD_SUFFIX: &str = "bad::const_suffix";
-OperationRegistration::library(BAD_SUFFIX);
-OperationRegistration::library(BAD);
+OperationRegistration::library_unconstrained(BAD_SUFFIX);
+OperationRegistration::library_unconstrained(BAD);
 OperationRegistration {
     λid: "bad::field",
     tier: OperationTier::Library,
@@ -876,7 +874,7 @@ OperationRegistration {
     idλ: "bad::field_suffix",
     tier: OperationTier::Library,
 }
-OperationRegistration::library("good::registration");
+OperationRegistration::library_unconstrained("good::registration");
 "#,
         );
 

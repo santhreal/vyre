@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::{Ident, ProgramGraph};
+use vyre_foundation::{ir::Ident, logical::LogicalProgramGraph};
 
 use crate::{
     value_byte_count, workgroup_scratch_declarations, ArtifactNodeId, ArtifactValueId,
@@ -50,10 +50,11 @@ pub(crate) struct PlanningFacts {
 }
 
 pub(crate) fn derive(
-    graph: &ProgramGraph,
+    logical: &LogicalProgramGraph<'_>,
     dependencies: &[DependencyEdge],
     bindings: &BTreeMap<String, u64>,
 ) -> Result<PlanningFacts, CompileError> {
+    let graph = logical.graph();
     let node_count = graph.nodes().len();
     let mut node_work = Vec::with_capacity(node_count);
     let mut node_live_values = Vec::with_capacity(node_count);
@@ -71,39 +72,10 @@ pub(crate) fn derive(
         let invocations = u64::from(declared[0])
             .saturating_mul(u64::from(declared[1]))
             .saturating_mul(u64::from(declared[2]));
-        // A launch width is safe to replace only when nothing in the program
-        // observes it. A workgroup-scoped buffer is sized for the declared
-        // width, a barrier orders invocations inside the declared group, a
-        // subgroup operation reads the group's lane layout, and any launch-geometry
-        // expression (InvocationId, LocalId, WorkgroupId, SubgroupLocalId, SubgroupSize)
-        // reads the group dimensions/indices, so each one pins the declared shape.
-        // A 2D or 3D declaration pins it too: the search only proposes 1D widths.
-        let observes_launch_geometry = program.entry().iter().any(|node| {
-            vyre_foundation::visit::any_descendant(node, &mut |n| {
-                vyre_foundation::visit::node_operands(n)
-                    .into_iter()
-                    .flatten()
-                    .any(|expr| {
-                        vyre_foundation::visit::any_subexpr(expr, &mut |sub| {
-                            matches!(
-                                sub,
-                                vyre_foundation::ir::Expr::InvocationId { .. }
-                                    | vyre_foundation::ir::Expr::WorkgroupId { .. }
-                                    | vyre_foundation::ir::Expr::LocalId { .. }
-                                    | vyre_foundation::ir::Expr::SubgroupLocalId
-                                    | vyre_foundation::ir::Expr::SubgroupSize
-                            )
-                        })
-                    })
-            })
-        });
-        let accepts_width = declared[1] == 1
-            && declared[2] == 1
-            && scratch.is_empty()
-            && !stats.has_node_barrier()
-            && !stats.subgroup_ops()
-            && !program.non_composable_with_self
-            && !observes_launch_geometry;
+        // Only a schedule-only width may vary. The semantic IR owner classifies
+        // geometry observability once so search and logical identity cannot
+        // disagree about whether the declaration affects behavior.
+        let accepts_width = program.workgroup_size_is_schedule_only();
         node_workgroup_scratch.push(scratch);
         node_declared_invocations.push(invocations.max(1));
         node_declared_workgroup.push(declared);

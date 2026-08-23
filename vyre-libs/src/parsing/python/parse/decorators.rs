@@ -187,7 +187,7 @@ const EXPECTED_DECORATOR_RECORDS: [u8; 384] = pack_words_padded_bytes([1, 1, 2, 
 const EXPECTED_DECORATOR_COUNTS: [u8; 4] = 6u32.to_le_bytes();
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || python312_extract_decorators("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         Some(decorator_fixture_inputs),

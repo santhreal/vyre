@@ -57,7 +57,7 @@ pub fn try_tn_pair_contract(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || tn_pair_contract("a", "b", "c", 2, 2, 2),
         Some(|| {

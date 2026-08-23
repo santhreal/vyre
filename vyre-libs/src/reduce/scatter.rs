@@ -44,7 +44,7 @@ pub fn scatter(src: &str, indices: &str, dst: &str, count: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || scatter("src", "indices", "dst", 4),
         Some(super::indexed_move::indexed_move_4element_fixture_inputs),

@@ -265,7 +265,7 @@ const EXPECTED_NTT_BUTTERFLY_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || ntt_butterfly_stage("data", "twiddles", 4, 0),
         Some(|| {

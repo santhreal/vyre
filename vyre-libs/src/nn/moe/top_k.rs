@@ -124,7 +124,7 @@ const EXPECTED_TOP_K_INDICES_BYTES: [u8; 8] = [0x07, 0x00, 0x00, 0x00, 0x06, 0x0
 const EXPECTED_TOP_K_VALUES_BYTES: [u8; 8] = [0x00, 0x00, 0x00, 0x41, 0x00, 0x00, 0xE0, 0x40];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::nn::top_k",
         || top_k("input", "output", 8, 2),
         Some(|| {

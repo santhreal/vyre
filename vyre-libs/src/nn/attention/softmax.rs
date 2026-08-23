@@ -208,7 +208,7 @@ fn softmax_reference_program(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::nn::softmax",
         || softmax("input", "output", 4),
         Some(|| {
@@ -243,8 +243,8 @@ mod tests {
     #[test]
     fn softmax_lowers_and_keeps_its_region_generator_in_the_descriptor() {
         let program = softmax("input", "output", 4);
-        let descriptor = vyre_lower::lower_verified(&program)
-            .map(|lowered| lowered.descriptor)
+        let descriptor = vyre_lower::lower_physical(&program)
+            .map(|lowered| lowered.into_descriptor())
             .expect("Fix: the softmax program must lower to a verified descriptor.");
 
         let generators: Vec<&str> = descriptor

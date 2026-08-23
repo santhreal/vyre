@@ -19,7 +19,8 @@ use crate::target::{TargetCompileError, TargetCompiler};
 use crate::{artifact, facts, normalize, search, select};
 
 /// Everything one compilation derives once and every finalist reuses.
-struct CompileContext {
+struct CompileContext<'a> {
+    logical: vyre_foundation::logical::LogicalProgramGraph<'a>,
     source_graph: Digest,
     nodes: Vec<NodeRecord>,
     dependencies: Vec<DependencyEdge>,
@@ -30,18 +31,22 @@ struct CompileContext {
 }
 
 /// Rank every legal candidate for one validated request.
-fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext, CompileError> {
-    let canonical_wire = request.graph.to_wire().map_err(|error| {
+fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext<'_>, CompileError> {
+    let logical = vyre_foundation::logical::LogicalProgramGraph::validate(
+        &request.graph,
+        &request.facts.symbolic_bindings,
+    )
+    .map_err(|error| {
         failure(
             CompilerFailureKind::InvalidProgram,
-            "request.graph",
+            "request.logical",
             error.to_string(),
-            "supply a graph representable by the canonical foundation wire format",
+            "supply a graph with bounded, compatible logical domains",
         )
     })?;
-    let source_graph = domain_digest(SOURCE_DIGEST_DOMAIN, &canonical_wire);
-    let nodes = request
-        .graph
+    let source_graph = domain_digest(SOURCE_DIGEST_DOMAIN, logical.semantic_wire());
+    let nodes = logical
+        .graph()
         .nodes()
         .iter()
         .map(|node| {
@@ -60,15 +65,11 @@ fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext, CompileE
             })
         })
         .collect::<Result<Vec<_>, CompileError>>()?;
-    let normalized = normalize::normalize(&request.graph)?;
+    let normalized = normalize::normalize(logical.graph())?;
     let dependencies = normalized.dependencies;
-    let planning_facts = facts::derive(
-        &request.graph,
-        &dependencies,
-        &request.facts.symbolic_bindings,
-    )?;
+    let planning_facts = facts::derive(&logical, &dependencies, &request.facts.symbolic_bindings)?;
     let search = search::explore(
-        &request.graph,
+        &logical,
         &planning_facts,
         &dependencies,
         request.search_budget,
@@ -99,6 +100,7 @@ fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext, CompileE
         })
         .collect();
     Ok(CompileContext {
+        logical,
         source_graph,
         nodes,
         dependencies,
@@ -112,7 +114,7 @@ fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext, CompileE
 /// Turn one ranked candidate into a complete canonical artifact.
 fn assemble(
     request: &ValidatedCompileRequest,
-    context: &CompileContext,
+    context: &CompileContext<'_>,
     selection: &select::Selection,
     work: SearchWork,
     measurement: PlanMeasurement,
@@ -123,7 +125,7 @@ fn assemble(
         geometry,
         selected_plan,
     } = artifact::plan(artifact::PlanInputs {
-        graph: &request.graph,
+        logical: &context.logical,
         dependencies: &context.dependencies,
         facts: &context.facts,
         selection,
@@ -327,7 +329,9 @@ pub fn compile_measured(
     }
 }
 
-fn first_ranked(context: &CompileContext) -> Result<&select::Selection, CompileError> {
+fn first_ranked<'a>(
+    context: &'a CompileContext<'_>,
+) -> Result<&'a select::Selection, CompileError> {
     context.ranked.first().ok_or_else(|| {
         failure(
             CompilerFailureKind::InvalidSearchBudget,

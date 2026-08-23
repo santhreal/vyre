@@ -7,12 +7,12 @@ use vyre_lower::pattern_audit::PatternAudit;
 pub(crate) fn validate_and_analyze(
     program: &Program,
 ) -> Result<vyre_lower::KernelDescriptor, LoweringError> {
-    let lowered = vyre_lower::lower_verified(program).map_err(|error| {
+    let lowered = vyre_lower::lower_physical(program).map_err(|error| {
         LoweringError::invalid(format!(
-            "verified lowering failed before wgpu emission: {error}. Fix: route Programs through vyre_lower::lower_verified and add missing neutral mappings there instead of concrete-driver lowering."
+            "physical lowering failed before wgpu emission: {error}. Fix: add the missing neutral mapping to vyre-lower instead of concrete-driver lowering."
         ))
     })?;
-    let descriptor = lowered.descriptor;
+    let descriptor = lowered.into_descriptor();
     let neutral = vyre_lower::audit(&descriptor);
     let concrete = vyre_emit_naga::patterns::audit(&descriptor);
     tracing::trace!(
@@ -57,7 +57,7 @@ mod tests {
 
         let error = validate_and_analyze(&program).expect_err("zero dispatch must fail");
 
-        assert!(error.message().contains("verified lowering failed"));
+        assert!(error.message().contains("physical lowering failed"));
         assert!(error.message().contains("KernelDescriptor"));
         assert!(error.message().contains("Fix:"));
     }

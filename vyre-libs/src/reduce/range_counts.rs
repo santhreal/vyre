@@ -64,7 +64,7 @@ pub fn range_counts_u32(histogram: &str, out: &str, start: u32, end: u32) -> Pro
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         RANGE_COUNTS_U32_OP_ID,
         || range_counts_u32("histogram", "out", 1, 4),
         Some(|| {

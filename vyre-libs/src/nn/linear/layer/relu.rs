@@ -40,7 +40,7 @@ const EXPECTED_LINEAR_RELU_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             linear_relu("x", "w", "b", "out", 4, 4).unwrap_or_else(|error| {

@@ -94,7 +94,7 @@ const EXPECTED_QUEST_IO_QUEUE_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || quest_paging("q", "meta", "scores", "io", 4, 2, 2),
         Some(|| {

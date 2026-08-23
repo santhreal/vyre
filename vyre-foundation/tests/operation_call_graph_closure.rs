@@ -73,19 +73,19 @@ fn make_caller_program(callee_id: &'static str) -> Program {
 /// and synchronization effects (writes, atomics, synchronization) up the call graph.
 #[test]
 fn transitive_effects_propagate_across_multi_hop_calls() {
-    let reg_c = OperationRegistration::library(
+    let reg_c = OperationRegistration::library_unconstrained(
         "vyre-libs::test::closure::leaf_c",
         make_atomic_write_leaf_program,
         None,
         None,
     );
-    let reg_b = OperationRegistration::library(
+    let reg_b = OperationRegistration::library_unconstrained(
         "vyre-libs::test::closure::intermediate_b",
         || make_caller_program("vyre-libs::test::closure::leaf_c"),
         None,
         None,
     );
-    let reg_a = OperationRegistration::library(
+    let reg_a = OperationRegistration::library_unconstrained(
         "vyre-libs::test::closure::root_a",
         || make_caller_program("vyre-libs::test::closure::intermediate_b"),
         None,
@@ -150,13 +150,13 @@ fn transitive_effects_propagate_across_multi_hop_calls() {
 /// propagate transitively from nested callees to parent callers.
 #[test]
 fn transitive_capabilities_propagate_across_call_graph() {
-    let reg_leaf = OperationRegistration::library(
+    let reg_leaf = OperationRegistration::library_unconstrained(
         "vyre-libs::test::closure::caps_leaf",
         make_specialized_caps_leaf_program,
         None,
         None,
     );
-    let reg_parent = OperationRegistration::library(
+    let reg_parent = OperationRegistration::library_unconstrained(
         "vyre-libs::test::closure::caps_parent",
         || make_caller_program("vyre-libs::test::closure::caps_leaf"),
         None,
@@ -205,7 +205,7 @@ fn transitive_capabilities_propagate_across_call_graph() {
 /// inheriting the strongest applicable effects and capabilities.
 #[test]
 fn missing_callee_defaults_to_strongest_effects_and_capabilities() {
-    let reg_caller = OperationRegistration::library(
+    let reg_caller = OperationRegistration::library_unconstrained(
         "vyre-libs::test::closure::calls_missing",
         || make_caller_program("external_unknown::missing_operation"),
         None,
@@ -239,14 +239,14 @@ fn missing_callee_defaults_to_strongest_effects_and_capabilities() {
 #[test]
 fn signature_only_callee_fails_closed_unless_explicit_contract_closes_it() {
     // 1. Signature-only without explicit contract -> fails closed
-    let reg_sig_open = OperationRegistration::new(
+    let reg_sig_open = OperationRegistration::new_unconstrained(
         "vyre-libs::test::closure::sig_open",
         OperationTier::Library,
         None,
         None,
         None,
     );
-    let reg_caller_open = OperationRegistration::library(
+    let reg_caller_open = OperationRegistration::library_unconstrained(
         "vyre-libs::test::closure::caller_sig_open",
         || make_caller_program("vyre-libs::test::closure::sig_open"),
         None,
@@ -271,7 +271,7 @@ fn signature_only_callee_fails_closed_unless_explicit_contract_closes_it() {
         synchronizes: false,
     };
     let closed_caps = RequiredCapabilities::none();
-    let reg_sig_closed = OperationRegistration::new(
+    let reg_sig_closed = OperationRegistration::new_unconstrained(
         "vyre-libs::test::closure::sig_closed",
         OperationTier::Library,
         None,
@@ -281,7 +281,7 @@ fn signature_only_callee_fails_closed_unless_explicit_contract_closes_it() {
     .with_explicit_effects(closed_eff)
     .with_explicit_capabilities(closed_caps);
 
-    let reg_caller_closed = OperationRegistration::library(
+    let reg_caller_closed = OperationRegistration::library_unconstrained(
         "vyre-libs::test::closure::caller_sig_closed",
         || make_caller_program("vyre-libs::test::closure::sig_closed"),
         None,
@@ -319,13 +319,13 @@ fn signature_only_callee_fails_closed_unless_explicit_contract_closes_it() {
 #[test]
 fn recursive_cycles_fail_closed_without_contract() {
     // Cycle A -> B -> A
-    let reg_cycle_a = OperationRegistration::library(
+    let reg_cycle_a = OperationRegistration::library_unconstrained(
         "vyre-libs::test::closure::cycle_a",
         || make_caller_program("vyre-libs::test::closure::cycle_b"),
         None,
         None,
     );
-    let reg_cycle_b = OperationRegistration::library(
+    let reg_cycle_b = OperationRegistration::library_unconstrained(
         "vyre-libs::test::closure::cycle_b",
         || make_caller_program("vyre-libs::test::closure::cycle_a"),
         None,
@@ -355,13 +355,13 @@ fn recursive_cycles_fail_closed_without_contract() {
 #[test]
 fn nested_callee_mutation_alters_parent_composite_version_and_effects() {
     // Baseline graph: Parent -> Child (pure)
-    let reg_child_v1 = OperationRegistration::library(
+    let reg_child_v1 = OperationRegistration::library_unconstrained(
         "vyre-libs::test::closure::child",
         make_pure_leaf_program,
         None,
         None,
     );
-    let reg_parent = OperationRegistration::library(
+    let reg_parent = OperationRegistration::library_unconstrained(
         "vyre-libs::test::closure::parent",
         || make_caller_program("vyre-libs::test::closure::child"),
         None,
@@ -379,7 +379,7 @@ fn nested_callee_mutation_alters_parent_composite_version_and_effects() {
     assert!(!parent_eff_v1.atomics, "V1 parent has no atomics");
 
     // Mutated graph: Child now adds writes and atomics, parent code untouched
-    let reg_child_v2 = OperationRegistration::library(
+    let reg_child_v2 = OperationRegistration::library_unconstrained(
         "vyre-libs::test::closure::child",
         make_atomic_write_leaf_program,
         None,

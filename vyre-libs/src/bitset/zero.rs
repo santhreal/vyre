@@ -20,7 +20,7 @@ pub fn bitset_zero(target: &str, words: u32) -> Program {
 const EXPECTED_BITSET_ZERO_OUTPUT_BYTES: [u8; 12] = [0; 12];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || bitset_zero("target", 3),
         Some(|| {

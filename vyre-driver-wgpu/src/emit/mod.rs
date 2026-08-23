@@ -57,7 +57,7 @@ pub struct WgpuProgram {
 ///
 /// The shader text is produced only after structural Naga IR construction and
 /// validation. Callers that need the module itself should use
-/// [`vyre_lower::lower_verified`] and [`vyre_emit_naga::emit`].
+/// [`vyre_lower::lower_physical`] and [`vyre_emit_naga::emit`].
 ///
 /// # Errors
 ///

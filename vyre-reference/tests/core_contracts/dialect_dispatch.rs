@@ -20,17 +20,17 @@ const EMPTY_SIGNATURE: Signature = Signature {
 };
 
 inventory::submit! {
-    OperationRegistration::new(ECHO_ID, OperationTier::External, None, None, None)
+    OperationRegistration::new_unconstrained(ECHO_ID, OperationTier::External, None, None, None)
         .with_signature(EMPTY_SIGNATURE)
         .with_category("test")
 }
 inventory::submit! {
-    OperationRegistration::new(PANIC_ID, OperationTier::External, None, None, None)
+    OperationRegistration::new_unconstrained(PANIC_ID, OperationTier::External, None, None, None)
         .with_signature(EMPTY_SIGNATURE)
         .with_category("test")
 }
 inventory::submit! {
-    OperationRegistration::new(MISSING_ID, OperationTier::External, None, None, None)
+    OperationRegistration::new_unconstrained(MISSING_ID, OperationTier::External, None, None, None)
         .with_signature(EMPTY_SIGNATURE)
         .with_category("test")
 }

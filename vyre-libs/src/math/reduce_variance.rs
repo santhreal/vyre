@@ -90,7 +90,7 @@ fn reduce_variance_reference_program(input: &str, output: &str, n: u32, bessel: 
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::math::reduce_variance",
         || reduce_variance("input", "output", 256),
         Some(|| {

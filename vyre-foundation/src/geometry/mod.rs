@@ -62,17 +62,23 @@ impl Default for Uniformity {
     }
 }
 
-/// Substrate-neutral execution geometry requirements declared by an operation.
+/// Substrate-neutral schedule constraints declared by an operation.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct GeometryRequirements {
-    /// Minimum or exact cooperative execution width.
+    /// Minimum or exact workgroup execution width.
     pub cooperative_width: CooperativeWidth,
+    /// Minimum or exact subgroup execution width.
+    pub subgroup_width: CooperativeWidth,
     /// Minimum workgroup-shared memory in bytes needed by the algorithm.
     pub min_shared_bytes: u32,
     /// Divisibility or element processing policy per invocation.
     pub per_invocation_elements: ElementPolicy,
     /// Uniformity requirements for cross-invocation divergence prevention.
     pub subgroup_uniformity: Uniformity,
+    /// Whether all workgroups must be resident for a grid-wide synchronization.
+    pub requires_cooperative_launch: bool,
+    /// Strongest memory ordering required by atomics or barriers.
+    pub memory_ordering: Option<crate::memory_model::MemoryOrdering>,
 }
 
 impl GeometryRequirements {
@@ -81,20 +87,21 @@ impl GeometryRequirements {
     pub const fn agnostic() -> Self {
         Self {
             cooperative_width: CooperativeWidth::Agnostic,
+            subgroup_width: CooperativeWidth::Agnostic,
             min_shared_bytes: 0,
             per_invocation_elements: ElementPolicy::Any,
             subgroup_uniformity: Uniformity::None,
+            requires_cooperative_launch: false,
+            memory_ordering: None,
         }
     }
 
-    /// Geometry requirements with a specific cooperative width constraint.
+    /// Geometry requirements with a specific workgroup width constraint.
     #[must_use]
     pub const fn cooperative(width: CooperativeWidth) -> Self {
         Self {
             cooperative_width: width,
-            min_shared_bytes: 0,
-            per_invocation_elements: ElementPolicy::Any,
-            subgroup_uniformity: Uniformity::None,
+            ..Self::agnostic()
         }
     }
 
@@ -117,6 +124,294 @@ impl GeometryRequirements {
     pub const fn with_subgroup_uniformity(mut self, uniformity: Uniformity) -> Self {
         self.subgroup_uniformity = uniformity;
         self
+    }
+
+    /// Attach a subgroup width constraint.
+    #[must_use]
+    pub const fn with_subgroup_width(mut self, width: CooperativeWidth) -> Self {
+        self.subgroup_width = width;
+        self
+    }
+
+    /// Require a cooperative launch for grid-wide synchronization.
+    #[must_use]
+    pub const fn with_cooperative_launch(mut self) -> Self {
+        self.requires_cooperative_launch = true;
+        self
+    }
+
+    /// Attach a minimum memory ordering.
+    #[must_use]
+    pub const fn with_memory_ordering(
+        mut self,
+        ordering: crate::memory_model::MemoryOrdering,
+    ) -> Self {
+        self.memory_ordering = Some(ordering);
+        self
+    }
+
+    /// Compose two neutral constraint records.
+    ///
+    /// # Errors
+    ///
+    /// Returns a stable conflict when no schedule can satisfy both records.
+    pub fn compose(self, other: Self) -> Result<Self, GeometryConstraintConflict> {
+        Ok(Self {
+            cooperative_width: compose_width(
+                "workgroup",
+                self.cooperative_width,
+                other.cooperative_width,
+            )?,
+            subgroup_width: compose_width("subgroup", self.subgroup_width, other.subgroup_width)?,
+            min_shared_bytes: self.min_shared_bytes.max(other.min_shared_bytes),
+            per_invocation_elements: compose_elements(
+                self.per_invocation_elements,
+                other.per_invocation_elements,
+            )?,
+            subgroup_uniformity: compose_uniformity(
+                self.subgroup_uniformity,
+                other.subgroup_uniformity,
+            ),
+            requires_cooperative_launch: self.requires_cooperative_launch
+                || other.requires_cooperative_launch,
+            memory_ordering: match (self.memory_ordering, other.memory_ordering) {
+                (Some(left), Some(right)) => Some(left.join(right)),
+                (Some(ordering), None) | (None, Some(ordering)) => Some(ordering),
+                (None, None) => None,
+            },
+        })
+    }
+
+    /// Derive the minimum neutral constraints required by program semantics.
+    ///
+    /// # Errors
+    ///
+    /// Returns a stable overflow reason when workgroup scratch cannot be represented.
+    pub fn from_program(program: &crate::ir::Program) -> Result<Self, GeometryConstraintConflict> {
+        let capabilities = crate::program_caps::scan(program);
+        let effects = crate::operation::OperationEffects::from_program(program);
+        let scratch_bytes = program
+            .buffers
+            .iter()
+            .filter(|buffer| buffer.access == crate::ir::BufferAccess::Workgroup)
+            .try_fold(0u32, |total, buffer| {
+                let element_bytes = buffer.element.size_bytes().unwrap_or(0) as u32;
+                let bytes = buffer
+                    .count
+                    .checked_mul(element_bytes)
+                    .ok_or(GeometryConstraintConflict::SharedScratchOverflow)?;
+                total
+                    .checked_add(bytes)
+                    .ok_or(GeometryConstraintConflict::SharedScratchOverflow)
+            })?;
+        let workgroup_width = if program.workgroup_size_is_schedule_only() {
+            CooperativeWidth::Agnostic
+        } else {
+            CooperativeWidth::Exactly(
+                program.workgroup_size[0]
+                    .saturating_mul(program.workgroup_size[1])
+                    .saturating_mul(program.workgroup_size[2]),
+            )
+        };
+        let memory_ordering = program_memory_ordering(program);
+        Ok(Self {
+            cooperative_width: workgroup_width,
+            subgroup_width: CooperativeWidth::Agnostic,
+            min_shared_bytes: scratch_bytes,
+            per_invocation_elements: ElementPolicy::Any,
+            subgroup_uniformity: if effects.synchronizes {
+                Uniformity::WorkgroupUniform
+            } else if capabilities.subgroup_ops {
+                Uniformity::SubgroupUniform
+            } else {
+                Uniformity::None
+            },
+            requires_cooperative_launch: capabilities.grid_sync,
+            memory_ordering,
+        })
+    }
+}
+
+fn program_memory_ordering(
+    program: &crate::ir::Program,
+) -> Option<crate::memory_model::MemoryOrdering> {
+    fn include(
+        aggregate: &mut Option<crate::memory_model::MemoryOrdering>,
+        ordering: crate::memory_model::MemoryOrdering,
+    ) {
+        *aggregate = Some(match aggregate {
+            Some(current) => current.join(ordering),
+            None => ordering,
+        });
+    }
+
+    let mut ordering = None;
+    crate::visit::for_each_node(program.entry(), |node| {
+        if let crate::ir::Node::Barrier { ordering: required } = node {
+            include(&mut ordering, *required);
+        }
+    });
+    crate::visit::for_each_expr(program.entry(), |expr| {
+        if let crate::ir::Expr::Atomic {
+            ordering: required, ..
+        } = expr
+        {
+            include(&mut ordering, *required);
+        }
+    });
+    ordering
+}
+
+impl std::fmt::Display for GeometryConstraintConflict {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ExactWidth { scope, left, right } => {
+                write!(
+                    formatter,
+                    "{scope} exact widths conflict: {left} versus {right}"
+                )
+            }
+            Self::ZeroWidth { scope } => {
+                write!(formatter, "{scope} width constraint is zero")
+            }
+            Self::WidthBelowMinimum {
+                scope,
+                exact,
+                minimum,
+            } => write!(
+                formatter,
+                "{scope} exact width {exact} is below required minimum {minimum}"
+            ),
+            Self::ZeroElementMultiple => formatter.write_str("element multiple constraint is zero"),
+            Self::ElementMultipleOverflow { left, right } => write!(
+                formatter,
+                "element multiples {left} and {right} exceed the representable schedule constraint"
+            ),
+            Self::SharedScratchOverflow => formatter
+                .write_str("workgroup scratch exceeds the representable schedule constraint"),
+        }
+    }
+}
+
+impl std::error::Error for GeometryConstraintConflict {}
+
+/// Stable reason that two neutral schedule contracts cannot compose.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum GeometryConstraintConflict {
+    /// Two exact widths disagree.
+    ExactWidth {
+        /// Constraint scope.
+        scope: &'static str,
+        /// Left exact width.
+        left: u32,
+        /// Right exact width.
+        right: u32,
+    },
+    /// A width constraint used zero.
+    ZeroWidth {
+        /// Constraint scope.
+        scope: &'static str,
+    },
+    /// An exact width is smaller than a required minimum.
+    WidthBelowMinimum {
+        /// Constraint scope.
+        scope: &'static str,
+        /// Exact width.
+        exact: u32,
+        /// Required minimum.
+        minimum: u32,
+    },
+    /// An element multiple used zero.
+    ZeroElementMultiple,
+    /// Element-policy least common multiple exceeded `u32`.
+    ElementMultipleOverflow {
+        /// Left multiple.
+        left: u32,
+        /// Right multiple.
+        right: u32,
+    },
+    /// Workgroup scratch byte accounting exceeded `u32`.
+    SharedScratchOverflow,
+}
+
+fn compose_width(
+    scope: &'static str,
+    left: CooperativeWidth,
+    right: CooperativeWidth,
+) -> Result<CooperativeWidth, GeometryConstraintConflict> {
+    use CooperativeWidth::{Agnostic, AtLeast, Exactly};
+    if matches!(left, AtLeast(0) | Exactly(0)) || matches!(right, AtLeast(0) | Exactly(0)) {
+        return Err(GeometryConstraintConflict::ZeroWidth { scope });
+    }
+    match (left, right) {
+        (Agnostic, width) | (width, Agnostic) => Ok(width),
+        (AtLeast(left), AtLeast(right)) => Ok(AtLeast(left.max(right))),
+        (Exactly(left), Exactly(right)) if left == right => Ok(Exactly(left)),
+        (Exactly(left), Exactly(right)) => {
+            Err(GeometryConstraintConflict::ExactWidth { scope, left, right })
+        }
+        (Exactly(exact), AtLeast(minimum)) | (AtLeast(minimum), Exactly(exact))
+            if exact >= minimum =>
+        {
+            Ok(Exactly(exact))
+        }
+        (Exactly(exact), AtLeast(minimum)) | (AtLeast(minimum), Exactly(exact)) => {
+            Err(GeometryConstraintConflict::WidthBelowMinimum {
+                scope,
+                exact,
+                minimum,
+            })
+        }
+    }
+}
+fn compose_elements(
+    left: ElementPolicy,
+    right: ElementPolicy,
+) -> Result<ElementPolicy, GeometryConstraintConflict> {
+    use ElementPolicy::{Any, Multiple, Scalar};
+    if matches!(left, Multiple(0)) || matches!(right, Multiple(0)) {
+        return Err(GeometryConstraintConflict::ZeroElementMultiple);
+    }
+    let left = match left {
+        Any => return Ok(right),
+        Scalar => 1,
+        Multiple(value) => value,
+    };
+    let right = match right {
+        Any => return Ok(Multiple(left)),
+        Scalar => 1,
+        Multiple(value) => value,
+    };
+    let gcd = gcd(left, right);
+    let multiple = left
+        .checked_div(gcd)
+        .and_then(|value| value.checked_mul(right))
+        .ok_or(GeometryConstraintConflict::ElementMultipleOverflow { left, right })?;
+    Ok(if multiple == 1 {
+        Scalar
+    } else {
+        Multiple(multiple)
+    })
+}
+
+const fn gcd(mut left: u32, mut right: u32) -> u32 {
+    while right != 0 {
+        let remainder = left % right;
+        left = right;
+        right = remainder;
+    }
+    left
+}
+
+const fn compose_uniformity(left: Uniformity, right: Uniformity) -> Uniformity {
+    match (left, right) {
+        (Uniformity::WorkgroupUniform, _) | (_, Uniformity::WorkgroupUniform) => {
+            Uniformity::WorkgroupUniform
+        }
+        (Uniformity::SubgroupUniform, _) | (_, Uniformity::SubgroupUniform) => {
+            Uniformity::SubgroupUniform
+        }
+        (Uniformity::None, Uniformity::None) => Uniformity::None,
     }
 }
 

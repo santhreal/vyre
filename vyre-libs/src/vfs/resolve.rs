@@ -68,7 +68,7 @@ pub fn vfs_resolve_dma(include_hashes: &str, out_file_buffers: &str, block_words
 const EXPECTED_VFS_RESOLVE_OUTPUT_BYTES: [u8; 4] = [1, 2, 3, 4];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         VFS_RESOLVE_OP_ID,
         || vfs_resolve_dma("include_hashes", "out_file_buffers", 1),
         Some(|| {

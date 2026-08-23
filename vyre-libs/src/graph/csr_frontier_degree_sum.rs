@@ -101,7 +101,7 @@ pub fn csr_frontier_degree_sum(shape: ProgramGraphShape) -> Program {
 const EXPECTED_CSR_FRONTIER_DEGREE_SUM_OUTPUT_BYTES: [u8; 4] = [3, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || csr_frontier_degree_sum(ProgramGraphShape::new(4, 4)),
         Some(|| {

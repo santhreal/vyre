@@ -28,7 +28,7 @@ pub fn bitset_not(input: &str, out: &str, words: u32) -> Program {
 const EXPECTED_BITSET_NOT_OUTPUT_BYTES: [u8; 4] = [0xF0, 0xF0, 0xF0, 0xF0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || bitset_not("input", "out", 1),
         Some(|| {

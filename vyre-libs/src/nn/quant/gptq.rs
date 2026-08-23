@@ -64,7 +64,7 @@ const EXPECTED_GPTQ_SDCLIP_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         ROUND_OP_ID,
         || gptq_round("input", "scale", "output", 4, 63.0),
         Some(|| {
@@ -80,7 +80,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         SDCLIP_OP_ID,
         || gptq_sdclip("input", "output", 4, 30.0),
         Some(|| {

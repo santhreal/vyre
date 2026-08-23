@@ -458,7 +458,7 @@ pub fn vast_descend_leftmost_leaf_program(node_count: u32) -> Program {
 const EXPECTED_VAST_DESCEND_LEFTMOST_LEAF_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         VAST_DESCEND_LEFTMOST_LEAF_OP_ID,
         || vast_descend_leftmost_leaf_program(3),
         Some(|| vec![vec![
@@ -844,7 +844,7 @@ const EXPECTED_VAST_PREORDER_OUTPUT_BYTES: [u8; 12] = [0, 0, 0, 0, 1, 0, 0, 0, 2
 const EXPECTED_VAST_POSTORDER_OUTPUT_BYTES: [u8; 12] = [1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         PREORDER_OP_ID,
         || ast_walk_preorder("nodes", "out", 3, 3),
         Some(|| vec![vec![
@@ -857,7 +857,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         POSTORDER_OP_ID,
         || ast_walk_postorder("nodes", "out", 3, 3),
         Some(|| vec![vec![

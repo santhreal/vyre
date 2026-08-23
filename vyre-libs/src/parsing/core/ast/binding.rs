@@ -87,7 +87,7 @@ const EXPECTED_AST_BINDING_STRENGTH_BYTES: [u8; 16] =
     [140, 0, 0, 0, 130, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::parsing::ast_binding_strength",
         // Use a small 4-token fixture so the witness is trivially
         // checkable: tok_types = [STAR, PLUS, '=', 0], depths = [1, 1, 0, 0].
@@ -98,7 +98,7 @@ inventory::submit! {
             let tokens: [u32; 4] = [TOK_STAR, TOK_PLUS, 0x3D, 0];
             let depths: [u32; 4] = [1, 1, 0, 0];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            vec![vec![to_bytes(&tokens), to_bytes(&depths), vec![0u8; 4 * 4]]]
+            vec![vec![to_bytes(&tokens), to_bytes(&depths)]]
         }),
         Some(|| {
             vec![vec![EXPECTED_AST_BINDING_STRENGTH_BYTES.to_vec()]]

@@ -15,13 +15,14 @@ target payload, and verifies the derived operation-to-target facet.
 
 ## Semantic operation
 
-Submit one `vyre_foundation::operation::OperationRegistration`. The record owns
-the stable operation ID, semantic tier, neutral `Program` builder, fixtures,
-laws, and tolerance. `OperationRegistry` is the only semantic lookup.
+Submit one `vyre_foundation::operation::OperationRegistration`. The record
+contains the stable operation ID, semantic tier, neutral `Program` builder,
+fixtures, laws, tolerance, and neutral schedule-constraint decision.
+`OperationRegistry` is the only semantic lookup.
 
 ```rust
 inventory::submit! {
-    OperationRegistration::new(
+    OperationRegistration::new_unconstrained(
         OPERATION_ID,
         OperationTier::External,
         Some(build_operation),

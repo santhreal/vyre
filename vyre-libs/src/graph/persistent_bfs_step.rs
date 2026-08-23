@@ -249,7 +249,7 @@ const EXPECTED_PERSISTENT_BFS_STEP_FRONTIER_BYTES: [u8; 4] = [15, 0, 0, 0];
 const EXPECTED_PERSISTENT_BFS_STEP_CHANGED_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         PERSISTENT_BFS_STEP_OP_ID,
         || persistent_bfs_step(ProgramGraphShape::new(4, 4), "frontier_out", "changed", 0xFFFF_FFFF),
         Some(|| {

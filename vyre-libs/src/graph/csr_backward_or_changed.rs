@@ -44,7 +44,7 @@ const EXPECTED_CSR_BACKWARD_OR_CHANGED_FRONTIER_BYTES: [u8; 4] = [7, 0, 0, 0];
 const EXPECTED_CSR_BACKWARD_OR_CHANGED_CHANGED_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             let shape = ProgramGraphShape {

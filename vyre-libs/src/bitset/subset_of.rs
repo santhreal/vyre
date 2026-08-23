@@ -17,7 +17,7 @@ pub fn bitset_subset_of(lhs: &str, rhs: &str, out_scalar: &str, words: u32) -> P
 const EXPECTED_BITSET_SUBSET_OF_OUTPUT_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || bitset_subset_of("lhs", "rhs", "out", 2),
         Some(crate::bitset::relation::bitset_relation_2word_fixture_inputs),

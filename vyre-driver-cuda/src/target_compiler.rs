@@ -25,7 +25,7 @@ fn emit_ptx_module(
     profile: &TargetProfile,
 ) -> Result<EmittedDialectModule, TargetCompileError> {
     let source = vyre_emit_ptx::emit_with_options(
-        &selected.descriptor,
+        selected.descriptor(),
         vyre_emit_ptx::PtxEmitOptions {
             target: vyre_emit_ptx::ComputeCapability {
                 major: profile.generation() as u32 / 10,

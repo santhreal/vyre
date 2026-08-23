@@ -116,7 +116,7 @@ const EXPECTED_AHO_CORASICK_OUTPUT_BYTES: [u8; 44] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             let patterns: [&[u8]; 1] = [b"abra"];

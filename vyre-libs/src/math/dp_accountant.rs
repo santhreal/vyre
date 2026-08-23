@@ -129,7 +129,7 @@ fn rdp_to_dp(rdp: f64, alpha: f64, delta: f64) -> f64 {
     vyre_reference::composition_witness::rdp_to_dp_witness(rdp, alpha, delta)
 }
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             gaussian_rdp_step("alpha", "sigma_sq", "out", 4)

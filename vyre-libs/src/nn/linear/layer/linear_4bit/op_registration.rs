@@ -13,7 +13,7 @@ const EXPECTED_LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_BYTES: [u8; 8] =
     [0x00, 0x00, 0x16, 0x43, 0x00, 0x00, 0x40, 0x40];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::nn::linear_4bit",
         || {
             linear_4bit("x", "w", "b", "out", 8, 4).unwrap_or_else(|error| {
@@ -42,7 +42,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::nn::linear_4bit_affine_grouped",
         || {
             linear_4bit_affine_grouped("x", "w", "scale", "zp", "b", "out", 8, 2, 4)

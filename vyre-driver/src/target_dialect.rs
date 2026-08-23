@@ -157,14 +157,14 @@ impl TargetCompiler for DialectCompiler {
                 let emitted = emit(selected, profile)?;
                 let grid_size = crate::infer_dispatch_grid_for_count(
                     selected.logical_element_count,
-                    selected.descriptor.dispatch.workgroup_size,
+                    selected.descriptor().dispatch.workgroup_size,
                 )
                 .map_err(|error| TargetCompileError::Emission(error.to_string()))?;
                 Ok(EmittedTargetModule {
                     entry_point: emitted.entry_point,
                     grid_size,
                     dynamic_shared_bytes: emitted.dynamic_shared_bytes,
-                    workgroup_size: selected.descriptor.dispatch.workgroup_size,
+                    workgroup_size: selected.descriptor().dispatch.workgroup_size,
                     resource_bindings: selected.canonical_bindings.clone(),
                     bytes: emitted.bytes,
                 })

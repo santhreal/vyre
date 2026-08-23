@@ -207,7 +207,7 @@ pub fn planar_rewrite_exclusion_check_program(w: u32, k: u32) -> Program {
 const EXPECTED_PLANAR_REWRITE_EXCLUSION_CHECK_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         PLANAR_REWRITE_EXCLUSION_CHECK_OP_ID,
         || planar_rewrite_exclusion_check_program(4, 2),
         Some(|| {
@@ -227,17 +227,14 @@ const EXPECTED_PLANAR_REWRITE_BYTES: [u8; 64] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || planar_rewrite_schedule("candidates", "chosen", 4, 4, 2),
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             let mut cands = vec![0; 16];
             cands[5] = 1;
-            vec![vec![
-                to_bytes(&cands),                // candidates
-                to_bytes(&[0; 16]),              // chosen
-            ]]
+            vec![vec![to_bytes(&cands)]] // candidates
         }),
         Some(|| {
             vec![vec![EXPECTED_PLANAR_REWRITE_BYTES.to_vec()]]

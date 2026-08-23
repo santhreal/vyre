@@ -512,7 +512,7 @@ const EXPECTED_ATTENTION_SUM_PASS_OUTPUT_BYTES: [u8; 4] = [0x00, 0x00, 0x00, 0x4
 const EXPECTED_ATTENTION_WRITE_PASS_OUTPUT_BYTES: [u8; 4] = [0x00, 0x00, 0xA0, 0x41];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         ATTENTION_MAX_PASS_OP_ID,
         || attention_max_pass_program("q", "k", "out", 2, 2),
         Some(|| {
@@ -530,7 +530,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         ATTENTION_SUM_PASS_OP_ID,
         || attention_sum_pass_program("q", "k", "max", "out", 2, 2),
         Some(|| {
@@ -549,7 +549,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         ATTENTION_WRITE_PASS_OP_ID,
         || {
             attention_write_pass_program(AttentionWritePassProgramSpec {

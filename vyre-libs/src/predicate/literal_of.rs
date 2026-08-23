@@ -28,7 +28,7 @@ pub fn literal_of(nodes: &str, nodeset_out: &str, node_count: u32) -> Program {
 const EXPECTED_LITERAL_OF_OUTPUT_BYTES: [u8; 4] = [8, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || literal_of("nodes", "nodeset", 4),
         Some(|| {

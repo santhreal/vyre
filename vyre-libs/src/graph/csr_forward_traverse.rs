@@ -87,7 +87,7 @@ pub fn csr_forward_traverse_excluding(
 const EXPECTED_CSR_FORWARD_TRAVERSE_OUTPUT_BYTES: [u8; 4] = [6, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         EXCLUDING_OP_ID,
         || csr_forward_traverse_excluding(
             ProgramGraphShape::new(4, 4),
@@ -113,7 +113,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || csr_forward_traverse(ProgramGraphShape::new(4, 4), "fin", "fout", 0xFFFF_FFFF),
         Some(|| {

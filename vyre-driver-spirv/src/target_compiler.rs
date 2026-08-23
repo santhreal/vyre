@@ -24,7 +24,7 @@ fn emit_spirv_module(
     selected: &vyre_megakernel::SelectedLowering,
     _profile: &TargetProfile,
 ) -> Result<EmittedDialectModule, TargetCompileError> {
-    let words = vyre_emit_spirv::emit(&selected.descriptor)
+    let words = vyre_emit_spirv::emit(selected.descriptor())
         .map_err(|error| TargetCompileError::Emission(error.to_string()))?;
     let mut bytes = Vec::with_capacity(words.len().saturating_mul(4));
     for word in words {

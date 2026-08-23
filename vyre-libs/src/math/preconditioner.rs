@@ -171,7 +171,7 @@ fn fixture_f32(values: &[f32]) -> Vec<u8> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         POLY5_F32_OP_ID,
         || newton_schulz_poly5_f32("mat", "output", 2, 2),
         Some(|| vec![vec![

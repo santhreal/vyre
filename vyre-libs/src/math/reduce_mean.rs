@@ -65,7 +65,7 @@ fn reduce_mean_reference_program(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::math::reduce_mean",
         || reduce_mean("input", "output", 4),
         Some(|| {

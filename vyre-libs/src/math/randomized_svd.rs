@@ -135,7 +135,7 @@ pub fn try_randomized_projection_step(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || randomized_projection_step("a", "omega", "y", 1, 2, 2),
         Some(|| {

@@ -36,8 +36,8 @@ pub(crate) fn region_program(
 /// Lower `program` and emit it under `options`, naming which of the two stages
 /// refused so a probe cannot mistake a lowering refusal for an emit refusal.
 pub(crate) fn lower_and_emit(program: &Program, options: PtxEmitOptions) -> Result<String, String> {
-    let descriptor = vyre_lower::lower_verified(program)
-        .map(|lowered| lowered.descriptor)
+    let descriptor = vyre_lower::lower_physical(program)
+        .map(|lowered| lowered.into_descriptor())
         .map_err(|error| format!("lower: {error:?}"))?;
     vyre_emit_ptx::emit_with_options(&descriptor, options).map_err(|error| format!("{error:?}"))
 }

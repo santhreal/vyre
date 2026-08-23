@@ -230,7 +230,7 @@ const EXPECTED_COOPERATIVE_DFA_OUTPUT_BYTES: [u8; 24] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             let (_, compiled, _) = fixture_case();

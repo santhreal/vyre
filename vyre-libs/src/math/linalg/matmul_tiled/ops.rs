@@ -242,7 +242,7 @@ pub fn matmul_bias_tiled(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::math::matmul_tiled",
         || matmul_tiled("a", "b", "out", 2, 2, 2, 2),
         Some(|| {
@@ -259,7 +259,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::math::matmul_bias_tiled",
         || matmul_bias_tiled("a", "b", "bias", "out", 2, 2, 2, 2),
         Some(super::super::matmul_bias_2x2_fixture_inputs),

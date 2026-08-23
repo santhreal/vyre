@@ -174,7 +174,7 @@ fn adler32_body(input: &str, out: &str, n: u32) -> Vec<Node> {
 const EXPECTED_ADLER32_OUTPUT_BYTES: [u8; 4] = [0x27, 0x01, 0x4D, 0x02];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         ADLER32_OP_ID,
         || adler32_program("input", "out", 3),
         Some(|| {

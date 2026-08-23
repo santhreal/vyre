@@ -204,7 +204,7 @@ fn perturbed_payloads_fail_before_native_materialization() {
 fn invalid_program_fails_before_spirv_emission() {
     let invalid = Program::wrapped(Vec::new(), [0, 1, 1], Vec::new());
     let error = SpirvBackend::program_to_spv(&invalid)
-        .expect_err("Fix: invalid workgroup geometry must fail verified lowering");
-    assert!(error.contains("verified lowering failed"));
+        .expect_err("Fix: invalid workgroup geometry must fail physical lowering");
+    assert!(error.contains("physical lowering failed"));
     assert!(error.contains("Fix:"));
 }

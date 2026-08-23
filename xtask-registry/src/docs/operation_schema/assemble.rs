@@ -13,7 +13,8 @@ use super::composition::{collect_composition, validate_composition};
 use super::placement;
 use super::routing::{category_from_id, read_manifest_features};
 use super::schema::{
-    BackendSupport, OperationRecord, OperationSchema, OracleContract, SCHEMA_VERSION,
+    BackendSupport, OperationRecord, OperationSchema, OracleContract, ScheduleConstraintsRecord,
+    SCHEMA_VERSION,
 };
 use super::signature::{signature_from_declaration, signature_from_program};
 use super::validate::validate_schema;
@@ -28,6 +29,7 @@ struct LiveEntry {
     laws: &'static [&'static str],
     has_expected: bool,
     tolerance_ulp: u32,
+    recorded_constraints: vyre_foundation::GeometryRequirements,
 }
 
 impl LiveEntry {
@@ -86,6 +88,7 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
             has_inputs: entry.test_inputs.is_some(),
             has_expected: entry.expected_output.is_some(),
             tolerance_ulp: entry.tolerance(),
+            recorded_constraints: entry.geometry_requirements,
             laws: entry.laws,
         })
         .collect::<Vec<_>>();
@@ -177,12 +180,39 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
                 ));
             }
         }
+        let schedule_constraints = match entry.program() {
+            Some(program) => match vyre_foundation::GeometryRequirements::from_program(&program)
+                .and_then(|derived| entry.recorded_constraints.compose(derived))
+            {
+                Ok(constraints) => constraints,
+                Err(error) => {
+                    errors.push(format!(
+                        "operation `{}` has incompatible schedule constraints: {error}",
+                        entry.id
+                    ));
+                    continue;
+                }
+            },
+            None => entry.recorded_constraints,
+        };
+        let schedule_constraints = ScheduleConstraintsRecord {
+            workgroup_width: width_name(schedule_constraints.cooperative_width),
+            subgroup_width: width_name(schedule_constraints.subgroup_width),
+            min_shared_bytes: schedule_constraints.min_shared_bytes,
+            element_policy: element_policy_name(schedule_constraints.per_invocation_elements),
+            uniformity: uniformity_name(schedule_constraints.subgroup_uniformity).to_string(),
+            cooperative_launch: schedule_constraints.requires_cooperative_launch,
+            memory_ordering: schedule_constraints
+                .memory_ordering
+                .map(memory_ordering_name),
+        };
         records.push(OperationRecord {
             id: entry.id.to_string(),
             tier,
             category,
             signature,
             features,
+            schedule_constraints,
             oracle: OracleContract {
                 flat_reference_facet: flat_reference_ids.contains(entry.id),
                 reference_eval,
@@ -224,7 +254,7 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
     }
     let schema = OperationSchema {
         schema_version: SCHEMA_VERSION,
-        authority: "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows".to_string(),
+        authority: "canonical OperationRegistration records and effective neutral schedule constraints joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows".to_string(),
         operation_count: records.len(),
         tier_counts,
         category_counts,
@@ -242,4 +272,32 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
 
 fn workspace_root() -> PathBuf {
     xtask::checkout::checkout_root()
+}
+
+fn width_name(width: vyre_foundation::CooperativeWidth) -> String {
+    match width {
+        vyre_foundation::CooperativeWidth::Agnostic => "agnostic".to_string(),
+        vyre_foundation::CooperativeWidth::AtLeast(width) => format!("at-least:{width}"),
+        vyre_foundation::CooperativeWidth::Exactly(width) => format!("exactly:{width}"),
+    }
+}
+
+fn element_policy_name(policy: vyre_foundation::ElementPolicy) -> String {
+    match policy {
+        vyre_foundation::ElementPolicy::Any => "any".to_string(),
+        vyre_foundation::ElementPolicy::Scalar => "scalar".to_string(),
+        vyre_foundation::ElementPolicy::Multiple(value) => format!("multiple:{value}"),
+    }
+}
+
+const fn uniformity_name(uniformity: vyre_foundation::Uniformity) -> &'static str {
+    match uniformity {
+        vyre_foundation::Uniformity::None => "none",
+        vyre_foundation::Uniformity::SubgroupUniform => "subgroup",
+        vyre_foundation::Uniformity::WorkgroupUniform => "workgroup",
+    }
+}
+
+fn memory_ordering_name(ordering: vyre_foundation::ir::MemoryOrdering) -> String {
+    format!("wire:{}", ordering.wire_tag())
 }

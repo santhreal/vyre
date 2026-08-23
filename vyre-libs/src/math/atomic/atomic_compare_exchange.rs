@@ -21,7 +21,7 @@ pub fn atomic_compare_exchange_u32(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || atomic_compare_exchange_u32("expected", "desired", "state", "trace", 4),
         Some(|| {

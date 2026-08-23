@@ -263,7 +263,7 @@ pub fn symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n:
 // eigenvalues that are not (2.0 and 13.0, each a sum of two cancelling terms) land 1 ULP low.
 // Nothing here justifies a wider window.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || symmetric_eigen_jacobi("a", "evec", "eval", 4),
         Some(|| {

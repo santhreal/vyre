@@ -1,9 +1,9 @@
 //! Registry-derived library operation catalog.
 //!
-//! The canonical semantic records live in `vyre-foundation`, submitted through
-//! `OperationRegistration::library`. This read-only projection exposes the
-//! library tier and its bounded convergence metadata to conformance and
-//! documentation consumers.
+//! The canonical semantic records are defined in `vyre-foundation` and submitted
+//! through `OperationRegistration::library_unconstrained` or an explicit
+//! constraint declaration. This projection exposes the library tier and its
+//! bounded convergence metadata to conformance and documentation consumers.
 
 use std::collections::BTreeMap;
 use std::sync::LazyLock;

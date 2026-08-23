@@ -13,7 +13,7 @@ const EXPECTED_CSR_FOC_FRONTIER_BYTES: [u8; 4] = [15, 0, 0, 0];
 const EXPECTED_CSR_FOC_CHANGED_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || csr_forward_or_changed(ProgramGraphShape::new(4, 4), "frontier", "changed", 1),
         Some(|| {

@@ -27,7 +27,7 @@ pub fn fft4_complex(input: &str, output: &str) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || fft4_complex("input", "output"),
         Some(|| {

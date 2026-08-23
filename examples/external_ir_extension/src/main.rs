@@ -27,7 +27,7 @@ fn build_operation() -> Program {
 }
 
 inventory::submit! {
-    OperationRegistration::new(
+    OperationRegistration::new_unconstrained(
         OPERATION_ID,
         OperationTier::External,
         Some(build_operation),
@@ -57,12 +57,12 @@ impl TargetCompiler for ExternalTargetCompiler {
             self.format.clone(),
             self.profile.clone(),
             |selected, _profile| {
-                let bytes = selected.descriptor.id.as_bytes().to_vec();
+                let bytes = selected.descriptor().id.as_bytes().to_vec();
                 Ok(EmittedTargetModule {
                     entry_point: "external_entry".to_string(),
                     grid_size: [selected.logical_element_count, 1, 1],
                     dynamic_shared_bytes: 0,
-                    workgroup_size: selected.descriptor.dispatch.workgroup_size,
+                    workgroup_size: selected.descriptor().dispatch.workgroup_size,
                     resource_bindings: selected.canonical_bindings.clone(),
                     bytes,
                 })

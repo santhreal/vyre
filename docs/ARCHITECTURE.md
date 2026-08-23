@@ -24,19 +24,22 @@ interpreter arm.
 ## Layers
 
 - `vyre-spec` is the frozen vocabulary. It does not execute.
-- `vyre-foundation` owns IR, validation, the host optimizer, and the
+- `vyre-foundation` owns validated `ProgramGraph` and schedule-free
+  `LogicalProgramGraph` IR, semantic identity, the host optimizer, and the
   registry. No application semantics.
 - `vyre-libs` owns every composition: consumer dialects and the compiler's
   own solvers, encoding, analysis, scheduling, and reasoning. Equal
   residents.
 - `vyre-primitives` owns marker types and hardware intrinsics. A composition
   belongs in `vyre-libs`.
-- `vyre-lower` is the last dialect-free stage: `Program` to
-  `KernelDescriptor`.
+- `vyre-lower` owns the sole `Program` to validated `PhysicalKernel`
+  boundary. Concrete emitters may borrow its verified `KernelDescriptor`.
 - `vyre-megakernel` owns Cross-program composition: candidate generation,
-  fusion legality, the cost model, selection under an explicit
-  `SearchBudget`, and target compiler facets. It does not own admission or
-  claim a measured winner that no clock produced.
+  fusion legality, the cost model, validated `SelectedPlan` schedule IR, and
+  selection under an explicit `SearchBudget`. It also owns immutable `Artifact`
+  identity and authenticated
+  `TargetPayload` construction. It does not own admission or claim a measured
+  winner that no clock produced.
 - `vyre-driver` is backend-agnostic machinery. Concrete drivers own names,
   dialects, and device quirks.
 - `vyre-runtime` executes the artifact's selected persistence. It does not
@@ -49,13 +52,35 @@ interpreter arm.
 ```text
 frontend Program(s)
   -> validated ProgramGraph
-  -> vyre-megakernel Compiler
-  -> immutable Artifact + TargetPayload
+  -> validated schedule-free LogicalProgramGraph
+  -> validated SelectedPlan in an immutable Artifact
+  -> validated PhysicalKernel per selected fusion group
+  -> authenticated TargetPayload
   -> driver admission and materialization
   -> ArtifactInstance
   -> typed Submission
   -> completion and readback
 ```
+
+The logical stage records versioned iteration extents, index maps, tensor
+layouts, aliases, effects, dependencies and point bounds before schedule
+search. Library compositions cross this boundary through their typed graph
+value contracts.
+
+The foundation schedule schema records phase fission and fusion, axis splitting,
+tiling, reorder, vectorization and hierarchy mapping, memory placement,
+prefetch, bounded producer/consumer pipelines, recomputation, persistent
+queues, neutral compute and device partitions, dispatch cuts, synchronization,
+and asymmetric joins. Every applied transform contains typed preconditions,
+source regions and phases, an inverse identity checkpoint, deterministic replay,
+and checked resource bounds. Distinct phases contain independent logical grids,
+workgroup shapes, resource ceilings and parallelism axes.
+
+Every operation registration records neutral schedule constraints. The registry
+derives the semantic minimum from the canonical program and composes workgroup
+and subgroup widths, uniformity, shared scratch, cooperative launch, memory
+ordering, and element policy before search. Conflicting constraints reject the
+operation contract instead of becoming candidate prices.
 
 Every production compile emits a megakernel artifact. Persistence is a
 schedule inside that artifact, not a second output type. Static and

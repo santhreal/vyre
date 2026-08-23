@@ -168,7 +168,7 @@ At the bottom of the operation's source file:
 
 ```rust
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::dialect::my_op",
         || my_op("input", "output", 4),
         Some(|| vec![/* deterministic input cases */]),
@@ -179,6 +179,11 @@ inventory::submit! {
 
 The canonical registry supplies the linked operation to validation, wire
 round-trip, optimization, conformance, and generated catalog checks.
+
+The constructor records an unconstrained decision. Use it only when the
+canonical program contains every semantic schedule requirement. Attach stronger
+neutral constraints with `with_geometry_requirements`; registry validation
+composes the decision with program-derived requirements.
 
 ---
 

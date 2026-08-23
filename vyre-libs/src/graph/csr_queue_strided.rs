@@ -75,7 +75,7 @@ pub fn csr_queue_strided_forward_traverse_with(
 const EXPECTED_CSR_QUEUE_STRIDED_OUTPUT_BYTES: [u8; 4] = [10, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         CSR_QUEUE_STRIDED_FORWARD_OP_ID,
         || csr_queue_strided_forward_traverse(
             "active_queue",

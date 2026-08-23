@@ -33,7 +33,7 @@ const EXPECTED_MUON_UPDATE_MOMENTUM_BYTES: [u8; 8] =
 const EXPECTED_MUON_UPDATE_OUTPUT_BYTES: [u8; 8] = [0x1E, 0x8A, 0x7E, 0x3F, 0x1E, 0x8A, 0xFE, 0x3F];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || muon_update("params", "grads", "momentum", "output", 2, 0.02, 0.95),
         Some(|| {

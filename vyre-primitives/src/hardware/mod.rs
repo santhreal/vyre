@@ -43,7 +43,7 @@ macro_rules! submit_intrinsic_operation {
                 expected_output: Some($expected),
                 laws: &[],
                 tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-                geometry_requirements: None,
+                geometry_requirements: vyre_foundation::GeometryRequirements::agnostic(),
             }
         }
     };
@@ -63,7 +63,7 @@ macro_rules! submit_hardware_intrinsic {
         semantic: $semantic:expr
     ) => {
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::intrinsic(
+            vyre_foundation::operation::OperationRegistration::intrinsic_unconstrained(
                 $op_id,
                 $sig,
                 Some($builder),

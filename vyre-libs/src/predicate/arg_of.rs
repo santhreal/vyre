@@ -67,7 +67,7 @@ mod tests {
 const EXPECTED_ARG_OF_OUTPUT_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || arg_of(ProgramGraphShape::new(4, 2), "fin", "fout"),
         Some(|| {

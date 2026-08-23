@@ -299,7 +299,7 @@ pub fn tensor_train_decompose_step(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         // m = r_prev*nk = 4 rows, n = rem = 2 columns, r_next = 1 (rank-1 truncation).
         //

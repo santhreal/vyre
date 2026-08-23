@@ -6,7 +6,7 @@ use vyre_foundation::operation::OperationRegistration;
 macro_rules! bitset_and_entry {
     ($module:ident, $build:expr) => {
         inventory::submit! {
-            OperationRegistration::library(
+            OperationRegistration::library_unconstrained(
                 super::$module::OP_ID,
                 $build,
                 Some(|| {
@@ -27,7 +27,7 @@ macro_rules! bitset_and_entry {
 macro_rules! bitset_and_not_entry {
     ($module:ident, $build:expr) => {
         inventory::submit! {
-            OperationRegistration::library(
+            OperationRegistration::library_unconstrained(
                 super::$module::OP_ID,
                 $build,
                 Some(|| {
@@ -78,7 +78,7 @@ bitset_and_not_entry!(unchecked_return, || {
 });
 
 inventory::submit! {
-    OperationRegistration::library(
+    OperationRegistration::library_unconstrained(
         super::sink_intersection::OP_ID,
         || super::sink_intersection::sink_intersection(4, "a", "b", "scratch", "out"),
         Some(|| vec![vec![
@@ -94,7 +94,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    OperationRegistration::library(
+    OperationRegistration::library_unconstrained(
         super::integer_overflow_arith::OP_ID,
         || {
             super::integer_overflow_arith::integer_overflow_arith(
@@ -116,7 +116,7 @@ inventory::submit! {
 macro_rules! reach_flow_entry {
     ($op_id:expr, $build:expr, $inputs_fn:expr, $expected_bytes:expr) => {
         inventory::submit! {
-            OperationRegistration::library(
+            OperationRegistration::library_unconstrained(
                 $op_id,
                 $build,
                 Some($inputs_fn),
@@ -178,7 +178,7 @@ reach_flow_entry!(
 );
 
 inventory::submit! {
-    OperationRegistration::library(
+    OperationRegistration::library_unconstrained(
         super::flows_to_to_sink::OP_ID,
         || super::flows_to_to_sink::flows_to_to_sink(crate::graph::program_graph::ProgramGraphShape::new(4, 3), "source", "sink", "reach", "hits", "out_scalar"),
         Some(super::flow_composition::dataflow_hit_fixture_inputs),
@@ -194,7 +194,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    OperationRegistration::library(
+    OperationRegistration::library_unconstrained(
         super::taint_pollution::OP_ID,
         || super::taint_pollution::taint_pollution(crate::graph::program_graph::ProgramGraphShape::new(4, 3), "source", "label_set", "reach", "hits", "out_scalar"),
         Some(super::flow_composition::dataflow_hit_fixture_inputs),
@@ -210,7 +210,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    OperationRegistration::library(
+    OperationRegistration::library_unconstrained(
         super::sanitized_by::OP_ID,
         || super::sanitized_by::sanitized_by(crate::graph::program_graph::ProgramGraphShape::new(4, 3), "fin", "san", "fout"),
         Some(super::sanitized_by::sanitized_by_fixture_inputs),
@@ -227,7 +227,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    OperationRegistration::library(
+    OperationRegistration::library_unconstrained(
         super::flows_to_with_sanitizer::OP_ID,
         || super::flows_to_with_sanitizer::flows_to_with_sanitizer(crate::graph::program_graph::ProgramGraphShape::new(4, 3), "source", "sink", "sanitizer", "clean", "reach", "alive", "hits", "out_scalar"),
         Some(super::flows_to_with_sanitizer::flows_to_with_sanitizer_fixture_inputs),

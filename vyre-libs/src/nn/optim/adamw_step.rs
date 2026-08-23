@@ -75,7 +75,7 @@ const EXPECTED_ADAMW_STEP_V_BYTES: [u8; 8] = [0x0D, 0xD7, 0x23, 0x3C, 0x0D, 0xD7
 const EXPECTED_ADAMW_STEP_PARAMS_BYTES: [u8; 8] = [0x1F, 0xC5, 0x27, 0x37, 0x1F, 0xC5, 0x27, 0x38];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || adamw_step("params", "grads", "m", "v", 2, 0.001, 0.9, 0.999, 1e-8, 0.01),
         Some(|| {

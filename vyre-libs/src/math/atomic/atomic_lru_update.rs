@@ -36,7 +36,7 @@ pub fn atomic_lru_update_u32(buffer: &str, index: Expr, timestamp: Expr) -> Prog
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::math::atomic::lru_update_u32",
         || atomic_lru_update_u32("buffer", Expr::u32(0), Expr::u32(12345)),
         Some(|| {

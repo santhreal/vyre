@@ -53,7 +53,7 @@ macro_rules! define_atomic_serial_module {
         }
 
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::library(
+            vyre_foundation::operation::OperationRegistration::library_unconstrained(
                 OP_ID,
                 || $fn_name("values", "state", "trace", 4),
                 Some(|| {

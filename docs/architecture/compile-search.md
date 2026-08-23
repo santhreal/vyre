@@ -2,21 +2,55 @@
 
 ```text
 validated ProgramGraph
+  -> validated schedule-free LogicalProgramGraph
   -> planning facts and dependency edges
-  -> candidate generation, bounded by SearchBudget
-  -> cost evaluation per candidate
-  -> one selected plan
+  -> versioned neutral schedule transforms, bounded by SearchBudget
+  -> cost evaluation per validated candidate
+  -> validated SelectedPlan with exact phase schedule
   -> immutable Artifact
 ```
 
-`vyre-megakernel` owns this seam. Its input is a validated typed
-`ProgramGraph`, immutable `ExternalFacts` and an explicit `SearchBudget`.
-Its output is one versioned immutable `Artifact` plus optional
+`vyre-megakernel` owns this seam. It validates a typed `ProgramGraph` into a
+schedule-free `LogicalProgramGraph` before planning reads it. Immutable
+`ExternalFacts` and an explicit `SearchBudget` complete the input. The output
+is one versioned immutable `Artifact` plus optional authenticated
 `TargetPayload` values in an `ArtifactEnvelope`. Device admission,
 materialization, submission, queues, residency and recovery consume that
 product and do not alter artifact identity.
 
-The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 7`.
+## Logical domain boundary
+
+`LOGICAL_ALGORITHM_VERSION = 2` authenticates the schedule-free domain
+contract. Each graph node produces one structured logical region. Its typed
+extents come from constants or symbolic dimensions on a graph value and resolve
+before search. The region records parallel, sequential, reduction or retained
+state semantics, a row-major index map and tensor layout, disjointness and
+retained-state aliases, read/write and synchronization effects, producer
+dependencies and an overflow-checked point bound. Missing or zero bindings,
+unresolved runtime extents, overflowing bounds, dependency cycles and
+incompatible aliases reject the logical stage.
+
+Library registrations are checked as a registry-derived set. Each registered
+composition must build a `ProgramGraph` and a complete logical region without a
+separate library-specific domain path.
+
+## Selected schedule boundary
+
+`SCHEDULE_IR_VERSION = 1` authenticates the backend-neutral schedule. The
+foundation schema represents phase fission, fusion, tiling, splitting,
+reordering, vectorization, lane through device-partition mappings, memory
+placement, prefetch, bounded pipelines and queues, recomputation, dispatch cuts,
+synchronization and asymmetric joins. Each transform is applied transactionally
+after typed preconditions pass. The record includes source phases and logical
+regions, the complete prior-schedule identity as inverse provenance, and checked
+resource increments.
+
+Artifact validation replays every transform from immutable source phases.
+Changed preconditions, provenance, phase geometry, ordering or resource bounds
+reject the artifact before `vyre-lower` applies the selected phase workgroup and
+constructs a `PhysicalKernel`.
+
+The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 9`.
 
 ## Legality before cost
 

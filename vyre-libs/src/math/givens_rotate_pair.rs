@@ -166,7 +166,7 @@ pub fn givens_rotate_columns(
 // fixture is really pinning: writing the first column before reading the second
 // would produce 0.6 and 0.36 in row 0.
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || givens_rotate_columns("m", "coeff", 2, 0, 1),
         Some(|| {

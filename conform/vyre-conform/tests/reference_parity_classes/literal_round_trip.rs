@@ -24,16 +24,18 @@ use vyre_megakernel::{
 use vyre_registry_link::operation::live_operation_registry;
 
 fn image_for(program: &Program) -> Option<TargetModuleImage> {
-    let lowered = vyre_lower::lower_verified(program).ok()?;
+    let lowered = vyre_lower::lower_physical(program).ok()?;
+    let program = lowered
+        .program
+        .to_wire()
+        .expect("Fix: a physical lowering's program must encode to the canonical wire.");
+    let descriptor = lowered.into_descriptor();
     Some(TargetModuleImage {
         group: FusionGroupId(0),
         stage: 0,
         nodes: vec![ArtifactNodeId(0)],
-        program: lowered
-            .program
-            .to_wire()
-            .expect("Fix: a verified lowering's program must encode to the canonical wire."),
-        descriptor: lowered.descriptor,
+        program,
+        descriptor,
         entry_point: "main".to_string(),
         bytes: Vec::new(),
     })

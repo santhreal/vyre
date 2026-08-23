@@ -266,7 +266,7 @@ const EXPECTED_BRACKET_MATCH_PAIRS_BYTES: [u8; 16] =
     [3, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         BRACKET_MATCH_OP_ID,
         || bracket_match("kinds", "stack", "match_pairs", 4, 4),
         Some(|| vec![vec![

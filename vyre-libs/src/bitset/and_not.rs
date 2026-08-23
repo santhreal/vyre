@@ -25,7 +25,7 @@ pub fn bitset_and_not(lhs: &str, rhs: &str, out: &str, words: u32) -> Program {
 const EXPECTED_AND_NOT_OUTPUT_BYTES: [u8; 8] = [0x00, 0x0F, 0x00, 0x00, 0xAA, 0xAA, 0xAA, 0xAA];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || bitset_and_not("lhs", "rhs", "out", 2),
         Some(|| {

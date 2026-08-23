@@ -54,6 +54,15 @@ from, and its own body digest is recomputed and compared on admission. A
 payload that has been edited, or that names a different artifact, does not
 admit.
 
+Schema 9 authenticates the versioned backend-neutral phase schedule, transform
+preconditions, inverse/source provenance, exact phase geometry and bounded
+resources. Decode rejects malformed schedules before physical lowering.
+
+Schema 8 authenticates the selected execution topology and its bounded search
+accounting. Decode rejects zero queue or resident-partition cardinalities,
+inconsistent candidate counts, work beyond the recorded budget, and measured
+plans without positive launch and device-time evidence.
+
 Schema 7 authenticates each entry input and output as a Program buffer name
 paired with its canonical graph value. It also records retained-predecessor
 lineage. Materializers resolve active buffers through those named records and

@@ -121,7 +121,7 @@ pub fn softmax_step(pre_exp: &str, out: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             softmax_step("pre_exp", "out", 4)

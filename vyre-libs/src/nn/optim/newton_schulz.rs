@@ -22,7 +22,7 @@ const EXPECTED_NEWTON_SCHULZ_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || newton_schulz_5step("mat", "output", 2, 2),
         Some(|| {

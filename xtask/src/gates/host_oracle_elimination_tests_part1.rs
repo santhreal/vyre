@@ -572,7 +572,7 @@ pub fn dynamic_math_oracle(words: &[u32]) -> Vec<u8> {
 }
 
 inventory::submit! {
-    OperationRegistration::library(
+    OperationRegistration::library_unconstrained(
         "test::op",
         || add_program("a", "b", "out", 2),
         Some(generate_deterministic_inputs),
@@ -619,7 +619,7 @@ pub static REG: OperationRegistration = OperationRegistration {
     expected_output: Some(|| vec![vec![struct_literal_oracle(&[1, 2])]]),
     laws: &[],
     tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-    geometry_requirements: None,
+    geometry_requirements: vyre_foundation::GeometryRequirements::agnostic(),
     source_file: "test.rs",
     explicit_effects: None,
     explicit_capabilities: None,
@@ -681,7 +681,7 @@ impl BogusOperationRegistration {
 }
 
 pub fn setup_mock() {
-    BogusOperationRegistration::library("mock", || {}, None, None);
+    BogusOperationRegistration::library_unconstrained("mock", || {}, None, None);
 }
 "#;
     let findings = analyze_files(&[("vyre-libs/src/op_bogus_control.rs", code)]);
@@ -702,7 +702,7 @@ pub fn add_program() -> Program {
 }
 
 inventory::submit! {
-    OperationRegistration::library(
+    OperationRegistration::library_unconstrained(
         "test::inline_math",
         add_program,
         None,
@@ -740,7 +740,7 @@ pub fn add_program() -> Program {
 const EXPECTED_BYTES: [u8; 4] = [100, 0, 200, 0];
 
 inventory::submit! {
-    OperationRegistration::library(
+    OperationRegistration::library_unconstrained(
         "test::clean_literal",
         add_program,
         None,
@@ -770,7 +770,7 @@ pub fn add_program() -> Program {
 const EXPECTED_BYTES: [u32; 2] = [100, 200];
 
 inventory::submit! {
-    OperationRegistration::library(
+    OperationRegistration::library_unconstrained(
         "test::clean_pack",
         add_program,
         None,
@@ -805,7 +805,7 @@ fn expected_bytes() -> Vec<u8> {
 }
 
 inventory::submit! {
-    OperationRegistration::library(
+    OperationRegistration::library_unconstrained(
         "test::helper_expected",
         add_program,
         None,
@@ -836,7 +836,7 @@ pub fn reduce_count(bitset: &str, out: &str, words: u32) -> Program {
 }
 
 inventory::submit! {
-    OperationRegistration::library(
+    OperationRegistration::library_unconstrained(
         "vyre-libs::reduce::count",
         || reduce_count("bitset", "out", 2),
         Some(|| {

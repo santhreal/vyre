@@ -35,7 +35,7 @@ fn emit_wgsl_module(
     selected: &SelectedLowering,
     _profile: &TargetProfile,
 ) -> Result<EmittedDialectModule, TargetCompileError> {
-    let module = crate::emit::emit_naga_module_for_descriptor(&selected.descriptor)
+    let module = crate::emit::emit_naga_module_for_descriptor(selected.descriptor())
         .map_err(|error| TargetCompileError::Emission(format!("WGSL emission failed: {error}")))?;
     let wgsl = crate::emit::write_wgsl(&module)
         .map_err(|error| TargetCompileError::Emission(format!("WGSL writing failed: {error}")))?;

@@ -50,7 +50,7 @@ pub fn hensel_lift_step(x: &str, f_x: &str, inv_f_prime: &str, out: &str, n: u32
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || hensel_lift_step("x", "f_x", "inv_f_prime", "out", 4),
         Some(|| {

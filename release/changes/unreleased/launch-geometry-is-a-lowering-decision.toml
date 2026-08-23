@@ -1,2 +1,2 @@
 category = "Changed"
-text = "Launch geometry is a lowering decision produced by backend GeometryStrategy from neutral GeometryRequirements rather than hardcoded in library operations."
+text = "Every operation now records neutral workgroup, subgroup, uniformity, shared-scratch, cooperative-launch, memory-order, and element schedule constraints that compose before target geometry selection."

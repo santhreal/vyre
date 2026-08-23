@@ -323,7 +323,7 @@ const EXPECTED_TENSOR_FLOW_PROPAGATE_EDGES_BYTES: [u8; 16] =
     [16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         TENSOR_FLOW_PROPAGATE_EDGES_OP_ID,
         tensor_flow_propagate_edges_program,
         Some(|| vec![vec![
@@ -339,7 +339,7 @@ inventory::submit! {
 const EXPECTED_TENSOR_FLOW_FORWARD_OUTPUT_BYTES: [u8; 4] = [0x10, 0x11, 0x00, 0x00];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || tensor_flow_forward(ProgramGraphShape::new(4, 4), "tin", "tout", 2, 2, 0xFFFF_FFFF),
         Some(|| {

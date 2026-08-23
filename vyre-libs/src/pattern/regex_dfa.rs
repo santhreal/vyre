@@ -437,7 +437,7 @@ fn canonical_regex_dfa_inputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         REGEX_DFA_OP_ID,
         canonical_regex_dfa_program,
         Some(canonical_regex_dfa_inputs),

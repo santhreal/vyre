@@ -29,7 +29,7 @@ const EXPECTED_LOGIT_SOFTCAP_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || logit_softcap("input", "output", 4, 30.0),
         Some(|| {

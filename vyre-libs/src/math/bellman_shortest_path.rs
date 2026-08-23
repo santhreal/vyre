@@ -312,7 +312,7 @@ fn bellman_single_word_harness(buffers: BellmanBuffers<'_>, extents: BellmanExte
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             bellman_shortest_path(

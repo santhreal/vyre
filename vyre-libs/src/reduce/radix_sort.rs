@@ -107,7 +107,7 @@ pub fn radix_sort(input: &str, output: &str, count: u32, bits: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || radix_sort("input", "output", 4, 8),
         Some(|| {

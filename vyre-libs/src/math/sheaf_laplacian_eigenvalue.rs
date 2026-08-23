@@ -158,7 +158,7 @@ pub fn sheaf_laplacian_eigenvalue(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || sheaf_laplacian_eigenvalue("r", "v", "l", 4, 1, 4),
         Some(|| {
@@ -191,7 +191,7 @@ inventory::submit! {
 const EXPECTED_POWER_ITERATION_PHASE_BYTES: [u8; 4] = [50, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         POWER_ITERATION_PHASE_OP_ID,
         || {
             Program::wrapped(

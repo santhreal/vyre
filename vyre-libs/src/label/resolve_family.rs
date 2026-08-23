@@ -32,7 +32,7 @@ pub fn resolve_family(
 const EXPECTED_RESOLVE_FAMILY_OUTPUT_BYTES: [u8; 4] = [6, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || resolve_family("tags", "nodeset", 4, 0b0010),
         Some(|| {

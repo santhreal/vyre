@@ -56,7 +56,7 @@ const EXPECTED_LINEAR_SILU_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             linear_silu("x", "w", "b", "out", 4, 4).unwrap_or_else(|error| {

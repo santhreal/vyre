@@ -22,7 +22,7 @@ pub fn node_kind_eq(nodes: &str, nodeset_out: &str, node_count: u32, kind: u32) 
 const EXPECTED_NODE_KIND_EQ_OUTPUT_BYTES: [u8; 4] = [5, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || node_kind_eq("nodes", "nodeset", 4, crate::predicate::node_kind::CALL),
         Some(|| {

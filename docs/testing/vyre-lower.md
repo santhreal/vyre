@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 ./cargo_full test -p vyre-lower
 ```
 
-Consume verified semantic programs and own the single backend-neutral lowering boundary and pre-emission transforms.
+Consume validated selected schedule phases and semantic programs, then own the single validated PhysicalKernel lowering boundary plus its backend-neutral pre-emission transforms.
 
 The crate lives at `vyre-lower`. The `lowering` owner maintains its
 `lowering` testing contract.

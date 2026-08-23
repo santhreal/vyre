@@ -256,7 +256,7 @@ const EXPECTED_HEX_CASE1_BYTES: [u8; 12] = [0x68, 0, 0, 0, 0x49, 0, 0, 0, 0x4A, 
 const EXPECTED_HEX_CASE2_BYTES: [u8; 12] = [0x7A, 0, 0, 0, 0x01, 0, 0, 0, 0x00, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || hex_decode("input", "output", 6),
         Some(fixture_inputs),

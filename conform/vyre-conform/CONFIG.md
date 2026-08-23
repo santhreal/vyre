@@ -31,16 +31,15 @@ flag always wins. There is no config file: the runner reads no
 ## Tier B  -  the witness corpus
 
 Every conformance witness the runner executes comes from canonical
-`OperationRegistration` records linked by `vyre-libs` and
-`vyre-primitives`. `unified_entries` joins the registry view used by those
-crates. Each operation carries its program builder, deterministic test inputs,
-and expected output.
+`OperationRegistration` records linked by `vyre-libs` and `vyre-primitives`.
+Each operation contains its program builder, deterministic test inputs,
+expected output, and neutral schedule-constraint decision.
 
 Submit a witness-bearing semantic operation next to its implementation:
 
 ```rust
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         MY_OP_ID,
         || my_op("input", "output", 2, 2),
         Some(|| vec![vec![/* input bytes */]]),

@@ -23,7 +23,7 @@ pub fn broadcast(src: &str, dst: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::math::broadcast",
         || broadcast("src", "dst", 4),
         Some(|| vec![vec![

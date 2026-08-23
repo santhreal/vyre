@@ -805,7 +805,7 @@ mod tests {
     #[test]
     fn inventory_block_is_balanced() {
         let blocks = inventory_submit_blocks(
-            "inventory::submit! { OperationRegistration::primitive(OP_ID, build, None, None) }",
+            "inventory::submit! { OperationRegistration::primitive_unconstrained(OP_ID, build, None, None) }",
         );
         assert_eq!(blocks.len(), 1);
         assert!(blocks[0].contains("OperationRegistration"));

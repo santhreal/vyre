@@ -154,7 +154,7 @@ const EXPECTED_MLP_BACKWARD_OUTPUT_BYTES: [u8; 8] =
     [0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x80, 0x40];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || mlp_backward("x", "w1", "b1", "w2", "grad_out", "grad_x", 2, 2),
         Some(|| {

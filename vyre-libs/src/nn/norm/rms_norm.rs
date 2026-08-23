@@ -139,7 +139,7 @@ const EXPECTED_RMS_NORM_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::nn::rms_norm",
         || rms_norm("input", "output", 4, 1e-5),
         Some(|| {

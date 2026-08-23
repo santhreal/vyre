@@ -58,7 +58,7 @@ mod non_panic_wrapper_tests {
 const EXPECTED_BITSET_POPCOUNT_OUTPUT_BYTES: [u8; 8] = [4, 0, 0, 0, 32, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || bitset_popcount("input", "count", 2),
         Some(|| {

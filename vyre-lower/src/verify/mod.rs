@@ -26,7 +26,7 @@
 //!
 //! ## Wiring
 //!
-//! [`crate::lower_verified`] and [`crate::verify_descriptor`] invoke this
+//! [`crate::lower_physical`] and [`crate::verify_descriptor`] invoke this
 //! verifier before emitter handoff. Tests and fuzzers call `verify()` directly
 //! to turn malformed descriptors into structured failures.
 

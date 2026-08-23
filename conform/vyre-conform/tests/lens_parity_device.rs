@@ -121,7 +121,7 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
         expected_output: None,
         laws: &[],
         tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        geometry_requirements: None,
+        geometry_requirements: vyre_foundation::GeometryRequirements::agnostic(),
         source_file: file!(),
         explicit_effects: None,
         explicit_capabilities: None,

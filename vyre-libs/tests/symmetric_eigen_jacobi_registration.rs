@@ -42,7 +42,7 @@ fn registered() -> SemanticOperation {
     OperationRegistry::global().get(OP_ID).unwrap_or_else(|| {
         panic!(
             "{OP_ID} is not in the operation registry. Fix: it is composed as a child region by \
-             tensor_train_decompose, so it needs its own OperationRegistration::library."
+             tensor_train_decompose, so it needs its own OperationRegistration::library_unconstrained."
         )
     })
 }

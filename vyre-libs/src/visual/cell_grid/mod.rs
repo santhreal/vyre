@@ -127,7 +127,7 @@ const EXPECTED_CELL_GRID_BYTES: [u8; 64] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             cell_grid_fill(

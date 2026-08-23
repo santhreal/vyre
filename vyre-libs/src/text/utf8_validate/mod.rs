@@ -59,7 +59,7 @@ const EXPECTED_UTF8_VALIDATE_OUTPUT_BYTES: [u8; 32] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || utf8_validate("source", "classes", 8),
         Some(|| {

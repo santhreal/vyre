@@ -367,7 +367,7 @@ const EXPECTED_FOUR_RUSSIANS_APPLY_OUTPUT_BYTES: [u8; 8] =
     [0x00, 0xF0, 0x00, 0xF0, 0x00, 0x00, 0x0F, 0x0F];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || four_russians_apply_byte_lut("lhs", "rhs", "lut", "out", 2),
         Some(|| {
@@ -388,7 +388,7 @@ inventory::submit! {
 const EXPECTED_FOUR_RUSSIANS_DENSE_MATVEC_OUTPUT_BYTES: [u8; 4] = [5, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         DENSE_MATVEC_OP_ID,
         || four_russians_dense_matvec_byte_lut("frontier", "tile_lut", "out", 1, 1),
         Some(|| {

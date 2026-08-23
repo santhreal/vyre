@@ -362,7 +362,7 @@ pub fn try_sketch_mix(input: &str, out: &str, size: u32) -> Result<Program, Tens
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         JOIN_OP_ID,
         || lattice_join("a", "b", "out", 4),
         Some(|| {
@@ -384,7 +384,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         MEET_OP_ID,
         || lattice_meet("a", "b", "out", 4),
         Some(|| {
@@ -406,7 +406,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         MINPLUS_MUL_OP_ID,
         || semiring_min_plus_mul("a", "b", "out", 4),
         Some(|| {
@@ -428,7 +428,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         BOOL_MATMUL_OP_ID,
         || bool_semiring_matmul("a", "b", "out", 2, 3, 2),
         Some(|| {
@@ -450,7 +450,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         SKETCH_MIX_OP_ID,
         || sketch_mix("input", "out", 4),
         Some(|| {

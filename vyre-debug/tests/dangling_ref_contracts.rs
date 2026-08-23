@@ -6,8 +6,8 @@ use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 #[test]
 fn find_dangling_refs_clean_program_returns_empty() {
     let prog = loop_carry_smoke();
-    let desc = vyre_lower::lower_verified(&prog)
-        .map(|lowered| lowered.descriptor)
+    let desc = vyre_lower::lower_physical(&prog)
+        .map(|lowered| lowered.into_descriptor())
         .unwrap();
     let danglings = find_dangling_refs(&desc);
     assert!(danglings.is_empty());
@@ -15,8 +15,8 @@ fn find_dangling_refs_clean_program_returns_empty() {
 
 #[test]
 fn find_dangling_refs_handcrafted_descriptor_finds_known_break() {
-    let mut desc = vyre_lower::lower_verified(&loop_carry_smoke())
-        .map(|lowered| lowered.descriptor)
+    let mut desc = vyre_lower::lower_physical(&loop_carry_smoke())
+        .map(|lowered| lowered.into_descriptor())
         .unwrap();
 
     let id_in_child = 999;
@@ -54,8 +54,8 @@ fn find_dangling_refs_handcrafted_descriptor_finds_known_break() {
 
 #[test]
 fn find_dangling_refs_matches_verifier_verdict() {
-    let mut desc = vyre_lower::lower_verified(&loop_carry_smoke())
-        .map(|lowered| lowered.descriptor)
+    let mut desc = vyre_lower::lower_physical(&loop_carry_smoke())
+        .map(|lowered| lowered.into_descriptor())
         .unwrap();
 
     let id_in_child = 999;
@@ -106,8 +106,8 @@ fn find_dangling_refs_matches_verifier_verdict() {
 
 #[test]
 fn find_dangling_refs_handles_deep_nesting_six_levels() {
-    let mut desc = vyre_lower::lower_verified(&loop_carry_smoke())
-        .map(|lowered| lowered.descriptor)
+    let mut desc = vyre_lower::lower_physical(&loop_carry_smoke())
+        .map(|lowered| lowered.into_descriptor())
         .unwrap();
 
     // Level 6 produces 999.
@@ -173,8 +173,8 @@ fn find_dangling_refs_handles_deep_nesting_six_levels() {
 
 #[test]
 fn find_dangling_refs_does_not_flag_completed_child_results() {
-    let mut desc = vyre_lower::lower_verified(&loop_carry_smoke())
-        .map(|lowered| lowered.descriptor)
+    let mut desc = vyre_lower::lower_physical(&loop_carry_smoke())
+        .map(|lowered| lowered.into_descriptor())
         .unwrap();
 
     let id_in_child = 999;

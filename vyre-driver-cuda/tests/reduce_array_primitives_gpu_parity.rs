@@ -210,7 +210,8 @@ fn cuda_radix_sort_with_duplicates() {
 
 fn run_segment_reduce(input: &[u32], segment_offsets: &[u32]) -> Vec<u32> {
     let num_segments = (segment_offsets.len() - 1) as u32;
-    let program = segment_reduce_sum("input", "segments", "output", num_segments);
+    let input_count = u32::try_from(input.len()).expect("CUDA fixture input count must fit u32");
+    let program = segment_reduce_sum("input", "segments", "output", input_count, num_segments);
     let inputs: Vec<Vec<u8>> = vec![
         u32_bytes(input),
         u32_bytes(segment_offsets),

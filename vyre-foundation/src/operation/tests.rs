@@ -36,7 +36,7 @@ fn the_namespace_never_answers_with_a_tier() {
 /// A workspace id cannot carry a tier only a consumer identity has.
 #[test]
 fn a_workspace_id_declaring_an_external_tier_is_rejected() {
-    let entry = OperationRegistration::new(
+    let entry = OperationRegistration::new_unconstrained(
         "vyre-libs::scan::literal_set",
         OperationTier::External,
         None,
@@ -56,7 +56,7 @@ fn a_workspace_id_declaring_an_external_tier_is_rejected() {
 /// A consumer id carries the external tier and no other.
 #[test]
 fn an_external_id_declaring_a_workspace_tier_is_rejected() {
-    let entry = OperationRegistration::new(
+    let entry = OperationRegistration::new_unconstrained(
         "community_pack::scan::signature",
         OperationTier::Library,
         None,
@@ -72,7 +72,7 @@ fn an_external_id_declaring_a_workspace_tier_is_rejected() {
         })
     );
     assert_eq!(
-        validate_identity(&OperationRegistration::new(
+        validate_identity(&OperationRegistration::new_unconstrained(
             "community_pack::scan::signature",
             OperationTier::External,
             None,
@@ -93,7 +93,7 @@ fn a_workspace_id_carries_every_workspace_tier() {
         OperationTier::Library,
     ] {
         assert_eq!(
-            validate_identity(&OperationRegistration::new(
+            validate_identity(&OperationRegistration::new_unconstrained(
                 "vyre-primitives::hardware::popcount_u32",
                 tier,
                 None,
@@ -105,7 +105,7 @@ fn a_workspace_id_carries_every_workspace_tier() {
         );
     }
     assert_eq!(
-        validate_identity(&OperationRegistration::new(
+        validate_identity(&OperationRegistration::new_unconstrained(
             "vyre-primitives::hardware::popcount_u32",
             OperationTier::Unknown,
             None,
@@ -125,7 +125,7 @@ fn a_workspace_id_carries_every_workspace_tier() {
 fn an_id_naming_no_crate_is_refused_whatever_it_declares() {
     for id in ["not_a_namespace", "core.indirect_dispatch", "vyre-libs::"] {
         assert_eq!(
-            validate_identity(&OperationRegistration::new(
+            validate_identity(&OperationRegistration::new_unconstrained(
                 id,
                 OperationTier::Library,
                 None,

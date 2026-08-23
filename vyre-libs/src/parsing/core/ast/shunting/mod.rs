@@ -220,10 +220,20 @@ fn ast_shunting_yard_program(
             decl
         }
     };
+    let tok_types_decl = BufferDecl::storage(tok_types, 0, BufferAccess::ReadOnly, DataType::U32)
+        .with_count(token_capacity);
+    let statements_decl = {
+        let decl = BufferDecl::storage(statements, 1, BufferAccess::ReadOnly, DataType::U32);
+        if let Some(statement_capacity) = statement_capacity {
+            decl.with_count(statement_capacity.saturating_mul(2))
+        } else {
+            decl
+        }
+    };
     Program::wrapped(
         vec![
-            BufferDecl::storage(tok_types, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(statements, 1, BufferAccess::ReadOnly, DataType::U32),
+            tok_types_decl,
+            statements_decl,
             BufferDecl::storage(out_ast_nodes, 2, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(token_capacity.saturating_mul(4)),
             BufferDecl::storage(out_ast_count, 3, BufferAccess::ReadWrite, DataType::U32)
@@ -290,7 +300,7 @@ const EXPECTED_SHUNTING_REDUCE_OUT_NODES_BYTES: [u8; 256] = {
 const EXPECTED_SHUNTING_REDUCE_OUT_LEN_BYTES: [u8; 4] = [4, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         AST_SHUNTING_YARD_REDUCE_OP_ID,
         ast_shunting_yard_reduce_program,
         Some(|| {

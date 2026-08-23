@@ -224,7 +224,7 @@ pub fn matroid_intersection_full(
             )],
         ));
 
-        let recon = path_reconstruct(parent, "target_node_buf", path_out, path_len, n);
+        let recon = path_reconstruct(parent, "target_node_buf", path_out, path_len, n, n);
         let mut on_sink = vec![
             Node::store("target_node_buf", Expr::u32(0), Expr::var("sink_node")),
             wrap_anonymous_region(OP_ID, recon.entry().to_vec()),

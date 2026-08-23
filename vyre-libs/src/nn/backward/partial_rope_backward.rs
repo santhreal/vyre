@@ -142,7 +142,7 @@ const EXPECTED_PARTIAL_ROPE_BACKWARD_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || partial_rope_backward("grad_out", "cos", "sin", "grad_in", 1, 1, 4, 2),
         Some(|| {

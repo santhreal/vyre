@@ -129,7 +129,7 @@ pub fn histogram_atomic_scatter(input: &str, output: &str, count: u32, num_bins:
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || histogram("input", "output", 8, 4),
         Some(|| {

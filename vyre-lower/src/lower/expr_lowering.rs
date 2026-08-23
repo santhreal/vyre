@@ -224,7 +224,7 @@ impl LowerCtx {
             // ask for a descriptor mapping that must never exist: naming a
             // buffer is not an operation a kernel can perform.
             Expr::BufferRef { buffer } => Err(LowerError::UnsupportedConstruct(format!(
-                "reference to buffer `{buffer}` reached lowering. It is only legal as an argument to a composite op, where composition expansion consumes it. Fix: route this Program through `vyre_lower::lower_verified` and register the callee's composition body."
+                "reference to buffer `{buffer}` reached lowering. It is only legal as an argument to a composite op, where composition expansion consumes it. Fix: route this Program through `vyre_lower::lower_physical` and register the callee's composition body."
             ))),
             other => Err(LowerError::UnsupportedConstruct(format!(
                 "expression `{other:?}` has no KernelDescriptor lowering. Fix: add a descriptor op mapping."

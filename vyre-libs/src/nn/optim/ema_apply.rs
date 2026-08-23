@@ -36,7 +36,7 @@ const EXPECTED_EMA_APPLY_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || ema_apply("ema", "theta", 4, 0.9),
         Some(|| {

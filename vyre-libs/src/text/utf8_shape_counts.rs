@@ -141,7 +141,7 @@ pub fn utf8_shape_counts(histogram: &str, out: &str) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         UTF8_SHAPE_COUNTS_OP_ID,
         || utf8_shape_counts("histogram", "out"),
         Some(|| {

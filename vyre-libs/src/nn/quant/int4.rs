@@ -207,7 +207,7 @@ const EXPECTED_INT4_MATVEC_SCALED_OUTPUT_BYTES: [u8; 8] = [0u8; 8];
 const EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES: [u8; 16] = [0u8; 16];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         DOT_OP_ID,
         || int4_dot_i32("lhs", "rhs", "out", 8),
         Some(|| {
@@ -222,7 +222,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         DOT_SCALED_OP_ID,
         || int4_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", 8),
         Some(|| {
@@ -239,7 +239,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         MATVEC_SCALED_OP_ID,
         || int4_matvec_f32_scaled("weights", "x", "scales", "out", 2, 8),
         Some(|| {
@@ -255,7 +255,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         BATCHED_MATVEC_SCALED_OP_ID,
         || int4_batched_matvec_f32_scaled("weights", "x", "scales", "out", 2, 2, 8),
         Some(|| {
@@ -271,7 +271,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         BATCHED_MATMUL_SCALED_OP_ID,
         || {
             int4_batched_matmul_f32_scaled(
@@ -299,7 +299,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         BATCHED_MATMUL_TOP1_SCALED_OP_ID,
         || {
             int4_batched_matmul_top1_f32_scaled(

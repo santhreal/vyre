@@ -61,7 +61,7 @@ fn compose_scan_primitive(child_id: &'static str, program: Program) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || scan_prefix_sum("input", "output", 4),
         Some(|| vec![vec![

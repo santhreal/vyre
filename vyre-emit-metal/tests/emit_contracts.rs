@@ -137,8 +137,8 @@ fn metal_resource_count_without_sidecar_room_is_rejected() {
 #[test]
 fn trap_sidecar_compare_exchange_emits_msl_helper() {
     let program = Program::wrapped(vec![], [64, 1, 1], vec![Node::trap(Expr::u32(7), "fault")]);
-    let desc = vyre_lower::lower_verified(&program)
-        .map(|lowered| lowered.descriptor)
+    let desc = vyre_lower::lower_physical(&program)
+        .map(|lowered| lowered.into_descriptor())
         .expect("Fix: trap programs must descriptor-lower");
     let artifact = emit_artifact(&desc).expect("Fix: trap descriptors must emit Metal MSL");
 

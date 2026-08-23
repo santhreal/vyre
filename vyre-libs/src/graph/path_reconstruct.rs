@@ -58,6 +58,8 @@ pub struct BatchedPathReconstructLayout {
 pub struct PathReconstructDispatchPlan {
     /// Number of parent entries supplied by the caller.
     pub parent_words: usize,
+    /// Parent entries narrowed for primitive buffer metadata.
+    pub parent_words_u32: u32,
     /// Number of words in the target buffer.
     pub target_words: usize,
     /// Number of words in the padded path output.
@@ -79,6 +81,7 @@ impl PathReconstructDispatchPlan {
             PATH_TARGET_BUFFER,
             PATH_OUT_BUFFER,
             PATH_LEN_BUFFER,
+            self.parent_words_u32,
             self.max_depth,
         )
     }
@@ -117,6 +120,8 @@ pub struct BatchedPathReconstructDispatchPlan {
     pub layout: BatchedPathReconstructLayout,
     /// Number of parent entries supplied by the caller.
     pub parent_words: usize,
+    /// Parent entries narrowed for primitive buffer metadata.
+    pub parent_words_u32: u32,
     /// Number of words in the targets input.
     pub target_words: usize,
     /// Number of words in the padded paths output.
@@ -152,7 +157,11 @@ impl BatchedPathReconstructDispatchPlan {
     /// Build the batched path-reconstruction program for this plan.
     #[must_use]
     pub fn program(&self) -> Program {
-        batched_path_reconstruct(self.layout.target_count, self.max_depth)
+        batched_path_reconstruct(
+            self.parent_words_u32,
+            self.layout.target_count,
+            self.max_depth,
+        )
     }
 
     /// Return the primitive-owned cache identity for this plan's static parent input.
@@ -187,6 +196,9 @@ fn path_reconstruct_u32_slice_fingerprint(values: &[u32]) -> u64 {
 }
 
 /// Build the IR `Program` for path reconstruction.
+///
+/// `parent_count` fixes the typed parent-buffer extent. Dispatch planning
+/// rejects counts that cannot fit primitive metadata.
 #[must_use]
 ///
 pub fn path_reconstruct(
@@ -194,6 +206,7 @@ pub fn path_reconstruct(
     target: &str,
     path_out: &str,
     path_len: &str,
+    parent_count: u32,
     max_depth: u32,
 ) -> Program {
     if max_depth == 0 {
@@ -262,7 +275,8 @@ pub fn path_reconstruct(
 
     Program::wrapped(
         vec![
-            BufferDecl::storage(parent, 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(parent, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(parent_count),
             BufferDecl::storage(target, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
             BufferDecl::storage(path_out, 2, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(max_depth),
@@ -296,7 +310,7 @@ pub fn path_reconstruct(
 /// `max_depth == 0` or `target_count * max_depth` overflow produces a trap
 /// program rather than silently emitting malformed buffer metadata.
 #[must_use]
-pub fn batched_path_reconstruct(target_count: u32, max_depth: u32) -> Program {
+pub fn batched_path_reconstruct(parent_count: u32, target_count: u32, max_depth: u32) -> Program {
     let layout = match validate_batched_path_reconstruct_layout(target_count as usize, max_depth) {
         Ok(layout) => layout,
         Err(error) => {
@@ -360,7 +374,8 @@ pub fn batched_path_reconstruct(target_count: u32, max_depth: u32) -> Program {
 
     Program::wrapped(
         vec![
-            BufferDecl::storage("parent", 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("parent", 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(parent_count),
             BufferDecl::storage("targets", 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(target_count),
             BufferDecl::storage("paths", 2, BufferAccess::ReadWrite, DataType::U32)
@@ -412,11 +427,18 @@ pub fn plan_path_reconstruct_dispatch(
     parent_len: usize,
     max_depth: u32,
 ) -> Result<PathReconstructDispatchPlan, String> {
+    if parent_len == 0 {
+        return Err("Fix: path_reconstruct requires at least one parent word.".to_string());
+    }
     if max_depth == 0 {
         return Err("Fix: path_reconstruct max_depth must be >= 1.".to_string());
     }
+    let parent_words_u32 = u32::try_from(parent_len).map_err(|_| {
+        format!("Fix: path_reconstruct parent word count {parent_len} exceeds u32.")
+    })?;
     Ok(PathReconstructDispatchPlan {
         parent_words: parent_len,
+        parent_words_u32,
         target_words: 1,
         path_words: max_depth as usize,
         len_words: 1,
@@ -431,9 +453,16 @@ pub fn plan_batched_path_reconstruct_dispatch(
     target_len: usize,
     max_depth: u32,
 ) -> Result<BatchedPathReconstructDispatchPlan, String> {
+    if parent_len == 0 {
+        return Err("Fix: batched_path_reconstruct requires at least one parent word.".to_string());
+    }
     let layout = validate_batched_path_reconstruct_layout(target_len, max_depth)?;
+    let parent_words_u32 = u32::try_from(parent_len).map_err(|_| {
+        format!("Fix: batched_path_reconstruct parent word count {parent_len} exceeds u32.")
+    })?;
     Ok(BatchedPathReconstructDispatchPlan {
         parent_words: parent_len,
+        parent_words_u32,
         target_words: target_len,
         path_words: layout.path_words,
         len_words: target_len,
@@ -507,6 +536,7 @@ mod dispatch_plan_tests {
             .expect("Fix: nonzero max_depth should plan single reconstruction");
 
         assert_eq!(plan.parent_words, 4);
+        assert_eq!(plan.parent_words_u32, 4);
         assert_eq!(plan.target_words, 1);
         assert_eq!(plan.path_words, 8);
         assert_eq!(plan.len_words, 1);
@@ -520,11 +550,35 @@ mod dispatch_plan_tests {
     }
 
     #[test]
+    fn every_path_dispatch_plan_rejects_an_empty_parent_domain() {
+        let error = plan_path_reconstruct_dispatch(0, 1)
+            .expect_err("single path dispatch requires a positive parent domain");
+        assert!(error.contains("at least one parent word"));
+        let error = plan_batched_path_reconstruct_dispatch(0, 1, 1)
+            .expect_err("batched path dispatch requires a positive parent domain");
+        assert!(error.contains("at least one parent word"));
+    }
+
+    #[cfg(target_pointer_width = "64")]
+    #[test]
+    fn single_path_dispatch_plan_rejects_unrepresentable_parent_count() {
+        let parent_len = usize::try_from(u64::from(u32::MAX) + 1)
+            .expect("64-bit usize must represent u32::MAX + 1");
+        let error = plan_path_reconstruct_dispatch(parent_len, 1)
+            .expect_err("primitive metadata cannot represent this parent count");
+        assert!(error.contains("exceeds u32"));
+        let error = plan_batched_path_reconstruct_dispatch(parent_len, 1, 1)
+            .expect_err("batched primitive metadata cannot represent this parent count");
+        assert!(error.contains("exceeds u32"));
+    }
+
+    #[test]
     fn batched_path_dispatch_plan_owns_layout_and_grid() {
         let plan = plan_batched_path_reconstruct_dispatch(4, 513, 3)
             .expect("Fix: valid batched reconstruction should plan");
 
         assert_eq!(plan.parent_words, 4);
+        assert_eq!(plan.parent_words_u32, 4);
         assert_eq!(plan.target_words, 513);
         assert_eq!(plan.path_words, 1539);
         assert_eq!(plan.len_words, 513);
@@ -608,9 +662,9 @@ const EXPECTED_PATH_RECONSTRUCT_PATH_BYTES: [u8; 16] =
 const EXPECTED_PATH_RECONSTRUCT_LEN_BYTES: [u8; 4] = [4, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
-        || path_reconstruct("parent", "target", "path_out", "path_len", 4),
+        || path_reconstruct("parent", "target", "path_out", "path_len", 4, 4),
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             // parent: [0, 0, 1, 2]  (0 is root; 1→0, 2→1, 3→2)
@@ -770,7 +824,7 @@ mod tests {
 
     #[test]
     fn program_builder_max_depth_zero_emits_trap() {
-        let p = path_reconstruct("parent", "target", "out", "len", 0);
+        let p = path_reconstruct("parent", "target", "out", "len", 1, 0);
         // Trap programs contain a Node::Trap in the entry region body.
         let entry = p.entry();
         let has_trap = entry.iter().any(|n| {
@@ -788,7 +842,7 @@ mod tests {
 
     #[test]
     fn batched_program_has_expected_buffers_and_workgroup() {
-        let p = batched_path_reconstruct(3, 4);
+        let p = batched_path_reconstruct(4, 3, 4);
         assert_eq!(p.workgroup_size, [BATCHED_WORKGROUP_SIZE, 1, 1]);
         let names: Vec<&str> = p.buffers.iter().map(|b| b.name()).collect();
         assert_eq!(names, vec!["parent", "targets", "paths", "lens"]);
@@ -929,7 +983,7 @@ mod tests {
 
     #[test]
     fn batched_program_zero_depth_emits_trap() {
-        let p = batched_path_reconstruct(3, 0);
+        let p = batched_path_reconstruct(1, 3, 0);
         let entry = p.entry();
         let has_trap = entry.iter().any(|n| {
             if let Node::Region { body, .. } = n {

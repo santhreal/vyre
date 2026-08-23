@@ -296,7 +296,7 @@ pub fn amg_v_cycle(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || amg_v_cycle("a", "b", "x", "r", "p", "ac", "om", "sf", "scb", "scx", 4, 2),
         Some(|| {
@@ -331,7 +331,7 @@ inventory::submit! {
 const EXPECTED_V_CYCLE_PHASE_BYTES: [u8; 16] = [2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 5, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         V_CYCLE_PHASE_OP_ID,
         || {
             Program::wrapped(

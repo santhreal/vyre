@@ -83,7 +83,7 @@ pub fn try_mz_project_step(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             mz_project_step("a", "b", "out", 4)

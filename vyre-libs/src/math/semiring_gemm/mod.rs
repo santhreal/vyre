@@ -212,7 +212,7 @@ fn fixture_u32(words: &[u32]) -> Vec<u8> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || semiring_gemm("a", "b", "c", 2, 2, 2, Semiring::Real),
         Some(|| vec![vec![

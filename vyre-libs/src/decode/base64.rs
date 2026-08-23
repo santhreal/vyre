@@ -435,7 +435,7 @@ const EXPECTED_BASE64_CASE2_BYTES: [u8; 24] = [
 const EXPECTED_BASE64_CASE2_LEN: [u8; 4] = [6, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || base64_decode("input", "output", 8),
         Some(fixture_inputs),

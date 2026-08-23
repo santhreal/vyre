@@ -137,7 +137,7 @@ macro_rules! define_bitwise_binary_op {
         const EXPECTED_REGISTRATION_BYTES: &[u8] = &[$($inventory_expected_bytes),*];
 
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::library(
+            vyre_foundation::operation::OperationRegistration::library_unconstrained(
                 OP_ID,
                 || $fn_name("lhs", "rhs", "out", $inventory_words),
                 Some(|| {
@@ -349,7 +349,7 @@ macro_rules! define_bitwise_in_place_op {
         const EXPECTED_REGISTRATION_BYTES: &[u8] = &[$($inventory_expected_bytes),*];
 
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::library(
+            vyre_foundation::operation::OperationRegistration::library_unconstrained(
                 OP_ID,
                 || $fn_name("target", "operand", $inventory_words),
                 Some(|| {

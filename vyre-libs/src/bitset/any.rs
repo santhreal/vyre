@@ -93,7 +93,7 @@ pub fn bitset_any(input: &str, out: &str, words: u32) -> Program {
 const EXPECTED_BITSET_ANY_OUTPUT_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || bitset_any("input", "out", 2),
         Some(|| {

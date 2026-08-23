@@ -150,7 +150,7 @@ const EXPECTED_PREFIX_SCAN_OUTPUT_BYTES: [u8; 256] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID_INCLUSIVE_SUM,
         || multi_block_prefix_scan_sum_u32("input", "output", 64),
         Some(|| {

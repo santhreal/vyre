@@ -1,4 +1,4 @@
-use vyre_foundation::ir::ProgramGraph;
+use vyre_foundation::logical::LogicalProgramGraph;
 
 use crate::{
     candidate::{CandidatePlan, ExecutionTopology, ResidentPartitionMode},
@@ -33,13 +33,14 @@ pub(crate) struct SearchResult {
 }
 
 pub(crate) fn explore(
-    graph: &ProgramGraph,
+    logical: &LogicalProgramGraph<'_>,
     facts: &PlanningFacts,
     dependencies: &[DependencyEdge],
     budget: SearchBudget,
     device: DeviceFacts,
 ) -> SearchResult {
-    let mut groupings = vec![CandidatePlan::baseline(graph.nodes().len())];
+    let graph = logical.graph();
+    let mut groupings = vec![CandidatePlan::baseline_for(logical)];
     let mut rejected = Vec::new();
     let mut legal_edges = Vec::new();
     let mut cpu_work = 0_u64;
@@ -51,7 +52,7 @@ pub(crate) fn explore(
         cpu_work = cpu_work.saturating_add(1);
         match analyze_fusion_pair(graph, edge.from, edge.to, edge.value) {
             FusionDecision::Legal => {
-                let candidate = CandidatePlan::from_edges(graph.nodes().len(), &[*edge]);
+                let candidate = CandidatePlan::from_edges_for(logical, &[*edge]);
                 if candidate_is_acyclic(&candidate, dependencies) {
                     legal_edges.push(*edge);
                     if groupings.len() < budget.max_candidates as usize {
@@ -80,7 +81,7 @@ pub(crate) fn explore(
         for edge in legal_edges {
             let mut proposed = accepted.clone();
             proposed.push(edge);
-            let candidate = CandidatePlan::from_edges(graph.nodes().len(), &proposed);
+            let candidate = CandidatePlan::from_edges_for(logical, &proposed);
             if candidate_is_acyclic(&candidate, dependencies) {
                 accepted = proposed;
             } else {
@@ -90,7 +91,7 @@ pub(crate) fn explore(
                 });
             }
         }
-        groupings.push(CandidatePlan::from_edges(graph.nodes().len(), &accepted));
+        groupings.push(CandidatePlan::from_edges_for(logical, &accepted));
     }
     groupings.sort_by(|left, right| left.node_groups.cmp(&right.node_groups));
     groupings.dedup_by(|left, right| left.node_groups == right.node_groups);
@@ -196,6 +197,9 @@ fn width_moves_any_group(candidate: &CandidatePlan, facts: &PlanningFacts, width
 }
 
 fn candidate_is_acyclic(candidate: &CandidatePlan, dependencies: &[DependencyEdge]) -> bool {
+    if candidate.schedule_error().is_some() {
+        return false;
+    }
     let groups = candidate
         .node_groups
         .iter()

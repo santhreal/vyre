@@ -133,7 +133,7 @@ pub fn bhattacharyya_per_element(p: &str, q: &str, out_per_elem: &str, n: u32) -
 // ---- CPU references ----
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || {
             bhattacharyya_per_element("a", "b", "out", 4)

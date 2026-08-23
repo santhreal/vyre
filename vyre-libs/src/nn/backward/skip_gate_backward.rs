@@ -57,7 +57,7 @@ const EXPECTED_SKIP_GATE_BACKWARD_OUTPUT_BYTES: [u8; 8] =
     [0x00, 0x00, 0xA0, 0xC0, 0x00, 0x00, 0x00, 0x80];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || skip_gate_backward("gate", "branch", "skip", "grad_out", "grad_gate", 2),
         Some(|| {

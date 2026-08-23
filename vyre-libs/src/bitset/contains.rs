@@ -62,7 +62,7 @@ pub fn bitset_contains(input: &str, index_buffer: &str, out: &str, words: u32) -
 const EXPECTED_BITSET_CONTAINS_OUTPUT_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || bitset_contains("input", "index", "out", 1),
         Some(|| {

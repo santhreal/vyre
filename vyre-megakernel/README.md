@@ -2,9 +2,9 @@
 
 The whole-program compile seam: a validated typed graph plus external
 facts plus an explicit search budget in, one versioned immutable
-artifact and its target payloads out. It owns candidate generation,
-fusion legality, the cost model, selection, and the target compiler
-facets.
+artifact and its target payloads out. It constructs foundation-owned
+versioned phase schedules through bounded candidate generation, fusion
+legality, cost evaluation and selection, then invokes target compiler facets.
 
 Not here: device admission, submission, queues, residency, recovery.
 Those consume the artifact and must not alter its identity. Also not
@@ -22,7 +22,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, emit a megakernel Artifact and TargetPayloads, and never claim a measured winner that no clock produced. Does not own admission, execution, or lifecycle policy.
+Construct foundation-owned selected schedules through bounded whole-ProgramGraph search, and own immutable Artifact identity and authenticated TargetPayload construction. Does not own logical semantics, schedule schemas, physical-kernel lowering, admission, execution, or lifecycle policy.
 
 ### Boundaries
 

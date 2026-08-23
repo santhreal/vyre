@@ -38,7 +38,7 @@ const EXPECTED_SILU_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         "vyre-libs::nn::silu",
         || silu("input", "output", 4),
         Some(|| {

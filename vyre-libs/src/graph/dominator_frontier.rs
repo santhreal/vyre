@@ -321,7 +321,7 @@ pub fn dominator_frontier_pred_check_program() -> Program {
 const EXPECTED_DOMINATOR_FRONTIER_PRED_CHECK_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         DOMINATOR_FRONTIER_PRED_CHECK_OP_ID,
         dominator_frontier_pred_check_program,
         Some(|| vec![vec![
@@ -344,7 +344,7 @@ pub fn frontier_size(frontier: &[u32]) -> u32 {
 const EXPECTED_DOMINATOR_FRONTIER_OUTPUT_BYTES: [u8; 4] = [0, 0, 0, 0];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || dominator_frontier(4, 4, 4, "idom", "df"),
         Some(|| {

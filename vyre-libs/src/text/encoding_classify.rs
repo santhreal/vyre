@@ -129,7 +129,7 @@ pub fn encoding_classify(histogram: &str, output: &str, count: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         ENCODING_CLASSIFY_OP_ID,
         || encoding_classify("histogram", "encoding", 5),
         Some(|| {

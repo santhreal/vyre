@@ -29,7 +29,7 @@ pub fn label_by_family(
 const EXPECTED_LABEL_BY_FAMILY_OUTPUT_BYTES: [u8; 4] = [0x06, 0x00, 0x00, 0x00];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || label_by_family("node_tags", "out", 4, 0b0010),
         Some(|| {

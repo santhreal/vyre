@@ -18,7 +18,7 @@ const EXPECTED_LAYERWISE_LN_SCALE_OUTPUT_BYTES: [u8; 16] = [
 ];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || layerwise_ln_scale("input", "scale", "output", 4),
         Some(|| {

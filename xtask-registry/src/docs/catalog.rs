@@ -108,6 +108,7 @@ mod tests {
                 bytes_extraction: false,
             },
             features: Vec::new(),
+            schedule_constraints: Default::default(),
             oracle: crate::docs::operation_schema::schema::OracleContract {
                 reference_eval: true,
                 flat_reference_facet: true,

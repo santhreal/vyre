@@ -371,7 +371,7 @@ pub fn try_rank1_query(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         RANK_SUPERBLOCKS_OP_ID,
         || rank1_superblocks("bits", "superblocks", 4, 2),
         Some(|| {
@@ -392,7 +392,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
         RANK_QUERY_OP_ID,
         || rank1_query("bits", "superblocks", "queries", "out", 4, 5, 2),
         Some(|| {

@@ -84,7 +84,7 @@ macro_rules! define_bit_update_op {
         const EXPECTED_REGISTRATION_BYTES: &[u8] = &[$($inventory_expected_bytes),*];
 
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::library(
+            vyre_foundation::operation::OperationRegistration::library_unconstrained(
                 OP_ID,
                 || $fn_name("target", 0, 2),
                 Some(|| {
