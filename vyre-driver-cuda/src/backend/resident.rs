@@ -686,6 +686,15 @@ mod tests {
             }
             other => panic!("expected InvalidProgram, got {other:?}"),
         }
+
+        // The fixture invented this device address, and `ResidentBuffer::drop`
+        // hands whatever it holds to `cuMemFree_v2`, which needs a loaded
+        // driver to report that nothing ever allocated it. Taking the entry out
+        // and forgetting it leaks no real allocation and keeps this a host-side
+        // metadata contract.
+        if let Some((_, fabricated)) = store.buffers.remove(&owned) {
+            std::mem::forget(fabricated);
+        }
     }
 }
 

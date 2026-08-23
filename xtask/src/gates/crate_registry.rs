@@ -176,7 +176,10 @@ fn document_findings(
         return Ok(Vec::new());
     }
     let actual = fs::read_to_string(&path).unwrap_or_default();
-    if actual == rendered {
+    // Line comparison: a checkout that materializes the document with CRLF
+    // endings renders the same rows, and a byte comparison would report a
+    // divergence the finding text cannot name.
+    if actual.lines().eq(rendered.lines()) {
         return Ok(Vec::new());
     }
     Ok(vec![Finding::in_file(

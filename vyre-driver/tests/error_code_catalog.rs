@@ -42,13 +42,17 @@ fn committed_catalog_matches_the_rendered_one() {
         )
     });
 
-    if committed == rendered {
+    // Compared line by line, not byte by byte. A checkout that materializes the
+    // committed file with CRLF endings is not a divergent catalog, and a byte
+    // comparison reported one while the diff below found nothing to name: the
+    // failure read "0 divergent rows" on every Windows run.
+    let committed_lines: Vec<&str> = committed.lines().collect();
+    let rendered_lines: Vec<&str> = rendered.lines().collect();
+    if committed_lines == rendered_lines {
         return;
     }
 
     let mut findings = Vec::new();
-    let committed_lines: Vec<&str> = committed.lines().collect();
-    let rendered_lines: Vec<&str> = rendered.lines().collect();
     for (index, (have, want)) in committed_lines.iter().zip(&rendered_lines).enumerate() {
         if have != want {
             findings.push(format!(

@@ -797,8 +797,17 @@ mod tests {
         let mut transfers = HostTransferAllocations::with_capacity(pool, 1, 2)
             .expect("Fix: host transfer table should reserve");
 
+        // The fixture owns this buffer. The pool never allocated it, so the
+        // table is drained below instead of releasing it: releasing asks
+        // `cuMemFreeHost` to free host memory the driver never pinned, which
+        // needs a loaded driver to even report the refusal and made this
+        // host-side contract fail on a machine with no CUDA library. Real
+        // memory rather than a dangling pointer also means a regression that
+        // copies before validating every slot fails on the assertion below
+        // instead of reading an address that was never mapped.
+        let mut backing = [0u8; 4];
         transfers.allocations.push(PinnedHostAllocation {
-            ptr: std::ptr::NonNull::<u8>::dangling().as_ptr(),
+            ptr: backing.as_mut_ptr(),
             byte_len: 4,
         });
         transfers.outputs.push(HostOutputTransfer {
@@ -819,6 +828,7 @@ mod tests {
         assert_eq!(outputs.len(), 2);
         assert!(outputs[0].is_empty());
         assert!(outputs[1].is_empty());
+        transfers.allocations.clear();
     }
 
     #[test]

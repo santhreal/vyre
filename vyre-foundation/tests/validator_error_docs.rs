@@ -33,7 +33,11 @@ fn generated_catalog_matches_the_live_validation_rules() {
              Fix: run `./cargo_full run -p xtask --bin xtask -- error-codes --write` to generate it."
         )
     });
-    if on_disk == rendered {
+    // Compared line by line: a checkout that materializes the committed file
+    // with CRLF endings is not a divergent catalog, and the divergence report
+    // below is line based, so a byte comparison here would fail with nothing to
+    // name.
+    if on_disk.lines().eq(rendered.lines()) {
         return;
     }
 
