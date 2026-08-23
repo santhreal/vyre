@@ -275,9 +275,13 @@ const EXPECTED: [(&str, &str); 26] = [
         "attention/direct",
         "514240c2d5ec2fce566d2a3c3cc4359b037f466a653df9a73f357c6e5349cce6",
     ),
+    // Re-pinned when the serial body of this program started naming the
+    // invocation it runs in rather than its workgroup. Its only caller pins a
+    // one-wide geometry, so the guard selects the same lane and the emitted
+    // result is unchanged; the guard expression itself is what moved.
     (
         "attention_reference",
-        "ce9f75a2a693d0c1826a935cf946c2616eb66f4a2505cb479024eec9b531b7e0",
+        "110f7cbd16990e8eae92dde872db7e1c39754d6728158ff1082e39ccd9712c4d",
     ),
     (
         "gqa_attention",
