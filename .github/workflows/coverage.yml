@@ -19,7 +19,7 @@ jobs:
     # --all-features enables the CUDA and WGPU backends, so the workspace suite
     # dispatches real device work and fails closed on a probe with no adapter.
     # A hosted runner therefore measures a panic, not coverage.
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, gpu]
     env:
       RUSTUP_TOOLCHAIN: stable
     steps:

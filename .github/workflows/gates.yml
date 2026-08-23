@@ -17,10 +17,10 @@ jobs:
     # The registry holds device-requiring gates (bench-smoke-runtime times a
     # real dispatch), and a GPU-required gate fails closed on an empty probe
     # rather than skipping, so the job that runs every gate needs an adapter.
-    # This host, not the release host: the sweep builds the workspace with
-    # --all-features --all-targets three times over, which does not fit in the
-    # release host's remaining root filesystem.
-    runs-on: [self-hosted, gpu-5090]
+    # It runs on the host that records the device evidence, because the
+    # artifact gates regenerate that evidence and compare it line by line: a
+    # sweep on a second adapter reports every device fact as divergent.
+    runs-on: [self-hosted, axiomexec, gpu]
     steps:
       # docs-coupling compares this head against the base branch, so this job
       # reads history rather than one tree. Every other job here clones shallow.
@@ -78,7 +78,7 @@ jobs:
   tree-rules:
     name: Rules the sweep owns, named by domain
     # contract-rules owns bench-smoke-runtime, which dispatches on a device.
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
