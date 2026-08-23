@@ -449,6 +449,7 @@ fn adapter_index_from_raw(raw: Option<&str>) -> Result<Option<usize>> {
 mod tests {
     use super::*;
 
+    #[cfg(feature = "device-tests")]
     #[test]
     fn enumerate_adapters_finds_required_gpu() {
         let adapters = enumerate_adapters();

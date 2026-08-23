@@ -1,6 +1,8 @@
+#[cfg(feature = "device-tests")]
 use std::sync::Arc;
 
 use super::*;
+#[cfg(feature = "device-tests")]
 use crate::buffer::handle::GpuBufferHandle;
 
 #[test]
@@ -84,6 +86,7 @@ fn bind_group_cache_lru_heap_stays_capacity_scale() {
 /// groups and reuse four. A layout-only key would create ONE and wrongly
 /// share it across both buffers, which `misses == 2` rejects. Dropping the
 /// buffer identity from the key regresses to exactly that bug.
+#[cfg(feature = "device-tests")]
 #[test]
 fn bind_group_reuse_keys_on_buffer_identity_not_layout_alone() {
     let arc = crate::runtime::cached_device()

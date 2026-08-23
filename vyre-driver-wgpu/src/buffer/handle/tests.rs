@@ -6,6 +6,7 @@ use vyre_driver::ResidentOwner;
 /// every boundary class: sub-word, exactly-a-word, word+tail, and a large
 /// payload (the catalog-scale path). A regression here is a silent data
 /// corruption on the ~1 GB DFA-catalog upload.
+#[cfg(feature = "device-tests")]
 #[test]
 fn mapped_upload_roundtrips_exact_bytes_across_boundaries() {
     let arc = crate::runtime::cached_device()
@@ -73,6 +74,7 @@ fn foreign_resident_handle_is_refused_not_resolved() {
     );
 }
 
+#[cfg(feature = "device-tests")]
 #[test]
 fn resident_registry_handles_concurrent_lookup_and_drop() {
     let arc = crate::runtime::cached_device()

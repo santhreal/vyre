@@ -1,23 +1,35 @@
+#[cfg(feature = "device-tests")]
 use std::hash::BuildHasherDefault;
+#[cfg(feature = "device-tests")]
 use std::sync::Arc;
 
 use vyre_driver::tuner::Mode;
 use vyre_driver::validation::LaunchGeometryLimits;
+#[cfg(feature = "device-tests")]
 use vyre_driver::BackendError;
+#[cfg(feature = "device-tests")]
 use vyre_driver::DEFAULT_PIPELINE_CACHE_ENTRIES;
 use vyre_foundation::execution_plan::{self, ReadbackStrategy};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 
 use super::tuning::wgpu_effective_dispatch_config_for_limits;
-use super::{enforce_actual_output_budget, BindGroupLayoutCache, DispatchConfig, WgpuPipeline};
+use super::{enforce_actual_output_budget, DispatchConfig};
+#[cfg(feature = "device-tests")]
+use super::{BindGroupLayoutCache, WgpuPipeline};
+#[cfg(feature = "device-tests")]
 use crate::buffer::BufferPool;
+#[cfg(feature = "device-tests")]
 use crate::engine::record_and_readback::{record_and_readback, DispatchLabels, RecordAndReadback};
+#[cfg(feature = "device-tests")]
 use crate::runtime::cache::pipeline::LruPipelineCache;
+#[cfg(feature = "device-tests")]
 use crate::runtime::device::EnabledFeatures;
+#[cfg(feature = "device-tests")]
 use crate::DispatchArena;
 
 /// Device, queue, dispatch config and the two compile caches every pipeline
 /// contract test needs. Each test used to spell this block out again.
+#[cfg(feature = "device-tests")]
 struct PipelineHarness {
     device_queue: Arc<(wgpu::Device, wgpu::Queue)>,
     adapter_info: wgpu::AdapterInfo,
@@ -27,6 +39,7 @@ struct PipelineHarness {
     layout_cache: Arc<BindGroupLayoutCache>,
 }
 
+#[cfg(feature = "device-tests")]
 impl PipelineHarness {
     /// `purpose` completes "Fix: GPU required for {purpose}" when no device opens.
     fn new(purpose: &str) -> Self {
@@ -90,6 +103,7 @@ impl PipelineHarness {
 /// The minimum program that produces an observable output. Six contract tests
 /// spelled it out, so a change to the fixture shape had to be applied six
 /// times or the tests stopped exercising the same program.
+#[cfg(feature = "device-tests")]
 fn stores_u32(name: &str, count: u32, value: u32) -> Program {
     Program::wrapped(
         vec![BufferDecl::output(name, 0, DataType::U32).with_count(count)],
@@ -102,6 +116,7 @@ fn stores_u32(name: &str, count: u32, value: u32) -> Program {
 /// test issues a single unprofiled 1x1x1 dispatch with no inputs over the
 /// arena's own pool; only the debug labels and whether readback rings are in
 /// play differ.
+#[cfg(feature = "device-tests")]
 fn record_once(
     pipeline: &WgpuPipeline,
     arena: &DispatchArena,
@@ -661,6 +676,7 @@ mod readback_ring_contracts {
     }
 }
 
+#[cfg(feature = "device-tests")]
 mod trap_output_contracts {
     use super::*;
 

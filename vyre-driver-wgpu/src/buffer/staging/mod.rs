@@ -117,10 +117,12 @@ impl StagingBufferPool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "device-tests")]
     use crate::buffer::handle::GpuBufferHandle;
 
     /// StagingBufferPool must reuse buffers across readback calls so that 100
     /// readbacks of the same size allocate only ~1 buffer.
+    #[cfg(feature = "device-tests")]
     #[test]
     fn staging_pool_reuses_buffers_on_hot_readback_loop() {
         let arc = crate::runtime::cached_device()
@@ -153,6 +155,7 @@ mod tests {
     }
 
     /// Without a pool, readback must still work and always create fresh buffers.
+    #[cfg(feature = "device-tests")]
     #[test]
     fn readback_without_pool_always_allocates() {
         let arc = crate::runtime::cached_device()

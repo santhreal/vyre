@@ -702,7 +702,10 @@ fn free_bucket_capacity(max_retained_bytes: usize) -> usize {
 // integration test can name.
 #[cfg(test)]
 mod tests {
-    use super::{class_index, free_bucket_capacity, size_class, BufferPool};
+    #[cfg(feature = "device-tests")]
+    use super::BufferPool;
+    use super::{class_index, free_bucket_capacity, size_class};
+    #[cfg(feature = "device-tests")]
     use proptest::prelude::*;
 
     #[test]
@@ -742,6 +745,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "device-tests")]
     #[test]
     fn acquire_release_reuses_power_of_two_classes() {
         let arc = crate::runtime::cached_device()
@@ -847,6 +851,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "device-tests")]
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(64))]
 
