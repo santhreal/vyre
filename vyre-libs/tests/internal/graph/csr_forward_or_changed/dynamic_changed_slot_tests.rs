@@ -1,4 +1,5 @@
 use super::super::*;
+use super::super::program_parallel_batch_global::try_csr_forward_or_changed_parallel_batch_global_dynamic_slot;
 use crate::graph::program_graph::ProgramGraphShape;
 
 #[test]

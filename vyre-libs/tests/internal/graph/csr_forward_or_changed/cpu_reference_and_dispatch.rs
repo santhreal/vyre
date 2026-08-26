@@ -1,4 +1,7 @@
 use super::super::*;
+use super::super::layout::{CsrForwardOrChangedLayout, CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE};
+use super::super::reference_adapter::{cpu_ref, cpu_ref_closure, cpu_ref_closure_into, cpu_ref_into};
+use super::super::validate::validate_csr_inputs;
 use crate::graph::csr_closure_inputs::graphs::CHAIN_4;
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use crate::graph::program_graph::ProgramGraphShape;

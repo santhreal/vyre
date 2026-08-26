@@ -8,10 +8,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
-    AxisMapping, MappingLevel, MemoryPlacement, PipelineRole, PipelineRoleGroup, ScheduleAxis,
-    ScheduleBoundKind, ScheduleInverse, ScheduleLegalityError, SchedulePhase, SchedulePhaseId,
-    SchedulePrecondition, ScheduleResourceBounds, ScheduleTransform, ScheduleTransformProvenance,
-    ScheduleTransformRecord, SelectedSchedule, SynchronizationScope,
+    AxisMapping, MappingLevel, MemoryPlacement, PipelineRole, ScheduleAxis, ScheduleBoundKind,
+    ScheduleLegalityError, SchedulePhase, SchedulePhaseId, SchedulePrecondition,
+    ScheduleResourceBounds, ScheduleTransform, SelectedSchedule, SynchronizationScope,
 };
 
 impl SelectedSchedule {
