@@ -10,7 +10,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -22,7 +22,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -34,7 +34,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -46,7 +46,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -58,7 +58,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -70,7 +70,7 @@ kind = "program_buffers"
 buffers = 1
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -82,7 +82,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -94,7 +94,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -106,7 +106,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["commutative"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -118,7 +118,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -130,7 +130,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -142,7 +142,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -154,7 +154,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -166,7 +166,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -178,7 +178,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -190,7 +190,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -202,7 +202,7 @@ kind = "program_buffers"
 buffers = 1
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -214,7 +214,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative", "commutative"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -226,7 +226,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -238,7 +238,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -250,7 +250,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative", "commutative", "self-inverse"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -262,7 +262,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["self-inverse"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -274,7 +274,7 @@ kind = "program_buffers"
 buffers = 1
 bytes_extraction = false
 features = ["bitset"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -286,7 +286,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["builder-ops"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -298,7 +298,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["builder-ops"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -310,7 +310,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["decode"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -322,7 +322,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["decode"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -334,7 +334,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["decode"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -346,7 +346,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["decode"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -358,7 +358,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["decode"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -370,7 +370,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["decode"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -382,7 +382,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["fixpoint"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -394,7 +394,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["fixpoint"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -406,7 +406,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["geom"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -418,7 +418,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["geom"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -430,7 +430,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -442,7 +442,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -454,7 +454,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -466,7 +466,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["inverse-of"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -478,7 +478,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -490,7 +490,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -502,7 +502,7 @@ kind = "program_buffers"
 buffers = 8
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -514,7 +514,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["bounded"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -526,7 +526,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -538,7 +538,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -550,7 +550,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -562,7 +562,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -574,7 +574,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -586,7 +586,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -598,7 +598,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -610,7 +610,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -622,7 +622,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -634,7 +634,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -646,7 +646,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -658,7 +658,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -670,7 +670,7 @@ kind = "program_buffers"
 buffers = 11
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -682,7 +682,7 @@ kind = "program_buffers"
 buffers = 8
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -694,7 +694,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -706,7 +706,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -718,7 +718,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -730,7 +730,7 @@ kind = "program_buffers"
 buffers = 8
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -742,7 +742,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["distributive"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -754,7 +754,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -766,7 +766,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -778,7 +778,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -790,7 +790,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -802,7 +802,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["graph"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -814,7 +814,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hash"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -826,7 +826,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["hash"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -838,7 +838,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["hash"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -850,7 +850,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["hash"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -862,7 +862,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hash"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -874,7 +874,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hash"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -886,7 +886,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hash"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -898,7 +898,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hash"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -910,7 +910,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hash"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -922,7 +922,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hash"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -934,7 +934,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["label", "predicate"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -946,7 +946,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["label"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -958,7 +958,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["llm"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -970,7 +970,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["llm"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -982,7 +982,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["llm"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -994,7 +994,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["llm"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1006,7 +1006,7 @@ kind = "program_buffers"
 buffers = 9
 bytes_extraction = false
 features = ["llm"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1018,7 +1018,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["logical"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1030,7 +1030,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["logical"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1042,7 +1042,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-algebra"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1054,7 +1054,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-algebra"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1066,7 +1066,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-algebra"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1078,7 +1078,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-algebra"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1090,7 +1090,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-algebra"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1102,7 +1102,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1114,7 +1114,7 @@ kind = "program_buffers"
 buffers = 11
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1126,7 +1126,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1138,7 +1138,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative", "commutative", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1150,7 +1150,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1162,7 +1162,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1174,7 +1174,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["custom"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1186,7 +1186,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["absorbing", "associative", "commutative", "idempotent", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1198,7 +1198,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["absorbing", "associative", "commutative", "idempotent", "left-absorbing"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1210,7 +1210,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["absorbing", "associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1222,7 +1222,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative", "commutative", "self-inverse"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1234,7 +1234,7 @@ kind = "program_buffers"
 buffers = 1
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1246,7 +1246,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1258,7 +1258,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "fixpoint"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1270,7 +1270,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1282,7 +1282,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1294,7 +1294,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-broadcast"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1306,7 +1306,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1318,7 +1318,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1330,7 +1330,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1342,7 +1342,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1354,7 +1354,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1366,7 +1366,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1378,7 +1378,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1390,7 +1390,7 @@ kind = "program_buffers"
 buffers = 1
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1402,7 +1402,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1414,7 +1414,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1426,7 +1426,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1438,7 +1438,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1450,7 +1450,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1462,7 +1462,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1474,7 +1474,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1486,7 +1486,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1498,7 +1498,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1510,7 +1510,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1522,7 +1522,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1534,7 +1534,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1546,7 +1546,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1558,7 +1558,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1570,7 +1570,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1582,7 +1582,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1594,7 +1594,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1606,7 +1606,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-linalg"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1618,7 +1618,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1630,7 +1630,7 @@ kind = "program_buffers"
 buffers = 1
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1642,7 +1642,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1654,7 +1654,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1666,7 +1666,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1678,7 +1678,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1690,7 +1690,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1702,7 +1702,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1714,7 +1714,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1726,7 +1726,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1738,7 +1738,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1750,7 +1750,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1762,7 +1762,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1774,7 +1774,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1786,7 +1786,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1798,7 +1798,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1810,7 +1810,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "fixpoint"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1822,7 +1822,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-scan"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1834,7 +1834,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["distributive"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1846,7 +1846,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1858,7 +1858,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1870,7 +1870,7 @@ kind = "program_buffers"
 buffers = 10
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "fixpoint"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1882,7 +1882,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1894,7 +1894,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1906,7 +1906,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-succinct"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1918,7 +1918,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt", "math-succinct"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1930,7 +1930,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1942,7 +1942,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1954,7 +1954,7 @@ kind = "program_buffers"
 buffers = 8
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1966,7 +1966,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1978,7 +1978,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -1990,7 +1990,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2002,7 +2002,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2014,7 +2014,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2026,7 +2026,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2038,7 +2038,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2050,7 +2050,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2062,7 +2062,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2074,7 +2074,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2086,7 +2086,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2098,7 +2098,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2110,7 +2110,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2122,7 +2122,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2134,7 +2134,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2146,7 +2146,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2158,7 +2158,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2170,7 +2170,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2182,7 +2182,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2194,7 +2194,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2206,7 +2206,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2218,7 +2218,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2230,7 +2230,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2242,7 +2242,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-linear-4bit"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2254,7 +2254,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-linear-4bit"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2266,7 +2266,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2278,7 +2278,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2290,7 +2290,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2302,7 +2302,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2314,7 +2314,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2326,7 +2326,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2338,7 +2338,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2350,7 +2350,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2362,7 +2362,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2374,7 +2374,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2386,7 +2386,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-moe"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2398,7 +2398,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-moe"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2410,7 +2410,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-moe"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2422,7 +2422,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2434,7 +2434,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2446,7 +2446,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2458,7 +2458,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2470,7 +2470,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2482,7 +2482,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2494,7 +2494,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2506,7 +2506,7 @@ kind = "program_buffers"
 buffers = 1
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2518,7 +2518,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2530,7 +2530,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2542,7 +2542,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2554,7 +2554,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2566,7 +2566,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2578,7 +2578,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2590,7 +2590,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2602,7 +2602,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2614,7 +2614,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2626,7 +2626,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2638,7 +2638,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-moe"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2650,7 +2650,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2662,7 +2662,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels", "nn-moe"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2674,7 +2674,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["opt"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2686,7 +2686,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2698,7 +2698,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2710,7 +2710,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2722,7 +2722,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2734,7 +2734,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2746,7 +2746,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2758,7 +2758,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2770,7 +2770,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2782,7 +2782,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2794,7 +2794,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2806,7 +2806,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2818,7 +2818,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2830,7 +2830,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2842,7 +2842,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2854,7 +2854,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2866,7 +2866,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2878,7 +2878,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2890,7 +2890,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2902,7 +2902,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2914,7 +2914,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2926,7 +2926,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2938,7 +2938,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2950,7 +2950,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2962,7 +2962,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2974,7 +2974,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2986,7 +2986,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -2998,7 +2998,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3010,7 +3010,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3022,7 +3022,7 @@ kind = "program_buffers"
 buffers = 8
 bytes_extraction = false
 features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3034,7 +3034,7 @@ kind = "program_buffers"
 buffers = 6
 bytes_extraction = false
 features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3046,7 +3046,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3058,7 +3058,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["predicate"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["inverse-of"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3070,7 +3070,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["predicate"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3082,7 +3082,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["predicate"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["distributive"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3094,7 +3094,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["predicate"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3106,7 +3106,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["predicate"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3118,7 +3118,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["predicate"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3130,7 +3130,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["predicate"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["absorbing"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3142,7 +3142,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["predicate"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["identity"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3154,7 +3154,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["predicate"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3166,7 +3166,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["predicate"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["complement"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3178,7 +3178,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3190,7 +3190,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3202,7 +3202,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3214,7 +3214,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3226,7 +3226,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3238,7 +3238,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3250,7 +3250,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3262,7 +3262,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3274,7 +3274,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3286,7 +3286,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3298,7 +3298,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3310,7 +3310,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3322,7 +3322,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3334,7 +3334,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["absorbing", "associative", "commutative", "distributive", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3346,7 +3346,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["absorbing", "associative", "commutative", "idempotent", "lattice-absorption"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3358,7 +3358,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative", "bounded"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3370,7 +3370,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["bounded", "monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3382,7 +3382,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3394,7 +3394,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative", "commutative", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3406,7 +3406,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3418,7 +3418,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["absorbing", "associative", "commutative", "idempotent", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3430,7 +3430,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["absorbing", "associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3442,7 +3442,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3454,7 +3454,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3466,7 +3466,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3478,7 +3478,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["inverse-of"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3490,7 +3490,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3502,7 +3502,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative", "commutative", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3514,7 +3514,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3526,7 +3526,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["absorbing", "associative", "commutative", "idempotent", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3538,7 +3538,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["absorbing", "associative", "commutative", "idempotent", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3550,7 +3550,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["absorbing", "associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3562,7 +3562,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["absorbing", "associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3574,7 +3574,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative", "commutative", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3586,7 +3586,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["reduce"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = ["associative", "commutative", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3598,7 +3598,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["representation"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3610,7 +3610,7 @@ kind = "program_buffers"
 buffers = 14
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3622,7 +3622,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3634,7 +3634,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3646,7 +3646,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3658,7 +3658,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3670,7 +3670,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3682,7 +3682,7 @@ kind = "program_buffers"
 buffers = 11
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3694,7 +3694,7 @@ kind = "program_buffers"
 buffers = 14
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3706,7 +3706,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3718,7 +3718,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3730,7 +3730,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3742,7 +3742,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3754,7 +3754,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3766,7 +3766,7 @@ kind = "program_buffers"
 buffers = 8
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3778,7 +3778,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3790,7 +3790,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3802,7 +3802,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3814,7 +3814,7 @@ kind = "program_buffers"
 buffers = 7
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3826,7 +3826,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3838,7 +3838,7 @@ kind = "program_buffers"
 buffers = 11
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3850,7 +3850,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3862,7 +3862,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["security"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3874,7 +3874,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["text"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3886,7 +3886,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["text"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3898,7 +3898,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["text"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3910,7 +3910,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["text"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3922,7 +3922,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["text"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3934,7 +3934,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["text"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3946,7 +3946,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["vfs"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3958,7 +3958,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["visual"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3970,7 +3970,7 @@ kind = "program_buffers"
 buffers = 1
 bytes_extraction = false
 features = ["visual"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3982,7 +3982,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["visual"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -3994,7 +3994,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["visual"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4006,7 +4006,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["visual"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4018,7 +4018,7 @@ kind = "program_buffers"
 buffers = 1
 bytes_extraction = false
 features = ["visual"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4030,7 +4030,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["visual"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4042,7 +4042,7 @@ kind = "program_buffers"
 buffers = 5
 bytes_extraction = false
 features = ["visual"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4054,7 +4054,7 @@ kind = "program_buffers"
 buffers = 1
 bytes_extraction = false
 features = ["visual"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4066,7 +4066,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["visual"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4078,7 +4078,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["visual"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4090,7 +4090,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hardware"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4102,7 +4102,7 @@ kind = "program_buffers"
 buffers = 4
 bytes_extraction = false
 features = ["hardware"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4114,7 +4114,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hardware"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4126,7 +4126,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hardware"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4138,7 +4138,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hardware"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4150,7 +4150,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hardware"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4162,7 +4162,7 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hardware"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4174,7 +4174,7 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["hardware"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
 
@@ -4186,6 +4186,6 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["hardware"]
-target_facets = ["cuda", "spirv", "wgpu"]
+target_facets = ["cpu-ref", "cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]

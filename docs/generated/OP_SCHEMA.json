@@ -116,6 +116,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -207,6 +208,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -305,6 +307,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -392,6 +395,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -488,6 +492,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -571,6 +576,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -667,6 +673,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -754,6 +761,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -852,6 +860,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -959,6 +968,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1055,6 +1065,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1142,6 +1153,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1238,6 +1250,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1329,6 +1342,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1418,6 +1432,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1514,6 +1529,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1592,6 +1608,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1688,6 +1705,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1787,6 +1805,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1874,6 +1893,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1970,6 +1990,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2061,6 +2082,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2141,6 +2163,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2228,6 +2251,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2329,6 +2353,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2439,6 +2464,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2535,6 +2561,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2651,6 +2678,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2747,6 +2775,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2843,6 +2872,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2957,6 +2987,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3053,6 +3084,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3149,6 +3181,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3245,6 +3278,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3341,6 +3375,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3428,6 +3463,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3530,6 +3566,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3667,6 +3704,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3799,6 +3837,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3933,6 +3972,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4065,6 +4105,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4208,6 +4249,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4342,6 +4384,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4467,6 +4510,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4539,7 +4583,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           }
         ],
         "inputs": [],
@@ -4590,6 +4634,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4709,6 +4754,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4832,6 +4878,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4939,6 +4986,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5053,6 +5101,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5154,6 +5203,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5250,6 +5300,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5337,6 +5388,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5433,6 +5485,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5508,7 +5561,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 4,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           },
           {
             "binding": 6,
@@ -5517,7 +5570,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 4,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           }
         ],
         "inputs": [],
@@ -5568,6 +5621,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5673,6 +5727,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5841,6 +5896,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6042,6 +6098,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6148,6 +6205,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6253,6 +6311,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6385,6 +6444,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6526,6 +6586,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6658,6 +6719,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6770,6 +6832,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6866,6 +6929,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6953,6 +7017,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -7040,6 +7105,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -7137,6 +7203,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -7226,6 +7293,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -7331,6 +7399,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -7742,6 +7811,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -7838,6 +7908,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -7965,6 +8036,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8052,6 +8124,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8139,6 +8212,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8226,6 +8300,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8313,6 +8388,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8400,6 +8476,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8488,6 +8565,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8577,6 +8655,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8680,6 +8759,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8790,6 +8870,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8886,6 +8967,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8982,6 +9064,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9132,6 +9215,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9253,6 +9337,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9349,6 +9434,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9450,6 +9536,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9551,6 +9638,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9652,6 +9740,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9753,6 +9842,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9845,6 +9935,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9963,6 +10054,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10135,6 +10227,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10231,6 +10324,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10331,6 +10425,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10435,6 +10530,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10548,6 +10644,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10648,6 +10745,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10750,6 +10848,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10856,6 +10955,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10962,6 +11062,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11067,6 +11168,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11153,6 +11255,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11253,6 +11356,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11381,6 +11485,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11486,6 +11591,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11595,6 +11701,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11687,6 +11794,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11796,6 +11904,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11887,6 +11996,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11996,6 +12106,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12096,6 +12207,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12187,6 +12299,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12297,6 +12410,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12407,6 +12521,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12489,6 +12604,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12580,6 +12696,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12712,6 +12829,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12843,6 +12961,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12943,6 +13062,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13034,6 +13154,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13134,6 +13255,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13225,6 +13347,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13334,6 +13457,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13434,6 +13558,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13561,6 +13686,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13652,6 +13778,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13768,6 +13895,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13859,6 +13987,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13960,6 +14089,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14070,6 +14200,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14180,6 +14311,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14308,6 +14440,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14432,6 +14565,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14528,6 +14662,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14610,6 +14745,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14710,6 +14846,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14810,6 +14947,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14901,6 +15039,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15001,6 +15140,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15119,6 +15259,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15237,6 +15378,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15346,6 +15488,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15464,6 +15607,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15564,6 +15708,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15673,6 +15818,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15764,6 +15910,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15864,6 +16011,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15964,6 +16112,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16092,6 +16241,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16202,6 +16352,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16312,6 +16463,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16417,6 +16569,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16546,6 +16699,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16652,6 +16806,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16816,6 +16971,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16912,6 +17068,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17003,6 +17160,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17118,6 +17276,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17237,6 +17396,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17360,6 +17520,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17505,6 +17666,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17652,6 +17814,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17798,6 +17961,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17898,6 +18062,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17989,6 +18154,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18098,6 +18264,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18207,6 +18374,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18343,6 +18511,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18462,6 +18631,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18586,6 +18756,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18695,6 +18866,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18795,6 +18967,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18904,6 +19077,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19043,6 +19217,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19170,6 +19345,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19297,6 +19473,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19407,6 +19584,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19548,6 +19726,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19654,6 +19833,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19763,6 +19943,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19911,6 +20092,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20031,6 +20213,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20127,6 +20310,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20227,6 +20411,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20336,6 +20521,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20451,6 +20637,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20579,6 +20766,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20688,6 +20876,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20797,6 +20986,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20924,6 +21114,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21052,6 +21243,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21143,6 +21335,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21243,6 +21436,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21379,6 +21573,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21498,6 +21693,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21607,6 +21803,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21734,6 +21931,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21862,6 +22060,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21998,6 +22197,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22128,6 +22328,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22242,6 +22443,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22356,6 +22558,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22465,6 +22668,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22565,6 +22769,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22665,6 +22870,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22765,6 +22971,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22856,6 +23063,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22938,6 +23146,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23029,6 +23238,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23129,6 +23339,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23238,6 +23449,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23347,6 +23559,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23480,6 +23693,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23580,6 +23794,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23671,6 +23886,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23780,6 +23996,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23903,6 +24120,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24012,6 +24230,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24156,6 +24375,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24256,6 +24476,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24366,6 +24587,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24471,6 +24693,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24580,6 +24803,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24671,6 +24895,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24785,6 +25010,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24894,6 +25120,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24985,6 +25212,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25089,6 +25317,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25188,6 +25417,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25296,6 +25526,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25422,6 +25653,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25562,6 +25794,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25690,6 +25923,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25785,6 +26019,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25875,6 +26110,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25965,6 +26201,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26055,6 +26292,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26195,6 +26433,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26317,6 +26556,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26439,6 +26679,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26561,6 +26802,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26683,6 +26925,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26805,6 +27048,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26936,6 +27180,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27026,6 +27271,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27135,6 +27381,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27235,6 +27482,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27335,6 +27583,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27444,6 +27693,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27580,6 +27830,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27725,6 +27976,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27857,6 +28109,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27962,6 +28215,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28094,6 +28348,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28233,6 +28488,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28377,6 +28633,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28471,6 +28728,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28570,6 +28828,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28669,6 +28928,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28768,6 +29028,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28867,6 +29128,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29006,6 +29268,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29150,6 +29413,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29253,6 +29517,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29358,6 +29623,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29449,6 +29715,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29567,6 +29834,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29690,6 +29958,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29804,6 +30073,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29927,6 +30197,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30032,6 +30303,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30146,6 +30418,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30242,6 +30515,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30356,6 +30630,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30452,6 +30727,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30552,6 +30828,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30639,6 +30916,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30732,6 +31010,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30825,6 +31104,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30915,6 +31195,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31014,6 +31295,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31112,6 +31394,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31208,6 +31491,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31295,6 +31579,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31388,6 +31673,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31498,6 +31784,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31590,6 +31877,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31677,6 +31965,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31773,6 +32062,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31871,6 +32161,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31958,6 +32249,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32049,6 +32341,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32145,6 +32438,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32247,6 +32541,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32349,6 +32644,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32450,6 +32746,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32551,6 +32848,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32651,6 +32949,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32742,6 +33041,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32937,6 +33237,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -33108,6 +33409,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -33245,6 +33547,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -33346,6 +33649,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -33483,6 +33787,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -33620,6 +33925,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -33793,6 +34099,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34018,6 +34325,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34154,6 +34462,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34273,6 +34582,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34375,6 +34685,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34481,6 +34792,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34582,6 +34894,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34728,6 +35041,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34829,6 +35143,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34939,6 +35254,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35050,6 +35366,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35187,6 +35504,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35288,6 +35606,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35461,6 +35780,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35587,6 +35907,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35688,6 +36009,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35780,6 +36102,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35876,6 +36199,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35963,6 +36287,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36087,6 +36412,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36194,6 +36520,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36281,6 +36608,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36377,6 +36705,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36464,6 +36793,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36547,6 +36877,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36634,6 +36965,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36735,6 +37067,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36827,6 +37160,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36905,6 +37239,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36997,6 +37332,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37121,6 +37457,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37204,6 +37541,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37296,6 +37634,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37383,6 +37722,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37470,6 +37810,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37575,6 +37916,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37662,6 +38004,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37749,6 +38092,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37836,6 +38180,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37923,6 +38268,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -38010,6 +38356,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -38106,6 +38453,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -38193,6 +38541,7 @@
         }
       },
       "target_facets": [
+        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"

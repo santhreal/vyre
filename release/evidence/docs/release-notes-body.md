@@ -5,6 +5,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Added
 
+- Adaptive traversal publishes the nine buffer names one step binds as
+  `AdaptiveTraversalBuffers::CANONICAL`, with canonical names for the
+  active-source queue and its resident length.
 - The docs-register gate reads docs/REGISTER.toml and fails on a banned
   register phrase, an em dash, or a host-local build setting in any authored
   Markdown page, and on a repository-root page the documentation manifest does
@@ -39,6 +42,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   longer pass as coverage. A gate whose honest output is a note is declared
   with the gate that carries its failing form, and the sweep also fails a
   declaration whose gate can find or whose name is not registered.
+- `vyre_driver::launch_fixtures::wide_limits` states the launch-geometry limits
+  a preparation or tuning test runs under, so such a test names only the
+  backend and the per-compute-unit thread budget.
 - `conformance-matrix` compares every `docs/optimization/OP_MATRIX.toml`
   backend cell against the recorded conformance run for that backend, in both
   directions: a cell claiming support the run does not cover or reports
@@ -83,6 +89,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   sweep reports a workflow step that names a script the checkout does not
   carry, which is what every script this campaign deletes leaves behind: a step
   that fails at run time under a name that still reads as coverage.
+- plan_adaptive_traversal_step and plan_adaptive_dense_step return the
+  traversal step selected for measured graph statistics, together with the
+  byte-tile table the Four-Russians kernel binds.
 - The ci-steps gate resolves every package, test, bench, example, binary and
   feature token in the workflow steps and the scripts against the workspace
   manifests, so a step that silently selects nothing fails.
@@ -304,16 +313,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   query and key heads. It accumulates sum-of-squares in F32, applies epsilon
   inside the canonical inverse-square-root contract, isolates rows exactly, and
   converts output once to F32, F16, or BF16.
-- Two duplication classes in `vyre-libs` are gated, each deriving its member
-  set from source at run time so a new member is red on its first run rather
-  than missing from a hand-maintained roster. Every quantized dispatch entry
-  point published as `_via` must carry a row asserting how it rejects a
-  malformed backend readback, checked against the re-export list parsed from
-  `vyre_libs::solvers::quantized_dispatch`. Every
-  `ResidentCsrQueueMaterializer` variant must have a case pinning the step
-  sequence it launches, checked against the variants parsed from
-  `vyre_libs::graph::dispatch::csr_frontier_queue_scratch`. Each gate assertion
-  names the fix rather than the failed comparison.
+- Every quantized dispatch entry point in `vyre-libs` published as `_via` must
+  carry a row asserting how it rejects a malformed backend readback, checked
+  against the re-export list parsed from
+  `vyre_libs::solvers::quantized_dispatch` at run time, so a new entry point is
+  red on its first run.
 - `loop_legality_collector_closure` plants a scalar read, a buffer load, a
   store and a binding in every operand and body slot of every declared `Node`
   variant and asserts each read set reports it. The variant set comes from
@@ -687,6 +691,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   are untouched. A module stays exempt only while the committed public-API
   snapshot publishes it, so vyre_libs::parsing::core and vyre_driver_wgpu::ext
   keep their names until the snapshot stops publishing them.
+- Forward-or-changed fixpoint readback moved out of the submission path into a
+  dedicated decoder over the returned graph values.
 - Constant propagation, dead-branch elimination and loop-invariant code motion
   moved from vyre_pass_engine::optimizer to vyre_foundation::transform, and the
   cross-scope CSE hoist moved into vyre_pass_engine::optimizer::cse_via_encoded
@@ -715,6 +721,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   defect. The descent uses visit::any_descendant rather than a local match,
   because a pass may legitimately move a store under a guard and a hand-written
   walk read that as a deletion.
+- The const-fold and CSE analysis programs declare one output buffer each, so
+  `build_canonical_id_program` takes only an expression count,
+  `CANONICAL_TABLE_MULT` is gone, and the const-fold request carries the
+  initial state of its two retained result buffers.
 - An optimizer pass now reports whether it changed the program by comparing
   structure, not by hashing the program before and after. Hashing forced a full
   canonical wire encode plus BLAKE3 over a freshly built program whose memos
@@ -1343,13 +1353,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   where the multiply lowering wrote wrong values reported green. The surviving
   contract now sweeps both the add and the multiply program and asserts the
   lanes for each.
-- `vyre_driver_cuda::optimizer` is `vyre_driver_cuda::resident_dispatcher`. The
-  module holds no optimization pass: it holds `CudaProgramDispatcher`, the
-  resident buffer pool, the static-upload cache and their eviction policy.
-  Optimization semantics live in `vyre-foundation`, so an `optimizer` module
-  inside a concrete driver crate named the caller rather than the contents, and
-  four private helpers were named after the file instead of their work. The
-  `CudaProgramDispatcher` re-export at the crate root is unchanged.
 - The generated CUDA resident reference matrices share one sweep runner and one
   program builder. Five contract files each carried their own runner loop over
   the resident dispatch path, and `program_builders.rs` carried thirteen
@@ -2069,6 +2072,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   witnesses were imported under the aliases reference_eval and
   reference_eval_warm_start, which gave the interpreter's name to something
   that is not the interpreter; they are difference_flag and warm_start now.
+- Operations in vyre-libs no longer publish dispatch-grid functions, fields, or
+  constants; a caller below admission lets vyre_driver::infer_dispatch_grid
+  derive the launch.
 - The borrow-preserving structural `Node` rewrite has one owner,
   `vyre_foundation::transform::rewrite_walk`. Eight sites carried their own
   `match node { .. }` that rebuilt every variant: induction-variable
@@ -2441,12 +2447,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   structure_gate::workspace_manifest::string_list resolves a TOML array of
   strings, and the workspace path reader and the shipped-library build test
   call it instead of repeating the same and_then chain.
-- One recording dispatcher for both resident CSR queue test suites. The
-  single-step and batch suites each kept their own recorder with the same five
-  `ProgramDispatcher` arms under differently spelled fields, so an assertion
-  about one said nothing about the other. Both now include
-  `recording_resident_dispatcher.rs`, and the batch suite records the
-  allocation lengths and upload bytes it previously discarded.
 - The stored-block inflate contracts call the reference interpreter through the
   one helper that owns that call instead of building Value vectors and
   unwrapping to_bytes at four separate sites. The module-local run helper that
@@ -2911,6 +2911,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   that owns the snapshots. Three device loudness patterns had been unreachable
   since they were written, because a malformed expression made the search exit
   with an error that read as no match.
+- The semantic execution boundary accepts validated graph inputs and compiler
+  policy only; admitted target entry points fix submission geometry.
 - Floating-point parity now uses one foundation-owned comparison contract for
   semantic operation witnesses, including each operation's declared tolerance.
   The library operation catalog distinguishes the complete semantic inventory
@@ -3693,6 +3695,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   conformance harness is the one package that depends on vyre-reference outside
   dev-dependencies, and it runs the interpreter after device completion rather
   than instead of it.
+- The `ProgramDispatcher` seam in `vyre-foundation` is gone;
+  `vyre_megakernel::SemanticExecutor` is the one boundary a program crosses to
+  reach a backend, and the host-oracle gate derives its execution and
+  input-binding method names from that trait instead.
 - `scripts/check_platform_consumer_docs.sh`,
   `scripts/check_parity_testing_not_leaked.sh` and
   `scripts/check_primitive_contract.sh` are gone, along with
@@ -4318,18 +4324,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A package error behavior override no longer stands in for a missing layer
   profile, and an override declared empty is reported instead of rendering a
   heading with nothing under it.
-- A layout move in vyre-libs launches over the elements it moves. Every move
-  guards on an element count and declares its buffers, and a launch geometry
-  inferred from those buffers takes the largest one, which is the output for a
-  gather and the whole cache for a scatter. The paged key-value append is the
-  first scatter: it moves one decoded token chunk into a cache that is
-  deliberately much larger, so an inferred launch fired one lane per cache
-  element on every decode step and let the guard discard the rest.
-  nn::attention::attention_layout_dispatch_grid and
-  ATTENTION_LAYOUT_WORKGROUP_SIZE are now the owners of a layout move launch,
-  llm::paged_kv::paged_kv_dispatch_grid sizes both paged moves from the token
-  count they touch, and the grid and the guard read the same element count so a
-  launch cannot cover a different domain from the one the move admits.
+- A dispatch launches over the domain a program's guard admits rather than over
+  its widest declared buffer, so a scatter no longer runs one lane per
+  destination element.
 - The four Scallop lineage fixpoint bodies take one LineageFixpoint value
   instead of restating a nine-argument wiring list each, and the cell count,
   word count and per-lane chunk count are derived there. A relation cell is
@@ -4564,6 +4561,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   refuses to write a generated contract that itself claims a retired release,
   while a retired claim in the crate own prose is reported and no longer blocks
   the regeneration of the generated region.
+- A guard written against a logical-index local that a loop body reassigns no
+  longer narrows the launch, so a program whose later iterations index beyond
+  the guard keeps every lane it needs.
 - A per-backend conformance artifact recorded under an older shape is now
   reported as stale, naming both the version it carries and the version the
   reader holds, instead of as unparseable JSON. Three committed artifacts
@@ -4606,6 +4606,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   fell from ten sites to eight. The operations were visible only with every
   feature enabled, which is how the whole `nn-attention` family stayed
   unmeasured.
+- The host oracle elimination gate reads the OperationRegistration constructor
+  roster and each expected-output argument position out of the registration
+  source, so a renamed or added constructor is analyzed instead of silently
+  leaving every registered fixture unreachable and every oracle inside
+  expected_output unconvicted.
 - The registration-visibility walker in `xtask-registry` carried a hand-written
   list of four macro names to decide which lines open a registration, and
   called `structure_gate::submits_registrations` with the arity it had before
@@ -4791,6 +4796,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   lines away. A registration in a neighbouring file counts when it names the
   op, so a dialect directory shared by several ops still cannot lend one op's
   registration to another.
+- The host oracle elimination gate follows a staged payload through the
+  graph-value map it is inserted into, so a carrier consumed by canonical
+  submission is no longer reported as unreachable host data processing.
 - The sentence that declares a recorded artifact stale is now formed and
   recognised through one constant in xtask::source_provenance, so the four
   producers and the recogniser cannot drift apart.
