@@ -1,9 +1,11 @@
 mod finalist;
 mod retained;
 mod session;
+mod workspace;
 
 pub use retained::RetainedArtifactSession;
 pub use session::{ArtifactSession, ArtifactSessionError};
+pub use workspace::ArtifactWorkspace;
 
 use thiserror::Error;
 use vyre_megakernel::{

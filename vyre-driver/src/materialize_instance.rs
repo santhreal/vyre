@@ -223,6 +223,7 @@ impl InstanceCore {
     /// resource.
     pub fn ordered_resident_resources<'names>(
         &self,
+        module_index: usize,
         names: impl IntoIterator<Item = &'names str>,
         resources: &BTreeMap<ArtifactValueId, Resource>,
         unbound: impl Fn(ArtifactValueId, &str) -> BackendError,
@@ -230,7 +231,7 @@ impl InstanceCore {
         let names = names.into_iter();
         let mut ordered = Vec::with_capacity(names.size_hint().0);
         for name in names {
-            let value = self.value_for_resident_name(0, name)?;
+            let value = self.value_for_resident_name(module_index, name)?;
             let resource = self
                 .lookup_resident_resource(value, resources)
                 .ok_or_else(|| unbound(value, name))?;
@@ -320,62 +321,6 @@ impl InstanceCore {
             )?;
         }
         self.completion(&state, has_device_timing.then_some(device_ns))
-    }
-
-    /// Take the single module a resident submission can run.
-    ///
-    /// Resident bindings are ordered handles for one launch, so a multi-module
-    /// artifact has no place to put the intermediate values its later modules
-    /// would read. `feature` names the refused capability in the backend's own
-    /// words; the backend itself comes from the device generation.
-    ///
-    /// # Errors
-    ///
-    /// Returns `BackendError::UnsupportedFeature` unless `modules` holds
-    /// exactly one module.
-    pub fn single_resident_module<'modules, M>(
-        &self,
-        modules: &'modules [M],
-        feature: &str,
-    ) -> Result<&'modules M, BackendError> {
-        match modules {
-            [module] => Ok(module),
-            _ => Err(BackendError::UnsupportedFeature {
-                name: feature.to_string(),
-                backend: self.device.backend.to_string(),
-            }),
-        }
-    }
-
-    /// Complete a resident dispatch, which starts from empty state.
-    ///
-    /// A resident launch reads its inputs from device memory the caller already
-    /// filled, so nothing is carried in and every completed value comes from
-    /// this dispatch. `messages` supplies the completion rejections, which is
-    /// not always `self.messages`: a backend may word an unproduced resident
-    /// value differently than a host one.
-    ///
-    /// # Errors
-    ///
-    /// Returns `omitted` for a declared output the module did not produce, and
-    /// the `messages` rejections when a declared value is absent afterwards.
-    pub fn resident_completion(
-        &self,
-        plan: &BindingPlan,
-        program: &Program,
-        dispatched: TimedDispatchResult,
-        omitted: impl Fn(usize, &str) -> BackendError,
-        messages: &InstanceMessages,
-    ) -> Result<Completion, BackendError> {
-        let device_ns = dispatched.device_ns;
-        let mut state = BTreeMap::new();
-        self.absorb_outputs(plan, program, dispatched.outputs, &mut state, omitted)?;
-        Ok(Completion {
-            artifact: self.artifact,
-            outputs: self.project(&self.outputs, &state, messages.missing_output_value)?,
-            retained: self.project(&self.retained, &state, messages.missing_retained_value)?,
-            device_ns,
-        })
     }
 }
 
@@ -498,13 +443,11 @@ pub trait MaterializedInstance {
 /// one.
 ///
 /// A resident launch is one module over device memory the caller already
-/// filled. Three backends wrote the same seven steps around it and differed on
-/// two: where the handle order comes from, and whether an unproduced resident
-/// value is worded the way the host path words it.
+/// filled, and an artifact contributes as many of them as its selected plan
+/// recorded. Three backends wrote the same seven steps around a single launch
+/// and differed on two: where the handle order comes from, and whether an
+/// unproduced resident value is worded the way the host path words it.
 pub trait ResidentInstance: MaterializedInstance {
-    /// Refused capability when a resident submission names more than one module.
-    fn multi_module_feature(&self) -> &str;
-
     /// Label naming this backend's resident target module in an omitted-output
     /// rejection.
     fn resident_module_label(&self) -> &'static str;
@@ -530,12 +473,13 @@ pub trait ResidentInstance: MaterializedInstance {
     /// unbound-resident rejection for a declared name carrying no resource.
     fn ordered_resident(
         &self,
+        module_index: usize,
         module: &Self::Module,
         plan: &BindingPlan,
         resources: &BTreeMap<ArtifactValueId, Resource>,
     ) -> Result<Vec<Resource>, BackendError> {
         self.core().ordered_resident_resources_for_module(
-            0,
+            module_index,
             plan,
             module.program(),
             resources,
@@ -543,9 +487,10 @@ pub trait ResidentInstance: MaterializedInstance {
         )
     }
 
-    /// Launch the single resident module over `ordered`.
+    /// Launch one resident module over `ordered`.
     ///
-    /// `config` is the module's admitted dispatch config.
+    /// `config` is the module's admitted dispatch config, which carries the
+    /// frozen launch.
     ///
     /// # Errors
     ///
@@ -557,29 +502,57 @@ pub trait ResidentInstance: MaterializedInstance {
         config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, BackendError>;
 
-    /// Launch the single module over caller-owned resident resources.
+    /// Launch every module of the selected plan over caller-owned resident
+    /// resources, in the recorded order.
+    ///
+    /// A multi-entry artifact records which entry point produces each value a
+    /// later one reads, and the workspace plan says where those values live, so
+    /// a resident submission needs no host round trip between entry points: the
+    /// caller binds every canonical value once and each launch reads the
+    /// handles its own module declares. Nothing here decides an order or a
+    /// resource. The order is the artifact's recorded plan order, which decode
+    /// refuses unless it follows the dependency DAG, and every handle comes out
+    /// of `resources`.
+    ///
+    /// Device time sums across modules and is reported only when at least one
+    /// module carried a device timer, so a backend that times some launches and
+    /// not others reports the partial sum rather than a total that omits the
+    /// untimed work.
     ///
     /// # Errors
     ///
-    /// Returns `BackendError::UnsupportedFeature` unless the plan selected one
-    /// module, whatever [`Self::ordered_resident`] and [`Self::launch_resident`]
-    /// report, and the resident completion rejections when the launch left a
+    /// Returns whatever [`Self::ordered_resident`] and [`Self::launch_resident`]
+    /// report, and the resident completion rejections when a launch left a
     /// declared value behind.
     fn execute_resident(
         &self,
         resources: &BTreeMap<ArtifactValueId, Resource>,
     ) -> Result<Completion, BackendError> {
         let core = self.core();
-        let module = core.single_resident_module(self.modules(), self.multi_module_feature())?;
-        let plan = BindingPlan::build(module.program())?;
-        let ordered = self.ordered_resident(module, &plan, resources)?;
-        let dispatched = self.launch_resident(module, &ordered, module.config())?;
         let label = self.resident_module_label();
-        core.resident_completion(
-            &plan,
-            module.program(),
-            dispatched,
-            |output_index, name| omitted_output(label, output_index, name),
+        let mut state = BTreeMap::new();
+        let mut device_ns = 0_u64;
+        let mut has_device_timing = false;
+        for (module_index, module) in self.modules().iter().enumerate() {
+            let plan = BindingPlan::build(module.program())?;
+            let ordered = self.ordered_resident(module_index, module, &plan, resources)?;
+            let dispatched = self.launch_resident(module, &ordered, module.config())?;
+            if let Some(ns) = dispatched.device_ns {
+                device_ns = device_ns.saturating_add(ns);
+                has_device_timing = true;
+            }
+            core.absorb_outputs_for_module(
+                module_index,
+                &plan,
+                module.program(),
+                dispatched.outputs,
+                &mut state,
+                |output_index, name| omitted_output(label, output_index, name),
+            )?;
+        }
+        core.completion_with(
+            &state,
+            has_device_timing.then_some(device_ns),
             self.resident_messages(),
         )
     }
@@ -717,7 +690,6 @@ macro_rules! materializer_passthrough {
 /// impl ResidentInstance for TargetArtifactInstance {
 ///     vyre_driver::resident_pipeline_launch!();
 ///
-///     fn multi_module_feature(&self) -> &str { /* per backend */ }
 ///     fn resident_module_label(&self) -> &'static str { /* per backend */ }
 /// }
 /// ```

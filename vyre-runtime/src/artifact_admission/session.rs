@@ -9,10 +9,11 @@ use vyre_driver::{
 use vyre_foundation::ir::{BufferAccess, BufferDecl, Program};
 use vyre_megakernel::{
     AbiAccess, ArtifactEnvelope, ArtifactValueId, CompileError, Digest, ResourceLifetime,
-    TargetCompileError, ValidatedCompileRequest,
+    TargetCompileError, TargetEntryPoint, ValidatedCompileRequest,
 };
 
 use super::finalist::{host_input_resources, validate_instance, DeviceFinalists};
+use super::workspace::ArtifactWorkspace;
 use super::{admit_envelope, AdmittedArtifact, ArtifactAdmissionError};
 
 /// Runtime materialization or submission failure with structured admission preserved.
@@ -272,7 +273,7 @@ impl ArtifactSession {
         let target_entries = state.admitted.target_payload().entries();
         if target_entries.len() != 1 {
             return Err(BackendError::UnsupportedFeature {
-                name: "resident bindings for multi-entry artifacts".to_string(),
+                name: "positional resident bindings for multi-entry artifacts".to_string(),
                 backend: state.instance.device().backend.to_string(),
             }
             .into());
@@ -303,22 +304,7 @@ impl ArtifactSession {
             }
             typed.insert(record.value, bound);
         }
-        for entry in target_entries {
-            for target_binding in &entry.resource_bindings {
-                if !typed.resources().contains_key(&target_binding.resource) {
-                    return Err(BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: target entry `{}` requires resident resource for canonical value {} at group {}, slot {}.",
-                            entry.name,
-                            target_binding.resource.0,
-                            target_binding.group,
-                            target_binding.slot
-                        ),
-                    }
-                    .into());
-                }
-            }
-        }
+        require_every_entry_binding(target_entries, &typed)?;
         Ok(typed)
     }
 
@@ -335,7 +321,7 @@ impl ArtifactSession {
         let target_entries = state.admitted.target_payload().entries();
         if target_entries.len() != 1 {
             return Err(BackendError::UnsupportedFeature {
-                name: "resident bindings for multi-entry artifacts".to_string(),
+                name: "positional resident bindings for multi-entry artifacts".to_string(),
                 backend: state.instance.device().backend.to_string(),
             }
             .into());
@@ -392,26 +378,14 @@ impl ArtifactSession {
             }
             typed.insert(value_id, bound);
         }
-        for entry in target_entries {
-            for target_binding in &entry.resource_bindings {
-                if !typed.resources().contains_key(&target_binding.resource) {
-                    return Err(BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: target entry `{}` requires resident resource for canonical value {} at group {}, slot {}.",
-                            entry.name,
-                            target_binding.resource.0,
-                            target_binding.group,
-                            target_binding.slot
-                        ),
-                    }
-                    .into());
-                }
-            }
-        }
+        require_every_entry_binding(target_entries, &typed)?;
         Ok(typed)
     }
 
-    /// Bind resident resources by exact resource name.
+    /// Bind resident resources by exact resource name, over any entry count.
+    ///
+    /// Naming a value binds it for every entry point that declares it, so a
+    /// multi-entry artifact needs no per-entry binding call.
     pub fn resident_bindings_by_name<'a, I>(
         &self,
         resources: I,
@@ -424,13 +398,6 @@ impl ArtifactSession {
             .read()
             .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
         let target_entries = state.admitted.target_payload().entries();
-        if target_entries.len() != 1 {
-            return Err(BackendError::UnsupportedFeature {
-                name: "resident bindings for multi-entry artifacts".to_string(),
-                backend: state.instance.device().backend.to_string(),
-            }
-            .into());
-        }
         let canonical_by_name =
             state
                 .admitted
@@ -464,26 +431,119 @@ impl ArtifactSession {
             }
             typed.insert(value_id, bound);
         }
-        for entry in target_entries {
-            for target_binding in &entry.resource_bindings {
-                if !typed.resources().contains_key(&target_binding.resource) {
+        require_every_entry_binding(target_entries, &typed)?;
+        Ok(typed)
+    }
+
+    /// Allocate the workspace the artifact recorded for its own values.
+    ///
+    /// The plan is the compiler's. Every region is allocated at the recorded
+    /// byte count, so the caller cannot resize, merge, or drop one.
+    ///
+    /// # Errors
+    ///
+    /// Returns the materializer rejection when a region cannot be allocated.
+    pub fn allocate_workspace(&self) -> Result<ArtifactWorkspace, ArtifactSessionError> {
+        let state = self
+            .state
+            .read()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        Ok(ArtifactWorkspace::allocate(
+            state.admitted.neutral().workspace(),
+            state.materializer.as_ref(),
+        )?)
+    }
+
+    /// Release every region of one workspace allocation.
+    ///
+    /// # Errors
+    ///
+    /// Returns the first materializer rejection after releasing the rest.
+    pub fn free_workspace(&self, workspace: ArtifactWorkspace) -> Result<(), ArtifactSessionError> {
+        let state = self
+            .state
+            .read()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        Ok(workspace.free(state.materializer.as_ref())?)
+    }
+
+    /// Bind caller-owned resources by name over one allocated workspace.
+    ///
+    /// A workspace-owned value is bound from `workspace`, and naming one in
+    /// `resources` is refused rather than overridden: the artifact allocated
+    /// that region for the entry points that pass a value between themselves,
+    /// and a caller buffer in its place is a wrong bind, not a substitution.
+    ///
+    /// # Errors
+    ///
+    /// Returns an invalid-program rejection when a named resource is not a
+    /// canonical value, when the caller names a workspace-owned value, when two
+    /// resources conflict for one value, and when an entry point declares a
+    /// binding neither the caller nor the workspace supplied.
+    pub fn resident_bindings_with_workspace<'a, I>(
+        &self,
+        workspace: &ArtifactWorkspace,
+        resources: I,
+    ) -> Result<BindingSet, ArtifactSessionError>
+    where
+        I: IntoIterator<Item = (&'a str, &'a Resource)>,
+    {
+        let state = self
+            .state
+            .read()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let target_entries = state.admitted.target_payload().entries();
+        let canonical_by_name =
+            state
+                .admitted
+                .neutral()
+                .canonical_value_by_name()
+                .map_err(|collision| {
+                    ArtifactSessionError::from(BackendError::InvalidProgram {
+                        fix: collision.to_string(),
+                    })
+                })?;
+        let mut typed = BindingSet::new(state.admitted.neutral().digest());
+        for (value, resource) in workspace.regions() {
+            typed.insert(*value, BoundResource::Resident(resource.clone()));
+        }
+        for (name, resource) in resources {
+            let value_id = canonical_by_name.get(name).copied().ok_or_else(|| {
+                ArtifactSessionError::from(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: artifact resources do not carry a canonical value named `{name}`."
+                    ),
+                })
+            })?;
+            if workspace.owns(value_id) {
+                return Err(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: resource `{name}` (canonical value {}) is workspace-owned; bind the artifact workspace and drop it from the caller bindings.",
+                        value_id.0
+                    ),
+                }
+                .into());
+            }
+            let bound = BoundResource::Resident(resource.clone());
+            if let Some(existing) = typed.resources().get(&value_id) {
+                if existing != &bound {
                     return Err(BackendError::InvalidProgram {
                         fix: format!(
-                            "Fix: target entry `{}` requires resident resource for canonical value {} at group {}, slot {}.",
-                            entry.name,
-                            target_binding.resource.0,
-                            target_binding.group,
-                            target_binding.slot
+                            "Fix: conflicting resident resources supplied for resource `{name}` (canonical value {}).",
+                            value_id.0
                         ),
                     }
                     .into());
                 }
             }
+            typed.insert(value_id, bound);
         }
+        require_every_entry_binding(target_entries, &typed)?;
         Ok(typed)
     }
 
-    /// Bind resident resources by exact canonical value identity.
+    /// Bind resident resources by exact canonical value identity, over any
+    /// entry count.
     pub fn resident_bindings_by_value<I>(
         &self,
         resources: I,
@@ -496,13 +556,6 @@ impl ArtifactSession {
             .read()
             .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
         let target_entries = state.admitted.target_payload().entries();
-        if target_entries.len() != 1 {
-            return Err(BackendError::UnsupportedFeature {
-                name: "resident bindings for multi-entry artifacts".to_string(),
-                backend: state.instance.device().backend.to_string(),
-            }
-            .into());
-        }
         let valid_values: BTreeSet<ArtifactValueId> = state
             .admitted
             .neutral()
@@ -532,22 +585,7 @@ impl ArtifactSession {
             }
             typed.insert(value_id, bound);
         }
-        for entry in target_entries {
-            for target_binding in &entry.resource_bindings {
-                if !typed.resources().contains_key(&target_binding.resource) {
-                    return Err(BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: target entry `{}` requires resident resource for canonical value {} at group {}, slot {}.",
-                            entry.name,
-                            target_binding.resource.0,
-                            target_binding.group,
-                            target_binding.slot
-                        ),
-                    }
-                    .into());
-                }
-            }
-        }
+        require_every_entry_binding(target_entries, &typed)?;
         Ok(typed)
     }
 
@@ -715,4 +753,32 @@ impl ArtifactSession {
             .map(|resource| resource.value)
             .collect())
     }
+}
+
+/// Refuse a binding set that leaves an entry point's declared resource unbound.
+///
+/// Every builder ends here, so one entry point missing a resource is the same
+/// rejection whether the caller bound by position, by name, by value, or over a
+/// workspace.
+fn require_every_entry_binding(
+    entries: &[TargetEntryPoint],
+    typed: &BindingSet,
+) -> Result<(), ArtifactSessionError> {
+    for entry in entries {
+        for target_binding in &entry.resource_bindings {
+            if !typed.resources().contains_key(&target_binding.resource) {
+                return Err(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: target entry `{}` requires resident resource for canonical value {} at group {}, slot {}.",
+                        entry.name,
+                        target_binding.resource.0,
+                        target_binding.group,
+                        target_binding.slot
+                    ),
+                }
+                .into());
+            }
+        }
+    }
+    Ok(())
 }

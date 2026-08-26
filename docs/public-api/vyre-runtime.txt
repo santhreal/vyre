@@ -60,6 +60,7 @@ impl vyre_runtime::RegisteredSemanticExecutor
 impl vyre_runtime::artifact_admission::AdmittedArtifact
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl vyre_runtime::artifact_admission::ArtifactSession
+impl vyre_runtime::artifact_admission::ArtifactWorkspace
 impl vyre_runtime::artifact_admission::RetainedArtifactSession
 impl vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange
 impl vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler
@@ -408,12 +409,14 @@ pub fn vyre_runtime::artifact_admission::AdmittedArtifact::target_payload(&self)
 pub fn vyre_runtime::artifact_admission::ArtifactAdmissionError::from(source: vyre_megakernel::error::CompileError) -> Self
 pub fn vyre_runtime::artifact_admission::ArtifactAdmissionError::into_compile_error(self) -> vyre_megakernel::error::CompileError
 pub fn vyre_runtime::artifact_admission::ArtifactSession::allocate_resident(&self, byte_len: usize) -> core::result::Result<vyre_driver::backend::resource::Resource, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::allocate_workspace(&self) -> core::result::Result<vyre_runtime::artifact_admission::ArtifactWorkspace, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::artifact(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::bindings(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::compile(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, request: &vyre_megakernel::request::ValidatedCompileRequest) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::compile_with_materializer(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, request: &vyre_megakernel::request::ValidatedCompileRequest, materializer: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::device(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::free_resident(&self, resource: vyre_driver::backend::resource::Resource) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::free_workspace(&self, workspace: vyre_runtime::artifact_admission::ArtifactWorkspace) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::from_bytes(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, envelope_bytes: &[u8]) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::from_envelope(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, envelope: vyre_megakernel::envelope::ArtifactEnvelope) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::from_envelope_with_materializer(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, envelope: vyre_megakernel::envelope::ArtifactEnvelope, materializer: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
@@ -426,12 +429,16 @@ pub fn vyre_runtime::artifact_admission::ArtifactSession::rematerialize(&self) -
 pub fn vyre_runtime::artifact_admission::ArtifactSession::resident_bindings(&self, resources: &[vyre_driver::backend::resource::Resource]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::resident_bindings_by_name<'a, I>(&self, resources: I) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError> where I: core::iter::traits::collect::IntoIterator<Item = (&'a str, &'a vyre_driver::backend::resource::Resource)>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::resident_bindings_by_value<I>(&self, resources: I) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError> where I: core::iter::traits::collect::IntoIterator<Item = (vyre_megakernel::identity::ArtifactValueId, vyre_driver::backend::resource::Resource)>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::resident_bindings_with_workspace<'a, I>(&self, workspace: &vyre_runtime::artifact_admission::ArtifactWorkspace, resources: I) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError> where I: core::iter::traits::collect::IntoIterator<Item = (&'a str, &'a vyre_driver::backend::resource::Resource)>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::resource(&self, name: &str) -> core::result::Result<vyre_megakernel::identity::ArtifactValueId, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::artifact_lifecycle::Submission>, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit_and_wait(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit_host_inputs(&self, inputs: &[&[u8]]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::upload_resident(&self, resource: &vyre_driver::backend::resource::Resource, bytes: &[u8]) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::upload_resident_at(&self, resource: &vyre_driver::backend::resource::Resource, offset_bytes: usize, bytes: &[u8]) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::owns(&self, value: vyre_megakernel::identity::ArtifactValueId) -> bool
+pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::regions(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, vyre_driver::backend::resource::Resource>
+pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::total_bytes(&self) -> u64
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::artifact(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::bindings(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::device(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
@@ -1035,6 +1042,7 @@ pub struct vyre_runtime::UringCompletionPump<'a>
 pub struct vyre_runtime::artifact_admission::AdmittedArtifact
 pub struct vyre_runtime::artifact_admission::ArtifactAdmissionError
 pub struct vyre_runtime::artifact_admission::ArtifactSession
+pub struct vyre_runtime::artifact_admission::ArtifactWorkspace
 pub struct vyre_runtime::artifact_admission::RetainedArtifactSession
 pub struct vyre_runtime::expert_scheduling::ExpertWorkItem
 pub struct vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange

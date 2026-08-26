@@ -269,10 +269,6 @@ impl MaterializedInstance for WgpuArtifactInstance {
 impl ResidentInstance for WgpuArtifactInstance {
     vyre_driver::resident_pipeline_launch!();
 
-    fn multi_module_feature(&self) -> &str {
-        "WGPU resident submission for multi-module artifacts"
-    }
-
     fn resident_module_label(&self) -> &'static str {
         "WGPU resident target module"
     }
@@ -286,11 +282,13 @@ impl ResidentInstance for WgpuArtifactInstance {
     /// binding plan's.
     fn ordered_resident(
         &self,
+        module_index: usize,
         module: &Self::Module,
         _plan: &BindingPlan,
         resources: &BTreeMap<ArtifactValueId, Resource>,
     ) -> Result<Vec<Resource>, BackendError> {
         self.core.ordered_resident_resources(
+            module_index,
             module.resident_slots.iter().map(String::as_str),
             resources,
             |value, name| {

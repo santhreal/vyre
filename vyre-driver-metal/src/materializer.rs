@@ -132,10 +132,6 @@ mod native {
     /// caller that could not use it: a chained pipeline had to round trip each
     /// stage through the host to reach the next.
     impl ResidentInstance for MetalArtifactInstance {
-        fn multi_module_feature(&self) -> &str {
-            "Metal resident submission for multi-module artifacts"
-        }
-
         fn resident_module_label(&self) -> &'static str {
             "Metal resident target module"
         }

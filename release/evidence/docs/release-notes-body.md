@@ -12,6 +12,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   register phrase, an em dash, or a host-local build setting in any authored
   Markdown page, and on a repository-root page the documentation manifest does
   not declare.
+- Binding over an allocated workspace rejects a caller resource for a
+  workspace-owned canonical value.
 - The `contract-in-source` gate reports a comment that defers its contract to a
   published document instead of stating it. A pointer costs a reader a second
   file and outlives the file it names: when the book those comments pointed
@@ -551,6 +553,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   built Program and wraps an invocation-gated arm so fusion does not run it
   under the widest geometry; math::scan::prefix_sum builds on that owner and
   its IR is unchanged.
+- An artifact session allocates, binds, and releases the workspace plan the
+  artifact recorded for the values its entry points pass between themselves.
 - `scripts/check_branch_accounting.py` derives the campaign's own branch and
   worktree state from git at run time and fails when it is inconsistent: a
   branch no owner branch holds and no worktree carries is work nobody is doing
@@ -758,6 +762,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   were all asserted against whatever the workspace happened to contain that
   day. Each now writes a fixture checkout holding exactly the file its case
   needs.
+- Resident submission launches every entry point of a multi-entry artifact in
+  the recorded plan order instead of refusing the artifact.
 - A second name for a composition witness is an alias, not a re-typed
   signature. The CSR forward-or-changed adapter and the numerical kernel
   pipeline tests re-export the vyre-reference witnesses under their local names

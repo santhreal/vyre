@@ -772,10 +772,30 @@ impl InstanceCore {
         state: &BTreeMap<ArtifactValueId, Vec<u8>>,
         device_ns: Option<u64>,
     ) -> Result<Completion, BackendError> {
+        self.completion_with(state, device_ns, &self.messages)
+    }
+
+    /// Build the completion for one execution's final state, worded by
+    /// `messages`.
+    ///
+    /// The resident path words an unproduced value differently than the host
+    /// path on some backends, and both project the same two value sets out of
+    /// the same state.
+    ///
+    /// # Errors
+    ///
+    /// Returns the `messages` rejections when execution did not leave a
+    /// declared value behind.
+    pub fn completion_with(
+        &self,
+        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
+        device_ns: Option<u64>,
+        messages: &InstanceMessages,
+    ) -> Result<Completion, BackendError> {
         Ok(Completion {
             artifact: self.artifact,
-            outputs: self.project(&self.outputs, state, self.messages.missing_output_value)?,
-            retained: self.project(&self.retained, state, self.messages.missing_retained_value)?,
+            outputs: self.project(&self.outputs, state, messages.missing_output_value)?,
+            retained: self.project(&self.retained, state, messages.missing_retained_value)?,
             device_ns,
         })
     }

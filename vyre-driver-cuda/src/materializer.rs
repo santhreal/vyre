@@ -131,10 +131,6 @@ impl MaterializedInstance for CudaArtifactInstance {
 impl ResidentInstance for CudaArtifactInstance {
     vyre_driver::resident_pipeline_launch!();
 
-    fn multi_module_feature(&self) -> &str {
-        "CUDA resident submission for multi-module artifacts"
-    }
-
     fn resident_module_label(&self) -> &'static str {
         "CUDA resident target module"
     }
