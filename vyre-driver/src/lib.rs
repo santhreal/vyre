@@ -197,6 +197,8 @@ pub(crate) mod speculate;
 pub mod grid_sync;
 /// Backend-neutral launch preparation and program fingerprint wrappers.
 pub(crate) mod launch;
+/// The complete launch one dispatch runs.
+pub mod launch_directive;
 /// Canonical launch-geometry limits shared by the launch preparation, validation,
 /// and natural-gradient tuning tests.
 #[cfg(any(test, feature = "test-fixtures"))]
@@ -279,6 +281,7 @@ pub use launch::{
     record_launch_measurement, resolve_launch_workgroup, resolve_launch_workgroup_for_geometry,
     resolve_launch_workgroup_for_mode, LaunchGeometry,
 };
+pub use launch_directive::LaunchDirective;
 pub use peer_transfer::{
     PeerAccessCapability, PeerLinkKind, PeerTopology, PeerTransferAccounting, PeerTransferError,
     PeerTransferPlan, PeerTransferPlanner, PeerTransferRequest,

@@ -219,9 +219,10 @@ impl CudaBackendRegistration {
             SmallVec::<[crate::backend::CudaResidentDispatchStep<'handles>; 8]>::new();
         reserve_smallvec(&mut concrete_steps, handle_sets.len(), field)?;
         for (step, handles) in steps.iter().zip(handle_sets.iter()) {
-            let mut config = DispatchConfig::default();
-            config.grid_override = step.grid_override;
-            config.workgroup_override = step.workgroup_override;
+            let config = match &step.launch {
+                Some(launch) => launch.dispatch_config(),
+                None => DispatchConfig::default(),
+            };
             concrete_steps.push(crate::backend::CudaResidentDispatchStep {
                 program: step.program,
                 handles,

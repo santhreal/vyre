@@ -66,14 +66,12 @@ fn dispatch_two_step_sequence_read_ranges(
             ResidentDispatchStep {
                 program: first,
                 resources: &first_resources,
-                grid_override: None,
-                workgroup_override: None,
+                launch: None,
             },
             ResidentDispatchStep {
                 program: second,
                 resources: &second_resources,
-                grid_override: None,
-                workgroup_override: None,
+                launch: None,
             },
         ];
         let read_ranges: Vec<_> = ranges
@@ -337,14 +335,12 @@ fn dispatch_repeated_in_place_sequence_read_ranges(
         let prefix_steps = [ResidentDispatchStep {
             program: prefix,
             resources: &prefix_resources,
-            grid_override: None,
-            workgroup_override: None,
+            launch: None,
         }];
         let repeated_steps = [ResidentDispatchStep {
             program: repeated,
             resources: &repeated_resources,
-            grid_override: None,
-            workgroup_override: None,
+            launch: None,
         }];
         let read_ranges: Vec<_> = ranges
             .iter()

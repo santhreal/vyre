@@ -2,6 +2,8 @@
 
 use std::time::Duration;
 
+use crate::backend::BackendError;
+
 /// Immutable execution policy supplied by the caller before dispatch.
 ///
 /// `DispatchConfig` is an additive, non-exhaustive struct so that new backend
@@ -39,6 +41,14 @@ pub struct DispatchConfig {
     pub label: Option<String>,
     /// Optional maximum output byte limit.
     pub max_output_bytes: Option<usize>,
+    /// The complete launch a compiled artifact recorded, or a caller stated.
+    ///
+    /// A frozen launch is authoritative: the workgroup, the grid and the shared
+    /// byte requirement are submitted exactly, no tuner sees the launch, and
+    /// nothing infers a grid from buffer shapes. Stating it alongside any of the
+    /// four override fields below is rejected rather than resolved, because the
+    /// resolution would pick one authority and drop the other silently.
+    pub launch: Option<crate::launch_directive::LaunchDirective>,
     /// Optional workgroup size override.
     ///
     /// When `Some`, the backend uses the supplied `[x, y, z]` workgroup size
@@ -124,6 +134,7 @@ impl DispatchConfig {
             timeout,
             label,
             max_output_bytes: None,
+            launch: None,
             workgroup_override: None,
             grid_override: None,
             dispatch_elements: None,
@@ -133,5 +144,94 @@ impl DispatchConfig {
             persistent_thread: None,
             cooperative: false,
         }
+    }
+
+    /// Workgroup shape this dispatch launches, when one is stated.
+    ///
+    /// A frozen launch answers first, so a consumer reads one field instead of
+    /// deciding between a recorded shape and a tuner override.
+    #[must_use]
+    pub fn launch_workgroup(&self) -> Option<[u32; 3]> {
+        match &self.launch {
+            Some(launch) => Some(launch.workgroup()),
+            None => self.workgroup_override,
+        }
+    }
+
+    /// Workgroup count this dispatch launches, when one is stated.
+    #[must_use]
+    pub fn launch_grid(&self) -> Option<[u32; 3]> {
+        match &self.launch {
+            Some(launch) => Some(launch.grid()),
+            None => self.grid_override,
+        }
+    }
+
+    /// Grid a backend that infers coverage from buffer shapes must cover.
+    #[must_use]
+    pub fn coverage_grid(&self) -> Option<[u32; 3]> {
+        match &self.launch {
+            Some(launch) => Some(launch.grid()),
+            None => self.dispatch_grid,
+        }
+    }
+
+    /// Workgroup-shared bytes the launch reserves, zero when none is stated.
+    #[must_use]
+    pub fn launch_dynamic_shared_bytes(&self) -> u32 {
+        match &self.launch {
+            Some(launch) => launch.dynamic_shared_bytes(),
+            None => 0,
+        }
+    }
+
+    /// Reject a dispatch that states two launch authorities.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError::InvalidProgram`] when a frozen launch arrives
+    /// beside a tuner override. Resolving the pair would pick one shape and drop
+    /// the other without saying so, and one of the two is a kernel nothing
+    /// compiled.
+    pub fn validate_launch_authority(&self, backend: &str) -> Result<(), BackendError> {
+        // Destructured field by field: a new dispatch-shape field cannot be
+        // added without deciding here whether it competes with a frozen launch.
+        let Self {
+            profile: _,
+            ulp_budget: _,
+            timeout: _,
+            label: _,
+            max_output_bytes: _,
+            launch,
+            workgroup_override,
+            grid_override,
+            dispatch_elements,
+            dispatch_grid,
+            fixpoint_iterations: _,
+            speculation: _,
+            persistent_thread: _,
+            cooperative: _,
+        } = self;
+        let Some(launch) = launch else {
+            return Ok(());
+        };
+        for (field, stated) in [
+            ("workgroup_override", workgroup_override.is_some()),
+            ("grid_override", grid_override.is_some()),
+            ("dispatch_elements", dispatch_elements.is_some()),
+            ("dispatch_grid", dispatch_grid.is_some()),
+        ] {
+            if stated {
+                return Err(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: backend `{backend}` received a dispatch stating both the frozen launch {:?}/{:?} and `DispatchConfig::{field}`. \
+                         Submit the frozen launch alone, or drop it and state the override alone.",
+                        launch.workgroup(),
+                        launch.grid(),
+                    ),
+                });
+            }
+        }
+        Ok(())
     }
 }

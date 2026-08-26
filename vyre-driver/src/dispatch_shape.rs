@@ -39,8 +39,9 @@ pub fn dispatch_configs_share_launch_shape(
     compiled.profile == runtime.profile
         && ulp_budgets_share_launch_shape(compiled, runtime)
         && compiled.max_output_bytes == runtime.max_output_bytes
-        && compiled.workgroup_override == runtime.workgroup_override
-        && compiled.grid_override == runtime.grid_override
+        && compiled.launch_workgroup() == runtime.launch_workgroup()
+        && compiled.launch_grid() == runtime.launch_grid()
+        && compiled.launch_dynamic_shared_bytes() == runtime.launch_dynamic_shared_bytes()
         && fixpoint_iterations_share_launch_shape(compiled, runtime)
         && compiled.speculation == runtime.speculation
         && compiled.persistent_thread == runtime.persistent_thread

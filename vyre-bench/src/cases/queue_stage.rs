@@ -4,7 +4,7 @@ use crate::api::metric::elapsed_ns;
 use std::time::Instant;
 
 use crate::api::case::{BenchContext, BenchError};
-use crate::api::resident::ResidentInputSet;
+use crate::api::resident::{stated_launch, ResidentInputSet};
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange, TimedDispatchResult};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -150,20 +150,20 @@ pub(crate) fn dispatch_resident_queue_sequence(
     let reset_step = ResidentDispatchStep {
         program: spec.reset_program,
         resources: &reset_resources,
-        grid_override: Some(QUEUE_RESET_GRID),
-        workgroup_override: None,
+        launch: Some(stated_launch(spec.reset_program, QUEUE_RESET_GRID)?),
     };
     let high_reset_step = ResidentDispatchStep {
         program: spec.reset_program,
         resources: &high_reset_resources,
-        grid_override: Some(QUEUE_RESET_GRID),
-        workgroup_override: None,
+        launch: Some(stated_launch(spec.reset_program, QUEUE_RESET_GRID)?),
     };
     let queue_step = ResidentDispatchStep {
         program: spec.queue_program,
         resources: &queue_resources,
-        grid_override: Some([spec.frontier_words.div_ceil(workgroup[0]).max(1), 1, 1]),
-        workgroup_override: None,
+        launch: Some(stated_launch(
+            spec.queue_program,
+            [spec.frontier_words.div_ceil(workgroup[0]).max(1), 1, 1],
+        )?),
     };
 
     let mut frontier_output = Vec::with_capacity(spec.baseline_output_len);
@@ -180,14 +180,12 @@ pub(crate) fn dispatch_resident_queue_sequence(
         let split_step = ResidentDispatchStep {
             program: spec.traverse_program,
             resources: &split_resources,
-            grid_override: Some(spec.traverse_grid),
-            workgroup_override: None,
+            launch: Some(stated_launch(spec.traverse_program, spec.traverse_grid)?),
         };
         let high_step = ResidentDispatchStep {
             program: high_program,
             resources: &high_resources,
-            grid_override: Some(spec.high_traverse_grid),
-            workgroup_override: None,
+            launch: Some(stated_launch(high_program, spec.high_traverse_grid)?),
         };
         let read_ranges = [ResidentReadRange {
             resource: &high_resources[5],
@@ -214,8 +212,7 @@ pub(crate) fn dispatch_resident_queue_sequence(
         let traverse_step = ResidentDispatchStep {
             program: spec.traverse_program,
             resources: &traverse_resources,
-            grid_override: Some(spec.traverse_grid),
-            workgroup_override: None,
+            launch: Some(stated_launch(spec.traverse_program, spec.traverse_grid)?),
         };
         let read_ranges = [ResidentReadRange {
             resource: &traverse_resources[5],
@@ -801,8 +798,7 @@ pub(crate) fn dispatch_resident_queue_closure_sequence(
     let reset_step = ResidentDispatchStep {
         program: prepared.reset_program,
         resources: &resource_sets[0],
-        grid_override: Some(reset_grid),
-        workgroup_override: None,
+        launch: Some(stated_launch(prepared.reset_program, reset_grid)?),
     };
     let read_ranges = [ResidentReadRange {
         resource: &resource_sets[0][RESET_ACCUMULATOR_RESOURCE],
@@ -812,29 +808,27 @@ pub(crate) fn dispatch_resident_queue_closure_sequence(
     let mut accumulator_output = Vec::with_capacity(prepared.baseline_output_len);
     let started = Instant::now();
     let plan = queue_closure_repeated_plan(prepared.closure_iterations);
+    let clear_launch = stated_launch(prepared.clear_len_program, [1, 1, 1])?;
+    let delta_launch = stated_launch(prepared.delta_program, prepared.delta_grid)?;
     let clear_a_step = || ResidentDispatchStep {
         program: prepared.clear_len_program,
         resources: &resource_sets[1],
-        grid_override: Some([1, 1, 1]),
-        workgroup_override: None,
+        launch: Some(clear_launch),
     };
     let clear_b_step = || ResidentDispatchStep {
         program: prepared.clear_len_program,
         resources: &resource_sets[2],
-        grid_override: Some([1, 1, 1]),
-        workgroup_override: None,
+        launch: Some(clear_launch),
     };
     let delta_a_to_b_step = || ResidentDispatchStep {
         program: prepared.delta_program,
         resources: &resource_sets[3],
-        grid_override: Some(prepared.delta_grid),
-        workgroup_override: None,
+        launch: Some(delta_launch),
     };
     let delta_b_to_a_step = || ResidentDispatchStep {
         program: prepared.delta_program,
         resources: &resource_sets[4],
-        grid_override: Some(prepared.delta_grid),
-        workgroup_override: None,
+        launch: Some(delta_launch),
     };
 
     if plan.leading_a_to_b_half_wave {

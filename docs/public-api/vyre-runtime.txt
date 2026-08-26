@@ -653,7 +653,6 @@ pub fn vyre_runtime::resident_work_queue::persistent_body_jit(workgroup_size_x: 
 pub fn vyre_runtime::resident_work_queue::persistent_body_priority(workgroup_size_x: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_runtime::resident_work_queue::persistent_body_priority_slots(workgroup_size_x: u32, slot_count: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_runtime::resident_work_queue::planner::ResidentGridPlan::recommend(request: vyre_runtime::resident_work_queue::planner::ResidentGridRequest, limits: vyre_runtime::resident_work_queue::planner::ResidentGridLimits) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry::dispatch_config(&self, timeout: core::option::Option<core::time::Duration>) -> vyre_driver::backend::dispatch_config::DispatchConfig
 pub fn vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry::from_item_count(item_count: usize, worker_count: u32, max_workgroup_size_x: u32) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry::from_slots(slot_count: u32, worker_count: u32, max_workgroup_size_x: u32) -> Self
 pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::default() -> Self

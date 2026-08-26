@@ -531,7 +531,7 @@ impl CompiledPipeline for WgpuPipeline {
                 iterations,
                 timestamp_profile: true,
                 inferred_grid_shape: config
-                    .grid_override
+                    .launch_grid()
                     .is_none()
                     .then_some(self.workgroup_shape),
             },

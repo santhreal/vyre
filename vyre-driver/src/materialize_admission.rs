@@ -87,9 +87,9 @@ pub fn admit(
             "target entry count must equal the compiler-selected fusion-group count",
         ));
     }
-    let mut records = BTreeMap::new();
+    let mut groups = BTreeSet::new();
     for record in selected {
-        if records.insert(record.id, record).is_some() {
+        if !groups.insert(record.id) {
             return Err(invalid_module(
                 "the selected plan lists one fusion group twice",
             ));
@@ -104,9 +104,19 @@ pub fn admit(
         }
     }
 
-    let mut admitted = Vec::with_capacity(selected.len());
+    // The selected plan's order is the recorded dependency order: the artifact
+    // refuses a plan whose groups precede a group they depend on. Walking it,
+    // rather than the bundle's own module order, is what makes the recorded DAG
+    // the submission order for every backend.
+    let mut images = BTreeMap::new();
     for image in bundle.modules {
-        let record = records.remove(&image.group).ok_or_else(|| {
+        if images.insert(image.group, image).is_some() {
+            return Err(invalid_module("target bundle names one fusion group twice"));
+        }
+    }
+    let mut admitted = Vec::with_capacity(selected.len());
+    for record in selected {
+        let image = images.remove(&record.id).ok_or_else(|| {
             invalid_module("target module names a fusion group the selected plan does not list")
         })?;
         admit_module_identity(&image, record)?;
@@ -142,9 +152,10 @@ pub fn admit(
                 invalid_module("admitted node has no selected launch geometry in the artifact")
             })?;
         let mut config = DispatchConfig::default();
-        config.grid_override = Some(geometry.grid);
-        config.dispatch_grid = Some(geometry.grid);
-        config.workgroup_override = Some(geometry.workgroup_size);
+        config.launch = Some(crate::launch_directive::LaunchDirective::from_record(
+            geometry,
+            target.backend_id,
+        )?);
         admitted.push(AdmittedModule {
             image,
             program,

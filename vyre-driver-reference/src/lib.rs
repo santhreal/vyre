@@ -61,7 +61,7 @@ impl VyreBackend for CpuRefBackend {
         // N-D shape, e.g. one query per `grid.y` block for batched persistent-BFS),
         // so it wins over the 1-D `dispatch_elements` floor; the shape-inference
         // path only applies when neither is set. See `DispatchConfig::dispatch_grid`.
-        let result = match (config.dispatch_grid, config.dispatch_elements) {
+        let result = match (config.coverage_grid(), config.dispatch_elements) {
             (Some(grid), _) => vyre_reference::reference_eval_with_grid(program, &values, grid),
             (None, Some(elements)) => {
                 vyre_reference::reference_eval_with_dispatch(program, &values, elements)

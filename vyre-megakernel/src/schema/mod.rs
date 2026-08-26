@@ -179,6 +179,56 @@ impl Artifact {
                 }
             }
         }
+        let mut position = BTreeMap::new();
+        for (index, record) in self.geometry().iter().enumerate() {
+            position.insert(record.node, index);
+        }
+        let mut group_of = BTreeMap::new();
+        for (index, group) in self.fusion().iter().enumerate() {
+            for member in &group.members {
+                group_of.insert(*member, index);
+            }
+        }
+        for (index, record) in self.geometry().iter().enumerate() {
+            for predecessor in &record.predecessors {
+                if position[predecessor] >= index {
+                    return Err(failure(
+                        CompilerFailureKind::MalformedArtifact,
+                        "artifact.body.geometry",
+                        format!(
+                            "node {} is recorded before entry point {} it depends on",
+                            record.node.0, predecessor.0
+                        ),
+                        "record the geometry set in the dependency order the selected plan implies",
+                    ));
+                }
+                match (group_of.get(&record.node), group_of.get(predecessor)) {
+                    (Some(consumer), Some(producer)) if producer <= consumer => {}
+                    (Some(_), Some(_)) => {
+                        return Err(failure(
+                            CompilerFailureKind::MalformedArtifact,
+                            "artifact.body.selected_plan",
+                            format!(
+                                "the fusion group of node {} is planned before the group producing entry point {}",
+                                record.node.0, predecessor.0
+                            ),
+                            "order the selected fusion groups in the dependency order they imply",
+                        ));
+                    }
+                    _ => {
+                        return Err(failure(
+                            CompilerFailureKind::MalformedArtifact,
+                            "artifact.body.selected_plan",
+                            format!(
+                                "node {} or entry point {} belongs to no selected fusion group",
+                                record.node.0, predecessor.0
+                            ),
+                            "assign every canonical node to one selected fusion group",
+                        ));
+                    }
+                }
+            }
+        }
         self.workspace().validate()?;
         let lifetimes: BTreeMap<ArtifactValueId, ResourceLifetime> = self
             .resources()
@@ -339,7 +389,7 @@ mod tests {
 
     use super::*;
     use crate::cost::CostBreakdown;
-    use crate::identity::ArtifactNodeId;
+    use crate::identity::{ArtifactNodeId, FusionGroupId};
     use crate::request::{SearchBudget, SearchWork};
     use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform, SelectedSchedule};
 
@@ -728,6 +778,58 @@ mod tests {
                 .message
                 .contains("depends on entry point 9 the artifact does not carry"),
             "diagnostic must name the missing entry point: {error}"
+        );
+    }
+
+    /// WHY: the recorded order is the submission order. A consumer submits the
+    /// geometry set and the selected fusion groups in the order the artifact
+    /// lists them, so a list that places an entry point before one it depends on
+    /// runs a consumer of a value before its producer wrote it. Recording that
+    /// order wrong is refused here rather than repaired by a topological sort in
+    /// every consumer, because two consumers sorting independently is how the
+    /// order stopped being the compiler's in the first place.
+    #[test]
+    fn decode_rejects_a_recorded_order_that_contradicts_the_dependency_dag() {
+        // Node 1 produces for node 0, recorded in dependency order.
+        let ordered = |dependent_first: bool, groups_swapped: bool| {
+            let mut payload = launchable();
+            payload.nodes = vec![entry_node(0), entry_node(1)];
+            let mut dependent = launch(0);
+            dependent.predecessors = vec![ArtifactNodeId(1)];
+            payload.geometry = if dependent_first {
+                vec![dependent, launch(1)]
+            } else {
+                vec![launch(1), dependent]
+            };
+            let group = |id: u32, node: u32| FusionRecord {
+                id: FusionGroupId(id),
+                members: vec![ArtifactNodeId(node)],
+                stage: 0,
+                legality: Vec::new(),
+            };
+            payload.selected_plan.fusion = if groups_swapped {
+                vec![group(0, 0), group(1, 1)]
+            } else {
+                vec![group(1, 1), group(0, 0)]
+            };
+            payload
+        };
+
+        decode_payload(ordered(false, false)).expect("a dependency-ordered artifact decodes");
+
+        let error = decode_payload(ordered(true, false))
+            .expect_err("a dependent recorded first must not decode");
+        assert!(
+            error
+                .diagnostic
+                .message
+                .contains("node 0 is recorded before entry point 1 it depends on"),
+            "diagnostic must name the misordered pair: {error}"
+        );
+
+        assert_eq!(
+            rejection_path(ordered(false, true), "consumer group planned first"),
+            "artifact.body.selected_plan"
         );
     }
 

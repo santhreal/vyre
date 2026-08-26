@@ -3,8 +3,8 @@ use std::time::Instant;
 use crate::api::case::{BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, WorkloadClass};
 use crate::api::metric::{elapsed_ns, BenchMetrics};
 use crate::api::resident::{
-    dispatch_program_timed, input_bytes_total, transfer_accounting_with_resident_reset,
-    ResidentInputSet, TransferAccounting,
+    dispatch_program_timed, input_bytes_total, stated_launch,
+    transfer_accounting_with_resident_reset, ResidentInputSet, TransferAccounting,
 };
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use crate::cases::reference_sample::timed_reference;
@@ -317,18 +317,22 @@ fn dispatch_resident_closure_sequence(
     let reset_step = ResidentDispatchStep {
         program: &prepared.reset_program,
         resources: &reset_resources,
-        grid_override: Some([
-            prepared.stats.frontier_words.div_ceil(workgroup[0]).max(1),
-            1,
-            1,
-        ]),
-        workgroup_override: None,
+        launch: Some(stated_launch(
+            &prepared.reset_program,
+            [
+                prepared.stats.frontier_words.div_ceil(workgroup[0]).max(1),
+                1,
+                1,
+            ],
+        )?),
     };
     let closure_step = ResidentDispatchStep {
         program: &prepared.program,
         resources: &closure_resources,
-        grid_override: Some([prepared.stats.nodes.div_ceil(workgroup[0]).max(1), 1, 1]),
-        workgroup_override: None,
+        launch: Some(stated_launch(
+            &prepared.program,
+            [prepared.stats.nodes.div_ceil(workgroup[0]).max(1), 1, 1],
+        )?),
     };
     let read_ranges = [
         ResidentReadRange {

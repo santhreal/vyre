@@ -279,15 +279,25 @@ fn run_resident_grid_sync_fixpoint(
     // resident resource slice binds positionally to each one.
     let mut steps = Vec::new();
     reserve_grid_sync_vec(&mut steps, segments.len(), "resident grid-sync steps")?;
+    // A grid is sized for a workgroup, so a segment either carries both or
+    // neither: a segment that kept the grid and lost the workgroup launched a
+    // grid that under-covered the work and dropped findings.
+    let stated = match (&config.launch, config.launch_grid()) {
+        (Some(launch), _) => Some(*launch),
+        (None, Some(grid)) => Some(crate::launch_directive::LaunchDirective::stated(
+            config
+                .launch_workgroup()
+                .unwrap_or(program.workgroup_size()),
+            grid,
+            config.launch_dynamic_shared_bytes(),
+        )?),
+        (None, None) => None,
+    };
     for segment in segments {
         steps.push(ResidentDispatchStep {
             program: segment,
             resources: resident.ordered.as_slice(),
-            grid_override: config.grid_override,
-            // Carry the workgroup too: `grid_override` is sized for this
-            // workgroup, so dropping it would launch a grid that under-covers
-            // the work and silently drops findings.
-            workgroup_override: config.workgroup_override,
+            launch: stated,
         });
     }
 

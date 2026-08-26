@@ -15,7 +15,9 @@ use vyre_foundation::ir::Program;
 
 use crate::api::case::{BenchContext, BenchError, BenchRun};
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
-use crate::api::resident::{dispatch_program_timed, transfer_accounting, ResidentInputSet};
+use crate::api::resident::{
+    dispatch_program_timed, stated_launch, transfer_accounting, ResidentInputSet,
+};
 
 use super::metrics::{scan_ac_baseline_metric_points, ScanAcStats};
 
@@ -137,14 +139,15 @@ pub(super) fn dispatch_reset_then_scan(
         ResidentDispatchStep {
             program: reset_program,
             resources: &reset_resources,
-            grid_override: Some([1, 1, 1]),
-            workgroup_override: None,
+            launch: Some(stated_launch(reset_program, [1, 1, 1])?),
         },
         ResidentDispatchStep {
             program: scan_program,
             resources: &scan_resources,
-            grid_override: Some([haystack_bytes.div_ceil(workgroup[0]).max(1), 1, 1]),
-            workgroup_override: None,
+            launch: Some(stated_launch(
+                scan_program,
+                [haystack_bytes.div_ceil(workgroup[0]).max(1), 1, 1],
+            )?),
         },
     ];
 

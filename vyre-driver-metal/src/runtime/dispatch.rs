@@ -202,9 +202,9 @@ pub(super) fn submit_planned_buffers_with_queue(
             )?,
         ));
     }
-    let workgroup_size = config.workgroup_override.unwrap_or(artifact.workgroup_size);
+    let workgroup_size = config.launch_workgroup().unwrap_or(artifact.workgroup_size);
     let threads_per_group = metal_threadgroup_size(workgroup_size)?;
-    let workgroups = match config.grid_override {
+    let workgroups = match config.launch_grid() {
         Some(grid) => grid,
         None => infer_dispatch_grid_for_count(
             dispatch_element_count_for_program(program, &binding_plan.bindings),

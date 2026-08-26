@@ -1015,9 +1015,12 @@ fn hostile_binding_bytes_cannot_resize_admitted_launch_geometry() {
             state,
             |_, _| panic!("the fixture dispatch returns its declared output"),
             |_, _, _, config, state| {
-                assert_eq!(config.grid_override, Some(recorded.grid));
-                assert_eq!(config.dispatch_grid, Some(recorded.grid));
-                assert_eq!(config.workgroup_override, Some(recorded.workgroup_size));
+                let launch = config.launch.expect("an admitted launch is frozen");
+                assert_eq!(launch.grid(), recorded.grid);
+                assert_eq!(launch.workgroup(), recorded.workgroup_size);
+                assert_eq!(launch.logical_coverage(), recorded.logical_coverage);
+                assert_eq!(config.workgroup_override, None);
+                assert_eq!(config.grid_override, None);
                 assert_eq!(state[&input], hostile_bytes);
                 Ok(TimedDispatchResult::host_timed(vec![vec![42, 0, 0, 0]], 0))
             },

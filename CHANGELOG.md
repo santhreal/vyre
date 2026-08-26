@@ -77,6 +77,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   baseline is compiled at measurement time and cached by source digest and
   device architecture, and the run is rejected when the cached binary reports a
   compute capability the host does not have.
+- A dispatch that states a recorded launch beside `workgroup_override`,
+  `grid_override`, `dispatch_elements` or `dispatch_grid` is rejected instead
+  of resolved to one of the two.
 - The host-oracle-elimination gate now reads manifests as well as sources.
   Containing no host oracle is not the same as linking none: a shipped crate
   that names vyre-reference or vyre-driver-reference under [dependencies]
@@ -678,6 +681,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   range precondition alongside the injectivity one: an entry naming a block at
   or past the block count addresses past the cache, and neither guard can bound
   it.
+- A dispatch carries one complete launch, so a resident step submits the
+  workgroup it states instead of running its grid under the program's declared
+  shape.
 - A file name states what the file holds, and the gate now judges every tree a
   crate compiles rather than src/ alone. The prohibition on names like common,
   support, helpers, types and utils was written for library modules and never
@@ -829,6 +835,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   reference, per-region ground-truth, fused presence-and-positions,
   transition-walk ownership, region-chain and conformance-matrix suites pass
   without repinning.
+- An admitted target module submits the grid, workgroup, coverage and shared
+  bytes the artifact recorded for its own entry point, and a payload-stated
+  geometry never reaches a submission.
 - `examples/external_backend_extension` registers a dispatch backend from
   outside the workspace. It described `vyre_driver::VyreBackend` as sealed
   against outside implementations and built a program instead, which stated a

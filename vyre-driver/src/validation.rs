@@ -479,8 +479,9 @@ pub fn validate_program_for_backend(
     program: &Program,
     config: &DispatchConfig,
 ) -> Result<(), BackendError> {
+    config.validate_launch_authority(backend.id())?;
     let workgroup = config
-        .workgroup_override
+        .launch_workgroup()
         .unwrap_or(program.workgroup_size());
     let max_axes = backend.max_workgroup_size();
     if workgroup.contains(&0) {
@@ -521,12 +522,12 @@ pub fn validate_program_for_backend(
             ),
         });
     }
-    if let Some(grid) = config.grid_override {
+    if let Some(grid) = config.launch_grid() {
         let max_workgroups = backend.max_compute_workgroups_per_dimension();
         if grid.contains(&0) {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
-                    "Fix: backend `{}` cannot dispatch zero-sized grid dimensions; set positive grid_override values.",
+                    "Fix: backend `{}` cannot dispatch zero-sized grid dimensions; state positive workgroup counts.",
                     backend.id()
                 ),
             });
@@ -535,7 +536,7 @@ pub fn validate_program_for_backend(
             if dim > max_workgroups {
                 return Err(BackendError::InvalidProgram {
                     fix: format!(
-                        "Fix: backend `{}` grid_override axis {axis} requested {} workgroups but max is {}.",
+                        "Fix: backend `{}` grid axis {axis} requested {} workgroups but max is {}.",
                         backend.id(),
                         dim,
                         max_workgroups

@@ -27,7 +27,9 @@ pub(crate) fn wgpu_effective_dispatch_config_for_limits(
     geometry: LaunchGeometry,
 ) -> Result<DispatchConfig, BackendError> {
     let mut effective = config.clone();
-    if geometry == LaunchGeometry::Untracked && effective.workgroup_override.is_some() {
+    if effective.launch.is_some()
+        || (geometry == LaunchGeometry::Untracked && effective.workgroup_override.is_some())
+    {
         return Ok(effective);
     }
     let element_count = wgpu_launch_element_count_for_tuning(program)?;

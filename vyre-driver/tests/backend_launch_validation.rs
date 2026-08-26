@@ -221,3 +221,82 @@ fn launch_plan_rejects_zero_grid_override_before_driver_entry() {
         "Fix: shared launch preparation must return actionable geometry errors; got: {err}"
     );
 }
+
+/// WHY: a dispatch that states a frozen launch and a tuner override states two
+/// launches, and resolving them picks one and drops the other with nothing
+/// reported. One of the two is then a shape nothing compiled against. Every
+/// dispatch-shape field is covered, not the one field a caller happened to set;
+/// `DispatchConfig::validate_launch_authority` destructures the struct field by
+/// field, so a new dispatch-shape field cannot be added without a decision here.
+#[test]
+fn a_frozen_launch_beside_any_dispatch_shape_override_is_rejected() {
+    let backend = GridLimitBackend;
+    let program = tiny_program();
+    let frozen = vyre_driver::LaunchDirective::stated([64, 1, 1], [2, 1, 1], 0)
+        .expect("the stated fixture launch is positive");
+
+    let overrides: [(&str, fn(&mut DispatchConfig)); 4] = [
+        ("workgroup_override", |config| {
+            config.workgroup_override = Some([64, 1, 1]);
+        }),
+        ("grid_override", |config| {
+            config.grid_override = Some([2, 1, 1]);
+        }),
+        ("dispatch_elements", |config| {
+            config.dispatch_elements = Some(128);
+        }),
+        ("dispatch_grid", |config| {
+            config.dispatch_grid = Some([2, 1, 1]);
+        }),
+    ];
+
+    for (field, state) in overrides {
+        let mut config = DispatchConfig::default();
+        config.launch = Some(frozen);
+        state(&mut config);
+
+        let err =
+            vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
+                .expect_err(
+                    "Fix: a frozen launch beside an override must be rejected, not resolved.",
+                );
+        let msg = err.to_string();
+        assert!(
+            msg.contains(field),
+            "the rejection must name the competing field; got: {msg}"
+        );
+
+        // The override alone, and the frozen launch alone, are both admissible.
+        let mut alone = DispatchConfig::default();
+        state(&mut alone);
+        vyre_driver::validation::validate_program_for_backend(&backend, &program, &alone)
+            .expect("Fix: a stated override alone must stay valid.");
+    }
+
+    let mut frozen_alone = DispatchConfig::default();
+    frozen_alone.launch = Some(frozen);
+    vyre_driver::validation::validate_program_for_backend(&backend, &program, &frozen_alone)
+        .expect("Fix: a frozen launch alone must stay valid.");
+}
+
+/// WHY: backend axis limits are enforced against whatever grid is submitted, and
+/// a frozen launch is submitted exactly. Reading only `grid_override` would let a
+/// recorded grid past a limit reach the device driver.
+#[test]
+fn a_frozen_launch_grid_past_the_backend_axis_limit_is_rejected() {
+    let backend = GridLimitBackend;
+    let program = tiny_program();
+    let mut config = DispatchConfig::default();
+    config.launch = Some(
+        vyre_driver::LaunchDirective::stated([1, 1, 1], [8, 1, 1], 0)
+            .expect("the stated fixture launch is positive"),
+    );
+
+    let err = vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
+        .expect_err("Fix: a frozen grid above the backend axis limit must fail.");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("axis 0") && msg.contains("max is 7"),
+        "the rejection must name the failing axis and the limit; got: {msg}"
+    );
+}

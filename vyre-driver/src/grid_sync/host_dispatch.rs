@@ -272,7 +272,7 @@ pub fn dispatch_with_grid_sync_split_into(
 /// handle: it plugs any backend, reference or device, as a
 /// `Fn(&Program, &[&[u8]], Option<[u32; 3]>, &mut Vec<Vec<u8>>) -> Result<(),
 /// String>` closure. The closure receives each segment's program, its rotated
-/// inputs, the whole-grid workgroup count (`config.grid_override`), and a
+/// inputs, the whole-grid workgroup count the config states, and a
 /// per-segment output slot to fill in the segment program's output order. The
 /// split, refresh, and convergence logic is the SAME code as the backend entry
 /// (both call the internal `dispatch_grid_sync_split_generic`), so the two paths converge
@@ -293,7 +293,7 @@ where
     F: Fn(&Program, &[&[u8]], Option<[u32; 3]>, &mut Vec<Vec<u8>>) -> Result<(), String>,
 {
     dispatch_grid_sync_split_generic(program, inputs, config, outputs, |p, i, c, o| {
-        dispatch(p, i, c.grid_override, o).map_err(BackendError::new)
+        dispatch(p, i, c.launch_grid(), o).map_err(BackendError::new)
     })
 }
 

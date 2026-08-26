@@ -18,7 +18,9 @@
 use super::mix32;
 use crate::api::case::{BenchContext, BenchError, BenchRun, Correctness};
 use crate::api::metric::BenchMetrics;
-use crate::api::resident::{dispatch_program_timed, transfer_accounting, ResidentInputSet};
+use crate::api::resident::{
+    dispatch_program_timed, stated_launch, transfer_accounting, ResidentInputSet,
+};
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::{Expr, Node, Program};
 
@@ -94,14 +96,15 @@ fn dispatch_resident_conditional_sequence(
         ResidentDispatchStep {
             program: &prepared.reset_program,
             resources: &reset_resources,
-            grid_override: Some([1, 1, 1]),
-            workgroup_override: None,
+            launch: Some(stated_launch(&prepared.reset_program, [1, 1, 1])?),
         },
         ResidentDispatchStep {
             program: &prepared.program,
             resources: &condition_resources,
-            grid_override: Some([prepared.eval_count.div_ceil(workgroup[0]).max(1), 1, 1]),
-            workgroup_override: None,
+            launch: Some(stated_launch(
+                &prepared.program,
+                [prepared.eval_count.div_ceil(workgroup[0]).max(1), 1, 1],
+            )?),
         },
     ];
     let read_ranges = [

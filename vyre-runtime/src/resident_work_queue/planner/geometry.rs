@@ -1,8 +1,6 @@
 //! Megakernel launch geometry helpers.
 
-use std::time::Duration;
-
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_driver::BackendError;
 
 use super::grid::cached_geometry_from_slots;
 use super::sizing::ResidentSizingPolicy;
@@ -54,16 +52,6 @@ impl ResidentLaunchGeometry {
     #[must_use]
     pub const fn covering_worker_groups(&self) -> u32 {
         self.slot_count / self.workgroup_size_x
-    }
-
-    /// Build the backend dispatch config that matches this launch geometry.
-    #[must_use]
-    pub fn dispatch_config(&self, timeout: Option<Duration>) -> DispatchConfig {
-        let mut config = DispatchConfig::default();
-        config.timeout = timeout;
-        config.grid_override = Some(self.dispatch_grid);
-        config.workgroup_override = Some([self.workgroup_size_x, 1, 1]);
-        config
     }
 }
 

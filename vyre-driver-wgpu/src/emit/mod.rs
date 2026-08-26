@@ -146,7 +146,7 @@ impl WgpuProgram {
     ) -> Result<Self, LoweringError> {
         let mut descriptor = descriptor_gate::validate_and_analyze(program)?;
         let workgroup_size = config
-            .workgroup_override
+            .launch_workgroup()
             .unwrap_or_else(|| optimal_workgroup_size(program, enabled_features));
         descriptor.dispatch.workgroup_size = workgroup_size;
 

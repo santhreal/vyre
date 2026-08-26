@@ -54,6 +54,18 @@ pub fn input_bytes_total(inputs: &[Vec<u8>]) -> u64 {
     inputs.iter().map(Vec::len).sum::<usize>() as u64
 }
 
+/// The launch a resident step states over `grid` workgroups of `program`.
+///
+/// A resident step carries a whole launch, so a benchmark that sized its grid
+/// for the program's declared workgroup states both through one owner.
+pub(crate) fn stated_launch(
+    program: &Program,
+    grid: [u32; 3],
+) -> Result<vyre_driver::LaunchDirective, BenchError> {
+    vyre_driver::LaunchDirective::stated_for(program, grid)
+        .map_err(|error| BenchError::BackendFailed(error.to_string()))
+}
+
 /// Static byte lengths for every externally visible output buffer in binding order.
 pub fn resident_output_byte_lengths(
     program: &Program,

@@ -313,7 +313,7 @@ impl BenchContext {
         &self,
         step: &vyre_driver::ResidentDispatchStep<'_>,
     ) -> Result<(vyre_driver::BindingSet, vyre_driver::Completion), vyre_driver::BackendError> {
-        if let Some(workgroup) = step.workgroup_override {
+        if let Some(workgroup) = step.launch.map(|launch| launch.workgroup()) {
             if workgroup != step.program.workgroup_size {
                 return Err(vyre_driver::BackendError::new(format!(
                     "resident artifact step requested workgroup {workgroup:?}, but its immutable program declares {:?}. Fix: compile the requested workgroup into the program before artifact creation.",

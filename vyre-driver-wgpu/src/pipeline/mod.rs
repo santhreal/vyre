@@ -262,7 +262,7 @@ impl WgpuPipeline {
         // logical extents, dispatch paths can only derive a safe default grid
         // for 1D kernels; 2D/3D kernels must provide `grid_override`.
         let effective_wg = config
-            .workgroup_override
+            .launch_workgroup()
             .unwrap_or(compile_program.workgroup_size);
         let workgroup_shape = [
             effective_wg[0].max(1),
@@ -471,7 +471,7 @@ impl WgpuPipeline {
     }
 
     fn requested_workgroups(&self, config: &DispatchConfig) -> Result<[u32; 3], BackendError> {
-        if let Some(grid) = config.grid_override {
+        if let Some(grid) = config.launch_grid() {
             return Ok(grid);
         }
         // Non-1D workgroups have no unambiguous default grid: there's

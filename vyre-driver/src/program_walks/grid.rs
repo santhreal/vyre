@@ -29,7 +29,7 @@ pub fn infer_dispatch_grid(
     infer_dispatch_grid_for_count(
         element_count,
         config
-            .workgroup_override
+            .launch_workgroup()
             .unwrap_or(program.workgroup_size()),
     )
 }

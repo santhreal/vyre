@@ -448,7 +448,7 @@ pub(crate) unsafe fn dispatch_program(
             backend: crate::SPIRV_BACKEND_ID.to_string(),
         });
     }
-    let workgroup_size = config.workgroup_override.unwrap_or(program.workgroup_size);
+    let workgroup_size = config.launch_workgroup().unwrap_or(program.workgroup_size);
     if workgroup_size.contains(&0) {
         return Err(BackendError::InvalidProgram {
             fix: format!(
@@ -458,7 +458,7 @@ pub(crate) unsafe fn dispatch_program(
     }
     let workgroup_size = [workgroup_size[0], workgroup_size[1], workgroup_size[2]];
 
-    let grid = if let Some(grid) = config.grid_override {
+    let grid = if let Some(grid) = config.launch_grid() {
         grid
     } else {
         infer_grid(program, workgroup_size)?

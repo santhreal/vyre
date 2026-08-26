@@ -305,8 +305,8 @@ mod tests {
     use crate::backend::forward::{forward_vyre_backend_dispatch, forward_vyre_backend_support};
     use crate::backend::registry::registered_backends;
     use crate::{
-        BackendError, DeviceProfile, DeviceTimingQuality, DispatchConfig, ResidentDispatchStep,
-        ResidentReadRange, Resource, VyreBackend,
+        BackendError, DeviceProfile, DeviceTimingQuality, DispatchConfig, LaunchDirective,
+        ResidentDispatchStep, ResidentReadRange, Resource, VyreBackend,
     };
     use smallvec::SmallVec;
     use std::sync::{Arc, Mutex};
@@ -776,14 +776,15 @@ mod tests {
         let prefix_steps = [ResidentDispatchStep {
             program: &program,
             resources: &resources,
-            grid_override: None,
-            workgroup_override: None,
+            launch: None,
         }];
         let repeated_steps = [ResidentDispatchStep {
             program: &program,
             resources: &resources,
-            grid_override: Some([3, 1, 1]),
-            workgroup_override: None,
+            launch: Some(
+                LaunchDirective::stated_for(&program, [3, 1, 1])
+                    .expect("the fixture launch is positive"),
+            ),
         }];
         let read_ranges = [
             ResidentReadRange {

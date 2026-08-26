@@ -171,8 +171,7 @@ pub(super) fn step<'a>(
     vyre_driver::ResidentDispatchStep {
         program,
         resources,
-        grid_override: None,
-        workgroup_override: None,
+        launch: None,
     }
 }
 

@@ -89,7 +89,7 @@ impl LaunchPlan {
             effective_launch_workgroup_for_mode(program, bindings, config, limits, mode);
         validate_launch_geometry(workgroup, [1, 1, 1], limits)?;
         let element_count = launch_element_count(program, bindings, workgroup, config, limits)?;
-        let grid = match config.grid_override {
+        let grid = match config.launch_grid() {
             Some(grid) => grid,
             None => {
                 // Non-1D workgroups need an explicit grid_override  -
@@ -144,7 +144,7 @@ fn launch_element_count(
     limits: LaunchGeometryLimits,
 ) -> Result<u32, BackendError> {
     let inferred = dispatch_element_count_for_program(program, bindings);
-    let Some(grid) = config.grid_override else {
+    let Some(grid) = config.launch_grid() else {
         return Ok(inferred);
     };
     if workgroup.contains(&0) || grid.contains(&0) {

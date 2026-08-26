@@ -349,14 +349,12 @@ fn apple_resident_sequence_dispatches_ordered_steps_and_reads_ranges() {
         ResidentDispatchStep {
             program: &double_program,
             resources: &first_resources,
-            grid_override: None,
-            workgroup_override: None,
+            launch: None,
         },
         ResidentDispatchStep {
             program: &add_program,
             resources: &second_resources,
-            grid_override: None,
-            workgroup_override: None,
+            launch: None,
         },
     ];
     let read_ranges = [ResidentReadRange {
@@ -436,8 +434,7 @@ fn apple_repeated_resident_sequence_updates_read_write_handle() {
     let repeated_steps = [ResidentDispatchStep {
         program: &increment_program,
         resources: &step_resources,
-        grid_override: None,
-        workgroup_override: None,
+        launch: None,
     }];
     let read_ranges = [ResidentReadRange {
         resource: &state,

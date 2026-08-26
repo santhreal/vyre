@@ -84,11 +84,11 @@ pub fn resolve_launch_workgroup_for_geometry(
     if let LaunchGeometry::Compiled(workgroup) = geometry {
         return workgroup;
     }
-    if let Some(workgroup) = config.workgroup_override {
+    if let Some(workgroup) = config.launch_workgroup() {
         return workgroup;
     }
     let declared = program.workgroup_size();
-    if config.grid_override.is_some() {
+    if config.launch_grid().is_some() {
         return declared;
     }
     let selected = if mode == Mode::NaturalGradient {
@@ -161,8 +161,8 @@ pub(crate) fn record_launch_measurement_for_mode_with_store(
 ) -> bool {
     if mode != Mode::NaturalGradient
         || elapsed_ns == 0
-        || config.workgroup_override.is_some()
-        || config.grid_override.is_some()
+        || config.launch_workgroup().is_some()
+        || config.launch_grid().is_some()
         || observed_workgroup[1] != 1
         || observed_workgroup[2] != 1
         || !candidate_x_fits_limits(observed_workgroup[0], limits)

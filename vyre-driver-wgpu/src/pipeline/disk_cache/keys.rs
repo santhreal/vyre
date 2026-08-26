@@ -31,7 +31,7 @@ pub(crate) fn early_pipeline_cache_key(
     hasher.update(b"\0policy\0");
     vyre_driver::update_dispatch_policy_cache_hash(&mut hasher, config);
     hasher.update(b"\0workgroup_override\0");
-    if let Some(wg) = config.workgroup_override {
+    if let Some(wg) = config.launch_workgroup() {
         for axis in wg {
             hasher.update(&axis.to_le_bytes());
         }

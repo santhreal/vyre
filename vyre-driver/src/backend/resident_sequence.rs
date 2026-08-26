@@ -19,14 +19,12 @@ pub struct ResidentDispatchStep<'a> {
     pub program: &'a Program,
     /// Resident resources in binding order.
     pub resources: &'a [Resource],
-    /// Optional grid-style launch override.
-    pub grid_override: Option<[u32; 3]>,
-    /// Optional workgroup override. MUST be carried alongside `grid_override`:
-    /// a caller that sizes its grid for a specific workgroup (grid =
-    /// ceil(work / workgroup)) will under-cover the work if the step falls back
-    /// to a different default workgroup. `None` keeps the backend's resolved
-    /// default (correct only when `grid_override` is also `None`).
-    pub workgroup_override: Option<[u32; 3]>,
+    /// The launch this step runs, when it states one.
+    ///
+    /// A grid is sized for a workgroup, so the two travel together or not at
+    /// all: a step that stated a grid and lost its workgroup to a shared loop
+    /// launched a grid that under-covered the work and dropped findings.
+    pub launch: Option<crate::launch_directive::LaunchDirective>,
 }
 
 /// One compact byte range to read from a backend-resident resource.
@@ -62,12 +60,6 @@ pub(crate) fn elapsed_resident_sequence_wall_ns(
         ),
     })
 }
-
-/// The launch configuration one resident step is dispatched with.
-///
-/// A step carries only its own grid override; nothing else from the caller's
-/// configuration applies, because a sequence step's shape is decided by the
-/// planner that built the step, not by the dispatch that runs the sequence.
 
 /// Default implementation for downloading a resident byte range into a new vector.
 pub(crate) fn download_resident_range_default<B>(
@@ -146,10 +138,15 @@ impl vyre_foundation::GeometryStrategy for dyn VyreBackend {
             .rank_geometries(requirements, problem_elements)
     }
 }
+/// The launch configuration one resident step is dispatched with.
+///
+/// A step carries one whole launch or none; nothing else from the caller's
+/// configuration applies, because a step's shape is decided by the planner that
+/// built the step, not by the dispatch that runs the sequence.
 pub(crate) fn resident_step_config(step: &ResidentDispatchStep<'_>) -> DispatchConfig {
-    DispatchConfig {
-        grid_override: step.grid_override,
-        ..DispatchConfig::default()
+    match &step.launch {
+        Some(launch) => launch.dispatch_config(),
+        None => DispatchConfig::default(),
     }
 }
 
@@ -295,15 +292,23 @@ mod tests {
 
         fn dispatch_resident_timed(
             &self,
-            _program: &Program,
+            program: &Program,
             _resources: &[Resource],
             config: &DispatchConfig,
         ) -> Result<TimedDispatchResult, BackendError> {
             let index = self.dispatches.fetch_add(1, Ordering::SeqCst) as u64;
+            let launch = config
+                .launch
+                .expect("Fix: a resident step must submit the launch it states.");
             assert_eq!(
-                config.grid_override,
-                Some([index as u32 + 1, 1, 1]),
-                "Fix: default resident sequence timing must preserve each step's grid override."
+                launch.grid(),
+                [index as u32 + 1, 1, 1],
+                "Fix: default resident sequence timing must preserve each step's grid."
+            );
+            assert_eq!(
+                launch.workgroup(),
+                program.workgroup_size(),
+                "Fix: default resident sequence timing must preserve each step's workgroup."
             );
             Ok(TimedDispatchResult::split_timed(
                 Vec::new(),
@@ -346,14 +351,18 @@ mod tests {
             ResidentDispatchStep {
                 program: &program,
                 resources: &first_resources,
-                grid_override: Some([1, 1, 1]),
-                workgroup_override: None,
+                launch: Some(
+                    crate::launch_directive::LaunchDirective::stated_for(&program, [1, 1, 1])
+                        .expect("the fixture launch is positive"),
+                ),
             },
             ResidentDispatchStep {
                 program: &program,
                 resources: &second_resources,
-                grid_override: Some([2, 1, 1]),
-                workgroup_override: None,
+                launch: Some(
+                    crate::launch_directive::LaunchDirective::stated_for(&program, [2, 1, 1])
+                        .expect("the fixture launch is positive"),
+                ),
             },
         ];
         let read_resource = Resource::Resident(owner.handle(33));
@@ -377,5 +386,89 @@ mod tests {
         assert_eq!(u64::from_le_bytes(output[0..8].try_into().unwrap()), 33);
         assert_eq!(u64::from_le_bytes(output[8..16].try_into().unwrap()), 4);
         assert_eq!(u64::from_le_bytes(output[16..24].try_into().unwrap()), 8);
+    }
+
+    /// Recording backend that keeps every submitted launch shape in order.
+    struct RecordingBackend {
+        submitted: std::sync::Mutex<Vec<([u32; 3], [u32; 3])>>,
+    }
+
+    impl sealed::Sealed for RecordingBackend {}
+
+    impl VyreBackend for RecordingBackend {
+        fn id(&self) -> &'static str {
+            "resident-launch-recording-test"
+        }
+
+        fn dispatch_borrowed(
+            &self,
+            _program: &Program,
+            _inputs: &[&[u8]],
+            _config: &DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, BackendError> {
+            Ok(Vec::new())
+        }
+
+        fn dispatch_resident_timed(
+            &self,
+            _program: &Program,
+            _resources: &[Resource],
+            config: &DispatchConfig,
+        ) -> Result<TimedDispatchResult, BackendError> {
+            let launch = config
+                .launch
+                .expect("Fix: a resident step must submit the launch it states.");
+            self.submitted
+                .lock()
+                .expect("Fix: the recording lock must stay usable.")
+                .push((launch.workgroup(), launch.grid()));
+            Ok(TimedDispatchResult::host_timed(Vec::new(), 1))
+        }
+    }
+
+    /// WHY: a resident step used to carry its workgroup and its grid in two
+    /// independent options, and the sequence loop forwarded only the grid. A grid
+    /// sized for a 64-lane workgroup then ran with the program's declared shape,
+    /// covering a fraction of the work with no error anywhere. This closes that
+    /// class: whatever a step states, both axes of the launch reach the backend.
+    #[test]
+    fn a_resident_step_submits_the_whole_launch_it_states() {
+        let backend = RecordingBackend {
+            submitted: std::sync::Mutex::new(Vec::new()),
+        };
+        // The program declares [1, 1, 1], so a dropped workgroup is observable.
+        let program = Program::empty();
+        assert_eq!(program.workgroup_size(), [1, 1, 1]);
+        let owner = crate::ResidentOwner::new().expect("Fix: owner ids must be available");
+        let resources = [Resource::Resident(owner.handle(11))];
+        let stated = [
+            ([64, 1, 1], [3, 1, 1]),
+            ([32, 2, 1], [5, 7, 1]),
+            ([8, 1, 4], [1, 1, 9]),
+        ];
+        let launches = stated
+            .iter()
+            .map(|(workgroup, grid)| {
+                crate::launch_directive::LaunchDirective::stated(*workgroup, *grid, 0)
+                    .expect("the stated fixture launches are positive")
+            })
+            .collect::<Vec<_>>();
+        let steps = launches
+            .iter()
+            .map(|launch| ResidentDispatchStep {
+                program: &program,
+                resources: &resources,
+                launch: Some(*launch),
+            })
+            .collect::<Vec<_>>();
+
+        dispatch_resident_steps(&backend, &steps).expect("Fix: the fixture sequence must run.");
+
+        let submitted = backend
+            .submitted
+            .lock()
+            .expect("Fix: the recording lock must stay usable.")
+            .clone();
+        assert_eq!(submitted, stated.to_vec());
     }
 }

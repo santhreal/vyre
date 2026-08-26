@@ -81,7 +81,8 @@ pub(crate) struct RecordAndReadback<'a> {
     /// `Some(shape)` means `workgroup_count` was derived from the compile-time
     /// output word count, so it must be recomputed once a runtime-sized output
     /// resolves to its real length. `None` means the caller pinned the launch
-    /// through `DispatchConfig::grid_override` and it is dispatched as asked.
+    /// through a frozen launch or `DispatchConfig::grid_override`, and it is
+    /// dispatched as asked.
     pub inferred_grid_shape: Option<[u32; 3]>,
 }
 
@@ -112,7 +113,7 @@ impl<'a> RecordAndReadback<'a> {
             iterations: config.fixpoint_iterations.unwrap_or(1).max(1),
             timestamp_profile,
             inferred_grid_shape: config
-                .grid_override
+                .launch_grid()
                 .is_none()
                 .then_some(pipeline.workgroup_shape),
         }
@@ -228,7 +229,7 @@ fn record_dispatch_unsubmitted_impl(
         // comes home as a zero under an `Ok`, which is the same silent
         // wrong-answer the zero-length readback was. Re-infer from the resolved
         // word count, and only when this dispatch inferred its grid: a caller
-        // who pinned `grid_override` asked for that exact launch and keeps it.
+        // who stated a launch asked for that exact grid and keeps it.
         if let Some(workgroup_shape) = request.inferred_grid_shape {
             let resolved_words = request
                 .output_bindings
