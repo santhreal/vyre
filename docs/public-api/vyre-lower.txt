@@ -10,7 +10,6 @@ impl core::default::Default for vyre_lower::analyses::RetainedFallbacks
 impl core::default::Default for vyre_lower::analyses::TailHandling
 impl core::default::Default for vyre_lower::analyses::TargetBankGeometry
 impl core::default::Default for vyre_lower::analyses::TargetEmittedMetrics
-impl core::default::Default for vyre_lower::analyses::TargetResourceLimits
 impl core::error::Error for vyre_lower::DescriptorIntentError
 impl core::error::Error for vyre_lower::PhysicalLoweringError
 impl core::error::Error for vyre_lower::analyses::AffineMapError
@@ -60,6 +59,7 @@ impl vyre_lower::analyses::ReachingDefFactSet
 impl vyre_lower::analyses::SharedStoreRaceReport
 impl vyre_lower::analyses::SliceSpec
 impl vyre_lower::analyses::StrideExpr
+impl vyre_lower::analyses::TargetResourceLimits
 impl vyre_lower::analyses::ValueRangeReport
 impl vyre_lower::analyses::WorkgroupUniformReport
 impl vyre_lower::analyses::alias_facts::AliasFactSet
@@ -90,6 +90,7 @@ pub const fn vyre_lower::analyses::DimExtent::is_static(&self) -> bool
 pub const fn vyre_lower::analyses::DimExtent::static_extent(&self) -> core::option::Option<u64>
 pub const fn vyre_lower::analyses::SliceSpec::forward(start: i64, stop: i64) -> Self
 pub const fn vyre_lower::analyses::StrideExpr::static_stride(&self) -> core::option::Option<i64>
+pub const fn vyre_lower::analyses::TargetResourceLimits::new(max_shared_memory_bytes: usize, occupancy_registers_per_thread: usize, architectural_registers_per_thread: usize, max_threads_per_workgroup: usize, required_vector_alignment_bytes: u32, supports_dynamic_shapes: bool) -> Self
 pub const vyre_lower::DESCRIPTOR_INTENT_SCHEMA_VERSION: u32
 pub const vyre_lower::SCAN_CONSTRUCT_INTENT_MAPPINGS: &[vyre_lower::ScanConstructIntentMapping]
 pub const vyre_lower::TRAP_SIDECAR_NAME: &str
@@ -238,7 +239,6 @@ pub fn vyre_lower::analyses::SliceSpec::element_count(&self) -> core::result::Re
 pub fn vyre_lower::analyses::TailHandling::default() -> Self
 pub fn vyre_lower::analyses::TargetBankGeometry::default() -> Self
 pub fn vyre_lower::analyses::TargetEmittedMetrics::default() -> Self
-pub fn vyre_lower::analyses::TargetResourceLimits::default() -> Self
 pub fn vyre_lower::analyses::ValueRangeReport::as_constant(&self, result_id: u32) -> core::option::Option<i64>
 pub fn vyre_lower::analyses::ValueRangeReport::get(&self, result_id: u32) -> core::option::Option<vyre_lower::analyses::IntRange>
 pub fn vyre_lower::analyses::ValueRangeReport::get_at(&self, result_id: u32, op_index: usize) -> core::option::Option<vyre_lower::analyses::IntRange>
@@ -901,8 +901,9 @@ pub vyre_lower::analyses::PromotionPlan::budget_bytes: u32
 pub vyre_lower::analyses::PromotionPlan::candidates: alloc::vec::Vec<vyre_lower::analyses::PromotionCandidate>
 pub vyre_lower::analyses::PromotionPlan::kernel_id: alloc::string::String
 pub vyre_lower::analyses::PromotionPlan::total_tile_bytes: u32
+pub vyre_lower::analyses::ResourceBounds::architectural_register_limit_per_thread: usize
 pub vyre_lower::analyses::ResourceBounds::is_within_limits: bool
-pub vyre_lower::analyses::ResourceBounds::register_limit_per_thread: usize
+pub vyre_lower::analyses::ResourceBounds::occupancy_register_budget_per_thread: usize
 pub vyre_lower::analyses::ResourceBounds::registers_per_thread: usize
 pub vyre_lower::analyses::ResourceBounds::shared_memory_bytes: usize
 pub vyre_lower::analyses::ResourceBounds::shared_memory_limit_bytes: usize
@@ -941,9 +942,10 @@ pub vyre_lower::analyses::TargetEmittedMetrics::local_memory_spill_bytes: usize
 pub vyre_lower::analyses::TargetEmittedMetrics::output_parity_verified: bool
 pub vyre_lower::analyses::TargetEmittedMetrics::register_count: usize
 pub vyre_lower::analyses::TargetEmittedMetrics::shared_memory_bytes: usize
-pub vyre_lower::analyses::TargetResourceLimits::max_registers_per_thread: usize
+pub vyre_lower::analyses::TargetResourceLimits::architectural_registers_per_thread: usize
 pub vyre_lower::analyses::TargetResourceLimits::max_shared_memory_bytes: usize
 pub vyre_lower::analyses::TargetResourceLimits::max_threads_per_workgroup: usize
+pub vyre_lower::analyses::TargetResourceLimits::occupancy_registers_per_thread: usize
 pub vyre_lower::analyses::TargetResourceLimits::required_vector_alignment_bytes: u32
 pub vyre_lower::analyses::TargetResourceLimits::supports_dynamic_shapes: bool
 pub vyre_lower::analyses::TextureCandidate::binding_slot: u32

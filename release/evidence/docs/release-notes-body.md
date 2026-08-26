@@ -651,6 +651,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   reduction round no longer requests a device-scope storage fence and a global
   release fence no longer converges the whole workgroup. The four strong
   orderings used to collapse onto one construct.
+- Candidate resource verification reports a register allocation above the
+  occupancy budget as spill traffic and rejects only an allocation above the
+  target's architectural register ceiling.
 - The workspace denies the unexpected_cfgs lint instead of warning. A cfg
   attribute naming a feature its own crate does not declare removes the code
   under it, and at warning level that signal is one line in a build that emits
