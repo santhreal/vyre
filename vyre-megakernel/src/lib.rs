@@ -17,16 +17,22 @@
 
 mod artifact;
 mod candidate;
+mod certificate;
 mod compile;
+mod constraints;
 /// Open, reproducible whole-program candidate cost model.
 pub mod cost;
 mod dependency_order;
+mod derive;
 mod device_facts;
 mod envelope;
 mod error;
 mod execution;
 mod facts;
 mod frame;
+/// Versioned production grammar candidate search derives plans from, re-exported
+/// as `ScheduleProduction`, `DerivationStep` and `SCHEDULE_GRAMMAR_VERSION`.
+mod grammar;
 #[cfg(test)]
 #[path = "../tests/graph_fixtures/mod.rs"]
 mod graph_fixtures;
@@ -46,6 +52,7 @@ mod select;
 pub(crate) mod target;
 
 pub use candidate::{ExecutionTopology, ResidentPartitionMode};
+pub use certificate::{DerivedFamily, PruneReason, PrunedFamily, SearchCertificate};
 pub use compile::{compile, compile_measured, FinalistEvaluator};
 pub use device_facts::DeviceFacts;
 pub use envelope::{
@@ -59,6 +66,7 @@ pub use execution::{
     SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
     SemanticExecutionRequest, SemanticExecutor, SingleProgramExecutionOutput,
 };
+pub use grammar::{DerivationStep, ScheduleProduction, SCHEDULE_GRAMMAR_VERSION};
 pub use identity::{
     ArtifactNodeId, ArtifactValueId, DependencyEdge, DependencyEndpoint, DependencyKind, Digest,
     FusionGroupId,

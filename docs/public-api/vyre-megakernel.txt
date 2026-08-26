@@ -1,3 +1,4 @@
+#[non_exhaustive] pub enum vyre_megakernel::PruneReason
 #[non_exhaustive] pub enum vyre_megakernel::TargetCompileError
 #[non_exhaustive] pub enum vyre_megakernel::legality::FusionRejectionReason
 impl core::default::Default for vyre_megakernel::ExecutionTopology
@@ -10,7 +11,10 @@ impl vyre_megakernel::DeviceFacts
 impl vyre_megakernel::Digest
 impl vyre_megakernel::ExternalFacts
 impl vyre_megakernel::GeometryRecord
+impl vyre_megakernel::PruneReason
+impl vyre_megakernel::ScheduleProduction
 impl vyre_megakernel::SearchBudget
+impl vyre_megakernel::SearchCertificate
 impl vyre_megakernel::SelectedLowering
 impl vyre_megakernel::SelectedPlan
 impl vyre_megakernel::SemanticExecutionPolicy
@@ -60,6 +64,8 @@ pub const fn vyre_megakernel::DeviceFacts::with_occupancy(self, registers_per_in
 pub const fn vyre_megakernel::DeviceFacts::with_spatial_partitioning(self, supported: bool) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_subgroup_size(self, subgroup_size: u32) -> Self
 pub const fn vyre_megakernel::Digest::as_bytes(&self) -> &[u8; 32]
+pub const fn vyre_megakernel::PruneReason::code(self) -> &'static str
+pub const fn vyre_megakernel::ScheduleProduction::code(self) -> &'static str
 pub const fn vyre_megakernel::SearchBudget::new(max_candidates: u32, max_cpu_work: u64, max_target_compilations: u32, max_measurements: u32, max_elapsed_ns: u64) -> Self
 pub const fn vyre_megakernel::SelectedLowering::descriptor(&self) -> &vyre_lower::descriptor::KernelDescriptor
 pub const fn vyre_megakernel::SemanticExecutionPolicy::budget(&self) -> vyre_megakernel::SearchBudget
@@ -96,6 +102,9 @@ pub const fn vyre_megakernel::ValidatedCompileRequest::search_budget(&self) -> v
 pub const fn vyre_megakernel::legality::FusionRejectionReason::code(self) -> &'static str
 pub const vyre_megakernel::ARTIFACT_ENVELOPE_SCHEMA_VERSION: u16
 pub const vyre_megakernel::ARTIFACT_SCHEMA_VERSION: u16
+pub const vyre_megakernel::PruneReason::ALL: &'static [Self]
+pub const vyre_megakernel::SCHEDULE_GRAMMAR_VERSION: u32
+pub const vyre_megakernel::ScheduleProduction::ALL: &'static [Self]
 pub const vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16
 pub const vyre_megakernel::TARGET_PAYLOAD_SCHEMA_VERSION: u16
 pub const vyre_megakernel::WORKSPACE_REGION_ALIGNMENT: u64
@@ -110,6 +119,7 @@ pub enum vyre_megakernel::MaterializationReason
 pub enum vyre_megakernel::PlanMeasurement
 pub enum vyre_megakernel::ResidentPartitionMode
 pub enum vyre_megakernel::ResourceLifetime
+pub enum vyre_megakernel::ScheduleProduction
 pub enum vyre_megakernel::SemanticExecutionError
 pub enum vyre_megakernel::TargetResourceAccess
 pub enum vyre_megakernel::TargetResourceMemory
@@ -142,6 +152,12 @@ pub fn vyre_megakernel::FinalistEvaluator::target_compiler(&self) -> &dyn vyre_m
 pub fn vyre_megakernel::GeometryRecord::covering_grid(coverage: [u64; 3], workgroup: [u32; 3]) -> core::result::Result<[u32; 3], vyre_megakernel::CompileError>
 pub fn vyre_megakernel::GeometryRecord::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::ResourceNameCollision::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_megakernel::ScheduleProduction::deriving(transform: &vyre_foundation::schedule::ScheduleTransform) -> Self
+pub fn vyre_megakernel::SearchCertificate::admitted_by(&self, production: vyre_megakernel::ScheduleProduction) -> u32
+pub fn vyre_megakernel::SearchCertificate::admitted_total(&self) -> u32
+pub fn vyre_megakernel::SearchCertificate::derived_by(&self, production: vyre_megakernel::ScheduleProduction) -> u32
+pub fn vyre_megakernel::SearchCertificate::derived_total(&self) -> u32
+pub fn vyre_megakernel::SearchCertificate::pruned_for(&self, reason: vyre_megakernel::PruneReason) -> u32
 pub fn vyre_megakernel::SelectedPlan::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::SemanticExecutionRequest<'a>::compile_request(&self) -> vyre_megakernel::CompileRequest
 pub fn vyre_megakernel::SemanticExecutionRequest<'a>::new(logical: &'a vyre_foundation::logical::LogicalProgramGraph<'a>, inputs: alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, &'a [u8]>, external_facts: vyre_megakernel::ExternalFacts, target_facts: vyre_megakernel::DeviceFacts, objective: vyre_megakernel::CompileObjective, budget: vyre_megakernel::SearchBudget, max_artifact_bytes: u64) -> core::result::Result<Self, vyre_megakernel::SemanticExecutionError>
@@ -187,6 +203,8 @@ pub struct vyre_megakernel::BarrierRecord
 pub struct vyre_megakernel::CompileError
 pub struct vyre_megakernel::CompileRequest
 pub struct vyre_megakernel::DependencyEdge
+pub struct vyre_megakernel::DerivationStep
+pub struct vyre_megakernel::DerivedFamily
 pub struct vyre_megakernel::DeviceFacts
 pub struct vyre_megakernel::Digest(pub [u8; 32])
 pub struct vyre_megakernel::EmittedTargetModule
@@ -201,11 +219,13 @@ pub struct vyre_megakernel::LaunchResourceIntent
 pub struct vyre_megakernel::MaterializationRecord
 pub struct vyre_megakernel::NodeRecord
 pub struct vyre_megakernel::Provenance
+pub struct vyre_megakernel::PrunedFamily
 pub struct vyre_megakernel::ResourceAbiRecord
 pub struct vyre_megakernel::ResourceEnvelope
 pub struct vyre_megakernel::ResourceNameCollision
 pub struct vyre_megakernel::ResourceRecord
 pub struct vyre_megakernel::SearchBudget
+pub struct vyre_megakernel::SearchCertificate
 pub struct vyre_megakernel::SearchWork
 pub struct vyre_megakernel::SelectedLowering
 pub struct vyre_megakernel::SelectedModule
@@ -251,6 +271,11 @@ pub vyre_megakernel::DependencyEndpoint::Value(vyre_megakernel::ArtifactValueId)
 pub vyre_megakernel::DependencyKind::Data
 pub vyre_megakernel::DependencyKind::Materialization
 pub vyre_megakernel::DependencyKind::Retained
+pub vyre_megakernel::DerivationStep::production: vyre_megakernel::ScheduleProduction
+pub vyre_megakernel::DerivationStep::transforms: alloc::vec::Vec<vyre_foundation::schedule::ScheduleTransform>
+pub vyre_megakernel::DerivedFamily::admitted: u32
+pub vyre_megakernel::DerivedFamily::derived: u32
+pub vyre_megakernel::DerivedFamily::production: vyre_megakernel::ScheduleProduction
 pub vyre_megakernel::EmittedTargetModule::bytes: alloc::vec::Vec<u8>
 pub vyre_megakernel::EmittedTargetModule::entry_point: alloc::string::String
 pub vyre_megakernel::EmittedTargetModule::resource_bindings: alloc::vec::Vec<vyre_megakernel::TargetResourceBinding>
@@ -318,6 +343,22 @@ pub vyre_megakernel::PlanMeasurement::UntimedDevice
 pub vyre_megakernel::Provenance::compiler_version: alloc::string::String
 pub vyre_megakernel::Provenance::request: vyre_megakernel::Digest
 pub vyre_megakernel::Provenance::source_graph: vyre_megakernel::Digest
+pub vyre_megakernel::PruneReason::AliasOrEffect
+pub vyre_megakernel::PruneReason::BarrierVisibility
+pub vyre_megakernel::PruneReason::Dependence
+pub vyre_megakernel::PruneReason::Numerical
+pub vyre_megakernel::PruneReason::ObjectiveDominated
+pub vyre_megakernel::PruneReason::Occupancy
+pub vyre_megakernel::PruneReason::PipelineCapacity
+pub vyre_megakernel::PruneReason::Progress
+pub vyre_megakernel::PruneReason::Representation
+pub vyre_megakernel::PruneReason::ScheduleLegality
+pub vyre_megakernel::PruneReason::Scratch
+pub vyre_megakernel::PruneReason::TargetFacts
+pub vyre_megakernel::PruneReason::Workspace
+pub vyre_megakernel::PrunedFamily::count: u32
+pub vyre_megakernel::PrunedFamily::production: vyre_megakernel::ScheduleProduction
+pub vyre_megakernel::PrunedFamily::reason: vyre_megakernel::PruneReason
 pub vyre_megakernel::ResidentPartitionMode::BoundedWorkQueue
 pub vyre_megakernel::ResidentPartitionMode::FixedSpatialMask
 pub vyre_megakernel::ResourceAbiRecord::access: vyre_megakernel::AbiAccess
@@ -341,11 +382,33 @@ pub vyre_megakernel::ResourceRecord::lifetime: vyre_megakernel::ResourceLifetime
 pub vyre_megakernel::ResourceRecord::name: alloc::string::String
 pub vyre_megakernel::ResourceRecord::retained_predecessor: core::option::Option<vyre_megakernel::ArtifactValueId>
 pub vyre_megakernel::ResourceRecord::value: vyre_megakernel::ArtifactValueId
+pub vyre_megakernel::ScheduleProduction::AsymmetricJoin
+pub vyre_megakernel::ScheduleProduction::AxisMapping
+pub vyre_megakernel::ScheduleProduction::AxisReorder
+pub vyre_megakernel::ScheduleProduction::AxisSplit
+pub vyre_megakernel::ScheduleProduction::DispatchCut
+pub vyre_megakernel::ScheduleProduction::Fission
+pub vyre_megakernel::ScheduleProduction::Fusion
+pub vyre_megakernel::ScheduleProduction::LaunchWidth
+pub vyre_megakernel::ScheduleProduction::MemoryPlacement
+pub vyre_megakernel::ScheduleProduction::PersistentQueue
+pub vyre_megakernel::ScheduleProduction::Pipeline
+pub vyre_megakernel::ScheduleProduction::Prefetch
+pub vyre_megakernel::ScheduleProduction::Recomputation
+pub vyre_megakernel::ScheduleProduction::SpatialPartition
+pub vyre_megakernel::ScheduleProduction::Synchronization
+pub vyre_megakernel::ScheduleProduction::Tiling
+pub vyre_megakernel::ScheduleProduction::Vectorization
 pub vyre_megakernel::SearchBudget::max_candidates: u32
 pub vyre_megakernel::SearchBudget::max_cpu_work: u64
 pub vyre_megakernel::SearchBudget::max_elapsed_ns: u64
 pub vyre_megakernel::SearchBudget::max_measurements: u32
 pub vyre_megakernel::SearchBudget::max_target_compilations: u32
+pub vyre_megakernel::SearchCertificate::budget_exhausted: bool
+pub vyre_megakernel::SearchCertificate::depth: u32
+pub vyre_megakernel::SearchCertificate::derived: alloc::vec::Vec<vyre_megakernel::DerivedFamily>
+pub vyre_megakernel::SearchCertificate::grammar_version: u32
+pub vyre_megakernel::SearchCertificate::pruned: alloc::vec::Vec<vyre_megakernel::PrunedFamily>
 pub vyre_megakernel::SearchWork::candidates_explored: u32
 pub vyre_megakernel::SearchWork::cpu_work: u64
 pub vyre_megakernel::SearchWork::elapsed_ns: u64
@@ -365,6 +428,8 @@ pub vyre_megakernel::SelectedModule::programs: alloc::vec::Vec<vyre_foundation::
 pub vyre_megakernel::SelectedModule::stage: u32
 pub vyre_megakernel::SelectedPlan::barriers: alloc::vec::Vec<vyre_megakernel::BarrierRecord>
 pub vyre_megakernel::SelectedPlan::candidates_explored: u32
+pub vyre_megakernel::SelectedPlan::certificate: vyre_megakernel::SearchCertificate
+pub vyre_megakernel::SelectedPlan::derivation: alloc::vec::Vec<vyre_megakernel::DerivationStep>
 pub vyre_megakernel::SelectedPlan::execution: vyre_megakernel::ExecutionMode
 pub vyre_megakernel::SelectedPlan::fusion: alloc::vec::Vec<vyre_megakernel::FusionRecord>
 pub vyre_megakernel::SelectedPlan::materializations: alloc::vec::Vec<vyre_megakernel::MaterializationRecord>

@@ -16,7 +16,10 @@ use thiserror::Error;
 use crate::logical::{LogicalExtent, LogicalProgramGraph};
 
 /// Current backend-neutral schedule schema and identity version.
-pub const SCHEDULE_IR_VERSION: u16 = 1;
+///
+/// Version 2 rewrites the axis nest for tiling and splitting, so a tiled phase
+/// and an untiled one no longer share a schedule identity.
+pub const SCHEDULE_IR_VERSION: u16 = 2;
 
 /// Stable identity of one selected schedule phase.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -694,6 +697,9 @@ pub enum ScheduleLegalityError {
     /// Persisted final phases or resources differ from deterministic replay.
     #[error("schedule final state differs from deterministic transform replay")]
     ReplayMismatch,
+    /// Naming the inner axis of a tile or split overflowed the axis index.
+    #[error("schedule axis index overflowed in phase {0:?}")]
+    AxisIndexOverflow(SchedulePhaseId),
     /// Canonical schedule identity serialization failed.
     #[error("schedule identity encoding failed: {0}")]
     Identity(String),

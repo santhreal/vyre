@@ -149,6 +149,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   tables by the one shared stride at several row counts, and every pass must
   carry every VAST field it does not declare that it writes, checked by running
   each program on a table whose carried fields all differ per row.
+- Candidate generation derives plans from a versioned schedule grammar whose
+  seventeen productions cover every schedule transform, so one semantic graph
+  produces structurally different kernel organizations for different device
+  facts instead of the baseline, one fused edge, one greedy grouping and four
+  launch widths.
 - `c_frontend::parity_matrix::assert_case_table_covers_fixture_file` reads a
   fixture family's own source at run time, collects the fixture builders it
   declares, and fails when the family's `CASES` table does not name one of
@@ -229,6 +234,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   crate-pages gate derives the roster from the workspace members and fails on a
   missing page, an undeclared edge or a module map naming a path the crate does
   not have.
+- Constraint propagation eliminates a derived candidate before anything is
+  generated for it, and the artifact records a search certificate holding the
+  grammar version, the depth reached, every derived family with its admitted
+  count, every eliminated family with one of thirteen stable reason codes, and
+  whether a bound stopped the search.
 - The `example-capability` gate builds every crate under `examples/` outside
   the workspace and runs what it asserts. Subjects come from the tracked tree,
   so a new example is covered when it is added: a directory with files and no
@@ -2125,6 +2135,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   plus a private copy in the readback and timestamp recorders, one of which
   imported the public alias in the same file it redefined. Both recorders use
   the published alias.
+- Candidate search selects the concurrent-queue submission arrangement inside
+  derivation, so one candidate bound covers both the schedule and the
+  arrangement.
 - Partial RoPE is emitted by the attention layout base, so one builder now owns
   every guarded element move in the attention and paged-cache families.
 - One builder turns a benchmark contract description into a contract. The two
@@ -3217,6 +3230,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   reference carried the cpu-parity gate once per item; the gate now sits on the
   module declaration, where an omission cannot ship a host classifier into a
   device build.
+- Schedule IR 2 rewrites the axis nest for tiling and splitting, replacing the
+  source axis with an outer axis of the quotient extent and an inner axis of
+  the factor, so a tiled phase differs from an untiled one by schedule
+  identity; artifact schema 11 records the grammar derivation and search
+  certificate alongside the selected launch, and a schema 10 artifact is
+  rejected.
 - `recurrent_gated_delta` and `chunked_gated_delta` take `&GatedDeltaSpec`,
   which is now public, and the chunked schedule is exported from the module
   that builds it. Each entry point had restated the same sixteen positional

@@ -141,7 +141,7 @@ fn every_recorded_launch_is_the_selected_schedule_phase_that_covers_the_node() {
     let schedule = &artifact.selected_plan().schedule;
 
     assert_eq!(artifact.geometry().len(), artifact.nodes().len());
-    assert_eq!(artifact.schema_version(), 10);
+    assert_eq!(artifact.schema_version(), 11);
 
     for node in artifact.nodes() {
         let record = record_for(&artifact, node.id);

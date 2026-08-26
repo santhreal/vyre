@@ -25,7 +25,7 @@ pub use records::{
 };
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 10;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 11;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -401,6 +401,8 @@ mod tests {
             selected_plan: SelectedPlan {
                 topology: crate::ExecutionTopology::Sequential,
                 schedule: SelectedSchedule::synthetic(1),
+                derivation: Vec::new(),
+                certificate: crate::SearchCertificate::new(crate::SCHEDULE_GRAMMAR_VERSION),
                 fusion: Vec::new(),
                 barriers: Vec::new(),
                 materializations: Vec::new(),

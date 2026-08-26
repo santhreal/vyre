@@ -644,7 +644,9 @@ fn validate_entries(
                 return Err(failure(
                     CompilerFailureKind::TargetPayloadAssociationMismatch,
                     format!("{path}.{field}"),
-                    format!("target entry states {emitted:?} and the artifact selected {selected:?}"),
+                    format!(
+                        "target entry states {emitted:?} and the artifact selected {selected:?}"
+                    ),
                     "attach the geometry the neutral artifact recorded",
                 ));
             }

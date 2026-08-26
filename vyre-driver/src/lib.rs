@@ -197,8 +197,8 @@ pub(crate) mod speculate;
 pub mod grid_sync;
 /// Backend-neutral launch preparation and program fingerprint wrappers.
 pub(crate) mod launch;
-/// The complete launch one dispatch runs.
-pub mod launch_directive;
+/// The complete launch one dispatch runs, re-exported as `LaunchDirective`.
+mod launch_directive;
 /// Canonical launch-geometry limits shared by the launch preparation, validation,
 /// and natural-gradient tuning tests.
 #[cfg(any(test, feature = "test-fixtures"))]

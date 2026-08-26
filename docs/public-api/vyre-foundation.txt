@@ -4301,6 +4301,7 @@ pub vyre_foundation::schedule::ScheduleBoundKind::PipelineRing
 pub vyre_foundation::schedule::ScheduleBoundKind::PrefetchDistance
 pub vyre_foundation::schedule::ScheduleBoundKind::QueueCapacity
 pub vyre_foundation::schedule::ScheduleInverse::previous_identity: [u8; 32]
+pub vyre_foundation::schedule::ScheduleLegalityError::AxisIndexOverflow(vyre_foundation::schedule::SchedulePhaseId)
 pub vyre_foundation::schedule::ScheduleLegalityError::DependencyCycle
 pub vyre_foundation::schedule::ScheduleLegalityError::DependencyCycle::from: vyre_foundation::schedule::SchedulePhaseId
 pub vyre_foundation::schedule::ScheduleLegalityError::DependencyCycle::to: vyre_foundation::schedule::SchedulePhaseId

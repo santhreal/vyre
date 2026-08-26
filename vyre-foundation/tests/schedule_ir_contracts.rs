@@ -178,6 +178,95 @@ fn every_neutral_transform_records_typed_provenance_and_changes_identity() {
     }
 }
 
+/// WHY: a transform that records a factor and rewrites nothing certifies a
+/// decision the compiler never made. Tiling and splitting must rewrite the axis
+/// nest of their phase, and nest position must state which loop is outer.
+#[test]
+fn tiling_and_splitting_rewrite_the_axis_nest() {
+    for transform in [
+        ScheduleTransform::Split {
+            phase: SchedulePhaseId(1),
+            axis: axis(1, 0),
+            factor: 8,
+        },
+        ScheduleTransform::Tile {
+            phase: SchedulePhaseId(1),
+            tiles: vec![(axis(1, 0), 8)],
+        },
+    ] {
+        let mut selected = schedule();
+        selected
+            .apply(transform.clone())
+            .unwrap_or_else(|error| panic!("{transform:?} must be legal: {error}"));
+        selected
+            .validate()
+            .expect("a split nest must replay exactly");
+        let phase = selected
+            .phases
+            .iter()
+            .find(|phase| phase.id == SchedulePhaseId(1))
+            .expect("the tiled phase must survive its own transform");
+        assert_eq!(
+            phase.axes,
+            vec![
+                ScheduleAxis {
+                    region: 1,
+                    axis: 0,
+                    extent: 8,
+                },
+                ScheduleAxis {
+                    region: 1,
+                    axis: 1,
+                    extent: 8,
+                },
+            ],
+            "{transform:?} must replace one axis with an outer and an inner axis"
+        );
+    }
+}
+
+/// WHY: appending a transform record changes the schedule identity whatever the
+/// checked rewrite did, so an identity assertion cannot see an inert arm. This
+/// states which variants must move phase state and which are recorded for a
+/// later stage to realize, with no catch-all arm, so a new transform variant
+/// fails to compile until that decision is made for it.
+#[test]
+fn only_the_transforms_a_later_stage_realizes_leave_phase_state_alone() {
+    for transform in every_transform() {
+        let must_rewrite = match &transform {
+            ScheduleTransform::PhaseFission { .. }
+            | ScheduleTransform::Fuse { .. }
+            | ScheduleTransform::Tile { .. }
+            | ScheduleTransform::Split { .. }
+            | ScheduleTransform::Reorder { .. }
+            | ScheduleTransform::Vectorize { .. }
+            | ScheduleTransform::Map { .. }
+            | ScheduleTransform::SetWorkgroup { .. }
+            | ScheduleTransform::PlaceMemory { .. }
+            | ScheduleTransform::Prefetch { .. }
+            | ScheduleTransform::Pipeline { .. }
+            | ScheduleTransform::PersistentQueue { .. }
+            | ScheduleTransform::SpatialPartition { .. }
+            | ScheduleTransform::DispatchCut { .. }
+            | ScheduleTransform::AsymmetricJoin { .. } => true,
+            // Recomputation and synchronization are realized where they are
+            // observable: the artifact reads the record to place a barrier phase
+            // or a recomputed value, and the phase geometry does not move.
+            ScheduleTransform::Recompute { .. } | ScheduleTransform::Synchronize { .. } => false,
+        };
+        let mut selected = schedule();
+        let before = selected.phases.clone();
+        selected
+            .apply(transform.clone())
+            .unwrap_or_else(|error| panic!("{transform:?} must be legal: {error}"));
+        assert_eq!(
+            selected.phases != before,
+            must_rewrite,
+            "{transform:?} rewrote phase state against its own contract"
+        );
+    }
+}
+
 #[test]
 fn every_transform_boundary_fails_closed_without_mutating_the_schedule() {
     let invalid = [

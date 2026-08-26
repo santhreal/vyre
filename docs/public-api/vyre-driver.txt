@@ -99,6 +99,7 @@ impl vyre_driver::DispatchConfig
 impl vyre_driver::Distribution
 impl vyre_driver::ErrorCode
 impl vyre_driver::HostShimBuffer
+impl vyre_driver::LaunchDirective
 impl vyre_driver::LaunchGeometry
 impl vyre_driver::LaunchPlan
 impl vyre_driver::Migration
@@ -155,7 +156,6 @@ impl vyre_driver::graph_capture::GraphCaptureEditStability
 impl vyre_driver::graph_capture::ScanGraphCaptureEdit
 impl vyre_driver::graph_capture::ScanGraphCaptureEditClassification
 impl vyre_driver::graph_capture::ScanGraphCaptureEditKind
-impl vyre_driver::launch_directive::LaunchDirective
 impl vyre_driver::launch_fusion::LaunchFusionScratch
 impl vyre_driver::materialize::InstanceCore
 impl vyre_driver::materialize::MaterializerDevice
@@ -215,6 +215,10 @@ pub const fn vyre_driver::ErrorCode::summary(self) -> &'static str
 pub const fn vyre_driver::ExtractionDevice<'a>::new(profile: &'a vyre_driver::DeviceProfile, hot_path: bool) -> Self
 pub const fn vyre_driver::ExtractionDevice<'a>::with_autotune_record(self, record: &'a vyre_driver::autotune_store::AutotuneRecord) -> Self
 pub const fn vyre_driver::ExtractionDevice<'a>::with_trace_jit(self, counters: vyre_driver::trace_jit_policy::TraceJitInputs) -> Self
+pub const fn vyre_driver::LaunchDirective::dynamic_shared_bytes(&self) -> u32
+pub const fn vyre_driver::LaunchDirective::grid(&self) -> [u32; 3]
+pub const fn vyre_driver::LaunchDirective::logical_coverage(&self) -> [u64; 3]
+pub const fn vyre_driver::LaunchDirective::workgroup(&self) -> [u32; 3]
 pub const fn vyre_driver::Migration::new(from: (&'static str, vyre_driver::Semver), to: (&'static str, vyre_driver::Semver), rewrite: fn(&mut vyre_driver::AttrMap) -> core::result::Result<(), vyre_driver::MigrationError>) -> Self
 pub const fn vyre_driver::MutationClass::requires_byte_parity(self) -> bool
 pub const fn vyre_driver::MutationClass::uses_law_proof(self) -> bool
@@ -249,10 +253,6 @@ pub const fn vyre_driver::graph_capture::ScanGraphCaptureEdit::new(kind: vyre_dr
 pub const fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::is_complete(self) -> bool
 pub const fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::as_str(self) -> &'static str
 pub const fn vyre_driver::graph_capture::classify_scan_graph_capture_edit(edit: vyre_driver::graph_capture::ScanGraphCaptureEdit) -> vyre_driver::graph_capture::ScanGraphCaptureEditClassification
-pub const fn vyre_driver::launch_directive::LaunchDirective::dynamic_shared_bytes(&self) -> u32
-pub const fn vyre_driver::launch_directive::LaunchDirective::grid(&self) -> [u32; 3]
-pub const fn vyre_driver::launch_directive::LaunchDirective::logical_coverage(&self) -> [u64; 3]
-pub const fn vyre_driver::launch_directive::LaunchDirective::workgroup(&self) -> [u32; 3]
 pub const fn vyre_driver::launch_fixtures::wide_limits(backend: &'static str, max_threads_per_sm: u32) -> vyre_driver::validation::LaunchGeometryLimits
 pub const fn vyre_driver::numeric::BackendNumericPolicy::backend(self) -> &'static str
 pub const fn vyre_driver::numeric::BackendNumericPolicy::new(backend: &'static str) -> Self
@@ -512,6 +512,10 @@ pub fn vyre_driver::HostShimBuffer::byte_len(&self) -> usize
 pub fn vyre_driver::HostShimBuffer::debug_label(&self) -> core::option::Option<&str>
 pub fn vyre_driver::HostShimBuffer::from_bytes(backend_id: &'static str, bytes: alloc::vec::Vec<u8>) -> alloc::boxed::Box<dyn vyre_driver::DeviceBuffer>
 pub fn vyre_driver::HostShimBuffer::set_label(&mut self, label: impl core::convert::Into<alloc::string::String>)
+pub fn vyre_driver::LaunchDirective::dispatch_config(&self) -> vyre_driver::DispatchConfig
+pub fn vyre_driver::LaunchDirective::from_record(record: &vyre_megakernel::schema::geometry::GeometryRecord, backend: &str) -> core::result::Result<Self, vyre_driver::BackendError>
+pub fn vyre_driver::LaunchDirective::stated(workgroup: [u32; 3], grid: [u32; 3], dynamic_shared_bytes: u32) -> core::result::Result<Self, vyre_driver::BackendError>
+pub fn vyre_driver::LaunchDirective::stated_for(program: &vyre_foundation::ir_inner::model::program::definition::Program, grid: [u32; 3]) -> core::result::Result<Self, vyre_driver::BackendError>
 pub fn vyre_driver::LaunchGeometry::from_recorded(workgroup: [u32; 3], backend: &str) -> core::result::Result<Self, vyre_driver::BackendError>
 pub fn vyre_driver::LaunchPlan::default() -> Self
 pub fn vyre_driver::LaunchPlan::from_bindings(program: &vyre_foundation::ir_inner::model::program::definition::Program, bindings: &[vyre_driver::Binding], config: &vyre_driver::DispatchConfig, limits: vyre_driver::validation::LaunchGeometryLimits) -> core::result::Result<Self, vyre_driver::BackendError>
@@ -835,10 +839,6 @@ pub fn vyre_driver::infer_dispatch_grid(program: &vyre_foundation::ir_inner::mod
 pub fn vyre_driver::infer_dispatch_grid_for_count(element_count: u32, workgroup: [u32; 3]) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::input_identity::domain_separated_exact_input_key(domain_tag: &[u8], domain_id: u64, feature_key: u64, inputs: &[&[u8]]) -> core::result::Result<vyre_driver::input_identity::ExactInputKey, vyre_driver::BackendError>
 pub fn vyre_driver::input_identity::exact_input_key(inputs: &[&[u8]]) -> core::result::Result<vyre_driver::input_identity::ExactInputKey, vyre_driver::BackendError>
-pub fn vyre_driver::launch_directive::LaunchDirective::dispatch_config(&self) -> vyre_driver::DispatchConfig
-pub fn vyre_driver::launch_directive::LaunchDirective::from_record(record: &vyre_megakernel::schema::geometry::GeometryRecord, backend: &str) -> core::result::Result<Self, vyre_driver::BackendError>
-pub fn vyre_driver::launch_directive::LaunchDirective::stated(workgroup: [u32; 3], grid: [u32; 3], dynamic_shared_bytes: u32) -> core::result::Result<Self, vyre_driver::BackendError>
-pub fn vyre_driver::launch_directive::LaunchDirective::stated_for(program: &vyre_foundation::ir_inner::model::program::definition::Program, grid: [u32; 3]) -> core::result::Result<Self, vyre_driver::BackendError>
 pub fn vyre_driver::launch_fusion::LaunchFusionError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver::launch_fusion::LaunchFusionScratch::id_capacity(&self) -> usize
 pub fn vyre_driver::launch_fusion::LaunchFusionScratch::new() -> Self
@@ -1248,7 +1248,6 @@ pub mod vyre_driver::graph_capture
 pub mod vyre_driver::grid_sync
 pub mod vyre_driver::hostile_input_closure
 pub mod vyre_driver::input_identity
-pub mod vyre_driver::launch_directive
 pub mod vyre_driver::launch_fixtures
 pub mod vyre_driver::launch_fusion
 pub mod vyre_driver::lowering
@@ -1387,7 +1386,6 @@ pub struct vyre_driver::fusion::FusionPass
 pub struct vyre_driver::graph_capture::GraphCaptureBindingPlan
 pub struct vyre_driver::graph_capture::ScanGraphCaptureEdit
 pub struct vyre_driver::graph_capture::ScanGraphCaptureEditClassification
-pub struct vyre_driver::launch_directive::LaunchDirective
 pub struct vyre_driver::launch_fusion::LaunchFusionGroup
 pub struct vyre_driver::launch_fusion::LaunchFusionPlan
 pub struct vyre_driver::launch_fusion::LaunchFusionScratch
@@ -1669,7 +1667,7 @@ pub vyre_driver::DispatchConfig::dispatch_grid: core::option::Option<[u32; 3]>
 pub vyre_driver::DispatchConfig::fixpoint_iterations: core::option::Option<u32>
 pub vyre_driver::DispatchConfig::grid_override: core::option::Option<[u32; 3]>
 pub vyre_driver::DispatchConfig::label: core::option::Option<alloc::string::String>
-pub vyre_driver::DispatchConfig::launch: core::option::Option<vyre_driver::launch_directive::LaunchDirective>
+pub vyre_driver::DispatchConfig::launch: core::option::Option<vyre_driver::LaunchDirective>
 pub vyre_driver::DispatchConfig::max_output_bytes: core::option::Option<usize>
 pub vyre_driver::DispatchConfig::persistent_thread: core::option::Option<vyre_driver::persistent::PersistentThreadMode>
 pub vyre_driver::DispatchConfig::profile: core::option::Option<alloc::string::String>
@@ -1852,7 +1850,7 @@ pub vyre_driver::RegexAcceleratorStreamMode::Block
 pub vyre_driver::RegexAcceleratorStreamMode::StatefulStreaming
 pub vyre_driver::RegexAcceleratorStreamMode::Streaming
 pub vyre_driver::RegexAcceleratorStreamMode::Unavailable
-pub vyre_driver::ResidentDispatchStep::launch: core::option::Option<vyre_driver::launch_directive::LaunchDirective>
+pub vyre_driver::ResidentDispatchStep::launch: core::option::Option<vyre_driver::LaunchDirective>
 pub vyre_driver::ResidentDispatchStep::program: &'a vyre_foundation::ir_inner::model::program::definition::Program
 pub vyre_driver::ResidentDispatchStep::resources: &'a [vyre_driver::Resource]
 pub vyre_driver::ResidentGraphReuseTelemetry::avoided_upload_bytes: u64

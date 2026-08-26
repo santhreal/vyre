@@ -4,9 +4,10 @@
 validated ProgramGraph
   -> validated schedule-free LogicalProgramGraph
   -> planning facts and dependency edges
-  -> versioned neutral schedule transforms, bounded by SearchBudget
-  -> cost evaluation per validated candidate
-  -> validated SelectedPlan with exact phase schedule
+  -> schedule grammar derivations, bounded by SearchBudget
+  -> constraint propagation over every derived candidate
+  -> cost evaluation per admitted candidate
+  -> validated SelectedPlan with exact phase schedule and search certificate
   -> immutable Artifact
 ```
 
@@ -42,7 +43,7 @@ registration.
 
 ## Selected schedule boundary
 
-`SCHEDULE_IR_VERSION = 1` authenticates the backend-neutral schedule. The
+`SCHEDULE_IR_VERSION = 2` authenticates the backend-neutral schedule. The
 foundation schema represents phase fission, fusion, tiling, splitting,
 reordering, vectorization, lane through device-partition mappings, memory
 placement, prefetch, bounded pipelines and queues, recomputation, dispatch cuts,
@@ -50,6 +51,12 @@ synchronization and asymmetric joins. Each transform is applied transactionally
 after typed preconditions pass. The record includes source phases and logical
 regions, the complete prior-schedule identity as inverse provenance, and checked
 resource increments.
+
+Tiling and splitting rewrite the axis nest of their phase. A factor that divides
+an axis extent replaces that axis with an outer axis of the quotient extent and
+inserts an inner axis of the factor directly after it, taking the next free axis
+index in the same logical region. Schema 2 records that nest, so a tiled phase is
+distinguishable from an untiled one by schedule identity.
 
 Artifact validation replays every transform from immutable source phases.
 Changed preconditions, provenance, phase geometry, ordering or resource bounds
@@ -60,19 +67,90 @@ constructs a `PhysicalKernel`.
 physical invocation, workgroup, local, and barrier IR before descriptor
 construction. `lower_physical` rejects any unresolved logical marker.
 
-The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 10`. Schema 10 records
+The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 11`. Schema 11 records
 the selected launch of every entry point: the entry dependency order, logical
 coverage, grid, workgroup, vector width, pipeline roles, ring slots, barrier
 phases, dynamic shared bytes, launch resource intent, and persistence, together
-with the workspace plan a runtime allocates. A target payload states the same
-geometry or admission rejects it, and emission carries the recorded launch
-rather than reporting one.
+with the workspace plan a runtime allocates, the grammar derivation that produced
+the plan, and the certificate of the search that selected it. A target payload
+states the same geometry or admission rejects it, and emission carries the
+recorded launch rather than reporting one.
 
-## Legality before cost
+## Candidate generation is a grammar
 
-A fusion candidate is checked for legality before anything measures or
-scores it. `analyze_fusion_pair` returns `FusionDecision::Legal` or
-`Rejected(reason)`, and every rejection reason carries a stable code:
+`SCHEDULE_GRAMMAR_VERSION = 1` authenticates candidate generation. Search does
+not hold a catalog of kernel shapes. It derives candidates from the baseline by
+applying productions of a versioned grammar, one production per schedule
+transform. A production reads phase axes and planning facts only. Device
+capabilities are absent from the grammar on purpose: a production proposes every
+structure the schedule IR can express, and constraint propagation eliminates the
+ones the authenticated target facts do not grant, so the certificate reports a
+family as considered and eliminated instead of reporting a smaller search.
+
+| Code | Production | Derives |
+|---|---|---|
+| `MKP001_FUSION` | Fusion | one generated kernel out of two phases |
+| `MKP002_FISSION` | Fission | a phase boundary inside one generated kernel |
+| `MKP003_LAUNCH_WIDTH` | LaunchWidth | a workgroup shape for one phase |
+| `MKP004_SPATIAL_PARTITION` | SpatialPartition | a compute-unit partition of one phase |
+| `MKP005_PERSISTENT_QUEUE` | PersistentQueue | a bounded resident queue for one phase |
+| `MKP006_PIPELINE` | Pipeline | producer/consumer overlap with ring slots and role groups |
+| `MKP007_DISPATCH_CUT` | DispatchCut | a dispatch boundary between two phases |
+| `MKP008_ASYMMETRIC_JOIN` | AsymmetricJoin | a join of independent arms into one consumer |
+| `MKP009_SYNCHRONIZATION` | Synchronization | a barrier phase at a named scope |
+| `MKP010_MEMORY_PLACEMENT` | MemoryPlacement | a value placed in workgroup or invocation storage |
+| `MKP011_PREFETCH` | Prefetch | a bounded prefetch distance for one value |
+| `MKP012_RECOMPUTATION` | Recomputation | a value recomputed instead of materialized |
+| `MKP013_TILING` | Tiling | a tiled axis nest for one phase |
+| `MKP014_AXIS_SPLIT` | AxisSplit | one axis split by an exact factor |
+| `MKP015_VECTORIZATION` | Vectorization | a vector width for one axis |
+| `MKP016_AXIS_MAPPING` | AxisMapping | an axis mapped to a hardware level |
+| `MKP017_AXIS_REORDER` | AxisReorder | a permutation of the axis nest |
+
+`ScheduleProduction::deriving` maps every `ScheduleTransform` variant onto
+exactly one production through an exhaustive match, so a transform added to the
+foundation schema cannot compile until a production derives it.
+
+Production order is expansion priority: kernel organization first, then
+concurrency and ordering, then storage, then intra-phase loop shape. A bounded
+search therefore spends its budget on the families that change program structure
+before the families that change one number inside a phase.
+
+The same semantic graph produces structurally different kernel graphs on
+different devices, because ranking and elimination read the device facts. A
+device that reports no cooperative launch keeps no resident candidate; a device
+that reports eight compute units and four queues admits partitioned and
+concurrent organizations of the same graph. A device that pays for every launch
+selects fewer, larger generated kernels than one that pays for resident state.
+
+## Constraint propagation before code generation
+
+Every derived candidate is eliminated or admitted before anything is generated
+for it. Elimination is a proof, not a price: an illegal candidate is rejected,
+never scored. Each eliminated family records a stable reason.
+
+| Code | Reason |
+|---|---|
+| `MKC001_NUMERICAL` | the transform changes what a width-observing phase computes |
+| `MKC002_DEPENDENCE` | the grouping would contract a dependency cycle |
+| `MKC003_ALIAS_OR_EFFECT` | an alias or effect between concurrent arms is unsatisfiable |
+| `MKC004_BARRIER_VISIBILITY` | a barrier phase or proxy is not visible to every participant |
+| `MKC005_PIPELINE_CAPACITY` | ring slots exceed the storage the device grants |
+| `MKC006_OCCUPANCY` | the launch exceeds the invocations per workgroup the device grants |
+| `MKC007_SCRATCH` | a phase declares more shared scratch than the device grants |
+| `MKC008_WORKSPACE` | cross-group workspace is not addressable at its alignment |
+| `MKC009_PROGRESS` | forward progress needs a capability the device does not report |
+| `MKC010_OBJECTIVE_DOMINATED` | a proved bound is no better than the best proved candidate |
+| `MKC011_TARGET_FACTS` | an operand needs a capability no authenticated fact reports |
+| `MKC012_REPRESENTATION` | the artifact cannot represent the derived organization |
+| `MKC013_SCHEDULE_LEGALITY` | a typed schedule precondition failed |
+
+`PruneReason::ALL` is the variant space, and the certificate records one row per
+eliminated family with its count, so a plan that looks unfused says which
+constraint removed the alternative.
+
+Fusion and topology legality keep their own codes, and the constraint classes map
+onto them rather than restating them:
 
 | Code | Reason |
 |---|---|
@@ -109,20 +187,26 @@ workgroup tile compile to a single dispatch.
 
 ## The unfused baseline is always a candidate
 
-`explore` seeds the candidate set with `CandidatePlan::baseline`, one group
-per node. Fusion has to earn its place against that baseline on cost, and
-an exhausted budget degrades to the baseline instead of to nothing.
+`explore` seeds the derivation with `CandidatePlan::baseline_for`, one group per
+node at its declared launch width and no specialization. Every production has to
+earn its place against that baseline on cost, and a cost tie is broken toward the
+shorter derivation, so an accepted transform is one that paid for itself. An
+exhausted budget degrades to the best proved candidate instead of to nothing.
 
 ## The budget bounds the search, not the answer
 
 `SearchBudget` carries `max_candidates`, `max_cpu_work`,
 `max_target_compilations`, `max_measurements` and `max_elapsed_ns`. Every
-edge considered spends CPU work, and the loop stops when the budget is
-spent. Candidates past `max_candidates` are not pushed. There is no
+derivation considered spends CPU work, and expansion stops when a bound is
+reached. Candidates past `max_candidates` are not pushed. There is no
 implicit budget and no unbounded search.
 
 The compiler reports what it spent in `SearchWork`: candidates explored,
-CPU work, target compilations, measurements and elapsed nanoseconds.
+CPU work, target compilations, measurements and elapsed nanoseconds. The
+certificate additionally records the grammar version, the depth the expansion
+reached, one row per derived family with its admitted count, one row per
+eliminated family with its reason, and whether a bound stopped the search. That
+record is what reproduces a compile without re-running it.
 
 ## The cost model is open
 
@@ -157,10 +241,12 @@ graph, the budget and the device facts, and nothing else.
 
 ## Candidate order is deterministic
 
-Candidates are sorted by their group assignment and deduplicated by it, so
-two runs over the same graph produce the same candidate set in the same
-order. Selection over a deterministic set is what makes an artifact digest
-identify a compile rather than a run.
+Expansion is a breadth-first worklist over a canonically ordered production set,
+and a candidate already derived is dropped by a structural key rather than
+re-expanded. Two runs over the same graph, facts, device and budget therefore
+derive the same candidates in the same order and record the same certificate.
+Selection over a deterministic set is what makes an artifact digest identify a
+compile rather than a run.
 
 ## Unmeasured is recorded as unmeasured
 

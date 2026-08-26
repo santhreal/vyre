@@ -507,7 +507,25 @@ impl SelectedSchedule {
                     .ok_or(ScheduleLegalityError::MissingPhase(*phase))?;
                 selected.resources = selected.resources.checked_join(resource_bounds)?;
             }
-            T::Tile { .. } | T::Split { .. } | T::Recompute { .. } | T::Synchronize { .. } => {}
+            T::Tile { phase, tiles } => {
+                let selected = self
+                    .phase_mut(*phase)
+                    .ok_or(ScheduleLegalityError::MissingPhase(*phase))?;
+                for (axis, factor) in tiles {
+                    Self::split_phase_axis(selected, *axis, *factor)?;
+                }
+            }
+            T::Split {
+                phase,
+                axis,
+                factor,
+            } => {
+                let selected = self
+                    .phase_mut(*phase)
+                    .ok_or(ScheduleLegalityError::MissingPhase(*phase))?;
+                Self::split_phase_axis(selected, *axis, *factor)?;
+            }
+            T::Recompute { .. } | T::Synchronize { .. } => {}
         }
         Ok(())
     }
@@ -519,6 +537,53 @@ impl SelectedSchedule {
         if extent % u64::from(factor) != 0 {
             return Err(ScheduleLegalityError::NonDivisible { extent, factor });
         }
+        Ok(())
+    }
+
+    /// Replace one axis with an outer axis of the quotient extent, followed by
+    /// an inner axis of the factor.
+    ///
+    /// `require_factor` proved the factor divides the extent before the rewrite
+    /// runs. The inner axis takes the next free index in the same logical
+    /// region, so two tiles of one region never collide, and nest position
+    /// records which loop is outer.
+    fn split_phase_axis(
+        phase: &mut SchedulePhase,
+        axis: ScheduleAxis,
+        factor: u32,
+    ) -> Result<(), ScheduleLegalityError> {
+        let position = phase.axes.iter().position(|held| *held == axis).ok_or(
+            ScheduleLegalityError::MissingAxis {
+                phase: phase.id,
+                axis,
+            },
+        )?;
+        let outer = axis.extent / u64::from(factor);
+        if outer == 0 {
+            return Err(ScheduleLegalityError::Zero("tiled axis extent"));
+        }
+        let inner = phase
+            .axes
+            .iter()
+            .filter(|held| held.region == axis.region)
+            .map(|held| held.axis)
+            .max()
+            .unwrap_or(axis.axis)
+            .checked_add(1)
+            .ok_or(ScheduleLegalityError::AxisIndexOverflow(phase.id))?;
+        phase.axes[position] = ScheduleAxis {
+            region: axis.region,
+            axis: axis.axis,
+            extent: outer,
+        };
+        phase.axes.insert(
+            position + 1,
+            ScheduleAxis {
+                region: axis.region,
+                axis: inner,
+                extent: u64::from(factor),
+            },
+        );
         Ok(())
     }
 

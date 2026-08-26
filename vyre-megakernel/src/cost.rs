@@ -321,7 +321,7 @@ pub(crate) fn evaluate(
 /// expensive and lose on one where they are not.
 ///
 /// A device that reports zero measured nothing, so the recorded floor stands in.
-fn launch_cost_ns(device: DeviceFacts) -> u64 {
+pub(crate) fn launch_cost_ns(device: DeviceFacts) -> u64 {
     match device.per_launch_overhead_ns() {
         0 => LAUNCH_COST_FLOOR_NS,
         measured => measured,

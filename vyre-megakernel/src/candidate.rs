@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeMap;
+use std::hash::{Hash, Hasher};
 use vyre_foundation::{
     logical::LogicalProgramGraph,
     schedule::{
@@ -8,6 +10,7 @@ use vyre_foundation::{
 };
 
 use crate::facts::{DataflowEdge, PlanningFacts};
+use crate::grammar::{DerivationStep, ScheduleProduction};
 
 /// Spatial and concurrency execution topology of a candidate plan.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -47,6 +50,9 @@ pub enum ResidentPartitionMode {
     BoundedWorkQueue,
 }
 
+/// Cheap structural identity of one candidate plan.
+pub(crate) type CandidateKey = u64;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct CandidatePlan {
     pub(crate) node_groups: Vec<u32>,
@@ -60,6 +66,8 @@ pub(crate) struct CandidatePlan {
     pub(crate) schedule: SelectedSchedule,
     /// Fail-closed transform diagnostic retained until candidate rejection.
     pub(crate) schedule_error: Option<ScheduleLegalityError>,
+    /// Grammar productions applied to the baseline, in application order.
+    pub(crate) derivation: Vec<DerivationStep>,
 }
 
 impl CandidatePlan {
@@ -80,6 +88,7 @@ impl CandidatePlan {
                 .map(|index| u32::try_from(index).unwrap_or(u32::MAX))
                 .collect(),
             fused_edges: Vec::new(),
+            derivation: Vec::new(),
             workgroup_width: None,
             topology: ExecutionTopology::Sequential,
             schedule,
@@ -126,6 +135,7 @@ impl CandidatePlan {
         Self {
             node_groups,
             fused_edges,
+            derivation: Vec::new(),
             workgroup_width: None,
             topology: ExecutionTopology::Sequential,
             schedule,
@@ -273,19 +283,20 @@ impl CandidatePlan {
                 phase
                     .source_regions
                     .first()
-                    .map(|region| (phase.id, *region))
+                    .map(|region| (phase.id, *region, phase.workgroup))
             })
             .collect::<Vec<_>>();
-        for (phase, region) in phases {
+        for (phase, region, current) in phases {
             let group = self
                 .node_groups
                 .get(region as usize)
                 .copied()
                 .ok_or(ScheduleLegalityError::MissingRegion(region))?;
-            schedule.apply(ScheduleTransform::SetWorkgroup {
-                phase,
-                shape: self.group_workgroup(group, facts),
-            })?;
+            let shape = self.group_workgroup(group, facts);
+            if shape == current {
+                continue;
+            }
+            schedule.apply(ScheduleTransform::SetWorkgroup { phase, shape })?;
         }
         schedule.validate()?;
         Ok(schedule)
@@ -295,6 +306,115 @@ impl CandidatePlan {
     pub(crate) fn schedule_error(&self) -> Option<&ScheduleLegalityError> {
         self.schedule_error.as_ref()
     }
+
+    /// Apply one grammar step to this candidate.
+    ///
+    /// The step's transforms are applied to the schedule, and everything the
+    /// candidate states about grouping is then re-derived from the schedule, so
+    /// the schedule stays the single authority over what the plan is.
+    pub(crate) fn derive(
+        &self,
+        step: &DerivationStep,
+        facts: &PlanningFacts,
+    ) -> Result<Self, ScheduleLegalityError> {
+        if let Some(error) = &self.schedule_error {
+            return Err(error.clone());
+        }
+        let mut candidate = self.clone();
+        for transform in &step.transforms {
+            candidate.schedule.apply(transform.clone())?;
+        }
+        if step.production == ScheduleProduction::LaunchWidth {
+            if let Some(width) = step
+                .transforms
+                .iter()
+                .find_map(|transform| match transform {
+                    ScheduleTransform::SetWorkgroup { shape, .. } => Some(shape[0]),
+                    _ => None,
+                })
+            {
+                candidate.workgroup_width = Some(width);
+            }
+        }
+        candidate.derivation.push(step.clone());
+        candidate.topology = resident_topology(&candidate.schedule).unwrap_or(candidate.topology);
+        candidate.regroup(facts)?;
+        Ok(candidate)
+    }
+
+    /// Re-derive fusion grouping from the phases of the selected schedule.
+    fn regroup(&mut self, facts: &PlanningFacts) -> Result<(), ScheduleLegalityError> {
+        let mut phases = self.schedule.phases.iter().collect::<Vec<_>>();
+        phases.sort_by_key(|phase| phase.id);
+        let mut groups = vec![None; self.node_groups.len()];
+        for (group, phase) in phases.iter().enumerate() {
+            for region in &phase.source_regions {
+                let slot = groups
+                    .get_mut(*region as usize)
+                    .ok_or(ScheduleLegalityError::MissingRegion(*region))?;
+                *slot = Some(u32::try_from(group).unwrap_or(u32::MAX));
+            }
+        }
+        let mut node_groups = Vec::with_capacity(groups.len());
+        for (node, group) in groups.into_iter().enumerate() {
+            node_groups.push(group.ok_or(ScheduleLegalityError::MissingRegion(
+                u32::try_from(node).unwrap_or(u32::MAX),
+            ))?);
+        }
+        self.fused_edges = facts
+            .dataflow
+            .iter()
+            .copied()
+            .filter(|edge| {
+                node_groups.get(edge.from.0 as usize) == node_groups.get(edge.to.0 as usize)
+            })
+            .collect();
+        self.node_groups = node_groups;
+        Ok(())
+    }
+
+    /// Structural key that recognizes a candidate already derived.
+    ///
+    /// Content identity would serialize and hash the whole schedule for every
+    /// derivation, which is the dominant cost of a bounded search. A structural
+    /// hash is cheap, and a collision only drops one candidate from the set.
+    #[must_use]
+    pub(crate) fn canonical_key(&self) -> CandidateKey {
+        let mut hasher = DefaultHasher::new();
+        self.schedule.phases.hash(&mut hasher);
+        self.schedule.transforms.hash(&mut hasher);
+        self.node_groups.hash(&mut hasher);
+        self.workgroup_width.hash(&mut hasher);
+        self.topology.hash(&mut hasher);
+        hasher.finish()
+    }
+}
+
+/// Resident topology the schedule itself records, if it records one.
+///
+/// Spatial partitioning and a bounded resident queue are schedule transforms, so
+/// the topology a candidate reports is read off the schedule instead of being
+/// carried beside it. Concurrent queues are a submission arrangement the
+/// schedule does not express, so they are not derived here.
+fn resident_topology(schedule: &SelectedSchedule) -> Option<ExecutionTopology> {
+    let mut partitions = 0_u32;
+    let mut mode = None;
+    for record in &schedule.transforms {
+        match record.transform {
+            ScheduleTransform::SpatialPartition {
+                partitions: count, ..
+            } => {
+                partitions = partitions.max(count);
+                mode = mode.or(Some(ResidentPartitionMode::FixedSpatialMask));
+            }
+            ScheduleTransform::PersistentQueue { capacity, .. } => {
+                partitions = partitions.max(capacity);
+                mode = Some(ResidentPartitionMode::BoundedWorkQueue);
+            }
+            _ => {}
+        }
+    }
+    mode.map(|mode| ExecutionTopology::ResidentPartition { partitions, mode })
 }
 
 fn schedule_for_groups(

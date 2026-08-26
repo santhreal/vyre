@@ -6,13 +6,13 @@ use vyre_foundation::schedule::{
 };
 
 use crate::{
-    build_barriers, build_materializations, domain_digest, facts::PlanningFacts, failure,
-    group_stages, select::Selection, ArtifactNodeId, ArtifactValueId, BarrierPhaseRecord,
-    CompileError, CompilerFailureKind, DependencyEdge, DependencyEndpoint, DeviceFacts,
-    EntryAbiRecord, EntryPersistence, ExecutionMode, ExternalFacts, FusionGroupId, FusionRecord,
-    FusionRejection, GeometryRecord, LaunchResourceIntent, PlanMeasurement, ResourceLifetime,
-    ResourceRecord, SearchBudget, SearchWork, SelectedPlan, WorkspacePlan, WorkspaceRegion,
-    WORKSPACE_REGION_ALIGNMENT,
+    build_barriers, build_materializations, certificate::SearchCertificate, domain_digest,
+    facts::PlanningFacts, failure, group_stages, select::Selection, ArtifactNodeId,
+    ArtifactValueId, BarrierPhaseRecord, CompileError, CompilerFailureKind, DependencyEdge,
+    DependencyEndpoint, DeviceFacts, EntryAbiRecord, EntryPersistence, ExecutionMode,
+    ExternalFacts, FusionGroupId, FusionRecord, FusionRejection, GeometryRecord,
+    LaunchResourceIntent, PlanMeasurement, ResourceLifetime, ResourceRecord, SearchBudget,
+    SearchWork, SelectedPlan, WorkspacePlan, WorkspaceRegion, WORKSPACE_REGION_ALIGNMENT,
 };
 
 const LEGALITY_DIGEST_DOMAIN: &[u8] = b"VYRE_FUSION_LEGALITY_V1\0";
@@ -31,6 +31,7 @@ pub(crate) struct PlanInputs<'a, 'graph> {
     pub(crate) facts: &'a PlanningFacts,
     pub(crate) selection: &'a Selection,
     pub(crate) pruned_fusions: &'a [FusionRejection],
+    pub(crate) certificate: &'a SearchCertificate,
     pub(crate) external: &'a ExternalFacts,
     pub(crate) device: DeviceFacts,
     pub(crate) budget: SearchBudget,
@@ -45,6 +46,7 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
         facts,
         selection,
         pruned_fusions,
+        certificate,
         external,
         device,
         budget,
@@ -146,6 +148,8 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
     let selected_plan = SelectedPlan {
         topology: candidate.topology(),
         schedule,
+        derivation: candidate.derivation.clone(),
+        certificate: certificate.clone(),
         fusion,
         barriers,
         materializations,

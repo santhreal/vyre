@@ -3,6 +3,7 @@
 
 use std::time::Instant;
 
+use crate::certificate::SearchCertificate;
 use crate::envelope::TargetPayload;
 use crate::error::{failure, overflow, serialization_failure, CompileError, CompilerFailureKind};
 use crate::identity::domain_digest;
@@ -27,6 +28,7 @@ struct CompileContext<'a> {
     facts: facts::PlanningFacts,
     ranked: Vec<select::Selection>,
     pruned_fusions: Vec<FusionRejection>,
+    certificate: SearchCertificate,
     work: SearchWork,
 }
 
@@ -107,6 +109,7 @@ fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext<'_>, Comp
         facts: planning_facts,
         ranked,
         pruned_fusions,
+        certificate: search.certificate,
         work: search.work,
     })
 }
@@ -130,6 +133,7 @@ fn assemble(
         facts: &context.facts,
         selection,
         pruned_fusions: &context.pruned_fusions,
+        certificate: &context.certificate,
         external: &request.facts,
         device: request.device,
         budget: request.search_budget,

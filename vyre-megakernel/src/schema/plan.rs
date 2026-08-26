@@ -4,8 +4,10 @@
 use serde::{Deserialize, Serialize};
 use vyre_foundation::schedule::SelectedSchedule;
 
+use crate::certificate::SearchCertificate;
 use crate::cost;
 use crate::error::{failure, CompileError, CompilerFailureKind};
+use crate::grammar::{DerivationStep, ScheduleProduction, SCHEDULE_GRAMMAR_VERSION};
 use crate::request::{SearchBudget, SearchWork};
 
 use super::records::{BarrierRecord, FusionRecord, FusionRejection, MaterializationRecord};
@@ -58,6 +60,10 @@ pub struct SelectedPlan {
     pub topology: crate::candidate::ExecutionTopology,
     /// Versioned backend-neutral phase and transform schedule selected by search.
     pub schedule: SelectedSchedule,
+    /// Grammar productions the search applied to the unfused baseline, in order.
+    pub derivation: Vec<DerivationStep>,
+    /// Reproducible record of the bounded search that selected this plan.
+    pub certificate: SearchCertificate,
     /// Selected fusion groups.
     pub fusion: Vec<FusionRecord>,
     /// Required dependency-completion boundaries.
@@ -104,6 +110,73 @@ impl SelectedPlan {
                 "re-run bounded schedule search and persist only a validated neutral schedule",
             )
         })?;
+        if self.certificate.grammar_version != SCHEDULE_GRAMMAR_VERSION {
+            return Err(invalid(
+                "certificate.grammar_version",
+                format!(
+                    "plan was derived by grammar {} but this compiler derives grammar {}",
+                    self.certificate.grammar_version, SCHEDULE_GRAMMAR_VERSION
+                ),
+                "re-compile the graph so the plan carries a derivation of the current grammar",
+            ));
+        }
+        for step in &self.derivation {
+            for transform in &step.transforms {
+                if ScheduleProduction::deriving(transform) != step.production {
+                    return Err(invalid(
+                        "derivation.production",
+                        format!(
+                            "step {} records a transform production {} derives",
+                            step.production.code(),
+                            ScheduleProduction::deriving(transform).code()
+                        ),
+                        "record each step under the production that derives its transform",
+                    ));
+                }
+                if !self
+                    .schedule
+                    .transforms
+                    .iter()
+                    .any(|record| record.transform == *transform)
+                {
+                    return Err(invalid(
+                        "derivation.transforms",
+                        format!(
+                            "step {} names a transform the selected schedule never applied",
+                            step.production.code()
+                        ),
+                        "record only the derivation the persisted schedule replays",
+                    ));
+                }
+            }
+        }
+        for family in &self.certificate.derived {
+            if family.derived == 0 || family.admitted > family.derived {
+                return Err(invalid(
+                    "certificate.derived",
+                    format!(
+                        "family {} records {} admitted of {} derived candidates",
+                        family.production.code(),
+                        family.admitted,
+                        family.derived
+                    ),
+                    "record one derived family per production that proposed a candidate",
+                ));
+            }
+        }
+        for family in &self.certificate.pruned {
+            if family.count == 0 {
+                return Err(invalid(
+                    "certificate.pruned",
+                    format!(
+                        "family {} records reason {} without an eliminated candidate",
+                        family.production.code(),
+                        family.reason.code()
+                    ),
+                    "record an eliminated family only when a candidate was eliminated",
+                ));
+            }
+        }
         match self.topology {
             crate::candidate::ExecutionTopology::Sequential => {}
             crate::candidate::ExecutionTopology::ConcurrentQueue { queues } if queues > 0 => {}

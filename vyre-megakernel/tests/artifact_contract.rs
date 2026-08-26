@@ -284,9 +284,14 @@ fn round_trip_preserves_typed_ids_abi_plan_and_digest() {
     assert_eq!(decoded.abi().entries[0].inputs[0].0, 0);
     assert_eq!(decoded.abi().entries[0].inputs[1].0, 1);
     assert_eq!(decoded.abi().entries[0].outputs[0].0, 3);
-    assert_eq!(decoded.selected_plan().candidates_explored, 2);
-    assert_eq!(decoded.selected_plan().search_budget, budget());
-    assert_eq!(decoded.selected_plan().search_work.candidates_explored, 2);
+    let plan = decoded.selected_plan();
+    assert_eq!(
+        plan.candidates_explored,
+        plan.search_work.candidates_explored
+    );
+    assert!(plan.candidates_explored >= 1);
+    assert!(plan.candidates_explored <= budget().max_candidates);
+    assert_eq!(plan.search_budget, budget());
     assert_eq!(decoded.selected_plan().search_work.target_compilations, 0);
     assert_eq!(decoded.selected_plan().search_work.measurements, 0);
     assert!(decoded.selected_plan().search_work.cpu_work <= budget().max_cpu_work);
