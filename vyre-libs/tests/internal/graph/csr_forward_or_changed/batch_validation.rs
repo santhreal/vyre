@@ -1,5 +1,5 @@
-use super::super::*;
 use super::super::layout::CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE;
+use super::super::*;
 use crate::graph::program_graph::ProgramGraphShape;
 
 fn assert_batch_buffers(

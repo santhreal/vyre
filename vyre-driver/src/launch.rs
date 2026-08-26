@@ -235,6 +235,7 @@ pub fn program_vsa_fingerprint_words(program: &Program) -> [u32; 8] {
 mod tests {
     use super::*;
     use crate::binding::BindingRole;
+    use crate::launch_fixtures::wide_limits;
     use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
     #[test]
@@ -273,13 +274,7 @@ mod tests {
             input_index: Some(0),
             output_index: None,
         }];
-        let limits = LaunchGeometryLimits {
-            backend: "test",
-            max_threads_per_block: 1024,
-            max_block_dim: [1024, 1024, 64],
-            max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
-            max_threads_per_sm: 1536,
-        };
+        let limits = wide_limits("test", 1536);
         let mut plan = LaunchPlan {
             param_words: Vec::with_capacity(8),
             ..LaunchPlan::new()

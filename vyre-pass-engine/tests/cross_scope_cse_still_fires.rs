@@ -1,13 +1,9 @@
 //! Cross-scope CSE hoists a repeated top-level expression after semantic
 //! execution of the two CSE analysis graphs.
 
-use std::collections::BTreeMap;
-
 use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_megakernel::{
-    CompileObjective, DeviceFacts, Digest, ExternalFacts, SearchBudget, SemanticExecutionPolicy,
-};
+use vyre_megakernel::{Digest, SearchBudget, SemanticExecutionPolicy};
 use vyre_pass_engine::optimizer::cse_via_encoded::{apply_cross_scope_cse, gpu_cse_canonicals};
 
 /// `src[0] + src[1]`, the repeated operand the hoist is supposed to find.
@@ -39,10 +35,8 @@ fn entry_scope(program: &Program) -> Vec<Node> {
 }
 
 fn policy() -> SemanticExecutionPolicy {
-    SemanticExecutionPolicy::new(
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        DeviceFacts::unknown(),
-        CompileObjective::MinimizeLatency,
+    vyre_test_support::semantic_requests::unknown_policy(
+        Digest([0; 32]),
         SearchBudget::new(8, 64, 0, 0, 1_000),
         1_000_000,
     )

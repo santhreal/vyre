@@ -23,6 +23,14 @@
 use vyre_libs::pattern::classic_ac::{
     classic_ac_compile, presence_by_region_words, ClassicAcAutomaton,
 };
+use vyre_libs::pattern::pack_haystack_u32;
+use vyre_primitives::wire::pack_u32_slice;
+use vyre_reference::composition_witness::{
+    classic_ac_candidate_end_byte_mask_words_witness,
+    classic_ac_candidate_suffix2_mask_words_witness,
+    classic_ac_candidate_suffix3_bloom_words_witness,
+};
+use vyre_reference::value::Value;
 
 /// A labeled literal-set fixture with its haystack and region starts.
 pub type PresenceCase = (String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>);
@@ -552,4 +560,107 @@ pub fn edge_cases() -> Vec<PresenceCase> {
     }
 
     cases
+}
+
+/// Every packed buffer a suffix3 region program binds, for one case.
+///
+/// The region-presence program and the fused presence-and-positions program read
+/// the same witness set: the compiled DFA tables, the three candidate masks, the
+/// packed haystack, and a presence bitmap zeroed to this case's word count. A
+/// suite that evaluates several programs over one case builds the set once and
+/// clones the values it binds.
+pub struct PackedCase {
+    /// The automaton the programs are built from.
+    pub ac: ClassicAcAutomaton,
+    /// Literal count this case compiled.
+    pub pattern_count: u32,
+    /// Region count this case declares.
+    pub region_count: u32,
+    /// Haystack bytes padded to a whole word.
+    pub haystack: Vec<u8>,
+    /// Packed DFA transition table.
+    pub transitions: Vec<u8>,
+    /// Packed per-state output offsets.
+    pub output_offsets: Vec<u8>,
+    /// Packed output records.
+    pub output_records: Vec<u8>,
+    /// Packed per-literal lengths.
+    pub lengths: Vec<u8>,
+    /// Packed haystack length in bytes.
+    pub hay_len: Vec<u8>,
+    /// Packed candidate end-byte mask.
+    pub end_mask: Vec<u8>,
+    /// Packed candidate two-byte suffix mask.
+    pub suffix2: Vec<u8>,
+    /// Packed candidate three-byte suffix bloom.
+    pub suffix3: Vec<u8>,
+    /// Packed ascending region starts.
+    pub region_starts: Vec<u8>,
+    /// One packed zero word, for a scalar output slot.
+    pub zero: Vec<u8>,
+    /// Presence bitmap zeroed to this case's word count.
+    pub presence_zeroed: Vec<u8>,
+}
+
+impl PackedCase {
+    /// Compile `literals` and pack every buffer the region programs read.
+    #[must_use]
+    pub fn new(literals: &[Vec<u8>], haystack: &[u8], region_starts: &[u32]) -> Self {
+        let pattern_refs: Vec<&[u8]> = literals.iter().map(Vec::as_slice).collect();
+        let ac = classic_ac_compile(&pattern_refs);
+        let pattern_count = literals.len() as u32;
+        let region_count = region_starts.len() as u32;
+        let end_mask = classic_ac_candidate_end_byte_mask_words_witness(
+            &ac.dfa.transitions,
+            &ac.dfa.output_offsets,
+            ac.dfa.state_count,
+        );
+        let suffix2 = classic_ac_candidate_suffix2_mask_words_witness(
+            &ac.dfa.transitions,
+            &ac.dfa.output_offsets,
+            ac.dfa.state_count,
+        );
+        let suffix3 = classic_ac_candidate_suffix3_bloom_words_witness(&pattern_refs);
+        let lengths: Vec<u32> = literals
+            .iter()
+            .map(|literal| literal.len() as u32)
+            .collect();
+        let presence_words = presence_by_region_words(pattern_count, region_count) as usize;
+        Self {
+            pattern_count,
+            region_count,
+            haystack: pack_haystack_u32(haystack),
+            transitions: pack_u32_slice(&ac.dfa.transitions),
+            output_offsets: pack_u32_slice(&ac.dfa.output_offsets),
+            output_records: pack_u32_slice(&ac.dfa.output_records),
+            lengths: pack_u32_slice(&lengths),
+            hay_len: pack_u32_slice(&[haystack.len() as u32]),
+            end_mask: pack_u32_slice(&end_mask),
+            suffix2: pack_u32_slice(&suffix2),
+            suffix3: pack_u32_slice(&suffix3),
+            region_starts: pack_u32_slice(region_starts),
+            zero: pack_u32_slice(&[0u32]),
+            presence_zeroed: pack_u32_slice(&vec![0u32; presence_words]),
+            ac,
+        }
+    }
+
+    /// The twelve values the region-presence program binds, in binding order.
+    #[must_use]
+    pub fn presence_inputs(&self) -> Vec<Value> {
+        vec![
+            Value::from(self.haystack.clone()),
+            Value::from(self.transitions.clone()),
+            Value::from(self.output_offsets.clone()),
+            Value::from(self.output_records.clone()),
+            Value::from(self.lengths.clone()),
+            Value::from(self.hay_len.clone()),
+            Value::from(self.presence_zeroed.clone()),
+            Value::from(self.end_mask.clone()),
+            Value::from(self.suffix2.clone()),
+            Value::from(self.suffix3.clone()),
+            Value::from(self.region_starts.clone()),
+            Value::from(self.zero.clone()),
+        ]
+    }
 }

@@ -161,19 +161,13 @@ fn atomic_exit_condition_is_rejected() {
 fn nested_loop_divergent_bounds_rejects_post_barrier_exit() {
     let program = program(vec![
         barrier(MemoryOrdering::SeqCst),
-        Node::Let {
-            name: "x".into(),
-            value: Expr::u32(0),
-        },
-        Node::Loop {
-            var: "inner".into(),
-            from: Expr::u32(0),
-            to: Expr::InvocationId { axis: 0 },
-            body: vec![Node::Assign {
-                name: "x".into(),
-                value: Expr::u32(1),
-            }],
-        },
+        Node::let_bind("x", Expr::u32(0)),
+        Node::loop_for(
+            "inner",
+            Expr::u32(0),
+            Expr::InvocationId { axis: 0 },
+            vec![Node::assign("x", Expr::u32(1))],
+        ),
         guarded_return(Expr::eq(Expr::var("x"), Expr::u32(1))),
     ]);
 
@@ -189,19 +183,13 @@ fn nested_loop_divergent_bounds_rejects_post_barrier_exit() {
 fn nested_loop_uniform_iterations_accepts_post_barrier_exit() {
     let program = program(vec![
         barrier(MemoryOrdering::SeqCst),
-        Node::Let {
-            name: "x".into(),
-            value: Expr::u32(0),
-        },
-        Node::Loop {
-            var: "inner".into(),
-            from: Expr::u32(0),
-            to: Expr::u32(4),
-            body: vec![Node::Assign {
-                name: "x".into(),
-                value: Expr::add(Expr::var("x"), Expr::u32(1)),
-            }],
-        },
+        Node::let_bind("x", Expr::u32(0)),
+        Node::loop_for(
+            "inner",
+            Expr::u32(0),
+            Expr::u32(4),
+            vec![Node::assign("x", Expr::add(Expr::var("x"), Expr::u32(1)))],
+        ),
         guarded_return(Expr::eq(Expr::var("x"), Expr::u32(4))),
     ]);
 

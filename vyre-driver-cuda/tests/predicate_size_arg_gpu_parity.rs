@@ -38,7 +38,7 @@ fn run(
         // frontier_out: zero-init.
         vec![0u8; words as usize * 4],
     ];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("predicate size argument", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

@@ -32,7 +32,7 @@ fn run_line_splice(source: &[u8]) -> Vec<u32> {
     let words = pack_bytes(source);
     let program = line_splice_classify(byte_count);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(&words), vec![0u8; byte_count.max(1) as usize * 4]];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("line splice classify", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -49,7 +49,7 @@ fn run_line_splice_u8(source: &[u8]) -> Vec<u32> {
     let byte_count = source.len() as u32;
     let program = line_splice_classify_u8(byte_count);
     let inputs: Vec<Vec<u8>> = vec![source.to_vec(), vec![0u8; byte_count.max(1) as usize * 4]];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("raw-u8 line splice classify", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

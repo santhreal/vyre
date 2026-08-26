@@ -3,6 +3,7 @@
 use super::*;
 use crate::binding::{Binding, BindingRole};
 use crate::launch::{effective_launch_workgroup_for_mode, LaunchPlan};
+use crate::launch_fixtures::wide_limits;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 #[test]
@@ -24,13 +25,7 @@ fn natural_gradient_launch_tunes_safe_1d_storage_program() {
         input_index: None,
         output_index: Some(0),
     }];
-    let limits = LaunchGeometryLimits {
-        backend: "test",
-        max_threads_per_block: 1024,
-        max_block_dim: [1024, 1024, 64],
-        max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
-        max_threads_per_sm: 1536,
-    };
+    let limits = wide_limits("test", 1536);
     let mut plan = LaunchPlan::new();
 
     plan.prepare_into_for_mode(
@@ -86,13 +81,7 @@ fn natural_gradient_launch_preserves_declared_shape_for_local_workgroup_ids() {
         input_index: None,
         output_index: Some(0),
     }];
-    let limits = LaunchGeometryLimits {
-        backend: "test",
-        max_threads_per_block: 1024,
-        max_block_dim: [1024, 1024, 64],
-        max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
-        max_threads_per_sm: 1536,
-    };
+    let limits = wide_limits("test", 1536);
 
     assert_eq!(
         effective_launch_workgroup_for_mode(
@@ -118,13 +107,7 @@ fn measured_launch_feedback_overrides_heuristic_cold_start() {
         vec![],
     );
     let config = DispatchConfig::default();
-    let limits = LaunchGeometryLimits {
-        backend: "test",
-        max_threads_per_block: 1024,
-        max_block_dim: [1024, 1024, 64],
-        max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
-        max_threads_per_sm: 1536,
-    };
+    let limits = wide_limits("test", 1536);
     let key = NaturalLaunchCacheKey::new(&program, [32, 1, 1], 8192, limits);
     natural_launch_cache_remove(key);
 
@@ -175,13 +158,7 @@ fn persisted_launch_feedback_rehydrates_measured_selection() {
         [32, 1, 1],
         vec![],
     );
-    let limits = LaunchGeometryLimits {
-        backend: "test",
-        max_threads_per_block: 1024,
-        max_block_dim: [1024, 1024, 64],
-        max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
-        max_threads_per_sm: 1536,
-    };
+    let limits = wide_limits("test", 1536);
     let key = NaturalLaunchCacheKey::new(&program, [32, 1, 1], 16_384, limits);
     natural_launch_cache_remove(key);
 
@@ -223,13 +200,7 @@ fn natural_gradient_launch_preserves_explicit_and_shared_memory_shapes() {
         input_index: None,
         output_index: Some(0),
     }];
-    let limits = LaunchGeometryLimits {
-        backend: "test",
-        max_threads_per_block: 1024,
-        max_block_dim: [1024, 1024, 64],
-        max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
-        max_threads_per_sm: 1536,
-    };
+    let limits = wide_limits("test", 1536);
     let mut config = DispatchConfig::default();
     config.workgroup_override = Some([256, 1, 1]);
 
@@ -270,13 +241,7 @@ fn record_launch_measurement_starts_fresh_only_when_no_prior_history_exists() {
         vec![],
     );
     let config = DispatchConfig::default();
-    let limits = LaunchGeometryLimits {
-        backend: "test-measurements",
-        max_threads_per_block: 1024,
-        max_block_dim: [1024, 1024, 64],
-        max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
-        max_threads_per_sm: 0,
-    };
+    let limits = wide_limits("test-measurements", 0);
     let key = NaturalLaunchCacheKey::new(&program, [32, 1, 1], 4096, limits);
     natural_launch_cache_remove(key);
 
@@ -335,16 +300,6 @@ fn record_launch_measurement_starts_fresh_only_when_no_prior_history_exists() {
 
 const REGRESSION_170_SM_COUNT: u32 = 170;
 
-fn regression_1536_thread_sm_limits() -> LaunchGeometryLimits {
-    LaunchGeometryLimits {
-        backend: "regression-1536-thread-sm-test",
-        max_threads_per_block: 1024,
-        max_block_dim: [1024, 1024, 64],
-        max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
-        max_threads_per_sm: 1536,
-    }
-}
-
 fn tunable_1d_program(output: &'static str, element_count: u32, declared: [u32; 3]) -> Program {
     Program::wrapped(
         vec![BufferDecl::output(output, 0, DataType::U32).with_count(element_count)],
@@ -355,7 +310,7 @@ fn tunable_1d_program(output: &'static str, element_count: u32, declared: [u32; 
 
 #[test]
 fn cold_start_never_strands_resident_thread_slots_when_an_even_divisor_exists() {
-    let limits = regression_1536_thread_sm_limits();
+    let limits = wide_limits("regression-1536-thread-sm-test", 1536);
     for (output, element_count) in [
         ("out_no_strand_1k", 1024u32),
         ("out_no_strand_4k", 4096),
@@ -383,13 +338,7 @@ fn cold_start_never_strands_resident_thread_slots_when_an_even_divisor_exists() 
 
 #[test]
 fn cold_start_still_admits_1024_where_the_per_sm_budget_divides_evenly() {
-    let limits = LaunchGeometryLimits {
-        backend: "even-divisor-test",
-        max_threads_per_block: 1024,
-        max_block_dim: [1024, 1024, 64],
-        max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
-        max_threads_per_sm: 2048,
-    };
+    let limits = wide_limits("even-divisor-test", 2048);
     let program = tunable_1d_program("out_even_divisor", 65_536, [32, 1, 1]);
 
     assert_eq!(
@@ -412,13 +361,7 @@ fn cold_start_still_admits_1024_where_the_per_sm_budget_divides_evenly() {
 
 #[test]
 fn unreported_per_sm_budget_leaves_cold_start_byte_identical() {
-    let limits = LaunchGeometryLimits {
-        backend: "unreported-residency-test",
-        max_threads_per_block: 1024,
-        max_block_dim: [1024, 1024, 64],
-        max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
-        max_threads_per_sm: 0,
-    };
+    let limits = wide_limits("unreported-residency-test", 0);
     assert_eq!(
         limits.resident_threads_per_compute_unit(1024),
         None,
@@ -450,7 +393,7 @@ fn unreported_per_sm_budget_leaves_cold_start_byte_identical() {
 
 #[test]
 fn explicit_geometry_pins_outrank_residency_aware_cold_start() {
-    let limits = regression_1536_thread_sm_limits();
+    let limits = wide_limits("regression-1536-thread-sm-test", 1536);
     let declared = [256, 1, 1];
     let program = tunable_1d_program("out_pinned_geometry", 262_144, declared);
 
@@ -485,7 +428,7 @@ fn explicit_geometry_pins_outrank_residency_aware_cold_start() {
 
 #[test]
 fn cooperative_lane_ceiling_follows_the_resolved_width_not_the_declared_one() {
-    let limits = regression_1536_thread_sm_limits();
+    let limits = wide_limits("regression-1536-thread-sm-test", 1536);
     let declared = [256, 1, 1];
     let program = tunable_1d_program("out_resolved_ceiling", 262_144, declared);
     let lane_ceiling = |width: u32| -> u64 {
@@ -539,7 +482,7 @@ fn measured_feedback_can_still_select_a_width_cold_start_would_reject() {
     let dir =
         tempfile::tempdir().expect("Fix: measured feedback test needs an isolated tuner cache");
     let path = dir.path().join("residency-feedback.toml");
-    let limits = regression_1536_thread_sm_limits();
+    let limits = wide_limits("regression-1536-thread-sm-test", 1536);
     let declared = [32, 1, 1];
     let program = tunable_1d_program("out_measured_beats_residency", 65_536, declared);
     let key = NaturalLaunchCacheKey::new(&program, declared, 65_536, limits);

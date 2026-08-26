@@ -8,6 +8,8 @@ use vyre_megakernel::{
     TargetResourceAccess,
 };
 
+use vyre_test_support::graph_values::graph_output;
+
 use crate::materialize::materialize_test_fixtures::{
     compile_graph, contract, entry_point, global_bindings, test_format, test_instance_core,
     test_payload, test_profile,
@@ -255,12 +257,10 @@ fn transitive_retained_predecessor_lineage_preservation() {
                     contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
                     retained_successor_of: Some(state_mid),
                 },
-                GraphOutput {
-                    buffer: "res".into(),
-                    name: "res".into(),
-                    contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output),
-                    retained_successor_of: None,
-                },
+                graph_output(
+                    "res",
+                    contract(BufferAccess::WriteOnly, ValueLifetime::Output),
+                ),
             ],
         )
         .unwrap();

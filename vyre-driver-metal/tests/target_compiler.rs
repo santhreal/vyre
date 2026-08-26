@@ -6,19 +6,17 @@
 // only the Apple-gated tests do. The non-Apple test asserts the absence of a
 // registration and reaches for none of it.
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-use std::collections::BTreeMap;
-
-#[cfg(any(target_os = "macos", target_os = "ios"))]
 use vyre_driver::BindingSet;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
-    ValueContract, ValueLifetime,
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ValueLifetime,
 };
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-use vyre_megakernel::{
-    CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, TargetModuleBundle,
-};
+use vyre_megakernel::{SearchBudget, TargetModuleBundle};
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+use vyre_test_support::graph_values::{graph_output, u32_scalar};
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+use vyre_test_support::semantic_requests::validated_unknown_request;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 fn artifact() -> vyre_megakernel::Artifact {
@@ -33,28 +31,13 @@ fn artifact() -> vyre_megakernel::Artifact {
             "main",
             program,
             Vec::new(),
-            vec![GraphOutput {
-                buffer: "out".into(),
-                name: "out".into(),
-                contract: ValueContract {
-                    dtype: DataType::U32,
-                    shape: vec![ShapeDim::Known(1)],
-                    access: BufferAccess::ReadWrite,
-                    lifetime: ValueLifetime::Output,
-                },
-                retained_successor_of: None,
-            }],
+            vec![graph_output(
+                "out",
+                u32_scalar(BufferAccess::ReadWrite, ValueLifetime::Output),
+            )],
         )
         .unwrap();
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        DeviceFacts::unknown(),
-        SearchBudget::new(1, 1, 0, 0, 1),
-        1_000_000,
-    )
-    .validate()
-    .unwrap();
+    let request = validated_unknown_request(graph, SearchBudget::new(1, 1, 0, 0, 1), 1_000_000);
     vyre_megakernel::compile(&request).unwrap()
 }
 

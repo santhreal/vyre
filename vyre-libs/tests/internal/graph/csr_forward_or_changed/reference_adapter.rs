@@ -36,9 +36,8 @@ pub(crate) fn cpu_ref_into(
     allow_mask: u32,
     output: &mut Vec<u32>,
 ) -> u32 {
-    let _layout =
-        validate_csr_inputs(node_count, edge_offsets, edge_targets, edge_kind_mask)
-            .unwrap_or_else(|error| panic!("invalid CSR forward witness input: {error}"));
+    let _layout = validate_csr_inputs(node_count, edge_offsets, edge_targets, edge_kind_mask)
+        .unwrap_or_else(|error| panic!("invalid CSR forward witness input: {error}"));
     csr_forward_or_changed_witness_into(
         node_count,
         edge_offsets,

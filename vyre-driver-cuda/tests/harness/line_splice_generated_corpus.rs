@@ -55,7 +55,7 @@ fn cuda_line_splice_classify_u8_generated_matrix_matches_cpu() {
     let len = 1025usize;
     let byte_count = len as u32;
     let program = line_splice_classify_u8(byte_count);
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
 
     with_live_backend("raw-u8 generated line-splice matrix", |backend| {
         let mut checked = 0usize;

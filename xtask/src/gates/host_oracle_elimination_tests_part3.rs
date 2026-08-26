@@ -8,7 +8,7 @@ use super::host_oracle_elimination_eval::analyze_sources;
 use super::host_oracle_elimination_records::TARGET_ROOTS;
 use super::host_oracle_elimination_test_fixtures::{
     canonical_dispatch_fn, resident_staging_source, self_binding_staging_source,
-    CANONICAL_DISPATCH_IMPORTS,
+    CANONICAL_DISPATCH_IMPORTS, CANONICAL_REQUEST_ARGUMENTS,
 };
 use super::host_oracle_elimination_tests_part1::analyze_files;
 
@@ -783,13 +783,7 @@ pub fn run_graph(
     let _ = graph;
     let inputs = BTreeMap::new();
     let request = SemanticExecutionRequest::new(
-        logical,
-        inputs,
-        policy.external_facts().clone(),
-        policy.target_facts(),
-        policy.objective(),
-        policy.budget(),
-        policy.max_artifact_bytes(),
+{CANONICAL_REQUEST_ARGUMENTS}
     )?;
     dispatcher.execute(&request)?;
     Ok(())
@@ -1306,13 +1300,7 @@ pub fn run_demo_traversal(
     let mut inputs = BTreeMap::new();
     inputs.insert(GraphValueId(0), packed.as_slice());
     let request = SemanticExecutionRequest::new(
-        logical,
-        inputs,
-        policy.external_facts().clone(),
-        policy.target_facts(),
-        policy.objective(),
-        policy.budget(),
-        policy.max_artifact_bytes(),
+{CANONICAL_REQUEST_ARGUMENTS}
     )?;
     dispatcher.execute(&request)?;
     Ok(())

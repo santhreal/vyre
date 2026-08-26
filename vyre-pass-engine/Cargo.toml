@@ -48,7 +48,7 @@ vyre-primitives = { workspace = true }
 rustc-hash.workspace = true
 
 [dev-dependencies]
-vyre-test-support.workspace = true
+vyre-test-support = { workspace = true, features = ["semantic-requests"] }
 # Dev-dep only -> gated out of production builds of dependents.
 vyre-primitives = { path = "../vyre-primitives", default-features = false }
 # The one crate allowed to execute a Program on the host. Parity tests use its

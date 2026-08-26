@@ -47,7 +47,7 @@ where
         edge_kind_mask,
         frontier,
     );
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
@@ -83,7 +83,7 @@ where
         edge_kind_mask,
         frontier,
     );
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");

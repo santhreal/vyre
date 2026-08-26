@@ -410,11 +410,12 @@ pub trait SemanticExecutor: Send + Sync {
 mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node};
-
     use super::*;
 
     const BUDGET: SearchBudget = SearchBudget::new(8, 64, 1, 0, 1_000);
+    /// The crate under test cannot reach the shared fixture: linking
+    /// `vyre-test-support` with its semantic feature would compile this crate
+    /// twice and the two `SemanticExecutionPolicy` types would not unify.
     fn policy() -> SemanticExecutionPolicy {
         SemanticExecutionPolicy::new(
             ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
@@ -426,18 +427,7 @@ mod tests {
     }
 
     fn semantic_program() -> Program {
-        Program::wrapped(
-            vec![
-                BufferDecl::read("src", 0, DataType::U32).with_count(1),
-                BufferDecl::output("out", 1, DataType::U32).with_count(1),
-            ],
-            [1, 1, 1],
-            vec![Node::store(
-                "out",
-                Expr::logical_index(0),
-                Expr::load("src", Expr::logical_index(0)),
-            )],
-        )
+        vyre_test_support::pass_programs::logical_copy_program()
     }
 
     struct RecordingExecutor {

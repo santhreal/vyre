@@ -39,7 +39,7 @@ fn run_once(
         u32_bytes(frontier),
         vec![0u8; 4],
     ];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("CSR backward-or-changed primitive", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

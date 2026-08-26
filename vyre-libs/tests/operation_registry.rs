@@ -10,6 +10,7 @@ use vyre_foundation::operation::{OperationRegistration, OperationRegistry, Opera
 use vyre_foundation::schedule::{SchedulePhaseId, SelectedSchedule};
 use vyre_foundation::visit::{for_each_expr, for_each_node};
 use vyre_lower::lower_scheduled;
+use vyre_test_support::logical_markers::{census, logical_marker_sum};
 
 const LOGICAL_EXPANSION_OP_ID: &str = "test::operation_registry::logical_expansion";
 
@@ -18,17 +19,7 @@ fn logical_expansion_program() -> Program {
         vec![BufferDecl::output("result", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![
-            Node::store(
-                "result",
-                Expr::u32(0),
-                Expr::add(
-                    Expr::logical_index(0),
-                    Expr::add(
-                        Expr::logical_tile_index(1),
-                        Expr::logical_within_tile_index(2),
-                    ),
-                ),
-            ),
+            Node::store("result", Expr::u32(0), logical_marker_sum()),
             Node::logical_barrier(MemoryOrdering::SeqCst),
         ],
     )
@@ -58,29 +49,12 @@ fn selected_schedule_legalizes_markers_introduced_by_call_expansion() {
     let lowered = lower_scheduled(&caller, &SelectedSchedule::synthetic(1), SchedulePhaseId(0))
         .expect("selected-schedule lowering must legalize expanded composition bodies");
 
-    let mut logical = 0usize;
-    let mut physical_axes = [0usize; 3];
-    for_each_expr(lowered.program.entry(), |expr| match expr {
-        Expr::LogicalIndex { .. }
-        | Expr::LogicalTileId { .. }
-        | Expr::LogicalWithinTileId { .. } => logical += 1,
-        Expr::InvocationId { .. } => physical_axes[0] += 1,
-        Expr::WorkgroupId { .. } => physical_axes[1] += 1,
-        Expr::LocalId { .. } => physical_axes[2] += 1,
-        _ => {}
-    });
-    let mut logical_barriers = 0usize;
-    let mut physical_barriers = 0usize;
-    for_each_node(lowered.program.entry(), |node| match node {
-        Node::LogicalBarrier { .. } => logical_barriers += 1,
-        Node::Barrier { .. } => physical_barriers += 1,
-        _ => {}
-    });
+    let markers = census(lowered.program.entry());
 
-    assert_eq!(logical, 0);
-    assert_eq!(logical_barriers, 0);
-    assert_eq!(physical_axes, [1, 1, 1]);
-    assert_eq!(physical_barriers, 1);
+    assert_eq!(markers.logical, 0);
+    assert_eq!(markers.logical_barriers, 0);
+    assert_eq!(markers.physical_axes, [1, 1, 1]);
+    assert_eq!(markers.physical_orderings.len(), 1);
 }
 
 #[test]

@@ -29,3 +29,6 @@ workspace = true
 
 [dev-dependencies]
 vyre-driver = { workspace = true, features = ["test-fixtures"] }
+# The shared semantic-execution graph, bindings, and request every backend
+# contract proves the seam with.
+vyre-test-support = { workspace = true, features = ["semantic-requests"] }

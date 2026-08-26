@@ -197,6 +197,10 @@ pub(crate) mod speculate;
 pub mod grid_sync;
 /// Backend-neutral launch preparation and program fingerprint wrappers.
 pub(crate) mod launch;
+/// Canonical launch-geometry limits shared by the launch preparation, validation,
+/// and natural-gradient tuning tests.
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod launch_fixtures;
 /// Backend-neutral adjacent-stage launch fusion planning.
 pub mod launch_fusion;
 /// Natural-gradient launch tuning, caching, and workgroup resolution.

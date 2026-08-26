@@ -22,6 +22,7 @@ use std::sync::Arc;
 
 use blake3::Hash;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_conform::panic_message;
 use vyre_conform::witness_plan::WitnessInputPlan;
 use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
 use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};

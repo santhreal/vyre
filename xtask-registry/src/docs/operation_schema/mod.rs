@@ -30,6 +30,18 @@ mod validate;
 const DEFAULT_OUTPUT: &str = "docs/generated/OP_SCHEMA.json";
 const MAX_SCHEMA_BYTES: u64 = 16_777_216;
 
+/// Turns operation schema build errors into one gate error, because a schema
+/// that does not build leaves a gate nothing to compare the tree against.
+pub fn schema_error(errors: Vec<String>) -> GateError {
+    GateError::new(
+        format!(
+            "the canonical operation schema does not build: {}",
+            errors.join("; ")
+        ),
+        "repair the registrations the schema rejects, then run the gate again",
+    )
+}
+
 /// Holds the canonical live operation contract schema to the registry.
 pub struct OperationSchemaGate;
 

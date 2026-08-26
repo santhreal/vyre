@@ -533,6 +533,17 @@ boundary = "public"
 seam = "foundation-ir"
 
 [[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the admitted artifact and target payload the reference target materializes"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
 package = "vyre-reference"
 purpose = "independent semantic oracle execution"
 features = []
@@ -750,6 +761,17 @@ optional = true
 default_features = true
 boundary = "private"
 seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the semantic execution request every backend contract shares, behind the semantic-requests feature"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "megakernel-compiler"
 
 
 [[crate.dependency]]
@@ -1275,6 +1297,17 @@ optional = false
 default_features = true
 boundary = "public"
 seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
 
 [[crate.dependency]]
 package = "vyre-primitives"

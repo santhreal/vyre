@@ -226,12 +226,10 @@ fn reserved_impact_mask(len: usize) -> Result<Vec<u32>, CacheInvalidationError> 
 mod tests {
     use super::*;
     use vyre_driver_reference::ReferenceSemanticExecutor;
-    use vyre_megakernel::{CompileObjective, DeviceFacts, Digest, ExternalFacts, SearchBudget};
+    use vyre_megakernel::{Digest, SearchBudget};
     fn policy() -> SemanticExecutionPolicy {
-        SemanticExecutionPolicy::new(
-            ExternalFacts::new(Digest([0; 32]), std::collections::BTreeMap::new()),
-            DeviceFacts::unknown(),
-            CompileObjective::MinimizeLatency,
+        vyre_test_support::semantic_requests::unknown_policy(
+            Digest([0; 32]),
             SearchBudget::new(8, 64, 0, 0, 1_000),
             1_000_000,
         )

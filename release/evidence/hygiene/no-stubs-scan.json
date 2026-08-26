@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:3b5fbe9762255e97f80e4347166024765120f5c9:dirty=true:worktree=7aaca7f7a0d6bdabaee6f8ec25eb8725088aae48ad5db805c86a4a63490049d4",
+  "source_fingerprint": "git:f658f200d51392c80a1428e5510b0a9f393f295a:dirty=true:worktree=e1bf0d30b3232f2572097dbead93e484120e55945fd78101e95c4c3108dd9c0c",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -29,7 +29,7 @@
     },
     {
       "path": "vyre-foundation/src/ir_inner/model/node/impl_node.rs",
-      "line": 284,
+      "line": 293,
       "pattern": "placeholder_text",
       "text": "/// node records placeholder operands. Emit"
     },
@@ -53,25 +53,25 @@
     },
     {
       "path": "vyre-primitives/src/hardware/mod.rs",
-      "line": 464,
+      "line": 469,
       "pattern": "placeholder_text",
       "text": "/// zeroed placeholder for one described a call the artifact ABI rejects."
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 224,
+      "line": 226,
       "pattern": "placeholder_text",
       "text": "// op whose fixture carried a placeholder for a backend-allocated output"
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 237,
+      "line": 239,
       "pattern": "placeholder_text",
       "text": "backend-allocated output; a placeholder for one is what the artifact ABI rejects on \\"
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 420,
+      "line": 422,
       "pattern": "placeholder_text",
       "text": "/// what a caller-supplied placeholder has to cover."
     },

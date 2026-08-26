@@ -11,15 +11,7 @@ pub struct ListOps;
 
 impl xtask::gate::GateBehavior for ListOps {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let schema = assemble::build().map_err(|errors| {
-            GateError::new(
-                format!(
-                    "the canonical operation schema does not build: {}",
-                    errors.join("; ")
-                ),
-                "repair the registrations the schema rejects, then run the gate again",
-            )
-        })?;
+        let schema = assemble::build().map_err(crate::docs::operation_schema::schema_error)?;
         let body = render(&schema.operations);
         let mut inspection = xtask::artifact_gate::Inspection::new();
         inspection.generates_text(INVENTORY_PATH, body);
@@ -111,13 +103,7 @@ mod tests {
             },
             features: vec!["f32".to_string()],
             schedule_constraints: Default::default(),
-            oracle: crate::docs::operation_schema::schema::OracleContract {
-                reference_eval: true,
-                flat_reference_facet: true,
-                fixture_inputs: true,
-                expected_output: true,
-                tolerance_ulp: 0,
-            },
+            oracle: crate::docs::operation_schema::schema::OracleContract::every_facet_proven(),
             backend_support,
             target_facets: vec!["simd".to_string()],
             laws: vec!["commutative".to_string()],

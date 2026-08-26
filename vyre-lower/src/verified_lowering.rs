@@ -276,6 +276,7 @@ mod tests {
         Node,
     };
     use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform, SelectedSchedule};
+    use vyre_test_support::logical_markers::{census, logical_marker_sum, MarkerCensus};
 
     #[test]
     fn lower_physical_runs_program_and_descriptor_pipeline() {
@@ -331,45 +332,23 @@ mod tests {
             ],
             [64, 1, 1],
             vec![
-                Node::store(
-                    "out",
-                    Expr::logical_index(0),
-                    Expr::add(
-                        Expr::logical_index(0),
-                        Expr::add(
-                            Expr::logical_tile_index(1),
-                            Expr::logical_within_tile_index(2),
-                        ),
-                    ),
-                ),
+                Node::store("out", Expr::logical_index(0), logical_marker_sum()),
                 Node::logical_barrier(MemoryOrdering::Acquire),
             ],
         );
         let schedule = SelectedSchedule::synthetic(1);
 
         let lowered = lower_scheduled(&program, &schedule, SchedulePhaseId(0)).unwrap();
-        let mut logical = 0usize;
-        let mut physical_axes = [0usize; 3];
-        for_each_expr(lowered.program.entry(), |expr| match expr {
-            Expr::LogicalIndex { .. }
-            | Expr::LogicalTileId { .. }
-            | Expr::LogicalWithinTileId { .. } => logical += 1,
-            Expr::InvocationId { .. } => physical_axes[0] += 1,
-            Expr::WorkgroupId { .. } => physical_axes[1] += 1,
-            Expr::LocalId { .. } => physical_axes[2] += 1,
-            _ => {}
-        });
-        let mut logical_barriers = 0usize;
-        let mut physical_orderings = Vec::new();
-        for_each_node(lowered.program.entry(), |node| match node {
-            Node::LogicalBarrier { .. } => logical_barriers += 1,
-            Node::Barrier { ordering } => physical_orderings.push(*ordering),
-            _ => {}
-        });
-        assert_eq!(logical, 0);
-        assert_eq!(logical_barriers, 0);
-        assert_eq!(physical_axes, [2, 1, 1]);
-        assert_eq!(physical_orderings, [MemoryOrdering::Acquire]);
+
+        assert_eq!(
+            census(lowered.program.entry()),
+            MarkerCensus {
+                logical: 0,
+                physical_axes: [2, 1, 1],
+                logical_barriers: 0,
+                physical_orderings: vec![MemoryOrdering::Acquire],
+            }
+        );
     }
 
     #[test]

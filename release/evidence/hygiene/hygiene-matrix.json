@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:3b5fbe9762255e97f80e4347166024765120f5c9:dirty=true:worktree=7aaca7f7a0d6bdabaee6f8ec25eb8725088aae48ad5db805c86a4a63490049d4",
+  "source_fingerprint": "git:f658f200d51392c80a1428e5510b0a9f393f295a:dirty=true:worktree=e1bf0d30b3232f2572097dbead93e484120e55945fd78101e95c4c3108dd9c0c",
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4302,
+  "scanned_files": 4250,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -132,7 +132,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 34
+      "count": 33
     },
     {
       "owner_lane": "coordination",
@@ -332,7 +332,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 33
+      "count": 34
     },
     {
       "owner_lane": "testing_evidence",
@@ -387,7 +387,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 34
+      "count": 33
     },
     {
       "owner_lane": "coordination",
@@ -738,7 +738,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 33
+      "count": 34
     },
     {
       "owner_lane": "testing_evidence",
@@ -983,13 +983,8 @@
       },
       {
         "file": "vyre-libs/tests/shared_owner_closure.rs",
-        "test": "no_dispatch_grid_function_hand_rolls_the_ceiling_division",
-        "reason": "Asserts that exactly one implementation of the ceiling division exists. A\nbehavioural parity sweep catches a copy that rounds differently and passes a\ncopy that agrees today, and a second implementation that agrees today is the\ndefect this closes: the copies it replaced agreed until the zero case."
-      },
-      {
-        "file": "vyre-libs/tests/shared_owner_closure.rs",
-        "test": "every_domain_with_a_dispatch_grid_can_reach_the_owner",
-        "reason": "Asserts that the owner of the dispatch-grid helper is declared unconditionally\nin the crate that holds it and that every crate with a dispatch-grid function\nreaches it through a non-optional dependency edge. Reachability is decided at\ncompile time, so a build where the owner is unreachable is a build in which\nthis test does not run."
+        "test": "no_operation_publishes_launch_geometry",
+        "reason": "Asserts that no operation declares a launch grid a caller could pass back into a\ndispatch. A behavioural test observes one launch on one fixture; this observes\nthe whole declaration surface, which is where the defect reappears. A scatter\nthat published a cache-sized grid ran the entire cache per decoded chunk while\nevery value it produced stayed correct."
       },
       {
         "file": "vyre-libs/tests/shared_owner_closure.rs",
@@ -1027,24 +1022,24 @@
         "reason": "Asserts that each source crate's widest aggregate feature turns on every\nfeature that gates a registration. The subject is that crate's feature table,\nwhich is consumed by cargo before any code runs."
       },
       {
-        "file": "vyre-libs/tests/internal/graph/dispatch/adaptive_traverse/sparse_queue_materializer_contracts.rs",
-        "test": "every_resident_queue_materializer_variant_has_a_step_sequence_case",
-        "reason": "Derives the published ResidentCsrQueueMaterializer variant set from the source\nthat declares it, so a variant added without a step-sequence case is red on its\nfirst run. A variant nothing exercises has no run-time witness: the property\nbeing asserted is the absence of a case, which no execution can observe."
-      },
-      {
         "file": "vyre-libs/tests/quantized_dispatch_variant_coverage_gate.rs",
         "test": "every_published_quantized_entry_point_has_a_readback_contract_row",
         "reason": "Derives the published quantized dispatch entry points from the `pub use\n..._via` re-exports that declare them, so an entry point shipped without a\nreadback contract row is red on its first run. The subject is the public\nexport list, which no run of the covered entry points can report on."
       },
       {
         "file": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
-        "test": "no_production_crate_outside_the_oracle_ships_a_host_dispatcher",
-        "reason": "Asserts that no crate except the parity oracle ships a `ProgramDispatcher` a\ndefault build can construct. The subject is the absence of a type in crates this\ntest does not link, and a type nobody constructed is invisible to every running\nprogram; the failure it prevents is a consumer reaching a host dispatcher years\nlater."
+        "test": "no_production_crate_outside_the_oracle_executes_on_the_host",
+        "reason": "Asserts that no crate except the parity oracle ships an execution-seam\nimplementation a default build can construct on the host. The subject is the\nabsence of a type in crates this test does not link, and a type nobody\nconstructed is invisible to every running program; the failure it prevents is a\nconsumer reaching host execution years later."
       },
       {
         "file": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
-        "test": "the_walk_actually_reaches_the_dispatchers_it_judges",
+        "test": "the_walk_actually_reaches_the_implementors_it_judges",
         "reason": "Floor check for the walk the gate above depends on. Its subject is the file set\nthat walk produced, which exists only inside the source scan."
+      },
+      {
+        "file": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
+        "test": "every_policed_seam_is_a_trait_this_tree_declares",
+        "reason": "Requires every policed seam name to resolve to a trait declaration in tracked\nsource. A renamed or retired seam leaves the walk searching for a string no file\ncontains, and its empty offender set then reports that the scan found nothing\nrather than that nothing is wrong. The subject is the declaration set, which no\nrun of the seam observes."
       },
       {
         "file": "vyre-foundation/tests/expr_type_single_owner.rs",
@@ -1058,7 +1053,12 @@
       },
       {
         "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-        "test": "canonical_program_dispatcher_exact_path_derives_execution_methods",
+        "test": "canonical_semantic_executor_exact_path_derives_execution_methods",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "every_registration_constructor_convicts_a_host_oracle_in_expected_output",
         "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
       },
       {
@@ -1706,7 +1706,7 @@
     },
     {
       "path": "vyre-foundation/src/ir_inner/model/node/impl_node.rs",
-      "line": 284,
+      "line": 293,
       "pattern": "placeholder_text",
       "owner_lane": "foundation_wire",
       "surface": "production",
@@ -1716,7 +1716,7 @@
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 564,
+      "line": 600,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1726,7 +1726,7 @@
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 568,
+      "line": 604,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1736,7 +1736,7 @@
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 576,
+      "line": 612,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1746,7 +1746,7 @@
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 585,
+      "line": 621,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1756,67 +1756,7 @@
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 714,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 723,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 727,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 735,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 739,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 747,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 752,
+      "line": 750,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1836,7 +1776,67 @@
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 884,
+      "line": 763,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 771,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 775,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 783,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 788,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 795,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 920,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1946,7 +1946,7 @@
     },
     {
       "path": "vyre-libs/src/graph/csr_bidirectional_plan.rs",
-      "line": 602,
+      "line": 549,
       "pattern": "documented_panic_contract",
       "owner_lane": "security_dataflow",
       "surface": "production",
@@ -1976,7 +1976,7 @@
     },
     {
       "path": "vyre-libs/src/graph/dominator_frontier.rs",
-      "line": 83,
+      "line": 70,
       "pattern": "documented_panic_contract",
       "owner_lane": "security_dataflow",
       "surface": "production",
@@ -2226,7 +2226,7 @@
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 44,
+      "line": 57,
       "pattern": "panic_macro",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2236,7 +2236,7 @@
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 118,
+      "line": 112,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2246,7 +2246,7 @@
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 163,
+      "line": 148,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2256,7 +2256,7 @@
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 197,
+      "line": 180,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2356,7 +2356,7 @@
     },
     {
       "path": "vyre-primitives/src/hardware/mod.rs",
-      "line": 464,
+      "line": 469,
       "pattern": "placeholder_text",
       "owner_lane": "driver_shared",
       "surface": "production",
@@ -2886,7 +2886,7 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 224,
+      "line": 226,
       "pattern": "placeholder_text",
       "owner_lane": "driver_shared",
       "surface": "production",
@@ -2896,7 +2896,7 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 237,
+      "line": 239,
       "pattern": "placeholder_text",
       "owner_lane": "driver_shared",
       "surface": "production",
@@ -2906,7 +2906,7 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 420,
+      "line": 422,
       "pattern": "placeholder_text",
       "owner_lane": "driver_shared",
       "surface": "production",
@@ -3526,7 +3526,7 @@
     },
     {
       "path": "vyre-foundation/tests/expr_type_single_owner.rs",
-      "line": 284,
+      "line": 295,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3536,7 +3536,7 @@
     },
     {
       "path": "vyre-foundation/tests/expr_type_single_owner.rs",
-      "line": 330,
+      "line": 341,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3646,7 +3646,7 @@
     },
     {
       "path": "vyre-libs/tests/graph_single_source_contracts.rs",
-      "line": 119,
+      "line": 118,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3656,7 +3656,7 @@
     },
     {
       "path": "vyre-libs/tests/graph_single_source_contracts.rs",
-      "line": 131,
+      "line": 151,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3666,17 +3666,7 @@
     },
     {
       "path": "vyre-libs/tests/graph_single_source_contracts.rs",
-      "line": 161,
-      "pattern": "source_inspection_test",
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs/tests/graph_single_source_contracts.rs",
-      "line": 189,
+      "line": 181,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3695,8 +3685,8 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
-      "line": 42,
+      "path": "vyre-libs/tests/graph_single_source_contracts.rs",
+      "line": 229,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3706,7 +3696,7 @@
     },
     {
       "path": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
-      "line": 66,
+      "line": 54,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3715,8 +3705,18 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-libs/tests/internal/graph/dispatch/adaptive_traverse/sparse_queue_materializer_contracts.rs",
-      "line": 251,
+      "path": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
+      "line": 84,
+      "pattern": "source_inspection_test",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
+      "line": 102,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3726,7 +3726,7 @@
     },
     {
       "path": "vyre-libs/tests/quantized_dispatch_variant_coverage_gate.rs",
-      "line": 169,
+      "line": 220,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3736,7 +3736,7 @@
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 291,
+      "line": 337,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3746,7 +3746,7 @@
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 330,
+      "line": 474,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3756,7 +3756,7 @@
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 504,
+      "line": 526,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3766,7 +3766,7 @@
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 556,
+      "line": 581,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3776,7 +3776,7 @@
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 611,
+      "line": 661,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3786,17 +3786,7 @@
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 691,
-      "pattern": "source_inspection_test",
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 727,
+      "line": 697,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3846,7 +3836,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 48,
+      "line": 69,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3856,7 +3846,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 300,
+      "line": 308,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3866,7 +3856,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 337,
+      "line": 345,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3876,7 +3866,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 357,
+      "line": 365,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3886,7 +3876,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 377,
+      "line": 385,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3896,7 +3886,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 400,
+      "line": 408,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3906,7 +3896,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 423,
+      "line": 431,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3916,7 +3906,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 448,
+      "line": 456,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3926,7 +3916,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 474,
+      "line": 482,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3936,7 +3926,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 506,
+      "line": 514,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3946,7 +3936,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 529,
+      "line": 537,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3956,7 +3946,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 548,
+      "line": 556,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3966,7 +3956,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 598,
+      "line": 606,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3976,7 +3966,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 640,
+      "line": 648,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3986,7 +3976,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 695,
+      "line": 703,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -3996,7 +3986,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 761,
+      "line": 769,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -4006,7 +3996,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 794,
+      "line": 802,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -4016,7 +4006,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 829,
+      "line": 847,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -4026,7 +4016,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 864,
+      "line": 889,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -4036,7 +4026,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 898,
+      "line": 924,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -4046,7 +4036,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 932,
+      "line": 958,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -4056,7 +4046,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 957,
+      "line": 992,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -4066,7 +4056,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 985,
+      "line": 1017,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -4076,7 +4066,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1009,
+      "line": 1045,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -4086,7 +4076,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1039,
+      "line": 1069,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -4096,7 +4086,17 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1087,
+      "line": 1099,
+      "pattern": "source_inspection_test",
+      "owner_lane": "testing_evidence",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+      "line": 1147,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -4236,7 +4236,7 @@
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 207,
+      "line": 213,
       "pattern": "documented_panic_contract",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -4246,7 +4246,7 @@
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 337,
+      "line": 343,
       "pattern": "documented_panic_contract",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -4256,7 +4256,7 @@
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 348,
+      "line": 354,
       "pattern": "documented_panic_contract",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -4883,85 +4883,85 @@
     },
     {
       "path": "vyre-foundation/src/ir_inner/model/node/impl_node.rs",
-      "line": 284,
+      "line": 293,
       "pattern": "placeholder_text",
       "text": "/// node records placeholder operands. Emit"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 564,
+      "line": 600,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: registered callee must have transitive effect state\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 568,
+      "line": 604,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: registered callee must have transitive capability state\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 576,
+      "line": 612,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: caller node in direct_callees must be registered in transitive_effects\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 585,
+      "line": 621,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: caller node in direct_callees must be registered in transitive_capabilities\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 714,
+      "line": 750,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan traversal node must have an adjacency entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 723,
+      "line": 759,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan visited child node must have a lowlink entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 727,
+      "line": 763,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 735,
+      "line": 771,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan on-stack node must have an index entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 739,
+      "line": 775,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 747,
+      "line": 783,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 752,
+      "line": 788,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan active node must have an index entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 759,
+      "line": 795,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan component stack must contain its root\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 884,
+      "line": 920,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"invalid semantic operation registry: {error}\"))"
     },
@@ -5027,7 +5027,7 @@
     },
     {
       "path": "vyre-libs/src/graph/csr_bidirectional_plan.rs",
-      "line": 602,
+      "line": 549,
       "pattern": "documented_panic_contract",
       "text": "try_merge_frontier_or_changed(current, next).unwrap_or_else(|error| panic!(\"{error}\"))"
     },
@@ -5045,7 +5045,7 @@
     },
     {
       "path": "vyre-libs/src/graph/dominator_frontier.rs",
-      "line": 83,
+      "line": 70,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
@@ -5195,25 +5195,25 @@
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 44,
+      "line": 57,
       "pattern": "panic_macro",
       "text": "panic!(\"{}\", self.0);"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 118,
+      "line": 112,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 163,
+      "line": 148,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 197,
+      "line": 180,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: sequential-output dispatcher mutex should not be poisoned\");"
     },
@@ -5273,7 +5273,7 @@
     },
     {
       "path": "vyre-primitives/src/hardware/mod.rs",
-      "line": 464,
+      "line": 469,
       "pattern": "placeholder_text",
       "text": "/// zeroed placeholder for one described a call the artifact ABI rejects."
     },
@@ -5591,19 +5591,19 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 224,
+      "line": 226,
       "pattern": "placeholder_text",
       "text": "// op whose fixture carried a placeholder for a backend-allocated output"
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 237,
+      "line": 239,
       "pattern": "placeholder_text",
       "text": "backend-allocated output; a placeholder for one is what the artifact ABI rejects on \\"
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 420,
+      "line": 422,
       "pattern": "placeholder_text",
       "text": "/// what a caller-supplied placeholder has to cover."
     },
@@ -5985,14 +5985,14 @@
     },
     {
       "path": "vyre-foundation/tests/expr_type_single_owner.rs",
-      "line": 284,
+      "line": 295,
       "pattern": "source_inspection_test",
       "text": "test `owner_answers_every_expr_variant` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "owner_answers_every_expr_variant"
     },
     {
       "path": "vyre-foundation/tests/expr_type_single_owner.rs",
-      "line": 330,
+      "line": 341,
       "pattern": "source_inspection_test",
       "text": "test `only_one_file_defines_expr_type` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "only_one_file_defines_expr_type"
@@ -6069,112 +6069,105 @@
     },
     {
       "path": "vyre-libs/tests/graph_single_source_contracts.rs",
-      "line": 119,
+      "line": 118,
       "pattern": "source_inspection_test",
       "text": "test `the_wrapper_set_is_derived_and_not_empty` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "the_wrapper_set_is_derived_and_not_empty"
     },
     {
       "path": "vyre-libs/tests/graph_single_source_contracts.rs",
-      "line": 131,
+      "line": 151,
       "pattern": "source_inspection_test",
       "text": "test `every_dispatch_wrapper_names_the_graph_primitive_it_wraps` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_dispatch_wrapper_names_the_graph_primitive_it_wraps"
     },
     {
       "path": "vyre-libs/tests/graph_single_source_contracts.rs",
-      "line": 161,
+      "line": 181,
       "pattern": "source_inspection_test",
       "text": "test `every_dispatch_wrapper_names_its_primitive_cpu_reference` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_dispatch_wrapper_names_its_primitive_cpu_reference"
     },
     {
       "path": "vyre-libs/tests/graph_single_source_contracts.rs",
-      "line": 189,
+      "line": 209,
       "pattern": "source_inspection_test",
       "text": "test `no_dispatch_wrapper_is_shadowed_by_an_older_module_path` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "no_dispatch_wrapper_is_shadowed_by_an_older_module_path"
     },
     {
       "path": "vyre-libs/tests/graph_single_source_contracts.rs",
-      "line": 209,
+      "line": 229,
       "pattern": "source_inspection_test",
       "text": "test `the_dispatch_module_declares_every_wrapper_once` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "the_dispatch_module_declares_every_wrapper_once"
     },
     {
       "path": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
-      "line": 42,
+      "line": 54,
       "pattern": "source_inspection_test",
-      "text": "test `no_production_crate_outside_the_oracle_ships_a_host_dispatcher` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "no_production_crate_outside_the_oracle_ships_a_host_dispatcher"
+      "text": "test `no_production_crate_outside_the_oracle_executes_on_the_host` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "no_production_crate_outside_the_oracle_executes_on_the_host"
     },
     {
       "path": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
-      "line": 66,
+      "line": 84,
       "pattern": "source_inspection_test",
-      "text": "test `the_walk_actually_reaches_the_dispatchers_it_judges` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "the_walk_actually_reaches_the_dispatchers_it_judges"
+      "text": "test `the_walk_actually_reaches_the_implementors_it_judges` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "the_walk_actually_reaches_the_implementors_it_judges"
     },
     {
-      "path": "vyre-libs/tests/internal/graph/dispatch/adaptive_traverse/sparse_queue_materializer_contracts.rs",
-      "line": 251,
+      "path": "vyre-libs/tests/host_dispatch_is_parity_only.rs",
+      "line": 102,
       "pattern": "source_inspection_test",
-      "text": "test `every_resident_queue_materializer_variant_has_a_step_sequence_case` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "every_resident_queue_materializer_variant_has_a_step_sequence_case"
+      "text": "test `every_policed_seam_is_a_trait_this_tree_declares` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "every_policed_seam_is_a_trait_this_tree_declares"
     },
     {
       "path": "vyre-libs/tests/quantized_dispatch_variant_coverage_gate.rs",
-      "line": 169,
+      "line": 220,
       "pattern": "source_inspection_test",
       "text": "test `every_published_quantized_entry_point_has_a_readback_contract_row` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_published_quantized_entry_point_has_a_readback_contract_row"
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 291,
+      "line": 337,
       "pattern": "source_inspection_test",
-      "text": "test `no_dispatch_grid_function_hand_rolls_the_ceiling_division` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "no_dispatch_grid_function_hand_rolls_the_ceiling_division"
+      "text": "test `no_operation_publishes_launch_geometry` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "no_operation_publishes_launch_geometry"
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 330,
-      "pattern": "source_inspection_test",
-      "text": "test `every_domain_with_a_dispatch_grid_can_reach_the_owner` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "every_domain_with_a_dispatch_grid_can_reach_the_owner"
-    },
-    {
-      "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 504,
+      "line": 474,
       "pattern": "source_inspection_test",
       "text": "test `no_binding_record_spells_its_full_name_set_twice` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "no_binding_record_spells_its_full_name_set_twice"
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 556,
+      "line": 526,
       "pattern": "source_inspection_test",
       "text": "test `every_buffer_binding_record_publishes_canonical_names` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_buffer_binding_record_publishes_canonical_names"
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 611,
+      "line": 581,
       "pattern": "source_inspection_test",
       "text": "test `every_routed_convergence_op_registers_with_the_routing_contract` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_routed_convergence_op_registers_with_the_routing_contract"
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 691,
+      "line": 661,
       "pattern": "source_inspection_test",
       "text": "test `no_op_re_asserts_the_routing_obligations_privately` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "no_op_re_asserts_the_routing_obligations_privately"
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 727,
+      "line": 697,
       "pattern": "source_inspection_test",
       "text": "test `no_production_op_calls_unrouted_persistent_fixpoint` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "no_production_op_calls_unrouted_persistent_fixpoint"
@@ -6209,182 +6202,189 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 48,
+      "line": 69,
       "pattern": "source_inspection_test",
-      "text": "test `canonical_program_dispatcher_exact_path_derives_execution_methods` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "canonical_program_dispatcher_exact_path_derives_execution_methods"
+      "text": "test `canonical_semantic_executor_exact_path_derives_execution_methods` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "canonical_semantic_executor_exact_path_derives_execution_methods"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 300,
+      "line": 308,
       "pattern": "source_inspection_test",
       "text": "test `production_trait_default_method_uncalled_oracle_is_flagged` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "production_trait_default_method_uncalled_oracle_is_flagged"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 337,
+      "line": 345,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_local_dummy_program_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_local_dummy_program_masquerade"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 357,
+      "line": 365,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_crate_bogus_program_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_crate_bogus_program_masquerade"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 377,
+      "line": 385,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_glob_import_program_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_glob_import_program_masquerade"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 400,
+      "line": 408,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_sibling_imported_fake_program_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_sibling_imported_fake_program_masquerade"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 423,
+      "line": 431,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_sibling_imported_fake_dispatcher_trait_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_sibling_imported_fake_dispatcher_trait_masquerade"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 448,
+      "line": 456,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_fake_dispatch_error_without_canonical_dispatcher` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_fake_dispatch_error_without_canonical_dispatcher"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 474,
+      "line": 482,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatch_error_and_resident_read_range_param_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatch_error_and_resident_read_range_param_masquerade"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 506,
+      "line": 514,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_mixed_tuple_data_type_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_mixed_tuple_data_type_masquerade"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 529,
+      "line": 537,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_result_vec_with_fusion_error_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_result_vec_with_fusion_error_masquerade"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 548,
+      "line": 556,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_allows_test_inputs_generator_and_catches_expected_output_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_allows_test_inputs_generator_and_catches_expected_output_oracle"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 598,
+      "line": 606,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_struct_literal_catches_expected_output_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_struct_literal_catches_expected_output_oracle"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 640,
+      "line": 648,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_aliased_as_or_catches_expected_output_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_aliased_as_or_catches_expected_output_oracle"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 695,
+      "line": 703,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_catches_inline_closure_loop_and_math` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_catches_inline_closure_loop_and_math"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 761,
+      "line": 769,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_catches_wire_pack_in_expected_output` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_catches_wire_pack_in_expected_output"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 794,
+      "line": 802,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_catches_helper_function_in_expected_output` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_catches_helper_function_in_expected_output"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 829,
+      "line": 847,
+      "pattern": "source_inspection_test",
+      "text": "test `every_registration_constructor_convicts_a_host_oracle_in_expected_output` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "every_registration_constructor_convicts_a_host_oracle_in_expected_output"
+    },
+    {
+      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+      "line": 889,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_catches_local_closure_alias_in_expected_output` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_catches_local_closure_alias_in_expected_output"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 864,
+      "line": 924,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_err_fallback_branch_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_err_fallback_branch_oracle"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 898,
+      "line": 958,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_unwrap_or_else_fallback_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_unwrap_or_else_fallback_oracle"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 932,
+      "line": 992,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_post_dispatch_iter_any_reduction` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_post_dispatch_iter_any_reduction"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 957,
+      "line": 1017,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_match_ok_post_dispatch_iter_any` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_match_ok_post_dispatch_iter_any"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 985,
+      "line": 1045,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_map_closure_post_dispatch_reduction` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_map_closure_post_dispatch_reduction"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1009,
+      "line": 1069,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_post_dispatch_loop_accumulation` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_post_dispatch_loop_accumulation"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1039,
+      "line": 1099,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_post_dispatch_filter_count_reduction` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_post_dispatch_filter_count_reduction"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1087,
+      "line": 1147,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_escaped_cache_invalidation_post_dispatch_host_projection` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_escaped_cache_invalidation_post_dispatch_host_projection"
@@ -6477,19 +6477,19 @@
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 207,
+      "line": 213,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {} declares no [package] name\", manifest.display()))"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 337,
+      "line": 343,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"Fix: cannot read {}: {error}\", path.display());"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 348,
+      "line": 354,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"Fix: parse {}: {e}\", path.display());"
     },

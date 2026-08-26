@@ -41,11 +41,10 @@ fn exit_after_the_last_barrier_emits_v055() {
     check_loop_back_edge(
         &[
             barrier(),
-            Node::If {
-                cond: Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                then: vec![Node::Return],
-                otherwise: Vec::new(),
-            },
+            Node::if_then(
+                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                vec![Node::Return],
+            ),
         ],
         &mut errors,
     );
@@ -62,11 +61,7 @@ fn a_barrier_after_the_exit_is_accepted() {
     check_loop_back_edge(
         &[
             barrier(),
-            Node::If {
-                cond: Expr::bool(true),
-                then: vec![Node::Return],
-                otherwise: Vec::new(),
-            },
+            Node::if_then(Expr::bool(true), vec![Node::Return]),
             barrier(),
         ],
         &mut errors,
@@ -84,11 +79,10 @@ fn logical_barrier_orders_a_logical_lane_exit() {
     check_loop_back_edge(
         &[
             Node::logical_barrier(MemoryOrdering::SeqCst),
-            Node::If {
-                cond: Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
-                then: vec![Node::Return],
-                otherwise: Vec::new(),
-            },
+            Node::if_then(
+                Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
+                vec![Node::Return],
+            ),
             Node::logical_barrier(MemoryOrdering::SeqCst),
         ],
         &mut errors,
@@ -104,11 +98,7 @@ fn logical_barrier_orders_a_logical_lane_exit() {
 fn an_exit_in_a_loop_with_no_barrier_is_accepted() {
     let mut errors = Vec::new();
     check_loop_back_edge(
-        &[Node::If {
-            cond: Expr::bool(true),
-            then: vec![Node::Return],
-            otherwise: Vec::new(),
-        }],
+        &[Node::if_then(Expr::bool(true), vec![Node::Return])],
         &mut errors,
     );
     assert!(
@@ -124,16 +114,15 @@ fn a_nested_exit_after_the_last_barrier_emits_v055() {
     check_loop_back_edge(
         &[
             barrier(),
-            Node::Loop {
-                var: "inner".into(),
-                from: Expr::u32(0),
-                to: Expr::u32(4),
-                body: vec![Node::If {
-                    cond: Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                    then: vec![Node::Return],
-                    otherwise: Vec::new(),
-                }],
-            },
+            Node::loop_for(
+                "inner",
+                Expr::u32(0),
+                Expr::u32(4),
+                vec![Node::if_then(
+                    Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                    vec![Node::Return],
+                )],
+            ),
         ],
         &mut errors,
     );
@@ -150,26 +139,16 @@ fn nested_loop_loop_carried_divergence_emits_v055() {
     check_loop_back_edge(
         &[
             barrier(),
-            Node::Let {
-                name: "x".into(),
-                value: Expr::u32(0),
-            },
-            Node::Loop {
-                var: "inner".into(),
-                from: Expr::u32(0),
-                to: Expr::u32(4),
-                body: vec![
-                    Node::If {
-                        cond: Expr::eq(Expr::var("x"), Expr::u32(0)),
-                        then: vec![Node::Return],
-                        otherwise: Vec::new(),
-                    },
-                    Node::Assign {
-                        name: "x".into(),
-                        value: Expr::InvocationId { axis: 0 },
-                    },
+            Node::let_bind("x", Expr::u32(0)),
+            Node::loop_for(
+                "inner",
+                Expr::u32(0),
+                Expr::u32(4),
+                vec![
+                    Node::if_then(Expr::eq(Expr::var("x"), Expr::u32(0)), vec![Node::Return]),
+                    Node::assign("x", Expr::InvocationId { axis: 0 }),
                 ],
-            },
+            ),
         ],
         &mut errors,
     );
@@ -186,26 +165,16 @@ fn nested_loop_purely_uniform_exit_is_accepted() {
     check_loop_back_edge(
         &[
             barrier(),
-            Node::Let {
-                name: "x".into(),
-                value: Expr::u32(0),
-            },
-            Node::Loop {
-                var: "inner".into(),
-                from: Expr::u32(0),
-                to: Expr::u32(4),
-                body: vec![
-                    Node::If {
-                        cond: Expr::eq(Expr::var("x"), Expr::u32(10)),
-                        then: vec![Node::Return],
-                        otherwise: Vec::new(),
-                    },
-                    Node::Assign {
-                        name: "x".into(),
-                        value: Expr::add(Expr::var("x"), Expr::u32(1)),
-                    },
+            Node::let_bind("x", Expr::u32(0)),
+            Node::loop_for(
+                "inner",
+                Expr::u32(0),
+                Expr::u32(4),
+                vec![
+                    Node::if_then(Expr::eq(Expr::var("x"), Expr::u32(10)), vec![Node::Return]),
+                    Node::assign("x", Expr::add(Expr::var("x"), Expr::u32(1))),
                 ],
-            },
+            ),
         ],
         &mut errors,
     );
@@ -222,24 +191,14 @@ fn nested_loop_divergent_bounds_modifying_variable_emits_v055() {
     check_loop_back_edge(
         &[
             barrier(),
-            Node::Let {
-                name: "x".into(),
-                value: Expr::u32(0),
-            },
-            Node::Loop {
-                var: "inner".into(),
-                from: Expr::u32(0),
-                to: Expr::InvocationId { axis: 0 },
-                body: vec![Node::Assign {
-                    name: "x".into(),
-                    value: Expr::u32(1),
-                }],
-            },
-            Node::If {
-                cond: Expr::eq(Expr::var("x"), Expr::u32(1)),
-                then: vec![Node::Return],
-                otherwise: Vec::new(),
-            },
+            Node::let_bind("x", Expr::u32(0)),
+            Node::loop_for(
+                "inner",
+                Expr::u32(0),
+                Expr::InvocationId { axis: 0 },
+                vec![Node::assign("x", Expr::u32(1))],
+            ),
+            Node::if_then(Expr::eq(Expr::var("x"), Expr::u32(1)), vec![Node::Return]),
         ],
         &mut errors,
     );
@@ -256,28 +215,17 @@ fn nested_loop_divergent_inner_branch_modifying_variable_emits_v055() {
     check_loop_back_edge(
         &[
             barrier(),
-            Node::Let {
-                name: "x".into(),
-                value: Expr::u32(0),
-            },
-            Node::Loop {
-                var: "inner".into(),
-                from: Expr::u32(0),
-                to: Expr::u32(4),
-                body: vec![Node::If {
-                    cond: Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                    then: vec![Node::Assign {
-                        name: "x".into(),
-                        value: Expr::u32(1),
-                    }],
-                    otherwise: Vec::new(),
-                }],
-            },
-            Node::If {
-                cond: Expr::eq(Expr::var("x"), Expr::u32(1)),
-                then: vec![Node::Return],
-                otherwise: Vec::new(),
-            },
+            Node::let_bind("x", Expr::u32(0)),
+            Node::loop_for(
+                "inner",
+                Expr::u32(0),
+                Expr::u32(4),
+                vec![Node::if_then(
+                    Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                    vec![Node::assign("x", Expr::u32(1))],
+                )],
+            ),
+            Node::if_then(Expr::eq(Expr::var("x"), Expr::u32(1)), vec![Node::Return]),
         ],
         &mut errors,
     );
@@ -294,29 +242,19 @@ fn doubly_nested_loop_divergent_inner_bounds_emits_v055() {
     check_loop_back_edge(
         &[
             barrier(),
-            Node::Let {
-                name: "x".into(),
-                value: Expr::u32(0),
-            },
-            Node::Loop {
-                var: "mid".into(),
-                from: Expr::u32(0),
-                to: Expr::u32(2),
-                body: vec![Node::Loop {
-                    var: "inner".into(),
-                    from: Expr::u32(0),
-                    to: Expr::InvocationId { axis: 0 },
-                    body: vec![Node::Assign {
-                        name: "x".into(),
-                        value: Expr::u32(1),
-                    }],
-                }],
-            },
-            Node::If {
-                cond: Expr::eq(Expr::var("x"), Expr::u32(1)),
-                then: vec![Node::Return],
-                otherwise: Vec::new(),
-            },
+            Node::let_bind("x", Expr::u32(0)),
+            Node::loop_for(
+                "mid",
+                Expr::u32(0),
+                Expr::u32(2),
+                vec![Node::loop_for(
+                    "inner",
+                    Expr::u32(0),
+                    Expr::InvocationId { axis: 0 },
+                    vec![Node::assign("x", Expr::u32(1))],
+                )],
+            ),
+            Node::if_then(Expr::eq(Expr::var("x"), Expr::u32(1)), vec![Node::Return]),
         ],
         &mut errors,
     );
@@ -334,26 +272,16 @@ fn nested_loop_later_iteration_divergent_return_emits_v055() {
     check_loop_back_edge(
         &[
             barrier(),
-            Node::Let {
-                name: "x".into(),
-                value: Expr::u32(0),
-            },
-            Node::Loop {
-                var: "inner".into(),
-                from: Expr::u32(0),
-                to: Expr::u32(4),
-                body: vec![
-                    Node::If {
-                        cond: Expr::eq(Expr::var("x"), Expr::u32(1)),
-                        then: vec![Node::Return],
-                        otherwise: Vec::new(),
-                    },
-                    Node::Assign {
-                        name: "x".into(),
-                        value: Expr::InvocationId { axis: 0 },
-                    },
+            Node::let_bind("x", Expr::u32(0)),
+            Node::loop_for(
+                "inner",
+                Expr::u32(0),
+                Expr::u32(4),
+                vec![
+                    Node::if_then(Expr::eq(Expr::var("x"), Expr::u32(1)), vec![Node::Return]),
+                    Node::assign("x", Expr::InvocationId { axis: 0 }),
                 ],
-            },
+            ),
         ],
         &mut errors,
     );
@@ -371,31 +299,27 @@ fn doubly_nested_loop_later_iteration_divergent_return_emits_v055() {
     check_loop_back_edge(
         &[
             barrier(),
-            Node::Let {
-                name: "x".into(),
-                value: Expr::u32(0),
-            },
-            Node::Loop {
-                var: "outer".into(),
-                from: Expr::u32(0),
-                to: Expr::u32(3),
-                body: vec![
-                    Node::Loop {
-                        var: "inner".into(),
-                        from: Expr::u32(0),
-                        to: Expr::u32(3),
-                        body: vec![Node::If {
-                            cond: Expr::eq(Expr::var("x"), Expr::u32(2)),
-                            then: vec![Node::Return],
-                            otherwise: Vec::new(),
-                        }],
-                    },
-                    Node::Assign {
-                        name: "x".into(),
-                        value: Expr::add(Expr::var("x"), Expr::InvocationId { axis: 0 }),
-                    },
+            Node::let_bind("x", Expr::u32(0)),
+            Node::loop_for(
+                "outer",
+                Expr::u32(0),
+                Expr::u32(3),
+                vec![
+                    Node::loop_for(
+                        "inner",
+                        Expr::u32(0),
+                        Expr::u32(3),
+                        vec![Node::if_then(
+                            Expr::eq(Expr::var("x"), Expr::u32(2)),
+                            vec![Node::Return],
+                        )],
+                    ),
+                    Node::assign(
+                        "x",
+                        Expr::add(Expr::var("x"), Expr::InvocationId { axis: 0 }),
+                    ),
                 ],
-            },
+            ),
         ],
         &mut errors,
     );

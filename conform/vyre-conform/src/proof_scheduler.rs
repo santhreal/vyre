@@ -6,6 +6,7 @@ use crate::proof_timing::{
     emit_backend_proof_timing, emit_pair_proof_start, emit_pair_proof_timing,
 };
 use crate::reference_parity::compare_backend_against_reference;
+use vyre_conform::panic_message;
 use vyre_conform_spec::ConformanceResult;
 
 pub(crate) struct PreparedEntryBatch {
@@ -237,14 +238,4 @@ fn prove_one_backend(
         .collect::<Vec<_>>();
     emit_backend_proof_timing(backend.id, pairs.len(), worker_count, started.elapsed());
     pairs
-}
-
-pub(crate) fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
-    if let Some(message) = payload.downcast_ref::<&'static str>() {
-        (*message).to_string()
-    } else if let Some(message) = payload.downcast_ref::<String>() {
-        message.clone()
-    } else {
-        "non-string panic payload".to_string()
-    }
 }

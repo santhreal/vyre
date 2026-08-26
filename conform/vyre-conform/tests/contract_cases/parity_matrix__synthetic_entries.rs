@@ -434,13 +434,3 @@ pub(crate) fn format_summary_failures(summary: &Summary) -> String {
     );
     message
 }
-
-pub(crate) fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
-    if let Some(message) = payload.downcast_ref::<&'static str>() {
-        (*message).to_string()
-    } else if let Some(message) = payload.downcast_ref::<String>() {
-        message.clone()
-    } else {
-        "non-string panic payload".to_string()
-    }
-}

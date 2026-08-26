@@ -6,7 +6,7 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::graph::scc_decompose::{scc_decompose, SCC_DECOMPOSE_WORKGROUP_SIZE};
+use vyre_libs::graph::scc_decompose::scc_decompose;
 use vyre_reference::composition_witness::scc_decompose_witness;
 
 fn run(
@@ -22,7 +22,7 @@ fn run(
         u32_bytes(backward),
         u32_bytes(component_in),
     ];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("SCC decompose", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

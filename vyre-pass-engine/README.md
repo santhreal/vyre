@@ -61,7 +61,7 @@ Execute optimizer passes as Vyre Programs through compiler-owned semantic compil
 ### Boundaries
 
 The `pass-engine` owner maintains this `pass-engine` crate at `vyre-pass-engine`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-libs`, `vyre-primitives`.
+Its allowed internal production dependencies are: `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

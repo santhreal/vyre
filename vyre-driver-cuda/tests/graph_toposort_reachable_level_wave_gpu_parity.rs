@@ -365,7 +365,7 @@ fn run_level_wave(backend: &CudaBackend, depths: &[u32], max_depth: u32) -> Vec<
     let program = Program::wrapped(buffers, inner.workgroup_size, inner.entry().to_vec());
 
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(depths), vec![0u8; lane_count as usize * 4]];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
@@ -415,7 +415,7 @@ fn run_level_wave_cross_block_dependency(
     );
     let program = Program::wrapped(buffers, inner.workgroup_size, inner.entry().to_vec());
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(depths), vec![0u8; lane_count as usize * 4]];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");

@@ -19,6 +19,7 @@ use vyre_megakernel::{
     DeviceFacts, Digest, ExternalFacts, SearchBudget,
 };
 
+use vyre_test_support::graph_values::{graph_output, u32_symbolic};
 use vyre_test_support::pass_programs::{add_program, copy_program};
 
 const LIMIT: u64 = 1_000_000;
@@ -32,12 +33,7 @@ fn diagnostic_path(error: &CompileError) -> Option<&str> {
 }
 
 fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
-    ValueContract {
-        dtype: DataType::U32,
-        shape: vec![ShapeDim::Symbol("items".into())],
-        access,
-        lifetime,
-    }
+    u32_symbolic(access, lifetime)
 }
 
 fn retained_program(input: &str, retained: &str) -> Program {
@@ -91,12 +87,10 @@ fn whole_graph() -> ProgramGraph {
                     contract: contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
                 },
             ],
-            vec![GraphOutput {
-                buffer: "intermediate".into(),
-                name: "intermediate".into(),
-                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),
-                retained_successor_of: None,
-            }],
+            vec![graph_output(
+                "intermediate",
+                contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),
+            )],
         )
         .unwrap();
     let (_, beta_outputs) = graph
@@ -132,12 +126,10 @@ fn whole_graph() -> ProgramGraph {
                 value: beta_outputs[0],
                 contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
             }],
-            vec![GraphOutput {
-                buffer: "result".into(),
-                name: "result".into(),
-                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
-                retained_successor_of: None,
-            }],
+            vec![graph_output(
+                "result",
+                contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+            )],
         )
         .unwrap();
     graph
@@ -190,12 +182,7 @@ fn fusion_pair_graph(
                 value: input,
                 contract: invocation.clone(),
             }],
-            vec![GraphOutput {
-                buffer: "intermediate".into(),
-                name: "intermediate".into(),
-                contract: invocation.clone(),
-                retained_successor_of: None,
-            }],
+            vec![graph_output("intermediate", invocation.clone())],
         )
         .unwrap();
     graph
@@ -212,12 +199,10 @@ fn fusion_pair_graph(
                 value: intermediate[0],
                 contract: invocation,
             }],
-            vec![GraphOutput {
-                buffer: "output".into(),
-                name: "output".into(),
-                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
-                retained_successor_of: None,
-            }],
+            vec![graph_output(
+                "output",
+                contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+            )],
         )
         .unwrap();
     graph
@@ -1036,21 +1021,7 @@ fn fenced_program(under_a_uniform_branch: bool) -> Program {
 fn device_with(
     edit: impl FnOnce(&mut vyre_foundation::validate::BackendCapabilities),
 ) -> DeviceFacts {
-    let mut capabilities = vyre_foundation::validate::BackendCapabilities {
-        supports_subgroup_ops: true,
-        supports_indirect_dispatch: true,
-        supports_specialization_constants: true,
-        supports_distributed_collectives: true,
-        has_mul_high: true,
-        has_dual_issue_fp32_int32: true,
-        has_tensor_core_int: true,
-        has_native_f16: true,
-        has_warp_shuffle: true,
-        has_shared_memory: true,
-        has_transcendental_polynomial_emit: true,
-        max_native_int_width: 64,
-        ..Default::default()
-    };
+    let mut capabilities = vyre_test_support::backend_capabilities::all_granted();
     edit(&mut capabilities);
     DeviceFacts::new(capabilities, 1024)
 }

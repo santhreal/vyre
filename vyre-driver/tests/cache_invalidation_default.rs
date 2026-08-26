@@ -6,15 +6,14 @@
 use vyre_driver::cache_invalidation::{impacted_entries_into, CacheInvalidationScratch};
 use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_megakernel::{
-    CompileObjective, DeviceFacts, Digest, ExternalFacts, SearchBudget, SemanticExecutionError,
-    SemanticExecutionOutput, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
+    Digest, SearchBudget, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
+    SemanticExecutionRequest, SemanticExecutor,
 };
+use vyre_test_support::semantic_requests::{admitted_output, unknown_policy};
 
 fn policy() -> SemanticExecutionPolicy {
-    SemanticExecutionPolicy::new(
-        ExternalFacts::new(Digest([0; 32]), std::collections::BTreeMap::new()),
-        DeviceFacts::unknown(),
-        CompileObjective::MinimizeLatency,
+    unknown_policy(
+        Digest([0; 32]),
         SearchBudget::new(8, 64, 0, 0, 1_000),
         1_000_000,
     )
@@ -200,11 +199,7 @@ impl SemanticExecutor for MalformedOutputExecutor {
             .flat_map(|node| node.outputs.iter().copied())
             .map(|value| (value, vec![0u8; 1]))
             .collect();
-        Ok(SemanticExecutionOutput {
-            artifact: Digest([1; 32]),
-            payload: Digest([2; 32]),
-            outputs,
-        })
+        Ok(admitted_output(outputs))
     }
 }
 

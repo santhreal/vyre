@@ -561,6 +561,7 @@ fn vsa_words_hash(words: &[u32]) -> blake3::Hash {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::launch_fixtures::wide_limits;
 
     #[test]
     fn validation_cache_records_vsa_without_lock_shards() {
@@ -623,13 +624,7 @@ mod tests {
     /// no residency-aware decision can be derived from a number it never gave.
     #[test]
     fn unreported_per_unit_budget_answers_unknown_rather_than_zero() {
-        let reported = LaunchGeometryLimits {
-            backend: "reported",
-            max_threads_per_block: 1024,
-            max_block_dim: [1024, 1024, 64],
-            max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
-            max_threads_per_sm: 1536,
-        };
+        let reported = wide_limits("reported", 1536);
         let unreported = LaunchGeometryLimits {
             max_threads_per_sm: 0,
             ..reported

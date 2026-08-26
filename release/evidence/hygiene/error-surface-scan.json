@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:3b5fbe9762255e97f80e4347166024765120f5c9:dirty=true:worktree=7aaca7f7a0d6bdabaee6f8ec25eb8725088aae48ad5db805c86a4a63490049d4",
+  "source_fingerprint": "git:f658f200d51392c80a1428e5510b0a9f393f295a:dirty=true:worktree=e1bf0d30b3232f2572097dbead93e484120e55945fd78101e95c4c3108dd9c0c",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -143,79 +143,79 @@
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 564,
+      "line": 600,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: registered callee must have transitive effect state\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 568,
+      "line": 604,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: registered callee must have transitive capability state\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 576,
+      "line": 612,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: caller node in direct_callees must be registered in transitive_effects\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 585,
+      "line": 621,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: caller node in direct_callees must be registered in transitive_capabilities\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 714,
+      "line": 750,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan traversal node must have an adjacency entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 723,
+      "line": 759,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan visited child node must have a lowlink entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 727,
+      "line": 763,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 735,
+      "line": 771,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan on-stack node must have an index entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 739,
+      "line": 775,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 747,
+      "line": 783,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 752,
+      "line": 788,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan active node must have an index entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 759,
+      "line": 795,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan component stack must contain its root\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 884,
+      "line": 920,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"invalid semantic operation registry: {error}\"))"
     },
@@ -269,7 +269,7 @@
     },
     {
       "path": "vyre-libs/src/graph/csr_bidirectional_plan.rs",
-      "line": 602,
+      "line": 549,
       "pattern": "documented_panic_contract",
       "text": "try_merge_frontier_or_changed(current, next).unwrap_or_else(|error| panic!(\"{error}\"))"
     },
@@ -287,7 +287,7 @@
     },
     {
       "path": "vyre-libs/src/graph/dominator_frontier.rs",
-      "line": 83,
+      "line": 70,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
@@ -431,25 +431,25 @@
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 44,
+      "line": 57,
       "pattern": "panic_macro",
       "text": "panic!(\"{}\", self.0);"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 118,
+      "line": 112,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 163,
+      "line": 148,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 197,
+      "line": 180,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: sequential-output dispatcher mutex should not be poisoned\");"
     },
@@ -1133,19 +1133,19 @@
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 207,
+      "line": 213,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {} declares no [package] name\", manifest.display()))"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 337,
+      "line": 343,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"Fix: cannot read {}: {error}\", path.display());"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 348,
+      "line": 354,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"Fix: parse {}: {e}\", path.display());"
     },

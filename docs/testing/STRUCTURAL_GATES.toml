@@ -65,16 +65,6 @@ every value it produced stayed correct.
 
 [[gate]]
 file = "vyre-libs/tests/shared_owner_closure.rs"
-tests = ["the_launch_geometry_signature_matches_every_shape_it_rejects"]
-reason = """
-Asserts that the source signature still sees a function, a constant and a field
-it must reject. An empty result is the passing state of the gate above, so a
-broken prefix match would read as a clean tree forever and no behavioural test
-can distinguish the two.
-"""
-
-[[gate]]
-file = "vyre-libs/tests/shared_owner_closure.rs"
 tests = ["no_binding_record_spells_its_full_name_set_twice"]
 reason = """
 Asserts that no file in the workspace respells a binding record's full name set
@@ -141,16 +131,6 @@ which is consumed by cargo before any code runs.
 """
 
 [[gate]]
-file = "vyre-libs/tests/internal/graph/dispatch/adaptive_traverse/sparse_queue_materializer_contracts.rs"
-tests = ["every_resident_queue_materializer_variant_has_a_step_sequence_case"]
-reason = """
-Derives the published ResidentCsrQueueMaterializer variant set from the source
-that declares it, so a variant added without a step-sequence case is red on its
-first run. A variant nothing exercises has no run-time witness: the property
-being asserted is the absence of a case, which no execution can observe.
-"""
-
-[[gate]]
 file = "vyre-libs/tests/quantized_dispatch_variant_coverage_gate.rs"
 tests = ["every_published_quantized_entry_point_has_a_readback_contract_row"]
 reason = """
@@ -191,17 +171,6 @@ run of the seam observes.
 """
 
 [[gate]]
-file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
-tests = ["every_test_gating_shape_this_tree_uses_is_recognized"]
-reason = """
-Exercises the three shapes that keep an implementation out of a shipped build:
-an attribute on the item, an attribute on an inline module, and an attribute on
-the `mod` statement that includes a separate file. The subject is the classifier
-itself, applied to synthetic source, so the rule is proven rather than today's
-tree.
-"""
-
-[[gate]]
 file = "vyre-foundation/tests/expr_type_single_owner.rs"
 tests = ["owner_answers_every_expr_variant"]
 reason = """
@@ -227,6 +196,7 @@ make, which no execution observes.
 file = "xtask/src/gates/host_oracle_elimination_tests_part1.rs"
 tests = [
   "canonical_semantic_executor_exact_path_derives_execution_methods",
+  "every_registration_constructor_convicts_a_host_oracle_in_expected_output",
   "mutation_catches_crate_bogus_program_masquerade",
   "mutation_catches_dispatch_error_and_resident_read_range_param_masquerade",
   "mutation_catches_dispatcher_err_fallback_branch_oracle",

@@ -56,7 +56,7 @@ libc.workspace = true
 vyre-runtime.workspace = true
 # `ir-fixtures` carries the shared u32 binop parity tables the live-GPU
 # parity suites read their operands and pinned oracle answers from.
-vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
+vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 # Byte-stability golden harness (`artifact_golden`) shared with the emitter
 # crates, so the emitted-PTX corpus is pinned the same way emitted artifacts
 # are instead of growing a second comparison spelling.

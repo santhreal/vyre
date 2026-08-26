@@ -85,6 +85,23 @@ pub(crate) struct OracleContract {
     pub(crate) tolerance_ulp: u32,
 }
 
+#[cfg(test)]
+impl OracleContract {
+    /// A contract with every facet proven and an exact tolerance.
+    ///
+    /// Renderers assert what they print for a fully proven operation, so the
+    /// value is stated once rather than retyped per renderer test.
+    pub(crate) fn every_facet_proven() -> Self {
+        Self {
+            reference_eval: true,
+            flat_reference_facet: true,
+            fixture_inputs: true,
+            expected_output: true,
+            tolerance_ulp: 0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub(crate) struct BackendSupport {
     pub(crate) status: String,

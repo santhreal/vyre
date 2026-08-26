@@ -36,22 +36,8 @@ fn budget() -> SearchBudget {
 fn target_facts() -> DeviceFacts {
     DeviceFacts::new(
         BackendCapabilities {
-            supports_subgroup_ops: true,
-            supports_indirect_dispatch: true,
-            supports_specialization_constants: true,
-            supports_distributed_collectives: true,
-            has_mul_high: true,
-            has_dual_issue_fp32_int32: true,
-            has_tensor_core_int: true,
-            has_native_f16: true,
-            has_warp_shuffle: true,
-            has_shared_memory: true,
-            has_transcendental_polynomial_emit: true,
             max_native_int_width: 32,
-            supports_tensor_cores: true,
-            max_shared_memory_bytes: 64 * 1024,
-            regs_per_thread_max: 255,
-            subgroup_size: 32,
+            ..vyre_test_support::backend_capabilities::all_granted()
         },
         1024,
     )

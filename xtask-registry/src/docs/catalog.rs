@@ -48,7 +48,7 @@ fn render(catalog: &BTreeMap<String, Vec<OperationRecord>>) -> String {
 }
 
 fn collect() -> Result<BTreeMap<String, Vec<OperationRecord>>, GateError> {
-    let schema = assemble::build().map_err(schema_error)?;
+    let schema = assemble::build().map_err(crate::docs::operation_schema::schema_error)?;
     let mut by_subsystem: BTreeMap<String, Vec<OperationRecord>> = BTreeMap::new();
     for operation in schema.operations {
         by_subsystem
@@ -71,17 +71,6 @@ fn subsystem_for(operation_id: &str) -> String {
         .to_string()
 }
 
-/// Turns operation schema build errors into one gate error, because a schema
-/// that does not build leaves the gate nothing to compare the tree against.
-fn schema_error(errors: Vec<String>) -> GateError {
-    GateError::new(
-        format!(
-            "the canonical operation schema does not build: {}",
-            errors.join("; ")
-        ),
-        "repair the registrations the schema rejects, then run the gate again",
-    )
-}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -109,13 +98,7 @@ mod tests {
             },
             features: Vec::new(),
             schedule_constraints: Default::default(),
-            oracle: crate::docs::operation_schema::schema::OracleContract {
-                reference_eval: true,
-                flat_reference_facet: true,
-                fixture_inputs: true,
-                expected_output: true,
-                tolerance_ulp: 0,
-            },
+            oracle: crate::docs::operation_schema::schema::OracleContract::every_facet_proven(),
             backend_support: BTreeMap::new(),
             target_facets: Vec::new(),
             laws: Vec::new(),

@@ -75,6 +75,20 @@ use vyre_megakernel::{
 };
 ";
 
+/// The request construction every dispatch fixture reaches the seam through.
+///
+/// Stated once because a case varies what surrounds the submission, never the
+/// arguments the seam takes. A second copy of these arguments in a fixture is
+/// what `dup-scan` counts, and a case that drifts from this one proves the
+/// scanner against a request shape no production caller writes.
+pub(super) const CANONICAL_REQUEST_ARGUMENTS: &str = "        logical,
+        inputs,
+        policy.external_facts().clone(),
+        policy.target_facts(),
+        policy.objective(),
+        policy.budget(),
+        policy.max_artifact_bytes(),";
+
 /// A function that binds staged bytes into a request and submits it.
 ///
 /// `vis` varies because a case distinguishes a public entry point from a private
@@ -98,13 +112,7 @@ pub(super) fn canonical_dispatch_fn(
     let mut inputs = BTreeMap::new();
     inputs.insert(GraphValueId(0), graph.packed.as_slice());
     let request = SemanticExecutionRequest::new(
-        logical,
-        inputs,
-        policy.external_facts().clone(),
-        policy.target_facts(),
-        policy.objective(),
-        policy.budget(),
-        policy.max_artifact_bytes(),
+{CANONICAL_REQUEST_ARGUMENTS}
     )?;
     dispatcher.execute(&request)?;
     Ok(())
@@ -138,13 +146,7 @@ pub fn stage_demo_request<'a>(
     let mut inputs = BTreeMap::new();
     inputs.insert(GraphValueId(0), &packed[..]);
     SemanticExecutionRequest::new(
-        logical,
-        inputs,
-        policy.external_facts().clone(),
-        policy.target_facts(),
-        policy.objective(),
-        policy.budget(),
-        policy.max_artifact_bytes(),
+{CANONICAL_REQUEST_ARGUMENTS}
     )
 }}
 "

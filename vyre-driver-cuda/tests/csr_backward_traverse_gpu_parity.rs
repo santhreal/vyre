@@ -33,7 +33,7 @@ fn run(
         edge_kind_mask,
         frontier,
     );
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("CSR backward traverse", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

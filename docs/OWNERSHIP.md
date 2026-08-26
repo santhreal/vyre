@@ -195,12 +195,13 @@ Adapt the reference interpreter to the backend contract for deterministic confor
 - Path: `vyre-driver-reference`
 - Owner: `reference-driver`
 - Layer: `concrete-backend`
-- Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-reference`
+- Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-reference`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `public` | `backend-contract` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-megakernel` | the admitted artifact and target payload the reference target materializes | `public` | `megakernel-compiler` |
 | `vyre-reference` | independent semantic oracle execution | `private` | `reference-semantics` |
 
 ### `vyre-driver-spirv`
@@ -318,11 +319,12 @@ Own every composition in the workspace: consumer dialects and compiler-internal 
 - Path: `vyre-libs`
 - Owner: `product-libraries`
 - Layer: `libraries`
-- Internal production dependencies: `vyre-foundation`, `vyre-primitives`, `vyre-spec`
+- Internal production dependencies: `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
 | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 
@@ -373,17 +375,18 @@ Construct foundation-owned selected schedules through bounded whole-ProgramGraph
 
 ### `vyre-pass-engine`
 
-Execute the optimizer's own passes as Vyre Programs, dispatched through the ProgramDispatcher seam.
+Execute optimizer passes as Vyre Programs through compiler-owned semantic compilation and admitted artifact submission.
 
 - Path: `vyre-pass-engine`
 - Owner: `pass-engine`
 - Layer: `pass-engine`
-- Internal production dependencies: `vyre-foundation`, `vyre-libs`, `vyre-primitives`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-libs` | product operation builders | `private` | `product-libraries` |
+| `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `private` | `megakernel-compiler` |
 | `vyre-primitives` | reusable semantic Program builders | `public` | `primitive-library` |
 
 ### `vyre-primitives`
@@ -476,12 +479,13 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 - Path: `vyre-test-support`
 - Owner: `test-support`
 - Layer: `test-tooling`
-- Internal production dependencies: `structure-gate`, `vyre-foundation`, `vyre-reference`, `vyre-spec`
+- Internal production dependencies: `structure-gate`, `vyre-foundation`, `vyre-megakernel`, `vyre-reference`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | `private` | `release-tooling` |
 | `vyre-foundation` | IR statement fixtures for the run-time variant enumeration, behind the ir-fixtures feature | `private` | `foundation-ir` |
+| `vyre-megakernel` | the semantic execution request every backend contract shares, behind the semantic-requests feature | `private` | `megakernel-compiler` |
 | `vyre-reference` | reference interpreter oracle evaluation and canonical ULP distance calculation for the differential execution matrix, behind the ir-fixtures feature | `private` | `reference-semantics` |
 | `vyre-spec` | DataType and declared operation signatures for fixture tables, without gating a leaf crate behind ir-fixtures | `private` | `specification` |
 

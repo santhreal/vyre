@@ -22,7 +22,7 @@ fn run_bigint_add_carry(a: &[u32], b: &[u32]) -> (Vec<u32>, Vec<u32>) {
     inputs[BINDING_B_IN as usize] = u32_bytes(b);
     inputs[BINDING_SUM_PARTIAL_OUT as usize] = vec![0u8; limb_count as usize * 4];
     inputs[BINDING_CARRY_PARTIAL_OUT as usize] = vec![0u8; limb_count as usize * 4];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("bigint add carry", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

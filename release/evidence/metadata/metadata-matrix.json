@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:bd721f226c8c287b2d8ab3d56fa8b9481c30ba65:dirty=true:worktree=56f29062b4429d54e02aff59a3a8adabbc90747f8dc3385c471ea1d42a76b1d2",
+  "source_fingerprint": "git:f658f200d51392c80a1428e5510b0a9f393f295a:dirty=true:worktree=bf785dfcf8b63ff05bed1b7cd34da330ec1ea4c9a043b8d4bd39309e9f276b60",
   "schema_version": 3,
   "publishable_package_count": 25,
   "vyre_package_count": 25,
@@ -416,7 +416,7 @@
       "name": "vyre-pass-engine",
       "manifest": "vyre-pass-engine/Cargo.toml",
       "version": "0.8.0",
-      "description": "Vyre pass engine: executes the optimizer's own passes as Vyre Programs, dispatched through the ProgramDispatcher seam.",
+      "description": "Vyre pass engine: executes optimizer analysis Programs through compiler-owned semantic execution.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",

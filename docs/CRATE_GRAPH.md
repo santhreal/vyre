@@ -107,6 +107,7 @@ graph TD
   C9 --> C22
   C10 --> C7
   C10 --> C17
+  C10 --> C22
   C10 --> C25
   C11 --> C7
   C11 --> C16
@@ -133,6 +134,7 @@ graph TD
   C17 --> C21
   C17 --> C29
   C18 --> C17
+  C18 --> C22
   C18 --> C24
   C18 --> C29
   C20 --> C17
@@ -140,6 +142,7 @@ graph TD
   C22 --> C20
   C23 --> C17
   C23 --> C18
+  C23 --> C22
   C23 --> C24
   C24 --> C17
   C25 --> C17
@@ -160,6 +163,7 @@ graph TD
   C27 --> C22
   C30 --> C0
   C30 --> C17
+  C30 --> C22
   C30 --> C25
   C30 --> C29
   C31 --> C0
@@ -247,6 +251,7 @@ graph TD
 | `vyre-driver-metal` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
 | `vyre-driver-reference` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
 | `vyre-driver-reference` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
+| `vyre-driver-reference` | `vyre-megakernel` | the admitted artifact and target payload the reference target materializes | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
 | `vyre-driver-reference` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
 | `vyre-driver-spirv` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
 | `vyre-driver-spirv` | `vyre-emit-spirv` | SPIR-V emission | None | `always` | `normal` | `false` | `true` | `private` | `spirv-emitter` |
@@ -273,6 +278,7 @@ graph TD
 | `vyre-foundation` | `vyre-macros` | compile-time registration generation | None | `always` | `normal` | `false` | `true` | `private` | `registration-macros` |
 | `vyre-foundation` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-libs` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
+| `vyre-libs` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
 | `vyre-libs` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
 | `vyre-libs` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-lower` | `vyre-foundation` | typed IR plus validated backend-neutral selected schedule phases | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
@@ -280,6 +286,7 @@ graph TD
 | `vyre-megakernel` | `vyre-lower` | single verified selected-module representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
 | `vyre-pass-engine` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-pass-engine` | `vyre-libs` | product operation builders | None | `always` | `normal` | `false` | `false` | `private` | `product-libraries` |
+| `vyre-pass-engine` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
 | `vyre-pass-engine` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
 | `vyre-primitives` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `true` | `true` | `private` | `foundation-ir` |
 | `vyre-reference` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
@@ -300,6 +307,7 @@ graph TD
 | `vyre-runtime` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
 | `vyre-test-support` | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
 | `vyre-test-support` | `vyre-foundation` | IR statement fixtures for the run-time variant enumeration, behind the ir-fixtures feature | None | `always` | `normal` | `true` | `true` | `private` | `foundation-ir` |
+| `vyre-test-support` | `vyre-megakernel` | the semantic execution request every backend contract shares, behind the semantic-requests feature | None | `always` | `normal` | `true` | `true` | `private` | `megakernel-compiler` |
 | `vyre-test-support` | `vyre-reference` | reference interpreter oracle evaluation and canonical ULP distance calculation for the differential execution matrix, behind the ir-fixtures feature | None | `always` | `normal` | `true` | `true` | `private` | `reference-semantics` |
 | `vyre-test-support` | `vyre-spec` | DataType and declared operation signatures for fixture tables, without gating a leaf crate behind ir-fixtures | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
 | `xtask` | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |

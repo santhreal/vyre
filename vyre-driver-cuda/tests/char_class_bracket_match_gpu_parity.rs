@@ -186,7 +186,7 @@ fn run_bracket_match(kinds: &[u32], max_depth: u32) -> Vec<u32> {
         // stack scratch: zero-init.
         vec![0u8; max_depth as usize * 4],
     ];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("bracket match", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

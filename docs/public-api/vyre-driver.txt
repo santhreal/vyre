@@ -248,6 +248,7 @@ pub const fn vyre_driver::graph_capture::ScanGraphCaptureEdit::new(kind: vyre_dr
 pub const fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::is_complete(self) -> bool
 pub const fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::as_str(self) -> &'static str
 pub const fn vyre_driver::graph_capture::classify_scan_graph_capture_edit(edit: vyre_driver::graph_capture::ScanGraphCaptureEdit) -> vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+pub const fn vyre_driver::launch_fixtures::wide_limits(backend: &'static str, max_threads_per_sm: u32) -> vyre_driver::validation::LaunchGeometryLimits
 pub const fn vyre_driver::numeric::BackendNumericPolicy::backend(self) -> &'static str
 pub const fn vyre_driver::numeric::BackendNumericPolicy::new(backend: &'static str) -> Self
 pub const fn vyre_driver::param_inlining::ParamInliningPolicy::disabled() -> Self
@@ -1235,6 +1236,7 @@ pub mod vyre_driver::graph_capture
 pub mod vyre_driver::grid_sync
 pub mod vyre_driver::hostile_input_closure
 pub mod vyre_driver::input_identity
+pub mod vyre_driver::launch_fixtures
 pub mod vyre_driver::launch_fusion
 pub mod vyre_driver::lowering
 pub mod vyre_driver::materialize

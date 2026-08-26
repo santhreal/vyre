@@ -152,6 +152,8 @@ pub mod adversarial_generators;
 #[cfg(feature = "ir-fixtures")]
 pub mod async_span_parity;
 #[cfg(feature = "ir-fixtures")]
+pub mod backend_capabilities;
+#[cfg(feature = "ir-fixtures")]
 pub mod binop_parity;
 pub mod case_table;
 #[cfg(feature = "ir-fixtures")]
@@ -169,9 +171,13 @@ pub mod expr_variants;
 pub mod extension_variants;
 pub mod fixed_point;
 #[cfg(feature = "ir-fixtures")]
+pub mod graph_values;
+#[cfg(feature = "ir-fixtures")]
 pub mod ir_regions;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_variants;
+#[cfg(feature = "ir-fixtures")]
+pub mod logical_markers;
 #[cfg(feature = "ir-fixtures")]
 pub mod memory_order_variants;
 pub mod monorepo;
@@ -182,6 +188,8 @@ pub mod pass_programs;
 #[cfg(feature = "ir-fixtures")]
 pub mod registry_nets;
 pub mod replay_capsule;
+#[cfg(feature = "semantic-requests")]
+pub mod semantic_requests;
 #[cfg(feature = "ir-fixtures")]
 pub use pass_programs::overfire_grid;
 pub mod public_api;

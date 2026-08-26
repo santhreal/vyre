@@ -76,10 +76,8 @@ fn named_output<'a>(
 mod tests {
     use std::collections::BTreeMap;
 
-    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node};
     use vyre_megakernel::{
-        CompileObjective, DeviceFacts, Digest, ExternalFacts, SearchBudget,
-        SemanticExecutionOutput, SemanticExecutionRequest,
+        Digest, SearchBudget, SemanticExecutionOutput, SemanticExecutionRequest,
     };
 
     use super::*;
@@ -112,28 +110,15 @@ mod tests {
     }
 
     fn policy() -> SemanticExecutionPolicy {
-        SemanticExecutionPolicy::new(
-            ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-            DeviceFacts::unknown(),
-            CompileObjective::MinimizeLatency,
+        vyre_test_support::semantic_requests::unknown_policy(
+            Digest([0; 32]),
             SearchBudget::new(4, 16, 1, 0, 100),
             1_000_000,
         )
     }
 
     fn copy_program() -> Program {
-        Program::wrapped(
-            vec![
-                BufferDecl::read("src", 0, DataType::U32).with_count(1),
-                BufferDecl::output("out", 1, DataType::U32).with_count(1),
-            ],
-            [1, 1, 1],
-            vec![Node::store(
-                "out",
-                Expr::logical_index(0),
-                Expr::load("src", Expr::logical_index(0)),
-            )],
-        )
+        vyre_test_support::pass_programs::logical_copy_program()
     }
 
     #[test]

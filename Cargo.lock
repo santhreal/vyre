@@ -3543,6 +3543,7 @@ dependencies = [
  "vyre-foundation",
  "vyre-lower",
  "vyre-megakernel",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -3554,6 +3555,7 @@ dependencies = [
  "vyre-foundation",
  "vyre-megakernel",
  "vyre-reference",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -3922,6 +3924,7 @@ dependencies = [
  "structure-gate",
  "tempfile",
  "vyre-foundation",
+ "vyre-megakernel",
  "vyre-reference",
  "vyre-spec",
 ]

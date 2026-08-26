@@ -14,14 +14,18 @@ categories = ["development-tools::testing"]
 publish = false
 
 [features]
-# Empty by default: `ir-fixtures` is the only feature and it is opt-in, so a
-# consumer that does not name it never pulls vyre-foundation into its dev graph.
+# Empty by default: every feature here is opt-in, so a consumer that names none
+# never pulls a compiler crate into its dev graph.
 default = []
 # Fixtures over the IR statement enum. Opt-in because it pulls vyre-foundation
 # into the dev graph of whichever crate enables it, and most consumers of this
 # crate only want the source-text closure enumerator or the flat element list.
 # The fixtures build inline shapes with smallvec, so it joins the graph too.
 ir-fixtures = ["dep:vyre-foundation", "dep:smallvec", "dep:vyre-reference"]
+# The semantic execution seam: the graph, bindings, and request every backend
+# contract shares. Separate from `ir-fixtures` because it needs the compiler
+# boundary crate, which the IR fixtures do not.
+semantic-requests = ["ir-fixtures", "dep:vyre-megakernel"]
 
 [dependencies]
 # The one owner of "which checkout am I reporting on". Resolved from the working
@@ -29,6 +33,7 @@ ir-fixtures = ["dep:vyre-foundation", "dep:smallvec", "dep:vyre-reference"]
 # `structure_gate::workspace_root` rather than resolving a second time.
 structure-gate = { path = "../structure-gate" }
 vyre-foundation = { workspace = true, optional = true }
+vyre-megakernel = { workspace = true, optional = true }
 # Not optional, and not behind `ir-fixtures`: `data_type_elements` states which
 # flat DataType forms exist, and `vyre-spec` declares DataType. Gating it forced
 # every consumer of that one list to enable `ir-fixtures`, which drags

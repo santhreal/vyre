@@ -568,9 +568,7 @@ mod semantic_tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use vyre_foundation::ir::{ShapeDim, ValueLifetime};
-    use vyre_megakernel::{
-        CompileObjective, DeviceFacts, Digest, ExternalFacts, SearchBudget, SemanticExecutionOutput,
-    };
+    use vyre_megakernel::{Digest, SearchBudget, SemanticExecutionOutput};
 
     use super::*;
 
@@ -624,10 +622,8 @@ mod semantic_tests {
     }
 
     fn policy() -> SemanticExecutionPolicy {
-        SemanticExecutionPolicy::new(
-            ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-            DeviceFacts::unknown(),
-            CompileObjective::MinimizeLatency,
+        vyre_test_support::semantic_requests::unknown_policy(
+            Digest([0; 32]),
             SearchBudget::new(8, 64, 1, 0, 1_000),
             1_000_000,
         )

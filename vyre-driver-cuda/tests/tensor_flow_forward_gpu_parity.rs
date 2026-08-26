@@ -56,7 +56,7 @@ fn run_tensor_flow(
         u32_bytes(tensor_in),
         vec![0u8; word_count * 4],
     ];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("tensor_flow_forward", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

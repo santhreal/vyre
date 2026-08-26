@@ -40,6 +40,28 @@ pub fn copy_program(input: &str, output: &str) -> Program {
     )
 }
 
+/// One `u32` copied from a read buffer to a backend-allocated output buffer.
+///
+/// The semantic seam addresses graph values rather than invocations, so a
+/// fixture proving that seam declares a read input and a real output and
+/// indexes logically. `copy_program` predates it and states two read-write
+/// buffers indexed by local invocation, which no semantic request produces.
+#[must_use]
+pub fn logical_copy_program() -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read("src", 0, DataType::U32).with_count(1),
+            BufferDecl::output("out", 1, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::logical_index(0),
+            Expr::load("src", Expr::logical_index(0)),
+        )],
+    )
+}
+
 /// A program that adds single-element u32 values from `left` and `right` into `output`.
 #[must_use]
 pub fn add_program(left: &str, right: &str, output: &str) -> Program {

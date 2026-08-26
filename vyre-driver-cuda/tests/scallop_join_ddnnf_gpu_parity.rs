@@ -36,7 +36,7 @@ fn run_scallop_join(
         vec![0u8; 4],
         u32_bytes(join_rules),
     ];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
@@ -187,7 +187,7 @@ fn run_ddnnf(
         u32_bytes(var_assignments),
         vec![0u8; n_nodes as usize * 4],
     ];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");

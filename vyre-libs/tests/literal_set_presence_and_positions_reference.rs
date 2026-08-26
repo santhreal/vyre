@@ -18,22 +18,15 @@ mod wire_words;
 use wire_words::decode_u32_words as decode_u32;
 
 mod presence_oracle;
-use presence_oracle::{random_haystack, random_literals, random_region_starts, Lcg};
+use presence_oracle::{random_haystack, random_literals, random_region_starts, Lcg, PackedCase};
 use std::collections::BTreeSet;
 
 use vyre_libs::pattern::classic_ac::{
-    classic_ac_compile, presence_by_region_words,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
 };
-use vyre_libs::pattern::pack_haystack_u32;
-use vyre_primitives::wire::pack_u32_slice;
-use vyre_reference::composition_witness::{
-    classic_ac_candidate_end_byte_mask_words_witness,
-    classic_ac_candidate_suffix2_mask_words_witness,
-    classic_ac_candidate_suffix3_bloom_words_witness,
-};
+use vyre_reference::value::Value;
 
 const MAX_MATCHES: u32 = 4096;
 fn decode_triples(count_words: &[u32], match_words: &[u32]) -> BTreeSet<(u32, u32, u32)> {
@@ -63,65 +56,20 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
 
     for case in 0..cases {
         let literals = random_literals(&mut rng);
-        let pattern_refs: Vec<&[u8]> = literals.iter().map(Vec::as_slice).collect();
         let haystack = random_haystack(&mut rng);
         let region_starts = random_region_starts(&mut rng, haystack.len());
-
-        let ac = classic_ac_compile(&pattern_refs);
-        let lengths: Vec<u32> = literals.iter().map(|l| l.len() as u32).collect();
-        let pattern_count = literals.len() as u32;
-        let region_count = region_starts.len() as u32;
-
-        let end_mask = classic_ac_candidate_end_byte_mask_words_witness(
-            &ac.dfa.transitions,
-            &ac.dfa.output_offsets,
-            ac.dfa.state_count,
-        );
-        let suffix2_mask = classic_ac_candidate_suffix2_mask_words_witness(
-            &ac.dfa.transitions,
-            &ac.dfa.output_offsets,
-            ac.dfa.state_count,
-        );
-        let suffix3_bloom = classic_ac_candidate_suffix3_bloom_words_witness(&pattern_refs);
-        let haystack_packed = pack_haystack_u32(&haystack);
-        let transitions = pack_u32_slice(&ac.dfa.transitions);
-        let output_offsets = pack_u32_slice(&ac.dfa.output_offsets);
-        let output_records = pack_u32_slice(&ac.dfa.output_records);
-        let lengths_packed = pack_u32_slice(&lengths);
-        let hay_len = pack_u32_slice(&[haystack.len() as u32]);
-        let end_mask_packed = pack_u32_slice(&end_mask);
-        let suffix2_packed = pack_u32_slice(&suffix2_mask);
-        let suffix3_packed = pack_u32_slice(&suffix3_bloom);
-        let region_starts_packed = pack_u32_slice(&region_starts);
-        let zero = pack_u32_slice(&[0u32]);
-        let total_presence_words = presence_by_region_words(pattern_count, region_count) as usize;
-        let presence_zeroed = pack_u32_slice(&vec![0u32; total_presence_words]);
-
-        let val = vyre_reference::value::Value::from;
+        let packed = PackedCase::new(&literals, &haystack, &region_starts);
+        let region_count = packed.region_count;
 
         // --- Separate presence-by-region program (bindings 0-11) ---
         let sep_presence_program = try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
-            &ac.dfa,
-            pattern_count,
+            &packed.ac.dfa,
+            packed.pattern_count,
             region_count,
         )
         .expect("separate presence-by-region program builds");
-        let sep_presence_inputs = vec![
-            val(haystack_packed.clone()),
-            val(transitions.clone()),
-            val(output_offsets.clone()),
-            val(output_records.clone()),
-            val(lengths_packed.clone()),
-            val(hay_len.clone()),
-            val(presence_zeroed.clone()),
-            val(end_mask_packed.clone()),
-            val(suffix2_packed.clone()),
-            val(suffix3_packed.clone()),
-            val(region_starts_packed.clone()),
-            val(zero.clone()),
-        ];
         let sep_presence_out =
-            vyre_reference::reference_eval(&sep_presence_program, &sep_presence_inputs)
+            vyre_reference::reference_eval(&sep_presence_program, &packed.presence_inputs())
                 .expect("separate presence-by-region program evaluates");
         let sep_presence = decode_u32(&sep_presence_out[0].to_bytes());
 
@@ -132,23 +80,23 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
         // uses plain `append_match`, so both append paths match bit-for-bit.
         let sep_positions_program =
             try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
-                &ac.dfa,
-                pattern_count,
+                &packed.ac.dfa,
+                packed.pattern_count,
                 MAX_MATCHES,
                 false,
             )
             .expect("separate positions program builds");
         let sep_positions_inputs = vec![
-            val(haystack_packed.clone()),
-            val(transitions.clone()),
-            val(output_offsets.clone()),
-            val(output_records.clone()),
-            val(lengths_packed.clone()),
-            val(hay_len.clone()),
-            val(zero.clone()), // 6: match_count
-            val(end_mask_packed.clone()),
-            val(suffix2_packed.clone()),
-            val(suffix3_packed.clone()),
+            Value::from(packed.haystack.clone()),
+            Value::from(packed.transitions.clone()),
+            Value::from(packed.output_offsets.clone()),
+            Value::from(packed.output_records.clone()),
+            Value::from(packed.lengths.clone()),
+            Value::from(packed.hay_len.clone()),
+            Value::from(packed.zero.clone()), // 6: match_count
+            Value::from(packed.end_mask.clone()),
+            Value::from(packed.suffix2.clone()),
+            Value::from(packed.suffix3.clone()),
         ];
         let sep_positions_out =
             vyre_reference::reference_eval(&sep_positions_program, &sep_positions_inputs)
@@ -160,27 +108,16 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
         // --- Fused program (bindings 0-13) ---
         let fused_program =
             try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
-                &ac.dfa,
-                pattern_count,
+                &packed.ac.dfa,
+                packed.pattern_count,
                 region_count,
                 MAX_MATCHES,
             )
             .expect("fused program builds");
-        let fused_inputs = vec![
-            val(haystack_packed.clone()),
-            val(transitions.clone()),
-            val(output_offsets.clone()),
-            val(output_records.clone()),
-            val(lengths_packed.clone()),
-            val(hay_len.clone()),
-            val(presence_zeroed.clone()),
-            val(end_mask_packed.clone()),
-            val(suffix2_packed.clone()),
-            val(suffix3_packed.clone()),
-            val(region_starts_packed.clone()),
-            val(zero.clone()), // 11: region_base
-            val(zero.clone()), // 12: match_count
-        ];
+        let mut fused_inputs = packed.presence_inputs();
+        // Binding 12 is the fused program's match counter, which the presence
+        // program does not declare.
+        fused_inputs.push(Value::from(packed.zero.clone()));
         let fused_out = vyre_reference::reference_eval(&fused_program, &fused_inputs)
             .expect("fused program evaluates");
         let fused_presence = decode_u32(&fused_out[0].to_bytes());

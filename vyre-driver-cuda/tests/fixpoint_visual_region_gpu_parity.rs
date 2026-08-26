@@ -126,7 +126,7 @@ fn run_dedup_flag(pids: &[u32], starts: &[u32], ends: &[u32]) -> Vec<u32> {
     // survivors is BufferAccess::WriteOnly so it does not consume an
     // input slot.
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(pids), u32_bytes(starts), u32_bytes(ends)];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("dedup regions flag", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -144,7 +144,7 @@ fn run_dedup_cluster(pids: &[u32], starts: &[u32], ends: &[u32]) -> (Vec<u32>, V
     let program =
         dedup_regions_cluster_program("pids", "starts", "ends", "survivors", "merged_ends", count);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(pids), u32_bytes(starts), u32_bytes(ends)];
-    let mut config = DispatchConfig::default();
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("dedup regions cluster", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
