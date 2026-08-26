@@ -172,6 +172,7 @@ pub(crate) fn rich_device() -> DeviceFacts {
     DeviceFacts::new(
         BackendCapabilities {
             supports_subgroup_ops: true,
+            has_warp_shuffle: true,
             ..BackendCapabilities::default()
         },
         256,

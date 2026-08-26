@@ -163,6 +163,7 @@ impl vyre_foundation::GeometryRequirements
 impl vyre_foundation::IrError
 impl vyre_foundation::LaunchGeometry
 impl vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration
+impl vyre_foundation::algebraic_reordering::ReorderingClass
 impl vyre_foundation::diagnostics::Diagnostic
 impl vyre_foundation::diagnostics::DiagnosticCode
 impl vyre_foundation::diagnostics::OpLocation
@@ -332,6 +333,7 @@ impl vyre_foundation::optimizer::rewrite_proof::ProofExpr
 impl vyre_foundation::optimizer::rewrite_proof::RewriteProofObligation
 impl vyre_foundation::perf::PerfScope
 impl vyre_foundation::program_caps::RequiredCapabilities
+impl vyre_foundation::schedule::ScheduleTransform
 impl vyre_foundation::schedule::SelectedSchedule
 impl vyre_foundation::serial::WireWriter
 impl vyre_foundation::serial::output_set::OutputSet
@@ -377,6 +379,7 @@ pub const fn vyre_foundation::LaunchGeometry::total_elements_covered(&self) -> u
 pub const fn vyre_foundation::LaunchGeometry::total_invocations(&self) -> u64
 pub const fn vyre_foundation::LaunchGeometry::workgroup_invocations(&self) -> u32
 pub const fn vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration::new(op_id: &'static str, law: vyre_spec::algebraic_law::AlgebraicLaw) -> Self
+pub const fn vyre_foundation::algebraic_reordering::ReorderingClass::permits_reordering(self) -> bool
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_retry(self, retry: vyre_foundation::diagnostics::RetryClass) -> Self
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_stage(self, stage: vyre_foundation::diagnostics::DiagnosticStage) -> Self
 pub const fn vyre_foundation::diagnostics::DiagnosticCode::new(code: &'static str) -> Self
@@ -493,6 +496,7 @@ pub const fn vyre_foundation::validate::ValidationError::location(&self) -> &vyr
 pub const fn vyre_foundation::validate::ValidationError::phase(&self) -> vyre_foundation::validate::ValidationPhase
 pub const fn vyre_foundation::validate::ValidationError::retry(&self) -> vyre_foundation::diagnostics::RetryClass
 pub const fn vyre_foundation::validate::ValidationPhase::as_str(self) -> &'static str
+pub const vyre_foundation::algebraic_reordering::ReorderingClass::ALL: &'static [Self]
 pub const vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES: [&str; 2]
 pub const vyre_foundation::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
 pub const vyre_foundation::fp_parity::BACKEND_ELEMENTARY_F32_ULP_BUDGET: u32
@@ -613,6 +617,7 @@ pub enum vyre_foundation::ElementPolicy
 pub enum vyre_foundation::GeometryConstraintConflict
 pub enum vyre_foundation::GeometryLoweringError
 pub enum vyre_foundation::Uniformity
+pub enum vyre_foundation::algebraic_reordering::ReorderingClass
 pub enum vyre_foundation::execution_plan::AutotuneStrategy
 pub enum vyre_foundation::execution_plan::ConformanceStrength
 pub enum vyre_foundation::execution_plan::DispatchStrategy
@@ -656,6 +661,7 @@ pub enum vyre_foundation::optimizer::program_soa::BufferRefKind
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofDomain
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofSort
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofStatus
+pub enum vyre_foundation::schedule::CombineOrder
 pub enum vyre_foundation::schedule::MappingLevel
 pub enum vyre_foundation::schedule::MemoryPlacement
 pub enum vyre_foundation::schedule::PipelineRole
@@ -678,7 +684,9 @@ pub enum vyre_foundation::vast::VastEditCorpusError
 pub enum vyre_foundation::vast::VastError
 pub enum vyre_foundation::visit::ExprBufferAccess
 pub enum vyre_foundation::visit::ExprBufferRef<'a>
+pub enum vyre_foundation::visit::ExprCombine<'a>
 pub enum vyre_foundation::visit::NameBinding
+pub enum vyre_foundation::visit::NodeCombine<'a>
 pub enum vyre_foundation::visit::VisitOrder
 pub fn alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String
 pub fn alloc::vec::Vec<u8>::from(writer: vyre_foundation::opaque_payload::endian::LeBytesWriter) -> Self
@@ -699,6 +707,7 @@ pub fn vyre_foundation::algebraic_law_registry::has_law<F>(op_id: &str, predicat
 pub fn vyre_foundation::algebraic_law_registry::is_associative(op_id: &str) -> bool
 pub fn vyre_foundation::algebraic_law_registry::is_commutative(op_id: &str) -> bool
 pub fn vyre_foundation::algebraic_law_registry::laws_for_op(op_id: &str) -> &'static [&'static vyre_spec::algebraic_law::AlgebraicLaw]
+pub fn vyre_foundation::algebraic_reordering::reordering_class(program: &vyre_foundation::ir::Program) -> vyre_foundation::algebraic_reordering::ReorderingClass
 pub fn vyre_foundation::allocation::reserve_exact_cleared<T>(buf: &mut alloc::vec::Vec<T>, target: usize) -> core::result::Result<(), alloc::collections::TryReserveError>
 pub fn vyre_foundation::allocation::try_reserve_binary_heap_to_capacity<T>(heap: &mut alloc::collections::binary_heap::BinaryHeap<T>, target_capacity: usize) -> core::result::Result<(), alloc::collections::TryReserveError>
 pub fn vyre_foundation::allocation::try_reserve_hash_map_to_capacity<K, V, S>(map: &mut std::collections::hash::map::HashMap<K, V, S>, target_capacity: usize) -> core::result::Result<(), alloc::collections::TryReserveError> where K: core::cmp::Eq + core::hash::Hash, S: core::hash::BuildHasher
@@ -2249,6 +2258,7 @@ pub fn vyre_foundation::program_caps::RequiredCapabilities::join(self, other: vy
 pub fn vyre_foundation::program_caps::RequiredCapabilities::union(self, other: vyre_foundation::program_caps::RequiredCapabilities) -> Self
 pub fn vyre_foundation::program_caps::check_backend_capabilities(backend_id: &str, support: &vyre_foundation::program_caps::BackendSupport, required: &vyre_foundation::program_caps::RequiredCapabilities) -> core::result::Result<(), vyre_foundation::program_caps::MissingCapability>
 pub fn vyre_foundation::program_caps::scan(program: &vyre_foundation::ir::Program) -> vyre_foundation::program_caps::RequiredCapabilities
+pub fn vyre_foundation::schedule::ScheduleTransform::combine_order(&self) -> vyre_foundation::schedule::CombineOrder
 pub fn vyre_foundation::schedule::SelectedSchedule::apply(&mut self, transform: vyre_foundation::schedule::ScheduleTransform) -> core::result::Result<(), vyre_foundation::schedule::ScheduleLegalityError>
 pub fn vyre_foundation::schedule::SelectedSchedule::canonical_wire(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::schedule::ScheduleLegalityError>
 pub fn vyre_foundation::schedule::SelectedSchedule::from_logical(logical: &vyre_foundation::logical::LogicalProgramGraph<'_>) -> Self
@@ -2493,11 +2503,13 @@ pub fn vyre_foundation::visit::child_bodies_mut(node: &mut vyre_foundation::ir::
 pub fn vyre_foundation::visit::collect_call_op_ids(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<alloc::sync::Arc<str>>
 pub fn vyre_foundation::visit::expr_buffer_ref(expr: &vyre_foundation::ir::Expr) -> vyre_foundation::visit::ExprBufferRef<'_>
 pub fn vyre_foundation::visit::expr_children(expr: &vyre_foundation::ir::Expr) -> vyre_foundation::visit::ExprChildren<'_>
+pub fn vyre_foundation::visit::expr_combine(expr: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::visit::ExprCombine<'_>>
 pub fn vyre_foundation::visit::for_each_expr<'a>(nodes: &'a [vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&'a vyre_foundation::ir::Expr))
 pub fn vyre_foundation::visit::for_each_node<'a>(nodes: &'a [vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&'a vyre_foundation::ir::Node))
 pub fn vyre_foundation::visit::for_each_subexpr<'a>(expr: &'a vyre_foundation::ir::Expr, visit: &mut impl core::ops::function::FnMut(&'a vyre_foundation::ir::Expr))
 pub fn vyre_foundation::visit::node_bound_name(node: &vyre_foundation::ir::Node) -> core::option::Option<&vyre_foundation::ir::Ident>
 pub fn vyre_foundation::visit::node_buffer_refs(node: &vyre_foundation::ir::Node) -> vyre_foundation::visit::BufferRefs<'_>
+pub fn vyre_foundation::visit::node_combine(node: &vyre_foundation::ir::Node) -> core::option::Option<vyre_foundation::visit::NodeCombine<'_>>
 pub fn vyre_foundation::visit::node_map::map_body<F>(node: vyre_foundation::ir::Node, f: &mut F) -> vyre_foundation::ir::Node where F: core::ops::function::FnMut(alloc::vec::Vec<vyre_foundation::ir::Node>) -> alloc::vec::Vec<vyre_foundation::ir::Node>
 pub fn vyre_foundation::visit::node_map::map_children<F>(node: vyre_foundation::ir::Node, f: &mut F) -> vyre_foundation::ir::Node where F: core::ops::function::FnMut(vyre_foundation::ir::Node) -> vyre_foundation::ir::Node
 pub fn vyre_foundation::visit::node_operands(node: &vyre_foundation::ir::Node) -> [core::option::Option<&vyre_foundation::ir::Expr>; 2]
@@ -2524,6 +2536,7 @@ pub fn vyre_foundation::visit::walk_nodes_mut(program: &mut vyre_foundation::ir:
 pub macro vyre_foundation::rewrite_rules!
 pub mod vyre_foundation
 pub mod vyre_foundation::algebraic_law_registry
+pub mod vyre_foundation::algebraic_reordering
 pub mod vyre_foundation::allocation
 pub mod vyre_foundation::composition
 pub mod vyre_foundation::cpu_op
@@ -3031,6 +3044,9 @@ pub vyre_foundation::Uniformity::SubgroupUniform
 pub vyre_foundation::Uniformity::WorkgroupUniform
 pub vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration::law: vyre_spec::algebraic_law::AlgebraicLaw
 pub vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration::op_id: &'static str
+pub vyre_foundation::algebraic_reordering::ReorderingClass::NoCombine
+pub vyre_foundation::algebraic_reordering::ReorderingClass::Ordered
+pub vyre_foundation::algebraic_reordering::ReorderingClass::Reassociable
 pub vyre_foundation::diagnostics::Diagnostic::cause: core::option::Option<vyre_foundation::diagnostics::DiagnosticCause>
 pub vyre_foundation::diagnostics::Diagnostic::code: vyre_foundation::diagnostics::DiagnosticCode
 pub vyre_foundation::diagnostics::Diagnostic::doc_url: core::option::Option<alloc::borrow::Cow<'static, str>>
@@ -4278,6 +4294,9 @@ pub vyre_foundation::program_caps::RequiredCapabilities::transport_collectives: 
 pub vyre_foundation::program_caps::RequiredCapabilities::trap: bool
 pub vyre_foundation::schedule::AxisMapping::axis: vyre_foundation::schedule::ScheduleAxis
 pub vyre_foundation::schedule::AxisMapping::level: vyre_foundation::schedule::MappingLevel
+pub vyre_foundation::schedule::CombineOrder::Changed
+pub vyre_foundation::schedule::CombineOrder::ChangedWhenReshaped([u32; 3])
+pub vyre_foundation::schedule::CombineOrder::Preserved
 pub vyre_foundation::schedule::MappingLevel::ComputeUnitPartition
 pub vyre_foundation::schedule::MappingLevel::DevicePartition
 pub vyre_foundation::schedule::MappingLevel::Lane
@@ -4783,9 +4802,21 @@ pub vyre_foundation::visit::ExprBufferRef::None
 pub vyre_foundation::visit::ExprBufferRef::Read(&'a vyre_foundation::ir::Ident)
 pub vyre_foundation::visit::ExprBufferRef::ReadWrite(&'a vyre_foundation::ir::Ident)
 pub vyre_foundation::visit::ExprBufferRef::Unknown
+pub vyre_foundation::visit::ExprCombine::Atomic
+pub vyre_foundation::visit::ExprCombine::Atomic::buffer: &'a vyre_foundation::ir::Ident
+pub vyre_foundation::visit::ExprCombine::Atomic::op: &'a vyre_spec::atomic_op::AtomicOp
+pub vyre_foundation::visit::ExprCombine::Subgroup
+pub vyre_foundation::visit::ExprCombine::Subgroup::op: vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub vyre_foundation::visit::ExprCombine::Unknown
 pub vyre_foundation::visit::NameBinding::Declare
 pub vyre_foundation::visit::NameBinding::Induction
 pub vyre_foundation::visit::NameBinding::Reassign
+pub vyre_foundation::visit::NodeCombine::Collective
+pub vyre_foundation::visit::NodeCombine::Collective::buffer: &'a vyre_foundation::ir::Ident
+pub vyre_foundation::visit::NodeCombine::Collective::op: vyre_spec::collective_op::CollectiveOp
+pub vyre_foundation::visit::NodeCombine::Tile
+pub vyre_foundation::visit::NodeCombine::Tile::op: vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub vyre_foundation::visit::NodeCombine::Unknown
 pub vyre_foundation::visit::NodeScalars::binding: core::option::Option<(vyre_foundation::visit::NameBinding, &'a vyre_foundation::ir::Ident)>
 pub vyre_foundation::visit::NodeScalars::operands: [core::option::Option<&'a vyre_foundation::ir::Expr>; 2]
 pub vyre_foundation::visit::NodeShape::carries_operands: bool

@@ -1,6 +1,10 @@
 use std::collections::BTreeMap;
 
-use vyre_foundation::{ir::Ident, logical::LogicalProgramGraph};
+use vyre_foundation::{
+    algebraic_reordering::{reordering_class, ReorderingClass},
+    ir::Ident,
+    logical::LogicalProgramGraph,
+};
 
 use crate::{
     value_byte_count, workgroup_scratch_declarations, ArtifactNodeId, ArtifactValueId,
@@ -36,6 +40,14 @@ pub(crate) struct PlanningFacts {
     pub(crate) node_declared_workgroup: Vec<[u32; 3]>,
     /// Whether a node's program stays correct under a different launch width.
     pub(crate) node_accepts_width: Vec<bool>,
+    /// Whether a schedule may reorder how each node's invocations combine into
+    /// a shared location.
+    ///
+    /// A rounding accumulation is order-dependent, so a schedule that changes
+    /// the order computes a different number. The semantic IR owner classifies
+    /// the combines once, from operator laws and element types, so search never
+    /// re-derives numerics from a candidate.
+    pub(crate) node_reordering: Vec<ReorderingClass>,
     /// Bytes of graph values each node produces or consumes.
     ///
     /// A value shared by two nodes counts for both, which is the traffic they
@@ -62,6 +74,7 @@ pub(crate) fn derive(
     let mut node_declared_invocations = Vec::with_capacity(node_count);
     let mut node_declared_workgroup = Vec::with_capacity(node_count);
     let mut node_accepts_width = Vec::with_capacity(node_count);
+    let mut node_reordering = Vec::with_capacity(node_count);
     for node in graph.nodes() {
         let program = &node.program;
         let stats = program.stats();
@@ -80,6 +93,7 @@ pub(crate) fn derive(
         node_declared_invocations.push(invocations.max(1));
         node_declared_workgroup.push(declared);
         node_accepts_width.push(accepts_width);
+        node_reordering.push(reordering_class(program));
     }
     let dataflow = dependencies
         .iter()
@@ -111,6 +125,7 @@ pub(crate) fn derive(
         node_declared_invocations,
         node_declared_workgroup,
         node_accepts_width,
+        node_reordering,
         node_touched_bytes,
         dataflow,
         value_bytes,

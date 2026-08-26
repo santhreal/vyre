@@ -354,6 +354,7 @@ fn resident_passes(demand: u64, budget: u64) -> u64 {
 mod tests {
     use super::*;
     use crate::facts::DataflowEdge;
+    use vyre_foundation::algebraic_reordering::ReorderingClass;
     use vyre_foundation::validate::BackendCapabilities;
 
     fn device(registers_per_invocation: u32) -> DeviceFacts {
@@ -379,6 +380,7 @@ mod tests {
             node_declared_invocations: vec![256, 256],
             node_declared_workgroup: vec![[256, 1, 1], [256, 1, 1]],
             node_accepts_width: vec![true, true],
+            node_reordering: vec![ReorderingClass::NoCombine; 2],
             node_touched_bytes: vec![value_bytes, value_bytes],
             dataflow: vec![DataflowEdge {
                 from: crate::ArtifactNodeId(0),

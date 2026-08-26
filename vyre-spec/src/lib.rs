@@ -51,6 +51,9 @@ mod category;
 /// Collective communication operators and communicator handles.
 /// Specification element.
 mod collective_op;
+/// Combine kinds shared by atomics, subgroup reductions and collectives.
+/// Specification element.
+mod combine;
 /// Calling conventions between CPU host and GPU kernels.
 /// Specification element.
 mod convention;
@@ -177,6 +180,9 @@ pub use category::{BackendAvailability, BackendAvailabilityPredicate, Category};
 /// See [`collective_op::{CollectiveOp, CommGroup}`].
 /// Specification element.
 pub use collective_op::{CollectiveOp, CommGroup};
+/// See [`combine::CombineKind`].
+/// Specification element.
+pub use combine::CombineKind;
 /// See [`convention::Convention`].
 /// Specification element.
 pub use convention::Convention;

@@ -131,7 +131,7 @@ never scored. Each eliminated family records a stable reason.
 
 | Code | Reason |
 |---|---|
-| `MKC001_NUMERICAL` | the transform changes what a width-observing phase computes |
+| `MKC001_NUMERICAL` | the transform changes what the program computes: a width-observing phase reshaped, or a reduction reordered that does not reassociate |
 | `MKC002_DEPENDENCE` | the grouping would contract a dependency cycle |
 | `MKC003_ALIAS_OR_EFFECT` | an alias or effect between concurrent arms is unsatisfiable |
 | `MKC004_BARRIER_VISIBILITY` | a barrier phase or proxy is not visible to every participant |
@@ -185,6 +185,36 @@ workgroup and synchronize inside it fuse into one kernel, because the merge
 concatenates the arms at that geometry and every barrier is already
 workgroup-uniform. That is what lets a score pass and a value pass over one
 workgroup tile compile to a single dispatch.
+
+## Reordering a reduction needs a law
+
+A spatial partition, a persistent queue, a pipeline, an asymmetric join, an axis
+remap, an axis reorder and a recomputation all change the order in which
+invocations combine into a shared location. That order is unobservable only when
+the combine is associative and commutative.
+
+`ScheduleTransform::combine_order` states, per transform, whether the order it
+produces differs from the order the program states. `SetWorkgroup` answers
+conditionally: freezing a phase at a shape its own regions declared reshapes
+nothing.
+
+`algebraic_reordering::reordering_class` answers the other half from the program:
+`NoCombine` when no combine crosses invocations, `Reassociable` when every
+combine is registered associative and commutative for its element type, and
+`Ordered` otherwise. Operator laws come from the algebraic law registry under
+`vyre.combine.exact.*` and `vyre.combine.rounding.*` ids, so an extension
+operator that registers its own laws is answered without being named, and an
+operator with no registered law is ordered. Which operator applies which combine
+is `CombineKind` in `vyre-spec`, and which IR variant combines at all is
+`visit::expr_combine` and `visit::node_combine`: three exhaustive matches with no
+catch-all arm, so a new operator or variant fails to compile rather than
+defaulting to reorderable.
+
+A candidate whose transform changes the order of a phase covering an `Ordered`
+node is eliminated as `MKC001_NUMERICAL`. Integer and bitwise reductions keep
+every reordering production; a floating-point reduction keeps fusion, fission,
+dispatch cuts, synchronization, memory placement and prefetch, so the graph still
+compiles and the baseline is still ranked.
 
 ## The unfused baseline is always a candidate
 

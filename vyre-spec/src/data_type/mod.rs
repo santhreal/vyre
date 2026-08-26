@@ -275,6 +275,52 @@ impl DataType {
         }
     }
 
+    /// Whether arithmetic on this type is exact, so a combine reassociated over
+    /// it produces the same value.
+    ///
+    /// The integer and boolean families are exact. Every floating-point family
+    /// rounds each partial result, a quantized value operates through one, and a
+    /// type whose arithmetic is defined outside this vocabulary is not assumed
+    /// to be exact. The match is exhaustive so a new element type states its own
+    /// answer instead of inheriting one.
+    #[must_use]
+    pub const fn arithmetic_is_exact(&self) -> bool {
+        match self {
+            Self::U8
+            | Self::U16
+            | Self::U32
+            | Self::U64
+            | Self::I4
+            | Self::I8
+            | Self::I16
+            | Self::I32
+            | Self::I64
+            | Self::Bool
+            | Self::Vec2U32
+            | Self::Vec4U32 => true,
+            Self::F16
+            | Self::BF16
+            | Self::F32
+            | Self::F64
+            | Self::F8E4M3
+            | Self::F8E5M2
+            | Self::FP4
+            | Self::NF4 => false,
+            Self::Vec { element, .. }
+            | Self::TensorShaped { element, .. }
+            | Self::SparseCsr { element }
+            | Self::SparseCoo { element }
+            | Self::SparseBsr { element, .. } => element.arithmetic_is_exact(),
+            Self::Quantized { .. } => false,
+            Self::Array { .. }
+            | Self::Bytes
+            | Self::Tensor
+            | Self::DeviceMesh { .. }
+            | Self::Handle(_)
+            | Self::Opaque(_) => false,
+        }
+    }
+
     /// Whether this type carries first-class quantization sidecar metadata.
     #[must_use]
     pub const fn is_quantized(&self) -> bool {

@@ -2879,6 +2879,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   bounded file reads route through `xtask::output_arg::read_text_bounded`. The
   xtask integration tests link as three binaries instead of ten and the
   registry tests as one instead of two.
+- Candidate search eliminates a schedule that reorders a reduction whose
+  combine is not registered associative and commutative for its element type.
 - The resident asynchronous overlap contract has one owner,
   `tests/support/resident_async_overlap_contract.rs`. Two backends had carried
   it verbatim apart from acquisition, message text and one assertion.

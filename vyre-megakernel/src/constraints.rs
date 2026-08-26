@@ -12,8 +12,9 @@
 //! artifact cannot represent is eliminated.
 
 use vyre_foundation::{
+    algebraic_reordering::ReorderingClass,
     ir::ProgramGraph,
-    schedule::{MappingLevel, SchedulePhaseId, ScheduleTransform},
+    schedule::{CombineOrder, MappingLevel, SchedulePhaseId, ScheduleTransform},
 };
 
 use crate::{
@@ -49,6 +50,7 @@ pub(crate) fn admit(
     fusion(candidate, context)?;
     topology(candidate, context)?;
     numerical(candidate, context)?;
+    reordering(candidate, context)?;
     launch(candidate, context)?;
     storage(candidate, context)?;
     pipeline(candidate, context)?;
@@ -165,6 +167,65 @@ fn numerical(
         }
     }
     Ok(())
+}
+
+/// A transform that changes combine order must combine reorderably.
+///
+/// A work queue, a spatial partition, a pipeline, and an asymmetric join let
+/// invocations reach a shared accumulator in an order the schedule does not fix,
+/// and splitting or remapping an axis changes which invocations reach it at all.
+/// Over a rounding accumulation that computes a different number from the one
+/// the graph states, and the difference is data-dependent, so it is eliminated
+/// here rather than reported as an accuracy result.
+fn reordering(
+    candidate: &CandidatePlan,
+    context: &ConstraintContext<'_>,
+) -> Result<(), PruneReason> {
+    for record in &candidate.schedule.transforms {
+        let phases = record.provenance.source_phases.as_slice();
+        match record.transform.combine_order() {
+            CombineOrder::Preserved => continue,
+            CombineOrder::ChangedWhenReshaped(shape) => {
+                if !phases
+                    .iter()
+                    .any(|phase| reshapes_any_node(candidate, context, *phase, shape))
+                {
+                    continue;
+                }
+            }
+            CombineOrder::Changed => {}
+        }
+        for phase in phases {
+            if !phase_permits_reordering(candidate, context, *phase) {
+                return Err(PruneReason::Numerical);
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Whether every node one phase covers combines reorderably.
+///
+/// A phase covering no known region permits reordering: there is no combine to
+/// reorder. A region the facts do not describe does not, because an unclassified
+/// program is not a proof.
+fn phase_permits_reordering(
+    candidate: &CandidatePlan,
+    context: &ConstraintContext<'_>,
+    phase: SchedulePhaseId,
+) -> bool {
+    let Some(regions) = covered_regions(candidate, phase) else {
+        return true;
+    };
+    regions.iter().all(|region| {
+        context
+            .facts
+            .node_reordering
+            .get(*region as usize)
+            .copied()
+            .unwrap_or(ReorderingClass::Ordered)
+            .permits_reordering()
+    })
 }
 
 /// Whether a selected shape differs from a shape some covered node declared.

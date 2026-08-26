@@ -69,7 +69,8 @@ pub enum VisitOrder {
 
 pub use evaluatable::Evaluatable;
 pub use expr_parts::{
-    any_subexpr, expr_buffer_ref, expr_children, for_each_subexpr, ExprBufferRef, ExprChildren,
+    any_subexpr, expr_buffer_ref, expr_children, expr_combine, for_each_subexpr, ExprBufferRef,
+    ExprChildren, ExprCombine,
 };
 pub use expr_visitor::{
     visit_expr, visit_expr_buffer_accesses, visit_postorder, visit_preorder,
@@ -78,8 +79,9 @@ pub use expr_visitor::{
 pub use lowerable::Lowerable;
 pub(crate) use node_parts::map_bodies_cow;
 pub use node_parts::{
-    child_bodies, child_bodies_mut, node_bound_name, node_buffer_refs, node_operands, node_scalars,
-    node_shape, node_tag, node_variadic_operands, BufferRefs, NameBinding, NodeScalars, NodeShape,
+    child_bodies, child_bodies_mut, node_bound_name, node_buffer_refs, node_combine, node_operands,
+    node_scalars, node_shape, node_tag, node_variadic_operands, BufferRefs, NameBinding,
+    NodeCombine, NodeScalars, NodeShape,
 };
 pub use node_visitor::{
     visit_node, visit_node_postorder, visit_node_preorder, walk_node_children_default, NodeVisitor,

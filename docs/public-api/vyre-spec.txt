@@ -52,6 +52,7 @@ impl vyre_spec::BinOp
 impl vyre_spec::CapabilityId
 impl vyre_spec::Category
 impl vyre_spec::CollectiveOp
+impl vyre_spec::CombineKind
 impl vyre_spec::CommGroup
 impl vyre_spec::DataType
 impl vyre_spec::EngineInvariant
@@ -81,12 +82,17 @@ impl vyre_spec::soundness::PrimitiveSoundness
 impl vyre_spec::soundness::Soundness
 impl<F> vyre_spec::BackendAvailability for F where F: core::ops::function::Fn(&str) -> bool + core::marker::Send + core::marker::Sync
 pub const fn vyre_spec::AtomicOp::builtin_wire_tag(&self) -> core::option::Option<u8>
+pub const fn vyre_spec::AtomicOp::combine(&self) -> core::option::Option<vyre_spec::CombineKind>
 pub const fn vyre_spec::BackendAvailabilityPredicate::new(predicate: fn(&str) -> bool) -> Self
 pub const fn vyre_spec::BinOp::builtin_wire_tag(&self) -> core::option::Option<u8>
 pub const fn vyre_spec::BinOp::result_class(self) -> vyre_spec::BinOpResult
 pub const fn vyre_spec::BinOp::takes_numeric_operands(self) -> bool
 pub const fn vyre_spec::CollectiveOp::builtin_wire_tag(self) -> u8
+pub const fn vyre_spec::CollectiveOp::combine(self) -> vyre_spec::CombineKind
+pub const fn vyre_spec::CombineKind::is_bitwise(self) -> bool
+pub const fn vyre_spec::CombineKind::law_id(self, exact: bool) -> &'static str
 pub const fn vyre_spec::CommGroup::as_u32(self) -> u32
+pub const fn vyre_spec::DataType::arithmetic_is_exact(&self) -> bool
 pub const fn vyre_spec::DataType::bit_width(&self) -> core::option::Option<usize>
 pub const fn vyre_spec::DataType::builtin_wire_tag(&self) -> core::option::Option<u8>
 pub const fn vyre_spec::DataType::element_size(&self) -> core::option::Option<usize>
@@ -111,6 +117,7 @@ pub const fn vyre_spec::PgNodeKind::from_u32(value: u32) -> core::option::Option
 pub const fn vyre_spec::Semiring::identity(self) -> u32
 pub const fn vyre_spec::SubgroupReduceOp::as_str(self) -> &'static str
 pub const fn vyre_spec::SubgroupReduceOp::builtin_wire_tag(self) -> u8
+pub const fn vyre_spec::SubgroupReduceOp::combine(self) -> vyre_spec::CombineKind
 pub const fn vyre_spec::SubgroupReduceOp::is_bitwise(self) -> bool
 pub const fn vyre_spec::TernaryOp::builtin_wire_tag(&self) -> core::option::Option<u8>
 pub const fn vyre_spec::TypeId::as_u32(self) -> u32
@@ -140,6 +147,7 @@ pub const fn vyre_spec::extension::ExtensionUnOpId::is_extension(self) -> bool
 pub const fn vyre_spec::soundness::PrimitiveSoundness::new(op_id: &'static str, soundness: vyre_spec::soundness::Soundness) -> Self
 pub const fn vyre_spec::soundness::PrimitiveSoundness::with_sanitizer_filter(self) -> Self
 pub const fn vyre_spec::soundness::Soundness::join(self, other: vyre_spec::soundness::Soundness) -> vyre_spec::soundness::Soundness
+pub const vyre_spec::CombineKind::ALL: [Self; 7]
 pub const vyre_spec::CommGroup::WORLD: Self
 pub const vyre_spec::FP4_DECODE_TABLE: [f32; 16]
 pub const vyre_spec::I4_DECODE_TABLE: [i32; 16]
@@ -377,6 +385,7 @@ pub const vyre_spec::python_token::TOK_STAR: u32
 pub const vyre_spec::python_token::TOK_STRING: u32
 pub const vyre_spec::python_token::TOK_WITH: u32
 pub enum vyre_spec::BinOpResult
+pub enum vyre_spec::CombineKind
 pub enum vyre_spec::InfinityBehavior
 pub enum vyre_spec::NanBehavior
 pub enum vyre_spec::NumericFormat
@@ -655,6 +664,13 @@ pub vyre_spec::CollectiveOp::BitXor
 pub vyre_spec::CollectiveOp::Max
 pub vyre_spec::CollectiveOp::Min
 pub vyre_spec::CollectiveOp::Sum
+pub vyre_spec::CombineKind::Add
+pub vyre_spec::CombineKind::And
+pub vyre_spec::CombineKind::Max
+pub vyre_spec::CombineKind::Min
+pub vyre_spec::CombineKind::Mul
+pub vyre_spec::CombineKind::Or
+pub vyre_spec::CombineKind::Xor
 pub vyre_spec::Convention::V1
 pub vyre_spec::Convention::V2
 pub vyre_spec::Convention::V2::lookup_binding: u32

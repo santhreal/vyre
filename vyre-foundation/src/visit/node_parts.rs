@@ -10,6 +10,7 @@
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::node::Node;
+use crate::ir_inner::model::op_signature::{CollectiveOp, SubgroupReduceOp};
 
 pub(crate) use super::node_bodies::map_bodies_cow;
 pub use super::node_bodies::{child_bodies, child_bodies_mut};
@@ -107,6 +108,69 @@ pub fn node_shape(node: &Node) -> NodeShape {
         | Node::TileReduce { .. }
         | Node::TileDecl { .. } => NodeShape::INERT,
         Node::Opaque(_) => NodeShape::OPAQUE,
+    }
+}
+
+/// The cross-invocation combine a statement applies.
+#[derive(Debug, Clone, Copy)]
+pub enum NodeCombine<'a> {
+    /// A collective reduction over the elements of one buffer.
+    Collective {
+        /// Operator the collective applies.
+        op: CollectiveOp,
+        /// Buffer whose elements the operator combines.
+        buffer: &'a Ident,
+    },
+    /// A reduction along one tile axis, over a tile whose element type the
+    /// statement does not state.
+    Tile {
+        /// Operator the reduction applies.
+        op: SubgroupReduceOp,
+    },
+    /// An out-of-tree extension, whose combine core cannot enumerate. A caller
+    /// whose answer has to be sound must treat it as combining in an order it
+    /// cannot prove.
+    Unknown,
+}
+
+/// The combine `node` applies across invocations, if it applies one.
+///
+/// The statement half of [`super::expr_parts::expr_combine`]. Exhaustive with no
+/// catch-all arm: a statement that reduces and is classified as reducing nothing
+/// would make every reordering schedule look legal over it.
+#[must_use]
+pub fn node_combine(node: &Node) -> Option<NodeCombine<'_>> {
+    match node {
+        Node::AllReduce { buffer, op, .. } => Some(NodeCombine::Collective { op: *op, buffer }),
+        Node::ReduceScatter { input, op, .. } => Some(NodeCombine::Collective {
+            op: *op,
+            buffer: input,
+        }),
+        Node::TileReduce { op, .. } => Some(NodeCombine::Tile { op: *op }),
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::Store { .. }
+        | Node::If { .. }
+        | Node::Loop { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::AsyncWait { .. }
+        | Node::Trap { .. }
+        | Node::Resume { .. }
+        | Node::AllGather { .. }
+        | Node::Broadcast { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
+        | Node::Block(_)
+        | Node::Region { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. } => None,
+        Node::Opaque(_) => Some(NodeCombine::Unknown),
     }
 }
 

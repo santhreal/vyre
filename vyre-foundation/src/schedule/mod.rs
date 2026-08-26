@@ -385,6 +385,61 @@ pub enum ScheduleTransform {
     },
 }
 
+/// Whether one transform changes the order in which the invocations of the
+/// phases it governs combine into a shared location.
+///
+/// Reordering an accumulation preserves its result only when the combine is
+/// associative and commutative, which
+/// [`algebraic_reordering`](crate::algebraic_reordering) answers for a program.
+/// This states which transforms have to ask.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum CombineOrder {
+    /// Every combine reaches its location in the order the program stated.
+    Preserved,
+    /// The order changes when the carried shape differs from the shape a
+    /// covered region declared, and is preserved when it does not.
+    ChangedWhenReshaped([u32; 3]),
+    /// The order changes wherever the transform applies.
+    Changed,
+}
+
+impl ScheduleTransform {
+    /// What this transform does to the combine order of the phases it governs.
+    ///
+    /// Splitting, tiling, reordering, vectorizing, and remapping an axis change
+    /// which invocations reach a location and in what sequence. A pipeline, a
+    /// persistent queue, a spatial partition, and an asymmetric join let
+    /// independent workers arrive in an order the schedule does not fix.
+    /// Recomputation applies a covered combine a second time, so the sequence
+    /// reaching a location is not the one the program stated either.
+    ///
+    /// Fission, fusion, memory placement, prefetch, a submission boundary, and
+    /// an added synchronization point move where work runs without changing
+    /// which invocations combine or in what sequence.
+    #[must_use]
+    pub fn combine_order(&self) -> CombineOrder {
+        match self {
+            Self::Tile { .. }
+            | Self::Split { .. }
+            | Self::Reorder { .. }
+            | Self::Vectorize { .. }
+            | Self::Map { .. }
+            | Self::Pipeline { .. }
+            | Self::Recompute { .. }
+            | Self::PersistentQueue { .. }
+            | Self::SpatialPartition { .. }
+            | Self::AsymmetricJoin { .. } => CombineOrder::Changed,
+            Self::SetWorkgroup { shape, .. } => CombineOrder::ChangedWhenReshaped(*shape),
+            Self::PhaseFission { .. }
+            | Self::Fuse { .. }
+            | Self::PlaceMemory { .. }
+            | Self::Prefetch { .. }
+            | Self::DispatchCut { .. }
+            | Self::Synchronize { .. } => CombineOrder::Preserved,
+        }
+    }
+}
+
 /// One validated application of a schedule transform.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ScheduleTransformRecord {

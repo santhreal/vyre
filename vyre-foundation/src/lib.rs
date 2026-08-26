@@ -99,6 +99,10 @@ pub(crate) mod scalar_ops;
 /// Inventory-registered algebraic-law registry (`algebraic_law_registry::laws_for_op`).
 pub mod algebraic_law_registry;
 
+/// Whether a schedule may reorder the combines a program performs
+/// (`algebraic_reordering::reordering_class`).
+pub mod algebraic_reordering;
+
 /// Region composition: region wrappers, program tagging, self-exclusive expansion.
 pub mod composition;
 

@@ -7,6 +7,7 @@
 
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::expr::Ident;
+use crate::ir_inner::model::op_signature::{AtomicOp, SubgroupReduceOp};
 use smallvec::SmallVec;
 
 /// What an expression does to the buffer it names.
@@ -60,6 +61,70 @@ pub fn expr_buffer_ref(expr: &Expr) -> ExprBufferRef<'_> {
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize => ExprBufferRef::None,
         Expr::Opaque(_) => ExprBufferRef::Unknown,
+    }
+}
+
+/// The cross-invocation combine an expression applies.
+#[derive(Debug, Clone, Copy)]
+pub enum ExprCombine<'a> {
+    /// A read-modify-write applied by every invocation that reaches it, to the
+    /// element of `buffer` its index selects.
+    Atomic {
+        /// Operator the read-modify-write applies.
+        op: &'a AtomicOp,
+        /// Buffer whose element the operator combines into.
+        buffer: &'a Ident,
+    },
+    /// A reduction across the lanes of one subgroup, over a computed value whose
+    /// element type the expression does not state.
+    Subgroup {
+        /// Operator the reduction applies.
+        op: SubgroupReduceOp,
+    },
+    /// An out-of-tree extension, whose combine core cannot enumerate. A caller
+    /// whose answer has to be sound must treat it as combining in an order it
+    /// cannot prove.
+    Unknown,
+}
+
+/// The combine `expr` applies across invocations, if it applies one.
+///
+/// The question is which expressions produce a result that depends on the order
+/// invocations reach them, because a schedule that reorders invocations is legal
+/// over such an expression only when the operator's laws say the order does not
+/// matter. Exhaustive with no catch-all arm: an expression variant that combines
+/// and is classified as combining nothing would make every reordering schedule
+/// look legal over it.
+#[must_use]
+pub fn expr_combine(expr: &Expr) -> Option<ExprCombine<'_>> {
+    match expr {
+        Expr::Atomic { op, buffer, .. } => Some(ExprCombine::Atomic { op, buffer }),
+        Expr::SubgroupReduce { op, .. } => Some(ExprCombine::Subgroup { op: *op }),
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::Var(_)
+        | Expr::BufferRef { .. }
+        | Expr::Load { .. }
+        | Expr::BufLen { .. }
+        | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. }
+        | Expr::BinOp { .. }
+        | Expr::UnOp { .. }
+        | Expr::Call { .. }
+        | Expr::Select { .. }
+        | Expr::Cast { .. }
+        | Expr::Fma { .. }
+        | Expr::SubgroupBallot { .. }
+        | Expr::SubgroupShuffle { .. }
+        | Expr::SubgroupLocalId
+        | Expr::SubgroupSize => None,
+        Expr::Opaque(_) => Some(ExprCombine::Unknown),
     }
 }
 
