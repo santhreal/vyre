@@ -6,6 +6,7 @@
 //! instruction choices are not part of this schema.
 
 mod legality;
+mod normalize;
 
 use std::collections::BTreeSet;
 
@@ -534,35 +535,6 @@ impl SelectedSchedule {
         self.phases
             .iter()
             .find(|phase| phase.source_regions.contains(&region))
-    }
-
-    /// Apply one transform after proving its typed preconditions.
-    pub fn apply(&mut self, transform: ScheduleTransform) -> Result<(), ScheduleLegalityError> {
-        let previous_identity = self.identity()?;
-        let (preconditions, source_phases, resource_bounds) = self.check_transform(&transform)?;
-        let source_regions = source_phases
-            .iter()
-            .filter_map(|phase| self.phase(*phase))
-            .flat_map(|phase| phase.source_regions.iter().copied())
-            .collect::<BTreeSet<_>>()
-            .into_iter()
-            .collect::<Vec<_>>();
-        let mut next = self.clone();
-        next.apply_checked(&transform, resource_bounds)?;
-        next.resources = next.resources.checked_join(resource_bounds)?;
-        next.transforms.push(ScheduleTransformRecord {
-            transform,
-            preconditions,
-            provenance: ScheduleTransformProvenance {
-                source_regions,
-                source_phases,
-                inverse: ScheduleInverse { previous_identity },
-            },
-            resource_bounds,
-        });
-        next.canonicalize();
-        *self = next;
-        Ok(())
     }
 
     /// Validate every persisted phase, transform proof, dependency, and resource bound.

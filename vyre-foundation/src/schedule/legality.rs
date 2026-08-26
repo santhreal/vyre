@@ -2,15 +2,14 @@
 //!
 //! `SelectedSchedule::apply` and `SelectedSchedule::validate` state what a
 //! transform must prove. The proof machinery is here: phase and axis lookup,
-//! precondition derivation, resource joins, the checked rewrite, and the
-//! acyclicity and canonicalization passes that every applied transform ends in.
+//! precondition derivation, resource joins, and the checked rewrite.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use super::{
     AxisMapping, MappingLevel, MemoryPlacement, PipelineRole, ScheduleAxis, ScheduleBoundKind,
     ScheduleLegalityError, SchedulePhase, SchedulePhaseId, SchedulePrecondition,
-    ScheduleResourceBounds, ScheduleTransform, SelectedSchedule, SynchronizationScope,
+    ScheduleResourceBounds, ScheduleTransform, SelectedSchedule,
 };
 
 impl SelectedSchedule {
@@ -534,54 +533,5 @@ impl SelectedSchedule {
             return Err(ScheduleLegalityError::DependencyCycle { from, to });
         }
         Ok(())
-    }
-
-    pub(super) fn validate_acyclic(&self) -> Result<(), ScheduleLegalityError> {
-        let by_id = self
-            .phases
-            .iter()
-            .map(|phase| (phase.id, phase))
-            .collect::<BTreeMap<_, _>>();
-        fn visit(
-            id: SchedulePhaseId,
-            by_id: &BTreeMap<SchedulePhaseId, &SchedulePhase>,
-            visiting: &mut BTreeSet<SchedulePhaseId>,
-            done: &mut BTreeSet<SchedulePhaseId>,
-        ) -> Result<(), ScheduleLegalityError> {
-            if done.contains(&id) {
-                return Ok(());
-            }
-            if !visiting.insert(id) {
-                return Err(ScheduleLegalityError::DependencyCycle { from: id, to: id });
-            }
-            let phase = by_id
-                .get(&id)
-                .ok_or(ScheduleLegalityError::MissingPhase(id))?;
-            for predecessor in &phase.predecessors {
-                visit(*predecessor, by_id, visiting, done)?;
-            }
-            visiting.remove(&id);
-            done.insert(id);
-            Ok(())
-        }
-        let mut visiting = BTreeSet::new();
-        let mut done = BTreeSet::new();
-        for id in by_id.keys().copied() {
-            visit(id, &by_id, &mut visiting, &mut done)?;
-        }
-        Ok(())
-    }
-
-    pub(super) fn canonicalize(&mut self) {
-        self.phases.sort_by_key(|phase| phase.id);
-        for phase in &mut self.phases {
-            phase.source_regions.sort_unstable();
-            phase.source_regions.dedup();
-            phase
-                .mappings
-                .sort_by_key(|mapping| (mapping.axis, mapping.level));
-            phase.predecessors.sort_unstable();
-            phase.predecessors.dedup();
-        }
     }
 }
