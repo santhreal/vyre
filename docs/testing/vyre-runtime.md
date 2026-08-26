@@ -35,6 +35,7 @@ The crate lives at `vyre-runtime`. The `runtime` owner maintains its
 | `lib` | `vyre_runtime` | `vyre-runtime/src/lib.rs` | None | `./cargo_full test -p vyre-runtime` |
 | `test` | `adversarial_disk` | `vyre-runtime/tests/adversarial_disk.rs` | None | `./cargo_full test -p vyre-runtime --test adversarial_disk` |
 | `test` | `artifact_admission_contract` | `vyre-runtime/tests/artifact_admission_contract.rs` | None | `./cargo_full test -p vyre-runtime --test artifact_admission_contract` |
+| `test` | `artifact_workspace_contract` | `vyre-runtime/tests/artifact_workspace_contract.rs` | None | `./cargo_full test -p vyre-runtime --test artifact_workspace_contract` |
 | `test` | `cache_eviction_proptest` | `vyre-runtime/tests/cache_eviction_proptest.rs` | None | `./cargo_full test -p vyre-runtime --test cache_eviction_proptest` |
 | `test` | `concurrency_invariants` | `vyre-runtime/tests/concurrency_invariants.rs` | None | `./cargo_full test -p vyre-runtime --test concurrency_invariants` |
 | `test` | `driver_runtime_lifecycle_boundary` | `vyre-runtime/tests/driver_runtime_lifecycle_boundary.rs` | None | `./cargo_full test -p vyre-runtime --test driver_runtime_lifecycle_boundary` |

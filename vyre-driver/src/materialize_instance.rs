@@ -615,6 +615,31 @@ macro_rules! artifact_instance_identity {
     };
 }
 
+/// Answer [`crate::ArtifactInstance::emitted_resources`] with one unreported
+/// record per module.
+///
+/// A backend whose API exposes no register, spill or static shared figure for a
+/// loaded entry point answers this way. The record count still has to match the
+/// module count, because the compiler pairs the records with payload entries by
+/// position, and zero in every field is what leaves the analytic estimate in
+/// force for that entry.
+#[macro_export]
+macro_rules! artifact_instance_unreported_resources {
+    () => {
+        fn emitted_resources(
+            &self,
+        ) -> ::std::result::Result<
+            ::std::vec::Vec<::vyre_megakernel::EmittedResources>,
+            $crate::BackendError,
+        > {
+            ::std::result::Result::Ok(::std::vec![
+                ::vyre_megakernel::EmittedResources::default();
+                $crate::materialize::MaterializedInstance::modules(self).len()
+            ])
+        }
+    };
+}
+
 /// Answer [`crate::ArtifactMaterializer::device`] from a
 /// [`crate::materialize::MaterializerDevice`]
 /// field named `descriptor`, and optionally forward the four resident-resource

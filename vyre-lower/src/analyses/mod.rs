@@ -7,7 +7,6 @@
 
 pub(crate) mod affine_access_map;
 pub(crate) mod resource_bounds;
-pub(crate) mod target_metrics;
 
 pub(crate) mod access_kind;
 pub mod alias_facts;
@@ -178,7 +177,6 @@ pub use shared_store_race::{
     analyze as analyze_shared_store_race, SharedStoreLegality, SharedStoreRaceReport,
     SharedStoreRaceSite,
 };
-pub use target_metrics::{rank_measured_candidates, CandidateRanking, TargetEmittedMetrics};
 pub use texture_promote::TextureCandidate;
 pub use texture_promote::{analyze as analyze_texture_promote, TexturePromotionPlan};
 pub use value_range::{analyze as analyze_value_range, IntRange, ValueRangeReport};

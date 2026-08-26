@@ -178,6 +178,7 @@ impl ExecutableModule for WgpuExecutableModule {
 
 impl ArtifactInstance for WgpuArtifactInstance {
     vyre_driver::artifact_instance_identity!();
+    vyre_driver::artifact_instance_unreported_resources!();
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
         if self.lost.load(Ordering::Acquire) {

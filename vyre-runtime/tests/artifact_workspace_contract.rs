@@ -23,8 +23,8 @@ use vyre_foundation::ir::{
     ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
-    Artifact, ArtifactEnvelope, ArtifactValueId, Digest, TargetEntryPoint, TargetPayload,
-    TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
+    Artifact, ArtifactEnvelope, ArtifactValueId, Digest, EmittedResources, TargetEntryPoint,
+    TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
     TargetResourceMemory,
 };
 use vyre_runtime::artifact_admission::ArtifactSession;
@@ -245,6 +245,10 @@ impl ArtifactInstance for WorkspaceInstance {
             retained: BTreeMap::new(),
             device_ns: None,
         }))))
+    }
+
+    fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError> {
+        Ok(vec![EmittedResources::default()])
     }
 }
 

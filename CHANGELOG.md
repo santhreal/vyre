@@ -1652,6 +1652,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `ExecutionRoute::open_with_representative_inputs` accept Program host-input
   order. Runtime-sized host buffers keep dynamic target IR while their
   representative bytes establish exact artifact resource counts.
+- Compile-time finalists are re-ranked on the registers, spill and shared
+  memory their emitted entry points allocate, and a finalist above the device
+  register limit is eliminated before measurement.
 - Harness selection and convergence-flag width for the persistent fixpoint are
   one decision with one owner, `routed_persistent_fixpoint`, which returns both
   halves together. The grid form indexes `changed[iteration]`, so taking the

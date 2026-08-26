@@ -163,6 +163,7 @@ pub fn vyre_megakernel::ExecutionTopology::default() -> Self
 pub fn vyre_megakernel::ExternalFacts::new(configuration_digest: vyre_megakernel::Digest, symbolic_bindings: alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>) -> Self
 pub fn vyre_megakernel::ExternalFacts::with_expected_launch_batch(self, expected_launch_batch: u32) -> Self
 pub fn vyre_megakernel::FinalistEvaluator::measure(&self, artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::TargetPayload) -> core::result::Result<u64, vyre_megakernel::TargetCompileError>
+pub fn vyre_megakernel::FinalistEvaluator::resources(&self, artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::TargetPayload) -> core::result::Result<alloc::vec::Vec<vyre_megakernel::EmittedResources>, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::FinalistEvaluator::target_compiler(&self) -> &dyn vyre_megakernel::TargetCompiler
 pub fn vyre_megakernel::GeometryRecord::covering_grid(coverage: [u64; 3], workgroup: [u32; 3]) -> core::result::Result<[u32; 3], vyre_megakernel::CompileError>
 pub fn vyre_megakernel::GeometryRecord::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
@@ -223,6 +224,7 @@ pub struct vyre_megakernel::DerivationStep
 pub struct vyre_megakernel::DerivedFamily
 pub struct vyre_megakernel::DeviceFacts
 pub struct vyre_megakernel::Digest(pub [u8; 32])
+pub struct vyre_megakernel::EmittedResources
 pub struct vyre_megakernel::EmittedTargetModule
 pub struct vyre_megakernel::EntryAbiRecord
 pub struct vyre_megakernel::EntryResourceBinding
@@ -293,6 +295,9 @@ pub vyre_megakernel::DerivationStep::transforms: alloc::vec::Vec<vyre_foundation
 pub vyre_megakernel::DerivedFamily::admitted: u32
 pub vyre_megakernel::DerivedFamily::derived: u32
 pub vyre_megakernel::DerivedFamily::production: vyre_megakernel::ScheduleProduction
+pub vyre_megakernel::EmittedResources::registers_per_invocation: u32
+pub vyre_megakernel::EmittedResources::shared_memory_bytes: u32
+pub vyre_megakernel::EmittedResources::spill_bytes_per_invocation: u32
 pub vyre_megakernel::EmittedTargetModule::bytes: alloc::vec::Vec<u8>
 pub vyre_megakernel::EmittedTargetModule::entry_point: alloc::string::String
 pub vyre_megakernel::EmittedTargetModule::resource_bindings: alloc::vec::Vec<vyre_megakernel::TargetResourceBinding>
@@ -523,6 +528,7 @@ pub vyre_megakernel::cost::CostBreakdown::materializations: u64
 pub vyre_megakernel::cost::CostBreakdown::materialized_bytes: u64
 pub vyre_megakernel::cost::CostBreakdown::occupancy_ns: u64
 pub vyre_megakernel::cost::CostBreakdown::occupancy_passes_peak: u64
+pub vyre_megakernel::cost::CostBreakdown::reported_spill_bytes: u64
 pub vyre_megakernel::cost::CostBreakdown::semantic_work: u64
 pub vyre_megakernel::cost::CostBreakdown::shared_scratch_bytes: u64
 pub vyre_megakernel::cost::CostBreakdown::spill_registers_peak: u64

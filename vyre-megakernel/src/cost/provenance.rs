@@ -148,6 +148,12 @@ pub const TERMS: &[CostTerm] = &[
         "replayed bytes within DeviceFacts::cache_capacity_bytes",
     ),
     term(
+        "reported_spill_bytes",
+        CostUnit::Bytes,
+        CostTermRole::Evidence,
+        "target-reported local spill per invocation times launched invocations",
+    ),
+    term(
         "launch_ns",
         CostUnit::Nanoseconds,
         CostTermRole::Charged,

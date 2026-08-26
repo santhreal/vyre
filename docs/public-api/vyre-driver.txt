@@ -398,6 +398,7 @@ pub fn vyre_driver::AdaptiveSpeculator::threshold_ppm(&self) -> u64
 pub fn vyre_driver::AotLauncherFiles::from_entries(dependencies: alloc::vec::Vec<vyre_driver::LauncherDependency>, entries: impl core::iter::traits::collect::IntoIterator<Item = (std::path::PathBuf, alloc::string::String)>) -> Self
 pub fn vyre_driver::ArtifactInstance::artifact(&self) -> vyre_megakernel::identity::Digest
 pub fn vyre_driver::ArtifactInstance::device(&self) -> &vyre_driver::DeviceIdentity
+pub fn vyre_driver::ArtifactInstance::emitted_resources(&self) -> core::result::Result<alloc::vec::Vec<vyre_megakernel::compile::EmittedResources>, vyre_driver::BackendError>
 pub fn vyre_driver::ArtifactInstance::payload(&self) -> vyre_megakernel::identity::Digest
 pub fn vyre_driver::ArtifactInstance::submit(&self, bindings: vyre_driver::BindingSet) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::Submission>, vyre_driver::BackendError>
 pub fn vyre_driver::ArtifactMaterializer::allocate_resident(&self, _byte_len: usize) -> core::result::Result<vyre_driver::Resource, vyre_driver::BackendError>
@@ -1223,6 +1224,7 @@ pub fn vyre_driver::vsa_specialization_key(program: &vyre_foundation::ir_inner::
 pub fn vyre_foundation::optimizer::ctx::AdapterCaps::from(profile: vyre_driver::DeviceProfile) -> Self
 pub fn vyre_foundation::validate::options::BackendCapabilities::from(profile: vyre_driver::DeviceProfile) -> Self
 pub macro vyre_driver::artifact_instance_identity!
+pub macro vyre_driver::artifact_instance_unreported_resources!
 pub macro vyre_driver::executable_module!
 pub macro vyre_driver::materializer_passthrough!
 pub macro vyre_driver::resident_pipeline_launch!

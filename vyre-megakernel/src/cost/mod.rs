@@ -62,6 +62,17 @@
 //! return to memory, so the occupancy term charges only the bytes that exceed
 //! the reported cache capacity. A device that reports no cache is charged for
 //! all of them, which is the previous behaviour.
+//!
+//! ## What the target compiler reports outranks what this model estimated
+//!
+//! Every register and shared-byte figure above is an estimate read off the IR.
+//! Once a candidate has been emitted and loaded, the target compiler and the
+//! device state what the entry point actually allocates, which is the same
+//! quantity measured instead of predicted. [`evaluate_reported`] re-prices a
+//! candidate with those figures in place of the estimate, so the ladder ranks
+//! its finalists on the register allocation the device will run rather than the
+//! one the IR suggested. A term the backend does not report stays zero and the
+//! estimate stands for it.
 
 use serde::{Deserialize, Serialize};
 use vyre_foundation::ir::Ident;
@@ -144,6 +155,13 @@ pub struct CostBreakdown {
     /// Repeated-pass bytes the device-wide cache serves, excluded from
     /// [`Self::occupancy_ns`].
     pub cache_resident_bytes: u64,
+    /// Local-memory spill bytes the target compiler reported, multiplied by the
+    /// invocations the selected geometry launches.
+    ///
+    /// Zero until a candidate has been emitted and the backend reported a spill.
+    /// Charged through [`Self::occupancy_ns`] at the same bandwidth fact as
+    /// every other byte that reaches memory twice.
+    pub reported_spill_bytes: u64,
     /// Launch term in nanoseconds.
     pub launch_ns: u64,
     /// Materialized-traffic term in nanoseconds.
@@ -163,11 +181,39 @@ pub struct CostBreakdown {
     pub total: u64,
 }
 
+/// What one emitted entry point allocates, as the target compiler and the device
+/// reported it, converted into the quantities this model prices.
+///
+/// One entry per fusion group, in group order, which is the order
+/// `compile_selected_modules` emits them in. Zero means the backend reported
+/// nothing for that term, and the analytic estimate stands.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct ReportedGroup {
+    /// Registers the entry point allocates per invocation.
+    pub(crate) registers_per_invocation: u32,
+    /// Statically declared workgroup-scoped bytes.
+    pub(crate) shared_memory_bytes: u32,
+    /// Local-memory spill bytes across every invocation the entry launches.
+    pub(crate) spill_traffic_bytes: u64,
+}
+
 pub(crate) fn evaluate(
     candidate: &CandidatePlan,
     facts: &PlanningFacts,
     dependencies: &[DependencyEdge],
     device: DeviceFacts,
+) -> CostBreakdown {
+    evaluate_reported(candidate, facts, dependencies, device, &[])
+}
+
+/// Price one candidate with the figures its emitted entry points reported in
+/// place of the estimates this model derived from the IR.
+pub(crate) fn evaluate_reported(
+    candidate: &CandidatePlan,
+    facts: &PlanningFacts,
+    dependencies: &[DependencyEdge],
+    device: DeviceFacts,
+    reported: &[ReportedGroup],
 ) -> CostBreakdown {
     let semantic_work = facts
         .node_work
@@ -237,109 +283,82 @@ pub(crate) fn evaluate(
     let mut occupancy_bytes = 0_u64;
     let mut spill_registers_peak = 0_u64;
     let mut cache_resident_bytes = 0_u64;
+    let mut reported_spill_bytes = 0_u64;
     let register_budget = u64::from(device.registers_per_invocation());
+    let scratch_budget = u64::from(device.shared_scratch_bytes_per_workgroup());
     let cache_capacity = device.cache_capacity_bytes();
-    match candidate.topology {
-        ExecutionTopology::Sequential | ExecutionTopology::ConcurrentQueue { .. } => {
-            for group in 0..u32::try_from(group_count).unwrap_or(u32::MAX) {
-                let mut group_live = 0_u64;
-                let mut group_tiles: Vec<(&Ident, u64)> = Vec::new();
-                let mut group_bytes = 0_u64;
-                for node in candidate.group_members(group) {
-                    group_live = group_live
-                        .saturating_add(facts.node_live_values.get(node).copied().unwrap_or(0));
-                    for (name, bytes) in facts
-                        .node_workgroup_scratch
-                        .get(node)
-                        .map(Vec::as_slice)
-                        .unwrap_or_default()
-                    {
-                        let held = group_tiles
-                            .iter()
-                            .position(|(name_held, _)| *name_held == name);
-                        match held {
-                            Some(index) => group_tiles[index].1 = group_tiles[index].1.max(*bytes),
-                            None => group_tiles.push((name, *bytes)),
-                        }
-                    }
-                    group_bytes = group_bytes
-                        .saturating_add(facts.node_touched_bytes.get(node).copied().unwrap_or(0));
-                }
-                let group_scratch = group_tiles
-                    .iter()
-                    .fold(0_u64, |total, (_, bytes)| total.saturating_add(*bytes));
-                live_value_peak = live_value_peak.max(group_live);
-                shared_scratch_bytes = shared_scratch_bytes.max(group_scratch);
-                let passes =
-                    resident_passes(group_live, u64::from(device.registers_per_invocation())).max(
-                        resident_passes(
-                            group_scratch,
-                            u64::from(device.shared_scratch_bytes_per_workgroup()),
-                        ),
-                    );
-                occupancy_passes_peak = occupancy_passes_peak.max(passes);
-                spill_registers_peak =
-                    spill_registers_peak.max(spilled(group_live, register_budget));
-                let replays = passes.saturating_sub(1);
-                let served = group_bytes.min(cache_capacity).saturating_mul(replays);
-                cache_resident_bytes = cache_resident_bytes.saturating_add(served);
-                occupancy_bytes = occupancy_bytes
-                    .saturating_add(group_bytes.saturating_mul(replays).saturating_sub(served));
-            }
-        }
-        ExecutionTopology::ResidentPartition { .. } => {
-            for groups in &stage_groups {
-                let mut stage_live = 0_u64;
-                let mut stage_tiles: Vec<(&Ident, u64)> = Vec::new();
-                let mut stage_bytes = 0_u64;
-                for &group in groups {
-                    for node in candidate.group_members(group) {
-                        stage_live = stage_live
-                            .saturating_add(facts.node_live_values.get(node).copied().unwrap_or(0));
-                        for (name, bytes) in facts
-                            .node_workgroup_scratch
-                            .get(node)
-                            .map(Vec::as_slice)
-                            .unwrap_or_default()
-                        {
-                            let held = stage_tiles
-                                .iter()
-                                .position(|(name_held, _)| *name_held == name);
-                            match held {
-                                Some(index) => {
-                                    stage_tiles[index].1 = stage_tiles[index].1.max(*bytes);
-                                }
-                                None => stage_tiles.push((name, *bytes)),
-                            }
-                        }
-                        stage_bytes = stage_bytes.saturating_add(
-                            facts.node_touched_bytes.get(node).copied().unwrap_or(0),
-                        );
+    // A sequential or queued topology holds one group resident at a time; a
+    // resident partition holds a whole stage. The peak is taken over whichever
+    // of the two is co-resident, so both cases are one loop over launch units.
+    let units: Vec<Vec<u32>> = match candidate.topology {
+        ExecutionTopology::Sequential | ExecutionTopology::ConcurrentQueue { .. } => (0
+            ..u32::try_from(group_count).unwrap_or(u32::MAX))
+            .map(|group| vec![group])
+            .collect(),
+        ExecutionTopology::ResidentPartition { .. } => stage_groups.clone(),
+    };
+    for unit in &units {
+        let mut estimated_live = 0_u64;
+        let mut tiles: Vec<(&Ident, u64)> = Vec::new();
+        let mut unit_bytes = 0_u64;
+        let mut reported_registers = 0_u64;
+        let mut reported_shared = 0_u64;
+        for &group in unit {
+            let reported = reported.get(group as usize).copied().unwrap_or_default();
+            reported_registers =
+                reported_registers.saturating_add(u64::from(reported.registers_per_invocation));
+            reported_shared =
+                reported_shared.saturating_add(u64::from(reported.shared_memory_bytes));
+            reported_spill_bytes =
+                reported_spill_bytes.saturating_add(reported.spill_traffic_bytes);
+            for node in candidate.group_members(group) {
+                estimated_live = estimated_live
+                    .saturating_add(facts.node_live_values.get(node).copied().unwrap_or(0));
+                for (name, bytes) in facts
+                    .node_workgroup_scratch
+                    .get(node)
+                    .map(Vec::as_slice)
+                    .unwrap_or_default()
+                {
+                    let held = tiles.iter().position(|(name_held, _)| *name_held == name);
+                    match held {
+                        Some(index) => tiles[index].1 = tiles[index].1.max(*bytes),
+                        None => tiles.push((name, *bytes)),
                     }
                 }
-                let stage_scratch = stage_tiles
-                    .iter()
-                    .fold(0_u64, |total, (_, bytes)| total.saturating_add(*bytes));
-                live_value_peak = live_value_peak.max(stage_live);
-                shared_scratch_bytes = shared_scratch_bytes.max(stage_scratch);
-                let passes =
-                    resident_passes(stage_live, u64::from(device.registers_per_invocation())).max(
-                        resident_passes(
-                            stage_scratch,
-                            u64::from(device.shared_scratch_bytes_per_workgroup()),
-                        ),
-                    );
-                occupancy_passes_peak = occupancy_passes_peak.max(passes);
-                spill_registers_peak =
-                    spill_registers_peak.max(spilled(stage_live, register_budget));
-                let replays = passes.saturating_sub(1);
-                let served = stage_bytes.min(cache_capacity).saturating_mul(replays);
-                cache_resident_bytes = cache_resident_bytes.saturating_add(served);
-                occupancy_bytes = occupancy_bytes
-                    .saturating_add(stage_bytes.saturating_mul(replays).saturating_sub(served));
+                unit_bytes = unit_bytes
+                    .saturating_add(facts.node_touched_bytes.get(node).copied().unwrap_or(0));
             }
         }
+        let estimated_scratch = tiles
+            .iter()
+            .fold(0_u64, |total, (_, bytes)| total.saturating_add(*bytes));
+        // A reported figure is the allocation the device will run. It replaces
+        // the estimate rather than joining it, because two answers to one
+        // question are not evidence of a larger demand.
+        let live = if reported_registers > 0 {
+            reported_registers
+        } else {
+            estimated_live
+        };
+        let scratch = if reported_shared > 0 {
+            reported_shared
+        } else {
+            estimated_scratch
+        };
+        live_value_peak = live_value_peak.max(live);
+        shared_scratch_bytes = shared_scratch_bytes.max(scratch);
+        let passes =
+            resident_passes(live, register_budget).max(resident_passes(scratch, scratch_budget));
+        occupancy_passes_peak = occupancy_passes_peak.max(passes);
+        spill_registers_peak = spill_registers_peak.max(spilled(live, register_budget));
+        let replays = passes.saturating_sub(1);
+        let served = unit_bytes.min(cache_capacity).saturating_mul(replays);
+        cache_resident_bytes = cache_resident_bytes.saturating_add(served);
+        occupancy_bytes = occupancy_bytes
+            .saturating_add(unit_bytes.saturating_mul(replays).saturating_sub(served));
     }
+    occupancy_bytes = occupancy_bytes.saturating_add(reported_spill_bytes);
 
     let launch_ns = launches.saturating_mul(launch_cost_ns(device));
     let throughput = match device.calibrated_materialization_throughput_bytes_per_ns() {
@@ -407,6 +426,7 @@ pub(crate) fn evaluate(
         divergent_regions,
         spill_registers_peak,
         cache_resident_bytes,
+        reported_spill_bytes,
         launch_ns,
         materialization_ns,
         occupancy_ns,

@@ -241,13 +241,13 @@ record is what reproduces a compile without re-running it.
 
 ## The cost model is open
 
-`CostBreakdown` has twenty-two fields and no hidden term. Each one states its
+`CostBreakdown` has twenty-three fields and no hidden term. Each one states its
 unit and where its weight came from in `vyre-megakernel/src/cost/provenance.rs`,
 and `CostBreakdown::term` reads that row by field name. A field with no row
 fails `every_cost_field_states_its_unit_and_provenance`, which derives the field
 set from the serialized shape rather than from a list.
 
-Fourteen fields are evidence, recorded and excluded from `total`.
+Fifteen fields are evidence, recorded and excluded from `total`.
 
 | Field | Unit | Meaning |
 |---|---|---|
@@ -265,6 +265,7 @@ Fourteen fields are evidence, recorded and excluded from `total`.
 | `divergent_regions` | count | lane-gated regions the graph states |
 | `spill_registers_peak` | registers | worst group's live values above the full-occupancy register budget |
 | `cache_resident_bytes` | bytes | replayed bytes the device-wide cache holds |
+| `reported_spill_bytes` | bytes | target-reported local spill across every launched invocation |
 
 Eight fields are charged, in nanoseconds of expected device time.
 
@@ -313,16 +314,31 @@ kept.
 | symbolic bound | can any descendant of this candidate beat the incumbent | CPU work |
 | analytic cost | how the admitted candidates rank | CPU work |
 | emission | which ranked plans the target compiler builds | `max_target_compilations` |
+| emitted resources | what each built plan allocates on the device | one module query per built plan |
 | measurement | which built plan is fastest on the device | `max_measurements` |
 
 `compile_measured` emits the top `max_target_compilations` ranked plans. A plan
 the target compiler rejects is eliminated with `MKC014_EMISSION` charged to the
 production that derived it, and the ladder continues with the next ranked plan,
-so one unbuildable plan does not fail the compilation. Each plan that emitted is
-launched `max_measurements` times and the lowest median device time wins, which
-can select a plan the analytic model ranked behind another. A compilation where
-no ranked plan emitted fails with the rejection instead of returning a plan the
-target cannot build.
+so one unbuildable plan does not fail the compilation.
+
+Each plan that emitted is then asked what it allocated. Registers and spill are
+assigned by the target compiler, so no estimate derived from the IR can state
+them and only the loaded module holds them. `FinalistEvaluator::resources`
+returns one record per payload entry with registers and local-memory spill per
+invocation and statically declared shared bytes. A reported figure replaces the
+model's estimate for that term, spill is priced as traffic over the invocations
+the authenticated geometry launches, and the finalists are re-ranked on the
+result before any measurement is spent. A plan whose reported registers exceed
+the device's architectural limit is eliminated with the emission reason: that is
+a launch the hardware cannot run, not a price. A backend whose API reports none
+of it returns default records, which leaves every finalist ranked on the
+estimate.
+
+Each surviving plan is launched `max_measurements` times and the lowest median
+device time wins, which can select a plan the analytic model ranked behind
+another. A compilation where no ranked plan emitted fails with the rejection
+instead of returning a plan the target cannot build.
 
 ## Unmeasured is recorded as unmeasured
 

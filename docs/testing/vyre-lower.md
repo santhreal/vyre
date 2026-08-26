@@ -42,7 +42,6 @@ The crate lives at `vyre-lower`. The `lowering` owner maintains its
 | `test` | `rewrite_layer_contract` | `vyre-lower/tests/rewrite_layer_contract.rs` | None | `./cargo_full test -p vyre-lower --test rewrite_layer_contract` |
 | `test` | `shared_store_race_legality` | `vyre-lower/tests/shared_store_race_legality.rs` | None | `./cargo_full test -p vyre-lower --test shared_store_race_legality` |
 | `test` | `target_capabilities` | `vyre-lower/tests/target_capabilities.rs` | None | `./cargo_full test -p vyre-lower --test target_capabilities` |
-| `test` | `target_metrics_contracts` | `vyre-lower/tests/target_metrics_contracts.rs` | None | `./cargo_full test -p vyre-lower --test target_metrics_contracts` |
 | `test` | `verify_result_id_uniqueness` | `vyre-lower/tests/verify_result_id_uniqueness.rs` | None | `./cargo_full test -p vyre-lower --test verify_result_id_uniqueness` |
 
 ## Test classes

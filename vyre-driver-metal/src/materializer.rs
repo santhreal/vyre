@@ -91,6 +91,7 @@ mod native {
 
     impl ArtifactInstance for MetalArtifactInstance {
         vyre_driver::artifact_instance_identity!();
+        vyre_driver::artifact_instance_unreported_resources!();
 
         fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
             self.submit_routed(&bindings, || {

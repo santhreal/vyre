@@ -18,7 +18,7 @@ use crate::schema::{
     Provenance, ARTIFACT_SCHEMA_VERSION,
 };
 use crate::target::{TargetCompileError, TargetCompiler};
-use crate::{artifact, facts, normalize, search, select};
+use crate::{artifact, candidate, cost, facts, normalize, search, select};
 
 /// Everything one compilation derives once and every finalist reuses.
 struct CompileContext<'a> {
@@ -271,16 +271,51 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
     )
 }
 
+/// Registers, spill and shared bytes one emitted entry point allocates.
+///
+/// A target compiler assigns physical registers and decides what spills; a
+/// device reports what the loaded module holds. Both figures are measurements of
+/// the entry point the compiler is about to time, and both outrank the estimate
+/// candidate search derived from the IR. Zero means the backend reported nothing
+/// for that term, and the estimate stands for it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EmittedResources {
+    /// Registers the entry point allocates per invocation.
+    pub registers_per_invocation: u32,
+    /// Local-memory spill bytes per invocation.
+    pub spill_bytes_per_invocation: u32,
+    /// Statically declared workgroup-scoped bytes.
+    pub shared_memory_bytes: u32,
+}
+
 /// Device access the compiler borrows to time its finalists.
 ///
 /// The compiler owns which plans are finalists and how their times are compared.
 /// The caller owns the device: it supplies the target compiler that turns one
-/// artifact into loadable bytes, and a launch that returns the device time of
-/// one execution. Nothing here acquires a device, so a caller without one calls
-/// [`compile`] instead.
+/// artifact into loadable bytes, the resources each emitted entry point turned
+/// out to need, and a launch that returns the device time of one execution.
+/// Nothing here acquires a device, so a caller without one calls [`compile`]
+/// instead.
 pub trait FinalistEvaluator {
     /// Target compiler that turns one candidate artifact into target bytes.
     fn target_compiler(&self) -> &dyn TargetCompiler;
+
+    /// What each entry point of `payload` allocates, in payload entry order.
+    ///
+    /// The compiler re-ranks its emitted finalists on these figures before it
+    /// spends a measurement, so a plan whose real register allocation costs
+    /// occupancy is measured after one whose does not. A backend whose API
+    /// reports none of it returns one default record per entry, which leaves
+    /// every candidate ranked on the analytic estimate.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the payload cannot be inspected on this device.
+    fn resources(
+        &self,
+        artifact: &Artifact,
+        payload: &TargetPayload,
+    ) -> Result<Vec<EmittedResources>, TargetCompileError>;
 
     /// Launch `payload` once and return the device time of that launch in
     /// nanoseconds. The time must come from the device, not the host clock.
@@ -368,10 +403,52 @@ pub fn compile_measured(
             }
         }
     }
+    // Emission and load turn every register and shared-byte estimate into a
+    // measurement. Re-rank on those before spending a device measurement, so the
+    // plan measured first is the plan the reported allocation favours rather than
+    // the one the IR estimate favoured.
+    let mut reranked: Vec<(u64, usize, usize)> = Vec::with_capacity(emitted.len());
+    let mut over_ceiling: Vec<usize> = Vec::new();
+    for (position, (index, provisional, payload)) in emitted.iter().enumerate() {
+        let reported = evaluator
+            .resources(provisional, payload)
+            .map_err(|error| finalist_failure(*index, &error))?;
+        let candidate = &context.ranked[*index].candidate;
+        let groups = reported_groups(&reported, payload, candidate);
+        let ceiling = request.device.hardware_registers_per_invocation();
+        if ceiling > 0
+            && groups
+                .iter()
+                .any(|group| group.registers_per_invocation > ceiling)
+        {
+            over_ceiling.push(position);
+            continue;
+        }
+        let cost = cost::evaluate_reported(
+            candidate,
+            &context.facts,
+            &context.dependencies,
+            request.device,
+            &groups,
+        );
+        reranked.push((cost.total, *index, position));
+    }
+    for position in over_ceiling {
+        let (index, ..) = &emitted[position];
+        eliminate(&mut certificate, &context.ranked[*index]);
+    }
+    // Total first, then the analytic rank, so a tie on the reported cost keeps
+    // the order a caller can reproduce from the certificate.
+    reranked.sort_unstable();
     certificate.canonicalize();
+    let order: Vec<usize> = reranked
+        .into_iter()
+        .map(|(_, _, position)| position)
+        .collect();
 
     let mut winner: Option<(usize, u64, u32)> = None;
-    for (index, provisional, payload) in &emitted {
+    for position in order {
+        let (index, provisional, payload) = &emitted[position];
         if spent(started) >= budget.max_elapsed_ns {
             break;
         }
@@ -422,6 +499,46 @@ pub fn compile_measured(
 /// Nanoseconds the measured path has spent since it started.
 fn spent(started: Instant) -> u64 {
     u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX)
+}
+
+/// Project what each emitted entry reported onto the fusion groups the cost
+/// model prices.
+///
+/// One entry implements one fusion group, so the entry's node names the group.
+/// A report shorter than the entry list leaves the remaining groups at zero,
+/// which keeps their analytic estimate. Spill is reported per invocation and
+/// priced as traffic, so it is multiplied by the invocations the authenticated
+/// geometry launches for that entry.
+fn reported_groups(
+    reported: &[EmittedResources],
+    payload: &TargetPayload,
+    candidate: &candidate::CandidatePlan,
+) -> Vec<cost::ReportedGroup> {
+    let mut groups = vec![cost::ReportedGroup::default(); candidate.group_count()];
+    for (entry, resources) in payload.entries().iter().zip(reported) {
+        let node = usize::try_from(entry.node.0).unwrap_or(usize::MAX);
+        let Some(group) = candidate.node_groups.get(node).copied() else {
+            continue;
+        };
+        let Some(slot) = groups.get_mut(usize::try_from(group).unwrap_or(usize::MAX)) else {
+            continue;
+        };
+        let invocations = entry
+            .grid_size
+            .iter()
+            .chain(entry.workgroup_size.iter())
+            .fold(1_u64, |total, extent| {
+                total.saturating_mul(u64::from(*extent))
+            });
+        slot.registers_per_invocation = slot
+            .registers_per_invocation
+            .max(resources.registers_per_invocation);
+        slot.shared_memory_bytes = slot.shared_memory_bytes.max(resources.shared_memory_bytes);
+        slot.spill_traffic_bytes = slot.spill_traffic_bytes.saturating_add(
+            u64::from(resources.spill_bytes_per_invocation).saturating_mul(invocations),
+        );
+    }
+    groups
 }
 
 /// Record that emission eliminated the family that derived one ranked plan.

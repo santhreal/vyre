@@ -203,6 +203,15 @@ impl CudaCompiledPipeline {
         crate::backend::module_cache::declares_trap_sidecar(&self.ptx_src)
             || self.program.stats().trap()
     }
+
+    /// What the driver assigned this pipeline's entry point after compiling its
+    /// PTX for the acquired device.
+    pub(crate) fn emitted_resources(
+        &self,
+    ) -> Result<vyre_megakernel::EmittedResources, BackendError> {
+        self.backend
+            .module_resources_with_key(&self.ptx_src, self.module_key)
+    }
 }
 
 impl Drop for CudaCompiledPipeline {

@@ -38,6 +38,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `adversarial_loop_induction_rebind` | `vyre-foundation/tests/adversarial_loop_induction_rebind.rs` | None | `./cargo_full test -p vyre-foundation --test adversarial_loop_induction_rebind` |
 | `test` | `adversarial_loop_peel_first_iter` | `vyre-foundation/tests/adversarial_loop_peel_first_iter.rs` | None | `./cargo_full test -p vyre-foundation --test adversarial_loop_peel_first_iter` |
 | `test` | `adversarial_program_canonical_laws` | `vyre-foundation/tests/adversarial_program_canonical_laws.rs` | None | `./cargo_full test -p vyre-foundation --test adversarial_program_canonical_laws` |
+| `test` | `algebraic_reordering` | `vyre-foundation/tests/algebraic_reordering.rs` | None | `./cargo_full test -p vyre-foundation --test algebraic_reordering` |
 | `test` | `async_destination_writability` | `vyre-foundation/tests/async_destination_writability.rs` | None | `./cargo_full test -p vyre-foundation --test async_destination_writability` |
 | `test` | `async_tag_discipline` | `vyre-foundation/tests/async_tag_discipline.rs` | None | `./cargo_full test -p vyre-foundation --test async_tag_discipline` |
 | `test` | `async_uniformity` | `vyre-foundation/tests/async_uniformity.rs` | None | `./cargo_full test -p vyre-foundation --test async_uniformity` |

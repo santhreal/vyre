@@ -75,6 +75,7 @@ The crate lives at `vyre-driver-cuda`. The `cuda-driver` owner maintains its
 | `test` | `dominator_frontier_gpu_parity` | `vyre-driver-cuda/tests/dominator_frontier_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test dominator_frontier_gpu_parity` |
 | `test` | `egraph_device_image_upload` | `vyre-driver-cuda/tests/egraph_device_image_upload/mod.rs` | None | `./cargo_full test -p vyre-driver-cuda --test egraph_device_image_upload` |
 | `test` | `emitted_ptx_byte_stability` | `vyre-driver-cuda/tests/emitted_ptx_byte_stability.rs` | None | `./cargo_full test -p vyre-driver-cuda --test emitted_ptx_byte_stability` |
+| `test` | `emitted_resources_contract` | `vyre-driver-cuda/tests/emitted_resources_contract.rs` | None | `./cargo_full test -p vyre-driver-cuda --test emitted_resources_contract` |
 | `test` | `encoding_classify_gpu_parity` | `vyre-driver-cuda/tests/encoding_classify_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test encoding_classify_gpu_parity` |
 | `test` | `execution_contracts` | `vyre-driver-cuda/tests/execution_contracts.rs` | None | `./cargo_full test -p vyre-driver-cuda --test execution_contracts` |
 | `test` | `exploded_gpu_parity` | `vyre-driver-cuda/tests/exploded_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test exploded_gpu_parity` |

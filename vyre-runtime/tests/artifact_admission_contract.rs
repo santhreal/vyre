@@ -17,9 +17,9 @@ use vyre_foundation::ir::{
 };
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileRequest, DeviceFacts,
-    Digest, ExternalFacts, GeometryRecord, SearchBudget, TargetCompileError, TargetCompiler,
-    TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess,
-    TargetResourceBinding, TargetResourceMemory,
+    Digest, EmittedResources, ExternalFacts, GeometryRecord, SearchBudget, TargetCompileError,
+    TargetCompiler, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
+    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_runtime::artifact_admission::{
     admit_artifact, admit_cached_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession,
@@ -668,6 +668,10 @@ impl ArtifactInstance for TestInstance {
             device_ns: None,
         }))))
     }
+
+    fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError> {
+        Ok(vec![EmittedResources::default()])
+    }
 }
 
 struct TestSubmission(Option<Completion>);
@@ -760,6 +764,10 @@ impl ArtifactInstance for RecordingInstance {
             retained: BTreeMap::new(),
             device_ns: Some(42),
         }))))
+    }
+
+    fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError> {
+        Ok(vec![EmittedResources::default()])
     }
 }
 

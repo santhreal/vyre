@@ -11,6 +11,7 @@ use vyre_driver::SpeculationMode;
 use vyre_driver::{resolve_fixpoint_iterations, BackendError, DispatchConfig, LaunchPlan};
 use vyre_driver::{BindingPlan, BindingRole};
 use vyre_foundation::ir::Program;
+use vyre_megakernel::EmittedResources;
 
 use super::allocations::DeviceAllocationPool;
 use super::module_cache::{
@@ -388,6 +389,30 @@ impl CudaBackend {
     ) -> Result<cudarc::driver::sys::CUfunction, BackendError> {
         self.module_cache
             .function_for_ptx(ptx_src, key, self.ptx_target_sm())
+    }
+
+    /// Registers, spill bytes and static shared bytes the driver assigned to
+    /// this PTX module's entry point.
+    pub(crate) fn module_resources_with_key(
+        &self,
+        ptx_src: &str,
+        key: ModuleCacheKey,
+    ) -> Result<EmittedResources, BackendError> {
+        let func = self.module_for_ptx_with_key(ptx_src, key)?;
+        let (registers_per_invocation, spill_bytes_per_invocation, shared_memory_bytes) =
+            super::module_cache::cuda_function_resources(func).map_err(|res| {
+                BackendError::DispatchFailed {
+                    code: None,
+                    message: format!(
+                        "cuFuncGetAttribute failed with {res:?} for a loaded CUDA entry point. Fix: verify the module is still resident on the acquired device."
+                    ),
+                }
+            })?;
+        Ok(EmittedResources {
+            registers_per_invocation,
+            spill_bytes_per_invocation,
+            shared_memory_bytes,
+        })
     }
 
     /// The module-scope globals this PTX module exposes to the host.

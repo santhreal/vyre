@@ -15,7 +15,9 @@ mod ptx_source_cache;
 mod trap_sidecar;
 
 pub(crate) use cache_key::{ModuleCacheKey, PtxSourceCacheKey};
-pub(crate) use driver_module::{load_cuda_module_data, unload_cuda_module};
+pub(crate) use driver_module::{
+    cuda_function_resources, load_cuda_module_data, unload_cuda_module,
+};
 pub(crate) use module_registry::{CudaModuleCache, ModuleGlobals};
 pub(crate) use ptx_source_cache::CudaPtxSourceCache;
 pub(crate) use trap_sidecar::{declares_trap_sidecar, TrapSidecar};

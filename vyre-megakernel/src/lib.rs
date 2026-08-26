@@ -53,7 +53,7 @@ pub(crate) mod target;
 
 pub use candidate::{ExecutionTopology, ResidentPartitionMode};
 pub use certificate::{DerivedFamily, PruneReason, PrunedFamily, SearchCertificate};
-pub use compile::{compile, compile_measured, FinalistEvaluator};
+pub use compile::{compile, compile_measured, EmittedResources, FinalistEvaluator};
 pub use device_facts::DeviceFacts;
 pub use envelope::{
     ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,

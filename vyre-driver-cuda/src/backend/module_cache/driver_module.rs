@@ -3,7 +3,7 @@
 
 use std::ffi::CStr;
 
-use cudarc::driver::sys::{CUfunction, CUmodule, CUresult};
+use cudarc::driver::sys::{CUfunction, CUfunction_attribute, CUmodule, CUresult};
 
 /// Module-scope cooperative grid-barrier counter symbol, emitted by
 /// `vyre-emit-ptx` as `.global .align 4 .u32 _vyre_grid_barrier[1];`.
@@ -56,6 +56,45 @@ pub(crate) fn get_cuda_module_function(
         return Err(CUresult::CUDA_ERROR_INVALID_VALUE);
     }
     Ok(func)
+}
+
+/// Registers, local-memory spill bytes and static shared bytes `ptxas` assigned
+/// to one loaded entry point.
+///
+/// PTX registers are virtual, so these figures exist only after the driver has
+/// compiled the module for the live device. That makes the loaded function the
+/// only place a real register or spill count can be read.
+pub(crate) fn cuda_function_resources(func: CUfunction) -> Result<(u32, u32, u32), CUresult> {
+    let registers =
+        cuda_function_attribute(func, CUfunction_attribute::CU_FUNC_ATTRIBUTE_NUM_REGS)?;
+    let spill = cuda_function_attribute(
+        func,
+        CUfunction_attribute::CU_FUNC_ATTRIBUTE_LOCAL_SIZE_BYTES,
+    )?;
+    let shared = cuda_function_attribute(
+        func,
+        CUfunction_attribute::CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES,
+    )?;
+    Ok((registers, spill, shared))
+}
+
+/// One `cuFuncGetAttribute` value, clamped at zero because every attribute read
+/// here is a count of a resource.
+fn cuda_function_attribute(
+    func: CUfunction,
+    attribute: CUfunction_attribute,
+) -> Result<u32, CUresult> {
+    if func.is_null() {
+        return Err(CUresult::CUDA_ERROR_INVALID_VALUE);
+    }
+    let mut value: std::ffi::c_int = 0;
+    // SAFETY: `func` is a non-null CUDA function handle from a loaded module and
+    // `value` is a live host integer for the duration of the FFI call.
+    let result = unsafe { cudarc::driver::sys::cuFuncGetAttribute(&mut value, attribute, func) };
+    if result != CUresult::CUDA_SUCCESS {
+        return Err(result);
+    }
+    Ok(u32::try_from(value).unwrap_or(0))
 }
 
 /// Resolve a `.global` symbol's device pointer and byte size from a loaded

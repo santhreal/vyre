@@ -35,6 +35,7 @@ The crate lives at `vyre-driver-spirv`. The `spirv-driver` owner maintains its
 | `lib` | `vyre_driver_spirv` | `vyre-driver-spirv/src/lib.rs` | None | `./cargo_full test -p vyre-driver-spirv` |
 | `test` | `dispatch` | `vyre-driver-spirv/tests/dispatch.rs` | `device-tests` | `./cargo_full test -p vyre-driver-spirv --test dispatch` |
 | `test` | `hostile_input_closure_contract` | `vyre-driver-spirv/tests/hostile_input_closure_contract.rs` | `device-tests` | `./cargo_full test -p vyre-driver-spirv --test hostile_input_closure_contract` |
+| `test` | `resident_multi_entry_submission` | `vyre-driver-spirv/tests/resident_multi_entry_submission.rs` | None | `./cargo_full test -p vyre-driver-spirv --test resident_multi_entry_submission` |
 | `test` | `shared_target_contract_discrimination` | `vyre-driver-spirv/tests/shared_target_contract_discrimination.rs` | None | `./cargo_full test -p vyre-driver-spirv --test shared_target_contract_discrimination` |
 | `test` | `spirv_parity` | `vyre-driver-spirv/tests/spirv_parity.rs` | `spirv-val` | `./cargo_full test -p vyre-driver-spirv --test spirv_parity` |
 | `test` | `target_payload_admission_contract` | `vyre-driver-spirv/tests/target_payload_admission_contract.rs` | None | `./cargo_full test -p vyre-driver-spirv --test target_payload_admission_contract` |

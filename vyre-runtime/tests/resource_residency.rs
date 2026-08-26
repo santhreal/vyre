@@ -10,7 +10,7 @@ use std::thread;
 use vyre_driver::{
     ArtifactInstance, BackendError, BindingSet, DeviceIdentity, ResidentOwner, Resource, Submission,
 };
-use vyre_megakernel::Digest;
+use vyre_megakernel::{Digest, EmittedResources};
 use vyre_runtime::resource_residency::{
     ArtifactInstanceBinding, ImmutableResourceUpload, MutableStateSpec, ResidentResourceDevice,
     ResourceAdmissionStatus, ResourceResidency, ResourceResidencyError, ResourceSetAdmission,
@@ -207,6 +207,10 @@ impl ArtifactInstance for FixtureInstance {
             name: "resource residency fixture submission".to_string(),
             backend: "fixture".to_string(),
         })
+    }
+
+    fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError> {
+        Ok(vec![EmittedResources::default()])
     }
 }
 

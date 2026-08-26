@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 
 use vyre_megakernel::{
-    Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat, TargetProfile,
+    Artifact, ArtifactValueId, Digest, EmittedResources, TargetPayload, TargetPayloadFormat,
+    TargetProfile,
 };
 
 use super::BackendError;
@@ -104,6 +105,19 @@ pub trait ArtifactInstance: Send + Sync {
     fn device(&self) -> &DeviceIdentity;
     /// Validate bindings and submit one invocation.
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError>;
+    /// What the loaded module allocates, one record per payload entry point in
+    /// payload entry order.
+    ///
+    /// Registers and spill are decided by the target compiler, not by the
+    /// neutral artifact, so only the loaded module holds them. Compile-time
+    /// finalist ranking reads these figures in place of its own estimate. A
+    /// backend whose API reports none of them returns one default record per
+    /// entry, which leaves the estimate in force.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the device rejects the query.
+    fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError>;
 }
 
 /// Device-specific admission and native-handle construction.

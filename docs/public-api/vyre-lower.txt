@@ -9,7 +9,6 @@ impl core::default::Default for vyre_lower::analyses::ConsumerAbiRequirement
 impl core::default::Default for vyre_lower::analyses::RetainedFallbacks
 impl core::default::Default for vyre_lower::analyses::TailHandling
 impl core::default::Default for vyre_lower::analyses::TargetBankGeometry
-impl core::default::Default for vyre_lower::analyses::TargetEmittedMetrics
 impl core::error::Error for vyre_lower::DescriptorIntentError
 impl core::error::Error for vyre_lower::PhysicalLoweringError
 impl core::error::Error for vyre_lower::analyses::AffineMapError
@@ -238,7 +237,6 @@ pub fn vyre_lower::analyses::SharedStoreRaceReport::race_count(&self) -> usize
 pub fn vyre_lower::analyses::SliceSpec::element_count(&self) -> core::result::Result<u64, vyre_lower::analyses::AffineMapError>
 pub fn vyre_lower::analyses::TailHandling::default() -> Self
 pub fn vyre_lower::analyses::TargetBankGeometry::default() -> Self
-pub fn vyre_lower::analyses::TargetEmittedMetrics::default() -> Self
 pub fn vyre_lower::analyses::ValueRangeReport::as_constant(&self, result_id: u32) -> core::option::Option<i64>
 pub fn vyre_lower::analyses::ValueRangeReport::get(&self, result_id: u32) -> core::option::Option<vyre_lower::analyses::IntRange>
 pub fn vyre_lower::analyses::ValueRangeReport::get_at(&self, result_id: u32, op_index: usize) -> core::option::Option<vyre_lower::analyses::IntRange>
@@ -275,7 +273,6 @@ pub fn vyre_lower::analyses::child_body_operands<'a>(kind: &vyre_lower::KernelOp
 pub fn vyre_lower::analyses::dead_by_no_use(desc: &vyre_lower::KernelDescriptor) -> alloc::vec::Vec<(alloc::vec::Vec<usize>, u32)>
 pub fn vyre_lower::analyses::evaluate_mitigation_candidate(phases: &[vyre_lower::analyses::AccessPhaseProfile], geometry: &vyre_lower::analyses::TargetBankGeometry, candidate: vyre_lower::analyses::BankConflictMitigation, baseline_worst: vyre_lower::analyses::ConflictSeverity) -> vyre_lower::analyses::MitigationEvaluation
 pub fn vyre_lower::analyses::import_descriptor_reaching_defs(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::analyses::ReachingDefFactSet
-pub fn vyre_lower::analyses::rank_measured_candidates(candidates: alloc::vec::Vec<vyre_lower::analyses::CandidateRanking>) -> alloc::vec::Vec<vyre_lower::analyses::CandidateRanking>
 pub fn vyre_lower::analyses::resolve_copy_alias(id: u32, copy_aliases: &rustc_hash::FxHashMap<u32, u32>) -> u32
 pub fn vyre_lower::analyses::select_bank_conflict_strategy(phases: &[vyre_lower::analyses::AccessPhaseProfile], geometry: &vyre_lower::analyses::TargetBankGeometry) -> vyre_lower::analyses::MitigationEvaluation
 pub fn vyre_lower::analyses::structured_walk::StructuredVisitor::enter_body(&mut self, body: &'a vyre_lower::KernelBody, op_index_offset: usize)
@@ -423,7 +420,6 @@ pub struct vyre_lower::analyses::BankConflictReport
 pub struct vyre_lower::analyses::BranchHint
 pub struct vyre_lower::analyses::BranchSite
 pub struct vyre_lower::analyses::CandidateLegalityReport
-pub struct vyre_lower::analyses::CandidateRanking
 pub struct vyre_lower::analyses::CoalescenceReport
 pub struct vyre_lower::analyses::CoalescenceWarning
 pub struct vyre_lower::analyses::CommonSubexprReport
@@ -450,7 +446,6 @@ pub struct vyre_lower::analyses::SharedStoreRaceSite
 pub struct vyre_lower::analyses::SliceSpec
 pub struct vyre_lower::analyses::TailHandling
 pub struct vyre_lower::analyses::TargetBankGeometry
-pub struct vyre_lower::analyses::TargetEmittedMetrics
 pub struct vyre_lower::analyses::TargetResourceLimits
 pub struct vyre_lower::analyses::TextureCandidate
 pub struct vyre_lower::analyses::UseSite
@@ -811,13 +806,6 @@ pub vyre_lower::analyses::CandidateLegalityReport::legality: vyre_lower::analyse
 pub vyre_lower::analyses::CandidateLegalityReport::resource_bounds: vyre_lower::analyses::ResourceBounds
 pub vyre_lower::analyses::CandidateLegalityReport::retained_fallbacks: vyre_lower::analyses::RetainedFallbacks
 pub vyre_lower::analyses::CandidateLegalityReport::violations: alloc::vec::Vec<alloc::string::String>
-pub vyre_lower::analyses::CandidateRanking::candidate_id: alloc::string::String
-pub vyre_lower::analyses::CandidateRanking::disqualification_reason: core::option::Option<alloc::string::String>
-pub vyre_lower::analyses::CandidateRanking::is_disqualified: bool
-pub vyre_lower::analyses::CandidateRanking::metrics: vyre_lower::analyses::TargetEmittedMetrics
-pub vyre_lower::analyses::CandidateRanking::rank: usize
-pub vyre_lower::analyses::CandidateRanking::score: f64
-pub vyre_lower::analyses::CandidateRanking::target_device: alloc::string::String
 pub vyre_lower::analyses::CoalescenceReport::kernel_id: alloc::string::String
 pub vyre_lower::analyses::CoalescenceReport::sites: alloc::vec::Vec<vyre_lower::analyses::AccessSite>
 pub vyre_lower::analyses::CoalescenceRewrite::BroadcastStoreReduction
@@ -934,14 +922,6 @@ pub vyre_lower::analyses::TargetBankGeometry::bank_count: u32
 pub vyre_lower::analyses::TargetBankGeometry::bank_width_bytes: u32
 pub vyre_lower::analyses::TargetBankGeometry::instruction_word_bytes: u32
 pub vyre_lower::analyses::TargetBankGeometry::subgroup_lanes: u32
-pub vyre_lower::analyses::TargetEmittedMetrics::async_copy_counter: u64
-pub vyre_lower::analyses::TargetEmittedMetrics::bank_conflict_counter: u64
-pub vyre_lower::analyses::TargetEmittedMetrics::device_duration_nanos: u64
-pub vyre_lower::analyses::TargetEmittedMetrics::instruction_count: usize
-pub vyre_lower::analyses::TargetEmittedMetrics::local_memory_spill_bytes: usize
-pub vyre_lower::analyses::TargetEmittedMetrics::output_parity_verified: bool
-pub vyre_lower::analyses::TargetEmittedMetrics::register_count: usize
-pub vyre_lower::analyses::TargetEmittedMetrics::shared_memory_bytes: usize
 pub vyre_lower::analyses::TargetResourceLimits::architectural_registers_per_thread: usize
 pub vyre_lower::analyses::TargetResourceLimits::max_shared_memory_bytes: usize
 pub vyre_lower::analyses::TargetResourceLimits::max_threads_per_workgroup: usize

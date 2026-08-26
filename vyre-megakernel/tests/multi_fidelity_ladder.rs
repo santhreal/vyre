@@ -15,8 +15,9 @@ use std::sync::Mutex;
 
 use vyre_megakernel::{
     compile_measured, compile_selected_modules, Artifact, CompileRequest, DeviceFacts,
-    EmittedTargetModule, FinalistEvaluator, PlanMeasurement, PruneReason, SearchBudget,
-    TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat, TargetProfile,
+    EmittedResources, EmittedTargetModule, FinalistEvaluator, PlanMeasurement, PruneReason,
+    SearchBudget, TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat,
+    TargetProfile,
 };
 
 #[path = "support/search_fixtures.rs"]
@@ -41,6 +42,30 @@ enum Unbuildable {
     /// Nothing the target is asked for is built.
     Every,
 }
+
+/// What the fixture device reports the analytically first-ranked finalist
+/// allocated once its entry points were emitted and loaded.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Reported {
+    /// The device reports nothing, so every finalist keeps its estimate.
+    Nothing,
+    /// It spills, which is legal and costs traffic the estimate never saw.
+    SpillOnRankedFirst,
+    /// It allocates more registers than the device has, which no launch can
+    /// run.
+    OverCeilingOnRankedFirst,
+}
+
+/// Local-memory bytes per invocation the fixture reports for a spilling plan.
+/// Priced against the fixture's one byte per nanosecond, this outweighs every
+/// launch the plan saves.
+const SPILL_BYTES_PER_INVOCATION: u32 = 65_536;
+
+/// Registers per invocation the fixture reports above the device ceiling.
+const OVER_CEILING_REGISTERS: u32 = 512;
+
+/// Architectural register ceiling of the fixture device.
+const REGISTER_CEILING: u32 = 255;
 
 /// Device time the fixture reports for a plan of `groups` generated kernels.
 ///
@@ -125,6 +150,11 @@ impl TargetCompiler for LadderCompiler {
 
 struct LadderEvaluator {
     compiler: LadderCompiler,
+    /// What the fixture device reports for the first plan it is asked about.
+    reported: Reported,
+    /// Generated-kernel counts whose emitted resources were read, in the order
+    /// the compiler asked for them, which is its analytic ranking.
+    inspected: Mutex<Vec<usize>>,
     /// Generated-kernel counts measured, in the order they were launched.
     measured: Mutex<Vec<usize>>,
 }
@@ -133,8 +163,26 @@ impl LadderEvaluator {
     fn new(unbuildable: Unbuildable) -> Self {
         Self {
             compiler: LadderCompiler::new(unbuildable),
+            reported: Reported::Nothing,
+            inspected: Mutex::new(Vec::new()),
             measured: Mutex::new(Vec::new()),
         }
+    }
+
+    /// An evaluator whose device builds every plan and reports `reported`.
+    fn reporting(reported: Reported) -> Self {
+        Self {
+            reported,
+            ..Self::new(Unbuildable::None)
+        }
+    }
+
+    /// Generated-kernel counts whose resources were read, in ranking order.
+    fn inspected(&self) -> Vec<usize> {
+        self.inspected
+            .lock()
+            .expect("fixture state is not poisoned")
+            .clone()
     }
 
     /// Emission attempts the target answered.
@@ -168,6 +216,35 @@ impl FinalistEvaluator for LadderEvaluator {
         &self.compiler
     }
 
+    fn resources(
+        &self,
+        artifact: &Artifact,
+        payload: &TargetPayload,
+    ) -> Result<Vec<EmittedResources>, TargetCompileError> {
+        let groups = artifact.selected_plan().fusion.len();
+        let mut inspected = self
+            .inspected
+            .lock()
+            .expect("fixture state is not poisoned");
+        let ranked_first = inspected.is_empty();
+        inspected.push(groups);
+        let record = match self.reported {
+            Reported::Nothing => EmittedResources::default(),
+            Reported::SpillOnRankedFirst if ranked_first => EmittedResources {
+                spill_bytes_per_invocation: SPILL_BYTES_PER_INVOCATION,
+                ..EmittedResources::default()
+            },
+            Reported::OverCeilingOnRankedFirst if ranked_first => EmittedResources {
+                registers_per_invocation: OVER_CEILING_REGISTERS,
+                ..EmittedResources::default()
+            },
+            Reported::SpillOnRankedFirst | Reported::OverCeilingOnRankedFirst => {
+                EmittedResources::default()
+            }
+        };
+        Ok(vec![record; payload.entries().len()])
+    }
+
     fn measure(
         &self,
         artifact: &Artifact,
@@ -194,6 +271,15 @@ fn budget(measurements: u32) -> SearchBudget {
 /// The launch-paying device with timestamped launches, so measurement runs.
 fn timed_device() -> DeviceFacts {
     launch_bound_device().with_device_timestamps(true)
+}
+
+/// The timed device with a byte rate and a register ceiling, so a reported
+/// spill has a price and a reported allocation has a limit.
+fn priced_device() -> DeviceFacts {
+    timed_device()
+        .with_bandwidth_facts(1, 1)
+        .with_occupancy(64, 32 * 1024)
+        .with_architectural_register_limit(REGISTER_CEILING)
 }
 
 fn measured_compile(
@@ -374,4 +460,96 @@ fn a_selection_no_device_timed_is_recorded_as_unmeasured() {
         assert!(evaluator.attempts().is_empty(), "{why}");
         assert!(evaluator.measured().is_empty(), "{why}");
     }
+}
+
+/// WHY: emission answers the register, spill and shared question the analytic
+/// model could only estimate, and a measurement spent in the estimate's order
+/// is a measurement spent on the wrong plan first. The fixture device reports
+/// that the plan ranking placed first spills, which the estimate never saw, so
+/// the reported price has to move it to the back of the measurement queue
+/// without dropping it from the ladder.
+#[test]
+fn a_reported_spill_reorders_the_finalists_before_they_are_measured() {
+    let baseline = LadderEvaluator::reporting(Reported::Nothing);
+    measured_compile(priced_device(), budget(LAUNCHES), &baseline)
+        .expect("every finalist builds, so one must win");
+    let ranked_first = baseline
+        .inspected()
+        .first()
+        .copied()
+        .expect("emission must read what it built");
+    let baseline_order = baseline.measured();
+
+    assert_eq!(
+        baseline_order.first().copied(),
+        Some(ranked_first),
+        "with nothing reported the analytic order must stand: {baseline_order:?}"
+    );
+
+    let spilling = LadderEvaluator::reporting(Reported::SpillOnRankedFirst);
+    measured_compile(priced_device(), budget(LAUNCHES), &spilling)
+        .expect("a spilling plan is legal, so the compilation must still succeed");
+    let spilling_order = spilling.measured();
+
+    assert_eq!(
+        spilling.inspected().first().copied(),
+        Some(ranked_first),
+        "both compilations must rank the same plan first analytically"
+    );
+    assert_eq!(
+        spilling_order.last().copied(),
+        Some(ranked_first),
+        "the plan the device reported spilling must be measured last: {spilling_order:?}"
+    );
+    assert_eq!(
+        distinct(&spilling_order),
+        distinct(&baseline_order),
+        "re-ranking must reorder the finalists, not drop any of them"
+    );
+}
+
+/// WHY: a register allocation above what the device has is not a price, it is a
+/// launch that cannot run. Such a finalist must be eliminated with the emission
+/// reason before anything is measured, and the winner must come from what
+/// survived.
+#[test]
+fn a_finalist_over_the_register_ceiling_is_eliminated_before_measurement() {
+    let evaluator = LadderEvaluator::reporting(Reported::OverCeilingOnRankedFirst);
+    let artifact = measured_compile(priced_device(), budget(LAUNCHES), &evaluator)
+        .expect("a finalist within the ceiling must still win");
+    let plan = artifact.selected_plan();
+    let ranked_first = evaluator
+        .inspected()
+        .first()
+        .copied()
+        .expect("emission must read what it built");
+    let measured = evaluator.measured();
+
+    assert!(
+        !measured.contains(&ranked_first),
+        "a plan allocating more registers than the device has must not be launched: {measured:?}"
+    );
+    assert_ne!(
+        plan.fusion.len(),
+        ranked_first,
+        "the winner cannot be the plan the device could not run"
+    );
+    assert_eq!(
+        plan.certificate.pruned_for(PruneReason::Emission),
+        1,
+        "the over-ceiling finalist must be eliminated for emission"
+    );
+    assert_eq!(
+        plan.search_work.measurements,
+        u32::try_from(measured.len()).expect("measurement count fits u32"),
+        "only the finalists that survived emission may be measured"
+    );
+}
+
+/// The distinct generated-kernel counts in `order`, ascending.
+fn distinct(order: &[usize]) -> Vec<usize> {
+    let mut counts = order.to_vec();
+    counts.sort_unstable();
+    counts.dedup();
+    counts
 }

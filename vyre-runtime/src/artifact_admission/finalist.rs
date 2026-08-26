@@ -5,8 +5,8 @@ use vyre_driver::{
 };
 use vyre_foundation::ir::GraphValueId;
 use vyre_megakernel::{
-    AbiAccess, Artifact, ArtifactValueId, FinalistEvaluator, ResourceAbiRecord, ResourceRecord,
-    TargetCompileError, TargetCompiler, TargetPayload,
+    AbiAccess, Artifact, ArtifactValueId, EmittedResources, FinalistEvaluator, ResourceAbiRecord,
+    ResourceRecord, TargetCompileError, TargetCompiler, TargetPayload,
 };
 
 use super::AdmittedArtifact;
@@ -116,6 +116,17 @@ pub(super) struct DeviceFinalists<'a> {
 impl FinalistEvaluator for DeviceFinalists<'_> {
     fn target_compiler(&self) -> &dyn TargetCompiler {
         self.compiler
+    }
+
+    fn resources(
+        &self,
+        artifact: &Artifact,
+        payload: &TargetPayload,
+    ) -> Result<Vec<EmittedResources>, TargetCompileError> {
+        self.materializer
+            .materialize(artifact, payload)
+            .and_then(|instance| instance.emitted_resources())
+            .map_err(measurement_failure)
     }
 
     fn measure(

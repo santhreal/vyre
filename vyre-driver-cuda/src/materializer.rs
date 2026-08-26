@@ -9,7 +9,7 @@ use vyre_driver::{
     DispatchConfig, Submission, TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, TargetPayload};
+use vyre_megakernel::{Artifact, EmittedResources, TargetPayload};
 
 use crate::backend::CudaBackend;
 use crate::pipeline::CudaCompiledPipeline;
@@ -100,6 +100,13 @@ impl ArtifactInstance for CudaArtifactInstance {
                 "CUDA artifact submission cannot mix host and resident resources",
             )
         })
+    }
+
+    fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError> {
+        self.modules
+            .iter()
+            .map(|module| module.pipeline.emitted_resources())
+            .collect()
     }
 }
 
