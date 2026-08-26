@@ -1560,6 +1560,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   two suites stay separate targets. A rule that lives only in a document stops
   being enforced the day the document is deleted, and four of these cited
   documents that already were.
+- Selection cost prices instruction, matrix-engine, rendezvous and idle-lane
+  work from reported device facts, records every term's unit and provenance,
+  and rejects a register allocation only above the architectural ceiling.
 - Every library composition in vyre-libs sits behind a feature. The text,
   representation, parsing and graph module trees were declared with no cfg, so
   forty-two files submitted an operation registration in every build that

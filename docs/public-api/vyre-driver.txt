@@ -205,8 +205,10 @@ pub const fn vyre_driver::BindingSet::new(artifact: vyre_megakernel::identity::D
 pub const fn vyre_driver::BindingSet::resources(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, vyre_driver::BoundResource>
 pub const fn vyre_driver::Deprecation::new(op_id: &'static str, deprecated_since: vyre_driver::Semver, note: &'static str) -> Self
 pub const fn vyre_driver::DeviceProfile::adapter_caps(self) -> vyre_foundation::optimizer::ctx::AdapterCaps
+pub const fn vyre_driver::DeviceProfile::cache_capacity_bytes(self) -> u64
 pub const fn vyre_driver::DeviceProfile::conservative(backend: &'static str) -> Self
 pub const fn vyre_driver::DeviceProfile::grid_stride_workgroups(self) -> u32
+pub const fn vyre_driver::DeviceProfile::registers_per_invocation_at_full_occupancy(self) -> u32
 pub const fn vyre_driver::DeviceProfile::strategy_capabilities(self) -> vyre_foundation::validate::options::BackendCapabilities
 pub const fn vyre_driver::DeviceProfile::validation_capabilities(self) -> vyre_foundation::validate::options::BackendCapabilities
 pub const fn vyre_driver::DeviceTimingQuality::as_str(self) -> &'static str
@@ -1615,8 +1617,10 @@ pub vyre_driver::DeviceProfile::ideal_vector_pack_bits: u32
 pub vyre_driver::DeviceProfile::ideal_workgroup_tile: [u32; 3]
 pub vyre_driver::DeviceProfile::l1_cache_bytes: u32
 pub vyre_driver::DeviceProfile::l2_cache_bytes: u32
+pub vyre_driver::DeviceProfile::max_invocations_per_compute_unit: u32
 pub vyre_driver::DeviceProfile::max_invocations_per_workgroup: u32
 pub vyre_driver::DeviceProfile::max_native_int_width: u32
+pub vyre_driver::DeviceProfile::max_registers_per_compute_unit: u32
 pub vyre_driver::DeviceProfile::max_shared_memory_bytes: u32
 pub vyre_driver::DeviceProfile::max_storage_buffer_binding_size: u64
 pub vyre_driver::DeviceProfile::max_workgroup_size: [u32; 3]

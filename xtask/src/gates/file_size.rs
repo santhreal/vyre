@@ -85,8 +85,10 @@ const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-runtime/src/uring/ring.rs", 685),
     ("vyre-foundation/src/execution_plan/policy.rs", 660),
     ("vyre-libs/src/math/semiring_gemm/mod.rs", 356),
-    ("vyre-foundation/src/schedule/mod.rs", 700),
-    ("vyre-foundation/src/schedule/legality.rs", 537),
+    ("vyre-foundation/src/schedule/mod.rs", 673),
+    ("vyre-foundation/src/schedule/legality.rs", 321),
+    ("vyre-foundation/src/schedule/preconditions.rs", 298),
+    ("vyre-foundation/src/schedule/error.rs", 100),
     ("vyre-foundation/src/schedule/normalize.rs", 93),
 ];
 

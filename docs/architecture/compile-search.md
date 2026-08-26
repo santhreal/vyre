@@ -241,34 +241,58 @@ record is what reproduces a compile without re-running it.
 
 ## The cost model is open
 
-`CostBreakdown` has eleven fields and no hidden term. The unit is nanoseconds
-of expected device time.
+`CostBreakdown` has twenty-two fields and no hidden term. Each one states its
+unit and where its weight came from in `vyre-megakernel/src/cost/provenance.rs`,
+and `CostBreakdown::term` reads that row by field name. A field with no row
+fails `every_cost_field_states_its_unit_and_provenance`, which derives the field
+set from the serialized shape rather than from a list.
 
-| Field | Meaning |
+Fourteen fields are evidence, recorded and excluded from `total`.
+
+| Field | Unit | Meaning |
+|---|---|---|
+| `semantic_work` | count | sum of semantic IR nodes in the complete graph |
+| `launches` | count | generated kernel launches |
+| `materializations` | count | values crossing generated-kernel boundaries |
+| `materialized_bytes` | bytes | bytes those crossing values move |
+| `live_value_peak` | registers | largest per-invocation live value count in any one group |
+| `shared_scratch_bytes` | bytes | largest shared scratch any one group declares, unioned by buffer name |
+| `occupancy_passes_peak` | count | largest number of resident passes any one group needs |
+| `instructions` | count | scalar instructions the graph states |
+| `tensor_ops` | count | tile statements the graph states |
+| `barriers` | count | workgroup barriers the graph states |
+| `grid_syncs` | count | stated grid rendezvous, plus one per resident-partition stage boundary |
+| `divergent_regions` | count | lane-gated regions the graph states |
+| `spill_registers_peak` | registers | worst group's live values above the full-occupancy register budget |
+| `cache_resident_bytes` | bytes | replayed bytes the device-wide cache holds |
+
+Eight fields are charged, in nanoseconds of expected device time.
+
+| Field | Priced from |
 |---|---|
-| `semantic_work` | sum of semantic IR nodes in the complete graph |
-| `launches` | number of generated kernel launches |
-| `materializations` | number of values crossing generated-kernel boundaries |
-| `materialized_bytes` | bytes those crossing values move |
-| `live_value_peak` | largest per-invocation live value count in any one group |
-| `shared_scratch_bytes` | largest shared scratch any one group declares, unioned by buffer name |
-| `occupancy_passes_peak` | largest number of resident passes any one group needs |
-| `launch_ns` | launch term |
-| `materialization_ns` | materialized-traffic term |
-| `occupancy_ns` | occupancy term |
-| `total` | sum of the three terms, minimized by selection |
+| `launch_ns` | per-launch overhead fact, or a recorded floor of 4224 ns |
+| `materialization_ns` | materialized bytes at the bandwidth fact |
+| `occupancy_ns` | replayed bytes the cache does not serve, at the bandwidth fact |
+| `instruction_ns` | scalar instructions at the reported instruction rate |
+| `tensor_ns` | tile statements at the reported matrix-engine rate |
+| `synchronization_ns` | barriers and grid rendezvous at their reported costs |
+| `divergence_ns` | idle lanes of each gated region at the instruction rate |
+| `total` | sum of every charged term, minimized by selection |
 
 A materialization is counted per data dependency whose producer and consumer
 land in different groups, which is exactly the value that has to round-trip
-through memory. `semantic_work` is recorded as evidence and excluded from
-`total`: it is the same for every candidate over one graph.
+through memory. `semantic_work` is the same for every candidate over one graph.
 
-A launch is priced at the device's measured per-launch overhead, and at a
-recorded floor of 4224 nanoseconds when the device reports none. Traffic is
-priced at 3788 bytes per nanosecond. Both figures come from
-`foundation.elementwise.add.1m` in `vyre-bench/snapshots`, and both are
-constants in `vyre-megakernel/src/cost.rs`. Reproducing a selection needs the
-graph, the budget and the device facts, and nothing else.
+A term whose rate the device does not report is charged zero rather than
+estimated: the count stays as evidence and the nanoseconds stay out of the
+total. The register budget an occupancy pass divides is the registers per
+invocation at full occupancy, which a device reports as its per-compute-unit
+register file divided by its per-compute-unit invocation limit; the
+architectural per-invocation ceiling is a separate fact, and exceeding it has no
+execution to price. Launch overhead falls back to a recorded floor of 4224
+nanoseconds and bandwidth to 3788 bytes per nanosecond, both from
+`foundation.elementwise.add.1m` in `vyre-bench/snapshots`. Reproducing a
+selection needs the graph, the budget and the device facts, and nothing else.
 
 ## Candidate order is deterministic
 

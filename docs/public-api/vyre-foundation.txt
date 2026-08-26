@@ -3549,9 +3549,11 @@ pub vyre_foundation::ir::ProgramGraphValue::name: alloc::string::String
 pub vyre_foundation::ir::ProgramGraphValue::producer: core::option::Option<vyre_foundation::ir::GraphNodeId>
 pub vyre_foundation::ir::ProgramGraphValue::retained_successor_of: core::option::Option<vyre_foundation::ir::GraphValueId>
 pub vyre_foundation::ir::ProgramStats::atomic_op_count: u64
+pub vyre_foundation::ir::ProgramStats::barrier_count: u64
 pub vyre_foundation::ir::ProgramStats::call_count: u32
 pub vyre_foundation::ir::ProgramStats::capability_bits: u32
 pub vyre_foundation::ir::ProgramStats::control_flow_count: u64
+pub vyre_foundation::ir::ProgramStats::grid_sync_count: u64
 pub vyre_foundation::ir::ProgramStats::instruction_count: u64
 pub vyre_foundation::ir::ProgramStats::memory_op_count: u64
 pub vyre_foundation::ir::ProgramStats::node_count: usize
@@ -3560,6 +3562,7 @@ pub vyre_foundation::ir::ProgramStats::opaque_count: u32
 pub vyre_foundation::ir::ProgramStats::region_count: u32
 pub vyre_foundation::ir::ProgramStats::register_pressure_estimate: u32
 pub vyre_foundation::ir::ProgramStats::static_storage_bytes: u64
+pub vyre_foundation::ir::ProgramStats::tensor_op_count: u64
 pub vyre_foundation::ir::ProgramStats::top_level_regions: u32
 pub vyre_foundation::ir::Residency::Global
 pub vyre_foundation::ir::Residency::Register

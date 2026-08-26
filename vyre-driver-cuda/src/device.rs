@@ -761,6 +761,8 @@ impl CudaDeviceCaps {
             subgroup_size: subgroup.subgroup_size,
             compute_units: self.multi_processor_count_u32(),
             regs_per_thread_max: self.max_registers_per_thread_u32(),
+            max_registers_per_compute_unit: self.max_registers_per_sm_u32(),
+            max_invocations_per_compute_unit: self.max_threads_per_sm_u32(),
             l1_cache_bytes: 0,
             l2_cache_bytes: self.l2_cache_bytes_u32(),
             mem_bw_gbps: self.memory_bandwidth_gbps(),

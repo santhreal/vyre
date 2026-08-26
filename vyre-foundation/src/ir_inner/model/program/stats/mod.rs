@@ -115,6 +115,26 @@ pub struct ProgramStats {
     pub atomic_op_count: u64,
     /// Number of control-flow operations.
     pub control_flow_count: u64,
+    /// Number of workgroup-or-wider rendezvous statements.
+    ///
+    /// Counted apart from [`Self::control_flow_count`] because a barrier costs
+    /// device time no branch costs: every invocation in the group waits for the
+    /// slowest one, so a schedule that adds one pays a rendezvous and a schedule
+    /// that removes one does not.
+    pub barrier_count: u64,
+    /// Number of those rendezvous whose scope is the whole grid.
+    ///
+    /// A grid rendezvous costs what a workgroup barrier does not: every
+    /// workgroup waits for every other one, so it is the barrier a whole-program
+    /// schedule adds when it fuses across a dependency and removes when it cuts
+    /// the dispatch instead.
+    pub grid_sync_count: u64,
+    /// Number of matrix-engine tile statements.
+    ///
+    /// A tile matmul or tile reduction issues on a different unit than a scalar
+    /// instruction and retires at a different rate, so pricing it at the scalar
+    /// rate misprices every candidate that fuses one.
+    pub tensor_op_count: u64,
     /// Coarse register pressure estimate from simultaneously named SSA-ish values.
     pub register_pressure_estimate: u32,
     /// Bitmask of capability requirements (see `CAP_*` constants).
@@ -194,6 +214,9 @@ pub(crate) fn compute_stats(program: &Program) -> ProgramStats {
         memory_op_count: ir.memory_op_count,
         atomic_op_count: ir.atomic_op_count,
         control_flow_count: ir.control_flow_count,
+        barrier_count: ir.barrier_count,
+        grid_sync_count: ir.grid_sync_count,
+        tensor_op_count: ir.tensor_op_count,
         register_pressure_estimate: ir.register_pressure_estimate(),
         capability_bits,
         node_kinds_present,
@@ -206,6 +229,9 @@ struct IrCounters {
     memory_op_count: u64,
     atomic_op_count: u64,
     control_flow_count: u64,
+    barrier_count: u64,
+    grid_sync_count: u64,
+    tensor_op_count: u64,
     live_names: u32,
     max_live_names: u32,
 }
@@ -227,6 +253,20 @@ impl IrCounters {
 
     fn control_flow(&mut self) {
         self.control_flow_count = self.control_flow_count.saturating_add(1);
+        self.instruction();
+    }
+
+    fn barrier(&mut self) {
+        self.barrier_count = self.barrier_count.saturating_add(1);
+        self.control_flow();
+    }
+
+    fn grid_sync(&mut self) {
+        self.grid_sync_count = self.grid_sync_count.saturating_add(1);
+    }
+
+    fn tensor_op(&mut self) {
+        self.tensor_op_count = self.tensor_op_count.saturating_add(1);
         self.instruction();
     }
 
@@ -401,11 +441,11 @@ fn walk_node(
         }
         Node::TileMatmul { .. } => {
             *kinds |= NODE_KIND_TILE_MATMUL;
-            ir.instruction();
+            ir.tensor_op();
         }
         Node::TileReduce { .. } => {
             *kinds |= NODE_KIND_TILE_REDUCE;
-            ir.instruction();
+            ir.tensor_op();
         }
         Node::TileElementwise { body, .. } => {
             *kinds |= NODE_KIND_TILE_ELEMENTWISE;
@@ -435,8 +475,9 @@ fn walk_node(
             // cooperative launch cannot emit the program at any geometry.
             if matches!(ordering, crate::memory_model::MemoryOrdering::GridSync) {
                 *bits |= CAP_GRID_SYNC;
+                ir.grid_sync();
             }
-            ir.control_flow();
+            ir.barrier();
         }
         Node::Resume { .. } => {
             *kinds |= NODE_KIND_RESUME;

@@ -4,6 +4,7 @@ use vyre_foundation::{
     algebraic_reordering::{reordering_class, ReorderingClass},
     ir::Ident,
     logical::LogicalProgramGraph,
+    optimizer::cost::CostCertificate,
 };
 
 use crate::{
@@ -48,6 +49,23 @@ pub(crate) struct PlanningFacts {
     /// the combines once, from operator laws and element types, so search never
     /// re-derives numerics from a candidate.
     pub(crate) node_reordering: Vec<ReorderingClass>,
+    /// Instructions each node's program states.
+    ///
+    /// The count is static: a loop body counts once, because no analysis here
+    /// bounds its trip count. It is priced only against a device that reported
+    /// an instruction rate, and recorded as evidence otherwise.
+    pub(crate) node_instructions: Vec<u64>,
+    /// Workgroup-scoped rendezvous each node's program states.
+    pub(crate) node_barriers: Vec<u64>,
+    /// Whole-grid rendezvous each node's program states.
+    pub(crate) node_grid_syncs: Vec<u64>,
+    /// Matrix-engine statements each node's program states.
+    pub(crate) node_tensor_ops: Vec<u64>,
+    /// Lane-gated regions each node's program states.
+    ///
+    /// A region entered by one lane of a subgroup leaves the rest idle for its
+    /// duration, so the count bounds the lanes a candidate wastes from below.
+    pub(crate) node_divergent_regions: Vec<u64>,
     /// Bytes of graph values each node produces or consumes.
     ///
     /// A value shared by two nodes counts for both, which is the traffic they
@@ -75,6 +93,11 @@ pub(crate) fn derive(
     let mut node_declared_workgroup = Vec::with_capacity(node_count);
     let mut node_accepts_width = Vec::with_capacity(node_count);
     let mut node_reordering = Vec::with_capacity(node_count);
+    let mut node_instructions = Vec::with_capacity(node_count);
+    let mut node_barriers = Vec::with_capacity(node_count);
+    let mut node_grid_syncs = Vec::with_capacity(node_count);
+    let mut node_tensor_ops = Vec::with_capacity(node_count);
+    let mut node_divergent_regions = Vec::with_capacity(node_count);
     for node in graph.nodes() {
         let program = &node.program;
         let stats = program.stats();
@@ -94,6 +117,11 @@ pub(crate) fn derive(
         node_declared_workgroup.push(declared);
         node_accepts_width.push(accepts_width);
         node_reordering.push(reordering_class(program));
+        node_instructions.push(stats.instruction_count);
+        node_barriers.push(stats.barrier_count);
+        node_grid_syncs.push(stats.grid_sync_count);
+        node_tensor_ops.push(stats.tensor_op_count);
+        node_divergent_regions.push(CostCertificate::for_program(program).divergence_score);
     }
     let dataflow = dependencies
         .iter()
@@ -126,6 +154,11 @@ pub(crate) fn derive(
         node_declared_workgroup,
         node_accepts_width,
         node_reordering,
+        node_instructions,
+        node_barriers,
+        node_grid_syncs,
+        node_tensor_ops,
+        node_divergent_regions,
         node_touched_bytes,
         dataflow,
         value_bytes,

@@ -26,6 +26,7 @@ impl vyre_megakernel::TargetPayloadFormat
 impl vyre_megakernel::TargetProfile
 impl vyre_megakernel::ValidatedCompileRequest
 impl vyre_megakernel::WorkspacePlan
+impl vyre_megakernel::cost::CostBreakdown
 impl vyre_megakernel::legality::FusionRejectionReason
 impl<'a> vyre_megakernel::SemanticExecutionRequest<'a>
 pub const fn vyre_megakernel::Artifact::abi(&self) -> &vyre_megakernel::ArtifactAbi
@@ -38,10 +39,16 @@ pub const fn vyre_megakernel::Artifact::workspace(&self) -> &vyre_megakernel::Wo
 pub const fn vyre_megakernel::ArtifactEnvelope::neutral(&self) -> &vyre_megakernel::Artifact
 pub const fn vyre_megakernel::CompileRequest::new(graph: vyre_foundation::ir_inner::model::program_graph::ProgramGraph, facts: vyre_megakernel::ExternalFacts, device: vyre_megakernel::DeviceFacts, search_budget: vyre_megakernel::SearchBudget, max_artifact_bytes: u64) -> Self
 pub const fn vyre_megakernel::CompileRequest::with_objective(self, objective: vyre_megakernel::CompileObjective) -> Self
+pub const fn vyre_megakernel::DeviceFacts::architectural_registers_per_invocation(&self) -> u32
+pub const fn vyre_megakernel::DeviceFacts::barrier_ns(&self) -> u64
+pub const fn vyre_megakernel::DeviceFacts::cache_capacity_bytes(&self) -> u64
 pub const fn vyre_megakernel::DeviceFacts::calibrated_materialization_throughput_bytes_per_ns(&self) -> u64
 pub const fn vyre_megakernel::DeviceFacts::capabilities(&self) -> vyre_foundation::validate::options::BackendCapabilities
+pub const fn vyre_megakernel::DeviceFacts::compute_throughput_ops_per_ns(&self) -> u64
 pub const fn vyre_megakernel::DeviceFacts::compute_units(&self) -> u32
 pub const fn vyre_megakernel::DeviceFacts::concurrent_queues(&self) -> u32
+pub const fn vyre_megakernel::DeviceFacts::grid_sync_ns(&self) -> u64
+pub const fn vyre_megakernel::DeviceFacts::hardware_registers_per_invocation(&self) -> u32
 pub const fn vyre_megakernel::DeviceFacts::max_invocations_per_workgroup(&self) -> u32
 pub const fn vyre_megakernel::DeviceFacts::new(capabilities: vyre_foundation::validate::options::BackendCapabilities, max_invocations_per_workgroup: u32) -> Self
 pub const fn vyre_megakernel::DeviceFacts::peak_bandwidth_bytes_per_ns(&self) -> u64
@@ -53,8 +60,12 @@ pub const fn vyre_megakernel::DeviceFacts::subgroup_size(&self) -> u32
 pub const fn vyre_megakernel::DeviceFacts::supports_cooperative_launch(&self) -> bool
 pub const fn vyre_megakernel::DeviceFacts::supports_device_timestamps(&self) -> bool
 pub const fn vyre_megakernel::DeviceFacts::supports_spatial_partitioning(&self) -> bool
+pub const fn vyre_megakernel::DeviceFacts::tensor_throughput_ops_per_ns(&self) -> u64
 pub const fn vyre_megakernel::DeviceFacts::unknown() -> Self
+pub const fn vyre_megakernel::DeviceFacts::with_architectural_register_limit(self, registers: u32) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_bandwidth_facts(self, peak_bandwidth_bytes_per_ns: u64, calibrated_materialization_throughput_bytes_per_ns: u64) -> Self
+pub const fn vyre_megakernel::DeviceFacts::with_cache_capacity(self, bytes: u64) -> Self
+pub const fn vyre_megakernel::DeviceFacts::with_compute_throughput(self, compute_ops_per_ns: u64, tensor_ops_per_ns: u64) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_compute_units(self, compute_units: u32) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_concurrent_queues(self, concurrent_queues: u32) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_cooperative_launch(self, supported: bool) -> Self
@@ -63,6 +74,7 @@ pub const fn vyre_megakernel::DeviceFacts::with_launch_costs(self, per_launch_ov
 pub const fn vyre_megakernel::DeviceFacts::with_occupancy(self, registers_per_invocation: u32, shared_scratch_bytes_per_workgroup: u32) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_spatial_partitioning(self, supported: bool) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_subgroup_size(self, subgroup_size: u32) -> Self
+pub const fn vyre_megakernel::DeviceFacts::with_synchronization_costs(self, barrier_ns: u64, grid_sync_ns: u64) -> Self
 pub const fn vyre_megakernel::Digest::as_bytes(&self) -> &[u8; 32]
 pub const fn vyre_megakernel::PruneReason::code(self) -> &'static str
 pub const fn vyre_megakernel::ScheduleProduction::code(self) -> &'static str
@@ -108,6 +120,7 @@ pub const vyre_megakernel::ScheduleProduction::ALL: &'static [Self]
 pub const vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16
 pub const vyre_megakernel::TARGET_PAYLOAD_SCHEMA_VERSION: u16
 pub const vyre_megakernel::WORKSPACE_REGION_ALIGNMENT: u64
+pub const vyre_megakernel::cost::TERMS: &[vyre_megakernel::cost::CostTerm]
 pub enum vyre_megakernel::AbiAccess
 pub enum vyre_megakernel::CompileObjective
 pub enum vyre_megakernel::DependencyEndpoint
@@ -123,6 +136,8 @@ pub enum vyre_megakernel::ScheduleProduction
 pub enum vyre_megakernel::SemanticExecutionError
 pub enum vyre_megakernel::TargetResourceAccess
 pub enum vyre_megakernel::TargetResourceMemory
+pub enum vyre_megakernel::cost::CostTermRole
+pub enum vyre_megakernel::cost::CostUnit
 pub enum vyre_megakernel::legality::FusionDecision
 pub fn vyre_megakernel::Artifact::barriers(&self) -> &[vyre_megakernel::BarrierRecord]
 pub fn vyre_megakernel::Artifact::canonical_value_by_name(&self) -> core::result::Result<alloc::collections::btree::map::BTreeMap<&str, vyre_megakernel::ArtifactValueId>, vyre_megakernel::ResourceNameCollision>
@@ -184,6 +199,7 @@ pub fn vyre_megakernel::attach_target(artifact: vyre_megakernel::Artifact, compi
 pub fn vyre_megakernel::compile(request: &vyre_megakernel::ValidatedCompileRequest) -> core::result::Result<vyre_megakernel::Artifact, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::compile_measured(request: &vyre_megakernel::ValidatedCompileRequest, evaluator: &dyn vyre_megakernel::FinalistEvaluator) -> core::result::Result<vyre_megakernel::Artifact, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::compile_selected_modules(artifact: &vyre_megakernel::Artifact, format: vyre_megakernel::TargetPayloadFormat, profile: vyre_megakernel::TargetProfile, emit: impl core::ops::function::FnMut(&vyre_megakernel::SelectedLowering, &vyre_megakernel::TargetProfile) -> core::result::Result<vyre_megakernel::EmittedTargetModule, vyre_megakernel::TargetCompileError>) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::TargetCompileError>
+pub fn vyre_megakernel::cost::CostBreakdown::term(field: &str) -> core::option::Option<&'static vyre_megakernel::cost::CostTerm>
 pub fn vyre_megakernel::execute_single_program(executor: &dyn vyre_megakernel::SemanticExecutor, node_name: &str, program: vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], policy: &vyre_megakernel::SemanticExecutionPolicy) -> core::result::Result<vyre_megakernel::SingleProgramExecutionOutput, vyre_megakernel::SemanticExecutionError>
 pub fn vyre_megakernel::grid_sync::requires_grid_sync(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> bool
 pub fn vyre_megakernel::legality::analyze_fusion_pair(graph: &vyre_foundation::ir_inner::model::program_graph::ProgramGraph, from: vyre_megakernel::ArtifactNodeId, to: vyre_megakernel::ArtifactNodeId, value: vyre_megakernel::ArtifactValueId) -> vyre_megakernel::legality::FusionDecision
@@ -245,6 +261,7 @@ pub struct vyre_megakernel::ValidatedCompileRequest
 pub struct vyre_megakernel::WorkspacePlan
 pub struct vyre_megakernel::WorkspaceRegion
 pub struct vyre_megakernel::cost::CostBreakdown
+pub struct vyre_megakernel::cost::CostTerm
 pub trait vyre_megakernel::FinalistEvaluator
 pub trait vyre_megakernel::SemanticExecutor: core::marker::Send + core::marker::Sync
 pub trait vyre_megakernel::TargetCompiler: core::marker::Send + core::marker::Sync
@@ -491,6 +508,13 @@ pub vyre_megakernel::WorkspaceRegion::last_entry: vyre_megakernel::ArtifactNodeI
 pub vyre_megakernel::WorkspaceRegion::lifetime: vyre_megakernel::ResourceLifetime
 pub vyre_megakernel::WorkspaceRegion::offset: u64
 pub vyre_megakernel::WorkspaceRegion::value: vyre_megakernel::ArtifactValueId
+pub vyre_megakernel::cost::CostBreakdown::barriers: u64
+pub vyre_megakernel::cost::CostBreakdown::cache_resident_bytes: u64
+pub vyre_megakernel::cost::CostBreakdown::divergence_ns: u64
+pub vyre_megakernel::cost::CostBreakdown::divergent_regions: u64
+pub vyre_megakernel::cost::CostBreakdown::grid_syncs: u64
+pub vyre_megakernel::cost::CostBreakdown::instruction_ns: u64
+pub vyre_megakernel::cost::CostBreakdown::instructions: u64
 pub vyre_megakernel::cost::CostBreakdown::launch_ns: u64
 pub vyre_megakernel::cost::CostBreakdown::launches: u64
 pub vyre_megakernel::cost::CostBreakdown::live_value_peak: u64
@@ -501,7 +525,21 @@ pub vyre_megakernel::cost::CostBreakdown::occupancy_ns: u64
 pub vyre_megakernel::cost::CostBreakdown::occupancy_passes_peak: u64
 pub vyre_megakernel::cost::CostBreakdown::semantic_work: u64
 pub vyre_megakernel::cost::CostBreakdown::shared_scratch_bytes: u64
+pub vyre_megakernel::cost::CostBreakdown::spill_registers_peak: u64
+pub vyre_megakernel::cost::CostBreakdown::synchronization_ns: u64
+pub vyre_megakernel::cost::CostBreakdown::tensor_ns: u64
+pub vyre_megakernel::cost::CostBreakdown::tensor_ops: u64
 pub vyre_megakernel::cost::CostBreakdown::total: u64
+pub vyre_megakernel::cost::CostTerm::field: &'static str
+pub vyre_megakernel::cost::CostTerm::provenance: &'static str
+pub vyre_megakernel::cost::CostTerm::role: vyre_megakernel::cost::CostTermRole
+pub vyre_megakernel::cost::CostTerm::unit: vyre_megakernel::cost::CostUnit
+pub vyre_megakernel::cost::CostTermRole::Charged
+pub vyre_megakernel::cost::CostTermRole::Evidence
+pub vyre_megakernel::cost::CostUnit::Bytes
+pub vyre_megakernel::cost::CostUnit::Count
+pub vyre_megakernel::cost::CostUnit::Nanoseconds
+pub vyre_megakernel::cost::CostUnit::Registers
 pub vyre_megakernel::legality::FusionDecision::Legal
 pub vyre_megakernel::legality::FusionDecision::Rejected(vyre_megakernel::legality::FusionRejectionReason)
 pub vyre_megakernel::legality::FusionRejectionReason::DependencyCycle

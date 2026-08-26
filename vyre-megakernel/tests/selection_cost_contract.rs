@@ -13,8 +13,9 @@
 //! materialization weighed 100, which were the weights of an earlier model with
 //! no unit. Nothing compared it to the type, so it drifted for as long as it
 //! took someone to read both. The roster test below derives the fields from
-//! `CostBreakdown` at run time, so a twelfth field turns the suite red until the
-//! table names it.
+//! `CostBreakdown` at run time, so an added field turns the suite red until the
+//! table names it, and the total test derives the charged set from the
+//! provenance table, so a term priced but never summed turns it red too.
 
 #![forbid(unsafe_code)]
 
@@ -22,7 +23,7 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::ir::ProgramGraph;
 use vyre_foundation::validate::BackendCapabilities;
-use vyre_megakernel::cost::CostBreakdown;
+use vyre_megakernel::cost::{CostBreakdown, CostTermRole};
 use vyre_megakernel::{compile, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget};
 
 use graph_fixtures::producer_consumer_pair;
@@ -95,14 +96,27 @@ fn a_device_that_measured_nothing_is_priced_at_the_recorded_floor() {
     );
 }
 
+/// WHY: a charged field that no arm adds into `total` is priced in the source
+/// and free in the ranking, which is the same defect as having no term. The
+/// charged set is read from the provenance table and the values from the
+/// serialized shape, so a new charged term left out of the sum turns this red.
 #[test]
-fn the_total_is_the_sum_of_the_three_priced_terms() {
+fn the_total_is_the_sum_of_every_charged_term() {
     let cost = cost_for(device().with_launch_costs(MEASURED_LAUNCH_NS, 0));
+    let fields = serde_json::to_value(cost).expect("CostBreakdown serializes as an object");
+    let charged: u64 = vyre_megakernel::cost::TERMS
+        .iter()
+        .filter(|term| term.role == CostTermRole::Charged && term.field != "total")
+        .map(|term| {
+            fields[term.field]
+                .as_u64()
+                .unwrap_or_else(|| panic!("{} is a charged nanosecond count", term.field))
+        })
+        .sum();
 
     assert_eq!(
-        cost.total,
-        cost.launch_ns + cost.materialization_ns + cost.occupancy_ns,
-        "semantic_work is evidence and is excluded, and there is no fourth term"
+        cost.total, charged,
+        "every charged term enters the total; evidence fields stay out of it"
     );
 }
 

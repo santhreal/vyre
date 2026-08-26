@@ -30,6 +30,12 @@ pub struct DeviceFacts {
     persistent_setup_overhead_ns: u64,
     peak_bandwidth_bytes_per_ns: u64,
     calibrated_materialization_throughput_bytes_per_ns: u64,
+    architectural_registers_per_invocation: u32,
+    cache_capacity_bytes: u64,
+    compute_throughput_ops_per_ns: u64,
+    tensor_throughput_ops_per_ns: u64,
+    barrier_ns: u64,
+    grid_sync_ns: u64,
     subgroup_size: u32,
 }
 
@@ -92,6 +98,12 @@ impl DeviceFacts {
             persistent_setup_overhead_ns: 0,
             peak_bandwidth_bytes_per_ns: 0,
             calibrated_materialization_throughput_bytes_per_ns: 0,
+            architectural_registers_per_invocation: 0,
+            cache_capacity_bytes: 0,
+            compute_throughput_ops_per_ns: 0,
+            tensor_throughput_ops_per_ns: 0,
+            barrier_ns: 0,
+            grid_sync_ns: 0,
             subgroup_size,
         }
     }
@@ -140,6 +152,51 @@ impl DeviceFacts {
     ) -> Self {
         self.registers_per_invocation = registers_per_invocation;
         self.shared_scratch_bytes_per_workgroup = shared_scratch_bytes_per_workgroup;
+        self
+    }
+
+    /// Record the architectural register ceiling one invocation may allocate.
+    ///
+    /// The occupancy budget recorded by [`Self::with_occupancy`] is what an
+    /// invocation holds before the device schedules fewer of them; this is what
+    /// the device refuses to launch beyond. Ranking needs both, because a plan
+    /// between the two spills and still runs, and a plan above the ceiling has
+    /// no execution at all.
+    #[must_use]
+    pub const fn with_architectural_register_limit(mut self, registers: u32) -> Self {
+        self.architectural_registers_per_invocation = registers;
+        self
+    }
+
+    /// Record the device-wide cache capacity a repeated pass can be served from.
+    #[must_use]
+    pub const fn with_cache_capacity(mut self, bytes: u64) -> Self {
+        self.cache_capacity_bytes = bytes;
+        self
+    }
+
+    /// Record measured instruction and matrix-engine throughput.
+    ///
+    /// Both are operations retired per nanosecond across the whole device. A
+    /// zero rate means the backend measured none, and the term it feeds is
+    /// omitted rather than priced at a rate nothing observed.
+    #[must_use]
+    pub const fn with_compute_throughput(
+        mut self,
+        compute_ops_per_ns: u64,
+        tensor_ops_per_ns: u64,
+    ) -> Self {
+        self.compute_throughput_ops_per_ns = compute_ops_per_ns;
+        self.tensor_throughput_ops_per_ns = tensor_ops_per_ns;
+        self
+    }
+
+    /// Record measured workgroup-barrier and whole-grid rendezvous costs in
+    /// nanoseconds.
+    #[must_use]
+    pub const fn with_synchronization_costs(mut self, barrier_ns: u64, grid_sync_ns: u64) -> Self {
+        self.barrier_ns = barrier_ns;
+        self.grid_sync_ns = grid_sync_ns;
         self
     }
 
@@ -246,6 +303,63 @@ impl DeviceFacts {
     #[must_use]
     pub const fn shared_scratch_bytes_per_workgroup(&self) -> u32 {
         self.shared_scratch_bytes_per_workgroup
+    }
+
+    /// Registers one invocation may allocate before the device refuses the
+    /// launch, or zero when the backend reports no ceiling.
+    #[must_use]
+    pub const fn architectural_registers_per_invocation(&self) -> u32 {
+        self.architectural_registers_per_invocation
+    }
+
+    /// Registers per invocation above which no execution exists, or zero when
+    /// the backend reports no ceiling.
+    ///
+    /// Allocating above [`Self::registers_per_invocation`] costs occupancy and
+    /// spill traffic, both of which the cost model prices. Allocating above
+    /// this ceiling has no launch to price, so legality rejects it. A backend
+    /// that reports only the occupancy budget is held to that budget, because a
+    /// ceiling nothing reported cannot admit anything.
+    #[must_use]
+    pub const fn hardware_registers_per_invocation(&self) -> u32 {
+        if self.architectural_registers_per_invocation > 0 {
+            self.architectural_registers_per_invocation
+        } else {
+            self.registers_per_invocation
+        }
+    }
+
+    /// Device-wide cache bytes a repeated pass can be served from, or zero when
+    /// the backend reports no capacity.
+    #[must_use]
+    pub const fn cache_capacity_bytes(&self) -> u64 {
+        self.cache_capacity_bytes
+    }
+
+    /// Instructions the device retires per nanosecond, or zero when unmeasured.
+    #[must_use]
+    pub const fn compute_throughput_ops_per_ns(&self) -> u64 {
+        self.compute_throughput_ops_per_ns
+    }
+
+    /// Matrix-engine operations the device retires per nanosecond, or zero when
+    /// unmeasured.
+    #[must_use]
+    pub const fn tensor_throughput_ops_per_ns(&self) -> u64 {
+        self.tensor_throughput_ops_per_ns
+    }
+
+    /// Cost of one workgroup barrier in nanoseconds, or zero when unmeasured.
+    #[must_use]
+    pub const fn barrier_ns(&self) -> u64 {
+        self.barrier_ns
+    }
+
+    /// Cost of one whole-grid rendezvous in nanoseconds, or zero when
+    /// unmeasured.
+    #[must_use]
+    pub const fn grid_sync_ns(&self) -> u64 {
+        self.grid_sync_ns
     }
 
     /// Host cost of one kernel launch in nanoseconds, or zero when unmeasured.

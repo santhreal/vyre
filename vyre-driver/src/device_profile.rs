@@ -92,6 +92,18 @@ pub struct DeviceProfile {
     pub compute_units: u32,
     /// Maximum registers per thread, or `0` when unknown.
     pub regs_per_thread_max: u32,
+    /// 32-bit registers one compute unit holds across all resident
+    /// invocations, or `0` when unknown.
+    ///
+    /// Separate from [`Self::regs_per_thread_max`], which is the architectural
+    /// ceiling one invocation may allocate. The compiler needs both: the
+    /// ceiling says what the device refuses to launch, and this figure divided
+    /// by the resident invocation count says how many registers an invocation
+    /// holds before the device schedules fewer of them.
+    pub max_registers_per_compute_unit: u32,
+    /// Invocations resident on one compute unit at full occupancy, or `0` when
+    /// unknown.
+    pub max_invocations_per_compute_unit: u32,
     /// L1 cache size in bytes, or `0` when unknown.
     pub l1_cache_bytes: u32,
     /// L2 cache size in bytes, or `0` when unknown.
@@ -151,6 +163,8 @@ impl DeviceProfile {
             subgroup_size: 0,
             compute_units: 0,
             regs_per_thread_max: 0,
+            max_registers_per_compute_unit: 0,
+            max_invocations_per_compute_unit: 0,
             l1_cache_bytes: 0,
             l2_cache_bytes: 0,
             mem_bw_gbps: 0,
@@ -200,6 +214,8 @@ impl DeviceProfile {
             subgroup_size: backend.subgroup_size().unwrap_or(0),
             compute_units: 0,
             regs_per_thread_max: 0,
+            max_registers_per_compute_unit: 0,
+            max_invocations_per_compute_unit: 0,
             l1_cache_bytes: 0,
             l2_cache_bytes: 0,
             mem_bw_gbps: 0,
@@ -243,6 +259,12 @@ impl DeviceProfile {
     /// backend reported. A zero means the backend measured nothing, and the
     /// compiler treats a zero budget or a zero cost as unknown rather than as a
     /// limit of zero.
+    ///
+    /// Every fact a backend probes is forwarded. Dropping one here does not make
+    /// the compiler cautious, it makes the omitted term zero: a profile that
+    /// reported a compute-unit count, a cache capacity and a memory bandwidth
+    /// was ranked as though it had reported none, so the model priced traffic
+    /// against launches on a device it had the bandwidth for.
     #[must_use]
     pub fn compile_facts(self) -> vyre_megakernel::DeviceFacts {
         vyre_megakernel::DeviceFacts::new(
@@ -251,11 +273,45 @@ impl DeviceProfile {
         )
         .with_cooperative_launch(self.supports_cooperative_launch)
         .with_device_timestamps(self.supports_device_timestamps)
-        .with_occupancy(self.regs_per_thread_max, self.max_shared_memory_bytes)
+        .with_occupancy(
+            self.registers_per_invocation_at_full_occupancy(),
+            self.max_shared_memory_bytes,
+        )
+        .with_architectural_register_limit(self.regs_per_thread_max)
         .with_launch_costs(
             self.per_launch_overhead_ns,
             self.persistent_setup_overhead_ns,
         )
+        .with_compute_units(self.compute_units)
+        .with_subgroup_size(self.subgroup_size)
+        .with_cache_capacity(self.cache_capacity_bytes())
+        .with_bandwidth_facts(u64::from(self.mem_bw_gbps), 0)
+    }
+
+    /// 32-bit registers one invocation holds while the device stays fully
+    /// occupied, or `0` when the backend reports no per-compute-unit figures.
+    ///
+    /// The architectural ceiling is not this number. A device that allows 255
+    /// registers per invocation runs one invocation group per compute unit at
+    /// that allocation, so ranking against the ceiling reports every candidate
+    /// as resident and the occupancy term never fires.
+    #[must_use]
+    pub const fn registers_per_invocation_at_full_occupancy(self) -> u32 {
+        if self.max_registers_per_compute_unit == 0 || self.max_invocations_per_compute_unit == 0 {
+            return 0;
+        }
+        self.max_registers_per_compute_unit / self.max_invocations_per_compute_unit
+    }
+
+    /// Bytes of cache a second pass over a working set can be served from, or
+    /// `0` when the backend reports no cache capacity.
+    ///
+    /// The device-wide level is the one that matters to a whole-program plan: a
+    /// group re-reading its own output reaches it across workgroups, which a
+    /// per-compute-unit level cannot serve.
+    #[must_use]
+    pub const fn cache_capacity_bytes(self) -> u64 {
+        self.l2_cache_bytes as u64
     }
 
     /// Optimizer capability projection.
@@ -515,6 +571,8 @@ mod tests {
             subgroup_size: 32,
             compute_units: 128,
             regs_per_thread_max: 255,
+            max_registers_per_compute_unit: 65_536,
+            max_invocations_per_compute_unit: 1_536,
             l1_cache_bytes: 128 * 1024,
             l2_cache_bytes: 64 * 1024 * 1024,
             mem_bw_gbps: 1700,

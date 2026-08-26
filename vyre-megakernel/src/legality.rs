@@ -240,9 +240,8 @@ pub(crate) fn analyze_topology_legality(
                         }
                     }
                 }
-                if device.registers_per_invocation() > 0
-                    && aggregate_live > u64::from(device.registers_per_invocation())
-                {
+                let register_ceiling = device.hardware_registers_per_invocation();
+                if register_ceiling > 0 && aggregate_live > u64::from(register_ceiling) {
                     return TopologyDecision::Rejected(TopologyRejectionReason::OccupancyExceeded);
                 }
                 if device.shared_scratch_bytes_per_workgroup() > 0
