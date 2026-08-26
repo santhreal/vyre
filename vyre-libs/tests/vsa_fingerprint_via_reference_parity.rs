@@ -6,12 +6,14 @@
 //! argument and hand-computes the XOR, so `fingerprint_via` validated the two-stage dispatch
 //! plumbing but NEVER executed the kernel (the mock-dispatcher-coherence gap).
 //!
-//! This runs the real `hypervector_xor_bind` Program through the shared `ReferenceEvalDispatcher`
+//! This runs the real `hypervector_xor_bind` Program through the shared `ReferenceSemanticExecutor`
 //!, twice, chained (`fingerprint = kind ⊕ signature ⊕ region`), and asserts it reproduces the
 //! host `reference_fingerprint` oracle over generated component hypervector triples across a range
 //! of dimensionalities. XOR binding is exact integer arithmetic, so the dispatched result must
 //! equal the host bit-for-bit.
 #![forbid(unsafe_code)]
+
+mod semantic_execution_support;
 
 use vyre_libs::encoding::vsa_fingerprint::fingerprint_via;
 use vyre_reference::composition_witness::hypervector_xor_bind_witness;
@@ -21,12 +23,12 @@ fn reference_fingerprint(kind: &[u32], signature: &[u32], region: &[u32]) -> Vec
     hypervector_xor_bind_witness(&kind_signature, region)
 }
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 #[test]
 fn fingerprint_via_matches_host_over_generated_hypervectors() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x0B1D_5A7Cu32;
     let mut nonzero_cases = 0u32;
     for case in 0..400u32 {
@@ -35,9 +37,14 @@ fn fingerprint_via_matches_host_over_generated_hypervectors() {
         let signature_hv: Vec<u32> = (0..dim_words).map(|_| xorshift(&mut state)).collect();
         let region_hv: Vec<u32> = (0..dim_words).map(|_| xorshift(&mut state)).collect();
 
-        let via = fingerprint_via(&dispatcher, &kind_hv, &signature_hv, &region_hv).expect(
-            "fingerprint_via must dispatch the XOR-bind Program through the reference backend",
-        );
+        let via = fingerprint_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &kind_hv,
+            &signature_hv,
+            &region_hv,
+        )
+        .expect("fingerprint_via must dispatch the XOR-bind Program through the reference backend");
         let host = reference_fingerprint(&kind_hv, &signature_hv, &region_hv);
         if host.iter().any(|&w| w != 0) {
             nonzero_cases += 1;
@@ -58,15 +65,21 @@ fn fingerprint_via_matches_host_over_generated_hypervectors() {
 fn fingerprint_via_is_the_triple_xor_bind() {
     // fingerprint = kind ⊕ signature ⊕ region, word-wise. Hand-check a small case through the
     // full two-stage dispatch so the chained-dispatch composition is pinned, not just per-stage.
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let kind_hv = vec![0b0011u32, 0xFFFF_0000];
     let signature_hv = vec![0b0101u32, 0x0F0F_0F0F];
     let region_hv = vec![0b1001u32, 0x0000_FFFF];
     let expected: Vec<u32> = (0..kind_hv.len())
         .map(|i| kind_hv[i] ^ signature_hv[i] ^ region_hv[i])
         .collect();
-    let via = fingerprint_via(&dispatcher, &kind_hv, &signature_hv, &region_hv)
-        .expect("fingerprint_via must dispatch");
+    let via = fingerprint_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &kind_hv,
+        &signature_hv,
+        &region_hv,
+    )
+    .expect("fingerprint_via must dispatch");
     let host = reference_fingerprint(&kind_hv, &signature_hv, &region_hv);
     assert_eq!(
         host, expected,

@@ -6,23 +6,24 @@
 //! without each pass re-implementing popcount inline.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
-    write_zero_bytes,
+    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Maximum word count where the sum of bit counts is guaranteed not to wrap a u32 reduction accumulator.
 const MAX_TOTAL_SET_BITS_WORDS: usize = (u32::MAX / 32) as usize;
 
-fn validate_total_set_bits_len(len: usize) -> Result<u32, DispatchError> {
+fn validate_total_set_bits_len(len: usize) -> Result<u32, SemanticExecutionError> {
     if len > MAX_TOTAL_SET_BITS_WORDS {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: total_set_bits_via input has {len} words, which exceeds the max capacity of {MAX_TOTAL_SET_BITS_WORDS} words (u32::MAX bits) supported by single-pass u32 GPU popcount reduction; shard the bitset before summarizing."
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: total_set_bits_via input has {len} words, which exceeds the max capacity of {MAX_TOTAL_SET_BITS_WORDS} words (u32::MAX bits) supported by single-pass u32 GPU popcount reduction; shard the bitset before summarizing."
+    )));
     }
     u32::try_from(len).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: total_set_bits_via input has {len} words, which exceeds the u32 GPU index space."
         ))
     })
@@ -93,11 +94,12 @@ pub struct BitsetSummaryGpuScratch {
 ///
 /// Propagates dispatcher errors or malformed readback.
 pub fn per_word_popcount_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     input: &[u32],
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
-    per_word_popcount_via_into(dispatcher, input, &mut out)?;
+    per_word_popcount_via_into(dispatcher, policy, input, &mut out)?;
     Ok(out)
 }
 
@@ -108,12 +110,13 @@ pub fn per_word_popcount_via(
 ///
 /// Propagates dispatcher errors or malformed readback.
 pub fn per_word_popcount_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     input: &[u32],
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = BitsetSummaryGpuScratch::default();
-    per_word_popcount_via_with_scratch_into(dispatcher, input, &mut scratch, out)
+    per_word_popcount_via_with_scratch_into(dispatcher, policy, input, &mut scratch, out)
 }
 
 /// GPU dispatch wrapper around the primitive per-word popcount program into
@@ -123,17 +126,18 @@ pub fn per_word_popcount_via_into(
 ///
 /// Propagates dispatcher errors or malformed readback.
 pub fn per_word_popcount_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     input: &[u32],
     scratch: &mut BitsetSummaryGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if input.is_empty() {
         out.clear();
         return Ok(());
     }
     let word_count = u32::try_from(input.len()).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: per_word_popcount_via input has {} words, which exceeds the u32 GPU index space.",
             input.len()
         ))
@@ -141,12 +145,19 @@ pub fn per_word_popcount_via_with_scratch_into(
     let program = crate::bitset::popcount::bitset_popcount("input", "count_words", word_count);
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
-    let grid_x = ceil_div_u32(word_count, 256);
-    let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([grid_x, 1, 1]))?;
+
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &scratch.inputs,
+        policy,
+    )
+    .map(|output| output.outputs)?;
     let [out_buf, ..] = match outputs.as_slice() {
         [out_buf, ..] => [out_buf],
         [] => {
-            return Err(DispatchError::BackendError(format!(
+            return Err(SemanticExecutionError::Backend(format!(
                 "Fix: per_word_popcount_via expected at least one output buffer, got {}.",
                 outputs.len()
             )));
@@ -161,11 +172,12 @@ pub fn per_word_popcount_via_with_scratch_into(
 ///
 /// Propagates popcount reduction dispatch errors.
 pub fn total_set_bits_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     input: &[u32],
-) -> Result<u64, DispatchError> {
+) -> Result<u64, SemanticExecutionError> {
     let mut scratch = BitsetSummaryGpuScratch::default();
-    total_set_bits_via_with_scratch_into(dispatcher, input, &mut scratch)
+    total_set_bits_via_with_scratch_into(dispatcher, policy, input, &mut scratch)
 }
 
 /// GPU-backed total set-bit count using caller-owned scratch.
@@ -174,10 +186,11 @@ pub fn total_set_bits_via(
 ///
 /// Propagates popcount reduction dispatch errors.
 pub fn total_set_bits_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     input: &[u32],
     scratch: &mut BitsetSummaryGpuScratch,
-) -> Result<u64, DispatchError> {
+) -> Result<u64, SemanticExecutionError> {
     if input.is_empty() {
         return Ok(0);
     }
@@ -186,11 +199,18 @@ pub fn total_set_bits_via_with_scratch_into(
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
     write_zero_bytes(&mut scratch.inputs[1], std::mem::size_of::<u32>());
-    let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([1, 1, 1]))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &scratch.inputs,
+        policy,
+    )
+    .map(|output| output.outputs)?;
     let [out_buf, ..] = match outputs.as_slice() {
         [out_buf, ..] => [out_buf],
         [] => {
-            return Err(DispatchError::BackendError(format!(
+            return Err(SemanticExecutionError::Backend(format!(
                 "Fix: total_set_bits_via expected at least one output buffer, got {}.",
                 outputs.len()
             )));
@@ -206,11 +226,12 @@ pub fn total_set_bits_via_with_scratch_into(
 ///
 /// Propagates popcount dispatch errors.
 pub fn saturation_ratio_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     input: &[u32],
-) -> Result<f64, DispatchError> {
+) -> Result<f64, SemanticExecutionError> {
     let mut scratch = BitsetSummaryGpuScratch::default();
-    saturation_ratio_via_with_scratch_into(dispatcher, input, &mut scratch)
+    saturation_ratio_via_with_scratch_into(dispatcher, policy, input, &mut scratch)
 }
 
 /// GPU-backed saturation ratio using caller-owned scratch.
@@ -219,10 +240,11 @@ pub fn saturation_ratio_via(
 ///
 /// Propagates popcount reduction dispatch errors.
 pub fn saturation_ratio_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     input: &[u32],
     scratch: &mut BitsetSummaryGpuScratch,
-) -> Result<f64, DispatchError> {
+) -> Result<f64, SemanticExecutionError> {
     if input.is_empty() {
         return Ok(0.0);
     }
@@ -230,11 +252,18 @@ pub fn saturation_ratio_via_with_scratch_into(
     let program = bitset_saturation_ratio("input", "out", word_count);
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
-    let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([1, 1, 1]))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &scratch.inputs,
+        policy,
+    )
+    .map(|output| output.outputs)?;
     let [out_buf, ..] = match outputs.as_slice() {
         [out_buf, ..] => [out_buf],
         [] => {
-            return Err(DispatchError::BackendError(format!(
+            return Err(SemanticExecutionError::Backend(format!(
                 "Fix: saturation_ratio_via expected at least one output buffer, got {}.",
                 outputs.len()
             )));
@@ -243,7 +272,7 @@ pub fn saturation_ratio_via_with_scratch_into(
     let [b0, b1, b2, b3, ..] = match out_buf.as_slice() {
         [b0, b1, b2, b3, ..] => [*b0, *b1, *b2, *b3],
         _ => {
-            return Err(DispatchError::BackendError(format!(
+            return Err(SemanticExecutionError::Backend(format!(
                 "Fix: saturation_ratio_via expected at least 4 output bytes for f32, got {}.",
                 out_buf.len()
             )));
@@ -257,7 +286,7 @@ pub fn saturation_ratio_via_with_scratch_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_foundation::ir::Program;
+
     use vyre_reference::composition_witness::{
         bitset_popcount_witness as per_word_popcount,
         bitset_popcount_witness_into as per_word_popcount_into,
@@ -278,38 +307,38 @@ mod tests {
 
     struct PopcountDispatcher;
 
-    impl ProgramDispatcher for PopcountDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for PopcountDispatcher {
+        fn execute(
             &self,
-            program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            let op_id = program.entry.iter().find_map(|node| match node {
-                vyre_foundation::ir::Node::Region { generator, .. } => Some(generator.as_str()),
-                _ => None,
-            });
-            if op_id == Some(crate::reduce::count::OP_ID) {
-                assert_eq!(grid_override, Some([1, 1, 1]));
-                assert_eq!(inputs.len(), 2);
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let program = &request.logical().graph().nodes()[0].program;
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                let op_id = program.entry.iter().find_map(|node| match node {
+                    vyre_foundation::ir::Node::Region { generator, .. } => Some(generator.as_str()),
+                    _ => None,
+                });
+                if op_id == Some(crate::reduce::count::OP_ID) {
+                    assert_eq!(inputs.len(), 2);
+                    let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                    assert_eq!(inputs[1].len(), std::mem::size_of::<u32>());
+                    let total: u32 = input.iter().map(|word| word.count_ones()).sum();
+                    return Ok(vec![u32_slice_to_le_bytes(&[total])]);
+                }
+                assert_eq!(inputs.len(), 1);
                 let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
-                assert_eq!(inputs[1].len(), std::mem::size_of::<u32>());
-                let total: u32 = input.iter().map(|word| word.count_ones()).sum();
-                return Ok(vec![u32_slice_to_le_bytes(&[total])]);
-            }
-            assert_eq!(inputs.len(), 1);
-            let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
-            if op_id == Some(SATURATION_RATIO_OP_ID) {
-                assert_eq!(grid_override, Some([1, 1, 1]));
-                let total: u32 = input.iter().map(|word| word.count_ones()).sum();
-                let capacity = (input.len() * 32) as f32;
-                let ratio = (total as f32) / capacity;
-                return Ok(vec![vyre_primitives::wire::pack_f32_slice(&[ratio])]);
-            }
-            let grid_x = ceil_div_u32(input.len() as u32, 256);
-            assert_eq!(grid_override, Some([grid_x, 1, 1]));
-            let out: Vec<u32> = input.iter().map(|word| word.count_ones()).collect();
-            Ok(vec![u32_slice_to_le_bytes(&out)])
+                if op_id == Some(SATURATION_RATIO_OP_ID) {
+                    let total: u32 = input.iter().map(|word| word.count_ones()).sum();
+                    let capacity = (input.len() * 32) as f32;
+                    let ratio = (total as f32) / capacity;
+                    return Ok(vec![vyre_primitives::wire::pack_f32_slice(&[ratio])]);
+                }
+
+                let out: Vec<u32> = input.iter().map(|word| word.count_ones()).collect();
+                Ok(vec![u32_slice_to_le_bytes(&out)])
+            })()?;
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -388,7 +417,12 @@ mod tests {
     #[test]
     fn per_word_popcount_via_dispatches_primitive() {
         let input = vec![0u32, 1, 0xFFFF_FFFF, 0xAAAA_AAAA];
-        let out = per_word_popcount_via(&PopcountDispatcher, &input).unwrap();
+        let out = per_word_popcount_via(
+            &PopcountDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &input,
+        )
+        .unwrap();
         assert_eq!(out, vec![0, 1, 32, 16]);
     }
 
@@ -396,7 +430,13 @@ mod tests {
     fn per_word_popcount_via_into_reuses_output() {
         let mut out = Vec::with_capacity(8);
         let ptr = out.as_ptr();
-        per_word_popcount_via_into(&PopcountDispatcher, &[0b1011], &mut out).unwrap();
+        per_word_popcount_via_into(
+            &PopcountDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[0b1011],
+            &mut out,
+        )
+        .unwrap();
         assert_eq!(out, vec![3]);
         assert_eq!(out.as_ptr(), ptr);
     }
@@ -408,6 +448,7 @@ mod tests {
 
         per_word_popcount_via_with_scratch_into(
             &PopcountDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[0b1011, 0xFFFF_FFFF],
             &mut scratch,
             &mut out,
@@ -419,6 +460,7 @@ mod tests {
 
         per_word_popcount_via_with_scratch_into(
             &PopcountDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[0b0101, 0xAAAA_AAAA],
             &mut scratch,
             &mut out,
@@ -438,6 +480,7 @@ mod tests {
         let mut scratch = BitsetSummaryGpuScratch::default();
         let res1 = total_set_bits_via_with_scratch_into(
             &PopcountDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[0b1011, 0xFFFF_FFFF],
             &mut scratch,
         )
@@ -447,6 +490,7 @@ mod tests {
         let input_capacities = scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>();
         let res2 = total_set_bits_via_with_scratch_into(
             &PopcountDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[0b0101, 0xAAAA_AAAA],
             &mut scratch,
         )
@@ -466,14 +510,32 @@ mod tests {
         );
         let err = validate_total_set_bits_len(MAX_TOTAL_SET_BITS_WORDS + 1)
             .expect_err("word count exceeding u32::MAX/32 must be rejected with BadInputs");
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
         assert!(err.to_string().contains("shard the bitset"));
     }
 
     #[test]
     fn total_and_ratio_via_match_host_contract() {
         let input = vec![0xFFFF_FFFFu32, 0];
-        assert_eq!(total_set_bits_via(&PopcountDispatcher, &input).unwrap(), 32);
-        assert!((saturation_ratio_via(&PopcountDispatcher, &input).unwrap() - 0.5).abs() < 1e-6);
+        assert_eq!(
+            total_set_bits_via(
+                &PopcountDispatcher,
+                &crate::test_parity_oracles::policy(),
+                &input,
+            )
+            .unwrap(),
+            32
+        );
+        assert!(
+            (saturation_ratio_via(
+                &PopcountDispatcher,
+                &crate::test_parity_oracles::policy(),
+                &input,
+            )
+            .unwrap()
+                - 0.5)
+                .abs()
+                < 1e-6
+        );
     }
 }

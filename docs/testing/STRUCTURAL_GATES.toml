@@ -54,23 +54,23 @@ process running locally.
 
 [[gate]]
 file = "vyre-libs/tests/shared_owner_closure.rs"
-tests = ["no_dispatch_grid_function_hand_rolls_the_ceiling_division"]
+tests = ["no_operation_publishes_launch_geometry"]
 reason = """
-Asserts that exactly one implementation of the ceiling division exists. A
-behavioural parity sweep catches a copy that rounds differently and passes a
-copy that agrees today, and a second implementation that agrees today is the
-defect this closes: the copies it replaced agreed until the zero case.
+Asserts that no operation declares a launch grid a caller could pass back into a
+dispatch. A behavioural test observes one launch on one fixture; this observes
+the whole declaration surface, which is where the defect reappears. A scatter
+that published a cache-sized grid ran the entire cache per decoded chunk while
+every value it produced stayed correct.
 """
 
 [[gate]]
 file = "vyre-libs/tests/shared_owner_closure.rs"
-tests = ["every_domain_with_a_dispatch_grid_can_reach_the_owner"]
+tests = ["the_launch_geometry_signature_matches_every_shape_it_rejects"]
 reason = """
-Asserts that the owner of the dispatch-grid helper is declared unconditionally
-in the crate that holds it and that every crate with a dispatch-grid function
-reaches it through a non-optional dependency edge. Reachability is decided at
-compile time, so a build where the owner is unreachable is a build in which
-this test does not run.
+Asserts that the source signature still sees a function, a constant and a field
+it must reject. An empty result is the passing state of the gate above, so a
+broken prefix match would read as a clean tree forever and no behavioural test
+can distinguish the two.
 """
 
 [[gate]]
@@ -162,21 +162,43 @@ export list, which no run of the covered entry points can report on.
 
 [[gate]]
 file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
-tests = ["no_production_crate_outside_the_oracle_ships_a_host_dispatcher"]
+tests = ["no_production_crate_outside_the_oracle_executes_on_the_host"]
 reason = """
-Asserts that no crate except the parity oracle ships a `ProgramDispatcher` a
-default build can construct. The subject is the absence of a type in crates this
-test does not link, and a type nobody constructed is invisible to every running
-program; the failure it prevents is a consumer reaching a host dispatcher years
-later.
+Asserts that no crate except the parity oracle ships an execution-seam
+implementation a default build can construct on the host. The subject is the
+absence of a type in crates this test does not link, and a type nobody
+constructed is invisible to every running program; the failure it prevents is a
+consumer reaching host execution years later.
 """
 
 [[gate]]
 file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
-tests = ["the_walk_actually_reaches_the_dispatchers_it_judges"]
+tests = ["the_walk_actually_reaches_the_implementors_it_judges"]
 reason = """
 Floor check for the walk the gate above depends on. Its subject is the file set
 that walk produced, which exists only inside the source scan.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
+tests = ["every_policed_seam_is_a_trait_this_tree_declares"]
+reason = """
+Requires every policed seam name to resolve to a trait declaration in tracked
+source. A renamed or retired seam leaves the walk searching for a string no file
+contains, and its empty offender set then reports that the scan found nothing
+rather than that nothing is wrong. The subject is the declaration set, which no
+run of the seam observes.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
+tests = ["every_test_gating_shape_this_tree_uses_is_recognized"]
+reason = """
+Exercises the three shapes that keep an implementation out of a shipped build:
+an attribute on the item, an attribute on an inline module, and an attribute on
+the `mod` statement that includes a separate file. The subject is the classifier
+itself, applied to synthetic source, so the rule is proven rather than today's
+tree.
 """
 
 [[gate]]
@@ -204,7 +226,7 @@ make, which no execution observes.
 [[gate]]
 file = "xtask/src/gates/host_oracle_elimination_tests_part1.rs"
 tests = [
-  "canonical_program_dispatcher_exact_path_derives_execution_methods",
+  "canonical_semantic_executor_exact_path_derives_execution_methods",
   "mutation_catches_crate_bogus_program_masquerade",
   "mutation_catches_dispatch_error_and_resident_read_range_param_masquerade",
   "mutation_catches_dispatcher_err_fallback_branch_oracle",

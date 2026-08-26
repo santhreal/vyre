@@ -723,7 +723,7 @@ pub trait Backend {
         inputs: &[&[u8]],
     ) -> Result<Vec<Vec<u8>>, Error> {
         let owned: Vec<Vec<u8>> = inputs.iter().map(|row| row.to_vec()).collect();
-        self.dispatch(&owned)
+        self.execute(&owned)
     }
 }
 ");
@@ -758,7 +758,7 @@ pub trait Backend {
         &self,
         inputs: &[Vec<u8>],
     ) -> Result<Pending, Error> {
-        ready(self.dispatch(inputs)?)
+        ready(self.execute(inputs)?)
     }
 
     fn dispatch_borrowed_async(
@@ -814,7 +814,7 @@ pub trait Backend {
     #[test]
     fn an_owned_only_dispatch_trait_is_left_alone() {
         let report = run(r"
-pub trait ProgramDispatcher {
+pub trait SemanticExecutor {
     fn dispatch(
         &self,
         inputs: &[Vec<u8>],

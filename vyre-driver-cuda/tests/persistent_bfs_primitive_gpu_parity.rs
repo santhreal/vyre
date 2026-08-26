@@ -8,8 +8,7 @@ use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::BufferAccess;
 use vyre_libs::graph::persistent_bfs::{
-    persistent_bfs, persistent_bfs_batch, persistent_bfs_batch_dispatch_grid,
-    persistent_bfs_single_dispatch_grid, validate_persistent_bfs_converged_flag,
+    persistent_bfs, persistent_bfs_batch, validate_persistent_bfs_converged_flag,
 };
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_reference::composition_witness::csr_persistent_closure_detailed_witness;
@@ -52,8 +51,7 @@ fn run(
             }
         })
         .collect();
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some(persistent_bfs_single_dispatch_grid(node_count));
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("persistent BFS primitive", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -135,8 +133,16 @@ fn run_batch(
         vec![0u8; query_count.max(1) as usize * 4],
         vec![0u8; query_count.max(1) as usize * 4],
     ];
+    // Axis 0 is the node domain the program's guard admits, which the driver
+    // derives on its own. Axis 1 is one block per query, which no axis-0 guard
+    // states, so the batch launch is the one shape a caller still supplies.
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(persistent_bfs_batch_dispatch_grid(node_count, query_count));
+    let node_lanes = vyre_primitives::lane_grid(
+        vyre_foundation::guarded_logical_span(&program)
+            .expect("Fix: the batch guard must bound the node domain"),
+        program.workgroup_size()[0],
+    );
+    config.grid_override = Some([node_lanes[0], query_count.max(1), 1]);
     let outputs = with_live_backend("persistent BFS primitive batch", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

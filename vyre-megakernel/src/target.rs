@@ -527,8 +527,7 @@ fn selected_logical_element_count(
         .flat_map(|entry| entry.inputs.iter().chain(&entry.outputs))
         .copied()
         .collect::<HashSet<_>>();
-    let full_span = program.stats().atomic_op_count > 0
-        || vyre_foundation::program_caps::scan(program).subgroup_ops;
+    let full_span = vyre_foundation::launch_covers_full_input_span(program);
     let selected = artifact
         .resources()
         .iter()
@@ -563,7 +562,8 @@ fn selected_logical_element_count(
     }
     .unwrap_or(1)
     .max(1);
-    u32::try_from(count).unwrap_or(u32::MAX)
+    let count = u32::try_from(count).unwrap_or(u32::MAX);
+    vyre_foundation::admitted_logical_span(program, count)
 }
 
 fn selected_abi(artifact: &Artifact, module: &SelectedModule) -> ArtifactAbi {

@@ -49,9 +49,11 @@ fn assert_bellman_tn_order_matches_reference(
 ) -> Vec<u32> {
     let (reference, _) =
         reference_bellman_shortest_path(src, dst, weight, dist_init, nodes, max_iters);
-    with_cuda_optimizer_dispatcher(label, |dispatcher| {
-        let gpu = bellman_tn_order_via(dispatcher, src, dst, weight, dist_init, nodes, max_iters)
-            .expect("dispatch");
+    with_cuda_optimizer_dispatcher(label, |executor, policy| {
+        let gpu = bellman_tn_order_via(
+            executor, policy, src, dst, weight, dist_init, nodes, max_iters,
+        )
+        .expect("dispatch");
         assert_eq!(gpu, reference, "{label}: distance divergence");
         gpu
     })

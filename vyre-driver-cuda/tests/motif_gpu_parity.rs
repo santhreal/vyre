@@ -51,9 +51,10 @@ fn cuda_match_motif_via_triangle_full_match() {
             to: 0,
         },
     ];
-    with_cuda_optimizer_dispatcher("triangle motif", |dispatcher| {
+    with_cuda_optimizer_dispatcher("triangle motif", |dispatcher, policy| {
         let gpu = match_motif_via(
             dispatcher,
+            policy,
             3,
             &edge_offsets,
             &edge_targets,
@@ -84,9 +85,10 @@ fn cuda_match_motif_via_partial_match_returns_zero() {
             to: 2,
         }, // missing
     ];
-    with_cuda_optimizer_dispatcher("partial motif", |dispatcher| {
+    with_cuda_optimizer_dispatcher("partial motif", |dispatcher, policy| {
         let gpu = match_motif_via(
             dispatcher,
+            policy,
             3,
             &edge_offsets,
             &edge_targets,
@@ -112,9 +114,10 @@ fn cuda_match_motif_via_kind_mask_filter() {
         kind_mask: 0b0001,
         to: 1,
     }];
-    with_cuda_optimizer_dispatcher("kind-mask motif", |dispatcher| {
+    with_cuda_optimizer_dispatcher("kind-mask motif", |dispatcher, policy| {
         let gpu = match_motif_via(
             dispatcher,
+            policy,
             2,
             &edge_offsets,
             &edge_targets,

@@ -1,7 +1,7 @@
 //! Proof plan summary, its catalog and execution hashes, and the `plan` subcommand.
 
 use crate::artifact_json::write_json_artifact;
-use crate::backend_selection::{dispatch_capable_backends, select_backends};
+use crate::backend_selection::{select_backends, semantic_execution_backends};
 use crate::operation_selection::{
     prepare_entry, select_entries, unified_entries, PreparedEntry, UnifiedEntry,
 };
@@ -41,7 +41,7 @@ struct ProofPlanArtifact {
 
 pub(crate) fn emit_plan(args: impl IntoIterator<Item = String>) -> Result<(), String> {
     let options = parse_proof_options("plan", args)?;
-    let all_backends = dispatch_capable_backends()?;
+    let all_backends = semantic_execution_backends()?;
     if all_backends.is_empty() {
         return Err(
             "plan refused to emit: no dispatch-capable backend is linked into this binary. \

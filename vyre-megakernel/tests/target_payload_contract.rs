@@ -64,6 +64,30 @@ impl TargetCompiler for FixtureCompiler {
     }
 }
 
+/// WHY: absent geometry cannot be represented by a zero extent and later
+/// defaulted to one. Every target entry must authenticate complete positive
+/// workgroup and grid geometry before admission.
+#[test]
+fn target_payload_rejects_every_zero_geometry_class() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    for (field, workgroup_size, grid_size) in [
+        ("workgroup_size", [0, 1, 1], [1, 1, 1]),
+        ("grid_size", [8, 1, 1], [0, 1, 1]),
+    ] {
+        let mut entry = entry_point();
+        entry.workgroup_size = workgroup_size;
+        entry.grid_size = grid_size;
+        let error = TargetPayload::new(&neutral, format(1), profile(1), vec![entry], vec![1])
+            .expect_err("zero target geometry must fail instead of defaulting to one");
+        assert_eq!(
+            diagnostic_path(&error),
+            Some(format!("target_payload.entries[0].{field}[0]").as_str())
+        );
+        assert!(error.to_string().contains("geometry extent is zero"));
+        assert!(error.to_string().contains("materialize explicit positive"));
+    }
+}
+
 /// WHY: every product must associate pure target output through one authenticated envelope seam.
 #[test]
 fn target_compiler_attaches_exactly_one_authenticated_payload() {
@@ -602,5 +626,142 @@ fn target_payload_rejects_unknown_canonical_resource() {
     assert_eq!(
         error.diagnostic.code.as_str(),
         "MKC020_TARGET_PAYLOAD_ASSOCIATION_MISMATCH"
+    );
+}
+
+/// Build a one-node graph whose program writes `destination` under an optional
+/// constant guard on axis-0 logical index, and return its selected launch span.
+///
+/// `source` is `chunk` elements and `destination` is `cache` elements, so the
+/// buffer-derived span and the guarded span differ by construction.
+fn selected_span(chunk: u32, cache: u32, guard: Option<u32>) -> u32 {
+    use vyre_foundation::ir::{
+        BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, ProgramGraph,
+        ShapeDim, ValueContract, ValueLifetime,
+    };
+
+    let contract = |access, lifetime, symbol: &str| ValueContract {
+        dtype: DataType::U32,
+        shape: vec![ShapeDim::Symbol(symbol.into())],
+        access,
+        lifetime,
+    };
+
+    let mut graph = ProgramGraph::new();
+    let source_value = graph
+        .add_external_value(
+            "chunk",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, "chunk"),
+        )
+        .expect("external chunk value must be accepted");
+
+    let index = Expr::var("index");
+    let store = Node::store(
+        "cache_out",
+        Expr::add(index.clone(), Expr::u32(1)),
+        Expr::load("chunk_in", index.clone()),
+    );
+    let body = match guard {
+        Some(limit) => vec![
+            Node::let_bind("index", Expr::LogicalIndex { axis: 0 }),
+            Node::if_then(Expr::lt(index, Expr::u32(limit)), vec![store]),
+        ],
+        None => vec![
+            Node::let_bind("index", Expr::LogicalIndex { axis: 0 }),
+            store,
+        ],
+    };
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("chunk_in", 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("cache_out", 1, BufferAccess::WriteOnly, DataType::U32),
+        ],
+        [32, 1, 1],
+        body,
+    );
+
+    graph
+        .add_node(
+            "scatter",
+            program,
+            vec![GraphInput {
+                buffer: "chunk_in".into(),
+                value: source_value,
+                contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, "chunk"),
+            }],
+            vec![GraphOutput {
+                buffer: "cache_out".into(),
+                name: "cache".into(),
+                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output, "cache"),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("scatter node must be accepted");
+
+    let mut symbols = std::collections::BTreeMap::new();
+    symbols.insert("chunk".into(), u64::from(chunk));
+    symbols.insert("cache".into(), u64::from(cache));
+    let request = vyre_megakernel::CompileRequest::new(
+        graph,
+        vyre_megakernel::ExternalFacts::new(vyre_megakernel::Digest([0; 32]), symbols),
+        vyre_megakernel::DeviceFacts::unknown(),
+        vyre_megakernel::SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+        1_000_000,
+    )
+    .validate()
+    .expect("scatter request must validate");
+    let artifact = vyre_megakernel::compile(&request).expect("scatter must compile");
+
+    let mut span = None;
+    compile_selected_modules(&artifact, format(1), profile(1), |selected, _prof| {
+        span = Some(selected.logical_element_count);
+        Ok(EmittedTargetModule {
+            entry_point: "scatter_entry".into(),
+            workgroup_size: [32, 1, 1],
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: selected.canonical_bindings.clone(),
+            bytes: vec![1],
+        })
+    })
+    .expect("selected module compilation must succeed");
+    span.expect("one module must be compiled")
+}
+
+/// WHY: a launch span taken from the widest declared resource is right for a
+/// gather and wrong for a scatter, which guards on a small source and declares
+/// a much larger destination. The guard is in the IR, so the compiler reads it
+/// instead of firing one lane per destination element and letting the guard
+/// discard the rest. Without the guard the destination is the only bound left,
+/// which is the case the cap must not touch.
+#[test]
+fn a_constant_guard_caps_the_launch_span_at_the_domain_it_admits() {
+    assert_eq!(
+        selected_span(8, 1024, Some(8)),
+        8,
+        "a guarded scatter must launch over its guarded domain, not its destination"
+    );
+    assert_eq!(
+        selected_span(8, 1024, None),
+        1024,
+        "an unguarded write has no domain but its destination"
+    );
+}
+
+/// WHY: the cap is a minimum, not a replacement. A guard wider than anything
+/// the program can address must not raise the launch above the resources, and a
+/// guard of zero must not produce a launch of zero groups, which a driver
+/// rejects outright.
+#[test]
+fn a_guard_never_raises_the_span_above_the_resources_or_lowers_it_below_one() {
+    assert_eq!(
+        selected_span(8, 64, Some(4_000_000)),
+        64,
+        "a guard wider than the resources must not widen the launch"
+    );
+    assert_eq!(
+        selected_span(8, 64, Some(0)),
+        1,
+        "a zero-domain guard must still leave a launchable span"
     );
 }

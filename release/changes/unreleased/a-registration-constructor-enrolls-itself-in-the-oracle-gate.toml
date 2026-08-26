@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The host oracle elimination gate reads the OperationRegistration constructor roster and each expected-output argument position out of the registration source, so a renamed or added constructor is analyzed instead of silently leaving every registered fixture unreachable and every oracle inside expected_output unconvicted."

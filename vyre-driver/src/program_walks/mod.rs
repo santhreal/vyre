@@ -171,7 +171,11 @@ mod tests {
                 BufferDecl::output("encoding", 2, DataType::U32).with_count(1),
             ],
             [256, 1, 1],
-            vec![],
+            vec![Node::store(
+                "histogram",
+                Expr::InvocationId { axis: 0 },
+                Expr::u32(1),
+            )],
         );
         let inputs = vec![vec![0u8; 5 * 4], vec![0u8; 256 * 4]];
 

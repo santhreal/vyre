@@ -21,15 +21,13 @@
 
 mod harness;
 
-use harness::live_backend;
+use harness::cuda_semantic_execution;
 use vyre::ir::{Expr, Node, Program};
-use vyre_driver_cuda::CudaProgramDispatcher;
-use vyre_pass_engine::optimizer::pipeline_resident::gpu_pipeline_resident;
+use vyre_pass_engine::optimizer::pipeline::gpu_optimize;
 
 fn run_gpu_pipeline(p: Program) -> Program {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
-    gpu_pipeline_resident(p, &dispatcher).expect("gpu pipeline must succeed")
+    let dispatcher = cuda_semantic_execution();
+    gpu_optimize(p, &dispatcher.0, &dispatcher.1).expect("gpu pipeline must succeed")
 }
 
 fn run_cpu_dce_only(p: Program) -> Program {

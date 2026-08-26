@@ -1,6 +1,6 @@
 //! Convergence lens: dispatch until the read-write state stabilises.
 
-use vyre_driver::{BackendError, BackendRegistration, DispatchConfig};
+use vyre_driver::{BackendError, BackendRegistration};
 use vyre_foundation::ir::Program;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_libs::operation_catalog::convergence_contract;
@@ -82,7 +82,6 @@ pub fn run(entry: &SemanticOperation, backend: &'static BackendRegistration) -> 
                 contract.max_iterations,
                 current_idx,
                 next_idx,
-                &setup.config,
             )
         },
     )
@@ -118,18 +117,16 @@ fn gpu_convergence(
     max_iterations: u32,
     current_idx: usize,
     next_idx: usize,
-    _config: &DispatchConfig,
 ) -> Result<Vec<Vec<u8>>, LoopError> {
     let mut state: Vec<Vec<u8>> = initial_inputs.to_vec();
     let mut prev_next: Vec<u8> = Vec::new();
-    let borrowed_inputs: Vec<&[u8]> = initial_inputs.iter().map(Vec::as_slice).collect();
-    let production = production_session(backend, program, &borrowed_inputs)?;
+    let production = production_session(backend, program)?;
     for _ in 0..max_iterations {
         let borrowed_state: Vec<&[u8]> = state.iter().map(Vec::as_slice).collect();
-        let outputs = production
+        let execution = production
             .submit(&borrowed_state)
             .map_err(|error| LoopError::Backend(BackendError::new(error.to_string())))?;
-        merge_rw(&mut state, &outputs, program);
+        merge_rw(&mut state, &execution.outputs, program);
         if state.get(next_idx) == Some(&prev_next) {
             return Ok(state);
         }

@@ -5,7 +5,7 @@
 
 mod harness;
 
-use harness::{live_backend, CudaProgramDispatcher};
+use harness::cuda_semantic_execution;
 use vyre::ir::{BinOp, Expr, Node, Program};
 use vyre_pass_engine::optimizer::pattern_match_via_encoded::gpu_algebraic_identities;
 
@@ -25,52 +25,48 @@ fn first_let_value(p: &Program) -> Expr {
 
 #[test]
 fn cuda_add_zero_left_collapses() {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::add(Expr::u32(0), Expr::var("a")),
     )]);
-    let after = gpu_algebraic_identities(p, &dispatcher).expect("dispatches");
+    let after = gpu_algebraic_identities(p, &dispatcher.0, &dispatcher.1).expect("dispatches");
     let got = first_let_value(&after);
     assert!(matches!(got, Expr::Var(ref n) if n.as_str() == "a"));
 }
 
 #[test]
 fn cuda_mul_zero_absorbs() {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::mul(Expr::u32(0), Expr::var("a")),
     )]);
-    let after = gpu_algebraic_identities(p, &dispatcher).expect("dispatches");
+    let after = gpu_algebraic_identities(p, &dispatcher.0, &dispatcher.1).expect("dispatches");
     let got = first_let_value(&after);
     assert!(matches!(got, Expr::LitU32(0)));
 }
 
 #[test]
 fn cuda_mul_one_collapses() {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::mul(Expr::var("a"), Expr::u32(1)),
     )]);
-    let after = gpu_algebraic_identities(p, &dispatcher).expect("dispatches");
+    let after = gpu_algebraic_identities(p, &dispatcher.0, &dispatcher.1).expect("dispatches");
     let got = first_let_value(&after);
     assert!(matches!(got, Expr::Var(ref n) if n.as_str() == "a"));
 }
 
 #[test]
 fn cuda_unrelated_binop_passes_through() {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::sub(Expr::var("a"), Expr::u32(1)),
     )]);
-    let after = gpu_algebraic_identities(p, &dispatcher).expect("dispatches");
+    let after = gpu_algebraic_identities(p, &dispatcher.0, &dispatcher.1).expect("dispatches");
     let got = first_let_value(&after);
     match got {
         Expr::BinOp { op, .. } => assert!(matches!(op, BinOp::Sub)),

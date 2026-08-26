@@ -23,9 +23,6 @@
 //! counter and forwards.
 
 mod dispatch;
-#[cfg(test)]
-#[path = "../../../../tests/internal/graph/dispatch/dominator_frontier/mod.rs"]
-mod tests;
 
 #[cfg(test)]
 use crate::graph::dominator_frontier::frontier_size as primitive_frontier_size;
@@ -65,3 +62,7 @@ impl DominanceFrontierGpuScratch {
 pub fn frontier_size(frontier: &[u32]) -> u32 {
     primitive_frontier_size(frontier)
 }
+
+#[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/dominator_frontier/mod.rs"]
+mod tests;

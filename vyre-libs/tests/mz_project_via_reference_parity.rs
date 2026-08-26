@@ -8,7 +8,7 @@
 //! fixed-point dispatch path.
 //!
 //! This runs the real fixed-point `mz_project_step` Program through the shared
-//! `ReferenceEvalDispatcher` and asserts it EXACTLY (no tolerance) reproduces a u32 16.16 matvec
+//! `ReferenceSemanticExecutor` and asserts it EXACTLY (no tolerance) reproduces a u32 16.16 matvec
 //! oracle. The oracle replicates the IR's arithmetic bit-for-bit: `fixed_mul_16_16(a, b) =
 //! ((a as i32 as i64 * b as i32 as i64) >> 16) as i32 as u32` (matching the corrected SIGNED
 //! `fixed_mul_16_16_expr` = bits 16..47 of the SIGNED 64-bit product), accumulated with wrapping
@@ -16,9 +16,11 @@
 //! divergence is a real IR/dispatch defect, not a rounding artifact.
 #![forbid(unsafe_code)]
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::mori_zwanzig_region_coarsen::coarsen_region_state_fixed_via;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::{
     fixed_matvec as mz_project_fixed, signed_fixed_19 as signed_fixed, to_fixed,
     xorshift32 as xorshift,
@@ -26,7 +28,7 @@ use vyre_test_support::fixed_point::{
 
 #[test]
 fn coarsen_region_state_fixed_via_matches_exact_fixed_point_matvec() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x3141_5926u32;
     let mut moved_cases = 0u32;
     for case in 0..400u32 {
@@ -40,8 +42,14 @@ fn coarsen_region_state_fixed_via_matches_exact_fixed_point_matvec() {
             .collect();
         let f_vec: Vec<u32> = (0..n).map(|_| xorshift(&mut state) & 0x000F_FFFF).collect();
 
-        let via = coarsen_region_state_fixed_via(&dispatcher, &p_matrix, &f_vec, n)
-            .expect("coarsen_region_state_fixed_via must dispatch the projection kernel");
+        let via = coarsen_region_state_fixed_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &p_matrix,
+            &f_vec,
+            n,
+        )
+        .expect("coarsen_region_state_fixed_via must dispatch the projection kernel");
         let oracle = mz_project_fixed(&p_matrix, &f_vec, n as usize);
         if oracle.iter().any(|&w| w != 0) {
             moved_cases += 1;
@@ -67,7 +75,7 @@ fn coarsen_region_state_fixed_via_matches_signed_projection_with_negative_entrie
     // asserts the dispatched kernel bit-exactly matches the SIGNED oracle, locking the signed
     // `fixed_mul_16_16_expr` fix at the mz_project consumer (pre-fix, a negative P[i,j]·f[j] term
     // would diverge because the unsigned high word was wrong).
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x9E37_79B1u32;
     let mut neg_inputs = 0u32;
     let mut neg_outputs = 0u32;
@@ -81,8 +89,14 @@ fn coarsen_region_state_fixed_via_matches_signed_projection_with_negative_entrie
         neg_inputs += p_matrix.iter().filter(|&&v| (v as i32) < 0).count() as u32;
         neg_inputs += f_vec.iter().filter(|&&v| (v as i32) < 0).count() as u32;
 
-        let via = coarsen_region_state_fixed_via(&dispatcher, &p_matrix, &f_vec, n)
-            .expect("coarsen_region_state_fixed_via must dispatch the projection kernel");
+        let via = coarsen_region_state_fixed_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &p_matrix,
+            &f_vec,
+            n,
+        )
+        .expect("coarsen_region_state_fixed_via must dispatch the projection kernel");
         let oracle = mz_project_fixed(&p_matrix, &f_vec, n as usize);
         assert_eq!(
             via, oracle,
@@ -114,11 +128,17 @@ fn coarsen_region_state_fixed_via_hand_checked_negative_projection() {
     // P = [[-1.0, 0.5], [0.0, -2.0]], f = [2.0, -3.0]:
     //   out[0] = (-1.0)(2.0) + (0.5)(-3.0) = -2.0 - 1.5 = -3.5
     //   out[1] = ( 0.0)(2.0) + (-2.0)(-3.0) = 0.0 + 6.0  =  6.0
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let p_matrix = vec![to_fixed(-1.0), to_fixed(0.5), to_fixed(0.0), to_fixed(-2.0)];
     let f_vec = vec![to_fixed(2.0), to_fixed(-3.0)];
-    let via = coarsen_region_state_fixed_via(&dispatcher, &p_matrix, &f_vec, 2)
-        .expect("coarsen_region_state_fixed_via must dispatch");
+    let via = coarsen_region_state_fixed_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &p_matrix,
+        &f_vec,
+        2,
+    )
+    .expect("coarsen_region_state_fixed_via must dispatch");
     let oracle = mz_project_fixed(&p_matrix, &f_vec, 2);
     assert_eq!(
         oracle,
@@ -135,12 +155,18 @@ fn coarsen_region_state_fixed_via_hand_checked_negative_projection() {
 fn coarsen_region_state_fixed_via_computes_a_known_projection() {
     // 2x2 identity-scaled projector P = [[1.0, 0.0],[0.0, 2.0]] in 16.16; f = [3.0, 4.0].
     // out[0] = 1.0*3.0 + 0.0*4.0 = 3.0; out[1] = 0.0*3.0 + 2.0*4.0 = 8.0.
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let one = 1u32 << 16;
     let p_matrix = vec![one, 0, 0, 2 * one];
     let f_vec = vec![3 * one, 4 * one];
-    let via = coarsen_region_state_fixed_via(&dispatcher, &p_matrix, &f_vec, 2)
-        .expect("coarsen_region_state_fixed_via must dispatch");
+    let via = coarsen_region_state_fixed_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &p_matrix,
+        &f_vec,
+        2,
+    )
+    .expect("coarsen_region_state_fixed_via must dispatch");
     let oracle = mz_project_fixed(&p_matrix, &f_vec, 2);
     assert_eq!(
         oracle,

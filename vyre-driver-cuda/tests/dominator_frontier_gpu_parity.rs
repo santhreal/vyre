@@ -17,9 +17,10 @@ fn cuda_dominance_frontier_via_chain_is_empty() {
     let pred_offsets = vec![0u32, 0, 1, 2, 3];
     let pred_targets = vec![0u32, 1, 2];
     let seed = vec![0b0001u32];
-    let gpu = with_cuda_optimizer_dispatcher("dominance frontier chain", |dispatcher| {
+    let gpu = with_cuda_optimizer_dispatcher("dominance frontier chain", |dispatcher, policy| {
         dominance_frontier_via(
             dispatcher,
+            policy,
             4,
             &dom_offsets,
             &dom_targets,
@@ -49,9 +50,10 @@ fn cuda_dominance_frontier_via_diamond_seed_is_merge_node() {
     let pred_offsets = vec![0u32, 0, 1, 2, 4];
     let pred_targets = vec![0u32, 0, 1, 2];
     let seed = vec![0b0010u32]; // seed = {1}
-    let gpu = with_cuda_optimizer_dispatcher("dominance frontier diamond", |dispatcher| {
+    let gpu = with_cuda_optimizer_dispatcher("dominance frontier diamond", |dispatcher, policy| {
         dominance_frontier_via(
             dispatcher,
+            policy,
             4,
             &dom_offsets,
             &dom_targets,
@@ -92,10 +94,12 @@ fn cuda_dominance_frontier_via_covers_candidate_past_first_workgroup() {
     let mut seed = vec![0u32; node_count.div_ceil(32) as usize];
     seed[300 / 32] |= 1u32 << (300 % 32);
 
-    let gpu =
-        with_cuda_optimizer_dispatcher("dominance frontier 513-node candidate", |dispatcher| {
+    let gpu = with_cuda_optimizer_dispatcher(
+        "dominance frontier 513-node candidate",
+        |dispatcher, policy| {
             dominance_frontier_via(
                 dispatcher,
+                policy,
                 node_count,
                 &dom_offsets,
                 &dom_targets,
@@ -104,7 +108,8 @@ fn cuda_dominance_frontier_via_covers_candidate_past_first_workgroup() {
                 &seed,
             )
             .expect("dispatch")
-        });
+        },
+    );
     let reference = reference_dominance_frontier(
         node_count,
         &dom_offsets,

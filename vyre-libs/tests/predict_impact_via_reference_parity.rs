@@ -1,6 +1,6 @@
 //! End-to-end parity for the do-calculus change-impact COMPOSITES
 //! `logic::do_calculus_change_impact::{predict_impact_via, predict_impact_observation_form_via}`, through
-//! the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! the shared faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `do_calculus_surgery_via_reference_parity` covers the surgery PRIMITIVES (intervention_delete_incoming,
@@ -17,6 +17,8 @@
 //! faithful boundary (unlike the data-dependent indirect-scatter fixpoints, see
 //! `BUG-reference-eval-indirect-scatter-fixpoint-1round`).
 
+mod semantic_execution_support;
+
 use vyre_libs::reasoning::do_calculus_change_impact::{
     predict_impact_observation_form_via, predict_impact_via,
 };
@@ -25,7 +27,7 @@ use vyre_reference::composition_witness::{
     predict_impact_witness as predict_impact,
 };
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// A random DAG-ish 0/1 adjacency: only i->j with i<j edges, so the transitive closure is acyclic and
@@ -48,7 +50,7 @@ fn random_mask(state: &mut u32, n: usize) -> Vec<u32> {
 
 #[test]
 fn predict_impact_via_matches_reference_over_random_dags() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let mut state = 0xD0_CA_00_01u32;
     let mut real_propagation = 0u32; // cases where the impact reached beyond the intervened nodes
     for case in 0..300u32 {
@@ -57,7 +59,7 @@ fn predict_impact_via_matches_reference_over_random_dags() {
         let mask = random_mask(&mut state, n);
         let n_u = n as u32;
 
-        let got = predict_impact_via(&d, &adj, &mask, n_u)
+        let got = predict_impact_via(&d, &semantic_execution_support::policy(), &adj, &mask, n_u)
             .expect("predict_impact_via must dispatch surgery + closure + projection");
         let want = predict_impact(&adj, &mask, n_u);
         assert_eq!(
@@ -79,7 +81,7 @@ fn predict_impact_via_matches_reference_over_random_dags() {
 
 #[test]
 fn predict_impact_observation_form_via_matches_reference_over_random_dags() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let mut state = 0x0B_5E_00_01u32;
     let mut nonempty = 0u32;
     for case in 0..300u32 {
@@ -88,9 +90,14 @@ fn predict_impact_observation_form_via_matches_reference_over_random_dags() {
         let observation_mask = random_mask(&mut state, n);
         let n_u = n as u32;
 
-        let got = predict_impact_observation_form_via(&d, &adj, &observation_mask, n_u).expect(
-            "predict_impact_observation_form_via must dispatch the observation-form pipeline",
-        );
+        let got = predict_impact_observation_form_via(
+            &d,
+            &semantic_execution_support::policy(),
+            &adj,
+            &observation_mask,
+            n_u,
+        )
+        .expect("predict_impact_observation_form_via must dispatch the observation-form pipeline");
         let want = predict_impact_observation_form(&adj, &observation_mask, n_u);
         assert_eq!(
             got, want,
@@ -108,7 +115,7 @@ fn predict_impact_observation_form_via_matches_reference_over_random_dags() {
 
 #[test]
 fn predict_impact_via_hand_checked_chain() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     // Chain 0 -> 1 -> 2 -> 3; intervene on node 0 → impact reaches every downstream node.
     let n = 4u32;
     let mut adj = vec![0u32; 16];
@@ -116,7 +123,8 @@ fn predict_impact_via_hand_checked_chain() {
     adj[1 * 4 + 2] = 1;
     adj[2 * 4 + 3] = 1;
     let mask = [1u32, 0, 0, 0];
-    let got = predict_impact_via(&d, &adj, &mask, n).unwrap();
+    let got =
+        predict_impact_via(&d, &semantic_execution_support::policy(), &adj, &mask, n).unwrap();
     let want = predict_impact(&adj, &mask, n);
     assert_eq!(got, want, "chain impact matches the reference");
     assert_eq!(
@@ -127,7 +135,8 @@ fn predict_impact_via_hand_checked_chain() {
 
     // Intervene on node 2 → only nodes 2 and 3 (its transitive downstream) are impacted.
     let mask = [0u32, 0, 1, 0];
-    let got = predict_impact_via(&d, &adj, &mask, n).unwrap();
+    let got =
+        predict_impact_via(&d, &semantic_execution_support::policy(), &adj, &mask, n).unwrap();
     assert_eq!(got, predict_impact(&adj, &mask, n));
     assert_eq!(
         got,

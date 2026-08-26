@@ -5,7 +5,7 @@ fn unpack_i4x8_via_dispatches_signed_boundaries() {
     let values = [-8, -7, -1, 0, 1, 2, 6, 7, -3, 4, 5, -5, -6, 3, -2, 0, 7];
     let packed = pack_i4x8_cpu(&values);
 
-    let out = unpack_i4x8_via(&QuantizedDispatcher, &packed, values.len() as u32)
+    let out = unpack_i4x8_via(&QuantizedDispatcher, &crate::test_parity_oracles::policy(), &packed, values.len() as u32)
         .expect("Fix: CUDA parity tests require backend dispatch; skip test if GPU unavailable, do not panic - fake dispatcher unpacks signed INT4 lanes");
 
     assert_eq!(out, values);
@@ -24,7 +24,7 @@ fn unpack_i4x8_via_reuses_scratch_and_output() {
     let out_ptr = out.as_ptr();
 
     unpack_i4x8_via_with_scratch_into(
-        &QuantizedDispatcher,
+        &QuantizedDispatcher, &crate::test_parity_oracles::policy(),
         &packed,
         values.len() as u32,
         &mut scratch,
@@ -37,7 +37,7 @@ fn unpack_i4x8_via_reuses_scratch_and_output() {
             "Fix: first quantized dispatch should build exactly one shape-specialized primitive Program."
         );
     unpack_i4x8_via_with_scratch_into(
-        &QuantizedDispatcher,
+        &QuantizedDispatcher, &crate::test_parity_oracles::policy(),
         &packed,
         values.len() as u32,
         &mut scratch,
@@ -70,7 +70,7 @@ fn unpack_i4x8_via_rebuilds_cached_program_only_on_lane_shape_change() {
     let mut out = Vec::new();
 
     unpack_i4x8_via_with_scratch_into(
-        &QuantizedDispatcher,
+        &QuantizedDispatcher, &crate::test_parity_oracles::policy(),
         &packed8,
         values8.len() as u32,
         &mut scratch,
@@ -78,7 +78,7 @@ fn unpack_i4x8_via_rebuilds_cached_program_only_on_lane_shape_change() {
     )
     .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - first shape succeeds");
     unpack_i4x8_via_with_scratch_into(
-        &QuantizedDispatcher,
+        &QuantizedDispatcher, &crate::test_parity_oracles::policy(),
         &packed8,
         values8.len() as u32,
         &mut scratch,
@@ -86,7 +86,7 @@ fn unpack_i4x8_via_rebuilds_cached_program_only_on_lane_shape_change() {
     )
     .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - same shape succeeds");
     unpack_i4x8_via_with_scratch_into(
-        &QuantizedDispatcher,
+        &QuantizedDispatcher, &crate::test_parity_oracles::policy(),
         &packed9,
         values9.len() as u32,
         &mut scratch,
@@ -104,10 +104,21 @@ fn unpack_i4x8_via_rebuilds_cached_program_only_on_lane_shape_change() {
 
 #[test]
 fn unpack_i4x8_via_rejects_shape_errors_before_dispatch() {
-    let err =
-        unpack_i4x8_via(&QuantizedDispatcher, &[], 1).expect_err("missing packed word must fail");
+    let err = unpack_i4x8_via(
+        &QuantizedDispatcher,
+        &crate::test_parity_oracles::policy(),
+        &[],
+        1,
+    )
+    .expect_err("missing packed word must fail");
     assert!(err.to_string().contains("packed_words.len()"));
 
-    let err = unpack_i4x8_via(&QuantizedDispatcher, &[0], 0).expect_err("zero lanes must fail");
+    let err = unpack_i4x8_via(
+        &QuantizedDispatcher,
+        &crate::test_parity_oracles::policy(),
+        &[0],
+        0,
+    )
+    .expect_err("zero lanes must fail");
     assert!(err.to_string().contains("lane_count > 0"));
 }

@@ -4,7 +4,9 @@
 //! scales, which is what makes the oracle usable as a parity reference.
 
 use super::*;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Compute a packed signed INT4 scaled dot product through the dispatch backend.
 ///
@@ -14,20 +16,22 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when lane count is zero, packed input shape is
+/// Returns [`SemanticExecutionError`] when lane count is zero, packed input shape is
 /// wrong, dispatch fails, or backend readback is malformed.
 pub fn i4x8_dot_f32_scaled_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     lhs_packed: &[u32],
     rhs_packed: &[u32],
     lhs_scale: f32,
     rhs_scale: f32,
     lane_count: u32,
-) -> Result<f32, DispatchError> {
+) -> Result<f32, SemanticExecutionError> {
     let mut scratch = QuantizedDotGpuScratch::default();
     let mut out = Vec::new();
     i4x8_dot_f32_scaled_via_with_scratch_into(
         dispatcher,
+        policy,
         lhs_packed,
         rhs_packed,
         lhs_scale,
@@ -45,10 +49,11 @@ pub fn i4x8_dot_f32_scaled_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] under the same conditions as
+/// Returns [`SemanticExecutionError`] under the same conditions as
 /// [`i4x8_dot_f32_scaled_via`].
 pub fn i4x8_dot_f32_scaled_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     lhs_packed: &[u32],
     rhs_packed: &[u32],
     lhs_scale: f32,
@@ -56,19 +61,19 @@ pub fn i4x8_dot_f32_scaled_via_with_scratch_into(
     lane_count: u32,
     scratch: &mut QuantizedDotGpuScratch,
     out: &mut Vec<f32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if lane_count == 0 {
-        return Err(DispatchError::BadInputs(
+        return Err(SemanticExecutionError::InvalidRequest(
             "Fix: i4x8_dot_f32_scaled_via requires lane_count > 0.".to_string(),
         ));
     }
     let expected_words = i4_packed_words(lane_count) as usize;
     if lhs_packed.len() != expected_words || rhs_packed.len() != expected_words {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: i4x8_dot_f32_scaled_via requires lhs/rhs packed lengths == i4_packed_words(lane_count), got lhs={} rhs={} expected={expected_words} for lane_count={lane_count}.",
-            lhs_packed.len(),
-            rhs_packed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: i4x8_dot_f32_scaled_via requires lhs/rhs packed lengths == i4_packed_words(lane_count), got lhs={} rhs={} expected={expected_words} for lane_count={lane_count}.",
+        lhs_packed.len(),
+        rhs_packed.len()
+    )));
     }
 
     let QuantizedDotGpuScratch {
@@ -86,11 +91,19 @@ pub fn i4x8_dot_f32_scaled_via_with_scratch_into(
     write_f32_slice_le_bytes(&mut inputs[2], &[lhs_scale]);
     write_f32_slice_le_bytes(&mut inputs[3], &[rhs_scale]);
 
-    let outputs = dispatcher.dispatch(program, &inputs[..4], Some([1, 1, 1]))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program.clone(),
+        &inputs[..4],
+        policy,
+    )
+    .map(|output| output.outputs)?;
     decode_f32_output_exact(
         expect_one_output("i4x8_dot_f32_scaled_via", &outputs)?,
         1,
         "i4x8_dot_f32_scaled_via",
         out,
     )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }

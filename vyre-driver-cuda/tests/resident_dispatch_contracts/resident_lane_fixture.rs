@@ -163,34 +163,6 @@ pub(super) fn free_resource_lanes(backend: &CudaBackendRegistration, lanes: Vec<
     }
 }
 
-/// Allocate one `LANE_BYTES` resident buffer through the optimizer dispatcher seam.
-pub(super) fn dispatcher_lane(dispatcher: &CudaProgramDispatcher<'_>, role: &str) -> u64 {
-    dispatcher
-        .alloc_resident(LANE_BYTES)
-        .unwrap_or_else(|error| panic!("Fix: CUDA resident {role} allocation failed: {error}"))
-}
-
-/// Free resident buffers allocated through [`dispatcher_lane`].
-pub(super) fn free_dispatcher_lanes(dispatcher: &CudaProgramDispatcher<'_>, lanes: &[(u64, &str)]) {
-    for (handle, role) in lanes {
-        dispatcher
-            .free_resident(*handle)
-            .unwrap_or_else(|error| panic!("Fix: CUDA resident {role} free failed: {error}"));
-    }
-}
-
-/// One optimizer-sequence step with the dispatcher's resolved launch geometry.
-pub(super) fn dispatcher_step<'a>(
-    program: &'a Program,
-    handle_ids: &'a [u64],
-) -> ResidentDispatchStep<'a> {
-    ResidentDispatchStep {
-        program,
-        handle_ids,
-        grid_override: None,
-    }
-}
-
 /// One sequence step with the backend's resolved default launch geometry.
 pub(super) fn step<'a>(
     program: &'a Program,

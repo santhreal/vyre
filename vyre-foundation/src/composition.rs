@@ -71,16 +71,19 @@ pub fn wrap_child_region(generator: &str, parent: Ident, body: Vec<Node>) -> Nod
     wrap_region(generator, body, Some(parent))
 }
 
-/// Guard nodes so that only invocation zero on axis zero runs them.
+/// Guard nodes so that only logical index zero on axis zero runs them.
+///
+/// The marker is logical, so a library program states which element the body
+/// belongs to and target lowering picks the physical id that names it.
 #[must_use]
 pub fn single_invocation(body: Vec<Node>) -> Vec<Node> {
     vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        Expr::eq(Expr::logical_index(0), Expr::u32(0)),
         body,
     )]
 }
 
-/// The entry of a serial kernel: one anonymous region that runs on invocation zero.
+/// The entry of a serial kernel: one anonymous region that runs on logical index zero.
 #[must_use]
 pub fn single_invocation_region(op_id: &str, body: Vec<Node>) -> Vec<Node> {
     vec![wrap_anonymous_region(op_id, single_invocation(body))]
@@ -277,7 +280,7 @@ mod tests {
         assert!(without_output.buffers().is_empty());
     }
 
-    /// A serial kernel runs its body once, on invocation zero of axis zero.
+    /// A serial kernel runs its body once, on logical index zero of axis zero.
     #[test]
     fn a_single_invocation_region_guards_the_body_it_was_given() {
         let entry = single_invocation_region("vyre.test.scan", vec![Node::Return]);
@@ -301,10 +304,7 @@ mod tests {
         else {
             panic!("the region body is one guarded branch: {body:?}");
         };
-        assert_eq!(
-            *cond,
-            Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0))
-        );
+        assert_eq!(*cond, Expr::eq(Expr::logical_index(0), Expr::u32(0)));
         assert_eq!(then.as_slice(), [Node::Return]);
         assert!(otherwise.is_empty(), "a serial guard has no else arm");
     }

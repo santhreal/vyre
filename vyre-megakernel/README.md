@@ -14,6 +14,11 @@ Every production compile emits a megakernel artifact. Persistence is a
 schedule the compiler may select, not the output type. Static and
 persistent routes consume the same artifact class.
 
+`SemanticExecutionRequest` combines a validated schedule-free
+`LogicalProgramGraph`, graph-value keyed inputs, immutable target facts, an
+objective, and a bounded search budget. It has no grid, workgroup, persistence,
+or route override.
+
 <!-- BEGIN GENERATED CRATE CONTRACT -->
 ## Crate contract
 

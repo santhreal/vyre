@@ -2,11 +2,13 @@ use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::graph::toposort::{
     reference_all_reachable, reference_reachable_set, reference_topo_order,
-    toposort as toposort_cpu, toposort_csr_into, ToposortError,
+    toposort as toposort_cpu, toposort_csr_into, ToposortError, TOPOSORT_ORDER_OUT_BUFFER,
 };
+use crate::test_parity_oracles::{canonical_inputs, policy, semantic_output_named};
 use std::sync::Mutex;
-use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest, SemanticExecutor,
+};
 
 #[test]
 fn topo_order_chain_emits_dependency_first() {
@@ -92,60 +94,59 @@ fn all_reachable_satisfies_query() {
 
 struct ToposortDispatcher;
 
-impl ProgramDispatcher for ToposortDispatcher {
-    fn dispatch(
+impl SemanticExecutor for ToposortDispatcher {
+    fn execute(
         &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        dispatch_with_primitive_csr_oracle(inputs, grid_override)
+        request: &SemanticExecutionRequest<'_>,
+    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+        let inputs = canonical_inputs(request)?;
+        semantic_output_named(request, dispatch_with_primitive_csr_oracle(&inputs)?)
     }
 }
 
 fn dispatch_with_primitive_csr_oracle(
     inputs: &[Vec<u8>],
-    grid_override: Option<[u32; 3]>,
-) -> Result<Vec<Vec<u8>>, DispatchError> {
-    assert_eq!(grid_override, Some([1, 1, 1]));
-    assert_eq!(inputs.len(), 5);
+) -> Result<Vec<(&'static str, Vec<u8>)>, SemanticExecutionError> {
+    assert_eq!(inputs.len(), 4);
     let offsets = crate::dispatch_buffers::read_u32s(&inputs[0]);
     let targets = crate::dispatch_buffers::read_u32s(&inputs[1]);
     let n = offsets.len() - 1;
     let mut out = Vec::with_capacity(n);
     toposort_csr_into(n as u32, &offsets, &targets, &mut out).map_err(|err| {
-        DispatchError::BackendError(format!(
-            "Fix: test dispatcher must use the primitive CSR oracle; got {err:?}."
+        SemanticExecutionError::Backend(format!(
+            "Fix: test executor must use the primitive CSR oracle; got {err:?}."
         ))
     })?;
     out.resize(n, 0);
-    Ok(vec![u32_slice_to_le_bytes(&out)])
+    Ok(vec![(
+        TOPOSORT_ORDER_OUT_BUFFER,
+        u32_slice_to_le_bytes(&out),
+    )])
 }
 
 struct RecordingToposortDispatcher {
     calls: Mutex<Vec<Vec<Vec<u8>>>>,
 }
 
-impl ProgramDispatcher for RecordingToposortDispatcher {
-    fn dispatch(
+impl SemanticExecutor for RecordingToposortDispatcher {
+    fn execute(
         &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(grid_override, Some([1, 1, 1]));
-        assert_eq!(inputs.len(), 5);
+        request: &SemanticExecutionRequest<'_>,
+    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+        let inputs = canonical_inputs(request)?;
+        assert_eq!(inputs.len(), 4);
         self.calls
             .lock()
-            .expect("Fix: recording toposort dispatcher calls lock should not be poisoned")
-            .push(inputs.to_vec());
-        dispatch_with_primitive_csr_oracle(inputs, grid_override)
+            .expect("Fix: recording toposort executor calls lock should not be poisoned")
+            .push(inputs.clone());
+        semantic_output_named(request, dispatch_with_primitive_csr_oracle(&inputs)?)
     }
 }
 
 #[test]
 fn topo_order_csr_via_dispatches_primitive_order() {
-    let order = topo_order_csr_via(&ToposortDispatcher, 3, &[0, 2, 3, 3], &[1, 2, 2]).unwrap();
+    let order =
+        topo_order_csr_via(&ToposortDispatcher, &policy(), 3, &[0, 2, 3, 3], &[1, 2, 2]).unwrap();
     let pos: std::collections::HashMap<u32, usize> =
         order.iter().enumerate().map(|(i, &n)| (n, i)).collect();
     assert!(pos[&0] < pos[&1]);
@@ -160,6 +161,7 @@ fn topo_order_csr_via_with_scratch_into_reuses_storage() {
 
     topo_order_csr_via_with_scratch_into(
         &ToposortDispatcher,
+        &policy(),
         3,
         &[0, 2, 3, 3],
         &[1, 2, 2],
@@ -174,6 +176,7 @@ fn topo_order_csr_via_with_scratch_into_reuses_storage() {
 
     topo_order_csr_via_with_scratch_into(
         &ToposortDispatcher,
+        &policy(),
         3,
         &[0, 1, 2, 2],
         &[1, 2],
@@ -191,6 +194,7 @@ fn topo_order_csr_via_with_scratch_into_reuses_storage() {
 
     topo_order_csr_via_with_scratch_into(
         &ToposortDispatcher,
+        &policy(),
         4,
         &[0, 1, 2, 3, 3],
         &[1, 2, 3],
@@ -215,6 +219,7 @@ fn topo_order_csr_via_refreshes_static_graph_inputs_for_same_shape_content_chang
 
     topo_order_csr_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         4,
         &offsets,
         &targets,
@@ -224,6 +229,7 @@ fn topo_order_csr_via_refreshes_static_graph_inputs_for_same_shape_content_chang
     .expect("Fix: first topological-sort dispatch should succeed");
     topo_order_csr_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         4,
         &offsets,
         &changed_targets,
@@ -254,6 +260,7 @@ fn topo_order_csr_via_reuses_static_graph_inputs_and_rezeros_work_slots() {
 
     topo_order_csr_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         3,
         &offsets,
         &targets,
@@ -269,6 +276,7 @@ fn topo_order_csr_via_reuses_static_graph_inputs_and_rezeros_work_slots() {
         .collect::<Vec<_>>();
     topo_order_csr_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         3,
         &offsets,
         &targets,
@@ -286,7 +294,6 @@ fn topo_order_csr_via_reuses_static_graph_inputs_and_rezeros_work_slots() {
     assert_eq!(calls[0][1], calls[1][1]);
     assert_eq!(calls[1][2], vec![0; 12]);
     assert_eq!(calls[1][3], vec![0; 12]);
-    assert_eq!(calls[1][4], vec![0; 12]);
     assert_eq!(
         scratch
             .inputs
@@ -301,31 +308,34 @@ fn topo_order_csr_via_reuses_static_graph_inputs_and_rezeros_work_slots() {
 
 #[test]
 fn topo_order_csr_via_rejects_cycle_like_partial_output() {
-    let err = topo_order_csr_via(&ToposortDispatcher, 2, &[0, 1, 2], &[1, 0]).unwrap_err();
-    assert!(matches!(err, DispatchError::BackendError(_)));
+    let err =
+        topo_order_csr_via(&ToposortDispatcher, &policy(), 2, &[0, 1, 2], &[1, 0]).unwrap_err();
+    assert!(matches!(err, SemanticExecutionError::Backend(_)));
 }
 
 #[test]
 fn topo_order_csr_via_uses_primitive_order_contract() {
     struct InvertedOrderDispatcher;
 
-    impl ProgramDispatcher for InvertedOrderDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for InvertedOrderDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            Ok(vec![u32_slice_to_le_bytes(&[1, 0])])
+            request: &SemanticExecutionRequest<'_>,
+        ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+            semantic_output_named(
+                request,
+                vec![(TOPOSORT_ORDER_OUT_BUFFER, u32_slice_to_le_bytes(&[1, 0]))],
+            )
         }
     }
 
-    let err = topo_order_csr_via(&InvertedOrderDispatcher, 2, &[0, 1, 1], &[1]).unwrap_err();
-    assert!(matches!(err, DispatchError::BackendError(_)));
+    let err =
+        topo_order_csr_via(&InvertedOrderDispatcher, &policy(), 2, &[0, 1, 1], &[1]).unwrap_err();
+    assert!(matches!(err, SemanticExecutionError::Backend(_)));
 }
 
 #[test]
 fn topo_order_csr_via_rejects_bad_csr() {
-    let err = topo_order_csr_via(&ToposortDispatcher, 2, &[0, 2, 1], &[1]).unwrap_err();
-    assert!(matches!(err, DispatchError::BadInputs(_)));
+    let err = topo_order_csr_via(&ToposortDispatcher, &policy(), 2, &[0, 2, 1], &[1]).unwrap_err();
+    assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
 }

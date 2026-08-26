@@ -1,7 +1,9 @@
 //! Device dispatch that expands packed INT4 lanes back to i32.
 
 use super::*;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Unpack packed signed INT4 lanes through the dispatch backend.
 ///
@@ -10,18 +12,20 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when lane count is zero, packed input shape is
+/// Returns [`SemanticExecutionError`] when lane count is zero, packed input shape is
 /// wrong, byte-count arithmetic overflows, dispatch fails, or backend readback
 /// is malformed.
 pub fn unpack_i4x8_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     packed_words: &[u32],
     lane_count: u32,
-) -> Result<Vec<i32>, DispatchError> {
+) -> Result<Vec<i32>, SemanticExecutionError> {
     let mut scratch = QuantizedUnpackGpuScratch::default();
     let mut out = Vec::new();
     unpack_i4x8_via_with_scratch_into(
         dispatcher,
+        policy,
         packed_words,
         lane_count,
         &mut scratch,
@@ -34,33 +38,34 @@ pub fn unpack_i4x8_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] under the same conditions as [`unpack_i4x8_via`].
+/// Returns [`SemanticExecutionError`] under the same conditions as [`unpack_i4x8_via`].
 pub fn unpack_i4x8_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     packed_words: &[u32],
     lane_count: u32,
     scratch: &mut QuantizedUnpackGpuScratch,
     out: &mut Vec<i32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if lane_count == 0 {
-        return Err(DispatchError::BadInputs(
+        return Err(SemanticExecutionError::InvalidRequest(
             "Fix: unpack_i4x8_via requires lane_count > 0.".to_string(),
         ));
     }
     let expected_words = i4_packed_words(lane_count) as usize;
     if packed_words.len() != expected_words {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: unpack_i4x8_via requires packed_words.len() == i4_packed_words(lane_count), got len={} expected={expected_words} for lane_count={lane_count}.",
-            packed_words.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: unpack_i4x8_via requires packed_words.len() == i4_packed_words(lane_count), got len={} expected={expected_words} for lane_count={lane_count}.",
+        packed_words.len()
+    )));
     }
     let lane_words = lane_count as usize;
     let out_bytes = lane_words
         .checked_mul(std::mem::size_of::<i32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
-                "Fix: unpack_i4x8_via output byte count overflows usize for lane_count={lane_count}."
-            ))
+            SemanticExecutionError::InvalidRequest(format!(
+            "Fix: unpack_i4x8_via output byte count overflows usize for lane_count={lane_count}."
+        ))
         })?;
 
     let QuantizedUnpackGpuScratch {
@@ -72,15 +77,19 @@ pub fn unpack_i4x8_via_with_scratch_into(
     ensure_input_slots(inputs, 2);
     write_u32_slice_le_bytes(&mut inputs[0], packed_words);
     write_zero_bytes(&mut inputs[1], out_bytes);
-    let outputs = dispatcher.dispatch(
-        program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program.clone(),
         &inputs[..2],
-        Some([ceil_div_u32(lane_count, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     decode_i32_output_exact(
         expect_one_output("unpack_i4x8_via", &outputs)?,
         lane_words,
         "unpack_i4x8_via",
         out,
     )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }

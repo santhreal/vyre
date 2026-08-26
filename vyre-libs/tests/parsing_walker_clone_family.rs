@@ -460,50 +460,53 @@ fn entry_points() -> Vec<(&'static str, Program)> {
 }
 
 /// Canonical wire fingerprints for every entry point the clone-family merges
-/// pass through. All 9 entries reflect the canonical wire format revision 7
-/// framing header. Prior historical moves: `python/decorators` moved when
-/// the missing `cursor != INVALID_POS` guard was fixed in the unified dotted-name
-/// walk, and the two `shunting` entries moved when anonymous child regions
-/// replaced op-id suffix naming. All five `python/*` entries moved together when
-/// every sentinel-indexed token load was folded into range before it issued: the
+/// pass through. All 9 entries reflect the canonical wire format revision 8
+/// framing header, and all 9 moved together when the revision advanced from 7
+/// to 8: the header is part of the fingerprinted bytes, so a revision bump
+/// moves every program in the tree and moves none of them relative to each
+/// other. Prior historical moves: `python/decorators` moved when the missing
+/// `cursor != INVALID_POS` guard was fixed in the unified dotted-name walk, and
+/// the two `shunting` entries moved when anonymous child regions replaced op-id
+/// suffix naming. All five `python/*` entries moved together when every
+/// sentinel-indexed token load was folded into range before it issued: the
 /// index expression changed at each load site, the values did not, and the `go`
 /// and `core` entries stayed put because they index nothing with a sentinel.
 const EXPECTED: &[(&str, &str)] = &[
     (
         "python/structure",
-        "0a905e8a25ab1fae018287f7a193ee7930dc302c37723b82333d418c1b644123",
+        "90c653cbed45a54cecc33e30acdb367e6c95eba0ecf868dffd43fb7a0727c184",
     ),
     (
         "python/imports",
-        "a780f3b16258f5e70a46818e753f5ed33ce3ad688f1d3d0ab0618d7f94eccb52",
+        "f5b058bca56f0a2996d0c2a0cf7944f425627ce0e32e966dd0306dc2cf5440ca",
     ),
     (
         "python/with_blocks",
-        "631fa405e05ea46255de38d656fcb754de71562d67da951616b9ead75e27398e",
+        "05e511a329bd7ef98bd8bcdc548ca1eca541f3a1c7d38100660a70f8424877c4",
     ),
     (
         "python/calls",
-        "7754284f6a47c09caea3860ccb2cf5ad03525e5d378ef8bfa441e81bb1df3c57",
+        "5d1f96be87f50de4a0df36cebf9ed279093cfb147618a7d320f71833f3ce30d1",
     ),
     (
         "python/decorators",
-        "5dfe371735dcbfa6af633a669a5c8f5ab92d37495d570332826dae89cd653e08",
+        "51f7aa1c6b17defcff462e6ddb1cbf4c0f3f5e528742547c8cc91697bb113fdb",
     ),
     (
         "go/packages_and_imports",
-        "6e880c51accaaeabde6e1bb090e905f3d90f1d795204ed8f0428539ea67d9433",
+        "e18b3b92bbe28c0046152c7ab1e71645cedeaf5b3e0564c28414d93c3817b81b",
     ),
     (
         "go/declarations",
-        "0e294b1f56d9b86fec9592a3869137a7d84a3a91c39661b099771c99ddb79751",
+        "c92934b96f70c94c7bddc6ce16ad8925db47871f8b51043f1229e3786ecdd541",
     ),
     (
         "core/ast/shunting",
-        "fd268d258fd06a6124b14d902323aecfec3539f20de9242a17ed8a88f5a580c3",
+        "f447a3085e9b31d62bc1e4e04a14358f8f70cc07571546545394b578c82a923b",
     ),
     (
         "core/ast/shunting_with_capacity",
-        "8fc0666a67d0dce44ab55957e842401e265bb920bcd87c8e523451974847b304",
+        "ad7812756122747a286c4c6aac86a0b525daa5aca3b2194073cb72ea8c6b8bf4",
     ),
 ];
 

@@ -4,11 +4,13 @@
 //! implemented in [`crate::topology::vietoris_rips`].
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, checked_square_cells, decode_u32_output_exact, u32_slice_to_le_bytes,
+    checked_square_cells, decode_u32_output_exact, u32_slice_to_le_bytes,
 };
 
 use crate::topology::vietoris_rips::vietoris_rips_edge_filter;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Compute the Vietoris-Rips 1-skeleton through the dispatcher using
 /// fixed-point 16.16 distances. This is the production path for callers
@@ -20,22 +22,31 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 ///
 /// # Errors
 ///
-/// Returns `DispatchError::BadInputs` if `dist_matrix_fixed.len() != n*n` or `n == 0`.
+/// Returns `SemanticExecutionError::InvalidRequest` if `dist_matrix_fixed.len() != n*n` or `n == 0`.
 pub fn region_loop_skeleton_fixed_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     dist_matrix_fixed: &[u32],
     epsilon_fixed: u32,
     n: u32,
-) -> Result<Vec<u32>, DispatchError> {
-    let cells = checked_square_cells(n, "region_loop_skeleton_fixed_via")?;
+) -> Result<Vec<u32>, SemanticExecutionError> {
+    let cells = checked_square_cells(n, "region_loop_skeleton_fixed_via")
+        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
     if dist_matrix_fixed.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "distance matrix len {} != n*n ({cells})",
             dist_matrix_fixed.len()
         )));
     }
     let mut out = Vec::new();
-    region_loop_skeleton_fixed_via_into(dispatcher, dist_matrix_fixed, epsilon_fixed, n, &mut out)?;
+    region_loop_skeleton_fixed_via_into(
+        dispatcher,
+        policy,
+        dist_matrix_fixed,
+        epsilon_fixed,
+        n,
+        &mut out,
+    )?;
     Ok(out)
 }
 
@@ -43,17 +54,19 @@ pub fn region_loop_skeleton_fixed_via(
 ///
 /// # Errors
 ///
-/// Returns `DispatchError` if inputs are malformed or dispatch fails.
+/// Returns `SemanticExecutionError` if inputs are malformed or dispatch fails.
 pub fn region_loop_skeleton_fixed_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     dist_matrix_fixed: &[u32],
     epsilon_fixed: u32,
     n: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
-    let cells = checked_square_cells(n, "region_loop_skeleton_fixed_via_into")?;
+) -> Result<(), SemanticExecutionError> {
+    let cells = checked_square_cells(n, "region_loop_skeleton_fixed_via_into")
+        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
     if dist_matrix_fixed.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "distance matrix len {} != n*n ({cells})",
             dist_matrix_fixed.len()
         )));
@@ -64,60 +77,85 @@ pub fn region_loop_skeleton_fixed_via_into(
         u32_slice_to_le_bytes(&[epsilon_fixed]),
         vec![0u8; cells * 4],
     ];
-    let groups = ceil_div_u32(n, 256).max(1);
-    let outputs = dispatcher.dispatch(&program, &inputs, Some([groups, 1, 1]))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &inputs,
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(
+        return Err(SemanticExecutionError::Backend(
             "Fix: Vietoris-Rips dispatch returned no output buffers".to_string(),
         ));
     }
     decode_u32_output_exact(&outputs[0], cells, "region_loop_skeleton_fixed_via", out)
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 #[cfg(test)]
 mod fixed_via_tests {
     use super::*;
-    use vyre_foundation::ir::Program;
 
     struct SkeletonDispatcher;
 
-    impl ProgramDispatcher for SkeletonDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for SkeletonDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 3);
-            let dist = crate::dispatch_buffers::read_u32s(&inputs[0]);
-            let epsilon = crate::dispatch_buffers::read_u32s(&inputs[1])[0];
-            let n = integer_sqrt(dist.len());
-            let mut mask = vec![0u32; dist.len()];
-            for i in 0..n {
-                for j in (i + 1)..n {
-                    let idx = i * n + j;
-                    if dist[idx] <= epsilon {
-                        mask[idx] = 1;
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                assert_eq!(inputs.len(), 3);
+                let dist = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                let epsilon = crate::dispatch_buffers::read_u32s(&inputs[1])[0];
+                let n = integer_sqrt(dist.len());
+                let mut mask = vec![0u32; dist.len()];
+                for i in 0..n {
+                    for j in (i + 1)..n {
+                        let idx = i * n + j;
+                        if dist[idx] <= epsilon {
+                            mask[idx] = 1;
+                        }
                     }
                 }
+                Ok(vec![u32_slice_to_le_bytes(&mask)])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
             }
-            Ok(vec![u32_slice_to_le_bytes(&mask)])
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
     #[test]
     fn fixed_via_dispatches_vietoris_rips_mask() {
         let dist = vec![0, 10, 30, 10, 0, 20, 30, 20, 0];
-        let mask = region_loop_skeleton_fixed_via(&SkeletonDispatcher, &dist, 20, 3).unwrap();
+        let mask = region_loop_skeleton_fixed_via(
+            &SkeletonDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &dist,
+            20,
+            3,
+        )
+        .unwrap();
         assert_eq!(mask, vec![0, 1, 0, 0, 0, 1, 0, 0, 0]);
     }
 
     #[test]
     fn fixed_via_rejects_bad_matrix_shape() {
-        let err =
-            region_loop_skeleton_fixed_via(&SkeletonDispatcher, &[0, 1, 2], 1, 2).unwrap_err();
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        let err = region_loop_skeleton_fixed_via(
+            &SkeletonDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[0, 1, 2],
+            1,
+            2,
+        )
+        .unwrap_err();
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 
     fn integer_sqrt(n: usize) -> usize {

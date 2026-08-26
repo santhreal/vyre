@@ -5,8 +5,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use super::frontier_plan::ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE;
-use super::OP_ID;
+use super::{ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE, OP_ID};
 use crate::bitset::bitset_words;
 use crate::graph::frontier_bits::{set_bit, BitAccess};
 

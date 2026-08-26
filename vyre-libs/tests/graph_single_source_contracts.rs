@@ -32,9 +32,9 @@ struct Wrapper {
 }
 
 /// The count below which the derivation is presumed broken rather than the tree
-/// empty. Eleven or more wrappers exist; a derivation that suddenly finds two would make
+/// empty. Nine wrappers exist; a derivation that suddenly finds two would make
 /// every rule here vacuous while still passing.
-const WRAPPER_FLOOR: usize = 11;
+const WRAPPER_FLOOR: usize = 9;
 
 /// Known non-wrapper dispatch infrastructure / pipeline modules under `src/graph/dispatch/`.
 const KNOWN_DISPATCH_INFRASTRUCTURE: &[&str] = &[
@@ -42,7 +42,6 @@ const KNOWN_DISPATCH_INFRASTRUCTURE: &[&str] = &[
     "frontier",
     "mod",
     "plan_cache",
-    "resident_handles",
     "structural_kernel_pipeline",
     "traversal_dispatch_pipeline",
 ];
@@ -124,6 +123,27 @@ fn the_wrapper_set_is_derived_and_not_empty() {
         wrappers.len() >= WRAPPER_FLOOR,
         "Fix: only {} graph dispatch wrappers were derived, below the floor of {WRAPPER_FLOOR}; the pairing between `vyre-libs/src/graph/dispatch/<name>` and `vyre-libs/src/graph/<name>` broke, and every rule in this file would otherwise pass by judging nothing",
         wrappers.len()
+    );
+}
+
+/// WHY: an infrastructure name exempts an entry under `src/graph/dispatch/`
+/// from the pairing rule. A name whose module was deleted exempts whatever is
+/// added under that name next, which is the pairing rule silently not applying
+/// to a wrapper nobody decided about.
+#[test]
+fn every_registered_infrastructure_entry_still_exists() {
+    let dispatch = crate_root().join("src/graph/dispatch");
+    let missing: Vec<&str> = KNOWN_DISPATCH_INFRASTRUCTURE
+        .iter()
+        .copied()
+        .filter(|name| {
+            !dispatch.join(format!("{name}.rs")).is_file() && !dispatch.join(name).is_dir()
+        })
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "Fix: remove the infrastructure exemption for a module that no longer exists: {}",
+        missing.join(", ")
     );
 }
 

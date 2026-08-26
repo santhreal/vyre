@@ -5,14 +5,18 @@
 
 pub(crate) mod self_optimizer;
 
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::DispatchConfig;
-pub(crate) use vyre_driver_cuda::{CudaBackend, CudaProgramDispatcher};
+pub(crate) use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::MemoryOrdering;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    CompileObjective, Digest, ExternalFacts, SearchBudget, SemanticExecutionPolicy,
+    SemanticExecutor,
+};
 use vyre_reference::value::Value;
+use vyre_runtime::RegisteredSemanticExecutor;
 
 /// Default generated-matrix lane count for live CUDA/reference differential tests.
 pub(crate) const GENERATED_LANE_COUNT: usize = 512;
@@ -150,17 +154,29 @@ pub(crate) fn with_live_backend<R>(_test_name: &str, run: impl FnOnce(&CudaBacke
     run(&backend)
 }
 
-/// Run a closure with a live CUDA-backed optimizer dispatcher.
-///
-/// The backend must outlive the dispatcher, so this helper centralizes the
-/// acquisition/lifetime pattern used by CUDA self-substrate parity tests.
+pub(crate) fn cuda_semantic_execution() -> (RegisteredSemanticExecutor, SemanticExecutionPolicy) {
+    let _ = vyre_driver_cuda::registered_backend_id();
+    let registration = vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
+        .expect("registered CUDA backend");
+    let device = registration.acquire().expect("live CUDA backend");
+    let executor = RegisteredSemanticExecutor::new(registration);
+    let policy = SemanticExecutionPolicy::new(
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device.device_profile().compile_facts(),
+        CompileObjective::MinimizeLatency,
+        SearchBudget::new(128, 128, 0, 0, 128),
+        60_000,
+    );
+    (executor, policy)
+}
+
+/// Run a closure with the registered CUDA semantic executor and explicit policy.
 pub(crate) fn with_cuda_optimizer_dispatcher<R>(
     _test_name: &str,
-    run: impl FnOnce(&CudaProgramDispatcher<'_>) -> R,
+    run: impl FnOnce(&dyn SemanticExecutor, &SemanticExecutionPolicy) -> R,
 ) -> R {
-    let backend = live_dispatcher();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
-    run(&dispatcher)
+    let (executor, policy) = cuda_semantic_execution();
+    run(&executor, &policy)
 }
 
 /// Run the pure Rust reference interpreter for byte-buffer CUDA test inputs.
@@ -198,12 +214,12 @@ pub(crate) fn compiled_cuda_outputs(
     )
 }
 
-/// Compile and dispatch through the authenticated CUDA artifact route with explicit geometry.
+/// Compile and dispatch through the authenticated CUDA artifact route.
 pub(crate) fn compiled_cuda_outputs_with_config(
     _backend: &CudaBackend,
     program: &Program,
     inputs: &[Vec<u8>],
-    config: &DispatchConfig,
+    _config: &DispatchConfig,
     case_name: &str,
 ) -> Vec<Vec<u8>> {
     let lowered_program =
@@ -286,11 +302,6 @@ pub(crate) fn compiled_cuda_outputs_with_config(
             resource.value,
             vyre_driver::BoundResource::Host(inputs[input_index].clone()),
         );
-    }
-    if let Some(grid) = config.grid_override.or(config.dispatch_grid) {
-        bindings.set_invocation_grid(grid).unwrap_or_else(|error| {
-            panic!("Fix: CUDA generated case `{case_name}` invocation grid failed: {error}")
-        });
     }
     let completion = instance
         .submit(bindings)

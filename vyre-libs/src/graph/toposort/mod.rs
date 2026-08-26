@@ -25,23 +25,19 @@ mod error;
 mod plan;
 mod program;
 
+#[cfg(test)]
+pub(crate) use csr::{toposort_csr, toposort_csr_into};
 pub use csr::{validate_toposort_csr_inputs, validate_toposort_csr_order, ToposortCsrLayout};
+#[cfg(test)]
+pub(crate) use edge_list::{
+    reference_all_reachable, reference_reachable_set, reference_topo_order, toposort,
+};
 pub use error::{ToposortCsrError, ToposortError};
 pub use plan::{
     plan_toposort_csr_dispatch, toposort_csr_slice_fingerprint, ToposortCsrDispatchPlan,
     ToposortCsrStaticInputKey,
 };
 pub use program::toposort_program;
-
-// `csr` and `edge_list` are private, and the CPU reference each owns is what the
-// dispatch contracts compare a device order against. These are the owning
-// names, re-exported so the one test path that reads them has a path to them.
-#[cfg(test)]
-pub(crate) use csr::{toposort_csr, toposort_csr_into};
-#[cfg(test)]
-pub(crate) use edge_list::{
-    reference_all_reachable, reference_reachable_set, reference_topo_order, toposort,
-};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::graph::toposort";
@@ -55,5 +51,3 @@ pub const TOPOSORT_INDEGREE_SCRATCH_BUFFER: &str = "toposort indeg_scratch";
 pub const TOPOSORT_QUEUE_SCRATCH_BUFFER: &str = "toposort queue_scratch";
 /// Canonical dispatch output label for the emitted order.
 pub const TOPOSORT_ORDER_OUT_BUFFER: &str = "toposort order_out";
-/// Single-lane Kahn dispatch grid.
-pub const TOPOSORT_DISPATCH_GRID: [u32; 3] = [1, 1, 1];

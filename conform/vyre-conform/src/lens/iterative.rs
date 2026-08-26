@@ -1,26 +1,24 @@
 //! The shape every iterative lens shares: prepare a fixture, then run the
 //! reference and the backend loop over each case and compare the final states.
 
-use vyre_driver::{BackendRegistration, DispatchConfig};
+use vyre_driver::BackendRegistration;
 use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
 use vyre_foundation::ir::Program;
 use vyre_foundation::operation::SemanticOperation;
 
 use crate::lens::buffer_state::project_output_buffers;
-use crate::lens::execution::{dispatch_config_for, LoopError};
+use crate::lens::execution::LoopError;
 use crate::lens::outcome::LensOutcome;
 
 /// One fixture prepared for an iterative lens.
 pub struct IterativeLensSetup {
     /// The op program every iteration dispatches.
     pub program: Program,
-    /// The dispatch shape both sides run under.
-    pub config: DispatchConfig,
     /// One initial state vector per fixture case.
     pub cases: Vec<Vec<Vec<u8>>>,
 }
 
-/// Read the fixture of `entry` and the dispatch shape its program needs.
+/// Read the fixture and semantic program for `entry`.
 pub fn prepare_iterative_lens(
     entry: &SemanticOperation,
     lens_name: &str,
@@ -43,10 +41,6 @@ pub fn prepare_iterative_lens(
             ),
         });
     };
-    let config = dispatch_config_for(&program).map_err(|detail| LensOutcome::Fail {
-        case_index: 0,
-        detail,
-    })?;
     let cases = test_inputs();
     if cases.is_empty() {
         return Err(LensOutcome::Fail {
@@ -57,11 +51,7 @@ pub fn prepare_iterative_lens(
             ),
         });
     }
-    Ok(IterativeLensSetup {
-        program,
-        config,
-        cases,
-    })
+    Ok(IterativeLensSetup { program, cases })
 }
 
 /// Run both loops over every case and compare the projected final states.

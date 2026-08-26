@@ -1,5 +1,5 @@
 //! End-to-end parity for `data::bitset_summary::{per_word_popcount_via, total_set_bits_via}` through
-//! the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! the shared faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the per-word popcount IR is not run through a faithful dispatch boundary by any
@@ -10,14 +10,16 @@
 //! outputs[0]. Exact integer arithmetic → BIT-EXACT (no tolerance), compared against a fully
 //! independent inline `u32::count_ones` oracle.
 
+mod semantic_execution_support;
+
 use vyre_libs::encoding::bitset_summary::{per_word_popcount_via, total_set_bits_via};
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 #[test]
 fn popcount_via_matches_inline_count_ones_oracle() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x90_9C_00_01u32;
     let mut saw_full = 0u32;
     let mut saw_empty = 0u32;
@@ -33,7 +35,7 @@ fn popcount_via_matches_inline_count_ones_oracle() {
             .collect();
 
         let want: Vec<u32> = input.iter().map(|w| w.count_ones()).collect();
-        let got = per_word_popcount_via(&dispatcher, &input)
+        let got = per_word_popcount_via(&dispatcher, &semantic_execution_support::policy(), &input)
             .expect("per_word_popcount_via must dispatch");
         assert_eq!(
             got, want,
@@ -42,7 +44,7 @@ fn popcount_via_matches_inline_count_ones_oracle() {
 
         let want_total: u64 = want.iter().map(|&c| u64::from(c)).sum();
         assert_eq!(
-            total_set_bits_via(&dispatcher, &input).unwrap(),
+            total_set_bits_via(&dispatcher, &semantic_execution_support::policy(), &input).unwrap(),
             want_total,
             "case {case}: total set bits must equal the summed popcount"
         );
@@ -62,19 +64,34 @@ fn popcount_via_matches_inline_count_ones_oracle() {
 
 #[test]
 fn popcount_via_hand_checked_cases() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     assert_eq!(
-        per_word_popcount_via(&d, &[0b1111, 0b101, 0]).unwrap(),
+        per_word_popcount_via(
+            &d,
+            &semantic_execution_support::policy(),
+            &[0b1111, 0b101, 0]
+        )
+        .unwrap(),
         vec![4, 2, 0],
         "popcount per word"
     );
     assert_eq!(
-        per_word_popcount_via(&d, &[u32::MAX, u32::MAX]).unwrap(),
+        per_word_popcount_via(
+            &d,
+            &semantic_execution_support::policy(),
+            &[u32::MAX, u32::MAX]
+        )
+        .unwrap(),
         vec![32, 32],
         "all-ones words each count 32"
     );
     assert_eq!(
-        total_set_bits_via(&d, &[u32::MAX, 0b111, 0]).unwrap(),
+        total_set_bits_via(
+            &d,
+            &semantic_execution_support::policy(),
+            &[u32::MAX, 0b111, 0]
+        )
+        .unwrap(),
         35,
         "total = 32 + 3 + 0"
     );
@@ -82,7 +99,7 @@ fn popcount_via_hand_checked_cases() {
 
 #[test]
 fn adversarial_widths_preserve_exact_reference_parity() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     for words in [
         0usize, 1, 2, 7, 31, 32, 33, 63, 64, 65, 255, 256, 257, 512, 1024,
     ] {
@@ -90,13 +107,14 @@ fn adversarial_widths_preserve_exact_reference_parity() {
             .map(|i| (i as u32).wrapping_mul(0x9E37_79B9) ^ 0x5555_AAAA)
             .collect();
         let want: Vec<u32> = input.iter().map(|w| w.count_ones()).collect();
-        let got = per_word_popcount_via(&dispatcher, &input)
+        let got = per_word_popcount_via(&dispatcher, &semantic_execution_support::policy(), &input)
             .expect("per_word_popcount_via must dispatch for adversarial width");
         assert_eq!(got, want, "words={words}");
 
         let want_total: u64 = want.iter().map(|&c| u64::from(c)).sum();
-        let got_total = total_set_bits_via(&dispatcher, &input)
-            .expect("total_set_bits_via must dispatch for adversarial width");
+        let got_total =
+            total_set_bits_via(&dispatcher, &semantic_execution_support::policy(), &input)
+                .expect("total_set_bits_via must dispatch for adversarial width");
         assert_eq!(got_total, want_total, "words={words}");
     }
 }

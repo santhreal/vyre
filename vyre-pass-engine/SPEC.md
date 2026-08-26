@@ -4,8 +4,8 @@ Layer `pass-engine`. Owner `pass-engine`.
 
 ## Owns
 
-Execute the optimizer's own passes as Vyre Programs, dispatched through the
-ProgramDispatcher seam.
+Execute optimizer passes as Vyre Programs through compiler-owned semantic
+compilation and admitted artifact submission.
 
 The chapter is [crate boundaries](../docs/architecture/crates.md#vyre-pass-engine).
 
@@ -24,6 +24,8 @@ Out of this crate, into:
   always.
 - `vyre-libs` over the `product-libraries` seam, private: product operation
   builders. Built when: always.
+- `vyre-megakernel` over the `megakernel-compiler` seam, private: whole-graph
+  compilation and immutable artifact contracts. Built when: always.
 - `vyre-primitives` over the `primitive-library` seam, public: reusable
   semantic Program builders. Built when: always.
 
@@ -34,9 +36,9 @@ Into this crate, from:
 
 ## Direction that may not reverse
 
-`vyre-foundation`, `vyre-libs`, `vyre-primitives` must never depend on
-`vyre-pass-engine`. The edge is one way: a cycle back into this crate makes the
-two crates one crate that cannot be built, reviewed or published apart.
+`vyre-foundation`, `vyre-libs`, `vyre-megakernel`, and `vyre-primitives` must
+never depend on `vyre-pass-engine`. The edge is one way. A reverse dependency
+creates a cycle that prevents separate builds, review, and publication.
 
 ## Invariants
 

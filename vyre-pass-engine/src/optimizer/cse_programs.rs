@@ -127,10 +127,7 @@ pub fn build_structural_hash_program(expr_count: u32, max_depth_iter_cap: u32) -
     super::arena_kernel::build_fused_level_wave_program(
         expr_count,
         max_depth_iter_cap,
-        vec![
-            BufferDecl::storage("hash", 6, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(expr_count.max(1)),
-        ],
+        vec![BufferDecl::output("hash", 6, DataType::U32).with_count(expr_count.max(1))],
         per_expr_body,
     )
 }
@@ -149,27 +146,22 @@ pub fn build_structural_hash_program(expr_count: u32, max_depth_iter_cap: u32) -
 ///
 /// Buffer layout:
 ///   0: hash          (RO)
-///   1: canonical     (RW)
-///   2: table_canonical (RW; init `u32::MAX`; used as a dummy RW
-///      binding so backends do not prune the buffer slot)
-///   3: arena_kinds   (RO)
-///   4: arena_arg0    (RO)
-///   5: arena_arg1    (RO)
-///   6: arena_arg2    (RO)
+///   1: canonical     (output)
+///   2: arena_kinds   (RO)
+///   3: arena_arg0    (RO)
+///   4: arena_arg1    (RO)
+///   5: arena_arg2    (RO)
 #[must_use]
-pub fn build_canonical_id_program(expr_count: u32, capacity: u32) -> Program {
+pub fn build_canonical_id_program(expr_count: u32) -> Program {
     let mut buffers = vec![
         BufferDecl::storage("hash", 0, BufferAccess::ReadOnly, DataType::U32)
             .with_count(expr_count.max(1)),
-        BufferDecl::storage("canonical", 1, BufferAccess::ReadWrite, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("table_canonical", 2, BufferAccess::ReadWrite, DataType::U32)
-            .with_count(capacity.max(1)),
+        BufferDecl::output("canonical", 1, DataType::U32).with_count(expr_count.max(1)),
     ];
     // Structural tuple buffers: hash collision alone must never declare two
     // exprs equivalent. The four arena rows supply the definitive
     // (kind, arg0, arg1, arg2) tuple comparison.
-    buffers.extend(super::arena_kernel::arena_row_buffers(expr_count, 3));
+    buffers.extend(super::arena_kernel::arena_row_buffers(expr_count, 2));
 
     // Per-thread body: brute-force scan 0..i.
     // The post-order encoding ensures children appear before parents,
@@ -267,17 +259,6 @@ pub fn build_canonical_id_program(expr_count: u32, capacity: u32) -> Program {
                     ],
                 ),
                 Node::store("canonical", Expr::var("i"), Expr::var("found_canonical")),
-                // Touch table_canonical so it's a true RW binding the
-                // backend can see (avoid unused-buffer prune); store
-                // identity so the buffer carries no semantics.
-                Node::if_then(
-                    Expr::lt(Expr::var("i"), Expr::u32(capacity)),
-                    vec![Node::store(
-                        "table_canonical",
-                        Expr::var("i"),
-                        Expr::var("found_canonical"),
-                    )],
-                ),
             ],
         ),
     ];

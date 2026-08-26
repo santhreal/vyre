@@ -568,7 +568,7 @@ fn first_param_is_program(after_name: &str) -> bool {
 ///
 /// Reading the whole signature instead is what misclassified
 /// `vyre_driver::self_optimizer_bench::report_scaling`, which returns `()` and
-/// takes a `fn(Program, &dyn ProgramDispatcher) -> Program` callback: the arrow
+/// takes a `fn(Program, &dyn SemanticExecutor) -> Program` callback: the arrow
 /// in the parameter type was read as the function's own return type.
 fn return_type_window(after_name: &str) -> Option<&str> {
     let mut rest = after_name;

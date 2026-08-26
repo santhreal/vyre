@@ -40,13 +40,6 @@ pub const BINDING_DEGREE_SUM_OUT: u32 = BINDING_PRIMITIVE_START + 1;
 /// One lane per source node; 256 keeps occupancy high without bloating register pressure.
 pub const CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid that covers every source node exactly once.
-#[cfg(test)]
-#[must_use]
-pub const fn csr_frontier_degree_sum_dispatch_grid(node_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(node_count, CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE[0])
-}
-
 /// Build the IR `Program` that computes `degree_sum_out[0]` =
 /// total outgoing-edge count over the active frontier.
 ///
@@ -217,15 +210,6 @@ mod tests {
             program.workgroup_size(),
             CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE
         );
-    }
-
-    #[test]
-    fn dispatch_grid_covers_all_source_nodes() {
-        assert_eq!(csr_frontier_degree_sum_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(csr_frontier_degree_sum_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(csr_frontier_degree_sum_dispatch_grid(256), [1, 1, 1]);
-        assert_eq!(csr_frontier_degree_sum_dispatch_grid(257), [2, 1, 1]);
-        assert_eq!(csr_frontier_degree_sum_dispatch_grid(1029), [5, 1, 1]);
     }
 
     #[test]

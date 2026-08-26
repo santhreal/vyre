@@ -1,6 +1,6 @@
 //! End-to-end parity for the COMPOSITE `math::fmm_polyhedral_compress::fmm_compress_pairwise_via`, the
 //! full zeroth-order Fast-Multipole compress pipeline P2M → M2L → L2P, through the shared faithful
-//! [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the three stages are each parity-covered in isolation (`fmm_polyhedral_via_reference_parity`), but the
@@ -20,9 +20,11 @@
 //! f32 GPU (three chained stages) vs f64 oracle → small numeric TOLERANCE. Distances are kept in [1, 4)
 //! so the M2L reciprocal is well-conditioned and rounding stays far below tolerance.
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::fmm_polyhedral_compress::fmm_compress_pairwise_via;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_reference::composition_witness::{
     l2p_zeroth_all_witness, m2l_zeroth_all_witness, p2m_zeroth_moment_witness,
 };
@@ -85,7 +87,7 @@ fn instance(state: &mut u32, n_cells: usize, n_regions: usize) -> (Vec<f32>, Vec
 
 #[test]
 fn fmm_compress_pairwise_via_matches_chained_f64_oracle() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let mut state = 0xF3_C0_00_01u32;
     let mut multi_region_cell = 0u32;
     for case in 0..300u32 {
@@ -95,6 +97,7 @@ fn fmm_compress_pairwise_via_matches_chained_f64_oracle() {
 
         let got = fmm_compress_pairwise_via(
             &d,
+            &semantic_execution_support::policy(),
             &scores,
             &cell_assignment,
             &cell_distances,
@@ -120,7 +123,7 @@ fn fmm_compress_pairwise_via_matches_chained_f64_oracle() {
 
 #[test]
 fn fmm_compress_pairwise_via_hand_checked_two_cell() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     // 2 cells, 3 regions: region 0 -> cell 0, regions 1,2 -> cell 1.
     //   moments[0] = 0.5;  moments[1] = 0.25 + 0.25 = 0.5
     //   dist = [[_, 2.0], [4.0, _]] (diagonal ignored)
@@ -129,7 +132,15 @@ fn fmm_compress_pairwise_via_hand_checked_two_cell() {
     let scores = [0.5f32, 0.25, 0.25];
     let cell_assignment = [0u32, 1, 1];
     let cell_distances = [0.0f32, 2.0, 4.0, 0.0]; // 2x2, diagonal unused
-    let got = fmm_compress_pairwise_via(&d, &scores, &cell_assignment, &cell_distances, 3).unwrap();
+    let got = fmm_compress_pairwise_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &scores,
+        &cell_assignment,
+        &cell_distances,
+        3,
+    )
+    .unwrap();
     let want = compress_oracle(&scores, &cell_assignment, &cell_distances, 2);
     approx_slice(&got, &want, "hand-checked two-cell");
     // Explicit expected values.

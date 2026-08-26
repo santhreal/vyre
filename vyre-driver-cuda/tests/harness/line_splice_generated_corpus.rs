@@ -1,8 +1,6 @@
 use crate::harness::{bytes_u32, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::parsing::line_splice_classify::{
-    line_splice_classify_dispatch_grid, line_splice_classify_u8,
-};
+use vyre_libs::parsing::line_splice_classify::line_splice_classify_u8;
 use vyre_reference::composition_witness::line_splice_classify_witness as reference_line_splice_classify;
 
 fn generated_line_splice_u8_source(case: u32, len: usize) -> Vec<u8> {
@@ -58,7 +56,6 @@ fn cuda_line_splice_classify_u8_generated_matrix_matches_cpu() {
     let byte_count = len as u32;
     let program = line_splice_classify_u8(byte_count);
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(line_splice_classify_dispatch_grid(byte_count));
 
     with_live_backend("raw-u8 generated line-splice matrix", |backend| {
         let mut checked = 0usize;

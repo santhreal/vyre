@@ -16,14 +16,18 @@
 //! `vyre_libs::solvers::quantized_dispatch` at run time, so an entry point
 //! added without a row here fails rather than going uncovered.
 
+mod semantic_execution_support;
+
 use std::collections::BTreeSet;
 
-use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_libs::solvers::quantized_dispatch::{
     i4x8_batched_matmul_f32_scaled_via, i4x8_batched_matmul_top1_f32_scaled_via,
     i4x8_batched_matvec_f32_scaled_via, i4x8_dot_f32_scaled_via, i4x8_matvec_f32_scaled_via,
     unpack_i4x8_via,
+};
+use vyre_megakernel::{
+    Digest, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
+    SemanticExecutor,
 };
 
 /// A dispatcher that returns exactly the output buffers it was handed, so the
@@ -32,14 +36,29 @@ struct FixedOutputDispatcher {
     outputs: Vec<Vec<u8>>,
 }
 
-impl ProgramDispatcher for FixedOutputDispatcher {
-    fn dispatch(
+impl SemanticExecutor for FixedOutputDispatcher {
+    fn execute(
         &self,
-        _program: &Program,
-        _inputs: &[Vec<u8>],
-        _grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        Ok(self.outputs.clone())
+        request: &SemanticExecutionRequest<'_>,
+    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+        let node = &request.logical().graph().nodes()[0];
+        if self.outputs.len() != node.outputs.len() {
+            return Err(SemanticExecutionError::Backend(format!(
+                "Fix: fixed-output executor received {} outputs for {} graph values.",
+                self.outputs.len(),
+                node.outputs.len()
+            )));
+        }
+        Ok(SemanticExecutionOutput {
+            artifact: Digest([1; 32]),
+            payload: Digest([2; 32]),
+            outputs: node
+                .outputs
+                .iter()
+                .copied()
+                .zip(self.outputs.clone())
+                .collect(),
+        })
     }
 }
 
@@ -49,7 +68,7 @@ impl ProgramDispatcher for FixedOutputDispatcher {
 struct EntryPoint {
     name: &'static str,
     output_bytes: usize,
-    call: Box<dyn Fn(&FixedOutputDispatcher) -> Result<(), DispatchError>>,
+    call: Box<dyn Fn(&FixedOutputDispatcher) -> Result<(), SemanticExecutionError>>,
 }
 
 /// `cols = 8` packs into exactly one u32 word per row, so every shape below is
@@ -60,14 +79,26 @@ fn entry_points() -> Vec<EntryPoint> {
             name: "unpack_i4x8_via",
             // Eight i32 lanes.
             output_bytes: 32,
-            call: Box::new(|dispatcher| unpack_i4x8_via(dispatcher, &[0], 8).map(drop)),
+            call: Box::new(|dispatcher| {
+                unpack_i4x8_via(dispatcher, &semantic_execution_support::policy(), &[0], 8)
+                    .map(drop)
+            }),
         },
         EntryPoint {
             name: "i4x8_dot_f32_scaled_via",
             // One f32 scalar.
             output_bytes: 4,
             call: Box::new(|dispatcher| {
-                i4x8_dot_f32_scaled_via(dispatcher, &[0], &[0], 0.5, 0.25, 8).map(drop)
+                i4x8_dot_f32_scaled_via(
+                    dispatcher,
+                    &semantic_execution_support::policy(),
+                    &[0],
+                    &[0],
+                    0.5,
+                    0.25,
+                    8,
+                )
+                .map(drop)
             }),
         },
         EntryPoint {
@@ -75,7 +106,16 @@ fn entry_points() -> Vec<EntryPoint> {
             // rows = 1.
             output_bytes: 4,
             call: Box::new(|dispatcher| {
-                i4x8_matvec_f32_scaled_via(dispatcher, &[0], &[0.0; 8], &[0.5], 1, 8).map(drop)
+                i4x8_matvec_f32_scaled_via(
+                    dispatcher,
+                    &semantic_execution_support::policy(),
+                    &[0],
+                    &[0.0; 8],
+                    &[0.5],
+                    1,
+                    8,
+                )
+                .map(drop)
             }),
         },
         EntryPoint {
@@ -83,8 +123,17 @@ fn entry_points() -> Vec<EntryPoint> {
             // batch * rows = 2.
             output_bytes: 8,
             call: Box::new(|dispatcher| {
-                i4x8_batched_matvec_f32_scaled_via(dispatcher, &[0], &[0.0; 16], &[0.5], 2, 1, 8)
-                    .map(drop)
+                i4x8_batched_matvec_f32_scaled_via(
+                    dispatcher,
+                    &semantic_execution_support::policy(),
+                    &[0],
+                    &[0.0; 16],
+                    &[0.5],
+                    2,
+                    1,
+                    8,
+                )
+                .map(drop)
             }),
         },
         EntryPoint {
@@ -94,6 +143,7 @@ fn entry_points() -> Vec<EntryPoint> {
             call: Box::new(|dispatcher| {
                 i4x8_batched_matmul_f32_scaled_via(
                     dispatcher,
+                    &semantic_execution_support::policy(),
                     &[0],
                     &[0, 0],
                     &[0.5],
@@ -112,6 +162,7 @@ fn entry_points() -> Vec<EntryPoint> {
             call: Box::new(|dispatcher| {
                 i4x8_batched_matmul_top1_f32_scaled_via(
                     dispatcher,
+                    &semantic_execution_support::policy(),
                     &[0],
                     &[0, 0],
                     &[0.5],

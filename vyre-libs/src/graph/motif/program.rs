@@ -29,18 +29,24 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
     };
     let mut buffers = shape.read_only_buffers();
     let per_node = shape.node_count.max(1);
-    buffers.push(word_buffer(
-        "motif_hits",
-        MOTIF_HITS_BUFFER,
-        BufferAccess::ReadWrite,
-        per_node,
-    ));
-    buffers.push(word_buffer(
-        witness_out,
-        MOTIF_WITNESS_OUT_BUFFER,
-        BufferAccess::ReadWrite,
-        per_node,
-    ));
+    buffers.push(
+        word_buffer(
+            "motif_hits",
+            MOTIF_HITS_BUFFER,
+            BufferAccess::ReadWrite,
+            per_node,
+        )
+        .with_pipeline_live_out(true),
+    );
+    buffers.push(
+        word_buffer(
+            witness_out,
+            MOTIF_WITNESS_OUT_BUFFER,
+            BufferAccess::ReadWrite,
+            per_node,
+        )
+        .with_pipeline_live_out(true),
+    );
 
     let clear_outputs = vec![
         Node::store("motif_hits", Expr::var("node"), Expr::u32(0)),

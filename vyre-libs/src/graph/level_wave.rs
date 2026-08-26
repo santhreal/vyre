@@ -53,12 +53,6 @@ pub const OP_ID: &str = "vyre-libs::graph::level_wave";
 /// Workgroup shape for per-node depth-wave traversal.
 pub const LEVEL_WAVE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid that covers every level-wave lane.
-#[must_use]
-pub const fn level_wave_dispatch_grid(lane_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(lane_count, LEVEL_WAVE_WORKGROUP_SIZE[0])
-}
-
 fn depth_wave_body(
     step_body: Vec<Node>,
     depth_buf: &str,
@@ -328,15 +322,6 @@ mod tests {
                 assert!(depth >= visits[idx - 1].1);
             }
         }
-    }
-
-    #[test]
-    fn dispatch_grid_packs_lane_count_into_workgroups() {
-        assert_eq!(level_wave_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(level_wave_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(level_wave_dispatch_grid(256), [1, 1, 1]);
-        assert_eq!(level_wave_dispatch_grid(257), [2, 1, 1]);
-        assert_eq!(level_wave_dispatch_grid(1029), [5, 1, 1]);
     }
 
     #[test]

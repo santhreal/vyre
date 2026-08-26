@@ -36,13 +36,6 @@ pub const CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE: u32 = 32;
 /// Workgroup shape for row-strided queue-driven CSR expansion.
 pub const CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid that launches one 32-lane team for every queue slot.
-#[must_use]
-pub const fn csr_queue_strided_forward_dispatch_grid(queue_capacity: u32) -> [u32; 3] {
-    let total_lanes = queue_capacity.saturating_mul(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE);
-    vyre_primitives::lane_grid(total_lanes, CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE[0])
-}
-
 define_csr_queue_forward_entry_point! {
     /// Build a GPU program that expands queued CSR source rows with a fixed lane
     /// team per row.
@@ -163,15 +156,6 @@ mod tests {
             }
         }
         out
-    }
-
-    #[test]
-    fn dispatch_grid_assigns_32_lanes_per_queue_slot() {
-        assert_eq!(csr_queue_strided_forward_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(csr_queue_strided_forward_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(csr_queue_strided_forward_dispatch_grid(8), [1, 1, 1]);
-        assert_eq!(csr_queue_strided_forward_dispatch_grid(9), [2, 1, 1]);
-        assert_eq!(csr_queue_strided_forward_dispatch_grid(256), [32, 1, 1]);
     }
 
     #[test]

@@ -68,14 +68,6 @@ pub fn host_only_bindings(
     })
 }
 
-/// Apply a submission-time invocation grid to a payload dispatch config.
-pub fn override_grid(config: &mut DispatchConfig, grid: Option<[u32; 3]>) {
-    if let Some(grid) = grid {
-        config.grid_override = Some(grid);
-        config.dispatch_grid = Some(grid);
-    }
-}
-
 impl InstanceCore {
     /// Wrap an already-finished execution as a submission.
     #[must_use]
@@ -104,34 +96,27 @@ impl InstanceCore {
         &self,
         bindings: &BindingSet,
         mixed: fn() -> BackendError,
-        host: impl FnOnce(
-            BTreeMap<ArtifactValueId, Vec<u8>>,
-            Option<[u32; 3]>,
-        ) -> Result<Completion, BackendError>,
-        resident: impl FnOnce(
-            &BTreeMap<ArtifactValueId, Resource>,
-            Option<[u32; 3]>,
-        ) -> Result<Completion, BackendError>,
+        host: impl FnOnce(BTreeMap<ArtifactValueId, Vec<u8>>) -> Result<Completion, BackendError>,
+        resident: impl FnOnce(&BTreeMap<ArtifactValueId, Resource>) -> Result<Completion, BackendError>,
     ) -> Result<Box<dyn Submission>, BackendError> {
         self.accept(bindings)?;
-        let invocation_grid = bindings.invocation_grid();
         let bound = partition_bindings(bindings);
         if !bound.host.is_empty() && !bound.resident.is_empty() {
             return Err(mixed());
         }
         let result = if bound.resident.is_empty() {
-            host(bound.host, invocation_grid)
+            host(bound.host)
         } else {
-            resident(&bound.resident, invocation_grid)
+            resident(&bound.resident)
         };
         Ok(self.ready(result))
     }
 
     /// Route one submission on a backend that has no resident execution path.
     ///
-    /// The refusal, the grid, and the host state come from the same three calls
-    /// wherever there is only one path to route to, so the backends that have
-    /// one wrote the same four lines. `feature` names the refused capability in
+    /// The refusal and host state come from the same calls wherever there is
+    /// only one path to route to, so the backends that have one wrote the same
+    /// three lines. `feature` names the refused capability in
     /// the backend's own words; the backend itself comes from the recorded
     /// device generation rather than a constant restated at the call site, so a
     /// materializer cannot report a resident refusal against a backend it did
@@ -148,15 +133,11 @@ impl InstanceCore {
         &self,
         bindings: &BindingSet,
         feature: &str,
-        host: impl FnOnce(
-            BTreeMap<ArtifactValueId, Vec<u8>>,
-            Option<[u32; 3]>,
-        ) -> Result<Completion, BackendError>,
+        host: impl FnOnce(BTreeMap<ArtifactValueId, Vec<u8>>) -> Result<Completion, BackendError>,
     ) -> Result<Box<dyn Submission>, BackendError> {
         self.accept(bindings)?;
-        let invocation_grid = bindings.invocation_grid();
         let state = host_only_bindings(bindings, feature, &self.device.backend)?;
-        Ok(self.ready(host(state, invocation_grid)))
+        Ok(self.ready(host(state)))
     }
 
     /// Resolve one Program buffer name by authenticated identity for a resident launch.
@@ -311,7 +292,6 @@ impl InstanceCore {
         &self,
         modules: &[M],
         mut state: BTreeMap<ArtifactValueId, Vec<u8>>,
-        invocation_grid: Option<[u32; 3]>,
         omitted: impl Fn(usize, &str) -> BackendError,
         mut dispatch: impl FnMut(
             usize,
@@ -324,10 +304,8 @@ impl InstanceCore {
         let mut device_ns = 0_u64;
         let mut has_device_timing = false;
         for (module_index, module) in modules.iter().enumerate() {
-            let mut config = module.config().clone();
-            override_grid(&mut config, invocation_grid);
             let plan = BindingPlan::build(module.program())?;
-            let dispatched = dispatch(module_index, module, &plan, &config, &state)?;
+            let dispatched = dispatch(module_index, module, &plan, module.config(), &state)?;
             if let Some(ns) = dispatched.device_ns {
                 device_ns = device_ns.saturating_add(ns);
                 has_device_timing = true;
@@ -434,7 +412,7 @@ pub trait MaterializedInstance {
     /// Launch one module over its borrowed input bytes.
     ///
     /// `inputs` is in the order [`Self::gather`] produced and `config` is the
-    /// module's dispatch config with the submission grid already applied.
+    /// module's admitted dispatch config.
     ///
     /// # Errors
     ///
@@ -484,13 +462,11 @@ pub trait MaterializedInstance {
     fn execute_host(
         &self,
         state: BTreeMap<ArtifactValueId, Vec<u8>>,
-        invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
         let label = self.module_label();
         self.core().execute_modules(
             self.modules(),
             state,
-            invocation_grid,
             |output_index, name| omitted_output(label, output_index, name),
             |module_index, module, plan, config, state| {
                 let inputs = self.gather(module_index, module, plan, state)?;
@@ -514,9 +490,7 @@ pub trait MaterializedInstance {
         feature: &str,
     ) -> Result<Box<dyn Submission>, BackendError> {
         self.core()
-            .submit_host_only(bindings, feature, |state, invocation_grid| {
-                self.execute_host(state, invocation_grid)
-            })
+            .submit_host_only(bindings, feature, |state| self.execute_host(state))
     }
 }
 
@@ -571,8 +545,7 @@ pub trait ResidentInstance: MaterializedInstance {
 
     /// Launch the single resident module over `ordered`.
     ///
-    /// `config` is the module's dispatch config with the submission grid
-    /// already applied.
+    /// `config` is the module's admitted dispatch config.
     ///
     /// # Errors
     ///
@@ -595,15 +568,12 @@ pub trait ResidentInstance: MaterializedInstance {
     fn execute_resident(
         &self,
         resources: &BTreeMap<ArtifactValueId, Resource>,
-        invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
         let core = self.core();
         let module = core.single_resident_module(self.modules(), self.multi_module_feature())?;
         let plan = BindingPlan::build(module.program())?;
         let ordered = self.ordered_resident(module, &plan, resources)?;
-        let mut config = module.config().clone();
-        override_grid(&mut config, invocation_grid);
-        let dispatched = self.launch_resident(module, &ordered, &config)?;
+        let dispatched = self.launch_resident(module, &ordered, module.config())?;
         let label = self.resident_module_label();
         core.resident_completion(
             &plan,
@@ -631,8 +601,8 @@ pub trait ResidentInstance: MaterializedInstance {
         self.core().route_submission(
             bindings,
             mixed,
-            |state, invocation_grid| self.execute_host(state, invocation_grid),
-            |resources, invocation_grid| self.execute_resident(resources, invocation_grid),
+            |state| self.execute_host(state),
+            |resources| self.execute_resident(resources),
         )
     }
 }

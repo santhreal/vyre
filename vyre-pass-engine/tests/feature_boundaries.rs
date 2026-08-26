@@ -63,7 +63,7 @@ fn optimizer_feature_is_standalone_and_excludes_unrequested_solver_domains() {
     let root = fixture_root();
     write_fixture(
         &root,
-        "fn accepts(_: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) {}\nfn main() { let _ = vyre_pass_engine::optimizer::dce_program::OP_ID; }\n",
+        "fn main() { let _ = vyre_pass_engine::optimizer::dce_program::OP_ID; }\n",
     );
     let success = cargo(&root, &["check", "--quiet"]);
     assert!(

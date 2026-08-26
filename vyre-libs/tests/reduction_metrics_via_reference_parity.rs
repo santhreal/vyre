@@ -1,5 +1,5 @@
 //! End-to-end parity for `data::reduction_metrics::*_via` through the shared faithful
-//! [`vyre_driver_reference::ReferenceEvalDispatcher`], across every reduction the consumer exposes
+//! [`vyre_driver_reference::ReferenceSemanticExecutor`], across every reduction the consumer exposes
 //! (sum / max / min / count-non-zero / any / all scalar reduces, per-segment CSR sum, and the
 //! atomic-scatter histogram).
 //!
@@ -14,6 +14,8 @@
 //! output RW(1) = 2 IC. All decode outputs[0] = the sole writable buffer. Every op is exact integer
 //! arithmetic → BIT-EXACT (no tolerance).
 
+mod semantic_execution_support;
+
 use vyre_libs::reduce::reduction_metrics::{
     histogram_atomic_scatter_via, reduce_all_via, reduce_any_via, reduce_count_non_zero_via,
     reduce_max_via, reduce_min_via, reduce_sum_via, segment_reduce_sum_via,
@@ -23,12 +25,13 @@ use vyre_reference::composition_witness::{
     segment_reduce_sum_witness as reference_segment_reduce_sum,
 };
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 #[test]
 fn scalar_reduces_via_match_independent_oracles() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let executor = ReferenceSemanticExecutor;
+    let policy = semantic_execution_support::policy();
     let mut state = 0x2E_D0_C0_01u32;
     let mut saw_all_true = 0u32;
     let mut saw_some_zero = 0u32;
@@ -54,32 +57,32 @@ fn scalar_reduces_via_match_independent_oracles() {
         let want_all = values.iter().all(|&v| v != 0);
 
         assert_eq!(
-            reduce_sum_via(&dispatcher, &values).unwrap(),
+            reduce_sum_via(&executor, &policy, &values).unwrap(),
             want_sum,
             "case {case}: sum mismatch; values={values:?}"
         );
         assert_eq!(
-            reduce_max_via(&dispatcher, &values).unwrap(),
+            reduce_max_via(&executor, &policy, &values).unwrap(),
             want_max,
             "case {case}: max mismatch; values={values:?}"
         );
         assert_eq!(
-            reduce_min_via(&dispatcher, &values).unwrap(),
+            reduce_min_via(&executor, &policy, &values).unwrap(),
             want_min,
             "case {case}: min mismatch; values={values:?}"
         );
         assert_eq!(
-            reduce_count_non_zero_via(&dispatcher, &values).unwrap(),
+            reduce_count_non_zero_via(&executor, &policy, &values).unwrap(),
             want_count,
             "case {case}: count-non-zero mismatch; values={values:?}"
         );
         assert_eq!(
-            reduce_any_via(&dispatcher, &values).unwrap(),
+            reduce_any_via(&executor, &policy, &values).unwrap(),
             want_any,
             "case {case}: any mismatch; values={values:?}"
         );
         assert_eq!(
-            reduce_all_via(&dispatcher, &values).unwrap(),
+            reduce_all_via(&executor, &policy, &values).unwrap(),
             want_all,
             "case {case}: all mismatch; values={values:?}"
         );
@@ -100,7 +103,8 @@ fn scalar_reduces_via_match_independent_oracles() {
 
 #[test]
 fn segment_reduce_sum_via_matches_cpu_ref_over_random_csr_partitions() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let executor = ReferenceSemanticExecutor;
+    let policy = semantic_execution_support::policy();
     let mut state = 0x5E_60_00_01u32;
     let mut nonempty_and_empty = 0u32;
     for case in 0..300u32 {
@@ -117,8 +121,8 @@ fn segment_reduce_sum_via_matches_cpu_ref_over_random_csr_partitions() {
         cuts.sort_unstable();
         let offsets = cuts; // len = num_segments+1, non-decreasing, ends 0..n → valid CSR
 
-        let got = segment_reduce_sum_via(&dispatcher, &values, &offsets)
-            .expect("segment_reduce_sum_via must dispatch");
+        let got = segment_reduce_sum_via(&executor, &policy, &values, &offsets)
+            .expect("segment_reduce_sum_via must execute");
         let want = reference_segment_reduce_sum(&values, &offsets);
         assert_eq!(
             got, want,
@@ -138,7 +142,8 @@ fn segment_reduce_sum_via_matches_cpu_ref_over_random_csr_partitions() {
 
 #[test]
 fn histogram_via_matches_cpu_ref_over_random_bin_indices() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let executor = ReferenceSemanticExecutor;
+    let policy = semantic_execution_support::policy();
     let mut state = 0x41_57_00_01u32;
     let mut saw_multi_count_bin = 0u32;
     for case in 0..300u32 {
@@ -147,8 +152,8 @@ fn histogram_via_matches_cpu_ref_over_random_bin_indices() {
         // Bin indices in [0, num_bins) so every input lands in a real bin.
         let input: Vec<u32> = (0..n).map(|_| xorshift(&mut state) % num_bins).collect();
 
-        let got = histogram_atomic_scatter_via(&dispatcher, &input, num_bins)
-            .expect("histogram_atomic_scatter_via must dispatch");
+        let got = histogram_atomic_scatter_via(&executor, &policy, &input, num_bins)
+            .expect("histogram_atomic_scatter_via must execute");
         let want = reference_histogram_atomic_scatter(&input, num_bins);
         assert_eq!(
             got, want,
@@ -171,29 +176,43 @@ fn histogram_via_matches_cpu_ref_over_random_bin_indices() {
 
 #[test]
 fn reduction_via_hand_checked_cases() {
-    let d = ReferenceEvalDispatcher;
+    let executor = ReferenceSemanticExecutor;
+    let policy = semantic_execution_support::policy();
 
     let v = vec![3, 1, 4, 1, 5, 9, 2, 6];
-    assert_eq!(reduce_sum_via(&d, &v).unwrap(), 31, "sum of the vector");
-    assert_eq!(reduce_max_via(&d, &v).unwrap(), 9, "max");
-    assert_eq!(reduce_min_via(&d, &v).unwrap(), 1, "min");
     assert_eq!(
-        reduce_count_non_zero_via(&d, &v).unwrap(),
+        reduce_sum_via(&executor, &policy, &v).unwrap(),
+        31,
+        "sum of the vector"
+    );
+    assert_eq!(reduce_max_via(&executor, &policy, &v).unwrap(), 9, "max");
+    assert_eq!(reduce_min_via(&executor, &policy, &v).unwrap(), 1, "min");
+    assert_eq!(
+        reduce_count_non_zero_via(&executor, &policy, &v).unwrap(),
         8,
         "all nonzero → count 8"
     );
-    assert!(reduce_all_via(&d, &v).unwrap(), "all nonzero");
+    assert!(
+        reduce_all_via(&executor, &policy, &v).unwrap(),
+        "all nonzero"
+    );
 
     let with_zero = vec![0, 7, 0, 3];
     assert_eq!(
-        reduce_count_non_zero_via(&d, &with_zero).unwrap(),
+        reduce_count_non_zero_via(&executor, &policy, &with_zero).unwrap(),
         2,
         "two nonzero"
     );
-    assert!(reduce_any_via(&d, &with_zero).unwrap(), "some nonzero");
-    assert!(!reduce_all_via(&d, &with_zero).unwrap(), "not all nonzero");
+    assert!(
+        reduce_any_via(&executor, &policy, &with_zero).unwrap(),
+        "some nonzero"
+    );
+    assert!(
+        !reduce_all_via(&executor, &policy, &with_zero).unwrap(),
+        "not all nonzero"
+    );
     assert_eq!(
-        reduce_min_via(&d, &with_zero).unwrap(),
+        reduce_min_via(&executor, &policy, &with_zero).unwrap(),
         0,
         "min includes the zero"
     );
@@ -202,7 +221,7 @@ fn reduction_via_hand_checked_cases() {
     let vals = vec![10, 20, 30, 40, 50];
     let offsets = vec![0, 2, 3, 3, 5];
     assert_eq!(
-        segment_reduce_sum_via(&d, &vals, &offsets).unwrap(),
+        segment_reduce_sum_via(&executor, &policy, &vals, &offsets).unwrap(),
         vec![30, 30, 0, 90],
         "per-segment sums with an empty middle segment"
     );
@@ -210,7 +229,7 @@ fn reduction_via_hand_checked_cases() {
     // Histogram: indices into 3 bins → counts.
     let idx = vec![0, 2, 2, 1, 2, 0];
     assert_eq!(
-        histogram_atomic_scatter_via(&d, &idx, 3).unwrap(),
+        histogram_atomic_scatter_via(&executor, &policy, &idx, 3).unwrap(),
         vec![2, 1, 3],
         "bin counts: two 0s, one 1, three 2s"
     );

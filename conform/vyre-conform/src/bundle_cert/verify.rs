@@ -37,21 +37,12 @@ pub fn verify_bundle_with_backend(
             message,
         }
     })?;
-    let mut first_inputs = Vec::with_capacity(input_plan.source_count());
-    if let Some(first_case) = corpus.first() {
-        plan_witness_inputs_into(&first_case.inputs, &input_plan, &mut first_inputs).map_err(
-            |message| BundleCertError::WitnessPlanningFailed {
-                witness: first_case.name.clone(),
-                message,
-            },
-        )?;
-    }
-    let production =
-        ProductionSession::compile_with_representative_inputs(program, &first_inputs, backend)
-            .map_err(|error| BundleCertError::ProductionFailed {
-                witness: "certificate-verification".to_string(),
-                message: error.to_string(),
-            })?;
+    let production = ProductionSession::from_registration(program, backend).map_err(|error| {
+        BundleCertError::ProductionFailed {
+            witness: "certificate-verification".to_string(),
+            message: error.to_string(),
+        }
+    })?;
     verify_bundle_with(
         cert,
         program,
@@ -70,7 +61,7 @@ pub fn verify_bundle_with_backend(
                 }
             })?;
             outputs.clear();
-            outputs.extend(dispatched);
+            outputs.extend(dispatched.outputs);
             Ok(())
         },
     )

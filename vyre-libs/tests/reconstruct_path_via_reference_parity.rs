@@ -1,5 +1,5 @@
 //! End-to-end parity for `graph::path_reconstruct::reconstruct_path_via`: the parent-pointer path walk
-//! through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! through the shared faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the `path_reconstruct` IR is not run through a faithful dispatch boundary by any `vyre-primitives/tests/*`
@@ -12,6 +12,8 @@
 //! returned length AND the full padded path buffer (no tolerance). The walk is bounded by `max_depth`, so
 //! even cyclic parent arrays terminate (both the GPU IR and `cpu_ref` bound-walk identically).
 
+mod semantic_execution_support;
+
 use vyre_libs::graph::dispatch::path_reconstruct::reconstruct_path_via;
 use vyre_reference::composition_witness::path_reconstruct_witness;
 
@@ -21,12 +23,12 @@ fn cpu_ref(parents: &[u32], target: u32, max_depth: u32, scratch: &mut Vec<u32>)
     length
 }
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 #[test]
 fn reconstruct_path_via_matches_cpu_ref_over_random_forests() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let mut rng = 0x9A_7C_00_01u32;
     let mut real_walk = 0u32; // cases where the path traversed >= 2 nodes
     let mut hit_root = 0u32; // cases that terminated at a root before max_depth
@@ -39,8 +41,15 @@ fn reconstruct_path_via_matches_cpu_ref_over_random_forests() {
         let max_depth = 1 + xorshift(&mut rng) % (n + 2); // 1..=n+2
 
         let mut got_scratch = Vec::new();
-        let got_len = reconstruct_path_via(&d, &parent, target, max_depth, &mut got_scratch)
-            .expect("reconstruct_path_via must dispatch the path walk");
+        let got_len = reconstruct_path_via(
+            &d,
+            &semantic_execution_support::policy(),
+            &parent,
+            target,
+            max_depth,
+            &mut got_scratch,
+        )
+        .expect("reconstruct_path_via must dispatch the path walk");
 
         let mut want_scratch = Vec::new();
         let want_len = cpu_ref(&parent, target, max_depth, &mut want_scratch);
@@ -78,12 +87,20 @@ fn reconstruct_path_via_matches_cpu_ref_over_random_forests() {
 
 #[test]
 fn reconstruct_path_via_hand_checked_chain_and_root() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
 
     // Chain: parent = [0, 0, 1, 2] → node 0 is the root (self-loop). Walk from 3: 3 -> 2 -> 1 -> 0.
     let parent = [0u32, 0, 1, 2];
     let mut scratch = Vec::new();
-    let len = reconstruct_path_via(&d, &parent, 3, 8, &mut scratch).unwrap();
+    let len = reconstruct_path_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &parent,
+        3,
+        8,
+        &mut scratch,
+    )
+    .unwrap();
     let mut want_scratch = Vec::new();
     let want_len = cpu_ref(&parent, 3, 8, &mut want_scratch);
     assert_eq!(len, want_len);
@@ -97,7 +114,15 @@ fn reconstruct_path_via_hand_checked_chain_and_root() {
 
     // max_depth truncation: walk from 3 with max_depth 2 → only [3, 2], len 2.
     let mut scratch = Vec::new();
-    let len = reconstruct_path_via(&d, &parent, 3, 2, &mut scratch).unwrap();
+    let len = reconstruct_path_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &parent,
+        3,
+        2,
+        &mut scratch,
+    )
+    .unwrap();
     assert_eq!(len, 2, "max_depth=2 truncates the walk to two nodes");
     assert_eq!(
         scratch,
@@ -108,7 +133,15 @@ fn reconstruct_path_via_hand_checked_chain_and_root() {
     // A lone root: parent[1]==1, walk from 1 → just [1].
     let parent = [0u32, 1, 1];
     let mut scratch = Vec::new();
-    let len = reconstruct_path_via(&d, &parent, 1, 4, &mut scratch).unwrap();
+    let len = reconstruct_path_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &parent,
+        1,
+        4,
+        &mut scratch,
+    )
+    .unwrap();
     assert_eq!(len, 1, "a root node walks to itself only");
     assert_eq!(scratch, vec![1, 0, 0, 0], "single node then zero padding");
     assert_eq!(len, cpu_ref(&parent, 1, 4, &mut Vec::new()));

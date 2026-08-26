@@ -22,11 +22,13 @@
 #[cfg(test)]
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::dispatch_buffers::{
-    ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
-    write_u32_slice_le_bytes, write_zero_bytes,
+    checked_product_count, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
+    write_zero_bytes,
 };
 use crate::math::sheaf_laplacian_eigenvalue::sheaf_laplacian_eigenvalue;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Default value for the retained (interface-stability) `iterations` parameter.
 ///
@@ -101,20 +103,22 @@ pub struct FixedSheafSpectrum {
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks fail, the primitive lane space
+/// Returns [`SemanticExecutionError`] when shape checks fail, the primitive lane space
 /// is exceeded, or the backend returns malformed output buffers.
 pub fn dominant_spectrum_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     restriction_diag_fixed: &[u32],
     v_init_fixed: &[u32],
     n_nodes: u32,
     d: u32,
     iterations: u32,
-) -> Result<FixedSheafSpectrum, DispatchError> {
+) -> Result<FixedSheafSpectrum, SemanticExecutionError> {
     let mut scratch = SheafSpectrumGpuScratch::default();
     let mut eigenvector = Vec::new();
     let lambda = dominant_spectrum_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         restriction_diag_fixed,
         v_init_fixed,
         n_nodes,
@@ -134,19 +138,21 @@ pub fn dominant_spectrum_fixed_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks or backend execution fail.
 pub fn dominant_spectrum_fixed_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     restriction_diag_fixed: &[u32],
     v_init_fixed: &[u32],
     n_nodes: u32,
     d: u32,
     iterations: u32,
     eigenvector_out: &mut Vec<u32>,
-) -> Result<u32, DispatchError> {
+) -> Result<u32, SemanticExecutionError> {
     let mut scratch = SheafSpectrumGpuScratch::default();
     dominant_spectrum_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         restriction_diag_fixed,
         v_init_fixed,
         n_nodes,
@@ -161,9 +167,10 @@ pub fn dominant_spectrum_fixed_via_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks or backend execution fail.
 pub fn dominant_spectrum_fixed_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     restriction_diag_fixed: &[u32],
     v_init_fixed: &[u32],
     n_nodes: u32,
@@ -171,27 +178,28 @@ pub fn dominant_spectrum_fixed_via_with_scratch_into(
     iterations: u32,
     scratch: &mut SheafSpectrumGpuScratch,
     eigenvector_out: &mut Vec<u32>,
-) -> Result<u32, DispatchError> {
+) -> Result<u32, SemanticExecutionError> {
     use crate::telemetry::{bump, sheaf_spectral_clustering_calls};
     bump(&sheaf_spectral_clustering_calls);
 
-    let cells = checked_product_count(n_nodes, d, "n_nodes", "d", "dominant_spectrum_fixed_via")?;
+    let cells = checked_product_count(n_nodes, d, "n_nodes", "d", "dominant_spectrum_fixed_via")
+        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
     let cells_u32 = u32::try_from(cells).map_err(|_| {
-        DispatchError::BadInputs(format!(
-            "Fix: dominant_spectrum_fixed_via n_nodes*d exceeds the primitive u32 lane limit for n_nodes={n_nodes}, d={d}."
-        ))
-    })?;
+    SemanticExecutionError::InvalidRequest(format!(
+        "Fix: dominant_spectrum_fixed_via n_nodes*d exceeds the primitive u32 lane limit for n_nodes={n_nodes}, d={d}."
+    ))
+})?;
     if restriction_diag_fixed.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: dominant_spectrum_fixed_via requires restriction_diag_fixed.len() == n_nodes*d, got len={}, n_nodes={n_nodes}, d={d}, cells={cells}.",
-            restriction_diag_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: dominant_spectrum_fixed_via requires restriction_diag_fixed.len() == n_nodes*d, got len={}, n_nodes={n_nodes}, d={d}, cells={cells}.",
+        restriction_diag_fixed.len()
+    )));
     }
     if v_init_fixed.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: dominant_spectrum_fixed_via requires v_init_fixed.len() == n_nodes*d, got len={}, n_nodes={n_nodes}, d={d}, cells={cells}.",
-            v_init_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: dominant_spectrum_fixed_via requires v_init_fixed.len() == n_nodes*d, got len={}, n_nodes={n_nodes}, d={d}, cells={cells}.",
+        v_init_fixed.len()
+    )));
     }
 
     let program =
@@ -208,7 +216,7 @@ pub fn dominant_spectrum_fixed_via_with_scratch_into(
     let v_bytes = cells
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: dominant_spectrum_fixed_via v byte size overflows usize for {cells} cells."
             ))
         })?;
@@ -218,36 +226,41 @@ pub fn dominant_spectrum_fixed_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[2], std::mem::size_of::<u32>());
     scratch.inputs[3].clear();
     scratch.inputs[3].extend_from_slice(&(1u32 << 16).to_le_bytes());
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs[..4],
-        Some([ceil_div_u32(cells_u32, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     // The kernel's writable buffers, in binding order, are exactly `v` (the eigenvector) then
     // `lambda`; the running max/arg-max are loop-carried locals, not storage buffers, so a faithful
     let [eigenvector_out_buf, lambda_out_buf] = match outputs.as_slice() {
-        [ev, l] => [ev, l],
-        _ => {
-            return Err(DispatchError::BackendError(format!(
-                "Fix: dominant_spectrum_fixed_via expected exactly eigenvector and lambda outputs, got {} buffer(s).",
-                outputs.len()
-            )))
-        }
-    };
+    [ev, l] => [ev, l],
+    _ => {
+        return Err(SemanticExecutionError::Backend(format!(
+            "Fix: dominant_spectrum_fixed_via expected exactly eigenvector and lambda outputs, got {} buffer(s).",
+            outputs.len()
+        )))
+    }
+};
 
     decode_u32_output_exact(
         eigenvector_out_buf,
         cells,
         "dominant_spectrum_fixed_via eigenvector",
         eigenvector_out,
-    )?;
+    )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
     let mut lambda = Vec::with_capacity(1);
     decode_u32_output_exact(
         lambda_out_buf,
         1,
         "dominant_spectrum_fixed_via lambda",
         &mut lambda,
-    )?;
+    )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
     Ok(lambda[0])
 }
 
@@ -304,7 +317,6 @@ pub(crate) fn suggested_cluster_count_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::Program;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-3 * (1.0 + a.abs() + b.abs())
@@ -376,67 +388,88 @@ mod tests {
 
     struct SpectrumDispatcher;
 
-    impl ProgramDispatcher for SpectrumDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for SpectrumDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            // Real-backend input contract: one input per input-consuming buffer in buffer order
-            // restriction_diag RO (0), v RW (1, zero slot), lambda RW (2, zero slot), one_fp RO (3).
-            // Compute the SAME closed-form diagonal eigenpair the real kernel does. (max r,
-            // e_argmax) (so this double stays truthful to the IR under test (Law 6)).
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 4);
-            let restriction = crate::dispatch_buffers::read_u32s(&inputs[0]);
-            let one_fp = crate::dispatch_buffers::read_u32s(&inputs[3])[0];
-            assert_eq!(one_fp, 1u32 << 16);
-            let mut max_r = 0u32;
-            let mut argmax = 0usize;
-            for (i, &ri) in restriction.iter().enumerate() {
-                if ri > max_r {
-                    max_r = ri;
-                    argmax = i;
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                // Real-backend input contract: one input per input-consuming buffer in buffer order
+                // restriction_diag RO (0), v RW (1, zero slot), lambda RW (2, zero slot), one_fp RO (3).
+                // Compute the SAME closed-form diagonal eigenpair the real kernel does. (max r,
+                // e_argmax) (so this double stays truthful to the IR under test (Law 6)).
+
+                assert_eq!(inputs.len(), 4);
+                let restriction = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                let one_fp = crate::dispatch_buffers::read_u32s(&inputs[3])[0];
+                assert_eq!(one_fp, 1u32 << 16);
+                let mut max_r = 0u32;
+                let mut argmax = 0usize;
+                for (i, &ri) in restriction.iter().enumerate() {
+                    if ri > max_r {
+                        max_r = ri;
+                        argmax = i;
+                    }
                 }
+                let eigenvector: Vec<u32> = (0..restriction.len())
+                    .map(|j| if j == argmax { one_fp } else { 0 })
+                    .collect();
+                Ok(vec![
+                    u32_slice_to_le_bytes(&eigenvector),
+                    max_r.to_le_bytes().to_vec(),
+                ])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
             }
-            let eigenvector: Vec<u32> = (0..restriction.len())
-                .map(|j| if j == argmax { one_fp } else { 0 })
-                .collect();
-            Ok(vec![
-                u32_slice_to_le_bytes(&eigenvector),
-                max_r.to_le_bytes().to_vec(),
-            ])
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
     struct ExtraSpectrumDispatcher;
 
-    impl ProgramDispatcher for ExtraSpectrumDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for ExtraSpectrumDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            Ok(vec![
-                u32_slice_to_le_bytes(&[1]),
-                u32_slice_to_le_bytes(&[1]),
-                u32_slice_to_le_bytes(&[1]),
-            ])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                Ok(vec![
+                    u32_slice_to_le_bytes(&[1]),
+                    u32_slice_to_le_bytes(&[1]),
+                    u32_slice_to_le_bytes(&[1]),
+                ])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
+            }
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
     struct TrailingLambdaDispatcher;
 
-    impl ProgramDispatcher for TrailingLambdaDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for TrailingLambdaDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            Ok(vec![u32_slice_to_le_bytes(&[1]), vec![1, 0, 0, 0, 2]])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                Ok(vec![u32_slice_to_le_bytes(&[1]), vec![1, 0, 0, 0, 2]])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
+            }
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -447,6 +480,7 @@ mod tests {
         // initial vector is ignored by the diagonal kernel.
         let spectrum = dominant_spectrum_fixed_via(
             &SpectrumDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[one, one / 2],
             &[8 * one, 4 * one],
             2,
@@ -477,6 +511,7 @@ mod tests {
         let out_ptr = eigenvector.as_ptr();
         let lambda = dominant_spectrum_fixed_via_with_scratch_into(
             &SpectrumDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[one, one / 2],
             &[8 * one, 4 * one],
             2,
@@ -497,27 +532,51 @@ mod tests {
 
     #[test]
     fn fixed_via_rejects_shape_mismatch() {
-        let err = dominant_spectrum_fixed_via(&SpectrumDispatcher, &[1, 2, 3], &[1, 2], 2, 2, 1)
-            .unwrap_err();
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        let err = dominant_spectrum_fixed_via(
+            &SpectrumDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[1, 2, 3],
+            &[1, 2],
+            2,
+            2,
+            1,
+        )
+        .unwrap_err();
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 
     #[test]
     fn fixed_via_rejects_extra_outputs() {
-        let err =
-            dominant_spectrum_fixed_via(&ExtraSpectrumDispatcher, &[1], &[1], 1, 1, 1).unwrap_err();
+        let err = dominant_spectrum_fixed_via(
+            &ExtraSpectrumDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[1],
+            &[1],
+            1,
+            1,
+            1,
+        )
+        .unwrap_err();
         assert!(
-            matches!(err, DispatchError::BackendError(_)),
+            matches!(err, SemanticExecutionError::Backend(_)),
             "unexpected error: {err:?}"
         );
     }
 
     #[test]
     fn fixed_via_rejects_trailing_lambda_bytes() {
-        let err = dominant_spectrum_fixed_via(&TrailingLambdaDispatcher, &[1], &[1], 1, 1, 1)
-            .unwrap_err();
+        let err = dominant_spectrum_fixed_via(
+            &TrailingLambdaDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[1],
+            &[1],
+            1,
+            1,
+            1,
+        )
+        .unwrap_err();
         assert!(
-            matches!(err, DispatchError::BackendError(_)),
+            matches!(err, SemanticExecutionError::Backend(_)),
             "unexpected error: {err:?}"
         );
     }

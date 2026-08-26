@@ -9,8 +9,9 @@
 //! given seed means. CPU reference paths only - no mock dispatchers.
 
 #![forbid(unsafe_code)]
+mod semantic_execution_support;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_libs::graph::dispatch::exploded::build_ifds_csr_via;
 use vyre_libs::graph::motif::MotifEdge;
 use vyre_reference::composition_witness::{
@@ -591,7 +592,7 @@ fn sweep_exploded_ifds_substrate_matches_primitive_oracle_matrix() {
 
 #[test]
 fn sweep_exploded_ifds_via_matches_cpu_oracle_matrix() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut assertions = 0usize;
     for (case, (num_procs, blocks_per_proc, facts_per_proc, intra, inter, gen, kill)) in
         ifds_cases(CASES_PER_FAMILY, 0x1F05_0005, 0xC2B2_AE35)
@@ -607,6 +608,7 @@ fn sweep_exploded_ifds_via_matches_cpu_oracle_matrix() {
         );
         let actual = build_ifds_csr_via(
             &dispatcher,
+            &semantic_execution_support::policy(),
             num_procs,
             blocks_per_proc,
             facts_per_proc,

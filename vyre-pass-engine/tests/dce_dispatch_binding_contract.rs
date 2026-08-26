@@ -1,187 +1,249 @@
-//! The GPU DCE pass must hand the backend exactly the input slots its analysis
-//! program declares.
-//!
-//! `gpu_dce` builds its persistent-BFS analysis program and then fills a fixed
-//! number of input byte buffers. Those two numbers live in different files, and
-//! nothing but a live GPU dispatch used to compare them. When 0.7.0 added the
-//! `converged` output to the persistent-BFS layout the program grew a ninth
-//! input slot, the filler kept writing eight, and every backend DCE test failed at
-//! dispatch time with "expected 9 input buffer(s) from Program declarations but
-//! received 8". These tests move that check off the GPU: they run `gpu_dce`
-//! against a recording dispatcher, so a slot-count drift fails on any host, in
-//! milliseconds, and names the mismatch directly.
-//!
-//! A ReadWrite buffer is why the count is not just "the read-only buffers":
-//! backends bind ReadWrite as InputOutput, so it consumes an input slot as well
-//! as an output slot. The oracle below encodes that rule independently of the
-//! production code rather than importing it, so the test still fails if the
-//! production rule is what drifts.
-#![forbid(unsafe_code)]
+//! Semantic optimizer pipeline execution contract.
 
-use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::sync::Mutex;
 
-use vyre_foundation::ir::{BufferAccess, Expr, MemoryKind, Node, Program};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_pass_engine::optimizer::dce_via_encoded::gpu_dce;
+use vyre_driver_reference::ReferenceSemanticExecutor;
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, GraphValueId, Node, Program, ValueLifetime};
+use vyre_foundation::validate::BackendCapabilities;
+use vyre_megakernel::{
+    CompileObjective, DeviceFacts, Digest, ExternalFacts, SearchBudget, SemanticExecutionError,
+    SemanticExecutionOutput, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
+};
+use vyre_pass_engine::optimizer::dce_via_encoded::DceError;
+use vyre_pass_engine::optimizer::pipeline::{gpu_optimize, GpuOptimizeError};
 
-/// Number of dispatch input slots a program declares.
-///
-/// Independent oracle for the binding rule in `vyre-driver`: every buffer that
-/// is not workgroup-shared, not persistent, and not write-only occupies an
-/// input slot, and a ReadWrite buffer occupies one in addition to its output
-/// slot.
-fn declared_input_slots(program: &Program) -> usize {
-    program
-        .buffers()
-        .iter()
-        .filter(|buffer| {
-            if buffer.kind() == MemoryKind::Shared
-                || buffer.kind() == MemoryKind::Persistent
-                || buffer.access() == BufferAccess::Workgroup
-            {
-                return false;
-            }
-            if buffer.is_output || buffer.pipeline_live_out {
-                return false;
-            }
-            matches!(
-                buffer.access(),
-                BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
-            )
-        })
-        .count()
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct RequestSnapshot {
+    stage: String,
+    semantic_graph: Vec<u8>,
+    inputs: Vec<(GraphValueId, usize)>,
+    external_facts: ExternalFacts,
+    target_facts: DeviceFacts,
+    objective: CompileObjective,
+    budget: SearchBudget,
+    max_artifact_bytes: u64,
 }
 
-/// Dispatcher that records what `gpu_dce` actually handed it and answers with a
-/// converged, root-only liveness closure so the pass runs to completion.
-#[derive(Default)]
-struct RecordingDispatcher {
-    calls: RefCell<Vec<(usize, usize)>>,
-    grids: RefCell<Vec<Option<[u32; 3]>>>,
+struct RecordingExecutor {
+    hostile_route_preference: bool,
+    fail_stage: Option<&'static str>,
+    miskey_stage: Option<&'static str>,
+    requests: Mutex<Vec<RequestSnapshot>>,
 }
 
-impl ProgramDispatcher for RecordingDispatcher {
-    fn dispatch(
+impl RecordingExecutor {
+    fn new(hostile_route_preference: bool) -> Self {
+        Self {
+            hostile_route_preference,
+            fail_stage: None,
+            miskey_stage: None,
+            requests: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn snapshots(&self) -> Vec<RequestSnapshot> {
+        self.requests.lock().expect("request lock").clone()
+    }
+}
+
+impl SemanticExecutor for RecordingExecutor {
+    fn execute(
         &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        self.calls
-            .borrow_mut()
-            .push((inputs.len(), declared_input_slots(program)));
-        self.grids.borrow_mut().push(grid_override);
+        request: &SemanticExecutionRequest<'_>,
+    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+        let node = &request.logical().graph().nodes()[0];
+        let stage = node.name.as_str();
+        self.requests
+            .lock()
+            .expect("request lock")
+            .push(RequestSnapshot {
+                stage: stage.to_string(),
+                semantic_graph: request.logical().semantic_wire().to_vec(),
+                inputs: request
+                    .inputs()
+                    .iter()
+                    .map(|(id, bytes)| (*id, bytes.len()))
+                    .collect(),
+                external_facts: request.external_facts().clone(),
+                target_facts: request.target_facts(),
+                objective: request.objective(),
+                budget: request.budget(),
+                max_artifact_bytes: request.max_artifact_bytes(),
+            });
+        if self.fail_stage == Some(stage) {
+            return Err(SemanticExecutionError::Backend(format!(
+                "{stage} hostile executor failure"
+            )));
+        }
 
-        // Echo the caller's own frontier_out slot back as the liveness set, then
-        // report changed = 0 and converged = 1 so the pass does not refuse.
-        let frontier_out = inputs
-            .get(6)
-            .cloned()
-            .ok_or_else(|| DispatchError::BackendError("missing frontier_out slot".to_string()))?;
-        Ok(vec![
-            frontier_out,
-            0u32.to_le_bytes().to_vec(),
-            1u32.to_le_bytes().to_vec(),
-        ])
+        // This preference is intentionally hostile and intentionally unused. The
+        // semantic request contains no route or launch control for it to alter.
+        let _ = self.hostile_route_preference;
+        let first_words = request
+            .inputs()
+            .values()
+            .next()
+            .map_or(0, |bytes| bytes.len() / 4);
+        let encoded = |words: Vec<u32>| {
+            words
+                .into_iter()
+                .flat_map(u32::to_le_bytes)
+                .collect::<Vec<_>>()
+        };
+        let payloads = match stage {
+            "canonicalize" | "pattern-match" => vec![encoded(vec![0; first_words])],
+            "const-fold" => vec![encoded(vec![0; first_words]), encoded(vec![0; first_words])],
+            "dce" => {
+                let frontier_words = first_words.div_ceil(32).max(1);
+                vec![
+                    encoded(vec![u32::MAX; frontier_words]),
+                    encoded(vec![0]),
+                    encoded(vec![1]),
+                ]
+            }
+            other => panic!("unexpected semantic optimizer stage {other}"),
+        };
+        let output_ids = if node.outputs.is_empty() {
+            request
+                .logical()
+                .graph()
+                .values()
+                .iter()
+                .filter_map(|value| {
+                    (value.contract.lifetime == ValueLifetime::Retained).then_some(value.id)
+                })
+                .collect::<Vec<_>>()
+        } else {
+            node.outputs.clone()
+        };
+        assert_eq!(output_ids.len(), payloads.len());
+        let mut outputs = output_ids
+            .into_iter()
+            .zip(payloads)
+            .collect::<BTreeMap<_, _>>();
+        if self.miskey_stage == Some(stage) {
+            let bytes = outputs.pop_first().expect("stage has a canonical output").1;
+            outputs.insert(GraphValueId(u32::MAX), bytes);
+        }
+        Ok(SemanticExecutionOutput {
+            artifact: Digest([7; 32]),
+            payload: Digest([8; 32]),
+            outputs,
+        })
     }
 }
 
-fn wrapped(entry: Vec<Node>) -> Program {
-    Program::wrapped(Vec::new(), [1, 1, 1], entry)
+/// Facts for a device that reports the shared memory the pass programs use.
+///
+/// `DeviceFacts::unknown()` grants nothing, so a pass whose program declares
+/// workgroup scratch is rejected against it. The passes here are compiled, not
+/// hypothetically judged, so the policy names a device that can run them.
+fn policy() -> SemanticExecutionPolicy {
+    SemanticExecutionPolicy::new(
+        ExternalFacts::new(Digest([3; 32]), BTreeMap::new()),
+        DeviceFacts::new(
+            BackendCapabilities {
+                has_shared_memory: true,
+                max_shared_memory_bytes: 32 * 1024,
+                ..BackendCapabilities::default()
+            },
+            256,
+        ),
+        CompileObjective::MinimizeLatency,
+        SearchBudget::new(8, 64, 0, 0, 1_000),
+        1_000_000,
+    )
+}
+
+fn input_program() -> Program {
+    Program::wrapped(
+        Vec::new(),
+        [1, 1, 1],
+        vec![Node::let_bind("sum", Expr::add(Expr::u32(2), Expr::u32(3)))],
+    )
 }
 
 #[test]
-fn gpu_dce_fills_every_input_slot_its_analysis_program_declares() {
-    let dispatcher = RecordingDispatcher::default();
-    gpu_dce(
-        wrapped(vec![
-            Node::let_bind("a", Expr::u32(7)),
-            Node::let_bind("b", Expr::u32(9)),
-        ]),
-        &dispatcher,
-    )
-    .expect("Fix: gpu_dce must complete against a converged recording dispatcher");
+fn full_pipeline_stage_order_and_graph_value_inputs_are_closed() {
+    let executor = RecordingExecutor::new(false);
+    let optimized = gpu_optimize(input_program(), &executor, &policy()).expect("pipeline succeeds");
+    assert_eq!(optimized, input_program());
 
-    let calls = dispatcher.calls.borrow();
-    assert!(
-        !calls.is_empty(),
-        "Fix: gpu_dce must dispatch its liveness analysis at least once."
-    );
-    for (index, (supplied, declared)) in calls.iter().enumerate() {
-        assert_eq!(
-            supplied, declared,
-            "Fix: gpu_dce dispatch {index} supplied {supplied} input slot(s) for an analysis \
-             program declaring {declared}. Update the slot filler in \
-             vyre-pass-engine/src/optimizer/dce_via_encoded.rs to match the program."
-        );
-    }
-}
-
-#[test]
-fn the_dce_analysis_program_declares_nine_input_slots() {
-    let dispatcher = RecordingDispatcher::default();
-    gpu_dce(
-        wrapped(vec![Node::let_bind("a", Expr::u32(7))]),
-        &dispatcher,
-    )
-    .expect("Fix: gpu_dce must complete against a converged recording dispatcher");
-
-    let calls = dispatcher.calls.borrow();
-    let (supplied, declared) = calls
-        .first()
-        .copied()
-        .expect("Fix: gpu_dce must dispatch its liveness analysis at least once.");
+    let snapshots = executor.snapshots();
     assert_eq!(
-        declared, 9,
-        "Fix: the persistent-BFS DCE layout is six read-only graph buffers plus the ReadWrite \
-         frontier_out, changed and converged slots. A different count means the layout changed; \
-         update this pin and the slot filler together."
+        snapshots
+            .iter()
+            .map(|request| request.stage.as_str())
+            .collect::<Vec<_>>(),
+        ["canonicalize", "const-fold", "dce", "pattern-match"]
     );
-    assert_eq!(supplied, 9);
+    for request in snapshots {
+        assert!(!request.semantic_graph.is_empty());
+        assert!(!request.inputs.is_empty());
+        assert!(request.inputs.windows(2).all(|pair| pair[0].0 < pair[1].0));
+    }
 }
 
-/// `gpu_dce` MUST pin its liveness analysis to exactly one workgroup.
-///
-/// This is a correctness contract, not a tuning preference, and it is invisible on
-/// any single-workgroup-sized input, which is why it needs a test that inspects the
-/// launch geometry directly rather than an output.
-///
-/// The analysis kernel detects growth by testing whether THIS lane's `atomic_or`
-/// flipped the target bit. Exactly one lane in the grid wins any given flip, so
-/// across several workgroups a duplicate group can win a discovery, leaving the one
-/// group that covers the whole node range with `changed == 0`. That group records a
-/// fixpoint it never reached and stops relaxing while the newly discovered node's
-/// own edges are unexpanded, and `gpu_dce` then deletes live code against the
-/// truncated closure. `pipeline_resident` pins the same program for the same reason.
-///
-/// A regression here reads as `None`, which is the whole grid, or as any `[x, _, _]`
-/// with `x > 1`. Both are rejected.
 #[test]
-fn gpu_dce_pins_its_analysis_to_a_single_workgroup() {
-    let dispatcher = RecordingDispatcher::default();
-    gpu_dce(
-        wrapped(vec![
-            Node::let_bind("a", Expr::u32(7)),
-            Node::let_bind("b", Expr::u32(9)),
-        ]),
-        &dispatcher,
-    )
-    .expect("Fix: gpu_dce must complete against a converged recording dispatcher");
+fn hostile_route_preferences_cannot_change_semantic_requests() {
+    let ordinary = RecordingExecutor::new(false);
+    let hostile = RecordingExecutor::new(true);
+    gpu_optimize(input_program(), &ordinary, &policy()).expect("ordinary pipeline succeeds");
+    gpu_optimize(input_program(), &hostile, &policy()).expect("hostile pipeline succeeds");
+    assert_eq!(ordinary.snapshots(), hostile.snapshots());
+}
 
-    let grids = dispatcher.grids.borrow();
-    assert!(
-        !grids.is_empty(),
-        "Fix: gpu_dce must dispatch its liveness analysis at least once."
+#[test]
+fn semantic_backend_failure_keeps_dce_stage_classification_and_context() {
+    let executor = RecordingExecutor {
+        hostile_route_preference: true,
+        fail_stage: Some("dce"),
+        requests: Mutex::new(Vec::new()),
+        miskey_stage: None,
+    };
+    let error = gpu_optimize(input_program(), &executor, &policy()).expect_err("dce must fail");
+    assert!(matches!(
+        error,
+        GpuOptimizeError::Dce(DceError::Semantic(SemanticExecutionError::Backend(_)))
+    ));
+    assert!(error.to_string().contains("gpu_optimize dce"));
+    assert!(error
+        .to_string()
+        .contains("semantic artifact execution failed"));
+}
+
+#[test]
+fn final_stage_decoding_requires_the_canonical_graph_output_identity() {
+    let executor = RecordingExecutor {
+        hostile_route_preference: false,
+        fail_stage: None,
+        miskey_stage: Some("pattern-match"),
+        requests: Mutex::new(Vec::new()),
+    };
+    let error =
+        gpu_optimize(input_program(), &executor, &policy()).expect_err("wrong output id must fail");
+    assert!(matches!(error, GpuOptimizeError::AlgebraicIdentities(_)));
+    assert!(error.to_string().contains("omitted canonical output value"));
+}
+
+#[test]
+fn reference_semantic_executor_runs_the_complete_pipeline() {
+    let input = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::add(Expr::u32(2), Expr::u32(3)),
+        )],
     );
-    for (index, grid) in grids.iter().enumerate() {
-        assert_eq!(
-            *grid,
-            Some([1, 1, 1]),
-            "Fix: gpu_dce dispatch {index} launched with grid {grid:?} instead of a single \
-             workgroup. The analysis kernel's early exit attributes each discovery to the one \
-             lane whose atomic_or flipped the bit, so splitting it across workgroups lets a \
-             duplicate group steal a discovery and strand the essential group at changed = 0. \
-             Pin it with Some([1, 1, 1]) in dce_via_encoded.rs."
-        );
-    }
+    let expected = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store("out", Expr::u32(0), Expr::u32(5))],
+    );
+    let optimized = gpu_optimize(input, &ReferenceSemanticExecutor, &policy())
+        .expect("reference semantic pipeline succeeds");
+    assert_eq!(optimized, expected);
 }

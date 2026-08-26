@@ -54,17 +54,6 @@ pub const BINDING_KEPT_MASK_OUT: u32 = 1;
 /// Byte-lane workgroup used by the line-splice classifier.
 pub const LINE_SPLICE_CLASSIFY_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid for classifying `byte_count` input bytes.
-#[must_use]
-pub const fn line_splice_classify_dispatch_grid(byte_count: u32) -> [u32; 3] {
-    let blocks = byte_count.div_ceil(LINE_SPLICE_CLASSIFY_WORKGROUP_SIZE[0]);
-    if blocks == 0 {
-        [1, 1, 1]
-    } else {
-        [blocks, 1, 1]
-    }
-}
-
 const BACKSLASH: u32 = 0x5C; // '\\'
 const LF: u32 = 0x0A; // '\n'
 const CR: u32 = 0x0D; // '\r'
@@ -328,7 +317,9 @@ inventory::submit! {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             let mut bytes = vec![120 | (120 << 8) | (120 << 16) | (120 << 24); 64];
             bytes[0] = 97 | (92 << 8) | (10 << 16) | (98 << 24);
-            vec![vec![to_bytes(&bytes)]] // bytes_in
+            // `kept_mask_out` is read-write storage, so the reference takes one
+            // seeded Value for it exactly as a device takes one bound buffer.
+            vec![vec![to_bytes(&bytes), to_bytes(&vec![0u32; 256])]]
         }),
         Some(|| {
             vec![vec![EXPECTED_LINE_SPLICE_CLASSIFY_BYTES.to_vec()]]
@@ -518,15 +509,6 @@ mod tests {
         let p = line_splice_classify(64);
         assert_eq!(p.buffers().len(), 2, "bytes_in + kept_mask_out");
         assert_eq!(p.workgroup_size(), LINE_SPLICE_CLASSIFY_WORKGROUP_SIZE);
-    }
-
-    #[test]
-    fn dispatch_grid_packs_byte_lanes_into_blocks() {
-        assert_eq!(line_splice_classify_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(line_splice_classify_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(line_splice_classify_dispatch_grid(256), [1, 1, 1]);
-        assert_eq!(line_splice_classify_dispatch_grid(257), [2, 1, 1]);
-        assert_eq!(line_splice_classify_dispatch_grid(4099), [17, 1, 1]);
     }
 
     #[test]

@@ -81,13 +81,6 @@ pub const MAX_SEGMENT_VALUE: u32 = 0xFF;
 /// One lane per packed RLE segment.
 pub const RLE_SEGMENT_LENGTHS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid that covers every packed RLE segment lane.
-#[cfg(test)]
-#[must_use]
-pub const fn rle_segment_lengths_dispatch_grid(segment_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(segment_count, RLE_SEGMENT_LENGTHS_WORKGROUP_SIZE[0])
-}
-
 /// Pack errors raised by the host-side packer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
@@ -585,15 +578,6 @@ mod tests {
             "segments_in + lengths_out + values_out"
         );
         assert_eq!(program.workgroup_size(), RLE_SEGMENT_LENGTHS_WORKGROUP_SIZE);
-    }
-
-    #[test]
-    fn dispatch_grid_packs_segment_lanes_into_workgroups() {
-        assert_eq!(rle_segment_lengths_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(rle_segment_lengths_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(rle_segment_lengths_dispatch_grid(256), [1, 1, 1]);
-        assert_eq!(rle_segment_lengths_dispatch_grid(257), [2, 1, 1]);
-        assert_eq!(rle_segment_lengths_dispatch_grid(1025), [5, 1, 1]);
     }
 
     #[test]

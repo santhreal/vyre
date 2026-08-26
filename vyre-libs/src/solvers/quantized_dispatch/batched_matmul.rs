@@ -1,7 +1,7 @@
 //! Device dispatch of packed INT4 batched matmul.
 
 use super::*;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Compute packed signed INT4 batched matrix multiply through the backend.
 ///
@@ -13,10 +13,11 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when dimensions are zero, input shapes are wrong,
+/// Returns [`SemanticExecutionError`] when dimensions are zero, input shapes are wrong,
 /// dispatch fails, or backend readback is malformed.
 pub fn i4x8_batched_matmul_f32_scaled_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     weights_packed: &[u32],
     activation_batches_packed: &[u32],
     row_scales: &[f32],
@@ -24,11 +25,12 @@ pub fn i4x8_batched_matmul_f32_scaled_via(
     batch: u32,
     rows: u32,
     cols: u32,
-) -> Result<Vec<f32>, DispatchError> {
+) -> Result<Vec<f32>, SemanticExecutionError> {
     let mut scratch = QuantizedBatchedMatmulGpuScratch::default();
     let mut out = Vec::new();
     i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
         dispatcher,
+        policy,
         weights_packed,
         activation_batches_packed,
         row_scales,
@@ -48,10 +50,11 @@ pub fn i4x8_batched_matmul_f32_scaled_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] under the same conditions as
+/// Returns [`SemanticExecutionError`] under the same conditions as
 /// [`i4x8_batched_matmul_f32_scaled_via`].
 pub fn i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     weights_packed: &[u32],
     activation_batches_packed: &[u32],
     row_scales: &[f32],
@@ -61,7 +64,7 @@ pub fn i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
     cols: u32,
     scratch: &mut QuantizedBatchedMatmulGpuScratch,
     out: &mut Vec<f32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let QuantizedBatchedMatmulGpuScratch {
         inputs,
         program_cache,
@@ -69,6 +72,7 @@ pub fn i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
     dispatch_packed_batched_matmul(
         "i4x8_batched_matmul_f32_scaled_via",
         dispatcher,
+        policy,
         weights_packed,
         activation_batches_packed,
         row_scales,
@@ -78,7 +82,6 @@ pub fn i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
         cols,
         inputs,
         program_cache,
-        None,
         None,
         || {
             i4x8_batched_matmul_f32_scaled(

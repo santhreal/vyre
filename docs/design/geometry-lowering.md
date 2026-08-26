@@ -103,6 +103,28 @@ derives semantic constraints from the canonical program and composes them with
 that decision. `docs/generated/OP_SCHEMA.json` records the effective result for
 every linked operation.
 
+### Deriving the span a launch must cover
+
+A program states no launch, so the span one covers is derived from the program.
+`vyre-foundation::geometry` publishes that analysis.
+
+`guarded_logical_span` returns the largest axis-0 logical index a program can
+affect when every effect it performs is dominated by a constant bound on that
+index, and `None` when an effect escapes every such guard, because an unbounded
+effect leaves high lanes observable. A program with no effect returns `Some(0)`:
+the launch minimum belongs to whoever sizes the launch.
+
+`admitted_logical_span` narrows a resource-derived span to that guarded domain.
+A resource span takes the widest declared buffer, which a scatter makes far
+larger than the domain its guard admits. The result is at least one.
+
+`launch_covers_full_input_span` states when narrowing is illegal whatever the
+guards admit. An atomic, a subgroup collective and a workgroup-scoped buffer all
+make the result depend on how many invocations ran rather than only on which
+elements each one touched. The last is the shared-memory reduction: every lane of
+a group contributes a partial, so a launch narrowed to a one-element output
+leaves the rest of the input unreduced.
+
 ### Search
 
 Geometry becomes a ranked dimension. The lowering strategy returns candidate

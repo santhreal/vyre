@@ -7,7 +7,7 @@
 //! about which entries a change touched.
 
 use vyre_driver::BackendError;
-use vyre_foundation::program_dispatch::ProgramDispatcher;
+use vyre_megakernel::{SemanticExecutionPolicy, SemanticExecutor};
 
 /// The rule-graph state one invalidation is evaluated against.
 pub(crate) struct RuleImpactQuery<'a> {
@@ -36,10 +36,12 @@ impl RuleImpactQuery<'_> {
     /// the declared rule count or the walk exceeds its iteration cap.
     pub(crate) fn impact_mask(
         &self,
-        dispatcher: &dyn ProgramDispatcher,
+        executor: &dyn SemanticExecutor,
+        policy: &SemanticExecutionPolicy,
     ) -> Result<Vec<u32>, BackendError> {
         vyre_driver::cache_invalidation::impacted_entries(
-            dispatcher,
+            executor,
+            policy,
             self.intervention_mask,
             self.rule_adj,
             self.state,

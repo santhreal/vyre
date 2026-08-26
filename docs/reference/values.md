@@ -68,3 +68,7 @@ rank-limited shape, and `DataType::DeviceMesh` carries mesh axes.
 `GraphValueId(u32)` and `GraphNodeId(u32)` are graph-local. They are dense
 indices into one graph, not stable identifiers across graphs, and nothing
 outside a single `ProgramGraph` should hold one.
+
+`ProgramGraph` is `Clone`. A clone is a distinct graph with the same dense
+indices, so an identity taken from one graph stays valid against its clone and
+against nothing else.

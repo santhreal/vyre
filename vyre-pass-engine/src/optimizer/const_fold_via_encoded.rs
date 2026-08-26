@@ -1,4 +1,4 @@
-//! Constant folding as a dispatched compute kernel.
+//! Constant folding through a semantic fused level-wave graph.
 //!
 //! V1 scope: literals (`LitU32`) plus the integer-arithmetic
 //! BinOps (`Add`, `Sub`, `Mul`, `BitAnd`, `BitOr`, `BitXor`) on u32.
@@ -9,29 +9,24 @@
 //! `build_const_fold_program` function constructs a vyre `Program`
 //! that scans the arena bottom-up, marking each foldable Expr in a
 //! `foldable[]` u32 buffer and writing its computed value into a
-//! `value[]` u32 buffer. The `ProgramDispatcher` runs that Program
-//! on the GPU; the decoder walks the IR and rewrites every foldable
-//! Expr into a literal.
-//!
-//! No host-reference escape in production. Tests parity against the
-//! `vyre-foundation` const-fold pass through
-//! `vyre_driver_reference::ReferenceEvalDispatcher`; the driver integration
-//! test crates run the same Program through a real backend.
+//! `value[]` u32 buffer. A semantic executor compiles and runs that Program;
+//! the decoder walks the IR and rewrites every foldable expression into a
+//! literal.
 
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use vyre_libs::dispatch_buffers::{
-    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
 
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, expr_kind, ExprArenaEncoding};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 #[derive(Debug, Default)]
 struct ConstFoldKernelScratch {
     inputs: Vec<Vec<u8>>,
-    current_level: [u32; 1],
+    max_depth: [u32; 1],
 }
 
 /// Errors surfaced by `gpu_const_fold`.
@@ -39,28 +34,26 @@ struct ConstFoldKernelScratch {
 pub enum ConstFoldError {
     /// Encoder did not accept the input shape.
     Encode(EncodeError),
-    /// Dispatcher rejected or failed to run the analysis Program.
-    Dispatch(DispatchError),
+    /// Semantic execution or canonical output decoding failed.
+    Semantic(SemanticExecutionError),
 }
 
 impl std::fmt::Display for ConstFoldError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Encode(err) => write!(f, "gpu_const_fold encode error: {err:?}"),
-            Self::Dispatch(err) => write!(f, "gpu_const_fold dispatch error: {err}"),
+            Self::Semantic(err) => write!(f, "gpu_const_fold semantic execution error: {err}"),
         }
     }
 }
 
 impl std::error::Error for ConstFoldError {}
 
-/// Run constant-folding on `program` by encoding its Expr arena,
-/// dispatching the bottom-up evaluator Program through `dispatcher`,
-/// and rewriting every foldable Expr in the input Program into the
-/// computed literal value.
+/// Run constant folding through one semantic execution of the fused level wave.
 pub fn gpu_const_fold(
     program: Program,
-    dispatcher: &dyn ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
 ) -> Result<Program, ConstFoldError> {
     let arena = encode_expr_arena(&program).map_err(ConstFoldError::Encode)?;
     if arena.expr_count == 0 {
@@ -71,12 +64,13 @@ pub fn gpu_const_fold(
     let mut value = Vec::with_capacity(arena.expr_count as usize);
     run_const_fold_kernel_with_scratch_into(
         &arena,
-        dispatcher,
+        executor,
+        policy,
         &mut scratch,
         &mut foldable,
         &mut value,
     )
-    .map_err(ConstFoldError::Dispatch)?;
+    .map_err(ConstFoldError::Semantic)?;
     Ok(rewrite_program_with_folded_values(
         program, &foldable, &value,
     ))
@@ -85,79 +79,65 @@ pub fn gpu_const_fold(
 #[cfg(test)]
 fn run_const_fold_kernel_into(
     arena: &ExprArenaEncoding,
-    dispatcher: &dyn ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     foldable: &mut Vec<u32>,
     value: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = ConstFoldKernelScratch::default();
-    run_const_fold_kernel_with_scratch_into(arena, dispatcher, &mut scratch, foldable, value)
+    run_const_fold_kernel_with_scratch_into(arena, executor, policy, &mut scratch, foldable, value)
 }
 
 fn run_const_fold_kernel_with_scratch_into(
     arena: &ExprArenaEncoding,
-    dispatcher: &dyn ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     scratch: &mut ConstFoldKernelScratch,
     foldable: &mut Vec<u32>,
     value: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let n = arena.expr_count;
-    let analysis = build_const_fold_program(n);
-    let words = n as usize;
-    let state_bytes = words
-        .checked_mul(std::mem::size_of::<u32>())
-        .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
-                "Fix: const-fold state byte count overflows usize for expr_count={n}."
-            ))
-        })?;
-
-    // Level-parallel kernel: each dispatch processes all Exprs at one
-    // depth level in parallel via gid_x(). The host loops levels
-    // 0..=max_depth, updating the `current_level` buffer between
-    // dispatches. Foldable + value buffers persist their state across
-    // levels (we re-feed the previous output as the next input).
-    //
-    // Buffer order matches `build_const_fold_program`'s declarations:
-    //   0: arena_kinds (RO)
-    //   1: arena_arg0 (RO)
-    //   2: arena_arg1 (RO)
-    //   3: arena_arg2 (RO)
-    //   4: arena_depths (RO)  -  per-Expr depth
-    //   5: current_level (RO)  -  single u32, varied per dispatch
-    //   6: foldable (RW; init zeros, persists across levels)
-    //   7: value (RW; init zeros, persists across levels)
     ensure_input_slots(&mut scratch.inputs, 8);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], &arena.kinds);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], &arena.arg0);
     write_u32_slice_le_bytes(&mut scratch.inputs[2], &arena.arg1);
     write_u32_slice_le_bytes(&mut scratch.inputs[3], &arena.arg2);
     write_u32_slice_le_bytes(&mut scratch.inputs[4], &arena.depths);
-    write_zero_bytes(&mut scratch.inputs[6], state_bytes);
-    write_zero_bytes(&mut scratch.inputs[7], state_bytes);
+    scratch.max_depth[0] = arena.max_depth;
+    write_u32_slice_le_bytes(&mut scratch.inputs[5], &scratch.max_depth);
+    // The two results are retained read-write buffers, so the request carries
+    // their initial state: zero means "no expr folded yet".
+    let seed = vec![0u32; n.max(1) as usize];
+    write_u32_slice_le_bytes(&mut scratch.inputs[6], &seed);
+    write_u32_slice_le_bytes(&mut scratch.inputs[7], &seed);
 
-    let grid_x = (n + WORKGROUP_X - 1) / WORKGROUP_X;
-
-    for level in 0..=arena.max_depth {
-        scratch.current_level[0] = level;
-        write_u32_slice_le_bytes(&mut scratch.inputs[5], &scratch.current_level);
-
-        let outputs = dispatcher.dispatch(&analysis, &scratch.inputs, Some([grid_x, 1, 1]))?;
-        if outputs.len() != 2 {
-            return Err(DispatchError::BackendError(format!(
-                "Fix: const-fold dispatch expected exactly 2 outputs (foldable, value), got {}.",
-                outputs.len()
-            )));
-        }
-        decode_u32_output_exact(&outputs[0], words, "const-fold foldable", foldable)?;
-        decode_u32_output_exact(&outputs[1], words, "const-fold value", value)?;
-        // Carry RW state forward to the next level dispatch.
-        scratch.inputs[6].clear();
-        scratch.inputs[6].extend_from_slice(&outputs[0]);
-        scratch.inputs[7].clear();
-        scratch.inputs[7].extend_from_slice(&outputs[1]);
+    let mut execution = vyre_megakernel::execute_single_program(
+        executor,
+        "const-fold",
+        build_const_fold_program_fused(n, arena.max_depth.saturating_add(1).max(1)),
+        &scratch.inputs,
+        policy,
+    )?;
+    if execution.outputs.len() != 2 {
+        return Err(SemanticExecutionError::Backend(format!(
+            "const-fold semantic execution expected two canonical outputs, got {}",
+            execution.outputs.len()
+        )));
     }
-
-    Ok(())
+    let value_bytes = execution.outputs.remove(1);
+    let foldable_bytes = execution.outputs.remove(0);
+    decode_u32_output_exact(&foldable_bytes, n as usize, "const-fold foldable", foldable).map_err(
+        |error| {
+            SemanticExecutionError::Backend(format!(
+                "const-fold foldable semantic output decoding failed: {error}"
+            ))
+        },
+    )?;
+    decode_u32_output_exact(&value_bytes, n as usize, "const-fold value", value).map_err(|error| {
+        SemanticExecutionError::Backend(format!(
+            "const-fold value semantic output decoding failed: {error}"
+        ))
+    })
 }
 
 /// Workgroup size for the level-parallel const-fold kernel.
@@ -170,8 +150,10 @@ const WORKGROUP_X: u32 = super::arena_kernel::WORKGROUP_X;
 ///
 /// The level wave itself is
 /// `super::arena_kernel::build_fused_level_wave_program`; const-fold
-/// contributes the `foldable` / `value` outputs at bindings 6 and 7 and
-/// the per-Expr body that writes them.
+/// contributes the retained `foldable` / `value` results at bindings 6 and 7
+/// and the per-Expr body that writes them. A program marks at most one buffer
+/// as its single output, so two results are read-write buffers the caller seeds
+/// and reads back, which is also what the level-parallel builder below does.
 #[must_use]
 pub fn build_const_fold_program_fused(expr_count: u32, max_depth_iter_cap: u32) -> Program {
     let count = expr_count.max(1);
@@ -730,175 +712,50 @@ mod tests {
     use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
     use super::super::arena_kernel::{
-        single_lit_u32_arena as one_expr_arena, FixedOutputDispatcher, GridExpectation,
+        semantic_test_policy, single_lit_u32_arena as one_expr_arena, FixedOutputExecutor,
     };
 
-    fn dispatcher(outputs: Vec<Vec<u8>>) -> FixedOutputDispatcher {
-        FixedOutputDispatcher {
+    fn executor(outputs: Vec<Vec<u8>>) -> FixedOutputExecutor {
+        FixedOutputExecutor {
             pass: "const-fold",
             expected_inputs: 8,
-            grid: GridExpectation::StridedOverArena,
             outputs,
         }
     }
 
     #[test]
-    fn kernel_into_decodes_exact_outputs_into_reused_buffers() {
-        let dispatcher = dispatcher(vec![
+    fn kernel_decodes_both_canonical_graph_outputs() {
+        let executor = executor(vec![
             u32_slice_to_le_bytes(&[1]),
             u32_slice_to_le_bytes(&[7]),
         ]);
         let mut foldable = Vec::with_capacity(4);
         let mut value = Vec::with_capacity(4);
-        let foldable_ptr = foldable.as_ptr();
-        let value_ptr = value.as_ptr();
-        run_const_fold_kernel_into(&one_expr_arena(), &dispatcher, &mut foldable, &mut value)
-            .expect("Fix: dispatch succeeds");
-        assert_eq!(foldable, vec![1]);
-        assert_eq!(value, vec![7]);
-        assert_eq!(foldable.as_ptr(), foldable_ptr);
-        assert_eq!(value.as_ptr(), value_ptr);
-    }
-
-    #[test]
-    fn kernel_with_scratch_reuses_dispatch_state_and_outputs() {
-        let dispatcher = dispatcher(vec![
-            u32_slice_to_le_bytes(&[1]),
-            u32_slice_to_le_bytes(&[7]),
-        ]);
-        let arena = one_expr_arena();
-        let mut scratch = ConstFoldKernelScratch::default();
-        let mut foldable = Vec::with_capacity(1);
-        let mut value = Vec::with_capacity(1);
-
-        run_const_fold_kernel_with_scratch_into(
-            &arena,
-            &dispatcher,
-            &mut scratch,
+        run_const_fold_kernel_into(
+            &one_expr_arena(),
+            &executor,
+            &semantic_test_policy(),
             &mut foldable,
             &mut value,
         )
-        .expect("Fix: dispatch succeeds");
-
-        let input_capacities = scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>();
-        let foldable_capacity = foldable.capacity();
-        let value_capacity = value.capacity();
-
-        run_const_fold_kernel_with_scratch_into(
-            &arena,
-            &dispatcher,
-            &mut scratch,
-            &mut foldable,
-            &mut value,
-        )
-        .expect("Fix: dispatch succeeds");
-
-        assert_eq!(
-            scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>(),
-            input_capacities
-        );
-        assert_eq!(foldable.capacity(), foldable_capacity);
-        assert_eq!(value.capacity(), value_capacity);
+        .expect("semantic execution succeeds");
         assert_eq!(foldable, vec![1]);
         assert_eq!(value, vec![7]);
-    }
-
-    #[test]
-    fn kernel_rejects_extra_outputs() {
-        let dispatcher = dispatcher(vec![
-            u32_slice_to_le_bytes(&[1]),
-            u32_slice_to_le_bytes(&[7]),
-            u32_slice_to_le_bytes(&[0]),
-        ]);
-        let mut foldable = Vec::new();
-        let mut value = Vec::new();
-        let err =
-            run_const_fold_kernel_into(&one_expr_arena(), &dispatcher, &mut foldable, &mut value)
-                .expect_err("extra outputs must be rejected");
-        assert!(
-            matches!(err, DispatchError::BackendError(_)),
-            "unexpected error: {err:?}"
-        );
     }
 
     #[test]
     fn kernel_rejects_trailing_value_bytes() {
-        let dispatcher = dispatcher(vec![u32_slice_to_le_bytes(&[1]), vec![7, 0, 0, 0, 1]]);
+        let executor = executor(vec![u32_slice_to_le_bytes(&[1]), vec![7, 0, 0, 0, 1]]);
         let mut foldable = Vec::new();
         let mut value = Vec::new();
-        let err =
-            run_const_fold_kernel_into(&one_expr_arena(), &dispatcher, &mut foldable, &mut value)
-                .expect_err("trailing bytes must be rejected");
-        assert!(
-            matches!(err, DispatchError::BackendError(_)),
-            "unexpected error: {err:?}"
-        );
-    }
-
-    /// P2 regression: the const-fold dispatcher receives `Some([grid_x, 1, 1])`
-    /// where `grid_x = ceil(expr_count / WORKGROUP_X)`. For a 257-expr arena
-    /// `grid_x` must be 2. The sibling arena passes each dispatch exactly one
-    /// workgroup, and this pass's own test fake once copied their
-    /// `Some([1, 1, 1])` assertion, which passed only for the trivial 1-expr
-    /// case and left multi-workgroup dispatch unexercised.
-    #[test]
-    fn const_fold_kernel_sends_correct_multi_workgroup_grid_for_257_exprs() {
-        struct GridCapture {
-            /// Store the x-grid from each dispatch call.
-            grid_x_values: std::cell::RefCell<Vec<u32>>,
-            expr_count: u32,
-        }
-        impl ProgramDispatcher for GridCapture {
-            fn dispatch(
-                &self,
-                _program: &Program,
-                _inputs: &[Vec<u8>],
-                grid_override: Option<[u32; 3]>,
-            ) -> Result<Vec<Vec<u8>>, DispatchError> {
-                let gx = grid_override.map(|g| g[0]).unwrap_or(0);
-                self.grid_x_values.borrow_mut().push(gx);
-                let n = self.expr_count as usize;
-                Ok(vec![
-                    u32_slice_to_le_bytes(&vec![0u32; n]),
-                    u32_slice_to_le_bytes(&vec![0u32; n]),
-                ])
-            }
-        }
-
-        let n: u32 = 257;
-        let arena = ExprArenaEncoding {
-            expr_count: n,
-            kinds: vec![expr_kind::LIT_U32; n as usize],
-            arg0: vec![0u32; n as usize],
-            arg1: vec![0u32; n as usize],
-            arg2: vec![0u32; n as usize],
-            depths: vec![0u32; n as usize],
-            max_depth: 0,
-            ..ExprArenaEncoding::default()
-        };
-        let dispatcher = GridCapture {
-            grid_x_values: std::cell::RefCell::new(Vec::new()),
-            expr_count: n,
-        };
-        let mut foldable = Vec::new();
-        let mut value = Vec::new();
-        run_const_fold_kernel_into(&arena, &dispatcher, &mut foldable, &mut value)
-            .expect("Fix: 257-expr const-fold dispatch succeeds");
-
-        assert_eq!(foldable.len(), n as usize);
-        // For n=257 and WORKGROUP_X=256: ceil(257/256) = 2.
-        let expected_grid_x = (n + WORKGROUP_X - 1) / WORKGROUP_X;
-        assert_eq!(
-            expected_grid_x, 2,
-            "sanity: expected_grid_x for 257 exprs must be 2"
-        );
-        for (dispatch_idx, &gx) in dispatcher.grid_x_values.borrow().iter().enumerate() {
-            assert_eq!(
-                gx, expected_grid_x,
-                "dispatch {dispatch_idx}: grid_x must be {expected_grid_x} for expr_count={n}; \
-                 asserting a literal Some([1,1,1]) here only works by accident for 1-expr \
-                 arenas"
-            );
-        }
+        let err = run_const_fold_kernel_into(
+            &one_expr_arena(),
+            &executor,
+            &semantic_test_policy(),
+            &mut foldable,
+            &mut value,
+        )
+        .expect_err("trailing bytes must be rejected");
+        assert!(matches!(err, SemanticExecutionError::Backend(_)));
     }
 }

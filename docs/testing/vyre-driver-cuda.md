@@ -37,8 +37,6 @@ The crate lives at `vyre-driver-cuda`. The `cuda-driver` owner maintains its
 | --- | --- | --- | --- | --- |
 | `example` | `cuda_release_surface` | `vyre-driver-cuda/examples/cuda_release_surface.rs` | None | `./cargo_full test -p vyre-driver-cuda --example cuda_release_surface` |
 | `lib` | `vyre_driver_cuda` | `vyre-driver-cuda/src/lib.rs` | None | `./cargo_full test -p vyre-driver-cuda` |
-| `test` | `adaptive_sparse_queue_generated_gpu_parity` | `vyre-driver-cuda/tests/adaptive_sparse_queue_generated_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test adaptive_sparse_queue_generated_gpu_parity` |
-| `test` | `adaptive_traverse_vast_walk_gpu_parity` | `vyre-driver-cuda/tests/adaptive_traverse_vast_walk_gpu_parity/mod.rs` | None | `./cargo_full test -p vyre-driver-cuda --test adaptive_traverse_vast_walk_gpu_parity` |
 | `test` | `aot_launcher_contracts` | `vyre-driver-cuda/tests/aot_launcher_contracts.rs` | None | `./cargo_full test -p vyre-driver-cuda --test aot_launcher_contracts` |
 | `test` | `argmax_of_marginals_gpu_parity` | `vyre-driver-cuda/tests/argmax_of_marginals_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test argmax_of_marginals_gpu_parity` |
 | `test` | `async_transfer_byte_span_parity` | `vyre-driver-cuda/tests/async_transfer_byte_span_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test async_transfer_byte_span_parity` |
@@ -62,10 +60,6 @@ The crate lives at `vyre-driver-cuda`. The `cuda-driver` owner maintains its
 | `test` | `csr_bidirectional_gpu_parity` | `vyre-driver-cuda/tests/csr_bidirectional_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test csr_bidirectional_gpu_parity` |
 | `test` | `csr_forward_or_changed_gpu_parity` | `vyre-driver-cuda/tests/csr_forward_or_changed_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test csr_forward_or_changed_gpu_parity` |
 | `test` | `csr_frontier_degree_sum_gpu_parity` | `vyre-driver-cuda/tests/csr_frontier_degree_sum_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test csr_frontier_degree_sum_gpu_parity` |
-| `test` | `csr_frontier_queue_gpu_parity` | `vyre-driver-cuda/tests/csr_frontier_queue_gpu_parity/mod.rs` | None | `./cargo_full test -p vyre-driver-cuda --test csr_frontier_queue_gpu_parity` |
-| `test` | `csr_frontier_queue_word_prefix_multiblock_gpu_parity` | `vyre-driver-cuda/tests/csr_frontier_queue_word_prefix_multiblock_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test csr_frontier_queue_word_prefix_multiblock_gpu_parity` |
-| `test` | `csr_queue_split_gpu_parity` | `vyre-driver-cuda/tests/csr_queue_split_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test csr_queue_split_gpu_parity` |
-| `test` | `csr_queue_strided_gpu_parity` | `vyre-driver-cuda/tests/csr_queue_strided_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test csr_queue_strided_gpu_parity` |
 | `test` | `cuda_external_probe_contract` | `vyre-driver-cuda/tests/cuda_external_probe_contract.rs` | None | `./cargo_full test -p vyre-driver-cuda --test cuda_external_probe_contract` |
 | `test` | `cuda_ffi_template_contracts` | `vyre-driver-cuda/tests/cuda_ffi_template_contracts.rs` | None | `./cargo_full test -p vyre-driver-cuda --test cuda_ffi_template_contracts` |
 | `test` | `cuda_graph_dispatch_parity` | `vyre-driver-cuda/tests/cuda_graph_dispatch_parity/mod.rs` | None | `./cargo_full test -p vyre-driver-cuda --test cuda_graph_dispatch_parity` |
@@ -73,7 +67,6 @@ The crate lives at `vyre-driver-cuda`. The `cuda-driver` owner maintains its
 | `test` | `cuda_scan_memory_pool_registry` | `vyre-driver-cuda/tests/cuda_scan_memory_pool_registry.rs` | None | `./cargo_full test -p vyre-driver-cuda --test cuda_scan_memory_pool_registry` |
 | `test` | `cuda_stream_ordered_pool_planner` | `vyre-driver-cuda/tests/cuda_stream_ordered_pool_planner.rs` | None | `./cargo_full test -p vyre-driver-cuda --test cuda_stream_ordered_pool_planner` |
 | `test` | `cuda_warp_nfa_plan_registry` | `vyre-driver-cuda/tests/cuda_warp_nfa_plan_registry.rs` | None | `./cargo_full test -p vyre-driver-cuda --test cuda_warp_nfa_plan_registry` |
-| `test` | `dce_workgroup_redundancy_and_cost` | `vyre-driver-cuda/tests/dce_workgroup_redundancy_and_cost.rs` | None | `./cargo_full test -p vyre-driver-cuda --test dce_workgroup_redundancy_and_cost` |
 | `test` | `decode_hex_gpu_parity` | `vyre-driver-cuda/tests/decode_hex_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test decode_hex_gpu_parity` |
 | `test` | `device_pool_hit_rate_evidence` | `vyre-driver-cuda/tests/device_pool_hit_rate_evidence.rs` | None | `./cargo_full test -p vyre-driver-cuda --test device_pool_hit_rate_evidence` |
 | `test` | `dispatch_overhead_breakdown` | `vyre-driver-cuda/tests/dispatch_overhead_breakdown.rs` | None | `./cargo_full test -p vyre-driver-cuda --test dispatch_overhead_breakdown` |
@@ -159,9 +152,9 @@ The crate lives at `vyre-driver-cuda`. The `cuda-driver` owner maintains its
 | `test` | `self_optimizer_licm_e2e` | `vyre-driver-cuda/tests/self_optimizer_licm_e2e.rs` | None | `./cargo_full test -p vyre-driver-cuda --test self_optimizer_licm_e2e` |
 | `test` | `self_optimizer_pattern_match_e2e` | `vyre-driver-cuda/tests/self_optimizer_pattern_match_e2e.rs` | None | `./cargo_full test -p vyre-driver-cuda --test self_optimizer_pattern_match_e2e` |
 | `test` | `self_optimizer_pattern_match_extended` | `vyre-driver-cuda/tests/self_optimizer_pattern_match_extended/mod.rs` | None | `./cargo_full test -p vyre-driver-cuda --test self_optimizer_pattern_match_extended` |
-| `test` | `self_optimizer_pipeline_resident_e2e` | `vyre-driver-cuda/tests/self_optimizer_pipeline_resident_e2e.rs` | None | `./cargo_full test -p vyre-driver-cuda --test self_optimizer_pipeline_resident_e2e` |
 | `test` | `self_optimizer_scaling_bench` | `vyre-driver-cuda/tests/self_optimizer_scaling_bench.rs` | None | `./cargo_full test -p vyre-driver-cuda --test self_optimizer_scaling_bench` |
 | `test` | `self_optimizer_validate_e2e` | `vyre-driver-cuda/tests/self_optimizer_validate_e2e.rs` | None | `./cargo_full test -p vyre-driver-cuda --test self_optimizer_validate_e2e` |
+| `test` | `semantic_execution` | `vyre-driver-cuda/tests/semantic_execution.rs` | None | `./cargo_full test -p vyre-driver-cuda --test semantic_execution` |
 | `test` | `semiring_gemm_gpu_parity` | `vyre-driver-cuda/tests/semiring_gemm_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test semiring_gemm_gpu_parity` |
 | `test` | `sketch_sparse_fft_gpu_parity` | `vyre-driver-cuda/tests/sketch_sparse_fft_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test sketch_sparse_fft_gpu_parity` |
 | `test` | `sparse_binding_param_cuda` | `vyre-driver-cuda/tests/sparse_binding_param_cuda.rs` | None | `./cargo_full test -p vyre-driver-cuda --test sparse_binding_param_cuda` |

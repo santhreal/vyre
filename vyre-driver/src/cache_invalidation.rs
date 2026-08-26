@@ -5,14 +5,14 @@
 //! depend on the composition modules that implement it directly.
 
 #[cfg(feature = "libs-compositions")]
-use vyre_foundation::program_dispatch::{DispatchError as ProgramDispatchError, ProgramDispatcher};
-#[cfg(feature = "libs-compositions")]
 use vyre_libs::encoding::scallop_provenance::provenance_closure_via_into;
 #[cfg(feature = "libs-compositions")]
 use vyre_libs::reasoning::do_calculus_change_impact::{
     predict_impact_via_into, project_impacted_lineage_entries_via_into, DoCalculusImpactScratch,
     ImpactedLineageProjectionScratch,
 };
+#[cfg(feature = "libs-compositions")]
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Error raised by GPU-resident cache invalidation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,8 +37,8 @@ impl std::fmt::Display for CacheInvalidationError {
 impl std::error::Error for CacheInvalidationError {}
 
 #[cfg(feature = "libs-compositions")]
-impl From<ProgramDispatchError> for CacheInvalidationError {
-    fn from(error: ProgramDispatchError) -> Self {
+impl From<SemanticExecutionError> for CacheInvalidationError {
+    fn from(error: SemanticExecutionError) -> Self {
         Self::new(error.to_string())
     }
 }
@@ -60,7 +60,8 @@ pub struct CacheInvalidationScratch {
 /// explicitly disable `libs-compositions` fail loudly instead of running
 /// a hidden reference cache-invalidation path.
 pub fn impacted_entries_into(
-    #[cfg(feature = "libs-compositions")] dispatcher: &dyn ProgramDispatcher,
+    #[cfg(feature = "libs-compositions")] executor: &dyn SemanticExecutor,
+    #[cfg(feature = "libs-compositions")] policy: &SemanticExecutionPolicy,
     intervention_mask: &[u32],
     rule_adj: &[u32],
     state: &[u32],
@@ -130,7 +131,8 @@ pub fn impacted_entries_into(
         reserve_impact_mask(out, lineage_cells.len())?;
 
         predict_impact_via_into(
-            dispatcher,
+            executor,
+            policy,
             rule_adj,
             intervention_mask,
             n,
@@ -141,7 +143,8 @@ pub fn impacted_entries_into(
             CacheInvalidationError::from(err)
         })?;
         provenance_closure_via_into(
-            dispatcher,
+            executor,
+            policy,
             state,
             join_rules,
             n,
@@ -154,7 +157,8 @@ pub fn impacted_entries_into(
         })?;
 
         project_impacted_lineage_entries_via_into(
-            dispatcher,
+            executor,
+            policy,
             _scratch.impact.impact_mask(),
             &_scratch.closure,
             n,
@@ -174,7 +178,8 @@ pub fn impacted_entries_into(
 /// Compute a 0/1 impact mask using temporary scratch.
 #[must_use]
 pub fn impacted_entries(
-    #[cfg(feature = "libs-compositions")] dispatcher: &dyn ProgramDispatcher,
+    #[cfg(feature = "libs-compositions")] executor: &dyn SemanticExecutor,
+    #[cfg(feature = "libs-compositions")] policy: &SemanticExecutionPolicy,
     intervention_mask: &[u32],
     rule_adj: &[u32],
     state: &[u32],
@@ -187,7 +192,9 @@ pub fn impacted_entries(
     let mut scratch = CacheInvalidationScratch::default();
     impacted_entries_into(
         #[cfg(feature = "libs-compositions")]
-        dispatcher,
+        executor,
+        #[cfg(feature = "libs-compositions")]
+        policy,
         intervention_mask,
         rule_adj,
         state,
@@ -218,10 +225,21 @@ fn reserved_impact_mask(len: usize) -> Result<Vec<u32>, CacheInvalidationError> 
 #[cfg(all(test, feature = "libs-compositions"))]
 mod tests {
     use super::*;
-    use vyre_driver_reference::ReferenceEvalDispatcher;
+    use vyre_driver_reference::ReferenceSemanticExecutor;
+    use vyre_megakernel::{CompileObjective, DeviceFacts, Digest, ExternalFacts, SearchBudget};
+    fn policy() -> SemanticExecutionPolicy {
+        SemanticExecutionPolicy::new(
+            ExternalFacts::new(Digest([0; 32]), std::collections::BTreeMap::new()),
+            DeviceFacts::unknown(),
+            CompileObjective::MinimizeLatency,
+            SearchBudget::new(8, 64, 0, 0, 1_000),
+            1_000_000,
+        )
+    }
     #[test]
     fn impact_mask_marks_lineage_intersection() {
-        let dispatcher = ReferenceEvalDispatcher;
+        let executor = ReferenceSemanticExecutor;
+        let policy = policy();
         let n = 3;
         let mut rule_adj = vec![0u32; 9];
         rule_adj[0 * 3 + 1] = 1;
@@ -231,7 +249,8 @@ mod tests {
         state[1 * 3] = 1;
         let join_rules = vec![0u32; 9];
         let mask = impacted_entries(
-            &dispatcher,
+            &executor,
+            &policy,
             &intervention_mask,
             &rule_adj,
             &state,
@@ -246,8 +265,9 @@ mod tests {
 
     #[test]
     fn malformed_dimensions_do_not_panic() {
-        let dispatcher = ReferenceEvalDispatcher;
-        let err = impacted_entries(&dispatcher, &[1], &[], &[], &[], 32, 16, &[0, 1])
+        let executor = ReferenceSemanticExecutor;
+        let policy = policy();
+        let err = impacted_entries(&executor, &policy, &[1], &[], &[], &[], 32, 16, &[0, 1])
             .expect_err("malformed dimensions must fail loudly");
         assert!(
             err.to_string().contains("Fix:"),
@@ -257,11 +277,13 @@ mod tests {
 
     #[test]
     fn empty_lineage_cells_clears_output_and_succeeds() {
-        let dispatcher = ReferenceEvalDispatcher;
+        let executor = ReferenceSemanticExecutor;
+        let policy = policy();
         let mut out = vec![42u32; 10];
         let mut scratch = CacheInvalidationScratch::default();
         impacted_entries_into(
-            &dispatcher,
+            &executor,
+            &policy,
             &[1, 0],
             &[0; 4],
             &[0; 4],
@@ -281,7 +303,8 @@ mod tests {
 
     #[test]
     fn transitive_impact_and_provenance_propagation_matches_exact_device_output() {
-        let dispatcher = ReferenceEvalDispatcher;
+        let executor = ReferenceSemanticExecutor;
+        let policy = policy();
         let n = 4;
         let mut rule_adj = vec![0u32; 16];
         // 0 -> 1 -> 2
@@ -295,7 +318,8 @@ mod tests {
         let join_rules = vec![0u32; 16];
 
         let mask = impacted_entries(
-            &dispatcher,
+            &executor,
+            &policy,
             &intervention_mask,
             &rule_adj,
             &state,

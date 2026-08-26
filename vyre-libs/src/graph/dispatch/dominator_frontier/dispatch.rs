@@ -9,7 +9,7 @@ use crate::graph::dispatch::dispatch_bridge::{
 use crate::graph::dominator_frontier::{
     plan_dominator_frontier_launch, DominatorFrontierLaunchPlan,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Dispatcher-backed dominance-frontier query.
 ///
@@ -19,17 +19,19 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 /// predecessor CSR inputs.
 #[allow(clippy::too_many_arguments)]
 pub fn dominance_frontier_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     dom_offsets: &[u32],
     dom_targets: &[u32],
     pred_offsets: &[u32],
     pred_targets: &[u32],
     seed: &[u32],
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
     dominance_frontier_via_into(
         dispatcher,
+        policy,
         node_count,
         dom_offsets,
         dom_targets,
@@ -44,7 +46,8 @@ pub fn dominance_frontier_via(
 /// Dispatcher-backed dominance-frontier query into caller-owned storage.
 #[allow(clippy::too_many_arguments)]
 pub fn dominance_frontier_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     dom_offsets: &[u32],
     dom_targets: &[u32],
@@ -52,10 +55,11 @@ pub fn dominance_frontier_via_into(
     pred_targets: &[u32],
     seed: &[u32],
     frontier_out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = DominanceFrontierGpuScratch::default();
     dominance_frontier_via_with_scratch_into(
         dispatcher,
+        policy,
         node_count,
         dom_offsets,
         dom_targets,
@@ -70,7 +74,8 @@ pub fn dominance_frontier_via_into(
 /// Dispatcher-backed dominance-frontier query with caller-owned scratch.
 #[allow(clippy::too_many_arguments)]
 pub fn dominance_frontier_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     dom_offsets: &[u32],
     dom_targets: &[u32],
@@ -79,7 +84,7 @@ pub fn dominance_frontier_via_with_scratch_into(
     seed: &[u32],
     scratch: &mut DominanceFrontierGpuScratch,
     frontier_out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let plan = plan_dominator_frontier_launch(
         node_count,
         dom_offsets,
@@ -88,8 +93,8 @@ pub fn dominance_frontier_via_with_scratch_into(
         pred_targets,
         seed,
     )
-    .map_err(DispatchError::BadInputs)?;
-    if plan.dispatch_grid()[0] == 0 {
+    .map_err(SemanticExecutionError::InvalidRequest)?;
+    if plan.frontier_words() == 0 {
         frontier_out.clear();
         return Ok(());
     }
@@ -101,8 +106,10 @@ pub fn dominance_frontier_via_with_scratch_into(
     let cached = program_cache.try_get_or_insert_with(plan.shape(), || {
         let program = plan
             .program("seed", "frontier_out")
-            .map_err(DispatchError::BadInputs)?;
-        Ok(CachedDominanceFrontierProgram { program })
+            .map_err(SemanticExecutionError::InvalidRequest)?;
+        Ok::<CachedDominanceFrontierProgram, SemanticExecutionError>(
+            CachedDominanceFrontierProgram { program },
+        )
     })?;
 
     refresh_dominance_frontier_inputs(
@@ -118,11 +125,11 @@ pub fn dominance_frontier_via_with_scratch_into(
 
     dispatch_single_u32_output_from_prepared_into(
         dispatcher,
-        &cached.program,
+        policy,
+        cached.program.clone(),
         inputs,
         plan.frontier_words(),
-        "dominance_frontier_via frontier_out",
-        Some(plan.dispatch_grid()),
+        "frontier_out",
         frontier_out,
     )
 }
@@ -137,7 +144,7 @@ fn refresh_dominance_frontier_inputs(
     pred_offsets: &[u32],
     pred_targets: &[u32],
     seed: &[u32],
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let next_key = plan.static_input_key(dom_offsets, dom_targets, pred_offsets, pred_targets);
     refresh_keyed_dispatch_inputs(
         inputs,
@@ -157,21 +164,8 @@ fn refresh_dominance_frontier_inputs(
                 "dominance_frontier_via pred_targets",
             ),
             DispatchInput::U32Slice(seed),
-            DispatchInput::ZeroU32Words {
-                words: plan.frontier_words(),
-                context: "dominance_frontier_via frontier_out",
-            },
         ],
-        &[
-            (4, DispatchInput::U32Slice(seed)),
-            (
-                5,
-                DispatchInput::ZeroU32Words {
-                    words: plan.frontier_words(),
-                    context: "dominance_frontier_via frontier_out",
-                },
-            ),
-        ],
+        &[(4, DispatchInput::U32Slice(seed))],
     )?;
     Ok(())
 }

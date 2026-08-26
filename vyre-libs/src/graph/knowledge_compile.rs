@@ -32,13 +32,6 @@ pub const OP_ID: &str = "vyre-libs::graph::ddnnf_evaluate";
 /// One lane per compiled d-DNNF node in a bottom-up evaluation wave.
 pub const DDNNF_EVALUATE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid that covers every compiled d-DNNF node lane.
-#[cfg(test)]
-#[must_use]
-pub const fn ddnnf_evaluate_dispatch_grid(n_nodes: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(n_nodes, DDNNF_EVALUATE_WORKGROUP_SIZE[0])
-}
-
 /// Emit one bottom-up d-DNNF evaluation step. The dispatch is
 /// `n_nodes` lanes; each lane evaluates one node from already-evaluated
 /// children. Callers compose this with `level_wave_program` or another
@@ -622,15 +615,6 @@ mod tests {
                 .iter()
                 .any(|node| matches!(node, vyre_foundation::ir::Node::Region { generator, .. } if generator.as_str() == OP_ID))
         );
-    }
-
-    #[test]
-    fn dispatch_grid_packs_ddnnf_nodes_into_workgroups() {
-        assert_eq!(ddnnf_evaluate_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(ddnnf_evaluate_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(ddnnf_evaluate_dispatch_grid(256), [1, 1, 1]);
-        assert_eq!(ddnnf_evaluate_dispatch_grid(257), [2, 1, 1]);
-        assert_eq!(ddnnf_evaluate_dispatch_grid(1025), [5, 1, 1]);
     }
 
     #[test]

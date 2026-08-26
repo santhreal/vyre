@@ -14,9 +14,14 @@ The runtime authenticates compiler envelopes, materializes target payloads,
 binds artifact ABI resources, submits typed work, and rematerializes the same
 artifact after device loss.
 
+`RegisteredSemanticExecutor` compiles a validated semantic request, admits its
+target payload, binds graph values as resources, and submits the artifact's
+frozen target entry points.
+
 | Module | Purpose |
 |--------|---------|
 | `artifact_admission` | Envelope authentication, exact target selection, materialization, and retained sessions |
+| `semantic_execution` | Compiler-owned semantic request execution through registered artifact admission |
 | `persistent_executor` | Resident queue submission over retained artifact bindings |
 | `resident_work_queue` | Ring protocol, host mirrors, queue sizing, IO, and telemetry |
 | `pipeline_cache` | Content-addressed storage keyed by neutral artifact digest |

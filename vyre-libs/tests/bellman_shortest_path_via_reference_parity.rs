@@ -1,5 +1,5 @@
 //! End-to-end parity for `math::bellman_tn_order::bellman_tn_order_via` (the fused Bellman-Ford
-//! shortest-path solver) through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! shortest-path solver) through the shared faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `bellman_shortest_path`'s IR is run by only ONE `vyre-primitives/tests/*` file
@@ -24,18 +24,20 @@
 //! insensitive to the multi-round modeling gap. The oracle is `bellman_shortest_path::cpu_ref`, the
 //! authoritative CPU reference. Values are exact integers → BIT-EXACT (no tolerance).
 
-use vyre_foundation::program_dispatch::DispatchError;
+mod semantic_execution_support;
+
 use vyre_libs::solvers::bellman_tn_order::bellman_tn_order_via;
+use vyre_megakernel::SemanticExecutionError;
 use vyre_reference::composition_witness::bellman_shortest_path_witness as cpu_ref;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 const INF: u32 = u32::MAX;
 
 #[test]
 fn bellman_via_matches_cpu_ref_on_single_hop_star_graphs() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0xB3_11_A0_01u32;
     let mut relaxed_some = 0u32;
     let mut had_unreachable = 0u32;
@@ -73,8 +75,17 @@ fn bellman_via_matches_cpu_ref_on_single_hop_star_graphs() {
         dist_init[0] = 0;
         // max_iterations doesn't affect a single-hop graph's converged value; use a small cap.
         let (want, _iters) = cpu_ref(&src, &dst, &weight, &dist_init, n_nodes, 4);
-        let got = bellman_tn_order_via(&dispatcher, &src, &dst, &weight, &dist_init, n_nodes, 4)
-            .expect("bellman_tn_order_via must dispatch the fused Bellman-Ford kernel");
+        let got = bellman_tn_order_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &src,
+            &dst,
+            &weight,
+            &dist_init,
+            n_nodes,
+            4,
+        )
+        .expect("bellman_tn_order_via must dispatch the fused Bellman-Ford kernel");
         assert_eq!(
             got, want,
             "case {case}: consumer path must match cpu_ref on a single-hop graph; \
@@ -105,29 +116,47 @@ fn bellman_via_matches_cpu_ref_on_single_hop_star_graphs() {
 
 #[test]
 fn bellman_via_rejects_out_of_range_endpoints() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     // The consumer boundary-validates edge endpoints (unlike the primitive's in-kernel OOB gate):
     // any edge with u >= n_nodes or v >= n_nodes is rejected as BadInputs before dispatch.
     let dist_init = vec![0, INF, INF];
     // OOB source (7 >= 3).
-    let err = bellman_tn_order_via(&dispatcher, &[0, 7], &[1, 1], &[5, 1], &dist_init, 3, 4)
-        .expect_err("OOB-source edge must be rejected");
+    let err = bellman_tn_order_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &[0, 7],
+        &[1, 1],
+        &[5, 1],
+        &dist_init,
+        3,
+        4,
+    )
+    .expect_err("OOB-source edge must be rejected");
     assert!(
-        matches!(err, DispatchError::BadInputs(_)),
-        "OOB source must be a BadInputs rejection, got {err:?}"
+        matches!(err, SemanticExecutionError::InvalidRequest(_)),
+        "OOB source must be a InvalidRequest rejection, got {err:?}"
     );
     // OOB dest (9 >= 3).
-    let err = bellman_tn_order_via(&dispatcher, &[0, 0], &[1, 9], &[5, 2], &dist_init, 3, 4)
-        .expect_err("OOB-dest edge must be rejected");
+    let err = bellman_tn_order_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &[0, 0],
+        &[1, 9],
+        &[5, 2],
+        &dist_init,
+        3,
+        4,
+    )
+    .expect_err("OOB-dest edge must be rejected");
     assert!(
-        matches!(err, DispatchError::BadInputs(_)),
-        "OOB dest must be a BadInputs rejection, got {err:?}"
+        matches!(err, SemanticExecutionError::InvalidRequest(_)),
+        "OOB dest must be a InvalidRequest rejection, got {err:?}"
     );
 }
 
 #[test]
 fn bellman_via_matches_hand_checked_single_hop_cases() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
 
     // Star into a 3-node graph with n_edges>=n_nodes (see the grid-inference note in the sweep):
     // 0→1(3), 0→2(4), 0→1(5). node1=min(3,5)=3, node2=4 → [0, 3, 4].
@@ -135,7 +164,17 @@ fn bellman_via_matches_hand_checked_single_hop_cases() {
     let dst = vec![1, 2, 1];
     let weight = vec![3, 4, 5];
     let dist_init = vec![0, INF, INF];
-    let got = bellman_tn_order_via(&dispatcher, &src, &dst, &weight, &dist_init, 3, 4).unwrap();
+    let got = bellman_tn_order_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &src,
+        &dst,
+        &weight,
+        &dist_init,
+        3,
+        4,
+    )
+    .unwrap();
     assert_eq!(
         got,
         vec![0, 3, 4],
@@ -147,7 +186,17 @@ fn bellman_via_matches_hand_checked_single_hop_cases() {
     let dst = vec![1, 1];
     let weight = vec![10, 3];
     let dist_init = vec![0, INF];
-    let got = bellman_tn_order_via(&dispatcher, &src, &dst, &weight, &dist_init, 2, 4).unwrap();
+    let got = bellman_tn_order_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &src,
+        &dst,
+        &weight,
+        &dist_init,
+        2,
+        4,
+    )
+    .unwrap();
     assert_eq!(
         got,
         vec![0, 3],
@@ -160,7 +209,17 @@ fn bellman_via_matches_hand_checked_single_hop_cases() {
     let dst = vec![1, 1];
     let weight = vec![INF - 2, 5];
     let dist_init = vec![0, INF];
-    let got = bellman_tn_order_via(&dispatcher, &src, &dst, &weight, &dist_init, 2, 4).unwrap();
+    let got = bellman_tn_order_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &src,
+        &dst,
+        &weight,
+        &dist_init,
+        2,
+        4,
+    )
+    .unwrap();
     assert_eq!(
         got,
         vec![0, 5],
@@ -173,7 +232,17 @@ fn bellman_via_matches_hand_checked_single_hop_cases() {
     let dst = vec![1, 1, 1];
     let weight = vec![5, 6, 7];
     let dist_init = vec![0, INF, INF];
-    let got = bellman_tn_order_via(&dispatcher, &src, &dst, &weight, &dist_init, 3, 4).unwrap();
+    let got = bellman_tn_order_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &src,
+        &dst,
+        &weight,
+        &dist_init,
+        3,
+        4,
+    )
+    .unwrap();
     assert_eq!(
         got,
         vec![0, 5, INF],

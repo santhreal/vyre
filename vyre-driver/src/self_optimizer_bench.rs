@@ -11,7 +11,7 @@
 //! backends could not be read side by side.
 //!
 //! What stays with each backend is the part that is genuinely backend-typed:
-//! acquiring its device and handing over a `ProgramDispatcher`.
+//! acquiring its device and handing over a `SemanticExecutor`.
 //!
 //! The fixtures are the two ends of the parallelism axis the GPU passes are
 //! judged on. A chain program's lets each read the previous one, so a level-wave
@@ -21,7 +21,7 @@
 use std::time::Instant;
 
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_foundation::program_dispatch::ProgramDispatcher;
+use vyre_megakernel::{SemanticExecutionPolicy, SemanticExecutor};
 
 /// Stack for the CPU oracle worker.
 ///
@@ -169,8 +169,9 @@ fn on_oracle_stack<T: Send + 'static>(name: &str, work: impl FnOnce() -> T + Sen
 /// excludes first-dispatch compilation.
 pub fn report_scaling(
     backend: &str,
-    dispatcher: &dyn ProgramDispatcher,
-    gpu_pipeline: fn(Program, &dyn ProgramDispatcher) -> Program,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
+    gpu_pipeline: fn(Program, &dyn SemanticExecutor, &SemanticExecutionPolicy) -> Program,
 ) {
     println!("\n=== self-hosted {backend} optimizer scaling vs CPU pipeline ===");
     for fixture in SCALING_FIXTURES {
@@ -183,11 +184,11 @@ pub fn report_scaling(
         for &count in SCALING_FIXTURE_SIZES {
             let program = (fixture.build)(count);
 
-            let _ = gpu_pipeline(program.clone(), dispatcher);
+            let _ = gpu_pipeline(program.clone(), executor, policy);
             let _ = cpu_pipeline_on_oracle_stack(program.clone());
 
             let started = Instant::now();
-            let _ = gpu_pipeline(program.clone(), dispatcher);
+            let _ = gpu_pipeline(program.clone(), executor, policy);
             let gpu_us = started.elapsed().as_micros();
 
             let cpu_us = timed_cpu_pipeline_on_oracle_stack(program);

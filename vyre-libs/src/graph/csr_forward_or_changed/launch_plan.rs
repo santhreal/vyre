@@ -1,8 +1,4 @@
-//! The launch decision on its own: layout, program key, and dispatch grid.
-//!
-//! A fixpoint loop re-launches the same program every iteration. Keeping the
-//! decision `Copy` and free of a [`Program`] lets the loop carry it without
-//! rebuilding or cloning IR per iteration.
+//! Schedule-free layout and program selection for forward fixpoint stages.
 
 use vyre_foundation::ir::Program;
 
@@ -16,13 +12,12 @@ use crate::graph::padded_u32_slice_fingerprint;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CsrForwardOrChangedLaunchPlan {
     key: CsrForwardOrChangedProgramKey,
-    dispatch_grid: [u32; 3],
 }
 
 impl CsrForwardOrChangedLaunchPlan {
     #[must_use]
-    pub(crate) const fn new(key: CsrForwardOrChangedProgramKey, dispatch_grid: [u32; 3]) -> Self {
-        Self { key, dispatch_grid }
+    pub(crate) const fn new(key: CsrForwardOrChangedProgramKey) -> Self {
+        Self { key }
     }
 
     /// Validated CSR/frontier layout.
@@ -91,12 +86,6 @@ impl CsrForwardOrChangedLaunchPlan {
             ));
         }
         Ok(index)
-    }
-
-    /// Dispatch grid for one expansion pass.
-    #[must_use]
-    pub const fn dispatch_grid(&self) -> [u32; 3] {
-        self.dispatch_grid
     }
 
     /// Number of u32 words in the frontier accumulator.

@@ -6,16 +6,16 @@
 //! emit dedup survivor flags for stream compaction.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
-    write_zero_bytes,
+    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::pattern::{
-    bracket_match, bracket_match_dispatch_grid, dedup_regions_flag_program,
-    region_dedup_dispatch_grid, region_sort_program, RegionTriple, BRACKET_KIND_CLOSE,
-    BRACKET_KIND_OPEN, BRACKET_KIND_OTHER,
+    bracket_match, dedup_regions_flag_program, region_sort_program, RegionTriple,
+    BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_OTHER,
 };
 use crate::plumbing::host::scratch::reserve_vec_capacity;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Caller-owned dispatch scratch for matching diagnostic compaction.
 #[derive(Debug, Default)]
@@ -34,16 +34,24 @@ pub struct MatchingDiagnosticCompactionGpuScratch {
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when `kinds.len()` or `max_depth` exceeds the
-/// primitive index space, dispatch fails, or readback is malformed.
+/// Returns [`SemanticExecutionError`] when `kinds.len()` or `max_depth` exceeds
+/// the primitive index space, semantic execution fails, or readback is malformed.
 pub fn bracket_pairs_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     kinds: &[u32],
     max_depth: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut scratch = MatchingDiagnosticCompactionGpuScratch::default();
     let mut out = Vec::new();
-    bracket_pairs_via_with_scratch_into(dispatcher, kinds, max_depth, &mut scratch, &mut out)?;
+    bracket_pairs_via_with_scratch_into(
+        dispatcher,
+        policy,
+        kinds,
+        max_depth,
+        &mut scratch,
+        &mut out,
+    )?;
     Ok(out)
 }
 
@@ -52,20 +60,21 @@ pub fn bracket_pairs_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation, dispatch, or readback fails.
+/// Returns [`SemanticExecutionError`] when validation, execution, or readback fails.
 pub fn bracket_pairs_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     kinds: &[u32],
     max_depth: u32,
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, matching_diagnostic_compaction_calls};
     bump(&matching_diagnostic_compaction_calls);
 
     let n = checked_len(kinds.len(), "bracket_pairs_via")?;
     let max_depth_usize = usize::try_from(max_depth).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: bracket_pairs_via max_depth={max_depth} does not fit usize scratch sizing."
         ))
     })?;
@@ -80,11 +89,14 @@ pub fn bracket_pairs_via_with_scratch_into(
         &mut scratch.inputs[1],
         max_depth_usize * std::mem::size_of::<u32>(),
     );
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs[..2],
-        Some(bracket_match_dispatch_grid(n, max_depth)),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     // Writable buffers are returned in binding order `[stack(1), match_pairs(2)]`, so the match-pairs
     // result is outputs[1]. NOT outputs[0], which is the `stack` scratch.
     decode_output_at(&outputs, 1, kinds.len(), "bracket_pairs_via", out)
@@ -94,15 +106,16 @@ pub fn bracket_pairs_via_with_scratch_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when the region count is zero or too large,
-/// dispatch fails, or readback is malformed.
+/// Returns [`SemanticExecutionError`] when the region count is zero or too large,
+/// semantic execution fails, or readback is malformed.
 pub fn sort_regions_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     regions: &[RegionTriple],
-) -> Result<Vec<RegionTriple>, DispatchError> {
+) -> Result<Vec<RegionTriple>, SemanticExecutionError> {
     let mut scratch = MatchingDiagnosticCompactionGpuScratch::default();
     let mut out = Vec::new();
-    sort_regions_via_with_scratch_into(dispatcher, regions, &mut scratch, &mut out)?;
+    sort_regions_via_with_scratch_into(dispatcher, policy, regions, &mut scratch, &mut out)?;
     Ok(out)
 }
 
@@ -111,14 +124,15 @@ pub fn sort_regions_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when the region count is zero or too large,
-/// dispatch fails, or readback is malformed.
+/// Returns [`SemanticExecutionError`] when the region count is zero or too large,
+/// semantic execution fails, or readback is malformed.
 pub fn sort_regions_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     regions: &[RegionTriple],
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<RegionTriple>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, matching_diagnostic_compaction_calls};
     bump(&matching_diagnostic_compaction_calls);
 
@@ -148,11 +162,14 @@ pub fn sort_regions_via_with_scratch_into(
             regions.len() * std::mem::size_of::<u32>(),
         );
     }
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs,
-        Some([ceil_div_u32(count, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     decode_region_outputs_into(&outputs, regions.len(), "sort_regions_via", scratch, out)
 }
 
@@ -160,16 +177,18 @@ pub fn sort_regions_via_with_scratch_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when the region count is too large, dispatch
-/// fails, or readback is malformed.
+/// Returns [`SemanticExecutionError`] when the region count is too large, semantic
+/// execution fails, or readback is malformed.
 pub fn dedup_region_survivor_flags_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     sorted_regions: &[RegionTriple],
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut scratch = MatchingDiagnosticCompactionGpuScratch::default();
     let mut out = Vec::new();
     dedup_region_survivor_flags_via_with_scratch_into(
         dispatcher,
+        policy,
         sorted_regions,
         &mut scratch,
         &mut out,
@@ -181,14 +200,15 @@ pub fn dedup_region_survivor_flags_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when the region count is too large, dispatch
-/// fails, or readback is malformed.
+/// Returns [`SemanticExecutionError`] when the region count is too large, semantic
+/// execution fails, or readback is malformed.
 pub fn dedup_region_survivor_flags_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     sorted_regions: &[RegionTriple],
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, matching_diagnostic_compaction_calls};
     bump(&matching_diagnostic_compaction_calls);
 
@@ -211,11 +231,14 @@ pub fn dedup_region_survivor_flags_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[0], &scratch.pids);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], &scratch.starts);
     write_u32_slice_le_bytes(&mut scratch.inputs[2], &scratch.ends);
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs[..3],
-        Some(region_dedup_dispatch_grid(count)),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     decode_first_output(
         &outputs,
         sorted_regions.len(),
@@ -251,7 +274,7 @@ fn split_regions_into(
     pids: &mut Vec<u32>,
     starts: &mut Vec<u32>,
     ends: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     pids.clear();
     starts.clear();
     ends.clear();
@@ -266,18 +289,18 @@ fn split_regions_into(
     Ok(())
 }
 
-fn checked_len(len: usize, context: &'static str) -> Result<u32, DispatchError> {
+fn checked_len(len: usize, context: &'static str) -> Result<u32, SemanticExecutionError> {
     u32::try_from(len).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: {context} received {len} items, which exceeds the u32 GPU index space."
         ))
     })
 }
 
-fn checked_nonzero_len(len: usize, context: &'static str) -> Result<u32, DispatchError> {
+fn checked_nonzero_len(len: usize, context: &'static str) -> Result<u32, SemanticExecutionError> {
     let count = checked_len(len, context)?;
     if count == 0 {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: {context} requires at least one region."
         )));
     }
@@ -290,9 +313,9 @@ fn decode_region_outputs_into(
     context: &'static str,
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<RegionTriple>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if outputs.len() < 3 {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: {context} expected three output buffers, got {}.",
             outputs.len()
         )));
@@ -319,7 +342,7 @@ fn decode_first_output(
     words: usize,
     context: &'static str,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     decode_output_at(outputs, 0, words, context, out)
 }
 
@@ -335,9 +358,9 @@ fn decode_output_at(
     words: usize,
     context: &'static str,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let buffer = outputs.get(index).ok_or_else(|| {
-        DispatchError::BackendError(format!(
+        SemanticExecutionError::Backend(format!(
             "Fix: {context} expected at least {} output buffer(s), got {}.",
             index + 1,
             outputs.len()
@@ -354,7 +377,7 @@ mod tests {
         dfa_compile as compile_diagnostic_dfa,
         dfa_compile_with_budget as compile_diagnostic_dfa_with_budget,
     };
-    use vyre_foundation::ir::Program;
+
     use vyre_reference::composition_witness::bracket_match_witness as reference_bracket_pairs;
 
     fn reference_sort_regions(mut regions: Vec<RegionTriple>) -> Vec<RegionTriple> {
@@ -382,94 +405,90 @@ mod tests {
 
     struct MatchingDispatcher;
 
-    impl ProgramDispatcher for MatchingDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for MatchingDispatcher {
+        fn execute(
             &self,
-            program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            let op_id = program
-                .entry
-                .iter()
-                .find_map(|node| match node {
-                    vyre_foundation::ir::Node::Region { generator, .. } => Some(generator.as_str()),
-                    _ => None,
-                })
-                .expect("Fix: matching primitive should expose a region generator");
-            match op_id {
-                crate::pattern::BRACKET_MATCH_OP_ID => {
-                    // Two input-consuming buffers: kinds ReadOnly(0), stack plain-ReadWrite(1).
-                    // `match_pairs` output(2) is backend-allocated (no input slot).
-                    assert_eq!(
-                        inputs.len(),
-                        2,
-                        "Fix: bracket_pairs_via must pass exactly the two input-consuming buffers (kinds, stack); match_pairs is backend-allocated."
-                    );
-                    let kinds = crate::dispatch_buffers::read_u32s(&inputs[0]);
-                    let depth_words = inputs[1].len() / std::mem::size_of::<u32>();
-                    assert_eq!(
-                        grid_override,
-                        Some(bracket_match_dispatch_grid(kinds.len() as u32, depth_words as u32)),
-                        "Fix: bracket_pairs_via must dispatch the primitive with enough workgroups for its selected bracket matcher."
-                    );
-                    // Model the real backend: return ALL writable buffers in binding order
-                    // [stack(1, InputOutput), match_pairs(2, output)]. The consumer must decode the
-                    // pairs from outputs[1], not outputs[0] (the stack scratch).
-                    Ok(vec![
-                        inputs[1].clone(),
-                        u32_slice_to_le_bytes(&reference_bracket_pairs(&kinds, depth_words as u32)),
-                    ])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let program = &request.logical().graph().nodes()[0].program;
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                let op_id = program
+                    .entry
+                    .iter()
+                    .find_map(|node| match node {
+                        vyre_foundation::ir::Node::Region { generator, .. } => {
+                            Some(generator.as_str())
+                        }
+                        _ => None,
+                    })
+                    .expect("Fix: matching primitive should expose a region generator");
+                match op_id {
+                    crate::pattern::BRACKET_MATCH_OP_ID => {
+                        // Two input-consuming buffers: kinds ReadOnly(0), stack plain-ReadWrite(1).
+                        // `match_pairs` output(2) is backend-allocated (no input slot).
+                        assert_eq!(
+                inputs.len(),
+                2,
+                "Fix: bracket_pairs_via must pass exactly the two input-consuming buffers (kinds, stack); match_pairs is backend-allocated."
+            );
+                        let kinds = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                        let depth_words = inputs[1].len() / std::mem::size_of::<u32>();
+
+                        // Model the real backend: return ALL writable buffers in binding order
+                        // [stack(1, InputOutput), match_pairs(2, output)]. The consumer must decode the
+                        // pairs from outputs[1], not outputs[0] (the stack scratch).
+                        Ok(vec![
+                            inputs[1].clone(),
+                            u32_slice_to_le_bytes(&reference_bracket_pairs(
+                                &kinds,
+                                depth_words as u32,
+                            )),
+                        ])
+                    }
+                    "vyre-libs::matching::region::region_sort" => {
+                        // Six input-consuming buffers: pids/starts/ends ReadOnly(0-2) + the three
+                        // plain-ReadWrite outputs pids_out/starts_out/ends_out(3-5, zero-filled).
+                        assert_eq!(
+                inputs.len(),
+                6,
+                "Fix: sort_regions_via must pass all six input-consuming buffers (3 RO + 3 plain-RW outputs)."
+            );
+                        let regions = join_regions(
+                            &crate::dispatch_buffers::read_u32s(&inputs[0]),
+                            &crate::dispatch_buffers::read_u32s(&inputs[1]),
+                            &crate::dispatch_buffers::read_u32s(&inputs[2]),
+                        );
+
+                        let sorted = reference_sort_regions(regions);
+                        let (pids, starts, ends) = split_regions(&sorted);
+                        Ok(vec![
+                            u32_slice_to_le_bytes(&pids),
+                            u32_slice_to_le_bytes(&starts),
+                            u32_slice_to_le_bytes(&ends),
+                        ])
+                    }
+                    "vyre-libs::matching::region::dedup_regions_flag" => {
+                        // Three input-consuming buffers: pids/starts/ends ReadOnly(0-2). `survivors` is
+                        // WriteOnly(3) (backend-allocated, no input slot).
+                        assert_eq!(
+                inputs.len(),
+                3,
+                "Fix: dedup_region_survivor_flags_via must pass exactly the three RO buffers; survivors is backend-allocated."
+            );
+                        let regions = join_regions(
+                            &crate::dispatch_buffers::read_u32s(&inputs[0]),
+                            &crate::dispatch_buffers::read_u32s(&inputs[1]),
+                            &crate::dispatch_buffers::read_u32s(&inputs[2]),
+                        );
+
+                        let flags = survivor_flags(&regions);
+                        Ok(vec![u32_slice_to_le_bytes(&flags)])
+                    }
+                    other => panic!("unexpected matching primitive op id {other}"),
                 }
-                "vyre-libs::matching::region::region_sort" => {
-                    // Six input-consuming buffers: pids/starts/ends ReadOnly(0-2) + the three
-                    // plain-ReadWrite outputs pids_out/starts_out/ends_out(3-5, zero-filled).
-                    assert_eq!(
-                        inputs.len(),
-                        6,
-                        "Fix: sort_regions_via must pass all six input-consuming buffers (3 RO + 3 plain-RW outputs)."
-                    );
-                    let regions = join_regions(
-                        &crate::dispatch_buffers::read_u32s(&inputs[0]),
-                        &crate::dispatch_buffers::read_u32s(&inputs[1]),
-                        &crate::dispatch_buffers::read_u32s(&inputs[2]),
-                    );
-                    assert_eq!(
-                        grid_override,
-                        Some([ceil_div_u32(regions.len() as u32, 256), 1, 1]),
-                        "Fix: sort_regions_via must dispatch one lane per region triple."
-                    );
-                    let sorted = reference_sort_regions(regions);
-                    let (pids, starts, ends) = split_regions(&sorted);
-                    Ok(vec![
-                        u32_slice_to_le_bytes(&pids),
-                        u32_slice_to_le_bytes(&starts),
-                        u32_slice_to_le_bytes(&ends),
-                    ])
-                }
-                "vyre-libs::matching::region::dedup_regions_flag" => {
-                    // Three input-consuming buffers: pids/starts/ends ReadOnly(0-2). `survivors` is
-                    // WriteOnly(3) (backend-allocated, no input slot).
-                    assert_eq!(
-                        inputs.len(),
-                        3,
-                        "Fix: dedup_region_survivor_flags_via must pass exactly the three RO buffers; survivors is backend-allocated."
-                    );
-                    let regions = join_regions(
-                        &crate::dispatch_buffers::read_u32s(&inputs[0]),
-                        &crate::dispatch_buffers::read_u32s(&inputs[1]),
-                        &crate::dispatch_buffers::read_u32s(&inputs[2]),
-                    );
-                    assert_eq!(
-                        grid_override,
-                        Some(region_dedup_dispatch_grid(regions.len() as u32)),
-                        "Fix: dedup_region_survivor_flags_via must use the primitive's 256-lane region-dedup grid."
-                    );
-                    let flags = survivor_flags(&regions);
-                    Ok(vec![u32_slice_to_le_bytes(&flags)])
-                }
-                other => panic!("unexpected matching primitive op id {other}"),
-            }
+            })()?;
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -505,7 +524,13 @@ mod tests {
     fn bracket_pairs_dispatch_through_primitive() {
         let fixture = nested_diagnostic_brace_fixture();
         assert_eq!(
-            bracket_pairs_via(&MatchingDispatcher, &fixture, 8).unwrap(),
+            bracket_pairs_via(
+                &MatchingDispatcher,
+                &crate::test_parity_oracles::policy(),
+                &fixture,
+                8,
+            )
+            .unwrap(),
             reference_bracket_pairs(&fixture, 8)
         );
     }
@@ -519,7 +544,13 @@ mod tests {
         kinds[512] = BRACKET_KIND_CLOSE;
 
         assert_eq!(
-            bracket_pairs_via(&MatchingDispatcher, &kinds, kinds.len() as u32).unwrap(),
+            bracket_pairs_via(
+                &MatchingDispatcher,
+                &crate::test_parity_oracles::policy(),
+                &kinds,
+                kinds.len() as u32,
+            )
+            .unwrap(),
             reference_bracket_pairs(&kinds, kinds.len() as u32)
         );
     }
@@ -532,7 +563,13 @@ mod tests {
         kinds[65] = BRACKET_KIND_CLOSE;
 
         assert_eq!(
-            bracket_pairs_via(&MatchingDispatcher, &kinds, 64).unwrap(),
+            bracket_pairs_via(
+                &MatchingDispatcher,
+                &crate::test_parity_oracles::policy(),
+                &kinds,
+                64,
+            )
+            .unwrap(),
             reference_bracket_pairs(&kinds, 64)
         );
     }
@@ -561,7 +598,13 @@ mod tests {
             }
 
             assert_eq!(
-                bracket_pairs_via(&MatchingDispatcher, &kinds, max_depth).unwrap(),
+                bracket_pairs_via(
+                    &MatchingDispatcher,
+                    &crate::test_parity_oracles::policy(),
+                    &kinds,
+                    max_depth,
+                )
+                .unwrap(),
                 reference_bracket_pairs(&kinds, max_depth),
                 "case {case}: diagnostic bracket dispatch must match primitive CPU oracle"
             );
@@ -578,7 +621,12 @@ mod tests {
         ];
 
         assert_eq!(
-            dedup_region_survivor_flags_via(&MatchingDispatcher, &sorted).unwrap(),
+            dedup_region_survivor_flags_via(
+                &MatchingDispatcher,
+                &crate::test_parity_oracles::policy(),
+                &sorted,
+            )
+            .unwrap(),
             vec![1, 0, 0, 1]
         );
     }
@@ -590,7 +638,12 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(
-            dedup_region_survivor_flags_via(&MatchingDispatcher, &sorted).unwrap(),
+            dedup_region_survivor_flags_via(
+                &MatchingDispatcher,
+                &crate::test_parity_oracles::policy(),
+                &sorted,
+            )
+            .unwrap(),
             vec![1; sorted.len()]
         );
     }
@@ -615,7 +668,12 @@ mod tests {
 
             let mut sorted = regions;
             sort_regions_witness_in_place(&mut sorted);
-            let flags = dedup_region_survivor_flags_via(&MatchingDispatcher, &sorted).unwrap();
+            let flags = dedup_region_survivor_flags_via(
+                &MatchingDispatcher,
+                &crate::test_parity_oracles::policy(),
+                &sorted,
+            )
+            .unwrap();
             let actual_cluster_starts = sorted
                 .iter()
                 .zip(flags.iter())
@@ -653,7 +711,12 @@ mod tests {
             RegionTriple::new(0, 5, 8),
         ];
         assert_eq!(
-            sort_regions_via(&MatchingDispatcher, &regions).unwrap(),
+            sort_regions_via(
+                &MatchingDispatcher,
+                &crate::test_parity_oracles::policy(),
+                &regions,
+            )
+            .unwrap(),
             reference_sort_regions(regions)
         );
     }
@@ -667,13 +730,25 @@ mod tests {
         let mut scratch = MatchingDiagnosticCompactionGpuScratch::default();
         let mut out = Vec::new();
 
-        sort_regions_via_with_scratch_into(&MatchingDispatcher, &large, &mut scratch, &mut out)
-            .expect("Fix: large diagnostic region sort should dispatch");
+        sort_regions_via_with_scratch_into(
+            &MatchingDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &large,
+            &mut scratch,
+            &mut out,
+        )
+        .expect("Fix: large diagnostic region sort should dispatch");
         let pids_capacity = scratch.pids.capacity();
         let decoded_capacity = scratch.decoded_regions.capacity();
 
-        sort_regions_via_with_scratch_into(&MatchingDispatcher, &small, &mut scratch, &mut out)
-            .expect("Fix: small diagnostic region sort should reuse scratch");
+        sort_regions_via_with_scratch_into(
+            &MatchingDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &small,
+            &mut scratch,
+            &mut out,
+        )
+        .expect("Fix: small diagnostic region sort should reuse scratch");
 
         assert_eq!(scratch.pids.capacity(), pids_capacity);
         assert_eq!(scratch.decoded_regions.capacity(), decoded_capacity);
@@ -688,7 +763,12 @@ mod tests {
             RegionTriple::new(1, 7, 10),
         ];
         assert_eq!(
-            dedup_region_survivor_flags_via(&MatchingDispatcher, &sorted).unwrap(),
+            dedup_region_survivor_flags_via(
+                &MatchingDispatcher,
+                &crate::test_parity_oracles::policy(),
+                &sorted,
+            )
+            .unwrap(),
             vec![1, 0, 1]
         );
     }
@@ -708,6 +788,7 @@ mod tests {
 
         dedup_region_survivor_flags_via_with_scratch_into(
             &MatchingDispatcher,
+            &crate::test_parity_oracles::policy(),
             &large,
             &mut scratch,
             &mut flags,
@@ -717,6 +798,7 @@ mod tests {
 
         dedup_region_survivor_flags_via_with_scratch_into(
             &MatchingDispatcher,
+            &crate::test_parity_oracles::policy(),
             &small,
             &mut scratch,
             &mut flags,
@@ -729,7 +811,12 @@ mod tests {
 
     #[test]
     fn empty_region_sort_error_is_actionable() {
-        let err = sort_regions_via(&MatchingDispatcher, &[]).unwrap_err();
+        let err = sort_regions_via(
+            &MatchingDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[],
+        )
+        .unwrap_err();
         assert!(err
             .to_string()
             .contains("Fix: sort_regions_via requires at least one region"));

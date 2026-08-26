@@ -11,8 +11,6 @@ mod harness;
 use harness::{bytes_u32, csr_traversal_inputs, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_libs::graph::csr_backward_traverse::csr_backward_traverse_dispatch_grid;
-use vyre_libs::graph::csr_forward_traverse::csr_forward_traverse_dispatch_grid;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_libs::predicate::arg_of::arg_of;
 use vyre_libs::predicate::call_to::call_to;
@@ -50,7 +48,6 @@ where
         frontier,
     );
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(csr_forward_traverse_dispatch_grid(node_count));
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
@@ -87,7 +84,6 @@ where
         frontier,
     );
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(csr_backward_traverse_dispatch_grid(node_count));
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");

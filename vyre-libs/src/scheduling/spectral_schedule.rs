@@ -7,15 +7,15 @@
 //! Output: cluster IDs that polyhedral fusion + megakernel
 //! scheduler consume as fusion hints.
 
-use crate::dispatch_buffers::{
-    ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
-    write_u32_slice_le_bytes, write_zero_bytes,
-};
+use super::{checked_square_cells, decode_u32_output_exact};
+use crate::dispatch_buffers::{ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes};
 use crate::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
 use crate::math::spectral_shape::mp_edge_clip;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
-/// Caller-owned dispatch scratch for spectral scheduling primitives.
+/// Caller-owned semantic execution scratch for spectral scheduling primitives.
 #[derive(Debug, Default)]
 pub struct SpectralScheduleGpuScratch {
     inputs: Vec<Vec<u8>>,
@@ -24,24 +24,26 @@ pub struct SpectralScheduleGpuScratch {
 
 /// Fixed-point production path for spectral fusion scores.
 ///
-/// Inputs are primitive-native 16.16 u32 buffers. The dispatcher runs
-/// [`chebyshev_filter`] directly and returns the fixed-point score vector.
+/// Inputs are primitive-native 16.16 u32 buffers. Semantic execution compiles
+/// and executes [`chebyshev_filter`] and returns the fixed-point score vector.
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shapes are invalid, the primitive order is
-/// unsupported, or the backend returns malformed output.
+/// Returns [`SemanticExecutionError`] when shapes are invalid, the primitive
+/// order is unsupported, compilation or execution fails, or output is malformed.
 pub fn fusion_scores_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     laplacian_fixed: &[u32],
     signal_fixed: &[u32],
     coeffs_fixed: &[u32],
     n: u32,
     k_steps: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
     fusion_scores_fixed_via_into(
-        dispatcher,
+        executor,
+        policy,
         laplacian_fixed,
         signal_fixed,
         coeffs_fixed,
@@ -57,19 +59,22 @@ pub fn fusion_scores_fixed_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks, compilation, or backend
+/// execution fails.
 pub fn fusion_scores_fixed_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     laplacian_fixed: &[u32],
     signal_fixed: &[u32],
     coeffs_fixed: &[u32],
     n: u32,
     k_steps: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = SpectralScheduleGpuScratch::default();
     fusion_scores_fixed_via_with_scratch_into(
-        dispatcher,
+        executor,
+        policy,
         laplacian_fixed,
         signal_fixed,
         coeffs_fixed,
@@ -81,13 +86,15 @@ pub fn fusion_scores_fixed_via_into(
 }
 
 /// Fixed-point production path for spectral fusion scores using caller-owned
-/// dispatch scratch.
+/// execution scratch.
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks, compilation, or backend
+/// execution fails.
 pub fn fusion_scores_fixed_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     laplacian_fixed: &[u32],
     signal_fixed: &[u32],
     coeffs_fixed: &[u32],
@@ -95,46 +102,46 @@ pub fn fusion_scores_fixed_via_with_scratch_into(
     k_steps: u32,
     scratch: &mut SpectralScheduleGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, spectral_schedule_calls};
     bump(&spectral_schedule_calls);
 
     if k_steps > CHEBYSHEV_MAX_K {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: fusion_scores_fixed_via requires k_steps <= {CHEBYSHEV_MAX_K}, got {k_steps}."
         )));
     }
     let cells = checked_square_cells(n, "fusion_scores_fixed_via")?;
-    let cells_u32 = u32::try_from(cells).map_err(|_| {
-        DispatchError::BadInputs(format!(
+    let _cells_u32 = u32::try_from(cells).map_err(|_| {
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: fusion_scores_fixed_via n*n exceeds the primitive u32 lane limit for n={n}."
         ))
     })?;
     if n > u32::MAX / 2 {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: fusion_scores_fixed_via scratch size 2*n overflows u32 for n={n}."
         )));
     }
     if laplacian_fixed.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: fusion_scores_fixed_via requires laplacian_fixed.len() == n*n, got len={}, n={}, n*n={cells}.",
             laplacian_fixed.len(),
             n
         )));
     }
     if signal_fixed.len() != n as usize {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: fusion_scores_fixed_via requires signal_fixed.len() == n, got len={}, n={n}.",
             signal_fixed.len()
         )));
     }
     let coeff_count = (k_steps as usize).checked_add(1).ok_or_else(|| {
-        DispatchError::BadInputs(
+        SemanticExecutionError::InvalidRequest(
             "Fix: fusion_scores_fixed_via coefficient count overflowed usize.".to_string(),
         )
     })?;
     if coeffs_fixed.len() != coeff_count {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: fusion_scores_fixed_via requires coeffs_fixed.len() == k_steps + 1, got len={}, k_steps={k_steps}.",
             coeffs_fixed.len()
         )));
@@ -149,10 +156,6 @@ pub fn fusion_scores_fixed_via_with_scratch_into(
         n,
         k_steps,
     );
-    // Real-backend dispatch-input contract: one input per INPUT-CONSUMING buffer in buffer order
-    // `laplacian`/`signal`/`coeffs` RO (0-2) + the plain-ReadWrite `output` (3, n words) and `scratch`
-    // (4, 2n double-words). The two RW buffers need zero-filled input slots (the kernel writes them);
-    // passing only the 3 RO buffers fails the backend's strict `validate_input_lengths` count.
     let out_bytes = (n as usize) * std::mem::size_of::<u32>();
     let scratch_bytes = 2 * out_bytes;
     ensure_input_slots(&mut scratch.inputs, 5);
@@ -161,18 +164,20 @@ pub fn fusion_scores_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[2], coeffs_fixed);
     write_zero_bytes(&mut scratch.inputs[3], out_bytes);
     write_zero_bytes(&mut scratch.inputs[4], scratch_bytes);
-    let outputs = dispatcher.dispatch(
-        &program,
-        &scratch.inputs[..5],
-        Some([ceil_div_u32(n, 256), 1, 1]),
-    )?;
+    let outputs = execute_single_program(
+        executor,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &scratch.inputs,
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: fusion_scores_fixed_via expected at least one output buffer, got {}.",
             outputs.len()
         )));
     }
-    let _ = cells_u32;
     decode_u32_output_exact(&outputs[0], n as usize, "fusion_scores_fixed_via", out)
 }
 
@@ -180,19 +185,21 @@ pub fn fusion_scores_fixed_via_with_scratch_into(
 ///
 /// `mp_edge_fixed` is the already-scaled 16.16 upper edge. Callers that need
 /// the f64 helper can keep using `mp_upper_edge` at the representation
-/// boundary, then quantize once before dispatch.
+/// boundary, then quantize once before semantic execution.
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when the eigenvalue vector is empty, too large
-/// for the primitive lane space, or the backend returns malformed output.
+/// Returns [`SemanticExecutionError`] when the eigenvalue vector is empty, too
+/// large for the primitive lane space, compilation or execution fails, or the
+/// output is malformed.
 pub fn shape_spectrum_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     eigenvalues_fixed: &[u32],
     mp_edge_fixed: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
-    shape_spectrum_fixed_via_into(dispatcher, eigenvalues_fixed, mp_edge_fixed, &mut out)?;
+    shape_spectrum_fixed_via_into(executor, policy, eigenvalues_fixed, mp_edge_fixed, &mut out)?;
     Ok(out)
 }
 
@@ -200,16 +207,19 @@ pub fn shape_spectrum_fixed_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks, compilation, or backend
+/// execution fails.
 pub fn shape_spectrum_fixed_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     eigenvalues_fixed: &[u32],
     mp_edge_fixed: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = SpectralScheduleGpuScratch::default();
     shape_spectrum_fixed_via_with_scratch_into(
-        dispatcher,
+        executor,
+        policy,
         eigenvalues_fixed,
         mp_edge_fixed,
         &mut scratch,
@@ -217,25 +227,27 @@ pub fn shape_spectrum_fixed_via_into(
     )
 }
 
-/// Fixed-point Marchenko-Pastur edge clipping using caller-owned dispatch scratch.
+/// Fixed-point Marchenko-Pastur edge clipping using caller-owned execution scratch.
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks, compilation, or backend
+/// execution fails.
 pub fn shape_spectrum_fixed_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     eigenvalues_fixed: &[u32],
     mp_edge_fixed: u32,
     scratch: &mut SpectralScheduleGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if eigenvalues_fixed.is_empty() {
-        return Err(DispatchError::BadInputs(
+        return Err(SemanticExecutionError::InvalidRequest(
             "Fix: shape_spectrum_fixed_via requires at least one eigenvalue.".to_string(),
         ));
     }
     let n = u32::try_from(eigenvalues_fixed.len()).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: shape_spectrum_fixed_via eigenvalue count exceeds u32 lane limit: {}.",
             eigenvalues_fixed.len()
         ))
@@ -244,18 +256,19 @@ pub fn shape_spectrum_fixed_via_with_scratch_into(
     let program = mp_edge_clip("eigenvalues", "mp_edge", "out", n);
     scratch.mp_edge.clear();
     scratch.mp_edge.push(mp_edge_fixed);
-    // `mp_edge_clip` declares two read-only inputs. Its write-complete output is
-    // allocated by the backend and must not be submitted as a host input.
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], eigenvalues_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], &scratch.mp_edge);
-    let outputs = dispatcher.dispatch(
-        &program,
-        &scratch.inputs[..2],
-        Some([ceil_div_u32(n, 256), 1, 1]),
-    )?;
+    let outputs = execute_single_program(
+        executor,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &scratch.inputs,
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: shape_spectrum_fixed_via expected at least one output buffer, got {}.",
             outputs.len()
         )));
@@ -273,7 +286,7 @@ mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use crate::math::spectral_shape::mp_upper_edge;
-    use vyre_foundation::ir::Program;
+    use crate::test_parity_oracles::{policy, StaticOutputs};
     use vyre_reference::composition_witness::{
         chebyshev_filter_witness as reference_chebyshev_filter,
         mp_edge_clip_witness as reference_mp_edge_clip,
@@ -303,11 +316,6 @@ mod tests {
 
     #[test]
     fn fusion_scores_uniform_for_zero_laplacian() {
-        // No edges → Laplacian = 0 matrix. Chebyshev recurrence:
-        //   T_0 = signal, T_1 = L·signal = 0, T_2 = 2·L·T_1 - T_0 = -signal.
-        // Output with coeffs [1, 0.5, 0.25]:
-        //   c_0·T_0 + c_1·T_1 + c_2·T_2 = (1 - 0.25) · signal = 0.75 · signal
-        // signal = 1/sqrt(4) = 0.5; output = 0.375 per node.
         let l: Vec<f32> = vec![0.0; 16];
         let scores = reference_fusion_scores(&l, 4);
         for s in scores {
@@ -317,13 +325,12 @@ mod tests {
 
     #[test]
     fn shape_spectrum_clips_outliers() {
-        // n_dispatches = 100, n_features = 100, σ²=1 → MP edge = 4.
         let eig = vec![1.0, 3.0, 5.0, 100.0];
         let clipped = reference_shape_spectrum(&eig, 100, 100);
         assert_eq!(clipped[0], 1.0);
         assert_eq!(clipped[1], 3.0);
-        assert_eq!(clipped[2], 4.0); // clipped to edge
-        assert_eq!(clipped[3], 4.0); // clipped to edge
+        assert_eq!(clipped[2], 4.0);
+        assert_eq!(clipped[3], 4.0);
     }
 
     #[test]
@@ -335,72 +342,63 @@ mod tests {
         }
     }
 
-    struct SpectralDispatcher;
-
-    impl ProgramDispatcher for SpectralDispatcher {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            match inputs.len() {
-                // mp_edge_clip: eigenvalues RO(0) + mp_edge scalar RO(1).
-                2 => {
-                    assert_eq!(grid_override, Some([1, 1, 1]));
-                    let eigenvalues = crate::dispatch_buffers::read_u32s(&inputs[0]);
-                    let edge = crate::dispatch_buffers::read_u32s(&inputs[1])[0];
-                    let clipped: Vec<u32> = eigenvalues.into_iter().map(|v| v.min(edge)).collect();
-                    Ok(vec![u32_slice_to_le_bytes(&clipped)])
-                }
-                // chebyshev_filter: 3 RO (laplacian/signal/coeffs) + plain-RW output(3)+scratch(4).
-                5 => {
-                    assert_eq!(grid_override, Some([1, 1, 1]));
-                    let laplacian = crate::dispatch_buffers::read_u32s(&inputs[0]);
-                    let signal = crate::dispatch_buffers::read_u32s(&inputs[1]);
-                    let coeffs = crate::dispatch_buffers::read_u32s(&inputs[2]);
-                    assert_eq!(laplacian, vec![1, 0, 0, 1]);
-                    assert_eq!(coeffs, vec![1]);
-                    Ok(vec![u32_slice_to_le_bytes(&signal)])
-                }
-                other => Err(DispatchError::BadInputs(format!(
-                    "Fix: test dispatcher does not accept {other} input buffers."
-                ))),
-            }
-        }
-    }
-
     #[test]
-    fn shape_spectrum_fixed_via_clips_on_dispatcher() {
-        let clipped = shape_spectrum_fixed_via(&SpectralDispatcher, &[1, 5, 10], 4).unwrap();
+    fn shape_spectrum_fixed_via_preserves_input_and_output_contracts() {
+        let eigenvalues = vec![1, 5, 10];
+        let executor =
+            StaticOutputs::new("spectral shape", vec![u32_slice_to_le_bytes(&[1, 4, 4])])
+                .expecting_inputs(&[2])
+                .recording_input(0);
+
+        let clipped = shape_spectrum_fixed_via(&executor, &policy(), &eigenvalues, 4).unwrap();
+
         assert_eq!(clipped, vec![1, 4, 4]);
+        assert_eq!(executor.recorded(), vec![eigenvalues]);
     }
 
     #[test]
-    fn fusion_scores_fixed_via_dispatches_chebyshev_filter() {
+    fn fusion_scores_fixed_via_preserves_input_and_output_contracts() {
+        let laplacian = vec![1, 0, 0, 1];
+        let executor = StaticOutputs::new(
+            "spectral fusion",
+            vec![u32_slice_to_le_bytes(&[7, 11]), vec![0; 16]],
+        )
+        .expecting_inputs(&[5])
+        .recording_input(0);
+
         let scores =
-            fusion_scores_fixed_via(&SpectralDispatcher, &[1, 0, 0, 1], &[7, 11], &[1], 2, 0)
+            fusion_scores_fixed_via(&executor, &policy(), &laplacian, &[7, 11], &[1], 2, 0)
                 .unwrap();
+
         assert_eq!(scores, vec![7, 11]);
+        assert_eq!(executor.recorded(), vec![laplacian]);
     }
 
     #[test]
     fn fixed_via_rejects_bad_shapes() {
-        let err = shape_spectrum_fixed_via(&SpectralDispatcher, &[], 4).unwrap_err();
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        let executor = StaticOutputs::new("unused spectral output", Vec::new());
+        let err = shape_spectrum_fixed_via(&executor, &policy(), &[], 4).unwrap_err();
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
 
-        let err = fusion_scores_fixed_via(&SpectralDispatcher, &[1, 0, 0], &[1, 1], &[1], 2, 0)
+        let err = fusion_scores_fixed_via(&executor, &policy(), &[1, 0, 0], &[1, 1], &[1], 2, 0)
             .unwrap_err();
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 
     #[test]
     fn fixed_via_with_scratch_reuses_input_buffers() {
+        let executor = StaticOutputs::new(
+            "spectral fusion scratch",
+            vec![u32_slice_to_le_bytes(&[7, 11]), vec![0; 16]],
+        )
+        .expecting_inputs(&[5]);
+        let execution_policy = policy();
         let mut scratch = SpectralScheduleGpuScratch::default();
         let mut out = Vec::new();
 
         fusion_scores_fixed_via_with_scratch_into(
-            &SpectralDispatcher,
+            &executor,
+            &execution_policy,
             &[1, 0, 0, 1],
             &[7, 11],
             &[1],
@@ -412,7 +410,8 @@ mod tests {
         .unwrap();
         let input_ptrs: Vec<*const u8> = scratch.inputs.iter().take(3).map(Vec::as_ptr).collect();
         fusion_scores_fixed_via_with_scratch_into(
-            &SpectralDispatcher,
+            &executor,
+            &execution_policy,
             &[1, 0, 0, 1],
             &[5, 13],
             &[1],

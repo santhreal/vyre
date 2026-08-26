@@ -67,7 +67,7 @@ fn cuda_advertises_trap_propagation_only_when_its_ptx_records_a_trap() {
         .expect("Fix: a trap-declaring program must lower before its emission can be judged.");
     assert!(
         lowered
-            .descriptor
+            .descriptor()
             .bindings
             .slots
             .iter()

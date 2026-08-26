@@ -68,8 +68,6 @@ pub struct Crc32MapReduceStep {
     pub input_words: u32,
     /// Number of u32 output words produced by the step Program.
     pub output_words: u32,
-    /// Dispatch grid override for this step.
-    pub grid: [u32; 3],
 }
 
 /// Single-source execution plan for CRC-32 GPU map-reduce.
@@ -344,7 +342,6 @@ pub fn crc32_map_reduce_plan(input_len: u32, chunk_size: NonZeroU32) -> Option<C
         output_pairs: chunk_count,
         input_words: input_len.max(1),
         output_words: chunk_output_words,
-        grid: [chunk_count, 1, 1],
     });
 
     let mut pair_count = chunk_count;
@@ -358,7 +355,6 @@ pub fn crc32_map_reduce_plan(input_len: u32, chunk_size: NonZeroU32) -> Option<C
             output_pairs,
             input_words,
             output_words,
-            grid: [output_pairs, 1, 1],
         });
         pair_count = output_pairs;
     }
@@ -788,7 +784,6 @@ mod tests {
         assert_eq!(plan.steps[0].input_items, 1500);
         assert_eq!(plan.steps[0].output_pairs, 24);
         assert_eq!(plan.steps[0].output_words, 48);
-        assert_eq!(plan.steps[0].grid, [24, 1, 1]);
 
         let mut pairs = plan.steps[0].output_pairs;
         for step in plan.steps.iter().skip(1) {
@@ -797,7 +792,6 @@ mod tests {
             assert_eq!(step.input_words, pairs * 2);
             assert_eq!(step.output_pairs, pairs.div_ceil(2));
             assert_eq!(step.output_words, step.output_pairs * 2);
-            assert_eq!(step.grid, [step.output_pairs, 1, 1]);
             pairs = step.output_pairs;
         }
         assert_eq!(pairs, 1);

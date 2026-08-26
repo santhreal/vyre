@@ -4,9 +4,8 @@
 //! the topology already lives on the device by the time the plan is built.
 
 use super::layout::{
-    persistent_bfs_batch_dispatch_grid, persistent_bfs_batch_program_cache_key,
-    persistent_bfs_program_shape, persistent_bfs_single_cache_key,
-    persistent_bfs_single_dispatch_grid, persistent_bfs_single_program_cache_key,
+    persistent_bfs_batch_program_cache_key, persistent_bfs_program_shape,
+    persistent_bfs_single_cache_key, persistent_bfs_single_program_cache_key,
     PersistentBfsBatchLayout, PersistentBfsFrontierLayout, PersistentBfsPlanCacheKey,
     PersistentBfsPlanCacheKind,
 };
@@ -56,12 +55,6 @@ impl PersistentBfsResidentDispatchPlan {
     #[must_use]
     pub const fn words_u32(&self) -> u32 {
         self.frontier_layout.words_u32
-    }
-
-    /// Single-query dispatch grid.
-    #[must_use]
-    pub const fn dispatch_grid(&self) -> [u32; 3] {
-        persistent_bfs_single_dispatch_grid(self.node_count)
     }
 
     /// Program graph shape with primitive-owned empty-edge padding.
@@ -165,12 +158,6 @@ impl PersistentBfsResidentBatchDispatchPlan {
     #[must_use]
     pub const fn total_words(&self) -> usize {
         self.batch_layout.total_words
-    }
-
-    /// Batch dispatch grid.
-    #[must_use]
-    pub const fn dispatch_grid(&self) -> [u32; 3] {
-        persistent_bfs_batch_dispatch_grid(self.node_count, self.batch_layout.query_count)
     }
 
     /// Program graph shape with primitive-owned empty-edge padding.

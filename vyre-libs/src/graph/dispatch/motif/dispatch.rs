@@ -10,7 +10,7 @@ use crate::reduce::reduction_metrics::{reduce_any_via, reduce_count_non_zero_via
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_two_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Dispatcher-backed motif match.
 ///
@@ -19,16 +19,18 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 /// Propagates dispatch failures and rejects malformed CSR or
 /// truncated readback.
 pub fn match_motif_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
     edge_kind_mask: &[u32],
     motif_edges: &[MotifEdge],
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
     match_motif_via_into(
         dispatcher,
+        policy,
         node_count,
         edge_offsets,
         edge_targets,
@@ -41,17 +43,19 @@ pub fn match_motif_via(
 
 /// Dispatcher-backed motif match into caller-owned storage.
 pub fn match_motif_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
     edge_kind_mask: &[u32],
     motif_edges: &[MotifEdge],
     witness_out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = MotifGpuScratch::default();
     match_motif_via_with_scratch_into(
         dispatcher,
+        policy,
         node_count,
         edge_offsets,
         edge_targets,
@@ -64,7 +68,8 @@ pub fn match_motif_via_into(
 
 /// Dispatcher-backed motif match into caller-owned dispatch and output storage.
 pub fn match_motif_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -72,7 +77,7 @@ pub fn match_motif_via_with_scratch_into(
     motif_edges: &[MotifEdge],
     scratch: &mut MotifGpuScratch,
     witness_out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let plan = plan_motif_launch(
         node_count,
         edge_offsets,
@@ -81,7 +86,7 @@ pub fn match_motif_via_with_scratch_into(
         motif_edges,
         "witness_out",
     )
-    .map_err(DispatchError::BadInputs)?;
+    .map_err(SemanticExecutionError::InvalidRequest)?;
     if plan.output_words() == 0 {
         witness_out.clear();
         return Ok(());
@@ -99,7 +104,7 @@ pub fn match_motif_via_with_scratch_into(
         });
     let next_static_input_key = plan
         .static_input_key(edge_offsets, edge_targets, edge_kind_mask)
-        .map_err(DispatchError::BadInputs)?;
+        .map_err(SemanticExecutionError::InvalidRequest)?;
     refresh_motif_inputs(
         inputs,
         static_input_key,
@@ -111,17 +116,17 @@ pub fn match_motif_via_with_scratch_into(
     )?;
     dispatch_two_u32_outputs_from_prepared_into(
         dispatcher,
-        &cached.program,
+        policy,
+        cached.program.clone(),
         inputs,
         cached.layout.output_words,
-        "match_motif_via motif_hits",
+        "motif_hits",
         motif_hits,
         cached.layout.output_words,
-        "match_motif_via witness_out",
+        "witness_out",
         witness_out,
-        Some(plan.dispatch_grid()),
     )?;
-    validate_motif_witness(cached.layout, witness_out).map_err(DispatchError::BackendError)
+    validate_motif_witness(cached.layout, witness_out).map_err(SemanticExecutionError::Backend)
 }
 
 fn refresh_motif_inputs(
@@ -132,7 +137,7 @@ fn refresh_motif_inputs(
     edge_offsets: &[u32],
     edge_targets: &[u32],
     edge_kind_mask: &[u32],
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     refresh_keyed_dispatch_inputs(
         inputs,
         static_input_key,
@@ -151,8 +156,6 @@ fn refresh_motif_inputs(
                 "match_motif_via edge_kind_mask",
             ),
             DispatchInput::zero_u32_words(layout.output_words, "match_motif_via node_tags"),
-            DispatchInput::zero_u32_words(layout.output_words, "match_motif_via motif_hits"),
-            DispatchInput::zero_u32_words(layout.output_words, "match_motif_via witness_out"),
         ],
         &[
             (
@@ -163,14 +166,6 @@ fn refresh_motif_inputs(
                 4,
                 DispatchInput::zero_u32_words(layout.output_words, "match_motif_via node_tags"),
             ),
-            (
-                5,
-                DispatchInput::zero_u32_words(layout.output_words, "match_motif_via motif_hits"),
-            ),
-            (
-                6,
-                DispatchInput::zero_u32_words(layout.output_words, "match_motif_via witness_out"),
-            ),
         ],
     )?;
     Ok(())
@@ -180,46 +175,50 @@ fn refresh_motif_inputs(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when graph validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when graph validation or backend execution fails.
 pub fn motif_matches_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
     edge_kind_mask: &[u32],
     motif_edges: &[MotifEdge],
-) -> Result<bool, DispatchError> {
+) -> Result<bool, SemanticExecutionError> {
     let witness = match_motif_via(
         dispatcher,
+        policy,
         node_count,
         edge_offsets,
         edge_targets,
         edge_kind_mask,
         motif_edges,
     )?;
-    reduce_any_via(dispatcher, &witness)
+    reduce_any_via(dispatcher, policy, &witness)
 }
 
 /// Dispatcher-backed motif participation count.
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when graph validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when graph validation or backend execution fails.
 pub fn motif_participation_count_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
     edge_kind_mask: &[u32],
     motif_edges: &[MotifEdge],
-) -> Result<u32, DispatchError> {
+) -> Result<u32, SemanticExecutionError> {
     let witness = match_motif_via(
         dispatcher,
+        policy,
         node_count,
         edge_offsets,
         edge_targets,
         edge_kind_mask,
         motif_edges,
     )?;
-    reduce_count_non_zero_via(dispatcher, &witness)
+    reduce_count_non_zero_via(dispatcher, policy, &witness)
 }

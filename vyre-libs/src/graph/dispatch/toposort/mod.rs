@@ -7,9 +7,6 @@
 //! Kahn's-algorithm reimplementations the optimizer carried inline.
 
 mod dispatch;
-#[cfg(test)]
-#[path = "../../../../tests/internal/graph/dispatch/toposort/mod.rs"]
-mod tests;
 
 use crate::graph::dispatch::dispatch_bridge::{CachedProgram, ProgramCache};
 use crate::graph::toposort::ToposortCsrStaticInputKey;
@@ -33,3 +30,7 @@ impl ToposortGpuScratch {
         self.program_cache.builds()
     }
 }
+
+#[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/toposort/mod.rs"]
+mod tests;

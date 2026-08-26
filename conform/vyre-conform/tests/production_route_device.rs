@@ -14,7 +14,6 @@ use std::time::Duration;
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_conform::production::run_bounded_step;
 use vyre_conform::ProductionSession;
-use vyre_driver::backend_dispatches;
 use vyre_registry_link::backend::live_backend_registry;
 
 /// Ceiling on one whole session lifecycle, compile through drop.
@@ -44,15 +43,15 @@ fn wgpu_production_route_executes_canonical_artifact() {
         vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
     );
 
-    let session = ProductionSession::compile(&program, registration)
+    let session = ProductionSession::from_registration(&program, registration)
         .expect("Fix: production conformance compilation and materialization must succeed");
-    let outputs = session
+    let execution = session
         .submit(&[])
         .expect("Fix: typed artifact submission must succeed");
 
-    assert_eq!(outputs, vec![7_u32.to_le_bytes().to_vec()]);
-    assert_ne!(session.artifact_digest().0, [0; 32]);
-    assert_ne!(session.payload_digest().0, [0; 32]);
+    assert_eq!(execution.outputs, vec![7_u32.to_le_bytes().to_vec()]);
+    assert_ne!(execution.artifact.0, [0; 32]);
+    assert_ne!(execution.payload.0, [0; 32]);
 }
 
 /// WHY: a runtime-sized host buffer is dynamic in target IR but its exact
@@ -81,13 +80,12 @@ fn wgpu_runtime_sized_input_uses_representative_extent() {
         .flat_map(u32::to_le_bytes)
         .collect::<Vec<_>>();
 
-    let session =
-        ProductionSession::compile_with_representative_inputs(&program, &[&input], registration)
-            .expect("runtime-sized representative input must size artifact resources");
-    let outputs = session
+    let session = ProductionSession::from_registration(&program, registration)
+        .expect("runtime-sized representative input must size artifact resources");
+    let execution = session
         .submit(&[&input])
         .expect("runtime-sized input must submit through the artifact route");
-    assert_eq!(outputs, vec![33_u32.to_le_bytes().to_vec()]);
+    assert_eq!(execution.outputs, vec![33_u32.to_le_bytes().to_vec()]);
 }
 
 #[test]
@@ -97,10 +95,6 @@ fn cuda_production_route_executes_line_index() {
         .iter()
         .find(|reg| reg.id == "cuda")
         .expect("Fix: the gpu feature must link the cuda registration");
-    assert!(
-        backend_dispatches("cuda").expect("valid backend registry"),
-        "Fix: CUDA backend must be dispatch-capable on a supported GPU host."
-    );
     let source = b"ab\ncd";
     let n = source.len() as u32;
     let program = vyre_libs::text::line_index("source", "lines", n);
@@ -109,9 +103,9 @@ fn cuda_production_route_executes_line_index() {
         u32_input.extend_from_slice(&(b as u32).to_le_bytes());
     }
 
-    let session = ProductionSession::compile_with_representative_inputs(&program, &[&u32_input], registration)
+    let session = ProductionSession::from_registration(&program, registration)
         .expect("Fix: production conformance compilation and materialization must succeed for line_index on CUDA");
-    let outputs = session
+    let execution = session
         .submit(&[&u32_input])
         .expect("Fix: line_index artifact submission must succeed on CUDA");
 
@@ -120,7 +114,7 @@ fn cuda_production_route_executes_line_index() {
         .iter()
         .position(|&idx| program.buffers()[idx as usize].name() == "lines")
         .expect("lines output index");
-    let out_u32s: Vec<u32> = outputs[lines_index]
+    let out_u32s: Vec<u32> = execution.outputs[lines_index]
         .chunks_exact(4)
         .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
         .collect();
@@ -135,8 +129,8 @@ fn cuda_production_route_reports_traps_on_malformed_inputs() {
         .find(|reg| reg.id == "cuda")
         .expect("Fix: the gpu feature must link the cuda registration");
     assert!(
-        backend_dispatches("cuda").expect("valid backend registry"),
-        "Fix: CUDA backend must be dispatch-capable on a supported GPU host."
+        registration.target_compiler.is_some() && registration.materializer.is_some(),
+        "Fix: CUDA must register target compilation and artifact materialization."
     );
     let program = Program::wrapped(
         vec![
@@ -157,13 +151,8 @@ fn cuda_production_route_reports_traps_on_malformed_inputs() {
     )
     .with_entry_op_id("vyre-conform::production_route::conditional_trap");
 
-    let valid_representative = 0_u32.to_le_bytes();
-    let session = ProductionSession::compile_with_representative_inputs(
-        &program,
-        &[&valid_representative],
-        registration,
-    )
-    .expect("Fix: safe finalist inputs must compile a trap-declaring program on CUDA");
+    let session = ProductionSession::from_registration(&program, registration)
+        .expect("Fix: safe finalist inputs must compile a trap-declaring program on CUDA");
     let malformed = 1_u32.to_le_bytes();
     let error = session
         .submit(&[&malformed])
@@ -207,8 +196,8 @@ fn every_artifact_backend_finishes_a_session_lifecycle_including_drop() {
     let mut exercised = Vec::new();
     for registration in registrations {
         assert!(
-            backend_dispatches(registration.id).expect("valid backend registry"),
-            "Fix: linked artifact backend `{}` must be dispatch-capable on a supported GPU host.",
+            registration.target_compiler.is_some() && registration.materializer.is_some(),
+            "Fix: linked artifact backend `{}` must support semantic execution.",
             registration.id
         );
         let program = Program::wrapped(
@@ -226,8 +215,8 @@ fn every_artifact_backend_finishes_a_session_lifecycle_including_drop() {
             registration.id,
             LIFECYCLE_DEADLINE,
             move || {
-                let session = ProductionSession::compile(&program, registration)?;
-                let outputs = session.submit(&[])?;
+                let session = ProductionSession::from_registration(&program, registration)?;
+                let outputs = session.submit(&[])?.outputs;
                 // The release is the subject: it has to run inside the bound.
                 drop(session);
                 Ok(outputs)
@@ -247,6 +236,6 @@ fn every_artifact_backend_finishes_a_session_lifecycle_including_drop() {
 
     assert!(
         !exercised.is_empty(),
-        "Fix: no linked artifact backend could dispatch on this host, so the session lifecycle was never exercised. Provide a dispatch-capable device or unlink the backend."
+        "Fix: no linked artifact backend could execute on this host, so the session lifecycle was never exercised. Provide a semantic-execution-capable device or unlink the backend."
     );
 }

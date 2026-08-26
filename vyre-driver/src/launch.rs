@@ -235,7 +235,7 @@ pub fn program_vsa_fingerprint_words(program: &Program) -> [u32; 8] {
 mod tests {
     use super::*;
     use crate::binding::BindingRole;
-    use vyre_foundation::ir::Program;
+    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
     #[test]
     fn program_vsa_fingerprint_words_match_wire_decoder() {
@@ -254,7 +254,13 @@ mod tests {
 
     #[test]
     fn launch_plan_prepare_into_reuses_param_words() {
-        let program = Program::wrapped(vec![], [64, 1, 1], vec![]);
+        // An unguarded store: the launch covers the whole binding span, which is
+        // what the parameter words this test watches are derived from.
+        let program = Program::wrapped(
+            vec![BufferDecl::output("input", 0, DataType::U32).with_count(7)],
+            [64, 1, 1],
+            vec![Node::store("input", Expr::logical_index(0), Expr::u32(1))],
+        );
         let bindings = vec![Binding {
             name: std::sync::Arc::from("input"),
             binding: 0,

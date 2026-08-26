@@ -83,8 +83,8 @@ pub struct DispatchConfig {
     /// program that fans a `[256, 1, 1]` workgroup across `grid.y` (batched
     /// persistent-BFS runs one query per `grid.y` block) would collapse to
     /// `grid.y == 1` and SILENTLY compute only the first query (a Law-10
-    /// under-coverage). A caller that knows the real grid, e.g.
-    /// `persistent_bfs_batch_dispatch_grid(node_count, query_count)`, sets it here so
+    /// under-coverage). A caller that knows the real grid, e.g. one block per
+    /// query alongside the node domain the program's guard admits, sets it here so
     /// the interpreter covers every workgroup the GPU would. `None` (the default)
     /// keeps buffer-shape inference. When both this and `dispatch_elements` are set,
     /// this wins because it fully specifies the grid.

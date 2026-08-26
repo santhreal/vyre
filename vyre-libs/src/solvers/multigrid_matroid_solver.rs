@@ -46,13 +46,15 @@
 //! prolongation primitives.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
-    write_u32_slice_le_bytes, write_zero_bytes,
+    checked_square_cells, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
+    write_zero_bytes,
 };
 use crate::math::multigrid::jacobi_smooth_step;
 #[cfg(test)]
 use vyre_foundation::pass_substrate::multigrid_matroid_solver as foundation_multigrid;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Caller-owned dispatch scratch for fixed-point multigrid Jacobi smoothing.
 #[derive(Debug, Default)]
@@ -112,19 +114,21 @@ pub(crate) fn reference_matroid_solve_step_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shapes are invalid, lane counts exceed the
+/// Returns [`SemanticExecutionError`] when shapes are invalid, lane counts exceed the
 /// primitive range, or the backend returns malformed output.
 pub fn matroid_solve_step_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     a_fixed: &[u32],
     b_fixed: &[u32],
     x_in_fixed: &[u32],
     omega_fixed: u32,
     n: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
     matroid_solve_step_fixed_via_into(
         dispatcher,
+        policy,
         a_fixed,
         b_fixed,
         x_in_fixed,
@@ -139,19 +143,21 @@ pub fn matroid_solve_step_fixed_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks or backend execution fail.
 pub fn matroid_solve_step_fixed_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     a_fixed: &[u32],
     b_fixed: &[u32],
     x_in_fixed: &[u32],
     omega_fixed: u32,
     n: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = MultigridMatroidGpuScratch::default();
     matroid_solve_step_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         a_fixed,
         b_fixed,
         x_in_fixed,
@@ -166,9 +172,10 @@ pub fn matroid_solve_step_fixed_via_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks or backend execution fail.
 pub fn matroid_solve_step_fixed_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     a_fixed: &[u32],
     b_fixed: &[u32],
     x_in_fixed: &[u32],
@@ -176,35 +183,31 @@ pub fn matroid_solve_step_fixed_via_with_scratch_into(
     n: u32,
     scratch: &mut MultigridMatroidGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, multigrid_matroid_solver_calls};
     bump(&multigrid_matroid_solver_calls);
 
-    let cells = checked_square_cells(n, "matroid_solve_step_fixed_via")?;
-    // Validate the n*n matrix count fits u32 for the a-buffer binding (fail fast with a clear
-    // message before building the program). The dispatch grid below uses `n`, not this value:
-    // `jacobi_smooth_step` is a per-ROW kernel (lane `t` relaxes row t, looping j internally), so
-    // only n lanes do work, dispatching n*n lanes would launch up to n× the useful invocations on
-    // a real backend (the extra lanes are guarded out by `t < n`, so parity can't see the waste).
+    let cells = checked_square_cells(n, "matroid_solve_step_fixed_via")
+        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
     let _matrix_cells_fit_u32 = u32::try_from(cells).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: matroid_solve_step_fixed_via n*n exceeds the primitive u32 lane limit for n={n}."
         ))
     })?;
     if a_fixed.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: matroid_solve_step_fixed_via requires a_fixed.len() == n*n, got len={}, n={n}, n*n={cells}.",
-            a_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: matroid_solve_step_fixed_via requires a_fixed.len() == n*n, got len={}, n={n}, n*n={cells}.",
+        a_fixed.len()
+    )));
     }
     if b_fixed.len() != n as usize {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: matroid_solve_step_fixed_via requires b_fixed.len() == n, got len={}, n={n}.",
             b_fixed.len()
         )));
     }
     if x_in_fixed.len() != n as usize {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: matroid_solve_step_fixed_via requires x_in_fixed.len() == n, got len={}, n={n}.",
             x_in_fixed.len()
         )));
@@ -214,7 +217,7 @@ pub fn matroid_solve_step_fixed_via_with_scratch_into(
     let out_bytes = (n as usize)
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: matroid_solve_step_fixed_via n={n} overflows output byte count."
             ))
         })?;
@@ -226,18 +229,22 @@ pub fn matroid_solve_step_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[2], x_in_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[3], &scratch.omega);
     write_zero_bytes(&mut scratch.inputs[4], out_bytes);
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs,
-        Some([ceil_div_u32(n, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: matroid_solve_step_fixed_via expected at least one output buffer, got {}.",
             outputs.len()
         )));
     }
     decode_u32_output_exact(&outputs[0], n as usize, "matroid_solve_step_fixed_via", out)
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Iterate Jacobi smoothing until residual norm drops below `tol`
@@ -287,7 +294,6 @@ pub(crate) fn solve_to_tolerance_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_foundation::ir::Program;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-4 * (1.0 + a.abs() + b.abs())
@@ -409,34 +415,43 @@ mod tests {
 
     struct JacobiDispatcher;
 
-    impl ProgramDispatcher for JacobiDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for JacobiDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 5);
-            let a = crate::dispatch_buffers::read_u32s(&inputs[0]);
-            let b = crate::dispatch_buffers::read_u32s(&inputs[1]);
-            let x_in = crate::dispatch_buffers::read_u32s(&inputs[2]);
-            let omega = crate::dispatch_buffers::read_u32s(&inputs[3])[0];
-            assert_eq!(inputs[4].len(), b.len() * std::mem::size_of::<u32>());
-            let n = b.len();
-            let mut out = Vec::with_capacity(n);
-            for i in 0..n {
-                let mut ax = 0u32;
-                for j in 0..n {
-                    ax = ax.saturating_add(((a[i * n + j] as u64 * x_in[j] as u64) >> 16) as u32);
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                assert_eq!(inputs.len(), 5);
+                let a = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                let b = crate::dispatch_buffers::read_u32s(&inputs[1]);
+                let x_in = crate::dispatch_buffers::read_u32s(&inputs[2]);
+                let omega = crate::dispatch_buffers::read_u32s(&inputs[3])[0];
+                assert_eq!(inputs[4].len(), b.len() * std::mem::size_of::<u32>());
+                let n = b.len();
+                let mut out = Vec::with_capacity(n);
+                for i in 0..n {
+                    let mut ax = 0u32;
+                    for j in 0..n {
+                        ax = ax
+                            .saturating_add(((a[i * n + j] as u64 * x_in[j] as u64) >> 16) as u32);
+                    }
+                    let res = b[i].saturating_sub(ax);
+                    let diag = a[i * n + i].max(1);
+                    let omega_res = ((omega as u64 * res as u64) >> 16) as u32;
+                    out.push(
+                        x_in[i].saturating_add((((omega_res as u64) << 16) / diag as u64) as u32),
+                    );
                 }
-                let res = b[i].saturating_sub(ax);
-                let diag = a[i * n + i].max(1);
-                let omega_res = ((omega as u64 * res as u64) >> 16) as u32;
-                out.push(x_in[i].saturating_add((((omega_res as u64) << 16) / diag as u64) as u32));
-            }
 
-            Ok(vec![u32_slice_to_le_bytes(&out)])
+                Ok(vec![u32_slice_to_le_bytes(&out)])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
+            }
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -445,6 +460,7 @@ mod tests {
         let one = 1u32 << 16;
         let out = matroid_solve_step_fixed_via(
             &JacobiDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[3 * one, 4 * one],
             &[0, 0],
@@ -455,51 +471,19 @@ mod tests {
         assert_eq!(out, vec![3 * one, 4 * one]);
     }
 
-    // Regression lock for the per-row dispatch-count fix. A weighted-Jacobi step is a per-ROW
-    // kernel (lane `t` relaxes row t, looping over j internally), so it needs ceil_div(n, 256)
-    // workgroups: NOT ceil_div(n*n, 256). Over-dispatching n*n lanes launches up to n× the useful
-    // invocations on a real backend; the extra lanes are guarded out by `t < n`, so a value-parity
-    // test can never see the waste. This asserts the grid the consumer actually requests.
-    struct GridAssertDispatcher;
-
-    impl ProgramDispatcher for GridAssertDispatcher {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            let n = crate::dispatch_buffers::read_u32s(&inputs[1]).len() as u32;
-            let expected = ceil_div_u32(n, 256);
-            assert_eq!(
-                grid_override,
-                Some([expected, 1, 1]),
-                "per-row Jacobi kernel must dispatch ceil_div(n,256)={expected} workgroups for \
-                 n={n}, not ceil_div(n*n,256)"
-            );
-            Ok(vec![u32_slice_to_le_bytes(&vec![0u32; n as usize])])
-        }
-    }
-
-    #[test]
-    fn fixed_via_dispatches_one_workgroup_row_per_256_rows_not_per_cell() {
-        // n=257 → per-row ceil_div(257,256)=2 workgroups; the old per-cell bug would request
-        // ceil_div(257*257,256)=ceil_div(66049,256)=259 → the assertion in GridAssertDispatcher
-        // fails under the bug and passes only with the per-row grid.
-        let n = 257u32;
-        let a = vec![0u32; (n as usize) * (n as usize)];
-        let b = vec![0u32; n as usize];
-        let x_in = vec![0u32; n as usize];
-        matroid_solve_step_fixed_via(&GridAssertDispatcher, &a, &b, &x_in, 1 << 16, n)
-            .expect("per-row dispatch must succeed");
-    }
-
     #[test]
     fn fixed_via_rejects_bad_shapes() {
-        let err =
-            matroid_solve_step_fixed_via(&JacobiDispatcher, &[1, 0, 0], &[1, 1], &[0, 0], 1, 2)
-                .unwrap_err();
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        let err = matroid_solve_step_fixed_via(
+            &JacobiDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[1, 0, 0],
+            &[1, 1],
+            &[0, 0],
+            1,
+            2,
+        )
+        .unwrap_err();
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 
     #[test]
@@ -510,6 +494,7 @@ mod tests {
 
         matroid_solve_step_fixed_via_with_scratch_into(
             &JacobiDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[3 * one, 4 * one],
             &[0, 0],
@@ -522,6 +507,7 @@ mod tests {
         let input_ptrs: Vec<*const u8> = scratch.inputs.iter().map(Vec::as_ptr).collect();
         matroid_solve_step_fixed_via_with_scratch_into(
             &JacobiDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[2 * one, 5 * one],
             &[0, 0],

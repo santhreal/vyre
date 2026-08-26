@@ -16,7 +16,7 @@
 
 mod harness;
 use harness::acquire_live_backend as live_backend;
-use harness::self_optimizer::{first_let_value, wrapped, WgpuProgramDispatcher};
+use harness::self_optimizer::{first_let_value, semantic_execution, wrapped};
 
 use vyre::ir::{Expr, Node};
 use vyre_pass_engine::optimizer::const_fold_via_encoded::gpu_const_fold;
@@ -24,14 +24,15 @@ use vyre_pass_engine::optimizer::const_fold_via_encoded::gpu_const_fold;
 #[test]
 fn const_fold_two_plus_three_yields_lit_five_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
+    let dispatcher = semantic_execution(&backend);
 
     // let x = 2 + 3
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::add(Expr::u32(2), Expr::u32(3)),
     )]);
-    let folded = gpu_const_fold(p, &dispatcher).expect("const-fold dispatches cleanly");
+    let folded =
+        gpu_const_fold(p, &dispatcher.0, &dispatcher.1).expect("const-fold dispatches cleanly");
     let got = first_let_value(&folded);
     assert!(
         matches!(got, Expr::LitU32(5)),
@@ -42,14 +43,14 @@ fn const_fold_two_plus_three_yields_lit_five_on_real_gpu() {
 #[test]
 fn const_fold_chained_arithmetic_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
+    let dispatcher = semantic_execution(&backend);
 
     // let x = (2 + 3) * 4   →   20
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::mul(Expr::add(Expr::u32(2), Expr::u32(3)), Expr::u32(4)),
     )]);
-    let folded = gpu_const_fold(p, &dispatcher).expect("dispatches cleanly");
+    let folded = gpu_const_fold(p, &dispatcher.0, &dispatcher.1).expect("dispatches cleanly");
     let got = first_let_value(&folded);
     assert!(
         matches!(got, Expr::LitU32(20)),
@@ -60,14 +61,14 @@ fn const_fold_chained_arithmetic_on_real_gpu() {
 #[test]
 fn const_fold_subtraction_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
+    let dispatcher = semantic_execution(&backend);
 
     // let x = 10 - 7   →   3
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::sub(Expr::u32(10), Expr::u32(7)),
     )]);
-    let folded = gpu_const_fold(p, &dispatcher).expect("dispatches cleanly");
+    let folded = gpu_const_fold(p, &dispatcher.0, &dispatcher.1).expect("dispatches cleanly");
     let got = first_let_value(&folded);
     assert!(matches!(got, Expr::LitU32(3)));
 }
@@ -75,7 +76,7 @@ fn const_fold_subtraction_on_real_gpu() {
 #[test]
 fn const_fold_bitwise_ops_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
+    let dispatcher = semantic_execution(&backend);
 
     // (0xFF | 0x100) & 0x1FF   →   0x1FF
     let p = wrapped(vec![Node::let_bind(
@@ -85,7 +86,7 @@ fn const_fold_bitwise_ops_on_real_gpu() {
             Expr::u32(0x1FF),
         ),
     )]);
-    let folded = gpu_const_fold(p, &dispatcher).expect("dispatches cleanly");
+    let folded = gpu_const_fold(p, &dispatcher.0, &dispatcher.1).expect("dispatches cleanly");
     let got = first_let_value(&folded);
     assert!(matches!(got, Expr::LitU32(0x1FF)));
 }
@@ -93,14 +94,14 @@ fn const_fold_bitwise_ops_on_real_gpu() {
 #[test]
 fn const_fold_unfoldable_var_passes_through_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
+    let dispatcher = semantic_execution(&backend);
 
     // let x = a + 2  →  unchanged (a is not foldable).
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::add(Expr::var("a"), Expr::u32(2)),
     )]);
-    let folded = gpu_const_fold(p, &dispatcher).expect("dispatches cleanly");
+    let folded = gpu_const_fold(p, &dispatcher.0, &dispatcher.1).expect("dispatches cleanly");
     let got = first_let_value(&folded);
     // Top-level Expr is still the Add (not foldable because Var(a) isn't).
     match got {

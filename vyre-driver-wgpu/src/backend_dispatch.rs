@@ -291,6 +291,8 @@ impl WgpuBackend {
     #[allow(clippy::too_many_arguments)]
     pub fn invalidate_impacted_pipeline_cache(
         &self,
+        executor: &dyn vyre_megakernel::SemanticExecutor,
+        policy: &vyre_megakernel::SemanticExecutionPolicy,
         intervention_mask: &[u32],
         rule_adj: &[u32],
         state: &[u32],
@@ -309,7 +311,7 @@ impl WgpuBackend {
             max_iterations,
             pipeline_lineage_cell,
         }
-        .impact_mask(self)?;
+        .impact_mask(executor, policy)?;
         self.pipeline_cache
             .invalidate_impacted(&impact_mask, pipeline_keys);
         Ok(())
@@ -318,6 +320,8 @@ impl WgpuBackend {
     /// Convenience wrapper around [`Self::invalidate_impacted_pipeline_cache`]
     pub fn invalidate_pipeline_cache_for_changed_op(
         &self,
+        executor: &dyn vyre_megakernel::SemanticExecutor,
+        policy: &vyre_megakernel::SemanticExecutionPolicy,
         changed_op_handle: u32,
         pipeline_lineage_cell: &[u32],
         pipeline_keys: &[[u8; 32]],
@@ -337,6 +341,8 @@ impl WgpuBackend {
             }
         }));
         self.invalidate_impacted_pipeline_cache(
+            executor,
+            policy,
             &intervention_mask,
             &rule_adj,
             &state,
@@ -357,6 +363,8 @@ impl WgpuBackend {
     #[allow(clippy::too_many_arguments)]
     pub fn invalidate_impacted_disk_cache(
         &self,
+        executor: &dyn vyre_megakernel::SemanticExecutor,
+        policy: &vyre_megakernel::SemanticExecutionPolicy,
         intervention_mask: &[u32],
         rule_adj: &[u32],
         state: &[u32],
@@ -375,7 +383,7 @@ impl WgpuBackend {
             max_iterations,
             pipeline_lineage_cell,
         }
-        .impact_mask(self)?;
+        .impact_mask(executor, policy)?;
         crate::pipeline::disk_cache::remove_impacted_entries(&impact_mask, cache_keys)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))
     }
@@ -1180,21 +1188,6 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         self.device_lost.store(false, Ordering::Release);
 
         Ok(())
-    }
-}
-
-impl vyre_foundation::program_dispatch::ProgramDispatcher for WgpuBackend {
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, vyre_foundation::program_dispatch::DispatchError> {
-        let mut config = vyre_driver::DispatchConfig::default();
-        config.grid_override = grid_override;
-        vyre_driver::VyreBackend::dispatch(self, program, inputs, &config).map_err(|error| {
-            vyre_foundation::program_dispatch::DispatchError::BackendError(error.to_string())
-        })
     }
 }
 

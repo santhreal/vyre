@@ -1,17 +1,18 @@
 use super::*;
-use vyre_foundation::ir::Program;
+use crate::test_parity_oracles::{canonical_inputs, semantic_output};
+use vyre_megakernel::{
+    SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest, SemanticExecutor,
+};
 
 pub(super) struct DominatorInputShapeDispatcher;
 
-impl ProgramDispatcher for DominatorInputShapeDispatcher {
-    fn dispatch(
+impl SemanticExecutor for DominatorInputShapeDispatcher {
+    fn execute(
         &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(grid_override, Some([1, 1, 1]));
-        assert_eq!(inputs.len(), 6);
+        request: &SemanticExecutionRequest<'_>,
+    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+        let inputs = canonical_inputs(request)?;
+        assert_eq!(inputs.len(), 5);
         assert_eq!(
             inputs[1].len(),
             4,
@@ -22,7 +23,7 @@ impl ProgramDispatcher for DominatorInputShapeDispatcher {
             4,
             "Fix: empty predecessor targets must be padded to one u32 from the primitive plan"
         );
-        Ok(vec![u32_slice_to_le_bytes(&[0])])
+        semantic_output(request, vec![u32_slice_to_le_bytes(&[0])])
     }
 }
 
@@ -31,18 +32,16 @@ pub(super) struct RecordingDominatorDispatcher {
     pub(super) output: Vec<u8>,
 }
 
-impl ProgramDispatcher for RecordingDominatorDispatcher {
-    fn dispatch(
+impl SemanticExecutor for RecordingDominatorDispatcher {
+    fn execute(
         &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(grid_override, Some([1, 1, 1]));
+        request: &SemanticExecutionRequest<'_>,
+    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+        let inputs = canonical_inputs(request)?;
         self.calls
             .lock()
-            .expect("Fix: recording dispatcher calls lock should not be poisoned")
-            .push(inputs.to_vec());
-        Ok(vec![self.output.clone()])
+            .expect("Fix: recording semantic executor calls lock should not be poisoned")
+            .push(inputs);
+        semantic_output(request, vec![self.output.clone()])
     }
 }

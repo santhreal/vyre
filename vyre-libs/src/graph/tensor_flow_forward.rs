@@ -30,13 +30,6 @@ pub const BINDING_TENSOR_IN: u32 = BINDING_PRIMITIVE_START;
 /// Canonical binding index for the output 3D tensor bitset.
 pub const BINDING_TENSOR_OUT: u32 = BINDING_PRIMITIVE_START + 1;
 
-/// Dispatch grid for source-node tensor-flow propagation.
-#[cfg(test)]
-#[must_use]
-pub const fn tensor_flow_forward_dispatch_grid(node_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(node_count, TENSOR_FLOW_FORWARD_WORKGROUP_SIZE[0])
-}
-
 /// Words needed for the per-node context x field tensor bitset, saturating.
 ///
 /// The bit count is `node_count * context_limit * field_limit`, which overflows

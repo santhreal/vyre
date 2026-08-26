@@ -1,21 +1,17 @@
-//! End-to-end tests: vyre's self-hosted optimizer passes running as
-//! vyre Programs on real CUDA hardware via `CudaBackend::dispatch`.
+//! End-to-end tests for self-hosted optimizer passes through admitted CUDA artifacts.
 //!
-//! Mirrors the wgpu E2E suites (DCE, const-fold, canonicalize,
-//! pipeline). Confirms the ProgramDispatcher abstraction is
-//! backend-agnostic  -  the same encoder + analysis Programs run
-//! unchanged on both CUDA and wgpu paths.
+//! The same semantic programs and explicit policies run on CUDA and WGPU.
 //!
 //! The canonicalize and pipeline inputs, and the shape each pass owes for them,
 //! are `vyre_test_support::pass_programs`, shared with the wgpu suites so the two
-//! backends cannot assert different rewrites of the same program. The dispatcher
-//! and the DCE differential against the foundation CPU oracle stay here.
+//! backends cannot assert different rewrites of the same program. The DCE
+//! differential against the foundation CPU oracle stays here.
 
 #![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 
-use harness::{live_backend, CudaProgramDispatcher};
+use harness::cuda_semantic_execution;
 use vyre::ir::{BinOp, Expr, Node};
 use vyre_foundation::optimizer::fingerprint_program;
 use vyre_foundation::optimizer::passes::fusion_cse::dce::dce as cpu_dce_oracle;
@@ -30,14 +26,14 @@ use vyre_test_support::pass_programs::{
 // ---- DCE on CUDA -----------------------------------------------------------
 
 fn assert_dce_matches_cpu_oracle_cuda(entry: Vec<Node>) {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
 
     let oracle_in = wrapped(entry.clone());
     let test_in = wrapped(entry);
 
     let oracle_out = cpu_dce_oracle(oracle_in);
-    let gpu_out = gpu_dce(test_in, &dispatcher).expect("gpu_dce dispatches through cuda cleanly");
+    let gpu_out = gpu_dce(test_in, &dispatcher.0, &dispatcher.1)
+        .expect("gpu_dce dispatches through cuda cleanly");
     assert_eq!(
         fingerprint_program(&oracle_out),
         fingerprint_program(&gpu_out),
@@ -84,14 +80,13 @@ fn cuda_dce_loop_with_induction_var() {
 
 #[test]
 fn cuda_const_fold_two_plus_three_yields_lit_five() {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
 
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::add(Expr::u32(2), Expr::u32(3)),
     )]);
-    let folded = gpu_const_fold(p, &dispatcher).expect("dispatches");
+    let folded = gpu_const_fold(p, &dispatcher.0, &dispatcher.1).expect("dispatches");
     let got = first_let_value(&folded);
     assert!(
         matches!(got, Expr::LitU32(5)),
@@ -101,22 +96,20 @@ fn cuda_const_fold_two_plus_three_yields_lit_five() {
 
 #[test]
 fn cuda_const_fold_chained_arithmetic() {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
 
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::mul(Expr::add(Expr::u32(2), Expr::u32(3)), Expr::u32(4)),
     )]);
-    let folded = gpu_const_fold(p, &dispatcher).expect("dispatches");
+    let folded = gpu_const_fold(p, &dispatcher.0, &dispatcher.1).expect("dispatches");
     let got = first_let_value(&folded);
     assert!(matches!(got, Expr::LitU32(20)));
 }
 
 #[test]
 fn cuda_const_fold_bitwise_ops() {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
 
     let p = wrapped(vec![Node::let_bind(
         "x",
@@ -125,21 +118,20 @@ fn cuda_const_fold_bitwise_ops() {
             Expr::u32(0x1FF),
         ),
     )]);
-    let folded = gpu_const_fold(p, &dispatcher).expect("dispatches");
+    let folded = gpu_const_fold(p, &dispatcher.0, &dispatcher.1).expect("dispatches");
     let got = first_let_value(&folded);
     assert!(matches!(got, Expr::LitU32(0x1FF)));
 }
 
 #[test]
 fn cuda_const_fold_unfoldable_var_passes_through() {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
 
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::add(Expr::var("a"), Expr::u32(2)),
     )]);
-    let folded = gpu_const_fold(p, &dispatcher).expect("dispatches");
+    let folded = gpu_const_fold(p, &dispatcher.0, &dispatcher.1).expect("dispatches");
     let got = first_let_value(&folded);
     match got {
         Expr::BinOp { op, .. } => assert!(matches!(op, BinOp::Add)),
@@ -152,10 +144,9 @@ fn cuda_const_fold_unfoldable_var_passes_through() {
 /// Dispatch canonicalize for the named case on the live device and assert the
 /// rewrite the case owes.
 fn assert_canonicalize_case(label: &str) {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
     let case = canonicalize_case(label);
-    let canon = gpu_canonicalize(case.input(), &dispatcher).expect("dispatches");
+    let canon = gpu_canonicalize(case.input(), &dispatcher.0, &dispatcher.1).expect("dispatches");
     assert_canonicalized("cuda", case, &canon);
 }
 
@@ -179,13 +170,13 @@ fn cuda_canonicalize_non_commutative_div_unchanged() {
 /// Run all three passes for the named case on the live device and assert the
 /// body the case owes.
 fn assert_pipeline_case(label: &str) {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
     let case = pipeline_case(label);
 
-    let p = gpu_canonicalize(case.input(), &dispatcher).expect("canonicalize dispatches");
-    let p = gpu_const_fold(p, &dispatcher).expect("const-fold dispatches");
-    let p = gpu_dce(p, &dispatcher).expect("dce dispatches");
+    let p = gpu_canonicalize(case.input(), &dispatcher.0, &dispatcher.1)
+        .expect("canonicalize dispatches");
+    let p = gpu_const_fold(p, &dispatcher.0, &dispatcher.1).expect("const-fold dispatches");
+    let p = gpu_dce(p, &dispatcher.0, &dispatcher.1).expect("dce dispatches");
 
     assert_pipeline_body("cuda", case, &p);
 }

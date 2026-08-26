@@ -10,7 +10,7 @@
 //! reference for the u32 fixed-point dispatch path.
 //!
 //! This runs the real fixed-point `natural_gradient_block_apply` Program through the shared
-//! `ReferenceEvalDispatcher` and asserts it EXACTLY (no tolerance) reproduces a u32 16.16 matvec
+//! `ReferenceSemanticExecutor` and asserts it EXACTLY (no tolerance) reproduces a u32 16.16 matvec
 //! oracle. The oracle mirrors the IR bit-for-bit: `fixed_mul_16_16(a, b) =
 //! ((a as i32 as i64 * b as i32 as i64) >> 16) as i32 as u32` (matching the corrected SIGNED
 //! `fixed_mul_16_16_expr` = bits 16..47 of the SIGNED 64-bit product), accumulated with wrapping u32
@@ -18,9 +18,11 @@
 //! arithmetic, any divergence is a real IR/dispatch defect, not a rounding artifact.
 #![forbid(unsafe_code)]
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::natural_gradient_autotuner::precondition_autotune_gradient_fixed_via;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::{
     fixed_matvec as natural_gradient_fixed, signed_fixed_19 as signed_fixed, to_fixed,
     xorshift32 as xorshift,
@@ -28,7 +30,7 @@ use vyre_test_support::fixed_point::{
 
 #[test]
 fn precondition_autotune_gradient_fixed_via_matches_exact_fixed_point_matvec() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x9E37_79B9u32;
     let mut moved_cases = 0u32;
     for case in 0..400u32 {
@@ -42,8 +44,14 @@ fn precondition_autotune_gradient_fixed_via_matches_exact_fixed_point_matvec() {
             .collect();
         let grad: Vec<u32> = (0..n).map(|_| xorshift(&mut state) & 0x000F_FFFF).collect();
 
-        let via = precondition_autotune_gradient_fixed_via(&dispatcher, &m_inv_sqrt, &grad, n)
-            .expect("precondition_autotune_gradient_fixed_via must dispatch the matvec kernel");
+        let via = precondition_autotune_gradient_fixed_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &m_inv_sqrt,
+            &grad,
+            n,
+        )
+        .expect("precondition_autotune_gradient_fixed_via must dispatch the matvec kernel");
         let oracle = natural_gradient_fixed(&m_inv_sqrt, &grad, n as usize);
         if oracle.iter().any(|&w| w != 0) {
             moved_cases += 1;
@@ -70,7 +78,7 @@ fn precondition_autotune_gradient_fixed_via_matches_signed_precondition_with_neg
     // oracle, locking the signed `fixed_mul_16_16_expr` fix at the natural-gradient consumer (pre-fix
     // a negative `M[i,j]·grad[j]` term diverged: the unsigned high word treated a negative operand as
     // ~2^32 and produced garbage).
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0xC2B2_AE35u32;
     let mut neg_inputs = 0u32;
     let mut neg_outputs = 0u32;
@@ -84,8 +92,14 @@ fn precondition_autotune_gradient_fixed_via_matches_signed_precondition_with_neg
         neg_inputs += m_inv_sqrt.iter().filter(|&&v| (v as i32) < 0).count() as u32;
         neg_inputs += grad.iter().filter(|&&v| (v as i32) < 0).count() as u32;
 
-        let via = precondition_autotune_gradient_fixed_via(&dispatcher, &m_inv_sqrt, &grad, n)
-            .expect("precondition_autotune_gradient_fixed_via must dispatch the matvec kernel");
+        let via = precondition_autotune_gradient_fixed_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &m_inv_sqrt,
+            &grad,
+            n,
+        )
+        .expect("precondition_autotune_gradient_fixed_via must dispatch the matvec kernel");
         let oracle = natural_gradient_fixed(&m_inv_sqrt, &grad, n as usize);
         assert_eq!(
             via, oracle,
@@ -117,11 +131,17 @@ fn precondition_autotune_gradient_fixed_via_hand_checked_negative_precondition()
     // M_inv_sqrt = [[2.0, -0.5], [0.0, 1.0]], grad = [-3.0, 4.0]:
     //   out[0] = (2.0)(-3.0) + (-0.5)(4.0) = -6.0 - 2.0 = -8.0
     //   out[1] = (0.0)(-3.0) + ( 1.0)(4.0) =  0.0 + 4.0 =  4.0
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let m_inv_sqrt = vec![to_fixed(2.0), to_fixed(-0.5), to_fixed(0.0), to_fixed(1.0)];
     let grad = vec![to_fixed(-3.0), to_fixed(4.0)];
-    let via = precondition_autotune_gradient_fixed_via(&dispatcher, &m_inv_sqrt, &grad, 2)
-        .expect("precondition_autotune_gradient_fixed_via must dispatch");
+    let via = precondition_autotune_gradient_fixed_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &m_inv_sqrt,
+        &grad,
+        2,
+    )
+    .expect("precondition_autotune_gradient_fixed_via must dispatch");
     let oracle = natural_gradient_fixed(&m_inv_sqrt, &grad, 2);
     assert_eq!(
         oracle,
@@ -138,12 +158,18 @@ fn precondition_autotune_gradient_fixed_via_hand_checked_negative_precondition()
 fn precondition_autotune_gradient_fixed_via_computes_a_known_precondition() {
     // 2x2 M_inv_sqrt = [[2.0, 0.0],[1.0, 3.0]] in 16.16; grad = [3.0, 4.0].
     // out[0] = 2.0*3.0 + 0.0*4.0 = 6.0; out[1] = 1.0*3.0 + 3.0*4.0 = 15.0.
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let one = 1u32 << 16;
     let m_inv_sqrt = vec![2 * one, 0, one, 3 * one];
     let grad = vec![3 * one, 4 * one];
-    let via = precondition_autotune_gradient_fixed_via(&dispatcher, &m_inv_sqrt, &grad, 2)
-        .expect("precondition_autotune_gradient_fixed_via must dispatch");
+    let via = precondition_autotune_gradient_fixed_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &m_inv_sqrt,
+        &grad,
+        2,
+    )
+    .expect("precondition_autotune_gradient_fixed_via must dispatch");
     let oracle = natural_gradient_fixed(&m_inv_sqrt, &grad, 2);
     assert_eq!(
         oracle,

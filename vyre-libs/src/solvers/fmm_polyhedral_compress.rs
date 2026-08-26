@@ -42,11 +42,13 @@
 //! each multipole order has an explicit schema and test oracle.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_f32_output_exact, ensure_input_slots, require_exactly_one_output,
+    decode_f32_output_exact, ensure_input_slots, require_exactly_one_output,
     write_f32_slice_le_bytes, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::fmm::{l2p_zeroth_f32_step, m2l_zeroth_f32_step, p2m_zeroth_f32_step};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     try_l2p_zeroth_all_witness_into, try_m2l_zeroth_all_witness_into,
@@ -205,17 +207,19 @@ pub(crate) fn fmm_compress_pairwise_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] for malformed shapes, oversized buffers, dispatch rejection, or
+/// Returns [`SemanticExecutionError`] for malformed shapes, oversized buffers, dispatch rejection, or
 /// malformed backend output.
 pub fn aggregate_to_cells_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     scores: &[f32],
     cell_assignment: &[u32],
-) -> Result<Vec<f32>, DispatchError> {
+) -> Result<Vec<f32>, SemanticExecutionError> {
     let mut scratch = FmmPolyhedralGpuScratch::default();
     let mut out = Vec::new();
     aggregate_to_cells_via_with_scratch_into(
         dispatcher,
+        policy,
         scores,
         cell_assignment,
         &mut scratch,
@@ -228,15 +232,16 @@ pub fn aggregate_to_cells_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] for malformed shapes, oversized buffers, dispatch rejection, or
+/// Returns [`SemanticExecutionError`] for malformed shapes, oversized buffers, dispatch rejection, or
 /// malformed backend output.
 pub fn aggregate_to_cells_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     scores: &[f32],
     cell_assignment: &[u32],
     scratch: &mut FmmPolyhedralGpuScratch,
     out: &mut Vec<f32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
 
@@ -258,29 +263,36 @@ pub fn aggregate_to_cells_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], cell_assignment);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs,
-        Some([ceil_div_u32(n_cells, 256), 1, 1]),
-    )?;
-    let output = require_exactly_one_output(&outputs, "aggregate_to_cells_via")?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
+    let output = require_exactly_one_output(&outputs, "aggregate_to_cells_via")
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
     decode_f32_output_exact(output, n_cells as usize, "aggregate_to_cells_via", out)
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Translate source-cell moments to target-cell locals through the active backend.
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] for malformed shape, dispatch failure, or malformed backend output.
+/// Returns [`SemanticExecutionError`] for malformed shape, dispatch failure, or malformed backend output.
 pub fn translate_to_targets_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     cell_moments: &[f32],
     cell_distances: &[f32],
-) -> Result<Vec<f32>, DispatchError> {
+) -> Result<Vec<f32>, SemanticExecutionError> {
     let mut scratch = FmmPolyhedralGpuScratch::default();
     let mut out = Vec::new();
     translate_to_targets_via_with_scratch_into(
         dispatcher,
+        policy,
         cell_moments,
         cell_distances,
         &mut scratch,
@@ -293,14 +305,15 @@ pub fn translate_to_targets_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] for malformed shape, dispatch failure, or malformed backend output.
+/// Returns [`SemanticExecutionError`] for malformed shape, dispatch failure, or malformed backend output.
 pub fn translate_to_targets_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     cell_moments: &[f32],
     cell_distances: &[f32],
     scratch: &mut FmmPolyhedralGpuScratch,
     out: &mut Vec<f32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
 
@@ -321,30 +334,37 @@ pub fn translate_to_targets_via_with_scratch_into(
     write_f32_slice_le_bytes(&mut scratch.inputs[1], cell_distances);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs,
-        Some([ceil_div_u32(n_cells, 256), 1, 1]),
-    )?;
-    let output = require_exactly_one_output(&outputs, "translate_to_targets_via")?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
+    let output = require_exactly_one_output(&outputs, "translate_to_targets_via")
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
     decode_f32_output_exact(output, n_cells as usize, "translate_to_targets_via", out)
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Evaluate target-cell locals into per-region affinity scores through the active backend.
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] for malformed shape, dispatch failure, or malformed backend output.
+/// Returns [`SemanticExecutionError`] for malformed shape, dispatch failure, or malformed backend output.
 pub fn evaluate_at_regions_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     cell_local: &[f32],
     cell_assignment: &[u32],
     n: u32,
-) -> Result<Vec<f32>, DispatchError> {
+) -> Result<Vec<f32>, SemanticExecutionError> {
     let mut scratch = FmmPolyhedralGpuScratch::default();
     let mut out = Vec::new();
     evaluate_at_regions_via_with_scratch_into(
         dispatcher,
+        policy,
         cell_local,
         cell_assignment,
         n,
@@ -358,15 +378,16 @@ pub fn evaluate_at_regions_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] for malformed shape, dispatch failure, or malformed backend output.
+/// Returns [`SemanticExecutionError`] for malformed shape, dispatch failure, or malformed backend output.
 pub fn evaluate_at_regions_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     cell_local: &[f32],
     cell_assignment: &[u32],
     n: u32,
     scratch: &mut FmmPolyhedralGpuScratch,
     out: &mut Vec<f32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
 
@@ -376,13 +397,13 @@ pub fn evaluate_at_regions_via_with_scratch_into(
         return Ok(());
     }
     let n_cells = u32::try_from(cell_local.len()).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: evaluate_at_regions_via cell count {} exceeds u32::MAX.",
             cell_local.len()
         ))
     })?;
     if n_cells == 0 {
-        return Err(DispatchError::BadInputs(
+        return Err(SemanticExecutionError::InvalidRequest(
             "Fix: evaluate_at_regions_via requires at least one cell local for non-empty regions."
                 .to_string(),
         ));
@@ -397,31 +418,38 @@ pub fn evaluate_at_regions_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], cell_assignment);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs,
-        Some([ceil_div_u32(n, 256), 1, 1]),
-    )?;
-    let output = require_exactly_one_output(&outputs, "evaluate_at_regions_via")?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
+    let output = require_exactly_one_output(&outputs, "evaluate_at_regions_via")
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
     decode_f32_output_exact(output, out_len, "evaluate_at_regions_via", out)
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Run the full P2M → M2L → L2P FMM compressor through the active backend.
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] for malformed inputs, dispatch failure, or malformed backend output.
+/// Returns [`SemanticExecutionError`] for malformed inputs, dispatch failure, or malformed backend output.
 pub fn fmm_compress_pairwise_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     scores: &[f32],
     cell_assignment: &[u32],
     cell_distances: &[f32],
     n: u32,
-) -> Result<Vec<f32>, DispatchError> {
+) -> Result<Vec<f32>, SemanticExecutionError> {
     let mut scratch = FmmPolyhedralGpuScratch::default();
     let mut out = Vec::new();
     fmm_compress_pairwise_via_with_scratch_into(
         dispatcher,
+        policy,
         scores,
         cell_assignment,
         cell_distances,
@@ -436,16 +464,17 @@ pub fn fmm_compress_pairwise_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] for malformed inputs, dispatch failure, or malformed backend output.
+/// Returns [`SemanticExecutionError`] for malformed inputs, dispatch failure, or malformed backend output.
 pub fn fmm_compress_pairwise_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     scores: &[f32],
     cell_assignment: &[u32],
     cell_distances: &[f32],
     n: u32,
     scratch: &mut FmmPolyhedralGpuScratch,
     out: &mut Vec<f32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     validate_region_n(cell_assignment.len(), n, "fmm_compress_pairwise_via")?;
     validate_region_shape(
         scores.len(),
@@ -454,10 +483,10 @@ pub fn fmm_compress_pairwise_via_with_scratch_into(
     )?;
     if n == 0 {
         if !cell_distances.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: fmm_compress_pairwise_via expected cell_distances.len() == 0 for n=0, got {}.",
-                cell_distances.len()
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: fmm_compress_pairwise_via expected cell_distances.len() == 0 for n=0, got {}.",
+            cell_distances.len()
+        )));
         }
         out.clear();
         scratch.cell_moments.clear();
@@ -473,6 +502,7 @@ pub fn fmm_compress_pairwise_via_with_scratch_into(
     let mut cell_moments = std::mem::take(&mut scratch.cell_moments);
     aggregate_to_cells_via_with_scratch_into(
         dispatcher,
+        policy,
         scores,
         cell_assignment,
         scratch,
@@ -481,6 +511,7 @@ pub fn fmm_compress_pairwise_via_with_scratch_into(
     let mut cell_local = std::mem::take(&mut scratch.cell_local);
     translate_to_targets_via_with_scratch_into(
         dispatcher,
+        policy,
         &cell_moments,
         cell_distances,
         scratch,
@@ -488,6 +519,7 @@ pub fn fmm_compress_pairwise_via_with_scratch_into(
     )?;
     let result = evaluate_at_regions_via_with_scratch_into(
         dispatcher,
+        policy,
         &cell_local,
         cell_assignment,
         n,
@@ -503,36 +535,40 @@ fn validate_region_shape(
     scores_len: usize,
     cells_len: usize,
     context: &str,
-) -> Result<u32, DispatchError> {
+) -> Result<u32, SemanticExecutionError> {
     if scores_len != cells_len {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: {context} requires scores.len() == cell_assignment.len(), got scores={scores_len}, cells={cells_len}."
         )));
     }
     u32::try_from(scores_len).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: {context} region count {scores_len} exceeds u32::MAX."
         ))
     })
 }
 
-fn validate_region_n(cells_len: usize, n: u32, context: &str) -> Result<(), DispatchError> {
+fn validate_region_n(
+    cells_len: usize,
+    n: u32,
+    context: &str,
+) -> Result<(), SemanticExecutionError> {
     if cells_len != n as usize {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: {context} requires cell_assignment.len() == n, got cells={cells_len}, n={n}."
         )));
     }
     Ok(())
 }
 
-fn cell_count(cell_assignment: &[u32], context: &str) -> Result<u32, DispatchError> {
+fn cell_count(cell_assignment: &[u32], context: &str) -> Result<u32, SemanticExecutionError> {
     let max_cell = cell_assignment.iter().copied().max().ok_or_else(|| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: {context} requires a non-empty cell assignment."
         ))
     })?;
     max_cell.checked_add(1).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: {context} cell id {max_cell} cannot be represented as count."
         ))
     })
@@ -542,19 +578,19 @@ fn validate_square_distance_shape(
     cells_len: usize,
     distances_len: usize,
     context: &str,
-) -> Result<u32, DispatchError> {
+) -> Result<u32, SemanticExecutionError> {
     let expected = cells_len.checked_mul(cells_len).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: {context} cell distance matrix size overflows usize for {cells_len} cells."
         ))
     })?;
     if distances_len != expected {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: {context} requires cell_distances.len() == n_cells*n_cells, got distances={distances_len}, expected={expected}."
         )));
     }
     u32::try_from(cells_len).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: {context} cell count {cells_len} exceeds u32::MAX."
         ))
     })
@@ -564,10 +600,10 @@ fn reject_out_of_bounds_cells(
     cell_assignment: &[u32],
     n_cells: usize,
     context: &str,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     for (idx, &cell) in cell_assignment.iter().enumerate() {
         if cell as usize >= n_cells {
-            return Err(DispatchError::BadInputs(format!(
+            return Err(SemanticExecutionError::InvalidRequest(format!(
                 "Fix: {context} cell_assignment[{idx}]={cell} is out of bounds for {n_cells} cells."
             )));
         }
@@ -575,11 +611,11 @@ fn reject_out_of_bounds_cells(
     Ok(())
 }
 
-fn bytes_for_f32_count(count: usize, context: &str) -> Result<usize, DispatchError> {
+fn bytes_for_f32_count(count: usize, context: &str) -> Result<usize, SemanticExecutionError> {
     count
         .checked_mul(std::mem::size_of::<f32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: {context} output byte count overflows usize for {count} f32 values."
             ))
         })
@@ -589,7 +625,7 @@ fn bytes_for_f32_count(count: usize, context: &str) -> Result<usize, DispatchErr
 mod tests {
     use super::*;
     use crate::dispatch_buffers::f32_slice_to_le_bytes;
-    use std::cell::Cell;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-6 * (1.0 + a.abs() + b.abs())
@@ -598,14 +634,22 @@ mod tests {
     #[test]
     fn zero_region_distance_validation_precedes_output_mutation() {
         struct NoDispatch;
-        impl ProgramDispatcher for NoDispatch {
-            fn dispatch(
+        impl SemanticExecutor for NoDispatch {
+            fn execute(
                 &self,
-                _program: &vyre_foundation::ir::Program,
-                _inputs: &[Vec<u8>],
-                _grid_override: Option<[u32; 3]>,
-            ) -> Result<Vec<Vec<u8>>, DispatchError> {
-                panic!("invalid zero-region inputs must fail before dispatch");
+                request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+            ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError>
+            {
+                let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+                let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                    panic!("invalid zero-region inputs must fail before dispatch");
+                })();
+                let mut ordered = ordered?;
+                let output_count = request.logical().graph().nodes()[0].outputs.len();
+                if ordered.len() < output_count {
+                    ordered.resize(output_count, Vec::new());
+                }
+                crate::test_parity_oracles::semantic_output(request, ordered)
             }
         }
 
@@ -617,6 +661,7 @@ mod tests {
         let mut out = vec![3.0];
         let err = fmm_compress_pairwise_via_with_scratch_into(
             &NoDispatch,
+            &crate::test_parity_oracles::policy(),
             &[],
             &[],
             &[1.0],
@@ -625,7 +670,7 @@ mod tests {
             &mut out,
         )
         .expect_err("non-empty zero-region distance matrix must fail");
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
         assert_eq!(scratch.cell_moments, [1.0]);
         assert_eq!(scratch.cell_local, [2.0]);
         assert_eq!(out, [3.0]);
@@ -733,10 +778,17 @@ mod tests {
         let cells = vec![0_u32, 0, 1, 1];
         let distances = vec![0.0_f32, 1.0, 1.0, 0.0];
 
-        let out = fmm_compress_pairwise_via(&dispatcher, &scores, &cells, &distances, 4)
-            .expect("Fix: dispatchable FMM pipeline should run");
+        let out = fmm_compress_pairwise_via(
+            &dispatcher,
+            &crate::test_parity_oracles::policy(),
+            &scores,
+            &cells,
+            &distances,
+            4,
+        )
+        .expect("Fix: dispatchable FMM pipeline should run");
 
-        assert_eq!(dispatcher.calls.get(), 3);
+        assert_eq!(dispatcher.calls.load(Ordering::Relaxed), 3);
         assert_eq!(out.len(), 4);
         assert!(approx_eq(out[0] as f64, 7.0));
         assert!(approx_eq(out[1] as f64, 7.0));
@@ -751,8 +803,15 @@ mod tests {
         let cells = vec![0_u32, 0, 1, 1];
         let distances = vec![0.0_f32, 1.0, 1.0];
 
-        let err = fmm_compress_pairwise_via(&dispatcher, &scores, &cells, &distances, 4)
-            .expect_err("malformed distance matrix must be rejected before dispatch");
+        let err = fmm_compress_pairwise_via(
+            &dispatcher,
+            &crate::test_parity_oracles::policy(),
+            &scores,
+            &cells,
+            &distances,
+            4,
+        )
+        .expect_err("malformed distance matrix must be rejected before dispatch");
 
         assert!(err.to_string().contains(
             "Fix: fmm_compress_pairwise_via requires cell_distances.len() == n_cells*n_cells"
@@ -761,32 +820,38 @@ mod tests {
 
     #[derive(Default)]
     struct FmmDispatcher {
-        calls: Cell<usize>,
+        calls: AtomicUsize,
     }
 
-    impl ProgramDispatcher for FmmDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for FmmDispatcher {
+        fn execute(
             &self,
-            _program: &vyre_foundation::ir::Program,
-            inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            let call = self.calls.get();
-            self.calls.set(call + 1);
-            match call {
-                0 => dispatch_p2m(inputs),
-                1 => dispatch_m2l(inputs),
-                2 => dispatch_l2p(inputs),
-                other => Err(DispatchError::BadInputs(format!(
-                    "Fix: FMM test dispatcher received unexpected dispatch #{other}."
-                ))),
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                let call = self.calls.fetch_add(1, Ordering::Relaxed);
+                match call {
+                    0 => dispatch_p2m(&inputs),
+                    1 => dispatch_m2l(&inputs),
+                    2 => dispatch_l2p(&inputs),
+                    other => Err(SemanticExecutionError::InvalidRequest(format!(
+                        "Fix: FMM test dispatcher received unexpected dispatch #{other}."
+                    ))),
+                }
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
             }
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
-    fn dispatch_p2m(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, DispatchError> {
+    fn dispatch_p2m(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
         let [score_bytes, cell_bytes, out_bytes] = inputs else {
-            return Err(DispatchError::BadInputs(format!(
+            return Err(SemanticExecutionError::InvalidRequest(format!(
                 "Fix: P2M test dispatcher expected 3 buffers, got {}.",
                 inputs.len()
             )));
@@ -803,9 +868,9 @@ mod tests {
         Ok(vec![f32_slice_to_le_bytes(&out)])
     }
 
-    fn dispatch_m2l(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, DispatchError> {
+    fn dispatch_m2l(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
         let [moment_bytes, distance_bytes, out_bytes] = inputs else {
-            return Err(DispatchError::BadInputs(format!(
+            return Err(SemanticExecutionError::InvalidRequest(format!(
                 "Fix: M2L test dispatcher expected 3 buffers, got {}.",
                 inputs.len()
             )));
@@ -829,9 +894,9 @@ mod tests {
         Ok(vec![f32_slice_to_le_bytes(&out)])
     }
 
-    fn dispatch_l2p(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, DispatchError> {
+    fn dispatch_l2p(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
         let [local_bytes, cell_bytes, out_bytes] = inputs else {
-            return Err(DispatchError::BadInputs(format!(
+            return Err(SemanticExecutionError::InvalidRequest(format!(
                 "Fix: L2P test dispatcher expected 3 buffers, got {}.",
                 inputs.len()
             )));

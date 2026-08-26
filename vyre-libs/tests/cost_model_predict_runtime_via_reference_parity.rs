@@ -1,6 +1,6 @@
 //! End-to-end parity for the COMPOSITE
 //! `analysis::cost_model::predict_runtime_fixed_via`: probabilistic dispatch-cost prediction, through
-//! the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! the shared faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the release cost model chains TWO dispatches, a 16.16 sum-product circuit evaluation over the
@@ -33,11 +33,13 @@
 //! depth-1 circuits (the sweep) and genuine multi-level DAGs (`..evaluates_multilevel_dag_correctly`),
 //! all end to end through the circuit→conformal composite.
 
+mod semantic_execution_support;
+
 use vyre_libs::analysis::cost_model::predict_runtime_fixed_via;
 use vyre_libs::graph::sum_product_circuit::{KIND_LEAF, KIND_PRODUCT, KIND_SUM};
 use vyre_reference::composition_witness::conformal_threshold_witness as conformal_threshold_cpu;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::{
     fixed_mul as fixed_mul_16_16, xorshift32 as xorshift, FIXED_ONE,
 };
@@ -135,13 +137,14 @@ fn random_depth1_circuit(state: &mut u32, n_leaves: usize, n_internal: usize) ->
 }
 
 fn predict(
-    d: &ReferenceEvalDispatcher,
+    d: &ReferenceSemanticExecutor,
     c: &Circuit,
     residuals_sorted: &[u32],
     alpha: f64,
 ) -> (u32, u32) {
     predict_runtime_fixed_via(
         d,
+        &semantic_execution_support::policy(),
         &c.kinds,
         &c.offsets,
         &c.counts,
@@ -156,7 +159,7 @@ fn predict(
 
 #[test]
 fn predict_runtime_via_matches_exact_composite_oracle() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let mut state = 0xC057_0001u32;
     let mut nonzero_point = 0u32;
     let mut nondegenerate_bound = 0u32;
@@ -203,7 +206,7 @@ fn predict_runtime_via_matches_exact_composite_oracle() {
 
 #[test]
 fn predict_runtime_via_hand_checked_two_level_circuit() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
 
     // Two leaves (0.5, 0.25 in 16.16) → one SUM root with unit weights:
     // root = fixed_mul(0.5, 1.0) + fixed_mul(0.25, 1.0) = 0.5 + 0.25 = 0.75.
@@ -257,7 +260,7 @@ fn predict_runtime_via_hand_checked_two_level_circuit() {
 
 #[test]
 fn predict_runtime_via_hand_checked_multi_internal_depth1() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     // Two leaves + TWO internal nodes, both reading only leaves (depth-1). The LAST node is the point
     // estimate; an earlier internal node's value is not read by anyone, but both must evaluate.
     //   n0,n1 leaves = 0.5, 0.25
@@ -299,7 +302,7 @@ fn predict_runtime_via_hand_checked_multi_internal_depth1() {
 /// regresses to 0, the consumer has reverted to a single-pass dispatch.
 #[test]
 fn predict_runtime_via_evaluates_multilevel_dag_correctly() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let half = FIXED_ONE / 2;
     // n2 SUM(n0=1.0, n1=0.5) = 1.5 ;  n3 PRODUCT(n2, n1) topo-correct = 1.5 * 0.5 = 0.75.
     let circuit = Circuit {
@@ -332,7 +335,7 @@ fn predict_runtime_via_evaluates_multilevel_dag_correctly() {
 /// the consumer must match the topo-correct fixed-point oracle at every depth.
 #[test]
 fn predict_runtime_via_evaluates_deep_chains_at_every_depth() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let residuals = [5u32, 15, 25];
     for depth in 2u32..=5 {
         // Node 0 = leaf(0.5); node k (1..=depth) reads node k-1 (and, for a valid SUM/PRODUCT edge,

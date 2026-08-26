@@ -25,7 +25,6 @@ mod tests;
 
 pub use hash::{persistent_bfs_layout_hash, persistent_bfs_program_layout_hash};
 pub use layout::{
-    persistent_bfs_batch_dispatch_grid, persistent_bfs_single_dispatch_grid,
     PersistentBfsPlanCacheKey, PersistentBfsStaticInputKey, BATCH_OP_ID, BINDING_CHANGED,
     BINDING_CONVERGED, BINDING_DENSITY_ACTIVE, BINDING_FRONTIER_IN, BINDING_FRONTIER_OUT,
     DENSITY_ACTIVE_BUFFER, OP_ID, PERSISTENT_BFS_WORKGROUP_SIZE,

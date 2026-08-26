@@ -28,8 +28,6 @@ pub const MOTIF_HITS_BUFFER: u32 = BINDING_PRIMITIVE_START;
 pub const MOTIF_WITNESS_OUT_BUFFER: u32 = BINDING_PRIMITIVE_START + 1;
 /// Motif matching is serial over the small pattern by construction.
 pub const MOTIF_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
-/// Canonical motif dispatch grid.
-pub const MOTIF_DISPATCH_GRID: [u32; 3] = [1, 1, 1];
 
 #[cfg(test)]
 fn try_cpu_ref_into(

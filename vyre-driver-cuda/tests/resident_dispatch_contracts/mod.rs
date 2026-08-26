@@ -13,7 +13,6 @@
 mod basic_resident_contracts;
 #[path = "../harness/mod.rs"]
 mod harness;
-mod optimizer_combined_contracts;
 mod repeated_sequence_contracts;
 mod resident_lane_fixture;
 mod sequence_readback_contracts;
@@ -23,13 +22,9 @@ use resident_lane_fixture::*;
 
 use vyre_driver::{DispatchConfig, Resource, VyreBackend};
 use vyre_driver_cuda::{
-    CudaBackend, CudaBackendRegistration, CudaProgramDispatcher, CudaResidentBuffer,
-    CudaTelemetrySnapshot,
+    CudaBackend, CudaBackendRegistration, CudaResidentBuffer, CudaTelemetrySnapshot,
 };
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::program_dispatch::{
-    ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
-};
 
 /// Law-10 release-path contract: a NATIVE resident dispatch must never
 /// silently escape to the borrowed host-buffer fallback. After a clean

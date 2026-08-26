@@ -8,15 +8,17 @@
 //! edge-filter kernel never ran (the mock-dispatcher-coherence gap; see the SWEEP-self-substrate row
 //! in BACKLOG.md).
 //!
-//! This runs the real `vietoris_rips_edge_filter` Program through the shared `ReferenceEvalDispatcher`
+//! This runs the real `vietoris_rips_edge_filter` Program through the shared `ReferenceSemanticExecutor`
 //! and asserts it EXACTLY (no tolerance) reproduces a u32 oracle. The mask is a pure comparison
 //! the upper-triangle predicate `i < j` and the unsigned 16.16 threshold `dist <= epsilon`, with no
 //! arithmetic, so the u32 oracle mirrors the IR bit-for-bit and any divergence is a real defect.
 #![forbid(unsafe_code)]
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::persistent_homology_loop_signature::region_loop_skeleton_fixed_via;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// Exact u32 replica of the `vietoris_rips_edge_filter` kernel: for the flat row-major `t = i*n + j`
@@ -37,7 +39,7 @@ fn vietoris_rips_edge_mask(dist_fixed: &[u32], epsilon_fixed: u32, n: usize) -> 
 
 #[test]
 fn region_loop_skeleton_fixed_via_matches_exact_edge_mask() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x5171_3971u32;
     let mut mixed_cases = 0u32;
     for case in 0..400u32 {
@@ -50,8 +52,14 @@ fn region_loop_skeleton_fixed_via_matches_exact_edge_mask() {
             .collect();
         let epsilon = (4u32 << 16) + (xorshift(&mut state) % (8u32 << 16));
 
-        let via = region_loop_skeleton_fixed_via(&dispatcher, &dist, epsilon, n)
-            .expect("region_loop_skeleton_fixed_via must dispatch the edge-filter kernel");
+        let via = region_loop_skeleton_fixed_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &dist,
+            epsilon,
+            n,
+        )
+        .expect("region_loop_skeleton_fixed_via must dispatch the edge-filter kernel");
         let oracle = vietoris_rips_edge_mask(&dist, epsilon, n as usize);
 
         // A case is "mixed" when at least one upper-triangular pair is an edge and at least one is
@@ -81,7 +89,7 @@ fn region_loop_skeleton_fixed_via_is_upper_triangular_and_boundary_inclusive() {
     // epsilon = 2.0. Upper-triangle edges with dist <= 2.0: (0,1) 1.0<=2 -> 1; (0,2) 3.0<=2 -> 0;
     // (1,2) 2.0<=2 -> 1 (the `<=` boundary is INCLUSIVE). All lower-triangle + diagonal cells are 0
     // regardless of distance.
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let one = 1u32 << 16;
     let dist = vec![
         0,
@@ -95,8 +103,14 @@ fn region_loop_skeleton_fixed_via_is_upper_triangular_and_boundary_inclusive() {
         0, // row 2: d20=3.0, d21=2.0, d22
     ];
     let epsilon = 2 * one;
-    let via = region_loop_skeleton_fixed_via(&dispatcher, &dist, epsilon, 3)
-        .expect("region_loop_skeleton_fixed_via must dispatch");
+    let via = region_loop_skeleton_fixed_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &dist,
+        epsilon,
+        3,
+    )
+    .expect("region_loop_skeleton_fixed_via must dispatch");
     let oracle = vietoris_rips_edge_mask(&dist, epsilon, 3);
     assert_eq!(
         oracle,

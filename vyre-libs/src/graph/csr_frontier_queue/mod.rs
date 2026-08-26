@@ -22,13 +22,10 @@ use crate::graph::csr_frontier_step::{
     CsrQueueEmit, CsrQueueInputs, CsrQueueLanes, CsrQueueRowPlan, CsrQueueStepSpec,
 };
 
-pub mod batch_memory;
 mod graph_validation;
 mod packed_word_compaction;
 mod queue_compaction;
 mod queue_traverse;
-pub(crate) mod resident_programs;
-pub(crate) mod scratch;
 mod sizing_diagnostics;
 mod word_block_scan;
 mod word_block_scatter;

@@ -7,26 +7,35 @@ use std::path::PathBuf;
 use crate::gate::Finding;
 
 use super::host_oracle_elimination_eval::analyze_parsed;
-use super::host_oracle_elimination_scanners::derive_canonical_dispatcher_methods;
+use super::host_oracle_elimination_scanners::{
+    derive_canonical_dispatcher_methods, derive_canonical_execution_fns,
+    derive_registration_expected_output_indices,
+};
 
 pub(super) fn analyze_files(files: &[(&str, &str)]) -> Vec<Finding> {
-    let canonical_source = include_str!("../../../vyre-foundation/src/program_dispatch/mod.rs");
+    let canonical_source = include_str!("../../../vyre-megakernel/src/execution.rs");
     let canonical_parsed =
         syn::parse_file(canonical_source).expect("canonical trait must parse as Rust");
     let mut canonical_trait_methods = BTreeSet::new();
-    let mut canonical_resident_upload_methods = BTreeSet::new();
+    let mut canonical_input_binding_methods = BTreeSet::new();
     derive_canonical_dispatcher_methods(
         &canonical_parsed,
         &mut canonical_trait_methods,
-        &mut canonical_resident_upload_methods,
+        &mut canonical_input_binding_methods,
     );
     assert!(
         !canonical_trait_methods.is_empty(),
-        "canonical ProgramDispatcher must yield non-empty execution methods"
+        "canonical SemanticExecutor must yield non-empty execution methods"
     );
     assert!(
-        !canonical_resident_upload_methods.is_empty(),
-        "canonical ProgramDispatcher must yield non-empty resident upload methods"
+        !canonical_input_binding_methods.is_empty(),
+        "canonical SemanticExecutionRequest must yield non-empty input-binding methods"
+    );
+    let canonical_execution_fns =
+        derive_canonical_execution_fns(&canonical_parsed, &canonical_trait_methods);
+    assert!(
+        !canonical_execution_fns.is_empty(),
+        "canonical seam must publish at least one free execution helper"
     );
 
     let parsed_sources: Vec<(PathBuf, syn::File, bool)> = files
@@ -37,60 +46,59 @@ pub(super) fn analyze_files(files: &[(&str, &str)]) -> Vec<Finding> {
         })
         .collect();
 
+    let registration_source = include_str!("../../../vyre-foundation/src/operation/mod.rs");
+    let registration_parsed =
+        syn::parse_file(registration_source).expect("registration source must parse as Rust");
+    let registration_expected_output_indices =
+        derive_registration_expected_output_indices(&registration_parsed);
+    assert!(
+        !registration_expected_output_indices.is_empty(),
+        "OperationRegistration must publish a constructor taking `expected_output`"
+    );
+
     analyze_parsed(
         &parsed_sources,
         &canonical_trait_methods,
-        &canonical_resident_upload_methods,
+        &canonical_input_binding_methods,
+        &canonical_execution_fns,
+        &registration_expected_output_indices,
     )
 }
 
 #[test]
-fn canonical_program_dispatcher_exact_path_derives_execution_methods() {
-    let canonical_source = include_str!("../../../vyre-foundation/src/program_dispatch/mod.rs");
+fn canonical_semantic_executor_exact_path_derives_execution_methods() {
+    let canonical_source = include_str!("../../../vyre-megakernel/src/execution.rs");
     let canonical_parsed =
         syn::parse_file(canonical_source).expect("canonical trait must parse as Rust");
     let mut canonical_trait_methods = BTreeSet::new();
-    let mut canonical_resident_upload_methods = BTreeSet::new();
+    let mut canonical_input_binding_methods = BTreeSet::new();
     derive_canonical_dispatcher_methods(
         &canonical_parsed,
         &mut canonical_trait_methods,
-        &mut canonical_resident_upload_methods,
+        &mut canonical_input_binding_methods,
     );
     assert!(
-        canonical_trait_methods.contains("dispatch"),
-        "must contain direct dispatch method"
+        canonical_trait_methods.contains("execute"),
+        "must contain the semantic execution method"
     );
     assert!(
-        canonical_trait_methods.contains("dispatch_resident"),
-        "must contain dispatch_resident"
+        !canonical_trait_methods.contains("writable_graph_values"),
+        "graph inspection helpers must not be execution methods"
     );
     assert!(
-        canonical_trait_methods.contains("dispatch_resident_sequence"),
-        "must contain dispatch_resident_sequence"
+        canonical_input_binding_methods.contains("new"),
+        "must derive input-binding methods from immutable byte payload parameters"
+    );
+
+    let canonical_execution_fns =
+        derive_canonical_execution_fns(&canonical_parsed, &canonical_trait_methods);
+    assert!(
+        canonical_execution_fns.contains("execute_single_program"),
+        "must derive the free helper that submits through the executor"
     );
     assert!(
-        canonical_trait_methods.contains("dispatch_resident_sequence_read_many"),
-        "must contain dispatch_resident_sequence_read_many"
-    );
-    assert!(
-        canonical_trait_methods.contains("dispatch_resident_sequence_read_ranges"),
-        "must contain dispatch_resident_sequence_read_ranges"
-    );
-    assert!(
-        !canonical_trait_methods.contains("supports_persistent"),
-        "metadata methods must not be execution methods"
-    );
-    assert!(
-        !canonical_trait_methods.contains("alloc_resident"),
-        "allocation methods must not be execution methods"
-    );
-    assert!(
-        canonical_resident_upload_methods.contains("upload_resident"),
-        "must derive resident upload methods from immutable byte payload parameters"
-    );
-    assert!(
-        !canonical_resident_upload_methods.contains("read_resident_ranges_into"),
-        "mutable readback outputs must not masquerade as upload methods"
+        !canonical_execution_fns.contains("writable_graph_value_buffers"),
+        "a helper that never submits through the executor must not read as execution"
     );
 }
 
@@ -148,7 +156,7 @@ fn expected_output() -> Vec<Vec<Vec<u8>>> {
 #[test]
 fn gpu_dispatcher_boundary_and_validation_functions_are_permitted() {
     let code = r#"
-use vyre_foundation::program_dispatch::ProgramDispatcher;
+use vyre_megakernel::SemanticExecutor;
 
 pub fn validate_circuit(n: u32) -> Result<(), String> {
     if n == 0 {
@@ -158,11 +166,11 @@ pub fn validate_circuit(n: u32) -> Result<(), String> {
 }
 
 pub fn predict_runtime_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     weights: &[u32],
 ) -> Result<(u32, u32), String> {
     validate_circuit(weights.len() as u32)?;
-    let _ = dispatcher.dispatch(1, 2);
+    let _ = dispatcher.execute(1, 2);
     Ok((10, 20))
 }
 "#;
@@ -423,14 +431,14 @@ pub fn fake_builder(x: f32) -> Program {
 fn mutation_catches_sibling_imported_fake_dispatcher_trait_masquerade() {
     let code = r#"
 mod sibling {
-    pub trait ProgramDispatcher {
+    pub trait SemanticExecutor {
         fn dispatch(&self, a: u32, b: u32);
     }
 }
-use sibling::ProgramDispatcher;
+use sibling::SemanticExecutor;
 
-pub fn fake_dispatch(d: &impl ProgramDispatcher, x: f32) -> f32 {
-    d.dispatch(1, 2);
+pub fn fake_dispatch(d: &impl SemanticExecutor, x: f32) -> f32 {
+    d.execute(1, 2);
     x + 1.0
 }
 "#;
@@ -438,7 +446,7 @@ pub fn fake_dispatch(d: &impl ProgramDispatcher, x: f32) -> f32 {
     assert_eq!(
         findings.len(),
         1,
-        "sibling imported ProgramDispatcher masquerade must be flagged"
+        "sibling imported SemanticExecutor masquerade must be flagged"
     );
     assert!(findings[0].message.contains("`fake_dispatch`"));
     assert_eq!(findings[0].line, Some(9));
@@ -447,16 +455,16 @@ pub fn fake_dispatch(d: &impl ProgramDispatcher, x: f32) -> f32 {
 #[test]
 fn mutation_catches_fake_dispatch_error_without_canonical_dispatcher() {
     let code = r#"
-pub struct FakeDispatchError;
+pub struct FakeSemanticExecutionError;
 
 pub struct LocalDevice;
 impl LocalDevice {
     pub fn dispatch(&self, _a: u32, _b: u32) {}
 }
 
-pub fn fake_dispatch(x: f32) -> Result<f32, FakeDispatchError> {
+pub fn fake_dispatch(x: f32) -> Result<f32, FakeSemanticExecutionError> {
     let obj = LocalDevice;
-    obj.dispatch(1, 2);
+    obj.execute(1, 2);
     Ok(x + 1.0)
 }
 "#;
@@ -473,7 +481,7 @@ pub fn fake_dispatch(x: f32) -> Result<f32, FakeDispatchError> {
 #[test]
 fn mutation_catches_dispatch_error_and_resident_read_range_param_masquerade() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ResidentReadRange};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionRequest};
 
 pub struct LocalDevice;
 impl LocalDevice {
@@ -481,12 +489,12 @@ impl LocalDevice {
 }
 
 pub fn fake_dispatch_with_error_param(
-    _err: &DispatchError,
-    _range: &ResidentReadRange,
+    _err: &SemanticExecutionError,
+    _range: &SemanticExecutionRequest,
     x: f32,
 ) -> f32 {
     let obj = LocalDevice;
-    obj.dispatch(1, 2);
+    obj.execute(1, 2);
     x + 1.0
 }
 "#;
@@ -494,7 +502,7 @@ pub fn fake_dispatch_with_error_param(
     assert_eq!(
         findings.len(),
         1,
-        "DispatchError/ResidentReadRange parameters must not establish dispatch roots"
+        "SemanticExecutionError/SemanticExecutionRequest parameters must not establish dispatch roots"
     );
     assert!(findings[0]
         .message
@@ -825,6 +833,58 @@ inventory::submit! {
         .any(|f| f.message.contains("expected_output")));
 }
 
+/// Every `OperationRegistration` constructor convicts a host oracle sitting in
+/// its `expected_output` argument.
+///
+/// The constructor roster was once hardcoded in the visitor. The constructors
+/// were later renamed with an `_unconstrained` suffix, the stale roster matched
+/// nothing, and the entire registered-fixture class stopped being analyzed: an
+/// oracle inside `expected_output` went unconvicted, and every registered
+/// callback read as unreachable host data processing. Deriving the roster and
+/// each argument position from the registration source closes that class, so a
+/// constructor added or renamed there enrolls itself here.
+#[test]
+fn every_registration_constructor_convicts_a_host_oracle_in_expected_output() {
+    let registration_source = include_str!("../../../vyre-foundation/src/operation/mod.rs");
+    let registration_parsed =
+        syn::parse_file(registration_source).expect("registration source must parse as Rust");
+    let roster = derive_registration_expected_output_indices(&registration_parsed);
+    assert!(
+        roster.len() >= 2,
+        "expected several registration constructors taking `expected_output`, derived {roster:?}"
+    );
+
+    for (constructor, expected_idx) in &roster {
+        let mut args: Vec<String> = (0..*expected_idx).map(|idx| format!("arg_{idx}")).collect();
+        args.push("Some(|| vec![vec![expected_bytes()]])".to_string());
+        let args = args.join(", ");
+        let code = format!(
+            r#"
+use vyre_foundation::ir::Program;
+use vyre_foundation::operation::OperationRegistration;
+
+pub fn add_program() -> Program {{
+    Program::new()
+}}
+
+fn expected_bytes() -> Vec<u8> {{
+    vec![1, 2, 3, 4]
+}}
+
+inventory::submit! {{
+    OperationRegistration::{constructor}({args})
+}}
+"#
+        );
+        let findings = analyze_files(&[("vyre-libs/src/op_roster_probe.rs", &code)]);
+        let messages: Vec<String> = findings.iter().map(|f| f.message.clone()).collect();
+        assert!(
+            messages.iter().any(|message| message.contains("expected_output")),
+            "`{constructor}` (expected_output at argument {expected_idx}) left a host oracle unconvicted: {messages:?}"
+        );
+    }
+}
+
 #[test]
 fn mutation_operation_registration_catches_local_closure_alias_in_expected_output() {
     let code = r#"
@@ -863,7 +923,7 @@ inventory::submit! {
 #[test]
 fn mutation_catches_dispatcher_err_fallback_branch_oracle() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn host_oracle_fallback(words: &[u32]) -> u32 {
     let mut sum = 0u32;
@@ -874,10 +934,10 @@ pub fn host_oracle_fallback(words: &[u32]) -> u32 {
 }
 
 pub fn dispatch_with_cpu_fallback(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     words: &[u32],
-) -> Result<u32, DispatchError> {
-    match dispatcher.dispatch(1, 2) {
+) -> Result<u32, SemanticExecutionError> {
+    match dispatcher.execute(1, 2) {
         Ok(_) => Ok(42),
         Err(_) => Ok(host_oracle_fallback(words)),
     }
@@ -897,7 +957,7 @@ pub fn dispatch_with_cpu_fallback(
 #[test]
 fn mutation_catches_dispatcher_unwrap_or_else_fallback_oracle() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn host_oracle_fallback(words: &[u32]) -> u32 {
     let mut sum = 0u32;
@@ -908,11 +968,11 @@ pub fn host_oracle_fallback(words: &[u32]) -> u32 {
 }
 
 pub fn dispatch_with_unwrap_fallback(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     words: &[u32],
-) -> Result<u32, DispatchError> {
+) -> Result<u32, SemanticExecutionError> {
     dispatcher
-        .dispatch(1, 2)
+        .execute(1, 2)
         .map(|_| 42)
         .unwrap_or_else(|_| Ok(host_oracle_fallback(words)))
 }
@@ -931,13 +991,13 @@ pub fn dispatch_with_unwrap_fallback(
 #[test]
 fn mutation_catches_dispatcher_post_dispatch_iter_any_reduction() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn motif_matches_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     words: &[u32],
-) -> Result<bool, DispatchError> {
-    let _ = dispatcher.dispatch(1, 2)?;
+) -> Result<bool, SemanticExecutionError> {
+    let _ = dispatcher.execute(1, 2)?;
     let output = [1u32, 0, 0];
     let any_match = output.iter().any(|&x| x == 1);
     Ok(any_match)
@@ -956,13 +1016,13 @@ pub fn motif_matches_via(
 #[test]
 fn mutation_catches_dispatcher_match_ok_post_dispatch_iter_any() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn motif_matches_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     words: &[u32],
-) -> Result<bool, DispatchError> {
-    match dispatcher.dispatch(1, 2) {
+) -> Result<bool, SemanticExecutionError> {
+    match dispatcher.execute(1, 2) {
         Ok(output) => {
             let any_match = output.iter().any(|&x| x == 1);
             Ok(any_match)
@@ -984,14 +1044,14 @@ pub fn motif_matches_via(
 #[test]
 fn mutation_catches_dispatcher_map_closure_post_dispatch_reduction() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn motif_count_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     words: &[u32],
-) -> Result<usize, DispatchError> {
+) -> Result<usize, SemanticExecutionError> {
     dispatcher
-        .dispatch(1, 2)
+        .execute(1, 2)
         .map(|output| output.iter().count())
 }
 "#;
@@ -1008,13 +1068,13 @@ pub fn motif_count_via(
 #[test]
 fn mutation_catches_dispatcher_post_dispatch_loop_accumulation() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn motif_participation_count_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     words: &[u32],
-) -> Result<u32, DispatchError> {
-    let _ = dispatcher.dispatch(1, 2)?;
+) -> Result<u32, SemanticExecutionError> {
+    let _ = dispatcher.execute(1, 2)?;
     let output = [1u32, 2, 0];
     let mut count = 0u32;
     for &x in &output {
@@ -1038,13 +1098,13 @@ pub fn motif_participation_count_via(
 #[test]
 fn mutation_catches_dispatcher_post_dispatch_filter_count_reduction() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn count_matches_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     words: &[u32],
-) -> Result<usize, DispatchError> {
-    let _ = dispatcher.dispatch(1, 2)?;
+) -> Result<usize, SemanticExecutionError> {
+    let _ = dispatcher.execute(1, 2)?;
     let output = [1u32, 2, 3, 0];
     let count = output.iter().filter(|&&x| x > 0).count();
     Ok(count)
@@ -1063,17 +1123,17 @@ pub fn count_matches_via(
 fn clean_dispatcher_allows_inter_dispatch_staging_loop() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
-pub fn multi_stage_dispatch_via(dispatcher: &dyn ProgramDispatcher, input: &[u32]) -> Result<Vec<u8>, DispatchError> {
+pub fn multi_stage_dispatch_via(dispatcher: &dyn SemanticExecutor, input: &[u32]) -> Result<Vec<u8>, SemanticExecutionError> {
     let prog1 = Program::default();
-    let out1 = dispatcher.dispatch(&prog1, &[vec![]], None)?;
+    let out1 = dispatcher.execute(&prog1, &[vec![]], None)?;
     let mut staged = vec![0u32; input.len()];
     for i in 0..input.len() {
         staged[i] = input[i] ^ (out1[0][0] as u32);
     }
     let prog2 = Program::default();
-    let out2 = dispatcher.dispatch(&prog2, &[staged], None)?;
+    let out2 = dispatcher.execute(&prog2, &[staged], None)?;
     Ok(out2[0].clone())
 }
 "#;
@@ -1086,19 +1146,19 @@ pub fn multi_stage_dispatch_via(dispatcher: &dyn ProgramDispatcher, input: &[u32
 #[test]
 fn mutation_catches_escaped_cache_invalidation_post_dispatch_host_projection() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn impacted_entries_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     lineage_cells: &[u32],
     n: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut impact_raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut impact_raw)?;
+    dispatcher.execute(&[], &mut impact_raw)?;
 
     let mut closure_raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut closure_raw)?;
+    dispatcher.execute(&[], &mut closure_raw)?;
 
     let mut impact_mask = Vec::new();
     for chunk in impact_raw.chunks_exact(4) {
@@ -1143,13 +1203,13 @@ pub fn impacted_entries_into(
 #[test]
 fn clean_dispatcher_allows_strict_fixed_width_decoder_only_return() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn decode_raw_outputs(
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<Vec<u32>, DispatchError> {
+    dispatcher: &dyn SemanticExecutor,
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut decoded = Vec::new();
     for chunk in raw.chunks_exact(4) {
         decoded.push(u32::from_le_bytes(chunk.try_into().unwrap()));
@@ -1166,13 +1226,13 @@ pub fn decode_raw_outputs(
 #[test]
 fn clean_dispatcher_allows_optional_local_and_capacity_reserve_decoder_loop() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn decode_with_local_and_reserve(
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<Vec<u32>, DispatchError> {
+    dispatcher: &dyn SemanticExecutor,
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut out = Vec::new();
     for chunk in raw.chunks_exact(4) {
         out.reserve(1);
@@ -1192,13 +1252,13 @@ pub fn decode_with_local_and_reserve(
 #[test]
 fn mutation_catches_decoder_loop_independent_constant_append() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn decode_constant(
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<Vec<u32>, DispatchError> {
+    dispatcher: &dyn SemanticExecutor,
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut out = Vec::new();
     for _chunk in raw.chunks_exact(4) {
         out.reserve(1);
@@ -1217,13 +1277,13 @@ pub fn decode_constant(
 #[test]
 fn mutation_catches_decoder_loop_subsliced_width_mismatch() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn decode_subsliced(
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<Vec<u16>, DispatchError> {
+    dispatcher: &dyn SemanticExecutor,
+) -> Result<Vec<u16>, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut out = Vec::new();
     for chunk in raw.chunks_exact(4) {
         out.push(u16::from_le_bytes(chunk[..2].try_into().unwrap()));
@@ -1241,13 +1301,13 @@ pub fn decode_subsliced(
 #[test]
 fn mutation_catches_decoder_loop_bitshift_transform() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn decode_shifted(
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<Vec<u32>, DispatchError> {
+    dispatcher: &dyn SemanticExecutor,
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut out = Vec::new();
     for chunk in raw.chunks_exact(4) {
         let word = u32::from_le_bytes(chunk.try_into().unwrap());
@@ -1265,17 +1325,17 @@ pub fn decode_shifted(
 #[test]
 fn mutation_catches_unqualified_or_custom_from_le_bytes_helper() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 fn from_le_bytes(chunk: &[u8]) -> u32 {
     (chunk[0] as u32) + 42
 }
 
 pub fn decode_with_custom_helper(
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<Vec<u32>, DispatchError> {
+    dispatcher: &dyn SemanticExecutor,
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut out = Vec::new();
     for chunk in raw.chunks_exact(4) {
         let word = from_le_bytes(chunk);

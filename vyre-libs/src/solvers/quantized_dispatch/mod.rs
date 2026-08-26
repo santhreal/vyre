@@ -7,8 +7,8 @@
 mod shapes;
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_f32_output_exact, decode_i32_output_exact, ensure_input_slots,
-    write_f32_slice_le_bytes, write_u32_slice_le_bytes, write_zero_bytes,
+    decode_f32_output_exact, decode_i32_output_exact, ensure_input_slots, write_f32_slice_le_bytes,
+    write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::quantized::{
     i4_packed_words, i4x8_batched_matmul_f32_scaled, i4x8_batched_matmul_top1_f32_scaled,

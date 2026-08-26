@@ -111,6 +111,7 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 | `test` | `self_optimizer_pattern_match_e2e` | `vyre-driver-wgpu/tests/self_optimizer_pattern_match_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test self_optimizer_pattern_match_e2e` |
 | `test` | `self_optimizer_pipeline_e2e` | `vyre-driver-wgpu/tests/self_optimizer_pipeline_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test self_optimizer_pipeline_e2e` |
 | `test` | `self_optimizer_scaling_bench` | `vyre-driver-wgpu/tests/self_optimizer_scaling_bench.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test self_optimizer_scaling_bench` |
+| `test` | `semantic_execution` | `vyre-driver-wgpu/tests/semantic_execution.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test semantic_execution` |
 | `test` | `shared_backend_contract` | `vyre-driver-wgpu/tests/shared_backend_contract.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test shared_backend_contract` |
 | `test` | `signed_int_op_parity` | `vyre-driver-wgpu/tests/signed_int_op_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test signed_int_op_parity` |
 | `test` | `signed_modulo_parity` | `vyre-driver-wgpu/tests/signed_modulo_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test signed_modulo_parity` |

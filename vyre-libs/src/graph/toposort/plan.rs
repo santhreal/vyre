@@ -8,8 +8,8 @@ use super::csr::{validate_toposort_csr_inputs, ToposortCsrLayout};
 use super::error::ToposortCsrError;
 use super::program::toposort_program;
 use super::{
-    TOPOSORT_DISPATCH_GRID, TOPOSORT_INDEGREE_SCRATCH_BUFFER, TOPOSORT_OFFSETS_BUFFER,
-    TOPOSORT_ORDER_OUT_BUFFER, TOPOSORT_QUEUE_SCRATCH_BUFFER, TOPOSORT_TARGETS_BUFFER,
+    TOPOSORT_INDEGREE_SCRATCH_BUFFER, TOPOSORT_OFFSETS_BUFFER, TOPOSORT_ORDER_OUT_BUFFER,
+    TOPOSORT_QUEUE_SCRATCH_BUFFER, TOPOSORT_TARGETS_BUFFER,
 };
 
 /// Primitive-owned dispatch plan for CSR topological sort.
@@ -17,8 +17,6 @@ use super::{
 pub struct ToposortCsrDispatchPlan {
     /// Validated CSR layout.
     pub layout: ToposortCsrLayout,
-    /// Dispatch grid override.
-    pub grid: [u32; 3],
     /// Words in the offsets input buffer.
     pub offset_words: usize,
     /// Words in the targets input buffer.
@@ -121,7 +119,6 @@ pub fn plan_toposort_csr_dispatch(
         target_words: layout.target_words,
         node_words: layout.node_words,
         layout,
-        grid: TOPOSORT_DISPATCH_GRID,
     })
 }
 
@@ -135,7 +132,6 @@ mod dispatch_plan_tests {
         let plan = plan_toposort_csr_dispatch(3, &[0, 2, 3, 3], &[1, 2, 2])
             .expect("Fix: valid DAG CSR should plan topological-sort dispatch");
 
-        assert_eq!(plan.grid, TOPOSORT_DISPATCH_GRID);
         assert_eq!(plan.offset_words, 4);
         assert_eq!(plan.target_words, 3);
         assert_eq!(plan.node_words, 3);
@@ -147,7 +143,6 @@ mod dispatch_plan_tests {
         let plan = plan_toposort_csr_dispatch(0, &[0], &[])
             .expect("Fix: canonical empty CSR should plan without dispatch");
 
-        assert_eq!(plan.grid, TOPOSORT_DISPATCH_GRID);
         assert_eq!(plan.offset_words, 1);
         assert_eq!(plan.target_words, 0);
         assert_eq!(plan.node_words, 0);

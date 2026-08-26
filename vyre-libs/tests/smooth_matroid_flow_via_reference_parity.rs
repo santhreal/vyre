@@ -1,6 +1,6 @@
 //! End-to-end parity for `math::amg_pass_solver::smooth_matroid_flow_fixed_via`: one full two-level
 //! algebraic-multigrid (AMG) V-cycle (pre-smooth → restrict → coarse-solve → prolong → post-smooth)
-//! through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! through the shared faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes the LAST mock-dispatcher-coherence gap in the SWEEP drain (see BACKLOG
 //! `SWEEP-self-substrate-mock-dispatcher-coherence`): the 11-buffer `amg_v_cycle` IR is not run through a
@@ -32,10 +32,12 @@
 //!     exercises (and regression-locks) the signed multiply + signed divide fix.
 //! Every input value is a multiple of 0.5 or a power of two → exact in 16.16.
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::amg_pass_solver::{smooth_matroid_flow_fixed_via, DEFAULT_OMEGA};
 use vyre_reference::composition_witness::amg_v_cycle_witness;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::{from_fixed, xorshift32 as xorshift};
 
 const FIXED_ONE: f64 = 65536.0;
@@ -130,7 +132,7 @@ fn inf_residual(a: &[f64], b: &[f64], x: &[f64], n: usize) -> f64 {
 
 #[test]
 fn smooth_matroid_flow_via_matches_reference_over_diagonal_dominant_systems() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let mut state = 0xA3_69_00_01u32;
     let mut nonzero = 0u32;
     let mut residual_reduced = 0u32;
@@ -166,7 +168,16 @@ fn smooth_matroid_flow_via_matches_reference_over_diagonal_dominant_systems() {
         let ac_fx: Vec<u32> = a_c.iter().map(|&v| to_fixed(v)).collect();
 
         let got_fixed = smooth_matroid_flow_fixed_via(
-            &d, &a_fx, &b_fx, &x_fx, &r_fx, &p_fx, &ac_fx, n_fine, n_coarse,
+            &d,
+            &semantic_execution_support::policy(),
+            &a_fx,
+            &b_fx,
+            &x_fx,
+            &r_fx,
+            &p_fx,
+            &ac_fx,
+            n_fine,
+            n_coarse,
         )
         .expect("smooth_matroid_flow_fixed_via must dispatch the AMG V-cycle");
         let got: Vec<f64> = got_fixed.iter().map(|&v| from_fixed(v)).collect();
@@ -218,7 +229,7 @@ fn smooth_matroid_flow_via_matches_reference_over_diagonal_dominant_systems() {
 
 #[test]
 fn smooth_matroid_flow_via_hand_checked_two_level() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     // n_fine=2, n_coarse=1. A = diag(4,4), b=[4,4], x0=0, R=[0.5,0.5], P=[1;1], a_c=[4].
     let n_fine = 2u32;
     let n_coarse = 1u32;
@@ -237,7 +248,16 @@ fn smooth_matroid_flow_via_hand_checked_two_level() {
     let ac_fx: Vec<u32> = a_c.iter().map(|&v| to_fixed(v)).collect();
 
     let got_fixed = smooth_matroid_flow_fixed_via(
-        &d, &a_fx, &b_fx, &x_fx, &r_fx, &p_fx, &ac_fx, n_fine, n_coarse,
+        &d,
+        &semantic_execution_support::policy(),
+        &a_fx,
+        &b_fx,
+        &x_fx,
+        &r_fx,
+        &p_fx,
+        &ac_fx,
+        n_fine,
+        n_coarse,
     )
     .unwrap();
     let got: Vec<f64> = got_fixed.iter().map(|&v| from_fixed(v)).collect();
@@ -273,7 +293,7 @@ fn smooth_matroid_flow_via_matches_reference_with_negative_intermediates() {
     // (post-prolong A·x > b), so the post-smooth residual `b − A·x` is NEGATIVE. Under the old UNSIGNED
     // fixed multiply the fixed path produced garbage (got≈10813 vs want≈0.39); the signed multiply now
     // tracks the f64 reference within fixed-point tolerance even through negative intermediates.
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
 
     // The EXACT configuration that reproduced the corruption: n_fine=4, diag(A)=[2,4,4,2], b=[2,1.5,1.5,1],
     // R=[1,1,0.5,0], P=[0.5,0.5,0.5,0], a_c=[4] (small → overshoot).
@@ -297,8 +317,19 @@ fn smooth_matroid_flow_via_matches_reference_with_negative_intermediates() {
     let p_fx: Vec<u32> = p_mat.iter().map(|&v| to_fixed(v)).collect();
     let ac_fx: Vec<u32> = a_c.iter().map(|&v| to_fixed(v)).collect();
 
-    let got_fixed =
-        smooth_matroid_flow_fixed_via(&d, &a_fx, &b_fx, &x_fx, &r_fx, &p_fx, &ac_fx, 4, 1).unwrap();
+    let got_fixed = smooth_matroid_flow_fixed_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &a_fx,
+        &b_fx,
+        &x_fx,
+        &r_fx,
+        &p_fx,
+        &ac_fx,
+        4,
+        1,
+    )
+    .unwrap();
     let got: Vec<f64> = got_fixed.iter().map(|&v| from_fixed(v)).collect();
     let want = reference_smooth_matroid_flow(&a, &b, &x0, &r_mat, &p_mat, &a_c, 4, 1);
 
@@ -351,7 +382,16 @@ fn smooth_matroid_flow_via_matches_reference_with_negative_intermediates() {
         let ac_fx: Vec<u32> = acm.iter().map(|&v| to_fixed(v)).collect();
 
         let got_fixed = smooth_matroid_flow_fixed_via(
-            &d, &a_fx, &b_fx, &x_fx, &r_fx, &p_fx, &ac_fx, n_fine, n_coarse,
+            &d,
+            &semantic_execution_support::policy(),
+            &a_fx,
+            &b_fx,
+            &x_fx,
+            &r_fx,
+            &p_fx,
+            &ac_fx,
+            n_fine,
+            n_coarse,
         )
         .expect("dispatch must succeed");
         let got: Vec<f64> = got_fixed.iter().map(|&v| from_fixed(v)).collect();

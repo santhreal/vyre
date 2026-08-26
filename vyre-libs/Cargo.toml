@@ -205,6 +205,9 @@ security = ["label", "predicate"]
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
+# Every composition reaches a device only through the compiler-owned semantic
+# compile-and-execute seam this crate declares.
+vyre-megakernel.workspace = true
 vyre-spec.workspace = true
 # Every composition domain moved into this crate, so the only thing left to ask
 # vyre-primitives for is the substrate: the wire format, guarded IR
@@ -247,11 +250,6 @@ vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # manifest. Path-only, and dev-only: cargo strips it from the published
 # manifest, so it adds no publish-ordering constraint.
 structure-gate = { path = "../structure-gate" }
-# The advertised minimal example compiles a libs composition into a megakernel
-# artifact. Path-only and dev-only: cargo strips it from the published manifest,
-# and the megakernel depends only on vyre-foundation and vyre-lower, so this adds
-# no cycle and no publish-ordering constraint.
-vyre-megakernel = { path = "../vyre-megakernel" }
 
 # The example the generated crate contract advertises. Named explicitly so the
 # contract picks this one rather than whichever filename sorts first.
@@ -699,8 +697,8 @@ path = "tests/nn_attention_clone_family_ir_invariance.rs"
 required-features = ["nn-attention"]
 
 [[test]]
-name = "attention_layout_dispatch_grid"
-path = "tests/attention_layout_dispatch_grid.rs"
+name = "attention_layout_launch_domain"
+path = "tests/attention_layout_launch_domain.rs"
 required-features = ["llm"]
 
 [[test]]

@@ -128,7 +128,8 @@ pub fn toposort_program(
             BufferDecl::storage(queue_scratch, 3, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(node_count.max(1)),
             BufferDecl::storage(order_out, 4, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(node_count.max(1)),
+                .with_count(node_count.max(1))
+                .with_pipeline_live_out(true),
         ],
         [1, 1, 1],
         vec![wrap_anonymous_region(

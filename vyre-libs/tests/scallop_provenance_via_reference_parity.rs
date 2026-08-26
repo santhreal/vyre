@@ -1,5 +1,5 @@
 //! End-to-end parity for `data::scallop_provenance::provenance_closure_via` (the transitive lineage
-//! closure) through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! closure) through the shared faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `scallop_join`'s IR is run by NO `vyre-primitives/tests/*` file through a faithful dispatch
@@ -15,10 +15,12 @@
 //! across iterations through reference_eval (so the full multi-iteration closure is validated here).
 //! Values are exact bitset unions → BIT-EXACT (no tolerance) vs `reference_provenance_closure`.
 
+mod semantic_execution_support;
+
 use vyre_libs::encoding::scallop_provenance::provenance_closure_via;
 use vyre_reference::composition_witness::scallop_join_fixpoint_witness;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 fn reference_provenance_closure(
@@ -32,7 +34,7 @@ fn reference_provenance_closure(
 
 #[test]
 fn provenance_closure_via_matches_cpu_ref_over_random_lineage_graphs() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut rng = 0x5CA1_1001_u32;
     let mut grew_beyond_seed = 0u32;
     for case in 0..300u32 {
@@ -44,8 +46,15 @@ fn provenance_closure_via_matches_cpu_ref_over_random_lineage_graphs() {
         let join_rules: Vec<u32> = (0..cells).map(|_| xorshift(&mut rng) & 0xF).collect();
         let max_iterations = n + 2; // >= n guarantees the transitive closure converges
 
-        let got = provenance_closure_via(&dispatcher, &state, &join_rules, n, max_iterations)
-            .expect("provenance_closure_via must dispatch the scallop-join closure");
+        let got = provenance_closure_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &state,
+            &join_rules,
+            n,
+            max_iterations,
+        )
+        .expect("provenance_closure_via must dispatch the scallop-join closure");
         let want = reference_provenance_closure(&state, &join_rules, n, max_iterations);
         assert_eq!(
             got, want,
@@ -63,7 +72,7 @@ fn provenance_closure_via_matches_cpu_ref_over_random_lineage_graphs() {
 
 #[test]
 fn provenance_closure_via_hand_checked_transitive_chain() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     // 3-node chain of clause bit 0b1: state seeds direct edges 0⇝1 and 1⇝2; the closure must derive
     // 0⇝2 transitively. Layout is row-major state[i*n + j]. Compared against the authoritative ref.
     let n = 3u32;
@@ -74,7 +83,15 @@ fn provenance_closure_via_hand_checked_transitive_chain() {
     join_rules[0 * 3 + 1] = 0b1;
     join_rules[1 * 3 + 2] = 0b1;
 
-    let got = provenance_closure_via(&d, &state, &join_rules, n, 5).unwrap();
+    let got = provenance_closure_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &state,
+        &join_rules,
+        n,
+        5,
+    )
+    .unwrap();
     let want = reference_provenance_closure(&state, &join_rules, n, 5);
     assert_eq!(got, want, "transitive chain closure must match cpu_ref");
     // The closure must be at least as large as the seed everywhere (monotone growth).

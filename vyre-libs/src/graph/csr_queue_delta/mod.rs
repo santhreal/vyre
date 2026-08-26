@@ -15,8 +15,6 @@ use crate::graph::csr_frontier_step::{
 
 mod strided;
 
-#[cfg(test)]
-pub use strided::csr_queue_delta_strided_dispatch_grid;
 pub use strided::{
     csr_queue_delta_strided_enqueue, csr_queue_delta_strided_enqueue_with,
     csr_queue_delta_strided_logical_lanes_per_launch,

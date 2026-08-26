@@ -8,6 +8,12 @@
 //! This module contains no device names, no instruction names, and no concrete
 //! device limits.
 
+mod logical_span;
+
+pub use logical_span::{
+    admitted_logical_span, guarded_logical_span, launch_covers_full_input_span,
+};
+
 /// Constraint on cooperative execution width within a single parallel region.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CooperativeWidth {

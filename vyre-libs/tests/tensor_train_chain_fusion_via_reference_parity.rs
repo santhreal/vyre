@@ -1,5 +1,5 @@
 //! End-to-end parity for `math::tensor_train_chain_fusion::fusion_pressure_via` through the shared
-//! faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`
 //! / `SWEEP-via-consumer-input-output-contract-audit`): `tt_contract_step`'s IR is run by NO
@@ -14,9 +14,11 @@
 //! rank product exactly (integer·2^16 >> 16 = integer, no rounding), so the final scalar is the exact
 //! product of the nonzero ranks (an independent mathematical oracle the IR must reproduce).
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::tensor_train_chain_fusion::fusion_pressure_via;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// The exact fusion pressure: the product of the nonzero ranks (zero ranks carry no dataflow and are
@@ -32,7 +34,7 @@ fn expected_pressure(ranks: &[u32]) -> f64 {
 
 #[test]
 fn fusion_pressure_via_matches_rank_product_over_generated_chains() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x77_3401u32;
     let mut nontrivial = 0u32;
     for case in 0..400u32 {
@@ -40,8 +42,9 @@ fn fusion_pressure_via_matches_rank_product_over_generated_chains() {
         let links = 1 + (case as usize % 4);
         let ranks: Vec<u32> = (0..links).map(|_| xorshift(&mut state) % 7).collect(); // 0..6
 
-        let pressure = fusion_pressure_via(&dispatcher, &ranks)
-            .expect("fusion_pressure_via must dispatch the tt_contract_step chain");
+        let pressure =
+            fusion_pressure_via(&dispatcher, &semantic_execution_support::policy(), &ranks)
+                .expect("fusion_pressure_via must dispatch the tt_contract_step chain");
         let want = expected_pressure(&ranks);
         assert_eq!(
             pressure, want,
@@ -59,11 +62,33 @@ fn fusion_pressure_via_matches_rank_product_over_generated_chains() {
 
 #[test]
 fn fusion_pressure_via_matches_known_chains() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     // [3,4] → 3·4 = 12; [2,3,5] → 30; a zero link is skipped: [4,0,3] → 12.
-    assert_eq!(fusion_pressure_via(&dispatcher, &[3, 4]).unwrap(), 12.0);
-    assert_eq!(fusion_pressure_via(&dispatcher, &[2, 3, 5]).unwrap(), 30.0);
-    assert_eq!(fusion_pressure_via(&dispatcher, &[4, 0, 3]).unwrap(), 12.0);
+    assert_eq!(
+        fusion_pressure_via(&dispatcher, &semantic_execution_support::policy(), &[3, 4]).unwrap(),
+        12.0
+    );
+    assert_eq!(
+        fusion_pressure_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &[2, 3, 5]
+        )
+        .unwrap(),
+        30.0
+    );
+    assert_eq!(
+        fusion_pressure_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &[4, 0, 3]
+        )
+        .unwrap(),
+        12.0
+    );
     // Empty chain has no pressure.
-    assert_eq!(fusion_pressure_via(&dispatcher, &[]).unwrap(), 0.0);
+    assert_eq!(
+        fusion_pressure_via(&dispatcher, &semantic_execution_support::policy(), &[]).unwrap(),
+        0.0
+    );
 }

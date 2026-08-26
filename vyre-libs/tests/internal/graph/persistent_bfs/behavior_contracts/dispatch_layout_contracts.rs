@@ -1,3 +1,5 @@
+use vyre_foundation::{admitted_logical_span, guarded_logical_span};
+
 use super::*;
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
@@ -63,7 +65,10 @@ fn dispatch_plans_pin_grid_cache_shape_and_program_builders() {
     assert_eq!(plan.frontier_words(), 1);
     assert_eq!(plan.node_words(), 4);
     assert_eq!(plan.edge_storage_words(), 3);
-    assert_eq!(plan.dispatch_grid(), persistent_bfs_single_dispatch_grid(4));
+    assert_eq!(
+        admitted_logical_span(&plan.program("frontier_in", "frontier_out"), 4),
+        4
+    );
     assert_eq!(
         plan.layout_hash(),
         persistent_bfs_layout_hash(4, &edge_offsets, &edge_targets, &edge_kind_mask)
@@ -134,8 +139,8 @@ fn dispatch_plans_pin_grid_cache_shape_and_program_builders() {
     assert_eq!(resident.frontier_words(), 1);
     assert_eq!(resident.words_u32(), 1);
     assert_eq!(
-        resident.dispatch_grid(),
-        persistent_bfs_single_dispatch_grid(4)
+        admitted_logical_span(&resident.program("frontier_in", "frontier_out"), 4),
+        4
     );
     assert_eq!(
         resident.cache_key(0xABCD, 0x10),
@@ -178,7 +183,11 @@ fn dispatch_plans_pin_grid_cache_shape_and_program_builders() {
     assert_eq!(batch.query_count_u32(), 2);
     assert_eq!(batch.total_words(), 2);
     assert_eq!(batch.words_per_query(), 1);
-    assert_eq!(batch.dispatch_grid(), [1, 2, 1]);
+    assert_eq!(
+        guarded_logical_span(&batch.program("frontier_in", "frontier_out", "changed", "converged")),
+        Some(batch.words_per_query())
+    );
+    assert!(batch.words_per_query() * 32 >= 4);
     assert_eq!(
         batch
             .program("frontier_in", "frontier_out", "changed", "converged")
@@ -250,7 +259,10 @@ fn large_dispatch_plans_cover_every_node_with_parallel_grid() {
     )
     .expect("Fix: large persistent-BFS chain should plan");
 
-    assert_eq!(plan.dispatch_grid(), [3, 1, 1]);
+    assert_eq!(
+        admitted_logical_span(&plan.program("frontier_in", "frontier_out"), node_count),
+        node_count
+    );
     assert_eq!(
         plan.program("frontier_in", "frontier_out").workgroup_size,
         PERSISTENT_BFS_WORKGROUP_SIZE
@@ -265,7 +277,10 @@ fn large_dispatch_plans_cover_every_node_with_parallel_grid() {
         node_count,
     )
     .expect("Fix: large resident persistent-BFS chain should plan");
-    assert_eq!(resident.dispatch_grid(), [3, 1, 1]);
+    assert_eq!(
+        admitted_logical_span(&resident.program("frontier_in", "frontier_out"), node_count),
+        node_count
+    );
 
     let batch_seed = vec![0u32; seed.len() * 3];
     let resident_batch = plan_persistent_bfs_resident_batch_dispatch(
@@ -278,5 +293,15 @@ fn large_dispatch_plans_cover_every_node_with_parallel_grid() {
         node_count,
     )
     .expect("Fix: large resident persistent-BFS batch should plan");
-    assert_eq!(resident_batch.dispatch_grid(), [3, 3, 1]);
+    assert_eq!(resident_batch.query_count(), 3);
+    assert_eq!(
+        guarded_logical_span(&resident_batch.program(
+            "frontier_in",
+            "frontier_out",
+            "changed",
+            "converged"
+        )),
+        Some(resident_batch.words_per_query())
+    );
+    assert!(resident_batch.words_per_query() * 32 >= node_count);
 }

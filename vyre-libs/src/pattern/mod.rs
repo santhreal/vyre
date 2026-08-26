@@ -46,8 +46,8 @@ pub use anchor_dfa::{
 };
 pub use bracket_match::BRACKET_MATCH_OP_ID;
 pub use bracket_match::{
-    bracket_match, bracket_match_dispatch_grid, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
-    BRACKET_KIND_OTHER, BRACKET_MATCH_NONE, BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE,
+    bracket_match, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_OTHER, BRACKET_MATCH_NONE,
+    BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE,
 };
 pub use dfa_compile::{
     dfa_compile, dfa_compile_case_insensitive, dfa_compile_case_insensitive_with_budget,
@@ -60,8 +60,8 @@ pub use nfa_to_dfa::{
 pub use nfa_to_dfa::{nfa_to_dfa, NfaTables, NfaToDfaError};
 pub use region::{
     cap_regions_per_pattern_flag_program, dedup_regions_cluster_program,
-    dedup_regions_flag_program, region_dedup_dispatch_grid, RegionTriple,
-    CAP_REGIONS_PER_PATTERN_OP_ID, REGION_DEDUP_WORKGROUP_SIZE,
+    dedup_regions_flag_program, RegionTriple, CAP_REGIONS_PER_PATTERN_OP_ID,
+    REGION_DEDUP_WORKGROUP_SIZE,
 };
 pub use region::{
     compact_first_per_region_pattern_flag_program, region_sort_program,

@@ -23,20 +23,6 @@ const KV_CACHE_APPEND_OP_ID: &str = "vyre-libs::nn::kv_cache_append";
 /// Lanes per workgroup for every layout move.
 pub const ATTENTION_LAYOUT_WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
 
-/// Dispatch grid covering one layout move: one lane per moved element.
-///
-/// A launch geometry inferred from the declared buffers takes the largest one,
-/// which is right for a gather and wrong for a scatter. The paged append
-/// guards on the CHUNK and writes into a cache that is deliberately much
-/// larger, so an inferred geometry fires a cache-sized dispatch to move one
-/// decoded token and lets the guard discard the rest. The element count the
-/// move was built from is the only thing that sizes it, so the base that owns
-/// the move owns the grid, and a caller launching one passes it.
-#[must_use]
-pub const fn attention_layout_dispatch_grid(elements: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(elements, ATTENTION_LAYOUT_WORKGROUP_SIZE[0])
-}
-
 /// Axis lengths of a row-major `[outer, mid, row, column]` tensor.
 ///
 /// The outer length is absent on purpose: a flat index never multiplies by it,

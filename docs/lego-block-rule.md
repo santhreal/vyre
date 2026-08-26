@@ -103,6 +103,20 @@ because publishing early buys churn and no reuse. `lego-audit` reports an
 orphan published op as an adoption advisory, and a catalog consumer
 registered to fake a second caller is a hard failure.
 
+## The composition helpers a block is built from
+
+`vyre-foundation::composition` holds the wrappers every composition uses.
+`wrap_region`, `wrap_anonymous_region` and `wrap_child_region` attribute a body
+to the generator that produced it, so a region tree records which composition
+emitted which nodes.
+
+`single_invocation` guards a body with `Expr::eq(Expr::logical_index(0),
+Expr::u32(0))`, and `single_invocation_region` wraps that guard in one anonymous
+region. The marker is a logical index, not a physical invocation id: a serial
+block states which element its body belongs to, and target lowering selects the
+physical id that names that element. A composition that reaches for a physical
+id states a launch, which is the compiler's decision, not the block's.
+
 ## Gate 1 and lego-audit
 
 `./cargo_full run --bin xtask -- gate1` walks every registered op's region

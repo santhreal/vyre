@@ -6,9 +6,7 @@ mod harness;
 
 use harness::{bytes_u32, csr_traversal_inputs, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::graph::csr_backward_traverse::{
-    csr_backward_traverse, csr_backward_traverse_dispatch_grid,
-};
+use vyre_libs::graph::csr_backward_traverse::csr_backward_traverse;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_reference::composition_witness::csr_backward_traverse_witness;
 
@@ -36,7 +34,6 @@ fn run(
         frontier,
     );
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(csr_backward_traverse_dispatch_grid(node_count));
     let outputs = with_live_backend("CSR backward traverse", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

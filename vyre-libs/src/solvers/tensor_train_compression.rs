@@ -19,7 +19,9 @@ use crate::dispatch_buffers::{
     decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::tensor_train_decompose::tensor_train_decompose_step;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Compressed cost tensor in tensor-train form.
 ///
@@ -58,19 +60,27 @@ pub struct TensorTrainCompressionGpuScratch {
 /// Compress an f32 cost tensor through dispatchable TT-SVD steps.
 ///
 /// This path chains [`tensor_train_decompose_step`] (a real per-mode truncated SVD in f32) once per
-/// non-final mode and stores the final remainder as the last core. It is the GPU-dispatchable
-/// production path, validated end-to-end via `ReferenceEvalDispatcher`.
+/// non-final mode and stores the final remainder as the last core. The production path
+/// executes the compiler-admitted artifact through [`SemanticExecutor`].
 pub fn compress_cost_tensor_f32_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     tensor_f32: &[f32],
     dims: &[u32],
     target_ranks: &[u32],
-) -> Result<CompressedF32CostTensor, DispatchError> {
+) -> Result<CompressedF32CostTensor, SemanticExecutionError> {
     validate_tt_shape(tensor_f32, dims, target_ranks)?;
     let dims_vec = dims.to_vec();
     let ranks_vec = target_ranks.to_vec();
     let mut cores = Vec::with_capacity(dims.len());
-    compress_cost_tensor_f32_via_into(dispatcher, tensor_f32, dims, target_ranks, &mut cores)?;
+    compress_cost_tensor_f32_via_into(
+        dispatcher,
+        policy,
+        tensor_f32,
+        dims,
+        target_ranks,
+        &mut cores,
+    )?;
     Ok(CompressedF32CostTensor {
         cores,
         dims: dims_vec,
@@ -80,15 +90,17 @@ pub fn compress_cost_tensor_f32_via(
 
 /// Compress an f32 cost tensor through dispatchable TT-SVD steps into caller-owned core storage.
 pub fn compress_cost_tensor_f32_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     tensor_f32: &[f32],
     dims: &[u32],
     target_ranks: &[u32],
     cores_out: &mut Vec<Vec<f32>>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = TensorTrainCompressionGpuScratch::default();
     compress_cost_tensor_f32_via_with_scratch_into(
         dispatcher,
+        policy,
         tensor_f32,
         dims,
         target_ranks,
@@ -100,13 +112,14 @@ pub fn compress_cost_tensor_f32_via_into(
 /// Compress an f32 cost tensor through dispatchable TT-SVD steps into
 /// caller-owned dispatch scratch and core storage.
 pub fn compress_cost_tensor_f32_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     tensor_f32: &[f32],
     dims: &[u32],
     target_ranks: &[u32],
     scratch: &mut TensorTrainCompressionGpuScratch,
     cores_out: &mut Vec<Vec<f32>>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, tensor_train_compression_calls};
     bump(&tensor_train_compression_calls);
 
@@ -136,13 +149,13 @@ pub fn compress_cost_tensor_f32_via_with_scratch_into(
         let input_rows = checked_mul_u32(r_prev, nk, "r_prev", "nk")?;
         let input_rows_usize = input_rows as usize;
         if input_rows_usize == 0 || scratch.current.len() % input_rows_usize != 0 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: compress_cost_tensor_f32_via mode {mode} expected current.len() divisible by r_prev*nk={input_rows}, got {}.",
-                scratch.current.len()
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: compress_cost_tensor_f32_via mode {mode} expected current.len() divisible by r_prev*nk={input_rows}, got {}.",
+            scratch.current.len()
+        )));
         }
         let rem = u32::try_from(scratch.current.len() / input_rows_usize).map_err(|_| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: compress_cost_tensor_f32_via mode {mode} remainder column count exceeds u32."
             ))
         })?;
@@ -175,31 +188,40 @@ pub fn compress_cost_tensor_f32_via_with_scratch_into(
         write_zero_bytes(&mut scratch.inputs[3], bytes(gram_words));
         write_zero_bytes(&mut scratch.inputs[4], bytes(gram_words));
         write_zero_bytes(&mut scratch.inputs[5], bytes(rem_usize));
-        let outputs = dispatcher.dispatch(&program, &scratch.inputs[..6], Some([1, 1, 1]))?;
+        let outputs = execute_single_program(
+            dispatcher,
+            crate::dispatch_buffers::HOST_WRAPPER_NODE,
+            program,
+            &scratch.inputs[..6],
+            policy,
+        )
+        .map(|output| output.outputs)?;
         // The kernel's writable buffers in binding order are u_out (core), rem_out (S·Vᵀ), then the
         // internal scratch; a faithful backend returns at least the first two, which are what we
         // decode. Trailing scratch outputs are ignored.
         let [u_out_bytes, rem_out_bytes, ..] = match outputs.as_slice() {
-            [u, r, ..] => [u, r],
-            _ => {
-                return Err(DispatchError::BackendError(format!(
-                    "Fix: compress_cost_tensor_f32_via expected at least the u_out + rem_out outputs, got {}.",
-                    outputs.len()
-                )))
-            }
-        };
+        [u, r, ..] => [u, r],
+        _ => {
+            return Err(SemanticExecutionError::Backend(format!(
+                "Fix: compress_cost_tensor_f32_via expected at least the u_out + rem_out outputs, got {}.",
+                outputs.len()
+            )))
+        }
+    };
         decode_f32_output_exact(
             u_out_bytes,
             core_words,
             "compress_cost_tensor_f32_via u_out",
             &mut cores_out[mode],
-        )?;
+        )
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
         decode_f32_output_exact(
             rem_out_bytes,
             rem_words,
             "compress_cost_tensor_f32_via rem_out",
             &mut scratch.remainder,
-        )?;
+        )
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
         std::mem::swap(&mut scratch.current, &mut scratch.remainder);
         r_prev = r_next;
     }
@@ -209,36 +231,40 @@ pub fn compress_cost_tensor_f32_via_with_scratch_into(
     // Retains the scratch allocation for the next call; contents stay put, so
     // this is the contents-preserving owner.
     vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut scratch.current, tensor_f32.len())
-        .map_err(|error| {
-            DispatchError::BackendError(format!(
-                "Fix: compress_cost_tensor_f32_via could not retain current scratch capacity for {} word(s): {error}.",
-                tensor_f32.len()
-            ))
-        })?;
+    .map_err(|error| {
+        SemanticExecutionError::Backend(format!(
+            "Fix: compress_cost_tensor_f32_via could not retain current scratch capacity for {} word(s): {error}.",
+            tensor_f32.len()
+        ))
+    })?;
     Ok(())
 }
 
-fn validate_tt_shape(tensor: &[f32], dims: &[u32], ranks: &[u32]) -> Result<(), DispatchError> {
+fn validate_tt_shape(
+    tensor: &[f32],
+    dims: &[u32],
+    ranks: &[u32],
+) -> Result<(), SemanticExecutionError> {
     if dims.iter().any(|&dim| dim == 0) {
-        return Err(DispatchError::BadInputs(
+        return Err(SemanticExecutionError::InvalidRequest(
             "Fix: compress_cost_tensor_f32_via requires all dims > 0.".to_string(),
         ));
     }
     if ranks.len() != dims.len() + 1 {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: compress_cost_tensor_f32_via expected ranks.len() == dims.len()+1 == {}, got {}.",
             dims.len() + 1,
             ranks.len()
         )));
     }
     if ranks.first().copied().unwrap_or(0) != 1 || ranks.last().copied().unwrap_or(0) != 1 {
-        return Err(DispatchError::BadInputs(
+        return Err(SemanticExecutionError::InvalidRequest(
             "Fix: compress_cost_tensor_f32_via requires boundary ranks ranks[0] == ranks[d] == 1."
                 .to_string(),
         ));
     }
     if ranks.iter().any(|&rank| rank == 0) {
-        return Err(DispatchError::BadInputs(
+        return Err(SemanticExecutionError::InvalidRequest(
             "Fix: compress_cost_tensor_f32_via requires all ranks > 0.".to_string(),
         ));
     }
@@ -246,12 +272,12 @@ fn validate_tt_shape(tensor: &[f32], dims: &[u32], ranks: &[u32]) -> Result<(), 
         .iter()
         .try_fold(1usize, |acc, &dim| acc.checked_mul(dim as usize))
         .ok_or_else(|| {
-            DispatchError::BadInputs(
+            SemanticExecutionError::InvalidRequest(
                 "Fix: compress_cost_tensor_f32_via dims product overflows usize.".to_string(),
             )
         })?;
     if tensor.len() != expected {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: compress_cost_tensor_f32_via expected tensor_f32.len() == dims product == {expected}, got {}.",
             tensor.len()
         )));
@@ -264,30 +290,39 @@ fn checked_mul_u32(
     right: u32,
     left_name: &str,
     right_name: &str,
-) -> Result<u32, DispatchError> {
+) -> Result<u32, SemanticExecutionError> {
     left.checked_mul(right).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: compress_cost_tensor_f32_via {left_name}*{right_name} overflows u32: {left}*{right}."
         ))
     })
 }
 
-fn checked_mul_usize(left: u32, right: u32, context: &str) -> Result<usize, DispatchError> {
+fn checked_mul_usize(
+    left: u32,
+    right: u32,
+    context: &str,
+) -> Result<usize, SemanticExecutionError> {
     checked_mul_u32(left, right, "left", "right")
         .map(|value| value as usize)
         .map_err(|_| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: compress_cost_tensor_f32_via {context} word count overflows usize."
             ))
         })
 }
 
-fn checked_product3_usize(a: u32, b: u32, c: u32, context: &str) -> Result<usize, DispatchError> {
+fn checked_product3_usize(
+    a: u32,
+    b: u32,
+    c: u32,
+    context: &str,
+) -> Result<usize, SemanticExecutionError> {
     let ab = checked_mul_u32(a, b, "a", "b")?;
     checked_mul_u32(ab, c, "a*b", "c")
         .map(|value| value as usize)
         .map_err(|_| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: compress_cost_tensor_f32_via {context} word count overflows usize."
             ))
         })

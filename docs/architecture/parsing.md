@@ -71,3 +71,17 @@ rather than a second registered operation, so it carries the
 `anonymous::` generator prefix. See
 [the placement rule](../lego-block-rule.md) for what that prefix means to
 the composition gate.
+
+## A parsing operation publishes no launch
+
+A parsing program declares its buffers and its own guard on the byte or word
+index it owns. It states no dispatch grid. The launch is derived below
+admission from the guard by `vyre_foundation::guarded_logical_span`, so a stage
+that classifies 4099 bytes and a stage that classifies 64 read the same
+program-level contract.
+
+A stage that produces more than one array declares the extra results as
+read-write storage rather than a second output buffer, because a program
+declares exactly one output. A caller therefore binds one buffer per declared
+result, and the reference oracle takes one seeded value for each in the same
+order.

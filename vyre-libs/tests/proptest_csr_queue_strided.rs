@@ -7,10 +7,7 @@ use wire_words::{mix64, queue_forward_oracle};
 
 use proptest::prelude::*;
 use vyre_libs::graph::csr_frontier_queue::validate_csr_queue_graph;
-use vyre_libs::graph::csr_queue_strided::{
-    csr_queue_strided_forward_dispatch_grid, CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE,
-    CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE,
-};
+use vyre_libs::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE;
 use vyre_reference::composition_witness::csr_queue_strided_forward_witness;
 
 #[derive(Clone, Debug)]
@@ -88,20 +85,6 @@ proptest! {
 
         prop_assert_eq!(unrelated, vec![0]);
         prop_assert_eq!(second, first);
-    }
-
-    #[test]
-    fn strided_dispatch_grid_covers_all_queue_lane_teams(queue_capacity in any::<u32>()) {
-        let grid = csr_queue_strided_forward_dispatch_grid(queue_capacity);
-        let total_lanes =
-            queue_capacity.saturating_mul(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE);
-        let expected_blocks = total_lanes
-            .div_ceil(CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE[0])
-            .max(1);
-
-        prop_assert_eq!(grid, [expected_blocks, 1, 1]);
-        prop_assert!(u64::from(grid[0]) * u64::from(CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE[0])
-            >= u64::from(total_lanes));
     }
 }
 

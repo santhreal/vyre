@@ -1,23 +1,19 @@
 //! End-to-end test: GPU CSE on real CUDA hardware.
 //!
-//! Builds a Program with structurally identical sub-expressions,
-//! dispatches the two CSE kernels (structural-hash + canonical-id)
-//! through `CudaProgramDispatcher`, and verifies the canonical
-//! buffer assigns equal canonicals to syntactically equal Exprs.
+//! Builds a Program with structurally identical sub-expressions, executes both
+//! CSE analyses through admitted artifacts, and verifies equal canonical ids.
 
 #![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 
-use harness::live_backend;
+use harness::cuda_semantic_execution;
 use vyre::ir::{Expr, Node, Program};
-use vyre_driver_cuda::CudaProgramDispatcher;
 use vyre_pass_engine::optimizer::cse_via_encoded::gpu_cse_canonicals;
 
 #[test]
 fn cuda_cse_finds_canonicals_for_equal_literal_pairs() {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
 
     // Two identical literal pairs in different lets:
     //   let a = 5         (LitU32 5 -> hash H_5)
@@ -35,8 +31,8 @@ fn cuda_cse_finds_canonicals_for_equal_literal_pairs() {
         ],
     );
 
-    let (arena, canonical) =
-        gpu_cse_canonicals(&p, &dispatcher).expect("gpu_cse_canonicals must succeed");
+    let (arena, canonical) = gpu_cse_canonicals(&p, &dispatcher.0, &dispatcher.1)
+        .expect("gpu_cse_canonicals must succeed");
     assert_eq!(canonical.len(), arena.expr_count as usize);
 
     // Find the LitU32(5) Expr ids  -  they should share a canonical.
@@ -82,8 +78,7 @@ fn cuda_cse_finds_canonicals_for_equal_literal_pairs() {
 
 #[test]
 fn cuda_cse_finds_canonicals_for_equal_binops() {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
 
     // Two structurally identical binops:
     //   let a = 1 + 2
@@ -101,8 +96,8 @@ fn cuda_cse_finds_canonicals_for_equal_binops() {
         ],
     );
 
-    let (arena, canonical) =
-        gpu_cse_canonicals(&p, &dispatcher).expect("gpu_cse_canonicals must succeed");
+    let (arena, canonical) = gpu_cse_canonicals(&p, &dispatcher.0, &dispatcher.1)
+        .expect("gpu_cse_canonicals must succeed");
 
     // Identify the BIN_OP entries with LitU32(1)+LitU32(2) children
     // vs LitU32(3)+LitU32(4) children.

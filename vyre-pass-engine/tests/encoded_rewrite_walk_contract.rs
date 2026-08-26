@@ -1,5 +1,5 @@
-//! Observable contract of the encoded-order rewrite walk that const-fold,
-//! canonicalize, pattern-match, and the fused resident decode all share.
+//! Observable contract of the encoded-order rewrite walk shared by semantic
+//! optimizer stages and combined delta decoding.
 //!
 //! The walk has one owner, `optimizer::rewrite_walk`, and each pass supplies
 //! only the decision taken at an Expr id. These tests pin what a caller can see:
@@ -15,10 +15,8 @@
 use std::sync::Arc;
 
 use vyre_foundation::ir::{BinOp, Expr, Node, Program, UnOp};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_pass_engine::optimizer::const_fold_via_encoded::gpu_const_fold;
+use vyre_pass_engine::optimizer::combined_decode::apply_combined_arena_deltas;
 use vyre_pass_engine::optimizer::pattern_match_via_encoded::rewrite_action as ra;
-use vyre_pass_engine::optimizer::pipeline_resident_decode::apply_combined_arena_deltas;
 
 /// `x + y` at ids 0, 1, 2.
 fn add_program(left: Expr, right: Expr) -> Program {
@@ -330,74 +328,4 @@ fn the_walk_stops_at_the_reachable_prefix() {
         vec![Node::let_bind("a", Expr::LitU32(3)), Node::Return],
         "Nodes after Return are unreachable and must not survive the rewrite"
     );
-}
-
-/// Returns the const-fold verdict buffers the caller asked for, whatever
-/// Program it is handed.
-struct CannedFoldVerdict {
-    foldable: Vec<u32>,
-    value: Vec<u32>,
-}
-
-impl ProgramDispatcher for CannedFoldVerdict {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        _inputs: &[Vec<u8>],
-        _grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let encode = |words: &[u32]| -> Vec<u8> {
-            words.iter().flat_map(|word| word.to_le_bytes()).collect()
-        };
-        Ok(vec![encode(&self.foldable), encode(&self.value)])
-    }
-}
-
-#[test]
-fn const_fold_rewrites_exactly_the_ids_its_kernel_marked() {
-    let program = add_program(Expr::u32(2), Expr::u32(3));
-    let folded = gpu_const_fold(
-        program.clone(),
-        &CannedFoldVerdict {
-            foldable: vec![0, 0, 1],
-            value: vec![0, 0, 5],
-        },
-    )
-    .expect("the canned verdict is well formed");
-    assert_eq!(only_expr(&folded), Expr::LitU32(5));
-
-    let untouched = gpu_const_fold(
-        program.clone(),
-        &CannedFoldVerdict {
-            foldable: vec![0, 0, 0],
-            value: vec![0, 0, 5],
-        },
-    )
-    .expect("the canned verdict is well formed");
-    assert_eq!(only_expr(&untouched), only_expr(&program));
-}
-
-#[test]
-fn const_fold_leaves_a_typed_literal_alone_and_folds_a_var() {
-    for (leaf, expected) in [
-        (Expr::LitI32(-4), Expr::LitI32(-4)),
-        (Expr::LitF32(1.5), Expr::LitF32(1.5)),
-        (Expr::LitBool(true), Expr::LitBool(true)),
-        (Expr::var("x"), Expr::LitU32(11)),
-    ] {
-        let program = Program::wrapped(
-            Vec::new(),
-            [1, 1, 1],
-            vec![Node::let_bind("v", leaf.clone())],
-        );
-        let folded = gpu_const_fold(
-            program,
-            &CannedFoldVerdict {
-                foldable: vec![1],
-                value: vec![11],
-            },
-        )
-        .expect("the canned verdict is well formed");
-        assert_eq!(only_expr(&folded), expected, "leaf {leaf:?} folded wrongly");
-    }
 }

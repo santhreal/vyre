@@ -21,9 +21,9 @@ pub(crate) use crate::cases::queue_stage::{
 };
 use crate::cases::queue_traverse_plan::{should_use_row_strided, traverse_logical_lanes};
 use vyre_libs::graph::csr_queue_split::{
-    csr_queue_split_low_dispatch_grid, csr_queue_split_mixed_logical_lanes,
-    CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
+    csr_queue_split_mixed_logical_lanes, CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
 };
+use vyre_libs::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE;
 
 mod queue_closure_contracts;
 mod queue_closure_generated;
@@ -198,7 +198,7 @@ fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
     assert_eq!(prepared.high_degree_queue_capacity, 256);
     assert_eq!(
         prepared.traverse_grid,
-        csr_queue_split_low_dispatch_grid(prepared.queue_capacity)
+        [prepared.queue_capacity.div_ceil(256).max(1), 1, 1]
     );
     assert_eq!(prepared.high_traverse_grid, [32, 1, 1]);
     assert_eq!(
@@ -265,9 +265,15 @@ fn ifds_active_queue_prepare_builds_sparse_traversal_program() {
     assert!(prepared.row_strided_traverse);
     assert_eq!(
         prepared.traverse_grid,
-        vyre_libs::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
-            prepared.queue_capacity
-        )
+        [
+            prepared
+                .queue_capacity
+                .saturating_mul(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE)
+                .div_ceil(256)
+                .max(1),
+            1,
+            1
+        ]
     );
     assert_eq!(
         prepared.traverse_logical_lanes,

@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 ./cargo_full test -p vyre-pass-engine
 ```
 
-Execute the optimizer's own passes as Vyre Programs, dispatched through the ProgramDispatcher seam.
+Execute optimizer passes as Vyre Programs through compiler-owned semantic compilation and admitted artifact submission.
 
 The crate lives at `vyre-pass-engine`. The `pass-engine` owner maintains its
 `pass-engine` testing contract.

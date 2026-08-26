@@ -54,6 +54,22 @@ other operation reaches byte identity across every backend.
 `conform/vyre-conform/tests/parity_matrix.rs` is the end-to-end wiring.
 `conform/vyre-conform/src/prover.rs` is the verdict shape.
 
+## How a production result is obtained
+
+`ProductionSession` holds an `Arc<dyn SemanticExecutor>`, a
+`SemanticExecutionPolicy` and the schedule-free `Program` under proof. Every
+submission crosses `SemanticExecutor::execute`: the executor compiles the
+program, admits its target payload, submits the frozen entry geometry the
+admitted artifact carries, and returns the artifact and payload identities
+alongside the output bytes. The session states no grid and no workgroup, so a
+conformance run and a release run submit the same bytes.
+
+`RegisteredSemanticExecutor` binds a session to one `BackendRegistration`. The
+policy takes its target facts from that registration's acquired device, an
+external-facts digest, `CompileObjective::MinimizeLatency`, the conformance
+search budget and an artifact ceiling. A backend row in the matrix therefore
+differs from another only in the device it acquires.
+
 ## Boundaries
 
 Conformance owns witness enumeration, the certificate and replay schemas,

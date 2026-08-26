@@ -10,12 +10,10 @@
 use vyre_foundation::ir::Program;
 use vyre_libs::graph::csr_frontier_queue::csr_queue_forward_traverse;
 use vyre_libs::graph::csr_queue_split::{
-    csr_queue_split_low_dispatch_grid, csr_queue_split_low_forward_traverse,
-    csr_queue_split_mixed_logical_lanes,
+    csr_queue_split_low_forward_traverse, csr_queue_split_mixed_logical_lanes,
 };
 use vyre_libs::graph::csr_queue_strided::{
-    csr_queue_strided_forward_dispatch_grid, csr_queue_strided_forward_traverse,
-    CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE,
+    csr_queue_strided_forward_traverse, CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE,
 };
 
 /// Lanes one workgroup covers in the one-lane-per-slot traversal.
@@ -51,6 +49,20 @@ pub(crate) const fn traverse_logical_lanes(queue_capacity: u32, row_strided: boo
     } else {
         queue_capacity as u64
     }
+}
+
+/// Launch shape for one lane per queue slot.
+fn lane_grid(queue_capacity: u32) -> [u32; 3] {
+    [
+        queue_capacity.div_ceil(QUEUE_TRAVERSE_WORKGROUP_X).max(1),
+        1,
+        1,
+    ]
+}
+
+/// Launch shape for a strided lane team per queue slot.
+fn strided_grid(queue_capacity: u32) -> [u32; 3] {
+    lane_grid(queue_capacity.saturating_mul(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE))
 }
 
 /// The single-kernel traversal of one active queue.
@@ -97,13 +109,9 @@ pub(crate) fn single_queue_traverse(
         )
     };
     let grid = if row_strided {
-        csr_queue_strided_forward_dispatch_grid(queue_capacity)
+        strided_grid(queue_capacity)
     } else {
-        [
-            queue_capacity.div_ceil(QUEUE_TRAVERSE_WORKGROUP_X).max(1),
-            1,
-            1,
-        ]
+        lane_grid(queue_capacity)
     };
 
     SingleQueueTraverse {
@@ -170,11 +178,11 @@ pub(crate) fn queue_traverse_plan(
         );
         return QueueTraversePlan {
             program,
-            grid: csr_queue_split_low_dispatch_grid(queue_capacity),
+            grid: lane_grid(queue_capacity),
             row_strided: true,
             split_high_degree: true,
             high_program: Some(high_program),
-            high_grid: csr_queue_strided_forward_dispatch_grid(high_degree_queue_capacity),
+            high_grid: strided_grid(high_degree_queue_capacity),
             logical_lanes: csr_queue_split_mixed_logical_lanes(
                 queue_capacity,
                 high_degree_queue_capacity,

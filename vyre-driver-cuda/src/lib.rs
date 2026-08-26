@@ -64,12 +64,6 @@ pub mod profiler;
 pub(crate) mod regex_hardware_comparison;
 /// CUDA backend registration and device-buffer substrate adapter.
 pub(crate) mod registration;
-/// CUDA-resident `ProgramDispatcher`: allocate once, upload once, dispatch
-/// many times against the same device buffers. This is the persistent
-/// execution path the pass engine's multi-pass pipeline runs on. External
-/// parity tests reach in through the `CudaProgramDispatcher` re-export below.
-pub(crate) mod resident_dispatcher;
-pub(crate) mod resident_dispatcher_trait;
 /// Repeated execution over persistent CUDA-resident graph state.
 pub(crate) mod resident_graph_session;
 mod stream;
@@ -166,7 +160,6 @@ pub use regex_hardware_comparison::{
     cuda_regex_hardware_comparison_evidence, cuda_regex_software_fallback_comparison_evidence,
     CudaRegexHardwareComparisonEvidence, CUDA_REGEX_HARDWARE_COMPARISON_SCHEMA_VERSION,
 };
-pub use resident_dispatcher::CudaProgramDispatcher;
 pub use resident_graph_session::{
     format_validated_cuda_resident_graph_session_evidence_csv, plan_cuda_resident_graph_session,
     resident_graph_session_speedup_sample, CudaResidentGraphReadback,

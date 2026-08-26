@@ -9,11 +9,12 @@ use super::natural_gradient_autotuner::{
     precondition_autotune_gradient_fixed_via_with_scratch_into, NaturalGradientGpuScratch,
 };
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
-    write_zero_bytes,
+    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::differentiable::softmax_step;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     argmin_cost_witness, differentiable_autotune_gradient_witness_into,
@@ -43,17 +44,19 @@ pub struct NaturalDifferentiableAutotuneGpuScratch {
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when there are no candidates, the candidate count
+/// Returns [`SemanticExecutionError`] when there are no candidates, the candidate count
 /// cannot be represented by the primitive, or the backend returns malformed
 /// output.
 pub fn pick_config_pre_exp_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     pre_exp_fixed: &[u32],
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut scratch = DifferentiableAutotuneGpuScratch::default();
     let mut out = Vec::new();
     pick_config_pre_exp_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         pre_exp_fixed,
         &mut scratch,
         &mut out,
@@ -65,47 +68,51 @@ pub fn pick_config_pre_exp_fixed_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when there are no candidates, the candidate count
+/// Returns [`SemanticExecutionError`] when there are no candidates, the candidate count
 /// cannot be represented by the primitive, or the backend returns malformed
 /// output.
 pub fn pick_config_pre_exp_fixed_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     pre_exp_fixed: &[u32],
     scratch: &mut DifferentiableAutotuneGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if pre_exp_fixed.is_empty() {
-        return Err(DispatchError::BadInputs(
+        return Err(SemanticExecutionError::InvalidRequest(
             "Fix: pick_config_pre_exp_fixed_via requires at least one candidate.".to_string(),
         ));
     }
     let n = u32::try_from(pre_exp_fixed.len()).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: pick_config_pre_exp_fixed_via candidate count {} exceeds u32::MAX.",
             pre_exp_fixed.len()
         ))
     })?;
     let output_bytes = pre_exp_fixed
-        .len()
-        .checked_mul(std::mem::size_of::<u32>())
-        .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
-                "Fix: pick_config_pre_exp_fixed_via output byte count overflows usize for {} candidates.",
-                pre_exp_fixed.len()
-            ))
-        })?;
+    .len()
+    .checked_mul(std::mem::size_of::<u32>())
+    .ok_or_else(|| {
+        SemanticExecutionError::InvalidRequest(format!(
+            "Fix: pick_config_pre_exp_fixed_via output byte count overflows usize for {} candidates.",
+            pre_exp_fixed.len()
+        ))
+    })?;
 
     let program = softmax_step("pre_exp", "out", n);
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], pre_exp_fixed);
     write_zero_bytes(&mut scratch.inputs[1], output_bytes);
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs[..2],
-        Some([ceil_div_u32(n, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: pick_config_pre_exp_fixed_via expected one output buffer, got {}.",
             outputs.len()
         )));
@@ -116,6 +123,7 @@ pub fn pick_config_pre_exp_fixed_via_with_scratch_into(
         "pick_config_pre_exp_fixed_via",
         out,
     )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Return fixed-point gradient magnitudes for the soft-picked cost.
@@ -126,28 +134,30 @@ pub fn pick_config_pre_exp_fixed_via_with_scratch_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] under the same conditions as
+/// Returns [`SemanticExecutionError`] under the same conditions as
 /// [`pick_config_pre_exp_fixed_via`].
 pub fn config_gradient_magnitude_pre_exp_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     pre_exp_fixed: &[u32],
-) -> Result<Vec<u32>, DispatchError> {
-    pick_config_pre_exp_fixed_via(dispatcher, pre_exp_fixed)
+) -> Result<Vec<u32>, SemanticExecutionError> {
+    pick_config_pre_exp_fixed_via(dispatcher, policy, pre_exp_fixed)
 }
 
 /// Return fixed-point gradient magnitudes into caller-owned output storage.
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] under the same conditions as
+/// Returns [`SemanticExecutionError`] under the same conditions as
 /// [`pick_config_pre_exp_fixed_via_with_scratch_into`].
 pub fn config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     pre_exp_fixed: &[u32],
     scratch: &mut DifferentiableAutotuneGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
-    pick_config_pre_exp_fixed_via_with_scratch_into(dispatcher, pre_exp_fixed, scratch, out)
+) -> Result<(), SemanticExecutionError> {
+    pick_config_pre_exp_fixed_via_with_scratch_into(dispatcher, policy, pre_exp_fixed, scratch, out)
 }
 
 /// Compute the Fisher-preconditioned fixed-point autotune gradient.
@@ -162,17 +172,19 @@ pub fn config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when candidate counts overflow, the Fisher block
+/// Returns [`SemanticExecutionError`] when candidate counts overflow, the Fisher block
 /// has the wrong shape, or backend execution/readback fails.
 pub fn natural_config_gradient_magnitude_pre_exp_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     pre_exp_fixed: &[u32],
     m_inv_sqrt_fixed: &[u32],
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut scratch = NaturalDifferentiableAutotuneGpuScratch::default();
     let mut out = Vec::new();
     natural_config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         pre_exp_fixed,
         m_inv_sqrt_fixed,
         &mut scratch,
@@ -186,28 +198,31 @@ pub fn natural_config_gradient_magnitude_pre_exp_fixed_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or backend execution fails.
 pub fn natural_config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     pre_exp_fixed: &[u32],
     m_inv_sqrt_fixed: &[u32],
     scratch: &mut NaturalDifferentiableAutotuneGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let n = u32::try_from(pre_exp_fixed.len()).map_err(|_| {
-        DispatchError::BadInputs(format!(
-            "Fix: natural_config_gradient_magnitude_pre_exp_fixed_via candidate count {} exceeds u32::MAX.",
-            pre_exp_fixed.len()
-        ))
-    })?;
+    SemanticExecutionError::InvalidRequest(format!(
+        "Fix: natural_config_gradient_magnitude_pre_exp_fixed_via candidate count {} exceeds u32::MAX.",
+        pre_exp_fixed.len()
+    ))
+})?;
     pick_config_pre_exp_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         pre_exp_fixed,
         &mut scratch.softmax,
         &mut scratch.probabilities,
     )?;
     precondition_autotune_gradient_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         m_inv_sqrt_fixed,
         &scratch.probabilities,
         n,
@@ -280,7 +295,6 @@ pub(crate) fn reference_config_gradient_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::Program;
 
     fn u32_slice_to_le_bytes(values: &[u32]) -> Vec<u8> {
         vyre_primitives::wire::pack_u32_slice(values)
@@ -288,49 +302,57 @@ mod tests {
 
     struct DifferentiableDispatcher;
 
-    impl ProgramDispatcher for DifferentiableDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for DifferentiableDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            match inputs.len() {
-                2 => {
-                    let pre_exp = crate::dispatch_buffers::read_u32s(&inputs[0]);
-                    let output_seed = crate::dispatch_buffers::read_u32s(&inputs[1]);
-                    assert_eq!(output_seed, vec![0; pre_exp.len()]);
-                    let sum: u64 = pre_exp.iter().map(|&value| u64::from(value)).sum();
-                    let sum = sum.max(1);
-                    let probabilities: Vec<u32> = pre_exp
-                        .iter()
-                        .map(|&value| ((u64::from(value) << 16) / sum) as u32)
-                        .collect();
-                    Ok(vec![u32_slice_to_le_bytes(&probabilities)])
-                }
-                3 => {
-                    let matrix = crate::dispatch_buffers::read_u32s(&inputs[0]);
-                    let grad = crate::dispatch_buffers::read_u32s(&inputs[1]);
-                    assert_eq!(inputs[2].len(), grad.len() * std::mem::size_of::<u32>());
-                    let n = grad.len();
-                    assert_eq!(matrix.len(), n * n);
-                    let mut out = vec![0u32; n];
-                    for i in 0..n {
-                        let mut acc = 0u64;
-                        for j in 0..n {
-                            acc = acc.wrapping_add(
-                                ((u64::from(matrix[i * n + j])) * u64::from(grad[j])) >> 16,
-                            );
-                        }
-                        out[i] = acc as u32;
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                match inputs.len() {
+                    2 => {
+                        let pre_exp = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                        let output_seed = crate::dispatch_buffers::read_u32s(&inputs[1]);
+                        assert_eq!(output_seed, vec![0; pre_exp.len()]);
+                        let sum: u64 = pre_exp.iter().map(|&value| u64::from(value)).sum();
+                        let sum = sum.max(1);
+                        let probabilities: Vec<u32> = pre_exp
+                            .iter()
+                            .map(|&value| ((u64::from(value) << 16) / sum) as u32)
+                            .collect();
+                        Ok(vec![u32_slice_to_le_bytes(&probabilities)])
                     }
-                    Ok(vec![u32_slice_to_le_bytes(&out)])
+                    3 => {
+                        let matrix = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                        let grad = crate::dispatch_buffers::read_u32s(&inputs[1]);
+                        assert_eq!(inputs[2].len(), grad.len() * std::mem::size_of::<u32>());
+                        let n = grad.len();
+                        assert_eq!(matrix.len(), n * n);
+                        let mut out = vec![0u32; n];
+                        for i in 0..n {
+                            let mut acc = 0u64;
+                            for j in 0..n {
+                                acc = acc.wrapping_add(
+                                    ((u64::from(matrix[i * n + j])) * u64::from(grad[j])) >> 16,
+                                );
+                            }
+                            out[i] = acc as u32;
+                        }
+                        Ok(vec![u32_slice_to_le_bytes(&out)])
+                    }
+                    other => {
+                        panic!(
+                            "Fix: unexpected differentiable autotune dispatch input count {other}."
+                        )
+                    }
                 }
-                other => {
-                    panic!("Fix: unexpected differentiable autotune dispatch input count {other}.")
-                }
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
             }
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -340,9 +362,12 @@ mod tests {
 
     #[test]
     fn fixed_pick_config_normalizes_pre_exp_weights() {
-        let out =
-            pick_config_pre_exp_fixed_via(&DifferentiableDispatcher, &[65_536, 131_072, 65_536])
-                .expect("Fix: dispatch should normalize pre-exp weights");
+        let out = pick_config_pre_exp_fixed_via(
+            &DifferentiableDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[65_536, 131_072, 65_536],
+        )
+        .expect("Fix: dispatch should normalize pre-exp weights");
         assert_eq!(out, vec![16_384, 32_768, 16_384]);
     }
 
@@ -357,6 +382,7 @@ mod tests {
         let out_ptr = out.as_ptr();
         pick_config_pre_exp_fixed_via_with_scratch_into(
             &DifferentiableDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[65_536, 65_536],
             &mut scratch,
             &mut out,
@@ -374,6 +400,7 @@ mod tests {
         let mut out = Vec::new();
         config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
             &DifferentiableDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[65_536, 196_608],
             &mut scratch,
             &mut out,
@@ -390,6 +417,7 @@ mod tests {
 
         let out = natural_config_gradient_magnitude_pre_exp_fixed_via(
             &DifferentiableDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[one, one],
             &m_inv_sqrt,
         )
@@ -409,6 +437,7 @@ mod tests {
 
         natural_config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
             &DifferentiableDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[one, one],
             &m_inv_sqrt,
             &mut scratch,
@@ -421,6 +450,7 @@ mod tests {
 
         natural_config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
             &DifferentiableDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[one, one],
             &m_inv_sqrt,
             &mut scratch,
@@ -440,10 +470,14 @@ mod tests {
 
     #[test]
     fn fixed_pick_config_rejects_empty_candidates() {
-        let err = pick_config_pre_exp_fixed_via(&DifferentiableDispatcher, &[])
-            .expect_err("empty candidate grids are invalid");
+        let err = pick_config_pre_exp_fixed_via(
+            &DifferentiableDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[],
+        )
+        .expect_err("empty candidate grids are invalid");
         match err {
-            DispatchError::BadInputs(message) => {
+            SemanticExecutionError::InvalidRequest(message) => {
                 assert!(message.contains("requires at least one candidate"));
             }
             other => panic!("expected BadInputs, got {other:?}"),

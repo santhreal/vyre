@@ -48,8 +48,6 @@ pub const BINDING_DENSITY_ACTIVE: u32 = BINDING_PRIMITIVE_START + 4;
 pub const DENSITY_ACTIVE_BUFFER: &str = "density_active";
 /// Canonical workgroup size for persistent BFS programs.
 pub const PERSISTENT_BFS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
-/// One-block dispatch grid used by the compact single-workgroup BFS path.
-pub(crate) const PERSISTENT_BFS_SINGLE_DISPATCH_GRID: [u32; 3] = [1, 1, 1];
 
 /// The persistent-BFS buffer bundle: two frontier bitsets, a changed array, a
 /// converged array, and the optional per-iteration density array.
@@ -104,27 +102,6 @@ impl PersistentBfsBuffers<'_> {
             ));
         }
     }
-}
-
-/// Dispatch grid for a single persistent-BFS query.
-#[must_use]
-pub const fn persistent_bfs_single_dispatch_grid(node_count: u32) -> [u32; 3] {
-    [persistent_bfs_grid_x(node_count), 1, 1]
-}
-
-/// Dispatch grid for a batched persistent-BFS query set.
-#[must_use]
-pub const fn persistent_bfs_batch_dispatch_grid(node_count: u32, query_count: u32) -> [u32; 3] {
-    if query_count == 0 {
-        [1, 1, 1]
-    } else {
-        [persistent_bfs_grid_x(node_count), query_count, 1]
-    }
-}
-
-/// Grid X for a resident persistent-BFS launch: one lane per node.
-const fn persistent_bfs_grid_x(node_count: u32) -> u32 {
-    vyre_primitives::lane_grid(node_count, PERSISTENT_BFS_WORKGROUP_SIZE[0])[0]
 }
 
 /// Program graph shape with primitive-owned empty-edge padding.

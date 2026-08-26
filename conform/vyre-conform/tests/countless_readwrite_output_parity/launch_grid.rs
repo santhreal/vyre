@@ -1,5 +1,4 @@
-//! The launch grid resolved from a runtime-sized buffer, and the explicit
-//! override that must survive it.
+//! Launch geometry resolved for a runtime-sized buffer and frozen into its artifact.
 
 use vyre::ir::{BufferDecl, DataType};
 use vyre_conform::production::ProductionSession;
@@ -39,53 +38,30 @@ fn countless_read_write_launches_enough_threads_for_every_element() {
     }
 }
 
-/// A caller who pins `grid_override` keeps exactly the launch they asked for.
+/// Artifact submission retains the compiler-selected grid for the resolved element count.
 ///
-/// Locks out the grid re-inference over-applying. Re-deriving the grid from the
-/// resolved element count must happen only when the backend inferred that grid
-/// in the first place. If it starts overwriting an explicit `grid_override`, a
-/// caller who deliberately launched a partial or oversized grid silently gets a
-/// different dispatch than the one they wrote.
+/// The materialized instance has no submission-time geometry input. A launch
+/// wide enough to cover this buffer therefore comes from the admitted payload.
 #[test]
-fn an_explicit_grid_override_is_not_replaced_by_the_resolved_element_count() {
-    // 4096 elements against a single workgroup. No workgroup size this backend
-    // picks can cover that in one launch, so the assertions below do not depend
-    // on which lane count the compiler chose.
+fn artifact_submission_retains_the_resolved_element_count_geometry() {
     const WIDE: u32 = 4096;
     let program = xor_program(BufferDecl::read_write("out", 1, DataType::U32), WIDE);
     let inputs = inputs_for(&program, WIDE as usize * 4, WIDE);
     let borrowed = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
     let registration = vyre_driver::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
         .expect("WGPU artifact target must be registered");
-    let production =
-        ProductionSession::compile_with_representative_inputs(&program, &borrowed, registration)
-            .expect("WGPU adapter required");
-    let pinned = production
-        .submit_with_invocation_grid(&borrowed, [1, 1, 1])
-        .expect("a pinned grid must still submit");
+    let production = ProductionSession::from_registration(&program, registration)
+        .expect("WGPU adapter required");
+    let execution = production.submit(&borrowed).expect("artifact submission");
 
     assert_eq!(
-        pinned[0].len(),
+        execution.outputs[0].len(),
         WIDE as usize * 4,
-        "the readback length is set by the resolved element count, not by the pinned grid"
+        "the readback length and admitted launch geometry use the resolved element count"
     );
-    // Element 0 is inside the one workgroup that was launched: 0 ^ 0x0F == 15.
     assert_eq!(
-        pinned[0][..4],
-        [15, 0, 0, 0],
-        "the workgroup that was launched must still write its own elements"
-    );
-    // The last element is far outside it and must keep the zero it was seeded
-    // with. If the override were silently widened to cover all 4096 elements,
-    // this would hold 4095 ^ 0x0F.
-    assert_eq!(
-        pinned[0][WIDE as usize * 4 - 4..],
-        [0, 0, 0, 0],
-        "a one-workgroup override must NOT have been widened into a full launch"
-    );
-    assert_ne!(
-        pinned[0],
+        execution.outputs[0],
         expected_bytes(WIDE),
-        "a pinned partial grid must not produce the full-launch result"
+        "caller input bindings must not resize the compiler-selected launch"
     );
 }

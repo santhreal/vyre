@@ -1,4 +1,4 @@
-//! Production compiler, target payload, materialization, and submission route.
+//! Production semantic compilation, artifact admission, and submission route.
 
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -8,27 +8,20 @@ use std::thread;
 use std::time::Duration;
 
 use thiserror::Error;
-use vyre_driver::{BackendRegistration, BindingPlan, DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferDecl, Program, ProgramGraph};
-use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
-use vyre_runtime::artifact_admission::{ArtifactSession, ArtifactSessionError};
+use vyre_driver::{BackendRegistration, BindingPlan};
+use vyre_foundation::ir::{BufferDecl, GraphValueId, Program, ProgramGraph};
+use vyre_foundation::logical::LogicalProgramGraph;
+use vyre_megakernel::{
+    CompileObjective, Digest, ExternalFacts, SearchBudget, SemanticExecutionError,
+    SemanticExecutionOutput, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
+};
+use vyre_runtime::RegisteredSemanticExecutor;
 
 const MAX_ARTIFACT_BYTES: u64 = 64 * 1024 * 1024;
 const CONFORMANCE_SEARCH_BUDGET: SearchBudget =
     SearchBudget::new(256, 100_000, 1, 1, 1_000_000_000);
 
 /// Ceiling on one bounded step against a registered backend.
-///
-/// Compilation, materialization and submission all end in a device driver call,
-/// and a driver call carries no timeout of its own: a kernel that never retires,
-/// a driver object freed under a live handle, or a device that fell off the bus
-/// blocks the calling thread with no error and no diagnostic. A conformance run
-/// that inherits that block reports nothing at all, including nothing about the
-/// operations it never reached, so every step below is measured against this
-/// ceiling and reports the operation and the backend that exceeded it.
-///
-/// Two minutes is orders of magnitude above the slowest conformance dispatch in
-/// this workspace, which compiles one small program and launches it once.
 pub const PRODUCTION_STEP_DEADLINE: Duration = Duration::from_secs(120);
 
 /// Operation identity a bounded step reports for a program carrying none.
@@ -41,10 +34,10 @@ pub enum ProductionError {
     /// Program-to-graph adaptation or compiler validation failed.
     #[error("production conformance compilation failed: {0}")]
     Compile(String),
-    /// Artifact materialization or submission failed.
+    /// Semantic compilation, admission, submission, or output projection failed.
     #[error(transparent)]
-    Runtime(#[from] ArtifactSessionError),
-    /// Backend acquisition or dispatch failed on the non-artifact route.
+    Semantic(#[from] SemanticExecutionError),
+    /// Backend acquisition failed before compiler target facts could be recorded.
     #[error("backend dispatch route failed: {0}")]
     Dispatch(String),
     /// A bounded step did not finish inside [`PRODUCTION_STEP_DEADLINE`].
@@ -73,14 +66,14 @@ pub enum ProductionError {
         step: &'static str,
         /// Operation the step was running.
         op_id: String,
-        /// Backend the step was running on.
+        /// Backend the bounded step was running on.
         backend: &'static str,
     },
-    /// A bounded step was abandoned on expiry and the session refuses more work.
+    /// A bounded step was abandoned on expiry and the executor refuses more work.
     #[error(
         "`{op_id}` on backend `{backend}` abandoned a step that exceeded its deadline. \
          Fix: the abandoned step may still be inside a driver call against this \
-         artifact; compile a fresh session instead of reusing this one."
+         artifact; construct a fresh executor instead of reusing this one."
     )]
     Abandoned {
         /// Operation whose step was abandoned.
@@ -94,14 +87,7 @@ pub enum ProductionError {
 ///
 /// The step runs on its own thread. A call already blocked inside a device driver
 /// cannot be cancelled from outside it, so an expired step is abandoned rather
-/// than joined: the caller receives [`ProductionError::Deadline`] and continues,
-/// and the abandoned thread holds only the resources of the step that failed.
-///
-/// # Errors
-///
-/// Returns [`ProductionError::Deadline`] when `deadline` elapses first,
-/// [`ProductionError::Panicked`] when the step panics, and whatever `work`
-/// returns otherwise.
+/// than joined.
 pub fn run_bounded_step<T: Send + 'static>(
     step: &'static str,
     op_id: &str,
@@ -109,10 +95,13 @@ pub fn run_bounded_step<T: Send + 'static>(
     deadline: Duration,
     work: impl FnOnce() -> Result<T, ProductionError> + Send + 'static,
 ) -> Result<T, ProductionError> {
-    let (sender, receiver) = mpsc::channel();
+    let (sender, receiver) = mpsc::sync_channel(1);
+    let thread_name = format!("vyre-conform-{step}-{backend}");
     thread::Builder::new()
-        .name(format!("vyre-conform {step}"))
-        .spawn(move || drop(sender.send(work())))
+        .name(thread_name)
+        .spawn(move || {
+            let _ = sender.send(work());
+        })
         .map_err(|error| {
             ProductionError::Dispatch(format!(
                 "could not start a bounded {step} thread for `{op_id}` on `{backend}`: {error}. \
@@ -135,188 +124,128 @@ pub fn run_bounded_step<T: Send + 'static>(
     }
 }
 
-/// Materialized production artifact used for repeated conformance submissions.
+/// Compiler-selected artifact and payload identities with canonical program outputs.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProductionExecution {
+    /// Neutral admitted artifact identity.
+    pub artifact: Digest,
+    /// Authenticated target payload identity submitted to the device.
+    pub payload: Digest,
+    /// Writable program buffers in declaration order.
+    pub outputs: Vec<Vec<u8>>,
+}
+
+/// Reusable semantic execution boundary for one conformance program.
+///
+/// Every submission crosses [`SemanticExecutor`]. The executor compiles the
+/// schedule-free program, admits its target payload, submits only its frozen
+/// entry geometry, and returns the identities of the admitted bytes.
 pub struct ProductionSession {
-    neutral: Digest,
-    payload: Digest,
-    /// Shared so a bounded submission can own a reference while the caller keeps
-    /// this handle.
-    session: Arc<ArtifactSession>,
-    /// Shared for the same reason: the bounded submission projects its outputs in
-    /// this Program's buffer declaration order, not in canonical ABI slot order.
+    executor: Arc<dyn SemanticExecutor>,
+    policy: SemanticExecutionPolicy,
     program: Arc<Program>,
     op_id: String,
     backend: &'static str,
-    /// Set once a bounded step was abandoned on expiry.
-    ///
-    /// The abandoned thread still holds this session and may still be inside a
-    /// driver call against the same materialized artifact and the same bindings,
-    /// so a second submission would run concurrently with work the caller can
-    /// neither see nor stop. The session refuses instead.
     abandoned: AtomicBool,
 }
 
 impl ProductionSession {
-    /// Compile a program with no host inputs.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ProductionError`] when the program needs representative host
-    /// inputs for measured compilation, or compilation and materialization fail.
-    pub fn compile(
+    /// Construct a semantic executor and explicit policy from registered target facts.
+    pub fn from_registration(
         program: &Program,
         registration: &'static BackendRegistration,
     ) -> Result<Self, ProductionError> {
-        Self::compile_with_representative_inputs(program, &[], registration)
+        let policy = semantic_policy_for_registration(registration)?;
+        Ok(Self::with_executor(
+            program,
+            Arc::new(RegisteredSemanticExecutor::new(registration)),
+            policy,
+            registration.id,
+        ))
     }
 
-    /// Compile, target-compile, authenticate, and materialize one frontend program.
-    ///
-    /// `representative_inputs` uses Program host-input order and supplies the
-    /// exact workload bytes used for on-device finalist measurement.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ProductionError`] when input planning, compilation,
-    /// materialization, or the bounded compile step fails.
-    pub fn compile_with_representative_inputs(
+    /// Bind a caller-supplied semantic executor and explicit compiler policy.
+    #[must_use]
+    pub fn with_executor(
         program: &Program,
-        representative_inputs: &[&[u8]],
-        registration: &'static BackendRegistration,
-    ) -> Result<Self, ProductionError> {
-        let op_id = program.entry_op_id().unwrap_or(UNNAMED_OP_ID).to_string();
-        let backend = registration.id;
-        let owned_program = Arc::new(program.clone());
-        let compiled_program = Arc::clone(&owned_program);
-        let owned_inputs = representative_inputs
-            .iter()
-            .map(|bytes| bytes.to_vec())
-            .collect::<Vec<_>>();
-        let session = run_bounded_step(
-            "compilation",
-            &op_id,
-            backend,
-            PRODUCTION_STEP_DEADLINE,
-            move || compile_artifact_session(&compiled_program, owned_inputs, registration),
-        )?;
-        let neutral = session.artifact()?;
-        let payload = session.payload()?;
-        Ok(Self {
-            neutral,
-            payload,
-            session: Arc::new(session),
-            program: owned_program,
-            op_id,
+        executor: Arc<dyn SemanticExecutor>,
+        policy: SemanticExecutionPolicy,
+        backend: &'static str,
+    ) -> Self {
+        Self {
+            executor,
+            policy,
+            program: Arc::new(program.clone()),
+            op_id: program.entry_op_id().unwrap_or(UNNAMED_OP_ID).to_string(),
             backend,
             abandoned: AtomicBool::new(false),
-        })
+        }
     }
 
-    /// Immutable neutral artifact identity used by live and packaged routes.
-    #[must_use]
-    pub const fn artifact_digest(&self) -> Digest {
-        self.neutral
-    }
-
-    /// Authenticated target payload identity materialized by this session.
-    #[must_use]
-    pub const fn payload_digest(&self) -> Digest {
-        self.payload
-    }
-
-    /// Submit caller inputs and return writable buffers in binding order.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ProductionError`] when the backend rejects the inputs or the
-    /// bounded submission exceeds [`PRODUCTION_STEP_DEADLINE`].
-    pub fn submit(&self, inputs: &[&[u8]]) -> Result<Vec<Vec<u8>>, ProductionError> {
-        self.submit_bounded("submission", inputs, None)
-    }
-
-    /// Submit caller inputs with a typed invocation-grid override.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ProductionError`] when the grid is rejected, the backend rejects
-    /// the inputs, or the bounded submission exceeds
-    /// [`PRODUCTION_STEP_DEADLINE`].
-    pub fn submit_with_invocation_grid(
-        &self,
-        inputs: &[&[u8]],
-        grid: [u32; 3],
-    ) -> Result<Vec<Vec<u8>>, ProductionError> {
-        self.submit_bounded("grid-pinned submission", inputs, Some(grid))
-    }
-
-    fn submit_bounded(
-        &self,
-        step: &'static str,
-        inputs: &[&[u8]],
-        grid: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, ProductionError> {
+    /// Execute caller inputs through semantic compilation and admitted artifact submission.
+    pub fn submit(&self, inputs: &[&[u8]]) -> Result<ProductionExecution, ProductionError> {
         if self.abandoned.load(Ordering::Acquire) {
             return Err(ProductionError::Abandoned {
                 op_id: self.op_id.clone(),
                 backend: self.backend,
             });
         }
-        // The bounded step outlives this call when it exceeds its deadline, so it
-        // cannot borrow the caller's input slices.
-        let owned = inputs
+        let owned_inputs = inputs
             .iter()
             .map(|bytes| bytes.to_vec())
             .collect::<Vec<_>>();
-        let session = Arc::clone(&self.session);
+        let executor = Arc::clone(&self.executor);
+        let policy = self.policy.clone();
         let program = Arc::clone(&self.program);
         let outcome = run_bounded_step(
-            step,
+            "semantic execution",
             &self.op_id,
             self.backend,
             PRODUCTION_STEP_DEADLINE,
-            move || {
-                let borrowed = owned.iter().map(Vec::as_slice).collect::<Vec<_>>();
-                let completion = match grid {
-                    Some(grid) => {
-                        let mut bindings = session.host_bindings(&borrowed)?;
-                        bindings
-                            .set_invocation_grid(grid)
-                            .map_err(ArtifactSessionError::from)?;
-                        session.submit_and_wait(bindings)?
-                    }
-                    None => session.submit_host_inputs(&borrowed)?,
-                };
-                Ok(session.program_outputs(&program, &completion)?)
-            },
+            move || execute_program(executor.as_ref(), &policy, &program, &owned_inputs),
         );
         if matches!(outcome, Err(ProductionError::Deadline { .. })) {
             self.abandoned.store(true, Ordering::Release);
         }
         outcome
     }
+
+    /// What a passing case on this route proves, in the words a report records.
+    #[must_use]
+    pub const fn proof(&self) -> &'static str {
+        "through canonical semantic artifact submission"
+    }
 }
 
-/// Compile and materialize one program on `registration`, without a bound.
-///
-/// [`ProductionSession::compile_with_representative_inputs`] runs this under
-/// [`PRODUCTION_STEP_DEADLINE`].
-fn compile_artifact_session(
-    program: &Program,
-    representative_inputs: Vec<Vec<u8>>,
+/// Construct the explicit compiler policy from immutable registered target facts.
+pub fn semantic_policy_for_registration(
     registration: &'static BackendRegistration,
-) -> Result<ArtifactSession, ProductionError> {
-    let borrowed_inputs = representative_inputs
-        .iter()
-        .map(Vec::as_slice)
-        .collect::<Vec<_>>();
+) -> Result<SemanticExecutionPolicy, ProductionError> {
+    let target_facts = registration
+        .acquire()
+        .map_err(|error| ProductionError::Dispatch(error.to_string()))?
+        .device_profile()
+        .compile_facts();
+    Ok(SemanticExecutionPolicy::new(
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        target_facts,
+        CompileObjective::MinimizeLatency,
+        CONFORMANCE_SEARCH_BUDGET,
+        MAX_ARTIFACT_BYTES,
+    ))
+}
+
+fn execute_program(
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
+    program: &Program,
+    inputs: &[Vec<u8>],
+) -> Result<ProductionExecution, ProductionError> {
+    let borrowed_inputs = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
     let binding_plan = BindingPlan::from_borrowed_inputs(program, &borrowed_inputs)
         .map_err(|error| ProductionError::Compile(error.to_string()))?;
     let mut runtime_counts = BTreeMap::new();
-    for (&buffer_idx, bytes) in binding_plan
-        .input_indices
-        .iter()
-        .zip(&representative_inputs)
-    {
+    for (&buffer_idx, bytes) in binding_plan.input_indices.iter().zip(inputs) {
         let buffer = &program.buffers()[buffer_idx];
         if buffer.count() == 0 {
             runtime_counts.insert(
@@ -328,47 +257,74 @@ fn compile_artifact_session(
     let graph =
         ProgramGraph::from_program_with_runtime_counts("main", program.clone(), &runtime_counts)
             .map_err(|error| ProductionError::Compile(error.to_string()))?;
-    let mut representative_map = BTreeMap::new();
-    for (bytes, &buffer_idx) in representative_inputs
-        .into_iter()
-        .zip(&binding_plan.input_indices)
-    {
-        let buffer = &program.buffers()[buffer_idx];
-        let graph_value = graph
-            .values()
-            .iter()
-            .find(|value| value.name == buffer.name())
-            .ok_or_else(|| {
-                ProductionError::Compile(format!(
-                    "graph value for input buffer `{}` not found",
-                    buffer.name()
-                ))
-            })?;
-        representative_map.insert(graph_value.id, bytes);
+    let logical = LogicalProgramGraph::validate(&graph, &policy.external_facts().symbolic_bindings)
+        .map_err(|error| {
+            ProductionError::Semantic(SemanticExecutionError::InvalidRequest(format!(
+                "logical graph validation failed: {error}. Fix: supply exact dynamic extent bindings"
+            )))
+        })?;
+    let node = graph.nodes().first().ok_or_else(|| {
+        ProductionError::Semantic(SemanticExecutionError::InvalidRequest(
+            "single-program graph has no node. Fix: supply one executable program".to_string(),
+        ))
+    })?;
+    if node.inputs.len() != inputs.len() {
+        return Err(ProductionError::Semantic(
+            SemanticExecutionError::InvalidRequest(format!(
+                "graph requires {} input value(s), received {}. Fix: supply one byte buffer per canonical graph input",
+                node.inputs.len(),
+                inputs.len()
+            )),
+        ));
     }
-    let device = registration
-        .acquire()
-        .map_err(|error| ProductionError::Dispatch(error.to_string()))?
-        .device_profile()
-        .compile_facts();
-    let facts = ExternalFacts::new(Digest([0; 32]), BTreeMap::new());
-    let request = CompileRequest::new(
-        graph,
-        facts,
-        device,
-        CONFORMANCE_SEARCH_BUDGET,
-        MAX_ARTIFACT_BYTES,
-    )
-    .with_representative_inputs(representative_map)
-    .validate()
-    .map_err(|error| ProductionError::Compile(error.to_string()))?;
-    Ok(ArtifactSession::compile(registration, &request)?)
+    let output_order = node.outputs.clone();
+    let request_inputs = node
+        .inputs
+        .iter()
+        .zip(inputs)
+        .map(|(port, bytes)| (port.value, bytes.as_slice()))
+        .collect::<BTreeMap<GraphValueId, &[u8]>>();
+    let request = SemanticExecutionRequest::new(
+        &logical,
+        request_inputs,
+        policy.external_facts().clone(),
+        policy.target_facts(),
+        policy.objective(),
+        policy.budget(),
+        policy.max_artifact_bytes(),
+    )?;
+    let SemanticExecutionOutput {
+        artifact,
+        payload,
+        mut outputs,
+    } = executor.execute(&request)?;
+    let mut ordered = Vec::with_capacity(output_order.len());
+    for value in output_order {
+        let bytes = outputs.remove(&value).ok_or_else(|| {
+            ProductionError::Semantic(SemanticExecutionError::Backend(format!(
+                "executor omitted canonical output value {}. Fix: return every graph output exactly once",
+                value.0
+            )))
+        })?;
+        ordered.push(bytes);
+    }
+    if !outputs.is_empty() {
+        return Err(ProductionError::Semantic(SemanticExecutionError::Backend(
+            format!(
+                "executor returned {} undeclared output value(s). Fix: return only canonical graph outputs",
+                outputs.len()
+            ),
+        )));
+    }
+    Ok(ProductionExecution {
+        artifact,
+        payload,
+        outputs: ordered,
+    })
 }
 
 fn runtime_element_count(buffer: &BufferDecl, bytes: &[u8]) -> Result<u64, ProductionError> {
-    let element_bits = if let Some(bits) = buffer.element().bit_width() {
-        bits
-    } else if let Some(element_bytes) = buffer.element().size_bytes() {
+    let element_bits = if let Some(element_bytes) = buffer.element().size_bytes() {
         element_bytes.checked_mul(8).ok_or_else(|| {
             ProductionError::Compile(format!(
                 "runtime-sized input `{}` element width overflowed host addressing",
@@ -403,148 +359,12 @@ fn runtime_element_count(buffer: &BufferDecl, bytes: &[u8]) -> Result<u64, Produ
             buffer.element()
         )));
     }
-    u64::try_from(total_bits / element_bits).map_err(|error| {
+    u64::try_from(total_bits / element_bits).map_err(|_| {
         ProductionError::Compile(format!(
-            "runtime-sized input `{}` element count exceeds u64: {error}",
+            "runtime-sized input `{}` element count exceeds u64",
             buffer.name()
         ))
     })
-}
-
-/// How one program is executed on one backend.
-///
-/// A backend that registers a target compiler and a materializer is exercised
-/// through the production artifact route, which is the path a caller's program
-/// takes in a release. The reference oracle registers neither: it interprets a
-/// neutral program and has no target payload to authenticate or materialize.
-/// Demanding a facet a registration declares absent measures the registration
-/// rather than the operation, so the route follows what the registration says it
-/// has.
-#[non_exhaustive]
-pub enum ExecutionRoute {
-    /// Compiled, authenticated and materialized target artifact.
-    Artifact(ProductionSession),
-    /// The backend's own dispatch entry point, for a backend with no artifact.
-    #[non_exhaustive]
-    Dispatch {
-        /// Acquired backend, shared so a bounded dispatch can own a reference.
-        backend: Arc<dyn VyreBackend>,
-        /// Program dispatched on every submission.
-        program: Program,
-        /// Operation identity reported when a bounded dispatch exceeds its
-        /// ceiling.
-        op_id: String,
-        /// Backend identity reported alongside it.
-        backend_id: &'static str,
-    },
-}
-
-impl ExecutionRoute {
-    /// Open the route `registration` declares it supports for an input-free program.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ProductionError`] when an artifact route needs representative
-    /// host inputs, or compilation, materialization, or backend acquisition fails.
-    pub fn open(
-        program: &Program,
-        registration: &'static BackendRegistration,
-    ) -> Result<Self, ProductionError> {
-        Self::open_with_representative_inputs(program, &[], registration)
-    }
-
-    /// Open the route `registration` declares it supports for `program`.
-    ///
-    /// The artifact route needs both a target compiler and a materializer, so it
-    /// is taken only when the registration declares both. A registration missing
-    /// either has no artifact to submit, and the backend's own dispatch entry
-    /// point is the route it does have. Representative inputs are used only by
-    /// measured artifact compilation.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ProductionError`] when input planning, compilation,
-    /// materialization, or backend acquisition fails.
-    pub fn open_with_representative_inputs(
-        program: &Program,
-        representative_inputs: &[&[u8]],
-        registration: &'static BackendRegistration,
-    ) -> Result<Self, ProductionError> {
-        if registration.target_compiler.is_some() && registration.materializer.is_some() {
-            return ProductionSession::compile_with_representative_inputs(
-                program,
-                representative_inputs,
-                registration,
-            )
-            .map(Self::Artifact);
-        }
-        let backend = registration
-            .acquire()
-            .map_err(|error| ProductionError::Dispatch(error.to_string()))?;
-        Ok(Self::Dispatch {
-            backend: Arc::from(backend),
-            program: program.clone(),
-            op_id: program.entry_op_id().unwrap_or(UNNAMED_OP_ID).to_string(),
-            backend_id: registration.id,
-        })
-    }
-
-    /// Submit caller inputs and return writable buffers in binding order.
-    ///
-    /// `config` carries the invocation grid the program needs. The artifact
-    /// route ignores it: a materialized artifact was compiled with its grid
-    /// already bound. The dispatch route needs it, because a neutral program
-    /// dispatched under the default grid executes one invocation and leaves
-    /// every other output element at zero.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ProductionError`] when the backend cannot execute the inputs, or
-    /// when the bounded step exceeds [`PRODUCTION_STEP_DEADLINE`].
-    pub fn submit(
-        &self,
-        inputs: &[&[u8]],
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, ProductionError> {
-        match self {
-            Self::Artifact(session) => session.submit(inputs),
-            Self::Dispatch {
-                backend,
-                program,
-                op_id,
-                backend_id,
-            } => {
-                let backend = Arc::clone(backend);
-                let program = program.clone();
-                let config = config.clone();
-                let owned = inputs
-                    .iter()
-                    .map(|bytes| bytes.to_vec())
-                    .collect::<Vec<_>>();
-                run_bounded_step(
-                    "dispatch",
-                    op_id,
-                    backend_id,
-                    PRODUCTION_STEP_DEADLINE,
-                    move || {
-                        let borrowed = owned.iter().map(Vec::as_slice).collect::<Vec<_>>();
-                        backend
-                            .dispatch_borrowed(&program, &borrowed, &config)
-                            .map_err(|error| ProductionError::Dispatch(error.to_string()))
-                    },
-                )
-            }
-        }
-    }
-
-    /// What a passing case on this route proves, in the words a report records.
-    #[must_use]
-    pub const fn proof(&self) -> &'static str {
-        match self {
-            Self::Artifact(_) => "through canonical artifact submission",
-            Self::Dispatch { .. } => "through backend dispatch of the neutral program",
-        }
-    }
 }
 
 /// Retained failure reproduction capsule that replays through the shipped product path.
@@ -576,45 +396,24 @@ impl ReplayCapsule {
         })
     }
 
-    /// Replay this failure capsule through the shipped product path:
-    /// wire decode -> optimization -> megakernel compilation -> materialization -> device dispatch.
+    /// Replay this capsule through wire decode, host rewrites, semantic compilation,
+    /// artifact admission, and device submission.
     pub fn replay_shipped_path(
         &self,
         registration: &'static BackendRegistration,
-    ) -> Result<Vec<Vec<u8>>, ProductionError> {
-        // 1. Wire decode
+    ) -> Result<ProductionExecution, ProductionError> {
         let decoded_program = Program::from_wire(&self.wire_bytes)
             .map_err(|err| ProductionError::Compile(format!("wire decode failed: {err}")))?;
-
-        // 2. Optimization / Host rewrites
         let mut optimized = decoded_program;
         for rewrite in vyre_foundation::transform::HOST_REWRITES {
             optimized = (rewrite.apply)(&optimized);
         }
-
-        // 3. Megakernel selection and target compilation + materialization
         let input_slices = self.inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
-        let session = ProductionSession::compile_with_representative_inputs(
-            &optimized,
-            &input_slices,
-            registration,
-        )?;
-
-        // 4. Device submission & execution
-        session.submit(&input_slices)
+        ProductionSession::from_registration(&optimized, registration)?.submit(&input_slices)
     }
 }
 
-/// Find a live dispatch-capable non-oracle backend registration, honoring
-/// `VYRE_BACKEND`.
-///
-/// Compiled only under `device-tests`, which is the admission a runner with a
-/// device turns on. Every caller acquires hardware, and `device-test-gating`
-/// reads a backend constructor in test source rather than a call graph, so a
-/// test reaching a device through this helper was invisible to it: two
-/// `lens_parity` tests ran on every hosted matrix leg and aborted inside cudarc
-/// with a missing `libcuda.so`. The `cfg` makes the compiler answer the
-/// question the scan cannot.
+/// Find a live semantic-execution-capable non-oracle backend registration.
 #[cfg(feature = "device-tests")]
 #[doc(hidden)]
 pub fn live_test_backend() -> Result<&'static BackendRegistration, String> {
@@ -626,12 +425,13 @@ pub fn live_test_backend() -> Result<&'static BackendRegistration, String> {
         .iter()
         .find(|registration| {
             !registration.reference_oracle
-                && vyre_driver::backend_dispatches(registration.id).unwrap_or(false)
+                && registration.target_compiler.is_some()
+                && registration.materializer.is_some()
                 && selected
                     .as_deref()
                     .is_none_or(|backend| registration.id == backend)
         })
         .ok_or_else(|| {
-            "Fix: a dispatch-capable backend must be registered. Link a concrete driver crate into the test binary.".to_string()
+            "Fix: a semantic-execution-capable backend must be registered. Link a concrete driver crate into the test binary.".to_string()
         })
 }

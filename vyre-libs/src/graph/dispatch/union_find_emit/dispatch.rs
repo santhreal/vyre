@@ -1,15 +1,13 @@
 //! Host-side dispatch of union-find component emission.
 
-use crate::graph::union_find::{
-    union_find_dispatch_grid, union_find_program, validate_union_find_inputs,
-};
+use crate::graph::union_find::{union_find_program, validate_union_find_inputs};
 use vyre_foundation::ir::Program;
 
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_single_u32_output_from_prepared_into, fingerprint_u32_slice,
     refresh_keyed_dispatch_inputs, DispatchInput, U32SliceFingerprint,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned GPU dispatch scratch for union-find emission.
 #[derive(Debug, Default)]
@@ -50,15 +48,16 @@ pub fn union_find_alias_program(
 ///
 /// # Errors
 ///
-/// Propagates any [`DispatchError`] surfaced by the dispatcher.
+/// Propagates any [`SemanticExecutionError`] surfaced by the dispatcher.
 pub fn union_find_alias_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     parent_init: &[u32],
     edge_a: &[u32],
     edge_b: &[u32],
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut parent = Vec::new();
-    union_find_alias_via_into(dispatcher, parent_init, edge_a, edge_b, &mut parent)?;
+    union_find_alias_via_into(dispatcher, policy, parent_init, edge_a, edge_b, &mut parent)?;
     Ok(parent)
 }
 
@@ -67,18 +66,20 @@ pub fn union_find_alias_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when inputs are malformed, dispatch fails, or the
+/// Returns [`SemanticExecutionError`] when inputs are malformed, dispatch fails, or the
 /// backend returns a malformed parent buffer.
 pub fn union_find_alias_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     parent_init: &[u32],
     edge_a: &[u32],
     edge_b: &[u32],
     parent_out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = UnionFindGpuScratch::default();
     union_find_alias_via_with_scratch_into(
         dispatcher,
+        policy,
         parent_init,
         edge_a,
         edge_b,
@@ -92,18 +93,19 @@ pub fn union_find_alias_via_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when inputs are malformed, dispatch fails, or the
+/// Returns [`SemanticExecutionError`] when inputs are malformed, dispatch fails, or the
 /// backend returns a malformed parent buffer.
 pub fn union_find_alias_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     parent_init: &[u32],
     edge_a: &[u32],
     edge_b: &[u32],
     scratch: &mut UnionFindGpuScratch,
     parent_out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let layout = validate_union_find_inputs(parent_init, edge_a, edge_b)
-        .map_err(DispatchError::BadInputs)?;
+        .map_err(SemanticExecutionError::InvalidRequest)?;
     if layout.node_count == 0 {
         parent_out.clear();
         return Ok(());
@@ -151,11 +153,11 @@ pub fn union_find_alias_via_with_scratch_into(
     )?;
     dispatch_single_u32_output_from_prepared_into(
         dispatcher,
-        &program,
+        policy,
+        program,
         &scratch.inputs,
         layout.node_words,
-        "union_find_alias_via",
-        Some(union_find_dispatch_grid(layout.edge_count)),
+        "parent",
         parent_out,
     )
 }

@@ -4,14 +4,16 @@
 //! `BUG-tensor-train-decompose-step-is-stub-not-svd` + `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the consumer's old `TtDecomposeDispatcher` mock IGNORED the IR and returned hand-picked bytes,
 //! and the underlying `tensor_train_decompose_step` was a STUB. Now the step is a real f32 truncated
-//! SVD and this runs the WHOLE per-mode compression chain through the shared `ReferenceEvalDispatcher`
+//! SVD and this runs the WHOLE per-mode compression chain through the shared `ReferenceSemanticExecutor`
 //! (real reference-eval of the kernel), then reconstructs the tensor from the TT cores and asserts it
 //! matches the input within an f32 tolerance, the basis-invariant correctness contract for a
 //! decomposition (a stub reconstructs to garbage).
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::tensor_train_compression::compress_cost_tensor_f32_via;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// Contract a TT-core chain to the scalar tensor value at multi-index `idx`.
@@ -69,7 +71,7 @@ fn rel_error(recon: &[f64], original: &[f32]) -> f64 {
 #[test]
 fn two_mode_full_rank_compression_reconstructs_the_matrix() {
     // d=2 (single decompose step): a 3x2 matrix with full column rank r=2 must reconstruct exactly.
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x7A17_C0DEu32;
     for case in 0..40u32 {
         let dims = [3u32, 2];
@@ -77,8 +79,14 @@ fn two_mode_full_rank_compression_reconstructs_the_matrix() {
         let tensor: Vec<f32> = (0..6)
             .map(|_| ((xorshift(&mut state) >> 8) as f32 / (1u32 << 24) as f32) * 4.0 - 2.0)
             .collect();
-        let compressed = compress_cost_tensor_f32_via(&dispatcher, &tensor, &dims, &ranks)
-            .expect("compress_cost_tensor_f32_via must dispatch the TT-SVD chain");
+        let compressed = compress_cost_tensor_f32_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &tensor,
+            &dims,
+            &ranks,
+        )
+        .expect("compress_cost_tensor_f32_via must dispatch the TT-SVD chain");
         assert_eq!(compressed.cores.len(), 2, "case {case}: TT has d cores");
         let recon = tt_reconstruct(&compressed.cores, &dims, &ranks);
         let err = rel_error(&recon, &tensor);
@@ -96,7 +104,7 @@ fn three_mode_rank1_tensor_compresses_and_reconstructs() {
     // d=3 (TWO chained decompose steps + a final core): an exact rank-1 outer product
     // T(i,j,k) = a[i]·b[j]·c[k] is TT-rank-1, so ranks [1,1,1,1] reconstruct it near-exactly. This
     // exercises the multi-step remainder carry, not just a single step.
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let a = [1.5f32, -0.5];
     let b = [2.0f32, 1.0, -1.0];
     let c = [0.5f32, 3.0];
@@ -110,8 +118,14 @@ fn three_mode_rank1_tensor_compresses_and_reconstructs() {
             }
         }
     }
-    let compressed = compress_cost_tensor_f32_via(&dispatcher, &tensor, &dims, &ranks)
-        .expect("compress_cost_tensor_f32_via must dispatch the 2-step chain");
+    let compressed = compress_cost_tensor_f32_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &tensor,
+        &dims,
+        &ranks,
+    )
+    .expect("compress_cost_tensor_f32_via must dispatch the 2-step chain");
     assert_eq!(compressed.cores.len(), 3, "TT has 3 cores");
     let recon = tt_reconstruct(&compressed.cores, &dims, &ranks);
     let err = rel_error(&recon, &tensor);

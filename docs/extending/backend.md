@@ -51,8 +51,8 @@ bytes. It does not lower or optimize the source program again, so a
 recovered instance runs the same bytes the lost one ran.
 
 `ArtifactInstance` accepts only a `BindingSet` carrying the same artifact
-digest, and every submission grid axis must be positive. Both are checked,
-not documented.
+digest. Submission geometry comes from the admitted `TargetEntryPoint`; resource
+bindings cannot resize or replace it.
 
 ## What your tests must prove
 

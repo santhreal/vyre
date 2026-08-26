@@ -24,7 +24,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Op id for the Sinkhorn dispatch clustering primitive.
 pub const OP_ID: &str = "vyre-libs::self_substrate::sinkhorn_dispatch_clustering";
@@ -351,11 +353,12 @@ pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32)
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError::BadInputs`] when dimensions or input buffers are malformed, and
-/// [`DispatchError::BackendError`] when the backend returns malformed output.
+/// Returns [`SemanticExecutionError::InvalidRequest`] when dimensions or input buffers are malformed, and
+/// [`SemanticExecutionError::Backend`] when the backend returns malformed output.
 #[allow(clippy::too_many_arguments)]
 pub fn sinkhorn_clustering_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     region_features: &[f32],
     cluster_centroids: &[f32],
     region_weights: &[f32],
@@ -365,10 +368,11 @@ pub fn sinkhorn_clustering_via(
     d: u32,
     iters: u32,
     eps: f32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut assignments = Vec::with_capacity(m as usize);
     sinkhorn_clustering_via_into(
         dispatcher,
+        policy,
         region_features,
         cluster_centroids,
         region_weights,
@@ -386,7 +390,8 @@ pub fn sinkhorn_clustering_via(
 /// Run Sinkhorn dispatch clustering through a concrete GPU dispatcher into caller-owned storage.
 #[allow(clippy::too_many_arguments)]
 pub fn sinkhorn_clustering_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     region_features: &[f32],
     cluster_centroids: &[f32],
     region_weights: &[f32],
@@ -397,10 +402,11 @@ pub fn sinkhorn_clustering_via_into(
     iters: u32,
     eps: f32,
     assignments_out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = SinkhornDispatchGpuScratch::default();
     sinkhorn_clustering_via_with_scratch_into(
         dispatcher,
+        policy,
         region_features,
         cluster_centroids,
         region_weights,
@@ -419,7 +425,8 @@ pub fn sinkhorn_clustering_via_into(
 /// caller-owned dispatch and assignment storage.
 #[allow(clippy::too_many_arguments)]
 pub fn sinkhorn_clustering_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     region_features: &[f32],
     cluster_centroids: &[f32],
     region_weights: &[f32],
@@ -431,39 +438,39 @@ pub fn sinkhorn_clustering_via_with_scratch_into(
     eps: f32,
     scratch: &mut SinkhornDispatchGpuScratch,
     assignments_out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if m == 0 || n == 0 || d == 0 || iters == 0 {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: sinkhorn_clustering_via requires nonzero m, n, d, and iters; got m={m}, n={n}, d={d}, iters={iters}."
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: sinkhorn_clustering_via requires nonzero m, n, d, and iters; got m={m}, n={n}, d={d}, iters={iters}."
+    )));
     }
     if !eps.is_finite() || eps <= 0.0 {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: sinkhorn_clustering_via requires finite eps > 0, got {eps}."
         )));
     }
     let feature_words = checked_product(m, d, "m", "d", "region_features")?;
     let centroid_words = checked_product(n, d, "n", "d", "cluster_centroids")?;
     if region_features.len() != feature_words {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: sinkhorn_clustering_via expected region_features.len() == m*d == {feature_words}, got {}.",
-            region_features.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: sinkhorn_clustering_via expected region_features.len() == m*d == {feature_words}, got {}.",
+        region_features.len()
+    )));
     }
     if cluster_centroids.len() != centroid_words {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: sinkhorn_clustering_via expected cluster_centroids.len() == n*d == {centroid_words}, got {}.",
-            cluster_centroids.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: sinkhorn_clustering_via expected cluster_centroids.len() == n*d == {centroid_words}, got {}.",
+        cluster_centroids.len()
+    )));
     }
     if region_weights.len() != m as usize {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: sinkhorn_clustering_via expected region_weights.len() == m == {m}, got {}.",
             region_weights.len()
         )));
     }
     if cluster_capacities.len() != n as usize {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: sinkhorn_clustering_via expected cluster_capacities.len() == n == {n}, got {}.",
             cluster_capacities.len()
         )));
@@ -484,26 +491,34 @@ pub fn sinkhorn_clustering_via_with_scratch_into(
     write_f32_slice_le_bytes(&mut scratch.inputs[3], cluster_capacities);
     write_zero_bytes(&mut scratch.inputs[4], byte_count(m as usize, "u")?);
     write_zero_bytes(&mut scratch.inputs[5], byte_count(n as usize, "v")?);
-    let outputs = dispatcher.dispatch(&program, &scratch.inputs[..6], Some([1, 1, 1]))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &scratch.inputs[..6],
+        policy,
+    )
+    .map(|output| output.outputs)?;
     // Real-backend output contract: the backend returns every WRITABLE buffer in binding order
     // the two plain-RW dual-scaling buffers `u` (4) and `v` (5, both role InputOutput → outputs 0,1)
     // then the `out_assignments` output (6 → output 2). The assignment vector is therefore the THIRD
     // output, not the first (the old program-ignoring mock faked a single-output return, hiding this).
     let [_, _, assignments_bytes] = match outputs.as_slice() {
-        [u, v, a] => [u, v, a],
-        _ => {
-            return Err(DispatchError::BackendError(format!(
-                "Fix: sinkhorn_clustering_via expected 3 writable outputs (u, v, out_assignments), got {}.",
-                outputs.len()
-            )))
-        }
-    };
+    [u, v, a] => [u, v, a],
+    _ => {
+        return Err(SemanticExecutionError::Backend(format!(
+            "Fix: sinkhorn_clustering_via expected 3 writable outputs (u, v, out_assignments), got {}.",
+            outputs.len()
+        )))
+    }
+};
     decode_u32_output_exact(
         assignments_bytes,
         m as usize,
         "sinkhorn_clustering_via out_assignments",
         assignments_out,
     )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 fn checked_product(
@@ -512,23 +527,23 @@ fn checked_product(
     left_name: &str,
     right_name: &str,
     context: &str,
-) -> Result<usize, DispatchError> {
+) -> Result<usize, SemanticExecutionError> {
     left.checked_mul(right)
         .map(|value| value as usize)
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: sinkhorn_clustering_via {context} count overflowed u32 for {left_name}={left}, {right_name}={right}."
             ))
         })
 }
 
-fn byte_count(words: usize, label: &str) -> Result<usize, DispatchError> {
+fn byte_count(words: usize, label: &str) -> Result<usize, SemanticExecutionError> {
     words
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
             "Fix: sinkhorn_clustering_via {label} byte count overflowed usize for {words} words."
-        ))
+                    ))
         })
 }
 
@@ -657,12 +672,12 @@ mod tests {
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 1]),
             ],
         )
-        .expecting_grid([1, 1, 1])
         .expecting_inputs(&[6]);
         let mut out = Vec::with_capacity(4);
         let ptr = out.as_ptr();
         sinkhorn_clustering_via_into(
             &dispatcher,
+            &crate::test_parity_oracles::policy(),
             &[0.0, 0.0, 10.0, 10.0],
             &[0.0, 0.0, 10.0, 10.0],
             &[1.0, 1.0],
@@ -690,13 +705,13 @@ mod tests {
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 1]),
             ],
         )
-        .expecting_grid([1, 1, 1])
         .expecting_inputs(&[6]);
         let mut scratch = SinkhornDispatchGpuScratch::default();
         let mut out = Vec::with_capacity(2);
 
         sinkhorn_clustering_via_with_scratch_into(
             &dispatcher,
+            &crate::test_parity_oracles::policy(),
             &[0.0, 0.0, 10.0, 10.0],
             &[0.0, 0.0, 10.0, 10.0],
             &[1.0, 1.0],
@@ -716,6 +731,7 @@ mod tests {
 
         sinkhorn_clustering_via_with_scratch_into(
             &dispatcher,
+            &crate::test_parity_oracles::policy(),
             &[0.0, 0.0, 10.0, 10.0],
             &[0.0, 0.0, 10.0, 10.0],
             &[1.0, 1.0],
@@ -750,13 +766,23 @@ mod tests {
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[9]),
             ],
         )
-        .expecting_grid([1, 1, 1])
         .expecting_inputs(&[6]);
-        let err =
-            sinkhorn_clustering_via(&dispatcher, &[0.0], &[0.0], &[1.0], &[1.0], 1, 1, 1, 5, 1.0)
-                .expect_err("extra outputs must be rejected");
+        let err = sinkhorn_clustering_via(
+            &dispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[0.0],
+            &[0.0],
+            &[1.0],
+            &[1.0],
+            1,
+            1,
+            1,
+            5,
+            1.0,
+        )
+        .expect_err("extra outputs must be rejected");
         assert!(
-            matches!(err, DispatchError::BackendError(_)),
+            matches!(err, SemanticExecutionError::Backend(_)),
             "unexpected error: {err:?}"
         );
     }
@@ -772,13 +798,23 @@ mod tests {
                 vec![0, 0, 0, 0, 1],
             ],
         )
-        .expecting_grid([1, 1, 1])
         .expecting_inputs(&[6]);
-        let err =
-            sinkhorn_clustering_via(&dispatcher, &[0.0], &[0.0], &[1.0], &[1.0], 1, 1, 1, 5, 1.0)
-                .expect_err("trailing bytes must be rejected");
+        let err = sinkhorn_clustering_via(
+            &dispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[0.0],
+            &[0.0],
+            &[1.0],
+            &[1.0],
+            1,
+            1,
+            1,
+            5,
+            1.0,
+        )
+        .expect_err("trailing bytes must be rejected");
         assert!(
-            matches!(err, DispatchError::BackendError(_)),
+            matches!(err, SemanticExecutionError::Backend(_)),
             "unexpected error: {err:?}"
         );
     }

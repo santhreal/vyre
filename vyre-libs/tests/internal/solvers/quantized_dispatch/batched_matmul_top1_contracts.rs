@@ -78,6 +78,7 @@ fn i4x8_batched_matmul_top1_f32_scaled_via_reuses_cached_program_for_same_shape(
             };
             i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
                 &QuantizedBatchedMatmulTop1Dispatcher,
+                &crate::test_parity_oracles::policy(),
                 &weights,
                 activations,
                 &row_scales,

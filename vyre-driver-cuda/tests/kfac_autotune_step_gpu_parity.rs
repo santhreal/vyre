@@ -25,8 +25,9 @@ fn assert_kfac_autotune_step_matches_reference(
     dim: u32,
 ) {
     let cpu = kfac_block_inverse_witness(blocks_in, blocks, dim);
-    with_cuda_optimizer_dispatcher(label, |dispatcher| {
-        let gpu = kfac_autotune_step_via(dispatcher, blocks_in, blocks, dim).expect("dispatch");
+    with_cuda_optimizer_dispatcher(label, |executor, policy| {
+        let gpu =
+            kfac_autotune_step_via(executor, policy, blocks_in, blocks, dim).expect("dispatch");
         approx_slice_eq(&gpu, &cpu);
     });
 }

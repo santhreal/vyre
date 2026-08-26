@@ -40,8 +40,8 @@ fn assert_bidirectional_step_matches_reference(
     allow_mask: u32,
 ) -> Vec<u32> {
     let reference = reference_bidirectional_step(n, off, tgt, msk, seed, allow_mask);
-    with_cuda_optimizer_dispatcher(label, |dispatcher| {
-        let gpu = bidirectional_step_via(dispatcher, n, off, tgt, msk, seed, allow_mask)
+    with_cuda_optimizer_dispatcher(label, |dispatcher, policy| {
+        let gpu = bidirectional_step_via(dispatcher, policy, n, off, tgt, msk, seed, allow_mask)
             .expect("dispatch");
         assert_eq!(gpu, reference, "{label}: bidirectional step divergence");
         gpu
@@ -71,9 +71,10 @@ fn assert_bidirectional_closure_matches_reference(
         },
         seed,
     );
-    with_cuda_optimizer_dispatcher(label, |dispatcher| {
+    with_cuda_optimizer_dispatcher(label, |dispatcher, policy| {
         let gpu = bidirectional_closure_via(
             dispatcher,
+            policy,
             CsrClosureInputs {
                 graph: CsrGraphView {
                     node_count: n,

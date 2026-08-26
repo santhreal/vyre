@@ -5,7 +5,7 @@
 //! mock returns HAND-PICKED output bytes and the value tests call `reference_sinkhorn_clustering`
 //! directly, so the actual Sinkhorn IR (`sinkhorn_clustering_program`: an entropic-OT dual-scaling
 //! iteration with FLOAT division, followed by a per-region arg-min assignment) NEVER ran. This
-//! dispatches the real kernel through the shared `ReferenceEvalDispatcher` (real reference-eval of
+//! dispatches the real kernel through the shared `ReferenceSemanticExecutor` (real reference-eval of
 //! the IR) and asserts the assignment output matches the host `reference_sinkhorn_clustering` oracle
 //! on well-separated clusters, where the arg-min is unambiguous (robust to f32 ordering).
 //!
@@ -16,10 +16,12 @@
 //! which the real backend's strict `validate_input_lengths` would reject. The faithful dispatcher's
 //! strict count check caught it; the consumer now passes exactly six.
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::sinkhorn_dispatch_clustering::sinkhorn_clustering_via;
 use vyre_reference::composition_witness::sinkhorn_clustering_witness;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 const ITERS: u32 = 12;
@@ -38,7 +40,8 @@ fn assert_via_matches_oracle(
     d: u32,
 ) -> Vec<u32> {
     let via = sinkhorn_clustering_via(
-        &ReferenceEvalDispatcher,
+        &ReferenceSemanticExecutor,
+        &semantic_execution_support::policy(),
         features,
         centroids,
         weights,

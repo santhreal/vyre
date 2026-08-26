@@ -199,15 +199,6 @@ fn reference_sort_regions_is_stable_for_equal_triples() {
 }
 
 #[test]
-fn region_dedup_dispatch_grid_packs_large_match_buffers() {
-    assert_eq!(region_dedup_dispatch_grid(0), [1, 1, 1]);
-    assert_eq!(region_dedup_dispatch_grid(1), [1, 1, 1]);
-    assert_eq!(region_dedup_dispatch_grid(256), [1, 1, 1]);
-    assert_eq!(region_dedup_dispatch_grid(257), [2, 1, 1]);
-    assert_eq!(region_dedup_dispatch_grid(513), [3, 1, 1]);
-}
-
-#[test]
 fn dedup_regions_flag_program_emits_expected_buffers() {
     let p = dedup_regions_flag_program("pids", "starts", "ends", "survivors", 513);
     assert_eq!(p.workgroup_size, REGION_DEDUP_WORKGROUP_SIZE);

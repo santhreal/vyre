@@ -10,12 +10,6 @@ pub const OP_ID: &str = "vyre-libs::graph::csr_backward_or_changed";
 /// Workgroup size for the reverse CSR frontier kernel (one thread per source node).
 pub const CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Compute the dispatch grid shape for reverse CSR frontier expansion.
-#[must_use]
-pub const fn csr_backward_or_changed_parallel_grid(node_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(node_count, CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE[0])
-}
-
 /// Build a Program: reverse CSR frontier expansion over an in-place accumulator bitset.
 ///
 /// Dispatches `shape.node_count` parallel invocations (one per source node).
@@ -98,14 +92,5 @@ mod tests {
             program.workgroup_size(),
             CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE
         );
-    }
-
-    #[test]
-    fn parallel_grid_packs_source_lanes_into_blocks() {
-        assert_eq!(csr_backward_or_changed_parallel_grid(0), [1, 1, 1]);
-        assert_eq!(csr_backward_or_changed_parallel_grid(1), [1, 1, 1]);
-        assert_eq!(csr_backward_or_changed_parallel_grid(256), [1, 1, 1]);
-        assert_eq!(csr_backward_or_changed_parallel_grid(257), [2, 1, 1]);
-        assert_eq!(csr_backward_or_changed_parallel_grid(513), [3, 1, 1]);
     }
 }

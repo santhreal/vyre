@@ -1,9 +1,8 @@
-//! Registry adapter that exposes `vyre-reference` as a `VyreBackend`, and the
-//! `ProgramDispatcher` bridge parity suites dispatch through.
+//! Registry adapter for the reference parity backend and semantic executor.
 
 mod program_dispatch;
 
-pub use program_dispatch::ReferenceEvalDispatcher;
+pub use program_dispatch::ReferenceSemanticExecutor;
 
 use std::sync::Arc;
 
@@ -147,12 +146,12 @@ inventory::submit! {
     BackendRegistration {
         id: CPU_REF_BACKEND_ID,
         target_id: CPU_REF_TARGET_ID,
-        payload_format: None,
+        payload_format: Some(program_dispatch::REFERENCE_TARGET_FORMAT),
         reference_oracle: true,
         factory: acquire_cpu_ref,
         supported_ops: core_supported_ops,
         semantic_operations: vyre_driver::dialect_only_supported_ops,
-        target_compiler: None,
+        target_compiler: Some(program_dispatch::target_compiler_factory),
         materializer: None,
     }
 }

@@ -123,7 +123,6 @@ fn generated_crc32_map_reduce_plan_matches_round_shapes_for_8192_cases() {
             assert_eq!(step.output_pairs, pairs.div_ceil(2), "seed {seed}");
             assert_eq!(step.input_words, pairs * 2, "seed {seed}");
             assert_eq!(step.output_words, step.output_pairs * 2, "seed {seed}");
-            assert_eq!(step.grid, [step.output_pairs, 1, 1], "seed {seed}");
             pairs = step.output_pairs;
         }
         assert_eq!(pairs, 1, "seed {seed}");

@@ -98,7 +98,13 @@ inventory::submit! {
             let tokens: [u32; 4] = [TOK_STAR, TOK_PLUS, 0x3D, 0];
             let depths: [u32; 4] = [1, 1, 0, 0];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            vec![vec![to_bytes(&tokens), to_bytes(&depths)]]
+            // `out_strengths` is read-write storage, so the reference takes one
+            // seeded Value for it exactly as a device takes one bound buffer.
+            vec![vec![
+                to_bytes(&tokens),
+                to_bytes(&depths),
+                to_bytes(&[0u32; 4]),
+            ]]
         }),
         Some(|| {
             vec![vec![EXPECTED_AST_BINDING_STRENGTH_BYTES.to_vec()]]

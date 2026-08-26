@@ -1,5 +1,5 @@
 //! End-to-end parity for `math::differentiable_autotune::pick_config_pre_exp_fixed_via` (the
-//! fixed-point softmax normalization step) through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! fixed-point softmax normalization step) through the shared faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `softmax_step`'s IR is not run through a faithful dispatch boundary by any `vyre-primitives/tests/*`
@@ -14,9 +14,11 @@
 //! (a u32 left-shift that keeps the low 32 bits, then integer division). The oracle here replicates
 //! that bit-for-bit → BIT-EXACT (no tolerance).
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::differentiable_autotune::pick_config_pre_exp_fixed_via;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::{xorshift32 as xorshift, FIXED_ONE};
 
 /// Exact u32 oracle mirroring `softmax_step` bit-for-bit.
@@ -29,7 +31,7 @@ fn softmax_fixed(pre_exp: &[u32]) -> Vec<u32> {
 
 #[test]
 fn softmax_pick_config_via_matches_exact_fixed_point_oracle() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x50_F7_00_01u32;
     let mut normalized_wide = 0u32;
     for case in 0..400u32 {
@@ -41,8 +43,12 @@ fn softmax_pick_config_via_matches_exact_fixed_point_oracle() {
             .map(|_| 1 + xorshift(&mut state) % FIXED_ONE)
             .collect();
 
-        let got = pick_config_pre_exp_fixed_via(&dispatcher, &pre_exp)
-            .expect("pick_config_pre_exp_fixed_via must dispatch the softmax step");
+        let got = pick_config_pre_exp_fixed_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &pre_exp,
+        )
+        .expect("pick_config_pre_exp_fixed_via must dispatch the softmax step");
         let want = softmax_fixed(&pre_exp);
         assert_eq!(
             got, want,
@@ -64,10 +70,15 @@ fn softmax_pick_config_via_matches_exact_fixed_point_oracle() {
 
 #[test]
 fn softmax_pick_config_via_hand_checked_cases() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
 
     // Two equal pre-exp weights → each normalizes to 0.5 (== FIXED_ONE/2).
-    let got = pick_config_pre_exp_fixed_via(&d, &[FIXED_ONE / 2, FIXED_ONE / 2]).unwrap();
+    let got = pick_config_pre_exp_fixed_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &[FIXED_ONE / 2, FIXED_ONE / 2],
+    )
+    .unwrap();
     // sum = FIXED_ONE; out[j] = ((FIXED_ONE/2) << 16) / FIXED_ONE = (FIXED_ONE/2). Both halves 0.5.
     assert_eq!(
         got,
@@ -77,7 +88,9 @@ fn softmax_pick_config_via_hand_checked_cases() {
 
     // A 3-way split 1:1:2 → normalized 0.25, 0.25, 0.5 of FIXED_ONE.
     let q = FIXED_ONE / 4;
-    let got = pick_config_pre_exp_fixed_via(&d, &[q, q, 2 * q]).unwrap();
+    let got =
+        pick_config_pre_exp_fixed_via(&d, &semantic_execution_support::policy(), &[q, q, 2 * q])
+            .unwrap();
     assert_eq!(
         got,
         softmax_fixed(&[q, q, 2 * q]),
@@ -90,7 +103,8 @@ fn softmax_pick_config_via_hand_checked_cases() {
     );
 
     // Single candidate → normalizes to 1.0 exactly ((p<<16)/p == 1<<16), for p < FIXED_ONE.
-    let got = pick_config_pre_exp_fixed_via(&d, &[12345]).unwrap();
+    let got =
+        pick_config_pre_exp_fixed_via(&d, &semantic_execution_support::policy(), &[12345]).unwrap();
     assert_eq!(
         got,
         vec![FIXED_ONE],

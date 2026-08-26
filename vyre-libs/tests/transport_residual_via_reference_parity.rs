@@ -1,6 +1,6 @@
 //! End-to-end parity for `math::qsvt_matrix_function_fusion::transport_residual_fixed_via`, the QSVT
 //! `f(M)·v` Chebyshev matrix-function filter (negative-truncator transport residual), through the shared
-//! faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! this is the SIGNED-coefficient companion to `fusion_scores_via_reference_parity`. Both dispatch the SAME
@@ -18,10 +18,12 @@
 //! `got[i] as i32 == want_f32[i].round() as i32` bit-for-bit. INCLUDING the negative-coefficient recurrence
 //! `T_next = 2·(M·T_curr) − T_prev` that distinguishes transport from the positive-only fusion filter.
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::qsvt_matrix_function_fusion::transport_residual_fixed_via;
 use vyre_reference::composition_witness::chebyshev_filter_witness as chebyshev_filter_cpu;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// A small SIGNED integer in `-lo..=hi`, returned as a two's-complement u32.
@@ -37,7 +39,7 @@ fn as_i32(v: u32) -> i32 {
 
 #[test]
 fn transport_residual_via_matches_chebyshev_cpu_signed_bit_exact() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let mut state = 0x7A_11_00_01u32;
     let chebyshev_order = 2u32; // 3 coefficients
     let mut nonzero = 0u32;
@@ -53,9 +55,16 @@ fn transport_residual_via_matches_chebyshev_cpu_signed_bit_exact() {
             .map(|_| signed(&mut state, 3))
             .collect();
 
-        let got =
-            transport_residual_fixed_via(&d, &dispatch_cost, &weights, &coeffs, n, chebyshev_order)
-                .expect("transport_residual_fixed_via must dispatch the chebyshev filter");
+        let got = transport_residual_fixed_via(
+            &d,
+            &semantic_execution_support::policy(),
+            &dispatch_cost,
+            &weights,
+            &coeffs,
+            n,
+            chebyshev_order,
+        )
+        .expect("transport_residual_fixed_via must dispatch the chebyshev filter");
 
         let lap_f: Vec<f32> = dispatch_cost.iter().map(|&v| as_i32(v) as f32).collect();
         let sig_f: Vec<f32> = weights.iter().map(|&v| as_i32(v) as f32).collect();
@@ -89,12 +98,21 @@ fn transport_residual_via_matches_chebyshev_cpu_signed_bit_exact() {
 
 #[test]
 fn transport_residual_via_hand_checked_negative_coefficient() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     // Identity operator M = I, weights [1, 2], coeffs [-1, 0, 0] → out = c0·weights = [-1, -2].
     let dispatch_cost = vec![1u32, 0, 0, 1];
     let weights = [1u32, 2];
     let coeffs = [(-1i32) as u32, 0, 0];
-    let got = transport_residual_fixed_via(&d, &dispatch_cost, &weights, &coeffs, 2, 2).unwrap();
+    let got = transport_residual_fixed_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &dispatch_cost,
+        &weights,
+        &coeffs,
+        2,
+        2,
+    )
+    .unwrap();
     let got_signed: Vec<i32> = got.iter().map(|&v| as_i32(v)).collect();
     assert_eq!(
         got_signed,

@@ -7,21 +7,12 @@ mod harness;
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::Program;
 use vyre_driver::DispatchConfig;
-use vyre_libs::graph::csr_frontier_degree_sum::csr_frontier_degree_sum;
+use vyre_libs::graph::csr_frontier_degree_sum::{
+    csr_frontier_degree_sum, CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE,
+};
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_reference::composition_witness::csr_frontier_degree_sum_witness as csr_frontier_degree_sum_cpu;
 
-const fn csr_frontier_degree_sum_dispatch_grid(node_count: u32) -> [u32; 3] {
-    [
-        if node_count == 0 {
-            1
-        } else {
-            (node_count + 255) / 256
-        },
-        1,
-        1,
-    ]
-}
 fn run(
     program: &Program,
     pg_nodes: &[u32],
@@ -30,7 +21,6 @@ fn run(
     edge_kind_mask: &[u32],
     pg_node_tags: &[u32],
     frontier: &[u32],
-    grid: [u32; 3],
 ) -> u32 {
     let inputs: Vec<Vec<u8>> = vec![
         u32_bytes(pg_nodes),
@@ -42,8 +32,7 @@ fn run(
         // degree_sum_out: 1 word, zero-init.
         vec![0u8; 4],
     ];
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some(grid);
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("CSR frontier degree sum", |backend| {
         backend
             .dispatch(program, &inputs, &config)
@@ -74,7 +63,6 @@ fn cuda_csr_frontier_degree_sum_chain() {
         &edge_kind_mask,
         &pg_node_tags,
         &frontier,
-        csr_frontier_degree_sum_dispatch_grid(n),
     );
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 3); // 1+1+1 outgoing edges from 0,1,2
@@ -100,7 +88,6 @@ fn cuda_csr_frontier_degree_sum_diamond() {
         &edge_kind_mask,
         &pg_node_tags,
         &frontier,
-        csr_frontier_degree_sum_dispatch_grid(n),
     );
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 2);
@@ -125,7 +112,6 @@ fn cuda_csr_frontier_degree_sum_empty_frontier() {
         &edge_kind_mask,
         &pg_node_tags,
         &frontier,
-        csr_frontier_degree_sum_dispatch_grid(n),
     );
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 0);
@@ -150,7 +136,6 @@ fn cuda_csr_frontier_degree_sum_full_frontier() {
         &edge_kind_mask,
         &pg_node_tags,
         &frontier,
-        csr_frontier_degree_sum_dispatch_grid(n),
     );
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 12);
@@ -192,7 +177,6 @@ fn cuda_csr_frontier_degree_sum_multi_block_power_law_frontier() {
 
     let cpu = csr_frontier_degree_sum_cpu(&frontier, &edge_offsets, n);
     let program = csr_frontier_degree_sum(ProgramGraphShape::new(n, edge_targets.len() as u32));
-    let grid = csr_frontier_degree_sum_dispatch_grid(n);
     let gpu = run(
         &program,
         &pg_nodes,
@@ -201,10 +185,12 @@ fn cuda_csr_frontier_degree_sum_multi_block_power_law_frontier() {
         &edge_kind_mask,
         &pg_node_tags,
         &frontier,
-        grid,
     );
 
-    assert_eq!(grid, [5, 1, 1]);
+    assert!(
+        n > CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE[0],
+        "Fix: the fixture must cross a workgroup boundary or it proves nothing about multi-block launches"
+    );
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 635);
 }

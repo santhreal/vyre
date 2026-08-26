@@ -1,16 +1,13 @@
 //! End-to-end parity for `scheduling::spectral_schedule::fusion_scores_fixed_via`, the Chebyshev
-//! spectral-fusion-score filter `f(L̂)·v`: through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! spectral-fusion-score filter `f(L̂)·v`: through the shared faithful
+//! [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
-//! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
-//! the `chebyshev_filter` IR is not run through a faithful dispatch boundary by any
-//! `vyre-primitives/tests/*` file (the in-file dispatcher hand-computes it). This is the FIRST-EVER
-//! execution of the barrier-cooperative Chebyshev matrix-polynomial kernel through a boundary that models
-//! the real backend (workgroup barriers between the T_{k-1}/T_k recurrence steps, which reference_eval
-//! honors as uniform-control-flow barriers).
+//! The suite executes the barrier-cooperative Chebyshev matrix-polynomial kernel through semantic
+//! compilation and reference artifact execution.
 //!
-//! Contract (audited CLEAN): `chebyshev_filter` binds laplacian RO(0) + signal RO(1) + coeffs RO(2) +
-//! output RW(3) + scratch RW(4, 2n words) = 5 IC; the via zero-fills output/scratch and decodes
-//! outputs[0] = the length-n score vector.
+//! `chebyshev_filter` binds laplacian RO(0) + signal RO(1) + coeffs RO(2) + output RW(3) + scratch
+//! RW(4, 2n words) as five input graph values. The wrapper zero-fills output and scratch and decodes
+//! the score vector from the first canonical output graph value.
 //!
 //! BIT-EXACT (no tolerance): the IR performs RAW u32 INTEGER arithmetic, plain `mul`/`add`/`sub`/`2·`,
 //! NO fixed-point shift, and `chebyshev_filter_cpu` computes the IDENTICAL formula in f32. With small
@@ -18,10 +15,12 @@
 //! `2·(L̂·T_curr)` dominates `T_prev`) and every intermediate stays < 2^24, where f32 represents integers
 //! EXACTLY. So the u32 GPU output equals the f32 reference cast to integer, bit-for-bit.
 
+mod semantic_execution_support;
+
 use vyre_libs::scheduling::spectral_schedule::fusion_scores_fixed_via;
 use vyre_reference::composition_witness::chebyshev_filter_witness as chebyshev_filter_cpu;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// A small positive integer in `1..=hi`.
@@ -31,7 +30,7 @@ fn small(state: &mut u32, hi: u32) -> u32 {
 
 #[test]
 fn fusion_scores_via_matches_chebyshev_cpu_bit_exact() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let mut state = 0x5EC7_0001u32;
     let k_steps = 2u32; // 3 coefficients, the shipped fusion-score order
     let mut nonzero_out = 0u32;
@@ -43,8 +42,16 @@ fn fusion_scores_via_matches_chebyshev_cpu_bit_exact() {
         let signal: Vec<u32> = (0..n).map(|_| small(&mut state, 3)).collect();
         let coeffs: Vec<u32> = (0..=k_steps).map(|_| small(&mut state, 3)).collect();
 
-        let got = fusion_scores_fixed_via(&d, &laplacian, &signal, &coeffs, n, k_steps)
-            .expect("fusion_scores_fixed_via must dispatch the chebyshev filter");
+        let got = fusion_scores_fixed_via(
+            &d,
+            &semantic_execution_support::policy(),
+            &laplacian,
+            &signal,
+            &coeffs,
+            n,
+            k_steps,
+        )
+        .expect("fusion_scores_fixed_via must execute the chebyshev filter");
 
         let lap_f: Vec<f32> = laplacian.iter().map(|&v| v as f32).collect();
         let sig_f: Vec<f32> = signal.iter().map(|&v| v as f32).collect();
@@ -69,12 +76,21 @@ fn fusion_scores_via_matches_chebyshev_cpu_bit_exact() {
 
 #[test]
 fn fusion_scores_via_hand_checked_identity_filter() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     // Identity L̂ (I), signal [2, 3], coeffs [1, 0, 0] → only the c0·signal term survives: out == signal.
     let laplacian = vec![1u32, 0, 0, 1];
     let signal = [2u32, 3];
     let coeffs = [1u32, 0, 0];
-    let got = fusion_scores_fixed_via(&d, &laplacian, &signal, &coeffs, 2, 2).unwrap();
+    let got = fusion_scores_fixed_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &laplacian,
+        &signal,
+        &coeffs,
+        2,
+        2,
+    )
+    .unwrap();
     assert_eq!(
         got,
         vec![2, 3],
@@ -83,7 +99,16 @@ fn fusion_scores_via_hand_checked_identity_filter() {
 
     // coeffs [0, 1, 0] with identity L̂ → out == L̂·signal == signal (T_1 = L̂·signal = signal).
     let coeffs = [0u32, 1, 0];
-    let got = fusion_scores_fixed_via(&d, &laplacian, &signal, &coeffs, 2, 2).unwrap();
+    let got = fusion_scores_fixed_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &laplacian,
+        &signal,
+        &coeffs,
+        2,
+        2,
+    )
+    .unwrap();
     assert_eq!(
         got,
         vec![2, 3],
@@ -95,7 +120,16 @@ fn fusion_scores_via_hand_checked_identity_filter() {
     let laplacian = vec![1u32, 1, 0, 1];
     let signal = [1u32, 1];
     let coeffs = [0u32, 1, 0];
-    let got = fusion_scores_fixed_via(&d, &laplacian, &signal, &coeffs, 2, 2).unwrap();
+    let got = fusion_scores_fixed_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &laplacian,
+        &signal,
+        &coeffs,
+        2,
+        2,
+    )
+    .unwrap();
     let want_f = chebyshev_filter_cpu(&[1.0, 1.0, 0.0, 1.0], &[1.0, 1.0], &[0.0, 1.0, 0.0], 2, 2);
     let want: Vec<u32> = want_f.iter().map(|&v| v.round() as u32).collect();
     assert_eq!(got, want, "non-trivial operator matches the CPU reference");

@@ -7,15 +7,6 @@ fn program_uses_block_sized_workgroup() {
 }
 
 #[test]
-fn dispatch_grid_packs_byte_lanes_into_blocks() {
-    assert_eq!(utf8_validate_dispatch_grid(0), [1, 1, 1]);
-    assert_eq!(utf8_validate_dispatch_grid(1), [1, 1, 1]);
-    assert_eq!(utf8_validate_dispatch_grid(256), [1, 1, 1]);
-    assert_eq!(utf8_validate_dispatch_grid(257), [2, 1, 1]);
-    assert_eq!(utf8_validate_dispatch_grid(513), [3, 1, 1]);
-}
-
-#[test]
 fn reference_ascii() {
     assert_eq!(reference_utf8_validate(b"Hello"), vec![UTF8_ASCII; 5]);
 }

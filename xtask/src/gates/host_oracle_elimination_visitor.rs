@@ -390,8 +390,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
 
         let (params, direct_dispatched_param_indices, param_callee_flows) =
             self.analyze_fn_params_and_dispatch_flow(&item.sig, Some(&item.block));
-        let stages_semantic_resident_upload =
-            self.stages_semantic_resident_upload(&item.block.stmts);
+        let stages_semantic_input_binding = self.stages_semantic_input_binding(&item.block.stmts);
 
         let has_collection_payload_inputs = item.sig.inputs.iter().any(|arg| match arg {
             syn::FnArg::Typed(pat) => match &*pat.ty {
@@ -432,7 +431,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             params,
             direct_dispatched_param_indices,
             param_callee_flows,
-            stages_semantic_resident_upload,
+            stages_semantic_input_binding,
         });
 
         let prev_fn = self.current_fn_idx.replace(fn_idx);
@@ -524,8 +523,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
 
         let (params, direct_dispatched_param_indices, param_callee_flows) =
             self.analyze_fn_params_and_dispatch_flow(&item.sig, Some(&item.block));
-        let stages_semantic_resident_upload =
-            self.stages_semantic_resident_upload(&item.block.stmts);
+        let stages_semantic_input_binding = self.stages_semantic_input_binding(&item.block.stmts);
 
         let has_collection_payload_inputs = item.sig.inputs.iter().any(|arg| match arg {
             syn::FnArg::Typed(pat) => match &*pat.ty {
@@ -566,7 +564,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             params,
             direct_dispatched_param_indices,
             param_callee_flows,
-            stages_semantic_resident_upload,
+            stages_semantic_input_binding,
         });
 
         let prev_fn = self.current_fn_idx.replace(fn_idx);
@@ -667,10 +665,10 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
 
         let (params, direct_dispatched_param_indices, param_callee_flows) =
             self.analyze_fn_params_and_dispatch_flow(&item.sig, item.default.as_ref());
-        let stages_semantic_resident_upload = item
+        let stages_semantic_input_binding = item
             .default
             .as_ref()
-            .is_some_and(|block| self.stages_semantic_resident_upload(&block.stmts));
+            .is_some_and(|block| self.stages_semantic_input_binding(&block.stmts));
 
         let has_collection_payload_inputs = item.sig.inputs.iter().any(|arg| match arg {
             syn::FnArg::Typed(pat) => match &*pat.ty {
@@ -711,7 +709,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             params,
             direct_dispatched_param_indices,
             param_callee_flows,
-            stages_semantic_resident_upload,
+            stages_semantic_input_binding,
         });
 
         if let Some(block) = &item.default {
@@ -847,7 +845,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     params: Vec::new(),
                     direct_dispatched_param_indices: BTreeSet::new(),
                     param_callee_flows: Vec::new(),
-                    stages_semantic_resident_upload: false,
+                    stages_semantic_input_binding: false,
                 });
                 self.record_call(name, line, false, CallContext::ExpectedOutputFixture);
             }
@@ -881,7 +879,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     params: Vec::new(),
                     direct_dispatched_param_indices: BTreeSet::new(),
                     param_callee_flows: Vec::new(),
-                    stages_semantic_resident_upload: false,
+                    stages_semantic_input_binding: false,
                 });
                 self.record_call(name, line, false, CallContext::FallbackFixture);
             }
@@ -938,7 +936,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     params: Vec::new(),
                     direct_dispatched_param_indices: BTreeSet::new(),
                     param_callee_flows: Vec::new(),
-                    stages_semantic_resident_upload: false,
+                    stages_semantic_input_binding: false,
                 });
                 self.record_call(name, line, false, CallContext::ExpectedOutputFixture);
             }
@@ -973,7 +971,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     params: Vec::new(),
                     direct_dispatched_param_indices: BTreeSet::new(),
                     param_callee_flows: Vec::new(),
-                    stages_semantic_resident_upload: false,
+                    stages_semantic_input_binding: false,
                 });
                 self.record_call(name, line, false, CallContext::FallbackFixture);
             }
@@ -1022,15 +1020,18 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             (String::new(), String::new())
         };
 
-        // Structurally inspect OperationRegistration constructor calls to mark expected_output fixture contexts
-        // Requires exact canonical origin vyre_foundation::operation::OperationRegistration
-        let expected_idx = match resolved_callee.as_str() {
-            "vyre_foundation::operation::OperationRegistration::library" => Some(3),
-            "vyre_foundation::operation::OperationRegistration::primitive" => Some(3),
-            "vyre_foundation::operation::OperationRegistration::intrinsic" => Some(4),
-            "vyre_foundation::operation::OperationRegistration::new" => Some(4),
-            _ => None,
-        };
+        // Structurally inspect OperationRegistration constructor calls to mark
+        // expected_output fixture contexts. The constructor roster and the
+        // argument position of each `expected_output` callback are read out of
+        // `vyre-foundation/src/operation/mod.rs`, and the call must resolve to
+        // that exact canonical origin.
+        let expected_idx = resolved_callee
+            .strip_prefix("vyre_foundation::operation::OperationRegistration::")
+            .and_then(|constructor| {
+                self.registration_expected_output_indices
+                    .get(constructor)
+                    .copied()
+            });
 
         if let Some(target_idx) = expected_idx {
             self.in_op_reg_depth += 1;

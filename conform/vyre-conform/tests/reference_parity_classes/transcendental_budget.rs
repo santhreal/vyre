@@ -87,12 +87,11 @@ fn every_transcendental_op_builds_a_payload_on_every_artifact_route_backend() {
             continue;
         }
         for backend in &backends {
-            if let Err(error) = ProductionSession::compile_with_representative_inputs(
-                program,
-                &backend_inputs,
-                backend,
-            ) {
-                refused.push(format!("({}, {op_id}): {error}", backend.id));
+            match ProductionSession::from_registration(program, backend)
+                .and_then(|session| session.submit(&backend_inputs))
+            {
+                Ok(_) => {}
+                Err(error) => refused.push(format!("({}, {op_id}): {error}", backend.id)),
             }
         }
     }

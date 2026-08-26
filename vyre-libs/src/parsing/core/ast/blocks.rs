@@ -125,7 +125,13 @@ inventory::submit! {
             //   stmt 0 → (1, 1), stmt 1 → (0, 0)
             let statements: [u32; 4] = [1, 1, 0, 0];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            vec![vec![to_bytes(&tok_types), to_bytes(&statements)]]
+            // `out_block_headers` is read-write storage, so the reference takes
+            // one seeded Value for it exactly as a device takes one bound buffer.
+            vec![vec![
+                to_bytes(&tok_types),
+                to_bytes(&statements),
+                to_bytes(&[0u32; 2]),
+            ]]
         }),
         Some(|| {
             vec![vec![EXPECTED_AST_CFG_BLOCKS_BYTES.to_vec()]]

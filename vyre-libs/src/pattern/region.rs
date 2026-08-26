@@ -39,8 +39,8 @@ use std::cmp::Ordering;
 
 pub use super::region_programs::{
     cap_regions_per_pattern_flag_program, compact_first_per_region_pattern_flag_program,
-    dedup_regions_cluster_program, dedup_regions_flag_program, region_dedup_dispatch_grid,
-    region_sort_program, CAP_REGIONS_PER_PATTERN_OP_ID, COMPACT_FIRST_PER_REGION_PATTERN_OP_ID,
+    dedup_regions_cluster_program, dedup_regions_flag_program, region_sort_program,
+    CAP_REGIONS_PER_PATTERN_OP_ID, COMPACT_FIRST_PER_REGION_PATTERN_OP_ID,
     DEDUP_REGIONS_CLUSTER_OP_ID, DEDUP_REGIONS_FLAG_OP_ID, REGION_DEDUP_WORKGROUP_SIZE,
 };
 

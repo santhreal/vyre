@@ -1,16 +1,28 @@
 //! Contract test for adapter-backed cache-invalidation behavior.
 //!
-//! The `libs-compositions` feature wires cache invalidation through
-//! the optimizer dispatcher; production cache invalidation must not rely on
-//! a hidden CPU fallback.
+//! The `libs-compositions` feature routes cache invalidation through semantic
+//! execution. Production cache invalidation has no hidden CPU fallback.
 
 use vyre_driver::cache_invalidation::{impacted_entries_into, CacheInvalidationScratch};
-use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_driver_reference::ReferenceSemanticExecutor;
+use vyre_megakernel::{
+    CompileObjective, DeviceFacts, Digest, ExternalFacts, SearchBudget, SemanticExecutionError,
+    SemanticExecutionOutput, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
+};
+
+fn policy() -> SemanticExecutionPolicy {
+    SemanticExecutionPolicy::new(
+        ExternalFacts::new(Digest([0; 32]), std::collections::BTreeMap::new()),
+        DeviceFacts::unknown(),
+        CompileObjective::MinimizeLatency,
+        SearchBudget::new(8, 64, 0, 0, 1_000),
+        1_000_000,
+    )
+}
+
 #[test]
 fn default_path_marks_impacted_lineage_entries() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut out = vec![99u32; 5];
     let mut scratch = CacheInvalidationScratch::default();
     let mut rule_adj = vec![0u32; 9];
@@ -20,6 +32,7 @@ fn default_path_marks_impacted_lineage_entries() {
 
     impacted_entries_into(
         &dispatcher,
+        &policy(),
         &[1, 0, 1],
         &rule_adj,
         &state,
@@ -42,12 +55,13 @@ fn default_path_marks_impacted_lineage_entries() {
 
 #[test]
 fn default_path_handles_empty_lineage_cells() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut out = vec![99u32; 3];
     let mut scratch = CacheInvalidationScratch::default();
 
     impacted_entries_into(
         &dispatcher,
+        &policy(),
         &[],
         &[],
         &[],
@@ -68,7 +82,7 @@ fn default_path_handles_empty_lineage_cells() {
 
 #[test]
 fn default_path_handles_max_u32_n_without_panic() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut out = vec![99u32; 2];
     let mut scratch = CacheInvalidationScratch::default();
 
@@ -76,6 +90,7 @@ fn default_path_handles_max_u32_n_without_panic() {
     // to index or allocate based on n.
     let err = impacted_entries_into(
         &dispatcher,
+        &policy(),
         &[1],
         &[0],
         &[0],
@@ -96,12 +111,13 @@ fn default_path_handles_max_u32_n_without_panic() {
 
 #[test]
 fn default_path_reuses_scratch_without_growing() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut out = vec![99u32; 3];
     let mut scratch = CacheInvalidationScratch::default();
 
     impacted_entries_into(
         &dispatcher,
+        &policy(),
         &[1],
         &[0],
         &[0],
@@ -117,6 +133,7 @@ fn default_path_reuses_scratch_without_growing() {
 
     impacted_entries_into(
         &dispatcher,
+        &policy(),
         &[1],
         &[0],
         &[0],
@@ -132,7 +149,7 @@ fn default_path_reuses_scratch_without_growing() {
 }
 #[test]
 fn default_path_handles_pure_transitive_provenance_and_unimpacted() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut out = vec![99u32; 5];
     let mut scratch = CacheInvalidationScratch::default();
 
@@ -150,6 +167,7 @@ fn default_path_handles_pure_transitive_provenance_and_unimpacted() {
 
     impacted_entries_into(
         &dispatcher,
+        &policy(),
         &intervention_mask,
         &rule_adj,
         &state,
@@ -166,28 +184,39 @@ fn default_path_handles_pure_transitive_provenance_and_unimpacted() {
     assert_eq!(out, vec![1, 1, 1, 0, 0]);
 }
 
-struct MalformedOutputDispatcher;
+/// Returns one truncated buffer for every declared graph output.
+struct MalformedOutputExecutor;
 
-impl ProgramDispatcher for MalformedOutputDispatcher {
-    fn dispatch(
+impl SemanticExecutor for MalformedOutputExecutor {
+    fn execute(
         &self,
-        _program: &Program,
-        _inputs: &[Vec<u8>],
-        _grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        // Return truncated output bytes
-        Ok(vec![vec![0u8; 1]])
+        request: &SemanticExecutionRequest<'_>,
+    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+        let outputs = request
+            .logical()
+            .graph()
+            .nodes()
+            .iter()
+            .flat_map(|node| node.outputs.iter().copied())
+            .map(|value| (value, vec![0u8; 1]))
+            .collect();
+        Ok(SemanticExecutionOutput {
+            artifact: Digest([1; 32]),
+            payload: Digest([2; 32]),
+            outputs,
+        })
     }
 }
 
 #[test]
 fn default_path_fails_closed_on_malformed_backend_output_without_stale_caller_output() {
-    let dispatcher = MalformedOutputDispatcher;
+    let dispatcher = MalformedOutputExecutor;
     let mut out = vec![99u32; 4];
     let mut scratch = CacheInvalidationScratch::default();
 
     let err = impacted_entries_into(
         &dispatcher,
+        &policy(),
         &[1, 0],
         &[0, 1, 0, 0],
         &[0; 4],

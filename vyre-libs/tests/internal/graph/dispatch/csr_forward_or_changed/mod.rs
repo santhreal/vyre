@@ -1,8 +1,8 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-use crate::test_parity_oracles::{NeverDispatches, StaticOutputs};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use crate::test_parity_oracles::{policy, NeverDispatches, StaticOutputs};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 #[path = "../csr_fixtures.rs"]
 mod csr_fixtures;
@@ -19,12 +19,13 @@ const CSR_CHANGED_CONTRACT: &str = "csr_forward_or_changed dispatch";
 /// allowed. The contracts below vary the dispatcher and the iteration budget; the graph itself is
 /// incidental to them.
 fn linear_closure(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     max_iters: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let (off, tgt, msk) = linear_graph();
     forward_closure_via_change_flag_gpu(
         dispatcher,
+        &policy(),
         linear_inputs(&off, &tgt, &msk, 0xFFFF_FFFF, max_iters),
         &[0b0001],
     )
@@ -32,13 +33,14 @@ fn linear_closure(
 
 /// [`linear_closure`] decoding into caller-owned frontier storage.
 fn linear_closure_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     max_iters: u32,
     frontier: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let (off, tgt, msk) = linear_graph();
     forward_closure_via_change_flag_gpu_into(
         dispatcher,
+        &policy(),
         linear_inputs(&off, &tgt, &msk, 0xFFFF_FFFF, max_iters),
         &[0b0001],
         frontier,
@@ -48,16 +50,17 @@ fn linear_closure_into(
 /// [`linear_closure`] through caller-owned scratch, with the seed and allow mask exposed because
 /// they participate in the cached program key.
 fn linear_closure_with_scratch(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     seed: &[u32],
     allow_mask: u32,
     max_iters: u32,
     scratch: &mut ForwardChangedGpuScratch,
     frontier: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let (off, tgt, msk) = linear_graph();
     forward_closure_via_change_flag_gpu_with_scratch_into(
         dispatcher,
+        &policy(),
         linear_inputs(&off, &tgt, &msk, allow_mask, max_iters),
         seed,
         scratch,
@@ -95,7 +98,7 @@ fn gpu_rejects_extra_outputs() {
     .expecting_inputs(&[7, 8]);
     let err = linear_closure(&dispatcher, 4).expect_err("extra outputs must be rejected");
     assert!(
-        matches!(err, DispatchError::BackendError(_)),
+        matches!(err, SemanticExecutionError::Backend(_)),
         "unexpected error: {err:?}"
     );
 }
@@ -109,7 +112,7 @@ fn gpu_rejects_trailing_changed_bytes() {
     .expecting_inputs(&[7, 8]);
     let err = linear_closure(&dispatcher, 4).expect_err("trailing changed bytes must be rejected");
     assert!(
-        matches!(err, DispatchError::BackendError(_)),
+        matches!(err, SemanticExecutionError::Backend(_)),
         "unexpected error: {err:?}"
     );
 }
@@ -127,7 +130,7 @@ fn gpu_rejects_non_boolean_changed_flag() {
     let err =
         linear_closure(&dispatcher, 1).expect_err("non-boolean changed flag must be rejected");
     assert!(
-        matches!(err, DispatchError::BackendError(_)),
+        matches!(err, SemanticExecutionError::Backend(_)),
         "unexpected error: {err:?}"
     );
 }
@@ -148,7 +151,7 @@ fn gpu_rejects_bad_seed_width_without_clobbering_frontier() {
     )
     .expect_err("bad seed width must be rejected before mutating reusable frontier storage");
 
-    assert!(matches!(err, DispatchError::BadInputs(_)));
+    assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     assert_eq!(frontier, vec![0xCAFE_BABEu32]);
     assert_eq!(frontier.capacity(), capacity);
     assert!(scratch.inputs.is_empty());
@@ -213,6 +216,7 @@ fn gpu_refreshes_static_inputs_when_same_shape_graph_content_changes() {
     ] {
         forward_closure_via_change_flag_gpu_with_scratch_into(
             &dispatcher,
+            &policy(),
             CsrClosureInputs::allow_all(
                 CsrGraphView {
                     node_count: 4,
@@ -260,7 +264,7 @@ fn gpu_reuses_cached_program_by_primitive_key() {
 
     // Only the seed width, the allow mask and the changed-history policy participate in the
     // primitive key, so the cumulative build count after each step is the contract.
-    let steps: [(&dyn ProgramDispatcher, &[u32], u32, u32, usize, &str); 4] = [
+    let steps: [(&dyn SemanticExecutor, &[u32], u32, u32, usize, &str); 4] = [
         (
             &history_dispatcher,
             &[0b0001],
@@ -310,7 +314,6 @@ fn gpu_reuses_cached_program_by_primitive_key() {
 }
 
 #[test]
-
 fn gpu_rejects_mismatched_edge_arrays() {
     let dispatcher = StaticOutputs::new(
         CSR_CHANGED_CONTRACT,
@@ -322,6 +325,7 @@ fn gpu_rejects_mismatched_edge_arrays() {
     .expecting_inputs(&[7, 8]);
     let err = forward_closure_via_change_flag_gpu(
         &dispatcher,
+        &policy(),
         CsrClosureInputs::allow_all(
             CsrGraphView {
                 node_count: 2,
@@ -334,7 +338,7 @@ fn gpu_rejects_mismatched_edge_arrays() {
         &[0b01],
     )
     .expect_err("mismatched edge arrays must be rejected");
-    assert!(matches!(err, DispatchError::BadInputs(_)));
+    assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
 }
 
 #[test]
@@ -359,6 +363,7 @@ fn generated_gpu_seed_copy_bounds_to_primitive_frontier_words() {
 
             let result = forward_closure_via_change_flag_gpu_into(
                 &dispatcher,
+                &policy(),
                 CsrClosureInputs::allow_all(
                     CsrGraphView {
                         node_count,
@@ -390,7 +395,7 @@ fn generated_gpu_seed_copy_bounds_to_primitive_frontier_words() {
                     "Fix: oversized generated seed must be rejected instead of silently truncated",
                 );
                 assert!(
-                    matches!(err, DispatchError::BadInputs(_)),
+                    matches!(err, SemanticExecutionError::InvalidRequest(_)),
                     "node_count={node_count} extra_words={extra_words} err={err:?}"
                 );
                 let observed = dispatcher.recorded();

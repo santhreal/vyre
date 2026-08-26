@@ -31,11 +31,8 @@
 
 use super::*;
 use crate::graph::csr_closure_inputs::CsrClosureInputs;
-use vyre_driver::grid_sync::{
-    contains_grid_sync, dispatch_with_grid_sync_split, dispatch_with_grid_sync_split_via,
-};
+use vyre_driver::grid_sync::{contains_grid_sync, dispatch_with_grid_sync_split};
 use vyre_driver::DispatchConfig;
-use vyre_driver::VyreBackend;
 use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_primitives::wire::pack_u32_slice;
@@ -80,6 +77,19 @@ fn read_named_output(program: &Program, outputs: &[Vec<u8>], name: &str) -> Vec<
         .chunks_exact(4)
         .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
         .collect()
+}
+
+/// Launch shape for a batch program.
+///
+/// Axis 0 is the node domain the program's own guard admits, and axis 1 is one
+/// block per query, which no analysis of axis-0 guards can supply. The
+/// interpreter needs both, so this test derives them rather than reading a
+/// launch an operation published.
+fn batch_grid(program: &Program, query_count: u32) -> [u32; 3] {
+    let span = vyre_foundation::guarded_logical_span(program)
+        .expect("Fix: a batch program's guard must bound its node domain");
+    let lanes = vyre_primitives::lane_grid(span, program.workgroup_size()[0]);
+    [lanes[0], query_count.max(1), 1]
 }
 
 /// Dispatch one persistent-BFS program and read back the named u32 outputs.
@@ -404,72 +414,6 @@ fn grid_sync_converged_word_matches_oracle_across_the_budget_boundary() {
     assert_eq!((changed, converged), (1, true));
 }
 
-#[test]
-fn grid_sync_converged_word_matches_oracle_through_the_closure_split_entry() {
-    // This is the exact production call path of a downstream dataflow consumer: a
-    // host-loop fixpoint solver holds an opaque single-launch dispatch closure (not
-    // a `&dyn VyreBackend`) and routes the grid-sync persistent_bfs program through
-    // `dispatch_with_grid_sync_split_via`. The closure wraps `CpuRefBackend`; the
-    // shared split core loops the segment sequence to a fixpoint and publishes
-    // the converged word, which must match the oracle just as the backend entry
-    // does. This proves the converged signal is correct on that closure entry.
-    let (node_count, offsets, targets, masks, seed) = grid_sync_two_level(256);
-    assert!(node_count > 256, "must exercise the grid-sync path");
-    let shape = shape_for(node_count, &targets);
-
-    // The opaque closure a host-loop solver supplies: one kernel launch per
-    // segment, grid from the caller, per-segment fixpoint fixed at 1 (the shared
-    // split core owns the outer iteration count).
-    let dispatch = |program: &Program,
-                    inputs: &[&[u8]],
-                    grid: Option<[u32; 3]>,
-                    outputs: &mut Vec<Vec<u8>>|
-     -> Result<(), String> {
-        let mut config = DispatchConfig::default();
-        config.grid_override = grid;
-        config.fixpoint_iterations = Some(1);
-        CpuRefBackend
-            .dispatch_borrowed_into(program, inputs, &config, outputs)
-            .map_err(|error| error.to_string())
-    };
-
-    for (max_iters, expect_converged) in [(1u32, 0u32), (2, 0), (3, 1)] {
-        let program = persistent_bfs(shape, "frontier_in", "frontier_out", 0xFFFF_FFFF, max_iters);
-        assert!(
-            contains_grid_sync(&program),
-            "258-node persistent_bfs must be a grid-sync program"
-        );
-        let inputs = build_inputs(&program, &offsets, &targets, &masks, &seed);
-        let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-        let outputs = dispatch_with_grid_sync_split_via(
-            &program,
-            &borrowed,
-            &DispatchConfig::default(),
-            &dispatch,
-        )
-        .expect("Fix: persistent_bfs closure-split dispatch must succeed on a valid graph.");
-        let converged = read_named_output(&program, &outputs, "converged")[0];
-
-        let inputs = CsrClosureInputs::new(
-            node_count,
-            &offsets,
-            &targets,
-            &masks,
-            0xFFFF_FFFF,
-            max_iters,
-        );
-        let (_, oracle) = try_cpu_ref_converged(inputs, &seed)
-            .expect("Fix: CPU oracle must accept a valid graph.");
-        assert_eq!(
-            converged,
-            expect_converged,
-            "max_iters={max_iters}: closure-split converged word must equal the oracle (converged={}).",
-            oracle.converged
-        );
-        assert_eq!(converged, u32::from(oracle.converged));
-    }
-}
-
 /// Dispatch the BATCH persistent_bfs program and read back the per-query
 /// frontier/changed/converged.
 fn run_converged_batch(
@@ -498,7 +442,7 @@ fn run_converged_batch(
         edge_targets,
         edge_kind_mask,
         frontier_in,
-        Some(persistent_bfs_batch_dispatch_grid(node_count, query_count)),
+        Some(batch_grid(&program, query_count)),
         &["frontier_out", "changed", "converged"],
     );
     let total_words = bitset_words(node_count) as usize * query_count.max(1) as usize;
@@ -830,7 +774,7 @@ fn run_density_batch(
         edge_targets,
         edge_kind_mask,
         frontier_in,
-        Some(persistent_bfs_batch_dispatch_grid(node_count, query_count)),
+        Some(batch_grid(&program, query_count)),
         &[DENSITY_ACTIVE_BUFFER],
     );
     let mut density = reads[0].clone();

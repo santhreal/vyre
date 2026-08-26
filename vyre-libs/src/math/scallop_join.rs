@@ -93,24 +93,6 @@ pub const OP_ID: &str = "vyre-libs::math::scallop_join";
 /// One lane per relation cell in the lineage fixpoint.
 pub const SCALLOP_JOIN_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid for the Scallop kernel.
-///
-/// # W-wide lane mapping
-///
-/// One lane per relation CELL, not per word. A lane owns the `w` contiguous
-/// `u32` words of its cell and walks them, so `n * n` lanes cover all
-/// `n * n * w` words and the grid does not scale with `w`. The word-wise walk
-/// lives in `scallop_persistent::wide_transfer_body` and
-/// `wide_compare_body`, which derive `cell_base = cell * w` and iterate `w`
-/// words from there.
-///
-/// Over the [`vyre_primitives::lane_grid`] owner, so the zero-relation case still
-/// yields a launchable grid.
-#[must_use]
-pub const fn scallop_join_dispatch_grid(n: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(n.saturating_mul(n), SCALLOP_JOIN_WORKGROUP_SIZE[0])
-}
-
 /// Documentation hook for the recursion-thesis self-consumer wired in
 /// `vyre-libs::self_substrate::scallop_provenance`. Updates to this
 /// constant must update the self-consumer module's doc-link.
@@ -468,50 +450,6 @@ mod tests {
             assert!(names.contains(&"j"));
             assert!(names.contains(&"c"));
         }
-    }
-
-    #[test]
-    fn dispatch_grid_scales_large_relations_into_blocks() {
-        assert_eq!(scallop_join_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(scallop_join_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(scallop_join_dispatch_grid(16), [1, 1, 1]);
-        assert_eq!(scallop_join_dispatch_grid(17), [2, 1, 1]);
-        assert_eq!(scallop_join_dispatch_grid(33), [5, 1, 1]);
-    }
-
-    /// The grid is sized in CELLS, and a lane walks the `w` words of its cell.
-    /// A grid sized in cells only covers the relation if that walk exists, so
-    /// assert the launched lane count times the per-lane word count reaches
-    /// every word of the relation. Dropping the walk from
-    /// `wide_transfer_body` would leave `w - 1` words of every cell untouched
-    /// while this arithmetic still held, so also assert the words each lane is
-    /// responsible for are the contiguous run the body derives.
-    #[test]
-    fn a_wide_grid_covers_every_relation_word() {
-        let n = 16u32;
-        let w = 8u32;
-        let grid = scallop_join_dispatch_grid(n);
-        let lanes = grid[0] * grid[1] * grid[2] * SCALLOP_JOIN_WORKGROUP_SIZE[0];
-        let words = n * n * w;
-
-        assert!(
-            lanes >= n * n,
-            "one lane per cell: {lanes} lanes must cover {} cells",
-            n * n
-        );
-        assert!(
-            lanes * w >= words,
-            "{lanes} lanes walking {w} words each must cover {words} relation words"
-        );
-
-        let covered: usize = (0..n * n)
-            .flat_map(|cell| (0..w).map(move |word| cell * w + word))
-            .collect::<std::collections::BTreeSet<_>>()
-            .len();
-        assert_eq!(
-            covered, words as usize,
-            "cell_base = cell * w over w words must enumerate every word exactly once"
-        );
     }
 
     #[test]

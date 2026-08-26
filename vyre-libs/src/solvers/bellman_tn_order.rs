@@ -14,10 +14,11 @@ use crate::math::bellman_shortest_path::{bellman_shortest_path, BellmanBuffers, 
 use vyre_foundation::ir::Program;
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
+    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
-use crate::fixpoint::persistent_fixpoint::PERSISTENT_FIXPOINT_WORKGROUP_SIZE;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Canonical self-substrate op ID for the Bellman TN order.
 pub const OP_ID: &str = "vyre-libs::self_substrate::bellman_tn_order";
@@ -63,17 +64,19 @@ const DISPATCH_BINDINGS: BellmanBuffers<'static> = BellmanBuffers::CANONICAL;
 /// buffers.
 #[allow(clippy::too_many_arguments)]
 pub fn bellman_tn_order_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     src: &[u32],
     dst: &[u32],
     weight: &[u32],
     dist_init: &[u32],
     n_nodes: u32,
     max_iterations: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
     bellman_tn_order_via_into(
         dispatcher,
+        policy,
         src,
         dst,
         weight,
@@ -93,7 +96,8 @@ pub fn bellman_tn_order_via(
 /// Propagates dispatch failures and rejects malformed edge or distance buffers.
 #[allow(clippy::too_many_arguments)]
 pub fn bellman_tn_order_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     src: &[u32],
     dst: &[u32],
     weight: &[u32],
@@ -101,10 +105,11 @@ pub fn bellman_tn_order_via_into(
     n_nodes: u32,
     max_iterations: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = BellmanTnOrderGpuScratch::default();
     bellman_tn_order_via_with_scratch_into(
         dispatcher,
+        policy,
         src,
         dst,
         weight,
@@ -124,7 +129,8 @@ pub fn bellman_tn_order_via_into(
 /// Propagates dispatch failures and rejects malformed edge or distance buffers.
 #[allow(clippy::too_many_arguments)]
 pub fn bellman_tn_order_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     src: &[u32],
     dst: &[u32],
     weight: &[u32],
@@ -133,10 +139,10 @@ pub fn bellman_tn_order_via_with_scratch_into(
     max_iterations: u32,
     scratch: &mut BellmanTnOrderGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if n_nodes == 0 {
         if !dist_init.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
+            return Err(SemanticExecutionError::InvalidRequest(format!(
                 "Fix: bellman_tn_order_via n_nodes=0 requires empty dist_init, got {} entries.",
                 dist_init.len()
             )));
@@ -146,7 +152,7 @@ pub fn bellman_tn_order_via_with_scratch_into(
     }
     if max_iterations == 0 {
         if dist_init.len() != n_nodes as usize {
-            return Err(DispatchError::BadInputs(format!(
+            return Err(SemanticExecutionError::InvalidRequest(format!(
                 "Fix: bellman_tn_order_via expected dist_init length {n_nodes}, got {}.",
                 dist_init.len()
             )));
@@ -156,28 +162,28 @@ pub fn bellman_tn_order_via_with_scratch_into(
         return Ok(());
     }
     if src.len() != dst.len() || src.len() != weight.len() {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: bellman_tn_order_via requires equal edge buffer lengths, got src={}, dst={}, weight={}.",
-            src.len(),
-            dst.len(),
-            weight.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: bellman_tn_order_via requires equal edge buffer lengths, got src={}, dst={}, weight={}.",
+        src.len(),
+        dst.len(),
+        weight.len()
+    )));
     }
     if dist_init.len() != n_nodes as usize {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: bellman_tn_order_via expected dist_init length {n_nodes}, got {}.",
             dist_init.len()
         )));
     }
     for (idx, (&u, &v)) in src.iter().zip(dst.iter()).enumerate() {
         if u >= n_nodes || v >= n_nodes {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: bellman_tn_order_via edge {idx} has endpoint ({u}->{v}) outside n_nodes {n_nodes}."
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: bellman_tn_order_via edge {idx} has endpoint ({u}->{v}) outside n_nodes {n_nodes}."
+        )));
         }
     }
     let n_edges = u32::try_from(src.len()).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: bellman_tn_order_via edge count {} exceeds u32 index space.",
             src.len()
         ))
@@ -221,15 +227,22 @@ pub fn bellman_tn_order_via_with_scratch_into(
     // program. Sizing the grid off `n_edges` alone leaves every node past the
     // launch width with no lane to publish it whenever `n_nodes` exceeds
     // `n_edges`, silently freezing those distances at their seed values.
-    let grid_x = ceil_div_u32(n_nodes.max(n_edges), PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0]);
-    let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([grid_x, 1, 1]))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &scratch.inputs,
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: bellman_tn_order_via expected at least the dist output buffer, got {}.",
             outputs.len()
         )));
     }
     decode_u32_output_exact(&outputs[0], n_nodes as usize, "bellman_tn_order_via", out)
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 #[cfg(test)]
@@ -293,32 +306,44 @@ mod tests {
 
     struct BellmanDispatcher;
 
-    impl ProgramDispatcher for BellmanDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for BellmanDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 6);
-            let dist = crate::dispatch_buffers::read_u32s(&inputs[0]);
-            let next_dist = crate::dispatch_buffers::read_u32s(&inputs[1]);
-            let changed = crate::dispatch_buffers::read_u32s(&inputs[2]);
-            let src = crate::dispatch_buffers::read_u32s(&inputs[3]);
-            let dst = crate::dispatch_buffers::read_u32s(&inputs[4]);
-            let weight = crate::dispatch_buffers::read_u32s(&inputs[5]);
-            assert_eq!(dist, next_dist);
-            // The invariant is a CLEARED flag buffer of whatever width the routed
-            // program declares, not a one-word buffer. Pinning `vec![0]` here would
-            // re-encode the assumption the grid route invalidates.
-            assert!(
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                assert_eq!(inputs.len(), 6);
+                let dist = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                let next_dist = crate::dispatch_buffers::read_u32s(&inputs[1]);
+                let changed = crate::dispatch_buffers::read_u32s(&inputs[2]);
+                let src = crate::dispatch_buffers::read_u32s(&inputs[3]);
+                let dst = crate::dispatch_buffers::read_u32s(&inputs[4]);
+                let weight = crate::dispatch_buffers::read_u32s(&inputs[5]);
+                assert_eq!(dist, next_dist);
+                // The invariant is a CLEARED flag buffer of whatever width the routed
+                // program declares, not a one-word buffer. Pinning `vec![0]` here would
+                // re-encode the assumption the grid route invalidates.
+                assert!(
                 !changed.is_empty() && changed.iter().all(|&word| word == 0),
                 "Fix: the consumer must upload a non-empty, fully cleared convergence-flag buffer, got {changed:?}."
             );
-            let (out, _) =
-                reference_bellman_shortest_path(&src, &dst, &weight, &dist, dist.len() as u32, 10);
-            Ok(vec![u32_slice_to_le_bytes(&out)])
+                let (out, _) = reference_bellman_shortest_path(
+                    &src,
+                    &dst,
+                    &weight,
+                    &dist,
+                    dist.len() as u32,
+                    10,
+                );
+                Ok(vec![u32_slice_to_le_bytes(&out)])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
+            }
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -353,42 +378,39 @@ mod tests {
         );
     }
 
-    /// The consumer must upload a convergence-flag buffer as wide as the routed
-    /// program DECLARES, and must launch over the dispatch SPAN, not the edge count.
+    /// The consumer must upload a convergence-flag buffer as wide as the program declares.
     ///
-    /// 300 states and 4 transitions. `bellman_shortest_path` routes a span of 300
-    /// to the grid fixpoint, which writes `changed[iteration]` and so declares one
-    /// word per iteration. Two separate defects are locked out here.
-    ///
-    /// First, the old scratch was a fixed `[u32; 1]` and always uploaded one word,
-    /// which hands the grid form an under-sized binding: iteration 1's
-    /// `atomic_or(changed, 1, 1)` writes past the end of it.
-    ///
-    /// Second, the grid width was `ceil(n_edges / 256)`, which is 1 here, so states
-    /// 256..=299 would get no lane at all. Nothing would run their compare, so
-    /// their distances would stay frozen at `u32::MAX` no matter how many
-    /// iterations ran. The span is `max(n_nodes, n_edges)`, giving 2 workgroups.
+    /// A fixed one-word scratch binding would let later iterations write beyond
+    /// the supplied resource, so this checks the semantic input ABI directly.
     #[test]
-    fn consumer_packs_declared_flag_width_and_launches_over_the_dispatch_span() {
-        use std::cell::RefCell;
+    fn consumer_packs_declared_flag_width() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
 
         struct CapturingDispatcher {
-            changed_words: RefCell<usize>,
-            grid: RefCell<Option<[u32; 3]>>,
+            changed_words: AtomicUsize,
             n_nodes: usize,
         }
 
-        impl ProgramDispatcher for CapturingDispatcher {
-            fn dispatch(
+        impl SemanticExecutor for CapturingDispatcher {
+            fn execute(
                 &self,
-                _program: &Program,
-                inputs: &[Vec<u8>],
-                grid_override: Option<[u32; 3]>,
-            ) -> Result<Vec<Vec<u8>>, DispatchError> {
-                *self.changed_words.borrow_mut() =
-                    crate::dispatch_buffers::read_u32s(&inputs[2]).len();
-                *self.grid.borrow_mut() = grid_override;
-                Ok(vec![u32_slice_to_le_bytes(&vec![0_u32; self.n_nodes])])
+                request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+            ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError>
+            {
+                let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+                let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                    self.changed_words.store(
+                        crate::dispatch_buffers::read_u32s(&inputs[2]).len(),
+                        Ordering::Relaxed,
+                    );
+                    Ok(vec![u32_slice_to_le_bytes(&vec![0_u32; self.n_nodes])])
+                })();
+                let mut ordered = ordered?;
+                let output_count = request.logical().graph().nodes()[0].outputs.len();
+                if ordered.len() < output_count {
+                    ordered.resize(output_count, Vec::new());
+                }
+                crate::test_parity_oracles::semantic_output(request, ordered)
             }
         }
 
@@ -408,18 +430,15 @@ mod tests {
             .find(|buffer| buffer.name() == "changed")
             .expect("Fix: the program must declare its convergence-flag buffer.")
             .count();
-        assert_eq!(
-            declared_changed, max_iterations,
-            "Fix: a 300-state span must route to the grid fixpoint, which declares one flag word per iteration."
-        );
+        assert_eq!(declared_changed, max_iterations);
 
         let dispatcher = CapturingDispatcher {
-            changed_words: RefCell::new(0),
-            grid: RefCell::new(None),
+            changed_words: AtomicUsize::new(0),
             n_nodes: n_nodes as usize,
         };
         bellman_tn_order_via(
             &dispatcher,
+            &crate::test_parity_oracles::policy(),
             &src,
             &dst,
             &weight,
@@ -430,14 +449,9 @@ mod tests {
         .expect("Fix: the consumer must dispatch a 300-state ordering problem.");
 
         assert_eq!(
-            *dispatcher.changed_words.borrow(),
+            dispatcher.changed_words.load(Ordering::Relaxed),
             declared_changed as usize,
-            "Fix: the uploaded convergence-flag buffer must be as wide as the program declares, or the grid form writes past its end."
-        );
-        assert_eq!(
-            *dispatcher.grid.borrow(),
-            Some([2, 1, 1]),
-            "Fix: the launch must span max(n_nodes, n_edges) = 300 over a 256-wide workgroup; sizing it off the 4 edges leaves states 256..=299 with no lane to publish them."
+            "Fix: the uploaded convergence-flag buffer must be as wide as the program declares."
         );
     }
 
@@ -460,8 +474,17 @@ mod tests {
         let weight = vec![10, 20, 30, 100];
         let dist_init = vec![0, u32::MAX, u32::MAX, u32::MAX];
 
-        let out = bellman_tn_order_via(&BellmanDispatcher, &src, &dst, &weight, &dist_init, 4, 10)
-            .unwrap();
+        let out = bellman_tn_order_via(
+            &BellmanDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &src,
+            &dst,
+            &weight,
+            &dist_init,
+            4,
+            10,
+        )
+        .unwrap();
 
         assert_eq!(out, vec![0, 10, 30, 60]);
     }
@@ -477,6 +500,7 @@ mod tests {
 
         bellman_tn_order_via_into(
             &BellmanDispatcher,
+            &crate::test_parity_oracles::policy(),
             &src,
             &dst,
             &weight,
@@ -502,6 +526,7 @@ mod tests {
 
         bellman_tn_order_via_with_scratch_into(
             &BellmanDispatcher,
+            &crate::test_parity_oracles::policy(),
             &src,
             &dst,
             &weight,
@@ -518,6 +543,7 @@ mod tests {
 
         bellman_tn_order_via_with_scratch_into(
             &BellmanDispatcher,
+            &crate::test_parity_oracles::policy(),
             &src,
             &dst,
             &weight,
@@ -539,10 +565,19 @@ mod tests {
 
     #[test]
     fn bellman_tn_order_via_rejects_bad_edge_shape() {
-        let err =
-            bellman_tn_order_via(&BellmanDispatcher, &[0], &[], &[1], &[0], 1, 10).unwrap_err();
+        let err = bellman_tn_order_via(
+            &BellmanDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[0],
+            &[],
+            &[1],
+            &[0],
+            1,
+            10,
+        )
+        .unwrap_err();
 
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 
     #[test]
@@ -552,6 +587,7 @@ mod tests {
             &NeverDispatches(
                 "Fix: empty Bellman edge set must not submit a zero-work GPU dispatch",
             ),
+            &crate::test_parity_oracles::policy(),
             &[],
             &[],
             &[],

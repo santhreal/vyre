@@ -1,5 +1,5 @@
 //! End-to-end parity for `logic::string_diagram_ir_rewrite::compose_ir_arrows_fixed_via` through the
-//! shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! shared faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap AND locks a real bug the conversion surfaced (see BACKLOG
 //! `SWEEP-via-consumer-input-output-contract-audit`): `monoidal_compose` delegates to the shared
@@ -14,9 +14,11 @@
 //! `fixed_mul_16_16_expr`), bit-exactly reproducible in u32, so this is a zero-tolerance oracle (the same
 //! exact-fixed-point route mz_project / natural_gradient use).
 
+mod semantic_execution_support;
+
 use vyre_libs::reasoning::string_diagram_ir_rewrite::compose_ir_arrows_fixed_via;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::{
     fixed_mul, signed_fixed_17 as signed_fixed, to_fixed, xorshift32 as xorshift, FIXED_ONE,
 };
@@ -38,7 +40,7 @@ fn compose_fixed(f: &[u32], g: &[u32], a: usize, b: usize, c: usize) -> Vec<u32>
 
 #[test]
 fn compose_via_matches_exact_fixed_matmul_over_generated_shapes() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x5D1A_9001_u32;
     let mut nontrivial = 0u32;
     for case in 0..400u32 {
@@ -54,8 +56,16 @@ fn compose_via_matches_exact_fixed_matmul_over_generated_shapes() {
             .map(|_| xorshift(&mut state) % (2 * FIXED_ONE))
             .collect();
 
-        let got = compose_ir_arrows_fixed_via(&dispatcher, &f, &g, a as u32, b as u32, c as u32)
-            .expect("compose_ir_arrows_fixed_via must dispatch the fixed-point matmul kernel");
+        let got = compose_ir_arrows_fixed_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &f,
+            &g,
+            a as u32,
+            b as u32,
+            c as u32,
+        )
+        .expect("compose_ir_arrows_fixed_via must dispatch the fixed-point matmul kernel");
         let want = compose_fixed(&f, &g, a, b, c);
         assert_eq!(
             got, want,
@@ -80,7 +90,7 @@ fn compose_via_matches_signed_fixed_matmul_with_negative_arrow_weights() {
     // bit-exactly matches the SIGNED oracle, locking the signed `fixed_mul_16_16_expr` fix on the
     // full a×b×c matmul path (pre-fix, a negative `f[i,k]·g[k,j]` term diverged: the unsigned high
     // word read a negative operand as ~2^32 and produced garbage).
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x8BAD_F00Du32;
     let mut neg_inputs = 0u32;
     let mut neg_outputs = 0u32;
@@ -96,8 +106,16 @@ fn compose_via_matches_signed_fixed_matmul_with_negative_arrow_weights() {
         neg_inputs += f.iter().filter(|&&v| (v as i32) < 0).count() as u32;
         neg_inputs += g.iter().filter(|&&v| (v as i32) < 0).count() as u32;
 
-        let got = compose_ir_arrows_fixed_via(&dispatcher, &f, &g, a as u32, b as u32, c as u32)
-            .expect("compose_ir_arrows_fixed_via must dispatch the fixed-point matmul kernel");
+        let got = compose_ir_arrows_fixed_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &f,
+            &g,
+            a as u32,
+            b as u32,
+            c as u32,
+        )
+        .expect("compose_ir_arrows_fixed_via must dispatch the fixed-point matmul kernel");
         let want = compose_fixed(&f, &g, a, b, c);
         assert_eq!(
             got, want,
@@ -131,10 +149,19 @@ fn compose_via_hand_checked_signed_composition() {
     //   out[0,1] = (2.0)(0.0) + (-1.0)( 1.0) = 0.0 - 1.0 = -1.0
     //   out[1,0] = (0.0)(1.0) + ( 3.0)(-2.0) = 0.0 - 6.0 = -6.0
     //   out[1,1] = (0.0)(0.0) + ( 3.0)( 1.0) = 0.0 + 3.0 =  3.0
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let f = vec![to_fixed(2.0), to_fixed(-1.0), to_fixed(0.0), to_fixed(3.0)];
     let g = vec![to_fixed(1.0), to_fixed(0.0), to_fixed(-2.0), to_fixed(1.0)];
-    let got = compose_ir_arrows_fixed_via(&dispatcher, &f, &g, 2, 2, 2).unwrap();
+    let got = compose_ir_arrows_fixed_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &f,
+        &g,
+        2,
+        2,
+        2,
+    )
+    .unwrap();
     let want = compose_fixed(&f, &g, 2, 2, 2);
     assert_eq!(
         want,
@@ -149,17 +176,35 @@ fn compose_via_hand_checked_signed_composition() {
 
 #[test]
 fn compose_via_matches_hand_checked_cases() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
 
     // Identity(2×2) · M(2×2) = M. Identity in 16.16 = [[1,0],[0,1]].
     let id = vec![FIXED_ONE, 0, 0, FIXED_ONE];
     let m = vec![2 * FIXED_ONE, FIXED_ONE, 0, 3 * FIXED_ONE];
-    let got = compose_ir_arrows_fixed_via(&dispatcher, &id, &m, 2, 2, 2).unwrap();
+    let got = compose_ir_arrows_fixed_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &id,
+        &m,
+        2,
+        2,
+        2,
+    )
+    .unwrap();
     assert_eq!(got, m, "identity composed with M yields M");
 
     // Row f(1×2)=[2.0, 3.0] composed with column g(2×1)=[1.0, 0.5] → 2*1 + 3*0.5 = 3.5.
     let f = vec![2 * FIXED_ONE, 3 * FIXED_ONE];
     let g = vec![FIXED_ONE, FIXED_ONE / 2];
-    let got = compose_ir_arrows_fixed_via(&dispatcher, &f, &g, 1, 2, 1).unwrap();
+    let got = compose_ir_arrows_fixed_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &f,
+        &g,
+        1,
+        2,
+        1,
+    )
+    .unwrap();
     assert_eq!(got, vec![FIXED_ONE * 7 / 2], "2·1 + 3·0.5 = 3.5 in 16.16");
 }

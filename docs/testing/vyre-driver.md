@@ -39,7 +39,6 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `test` | `actionable_errors` | `vyre-driver/tests/actionable_errors.rs` | None | `./cargo_full test -p vyre-driver --test actionable_errors` |
 | `test` | `allocation_contracts` | `vyre-driver/tests/allocation_contracts.rs` | None | `./cargo_full test -p vyre-driver --test allocation_contracts` |
 | `test` | `arm_independence_contracts` | `vyre-driver/tests/arm_independence_contracts.rs` | None | `./cargo_full test -p vyre-driver --test arm_independence_contracts` |
-| `test` | `artifact_invocation_grid` | `vyre-driver/tests/artifact_invocation_grid.rs` | None | `./cargo_full test -p vyre-driver --test artifact_invocation_grid` |
 | `test` | `async_copy_overlap_contracts` | `vyre-driver/tests/async_copy_overlap_contracts.rs` | None | `./cargo_full test -p vyre-driver --test async_copy_overlap_contracts` |
 | `test` | `async_dispatch_contract` | `vyre-driver/tests/async_dispatch_contract.rs` | None | `./cargo_full test -p vyre-driver --test async_dispatch_contract` |
 | `test` | `atomic_file_operation_race_policy` | `vyre-driver/tests/atomic_file_operation_race_policy.rs` | None | `./cargo_full test -p vyre-driver --test atomic_file_operation_race_policy` |
@@ -91,6 +90,7 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `test` | `mixed_work_autotuning` | `vyre-driver/tests/mixed_work_autotuning.rs` | None | `./cargo_full test -p vyre-driver --test mixed_work_autotuning` |
 | `test` | `no_backend_crate_links_host_arithmetic` | `vyre-driver/tests/no_backend_crate_links_host_arithmetic.rs` | None | `./cargo_full test -p vyre-driver --test no_backend_crate_links_host_arithmetic` |
 | `test` | `numeric_contracts` | `vyre-driver/tests/numeric_contracts.rs` | None | `./cargo_full test -p vyre-driver --test numeric_contracts` |
+| `test` | `omitted_launch_geometry` | `vyre-driver/tests/omitted_launch_geometry.rs` | None | `./cargo_full test -p vyre-driver --test omitted_launch_geometry` |
 | `test` | `ordering_contracts` | `vyre-driver/tests/ordering_contracts.rs` | None | `./cargo_full test -p vyre-driver --test ordering_contracts` |
 | `test` | `output_slab_provenance` | `vyre-driver/tests/output_slab_provenance.rs` | None | `./cargo_full test -p vyre-driver --test output_slab_provenance` |
 | `test` | `output_slots_contracts` | `vyre-driver/tests/output_slots_contracts.rs` | None | `./cargo_full test -p vyre-driver --test output_slots_contracts` |

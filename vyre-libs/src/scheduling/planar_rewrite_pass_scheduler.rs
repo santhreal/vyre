@@ -43,58 +43,62 @@
 //! count by orders of magnitude with provably-correct disjointness
 //! (the greedy schedule never picks two overlapping rewrites).
 
-use crate::dispatch_buffers::{
-    checked_product_count, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
-    write_zero_bytes,
-};
+use super::{checked_product_count, decode_u32_output_exact};
+use crate::dispatch_buffers::{ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes};
 use crate::parsing::planar_rewrite::planar_rewrite_schedule;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
-/// Caller-owned GPU dispatch scratch for planar rewrite scheduling.
+/// Caller-owned semantic execution scratch for planar rewrite scheduling.
 #[derive(Debug, Default)]
 pub struct PlanarRewriteScheduleGpuScratch {
     inputs: Vec<Vec<u8>>,
 }
 
-/// Schedule a batch of non-conflicting IR rewrites through the dispatcher.
+/// Schedule a batch of non-conflicting IR rewrites through semantic execution.
 ///
-/// This dispatches the primitive [`planar_rewrite_schedule`] and returns the
+/// This executes the primitive [`planar_rewrite_schedule`] and returns the
 /// selected `h x w` mask. The primitive's contract is single-lane greedy
 /// scheduling; callers that need higher-throughput graph coloring should use a
 /// separate primitive rather than changing this deterministic order.
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape validation fails, `k == 0`, or the
-/// backend returns malformed output.
+/// Returns [`SemanticExecutionError`] when shape validation fails, `k == 0`,
+/// compilation or execution fails, or the backend returns malformed output.
 pub fn schedule_disjoint_rewrites_via(
-    dispatcher: &impl ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     candidates: &[u32],
     h: u32,
     w: u32,
     k: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
-    schedule_disjoint_rewrites_via_into(dispatcher, candidates, h, w, k, &mut out)?;
+    schedule_disjoint_rewrites_via_into(executor, policy, candidates, h, w, k, &mut out)?;
     Ok(out)
 }
 
-/// Dispatcher-backed planar rewrite scheduling into caller-owned storage.
+/// Semantic planar rewrite scheduling into caller-owned storage.
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation, compilation, or backend
+/// execution fails.
 pub fn schedule_disjoint_rewrites_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     candidates: &[u32],
     h: u32,
     w: u32,
     k: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = PlanarRewriteScheduleGpuScratch::default();
     schedule_disjoint_rewrites_via_with_scratch_into(
-        dispatcher,
+        executor,
+        policy,
         candidates,
         h,
         w,
@@ -104,32 +108,34 @@ pub fn schedule_disjoint_rewrites_via_into(
     )
 }
 
-/// Dispatcher-backed planar rewrite scheduling into caller-owned dispatch and
-/// output storage.
+/// Semantic planar rewrite scheduling into caller-owned execution and output
+/// storage.
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation, compilation, or backend
+/// execution fails.
 pub fn schedule_disjoint_rewrites_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     candidates: &[u32],
     h: u32,
     w: u32,
     k: u32,
     scratch: &mut PlanarRewriteScheduleGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, planar_rewrite_pass_scheduler_calls};
     bump(&planar_rewrite_pass_scheduler_calls);
 
     if k == 0 {
-        return Err(DispatchError::BadInputs(
+        return Err(SemanticExecutionError::InvalidRequest(
             "Fix: schedule_disjoint_rewrites_via requires k > 0.".to_string(),
         ));
     }
     let cells = checked_product_count(h, w, "h", "w", "schedule_disjoint_rewrites_via")?;
     if candidates.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: schedule_disjoint_rewrites_via requires candidates.len() == h*w, got len={}, h={h}, w={w}, h*w={cells}.",
             candidates.len()
         )));
@@ -139,16 +145,23 @@ pub fn schedule_disjoint_rewrites_via_with_scratch_into(
     let output_bytes = cells
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: schedule_disjoint_rewrites_via output byte count overflows usize for {cells} cells."
             ))
         })?;
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], candidates);
     write_zero_bytes(&mut scratch.inputs[1], output_bytes);
-    let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([1, 1, 1]))?;
+    let outputs = execute_single_program(
+        executor,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &scratch.inputs,
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: schedule_disjoint_rewrites_via expected at least one output buffer, got {}.",
             outputs.len()
         )));
@@ -160,7 +173,7 @@ pub fn schedule_disjoint_rewrites_via_with_scratch_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_foundation::ir::Program;
+    use crate::test_parity_oracles::{policy, StaticOutputs};
     use vyre_reference::composition_witness::{
         planar_rewrite_schedule_witness as reference_planar_rewrite_schedule,
         reduce_count_non_zero_witness as count_scheduled,
@@ -182,59 +195,54 @@ mod tests {
 
     #[test]
     fn full_grid_yields_disjoint_subset() {
-        // 4x4 grid, all candidates, k=2. Expected: at most ⌈4/2⌉² = 4
-        // rewrites picked at positions (0,0), (0,2), (2,0), (2,2).
         let candidates = vec![1u32; 16];
         let schedule = schedule_disjoint_rewrites(&candidates, 4, 4, 2);
         let count = count_scheduled(&schedule);
-        // Disjointness with k=2 footprint allows at most 4 rewrites.
         assert!(count >= 1, "at least one rewrite must be schedulable");
         assert!(count <= 4, "at most 4 disjoint k=2 rewrites in a 4x4 grid");
     }
 
     #[test]
     fn k_one_allows_every_candidate() {
-        // k=1 means each rewrite covers a 1x1 sub-region  -  no
-        // overlap possible, so every candidate is selectable.
         let candidates = vec![1u32, 1, 1, 1];
         let schedule = schedule_disjoint_rewrites(&candidates, 2, 2, 1);
         assert_eq!(count_scheduled(&schedule), 4);
     }
 
-    struct PlanarDispatcher;
+    #[test]
+    fn schedule_disjoint_rewrites_via_preserves_input_and_output_contracts() {
+        let candidates = vec![1u32; 16];
+        let expected = schedule_disjoint_rewrites(&candidates, 4, 4, 2);
+        let executor = StaticOutputs::new(
+            "planar rewrite schedule",
+            vec![u32_slice_to_le_bytes(&expected)],
+        )
+        .expecting_inputs(&[2])
+        .recording_input(0);
 
-    impl ProgramDispatcher for PlanarDispatcher {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 2);
-            let candidates = crate::dispatch_buffers::read_u32s(&inputs[0]);
-            let n = integer_sqrt(candidates.len());
-            let chosen = reference_planar_rewrite_schedule(&candidates, n as u32, n as u32, 2);
-            Ok(vec![u32_slice_to_le_bytes(&chosen)])
-        }
+        let via =
+            schedule_disjoint_rewrites_via(&executor, &policy(), &candidates, 4, 4, 2).unwrap();
+
+        assert_eq!(via, expected);
+        assert_eq!(executor.recorded(), vec![candidates]);
     }
 
     #[test]
-    fn schedule_disjoint_rewrites_via_dispatches_primitive() {
+    fn schedule_disjoint_rewrites_via_with_scratch_reuses_input_and_output_storage() {
         let candidates = vec![1u32; 16];
-        let via = schedule_disjoint_rewrites_via(&PlanarDispatcher, &candidates, 4, 4, 2).unwrap();
-        let reference = schedule_disjoint_rewrites(&candidates, 4, 4, 2);
-        assert_eq!(via, reference);
-    }
-
-    #[test]
-    fn schedule_disjoint_rewrites_via_with_scratch_reuses_dispatch_and_output_storage() {
-        let candidates = vec![1u32; 16];
+        let expected = schedule_disjoint_rewrites(&candidates, 4, 4, 2);
+        let executor = StaticOutputs::new(
+            "planar rewrite schedule scratch",
+            vec![u32_slice_to_le_bytes(&expected)],
+        )
+        .expecting_inputs(&[2]);
+        let execution_policy = policy();
         let mut scratch = PlanarRewriteScheduleGpuScratch::default();
         let mut out = Vec::with_capacity(16);
 
         schedule_disjoint_rewrites_via_with_scratch_into(
-            &PlanarDispatcher,
+            &executor,
+            &execution_policy,
             &candidates,
             4,
             4,
@@ -248,7 +256,8 @@ mod tests {
         let out_capacity = out.capacity();
 
         schedule_disjoint_rewrites_via_with_scratch_into(
-            &PlanarDispatcher,
+            &executor,
+            &execution_policy,
             &candidates,
             4,
             4,
@@ -263,21 +272,14 @@ mod tests {
             input_capacities
         );
         assert_eq!(out.capacity(), out_capacity);
-        assert_eq!(out, schedule_disjoint_rewrites(&candidates, 4, 4, 2));
+        assert_eq!(out, expected);
     }
 
     #[test]
     fn schedule_disjoint_rewrites_via_rejects_bad_shape() {
+        let executor = StaticOutputs::new("unused planar output", Vec::new());
         let err =
-            schedule_disjoint_rewrites_via(&PlanarDispatcher, &[1, 0, 1], 2, 2, 2).unwrap_err();
-        assert!(matches!(err, DispatchError::BadInputs(_)));
-    }
-
-    fn integer_sqrt(n: usize) -> usize {
-        let mut root = 0usize;
-        while root * root < n {
-            root += 1;
-        }
-        root
+            schedule_disjoint_rewrites_via(&executor, &policy(), &[1, 0, 1], 2, 2, 2).unwrap_err();
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 }

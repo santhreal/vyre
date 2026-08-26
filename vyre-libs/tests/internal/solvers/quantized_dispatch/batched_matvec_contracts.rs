@@ -62,7 +62,7 @@ fn i4x8_batched_matvec_f32_scaled_via_reuses_cached_program_for_same_shape() {
                 (&x_batches[..], 2)
             };
             i4x8_batched_matvec_f32_scaled_via_with_scratch_into(
-                &QuantizedBatchedMatvecDispatcher,
+                &QuantizedBatchedMatvecDispatcher, &crate::test_parity_oracles::policy(),
                 &weights,
                 x_batches,
                 &row_scales,
@@ -87,6 +87,7 @@ fn i4x8_batched_matvec_f32_scaled_via_rejects_shape_errors_before_dispatch() {
 
     let err = i4x8_batched_matvec_f32_scaled_via(
         &QuantizedBatchedMatvecDispatcher,
+        &crate::test_parity_oracles::policy(),
         &weights,
         &x_batches,
         &row_scales,
@@ -99,6 +100,7 @@ fn i4x8_batched_matvec_f32_scaled_via_rejects_shape_errors_before_dispatch() {
 
     let err = i4x8_batched_matvec_f32_scaled_via(
         &QuantizedBatchedMatvecDispatcher,
+        &crate::test_parity_oracles::policy(),
         &[],
         &x_batches,
         &row_scales,
@@ -111,6 +113,7 @@ fn i4x8_batched_matvec_f32_scaled_via_rejects_shape_errors_before_dispatch() {
 
     let err = i4x8_batched_matvec_f32_scaled_via(
         &QuantizedBatchedMatvecDispatcher,
+        &crate::test_parity_oracles::policy(),
         &weights,
         &x_batches[..15],
         &row_scales,
@@ -123,6 +126,7 @@ fn i4x8_batched_matvec_f32_scaled_via_rejects_shape_errors_before_dispatch() {
 
     let err = i4x8_batched_matvec_f32_scaled_via(
         &QuantizedBatchedMatvecDispatcher,
+        &crate::test_parity_oracles::policy(),
         &weights,
         &x_batches,
         &[],

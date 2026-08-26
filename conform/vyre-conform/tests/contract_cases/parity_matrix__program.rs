@@ -22,9 +22,7 @@ use std::sync::Arc;
 
 use blake3::Hash;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_conform::dispatch_grid;
 use vyre_conform::witness_plan::WitnessInputPlan;
-use vyre_driver::DispatchConfig;
 use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
 use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};
 use vyre_spec::expr_variants;
@@ -49,19 +47,17 @@ fn parity_reference_runner_uses_planned_zeroed_read_write_inputs() {
         id: "reference",
         kind: BackendKind::ReferenceBackend,
     };
-    let config = DispatchConfig::default();
     let inputs = vec![1u32.to_le_bytes().to_vec()];
     let mut values = Vec::new();
     let mut borrowed_inputs = Vec::new();
 
     let outputs = runner
-        .dispatch_with_plan(
+        .execute_with_plan(
             &program,
             &inputs,
             &mut values,
             Some(&plan),
             &mut borrowed_inputs,
-            &config,
         )
         .expect("Fix: reference parity runner must receive planned zeroed read-write inputs.");
 
@@ -142,8 +138,6 @@ fn measure_entry(
     summary.ops_covered += 1;
     let input_plan = WitnessInputPlan::for_program(&program)
         .map_err(|error| OpFailure::harness(entry.id, "input plan", error.to_string()))?;
-    let grid_config = dispatch_grid::config_for_program(&program)
-        .map_err(|error| OpFailure::harness(entry.id, "grid config", error.to_string()))?;
     let mut reference_values = Vec::with_capacity(program.buffers().len());
     let mut outputs = Vec::<(&'static str, Vec<Vec<u8>>)>::with_capacity(runners.len());
     let mut borrowed_inputs = Vec::with_capacity(input_plan.source_count());
@@ -157,13 +151,12 @@ fn measure_entry(
         borrowed_inputs.clear();
 
         let reference_output = runners[0]
-            .dispatch_with_plan(
+            .execute_with_plan(
                 &program,
                 inputs,
                 &mut reference_values,
                 Some(&input_plan),
                 &mut borrowed_inputs,
-                &grid_config,
             )
             .map_err(|error| {
                 OpFailure::backend(
@@ -201,13 +194,12 @@ fn measure_entry(
 
         for runner in runners.iter().skip(1) {
             match catch_unwind(AssertUnwindSafe(|| {
-                runner.dispatch_with_plan(
+                runner.execute_with_plan(
                     &program,
                     inputs,
                     &mut reference_values,
                     Some(&input_plan),
                     &mut borrowed_inputs,
-                    &grid_config,
                 )
             })) {
                 Ok(Ok(output)) => match hash_program(&program) {
@@ -399,8 +391,6 @@ fn the_synthetic_opaque_extension_round_trips_through_the_wire() {
     );
     let input_plan = WitnessInputPlan::for_program(&decoded)
         .expect("Fix: the decoded coverage bundle must yield a witness input plan.");
-    let grid_config = dispatch_grid::config_for_program(&decoded)
-        .expect("Fix: the decoded coverage bundle must yield a dispatch grid configuration.");
     let mut values = Vec::with_capacity(decoded.buffers().len());
     let mut borrowed_inputs = Vec::with_capacity(input_plan.source_count());
     for runner in &runners {
@@ -409,13 +399,12 @@ fn the_synthetic_opaque_extension_round_trips_through_the_wire() {
         {
             borrowed_inputs.clear();
             let output = runner
-                .dispatch_with_plan(
+                .execute_with_plan(
                     &decoded,
                     inputs,
                     &mut values,
                     Some(&input_plan),
                     &mut borrowed_inputs,
-                    &grid_config,
                 )
                 .unwrap_or_else(|error| {
                     panic!(

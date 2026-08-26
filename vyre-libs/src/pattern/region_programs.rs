@@ -18,17 +18,6 @@ pub const COMPACT_FIRST_PER_REGION_PATTERN_OP_ID: &str =
 /// Region-dedup lane packing for scanner match buffers.
 pub const REGION_DEDUP_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid for region-dedup match buffers.
-#[must_use]
-pub const fn region_dedup_dispatch_grid(count: u32) -> [u32; 3] {
-    let blocks = count.div_ceil(REGION_DEDUP_WORKGROUP_SIZE[0]);
-    if blocks == 0 {
-        [1, 1, 1]
-    } else {
-        [blocks, 1, 1]
-    }
-}
-
 /// GPU survivor-flag companion to `region::dedup_regions_inplace`.
 ///
 /// Input contract: `pids`, `starts`, `ends` are three parallel
@@ -45,7 +34,6 @@ pub const fn region_dedup_dispatch_grid(count: u32) -> [u32; 3] {
 /// program stays available for consumers that only need cluster starts
 /// or already compute merged ends through another pipeline stage.
 ///
-/// Use [`region_dedup_dispatch_grid`] for explicit launches.
 #[must_use]
 pub fn dedup_regions_flag_program(
     pids: &str,
@@ -356,7 +344,6 @@ pub fn region_sort_program(
 /// empty program. `starts`/`ends` are not read, the cap keys only on pid, so
 /// only the `pids` column and the `survivors` output are bound.
 ///
-/// Use [`region_dedup_dispatch_grid`] for explicit launches.
 #[must_use]
 pub fn cap_regions_per_pattern_flag_program(
     pids: &str,
@@ -430,7 +417,6 @@ pub fn cap_regions_per_pattern_flag_program(
 /// `(region, pid)`: so only the `regions` and `pids` columns and the `survivors`
 /// output are bound.
 ///
-/// Use [`region_dedup_dispatch_grid`] for explicit launches.
 #[must_use]
 pub fn compact_first_per_region_pattern_flag_program(
     regions: &str,

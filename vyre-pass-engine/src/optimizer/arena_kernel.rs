@@ -141,73 +141,59 @@ pub(super) fn single_lit_u32_arena() -> super::expr_arena::ExprArenaEncoding {
     }
 }
 
-/// What grid the orchestrator under test is expected to ask for.
+/// A semantic executor that checks graph-value keyed inputs and returns canned
+/// bytes under the graph's canonical output identities.
 #[cfg(test)]
-pub(super) enum GridExpectation {
-    /// Exactly one workgroup, the shape every single-dispatch arena pass uses.
-    SingleWorkgroup,
-    /// `[ceil(expr_count / WORKGROUP_X), 1, 1]`, with `expr_count` derived from
-    /// the `arena_kinds` buffer at input slot 0 (one u32 per expr). Asserting a
-    /// literal `[1, 1, 1]` here would only be correct for a one-expr arena.
-    StridedOverArena,
-}
-
-/// A dispatcher that checks the request and hands back canned output bytes.
-///
-/// Every `*_via_encoded` pass proves its decode against the same fake: assert
-/// the grid, reject a wrong input count with a message naming the pass, return
-/// fixed bytes. Four near-copies of it drifted on the grid assertion alone, so
-/// the shape lives here and each pass supplies the facts that differ.
-#[cfg(test)]
-pub(super) struct FixedOutputDispatcher {
-    /// Pass name for the bad-input message.
+pub(super) struct FixedOutputExecutor {
     pub(super) pass: &'static str,
-    /// Input buffer count the orchestrator must bind.
     pub(super) expected_inputs: usize,
-    /// Grid the orchestrator must request.
-    pub(super) grid: GridExpectation,
-    /// Bytes handed back, one entry per output buffer.
     pub(super) outputs: Vec<Vec<u8>>,
 }
 
 #[cfg(test)]
-impl vyre_foundation::program_dispatch::ProgramDispatcher for FixedOutputDispatcher {
-    fn dispatch(
+impl vyre_megakernel::SemanticExecutor for FixedOutputExecutor {
+    fn execute(
         &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, vyre_foundation::program_dispatch::DispatchError> {
-        match self.grid {
-            GridExpectation::SingleWorkgroup => assert_eq!(
-                grid_override,
-                Some([1, 1, 1]),
-                "{} must dispatch exactly one workgroup",
-                self.pass
-            ),
-            GridExpectation::StridedOverArena => {
-                if let Some(grid) = grid_override {
-                    let expr_count = (inputs[0].len() / 4) as u32;
-                    let expected_x = expr_count.div_ceil(WORKGROUP_X);
-                    assert_eq!(
-                        grid,
-                        [expected_x, 1, 1],
-                        "{} grid must be [ceil(expr_count / WORKGROUP_X), 1, 1]",
-                        self.pass
-                    );
-                }
-            }
-        }
-        if inputs.len() != self.expected_inputs {
-            return Err(vyre_foundation::program_dispatch::DispatchError::BadInputs(
+        request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+    ) -> Result<vyre_megakernel::SemanticExecutionOutput, vyre_megakernel::SemanticExecutionError>
+    {
+        assert_eq!(request.logical().regions().len(), 1);
+        assert_eq!(request.logical().regions()[0].name, self.pass);
+        if request.inputs().len() != self.expected_inputs {
+            return Err(vyre_megakernel::SemanticExecutionError::InvalidRequest(
                 format!(
-                    "Fix: {} test dispatcher expected {} inputs, got {}.",
+                    "{} test executor expected {} graph inputs, got {}",
                     self.pass,
                     self.expected_inputs,
-                    inputs.len()
+                    request.inputs().len()
                 ),
             ));
         }
-        Ok(self.outputs.clone())
+        let node = &request.logical().graph().nodes()[0];
+        let written = vyre_megakernel::writable_graph_values(node);
+        assert_eq!(written.len(), self.outputs.len());
+        let outputs = written
+            .into_iter()
+            .zip(self.outputs.iter().cloned())
+            .collect();
+        Ok(vyre_megakernel::SemanticExecutionOutput {
+            artifact: vyre_megakernel::Digest([0; 32]),
+            payload: vyre_megakernel::Digest([1; 32]),
+            outputs,
+        })
     }
+}
+
+#[cfg(test)]
+pub(super) fn semantic_test_policy() -> vyre_megakernel::SemanticExecutionPolicy {
+    vyre_megakernel::SemanticExecutionPolicy::new(
+        vyre_megakernel::ExternalFacts::new(
+            vyre_megakernel::Digest([2; 32]),
+            std::collections::BTreeMap::new(),
+        ),
+        vyre_megakernel::DeviceFacts::unknown(),
+        vyre_megakernel::CompileObjective::MinimizeLatency,
+        vyre_megakernel::SearchBudget::new(8, 64, 0, 0, 1_000),
+        1_000_000,
+    )
 }

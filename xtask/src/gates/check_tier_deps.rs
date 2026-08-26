@@ -39,16 +39,22 @@ const FIX: &str = "remove the upward dependency, or move the crate to the layer 
 /// of what it checks, the FNV-1a state functions and the DFA compiler, from the
 /// crate that owns them. The reverse edge exists only as a dev-dependency,
 /// which cargo resolves separately and no production table declares.
+///
+/// `compiler-boundary` sits above `lowering` and below `libraries` because the
+/// semantic compile-and-execute seam depends only on the foundation IR and the
+/// lowering stage, while the composition library and the pass engine reach a
+/// device only through that seam. A composition that selected its own launch
+/// geometry used to make the edge point the other way; it no longer can.
 pub(super) const LAYER_ORDER: &[&str] = &[
     "standalone-tooling",
     "foundation",
     "primitives",
     "lowering",
+    "compiler-boundary",
     "libraries",
     "semantics",
     "test-tooling",
     "pass-engine",
-    "compiler-boundary",
     "emitter",
     "backend-neutral",
     "concrete-backend",

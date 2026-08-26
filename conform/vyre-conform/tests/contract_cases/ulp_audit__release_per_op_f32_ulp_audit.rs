@@ -77,20 +77,8 @@ fn release_per_op_f32_ulp_audit() {
                 continue;
             }
         };
-        let mut first_inputs: Vec<&[u8]> = Vec::with_capacity(program.buffers().len());
-        if let Err(error) = plan_witness_inputs_into(&cases[0], &input_plan, &mut first_inputs) {
-            failures.push(format!(
-                "{}: ULP audit first witness input planning failed: {error}",
-                entry.id
-            ));
-            continue;
-        }
         let tolerance = f32_ulp_tolerance(&program);
-        let production = match ProductionSession::compile_with_representative_inputs(
-            &program,
-            &first_inputs,
-            backend,
-        ) {
+        let production = match ProductionSession::from_registration(&program, backend) {
             Ok(production) => production,
             Err(error) => {
                 failures.push(format!(
@@ -130,7 +118,7 @@ fn release_per_op_f32_ulp_audit() {
                 }
             };
             let gpu = match production.submit(&backend_inputs) {
-                Ok(o) => o,
+                Ok(execution) => execution.outputs,
                 Err(e) => {
                     failures.push(format!(
                         "{} case {}: artifact submission failed: {e}",
@@ -197,8 +185,8 @@ fn release_per_op_f32_ulp_audit() {
                     }
                 };
                 match production.submit(&backend_inputs_for_adversarial) {
-                    Ok(gpu) => {
-                        let max_ulp = match max_output_ulp(&program, &cpu, &gpu) {
+                    Ok(execution) => {
+                        let max_ulp = match max_output_ulp(&program, &cpu, &execution.outputs) {
                             Some(u) => u,
                             None => {
                                 failures.push(format!(

@@ -1,5 +1,5 @@
 //! End-to-end parity for the `math::quantized_dispatch` scaled INT4 `_via` entry points through the
-//! shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! shared faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes the quantized_dispatch mock-dispatcher-coherence family (see BACKLOG
 //! `BUG-quantized-dispatch-family-over-feeds-backend-allocated-output`). Every scaled consumer's
@@ -12,6 +12,8 @@
 //! contract exactly, one input per input-consuming buffer, strict count; writable buffers returned
 //! in binding order) executes the actual quantized kernel IR for the first time and proves the fixed
 //! consumers match their `_cpu` oracles. The pre-fix over-feed surfaces here as a hard dispatch error.
+
+mod semantic_execution_support;
 
 use vyre_libs::solvers::quantized_dispatch::{
     i4x8_batched_matmul_f32_scaled_via, i4x8_batched_matmul_top1_f32_scaled_via,
@@ -26,7 +28,7 @@ use vyre_reference::composition_witness::{
     pack_i4x8_witness as pack_i4x8_cpu,
 };
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// A signed INT4 nibble value in `[-8, 7]`.
@@ -63,7 +65,7 @@ fn approx(got: f32, want: f32, ctx: &str) {
 
 #[test]
 fn matvec_via_matches_cpu_over_generated_systems() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x4A17_0001u32;
     for case in 0..200u32 {
         let rows = 1 + (case as usize % 6);
@@ -74,6 +76,7 @@ fn matvec_via_matches_cpu_over_generated_systems() {
 
         let got = i4x8_matvec_f32_scaled_via(
             &dispatcher,
+            &semantic_execution_support::policy(),
             &weights,
             &x,
             &row_scales,
@@ -91,7 +94,7 @@ fn matvec_via_matches_cpu_over_generated_systems() {
 
 #[test]
 fn batched_matvec_via_matches_cpu_over_generated_systems() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x4A17_0002u32;
     for case in 0..200u32 {
         let rows = 1 + (case as usize % 5);
@@ -103,6 +106,7 @@ fn batched_matvec_via_matches_cpu_over_generated_systems() {
 
         let got = i4x8_batched_matvec_f32_scaled_via(
             &dispatcher,
+            &semantic_execution_support::policy(),
             &weights,
             &x_batches,
             &row_scales,
@@ -128,7 +132,7 @@ fn batched_matvec_via_matches_cpu_over_generated_systems() {
 
 #[test]
 fn dot_via_matches_cpu_over_generated_vectors() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x4A17_0003u32;
     for case in 0..200u32 {
         let lanes = 8 * (1 + (case as usize % 4)); // 8..32
@@ -137,9 +141,16 @@ fn dot_via_matches_cpu_over_generated_vectors() {
         let lhs_scale = scale(&mut state);
         let rhs_scale = scale(&mut state);
 
-        let got =
-            i4x8_dot_f32_scaled_via(&dispatcher, &lhs, &rhs, lhs_scale, rhs_scale, lanes as u32)
-                .expect("dot_via must dispatch the INT4 dot kernel");
+        let got = i4x8_dot_f32_scaled_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &lhs,
+            &rhs,
+            lhs_scale,
+            rhs_scale,
+            lanes as u32,
+        )
+        .expect("dot_via must dispatch the INT4 dot kernel");
         let want = i4x8_dot_f32_scaled_cpu(&lhs, &rhs, lhs_scale, rhs_scale, lanes as u32);
         approx(got, want, &format!("case {case} dot"));
     }
@@ -147,7 +158,7 @@ fn dot_via_matches_cpu_over_generated_vectors() {
 
 #[test]
 fn batched_matmul_via_matches_cpu_over_generated_systems() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x4A17_0004u32;
     for case in 0..200u32 {
         let rows = 1 + (case as usize % 5);
@@ -160,6 +171,7 @@ fn batched_matmul_via_matches_cpu_over_generated_systems() {
 
         let got = i4x8_batched_matmul_f32_scaled_via(
             &dispatcher,
+            &semantic_execution_support::policy(),
             &weights,
             &activations,
             &row_scales,
@@ -187,7 +199,7 @@ fn batched_matmul_via_matches_cpu_over_generated_systems() {
 
 #[test]
 fn top1_via_matches_cpu_scores_and_indices_over_generated_systems() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x4A17_0005u32;
     for case in 0..200u32 {
         let rows = 2 + (case as usize % 5); // >=2 so argmax is non-trivial
@@ -200,6 +212,7 @@ fn top1_via_matches_cpu_scores_and_indices_over_generated_systems() {
 
         let (scores, indices) = i4x8_batched_matmul_top1_f32_scaled_via(
             &dispatcher,
+            &semantic_execution_support::policy(),
             &weights,
             &activations,
             &row_scales,

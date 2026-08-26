@@ -6,11 +6,9 @@
 //!
 //! This replaces ad-hoc cache invalidation with formal causal analysis.
 
-#[cfg(test)]
-use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::dispatch_buffers::{
-    ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
-    write_u32_slice_le_bytes, write_zero_bytes,
+    checked_square_cells, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
+    write_zero_bytes,
 };
 use crate::graph::do_calculus::{
     impact_mask_from_closure, intervention_delete_incoming, rule2_reverse_incoming, rule3_subgraph,
@@ -18,7 +16,9 @@ use crate::graph::do_calculus::{
 use crate::prelude::reachability_closure_via_into;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Reusable matrix buffers for do-calculus impact queries.
 #[derive(Debug, Default)]
@@ -53,25 +53,26 @@ impl DoCalculusImpactScratch {
 }
 
 fn dispatch_impact_mask_from_closure_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     mask: &[u32],
     closure: &[u32],
     n: u32,
     inputs: &mut Vec<Vec<u8>>,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if n == 0 {
         if !mask.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: dispatch_impact_mask_from_closure requires mask.len() == 0 for n=0, got len={}.",
-                mask.len()
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: dispatch_impact_mask_from_closure requires mask.len() == 0 for n=0, got len={}.",
+            mask.len()
+        )));
         }
         if !closure.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: dispatch_impact_mask_from_closure requires closure.len() == 0 for n=0, got len={}.",
-                closure.len()
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: dispatch_impact_mask_from_closure requires closure.len() == 0 for n=0, got len={}.",
+            closure.len()
+        )));
         }
         out.clear();
         return Ok(());
@@ -79,13 +80,13 @@ fn dispatch_impact_mask_from_closure_into(
 
     let cells = checked_square_cells(n, "dispatch_impact_mask_from_closure")?;
     if closure.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: dispatch_impact_mask_from_closure requires closure.len() == n*n, got len={}, n={n}, n*n={cells}.",
-            closure.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: dispatch_impact_mask_from_closure requires closure.len() == n*n, got len={}, n={n}, n*n={cells}.",
+        closure.len()
+    )));
     }
     if mask.len() != n as usize {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: dispatch_impact_mask_from_closure requires mask.len() == n, got len={}, n={n}.",
             mask.len()
         )));
@@ -94,7 +95,7 @@ fn dispatch_impact_mask_from_closure_into(
     let mask_bytes = (n as usize)
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: dispatch_impact_mask_from_closure mask byte size overflows usize for n={n}."
             ))
         })?;
@@ -102,15 +103,21 @@ fn dispatch_impact_mask_from_closure_into(
     write_u32_slice_le_bytes(&mut inputs[0], mask);
     write_u32_slice_le_bytes(&mut inputs[1], closure);
     write_zero_bytes(&mut inputs[2], mask_bytes);
-    let outputs =
-        dispatcher.dispatch(&program, &inputs[..3], Some([ceil_div_u32(n, 256), 1, 1]))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &inputs[..3],
+        policy,
+    )
+    .map(|output| output.outputs)?;
     let [impact_out] = match outputs.as_slice() {
         [impact_out] => [impact_out],
         _ => {
-            return Err(DispatchError::BackendError(format!(
-                "Fix: dispatch_impact_mask_from_closure expected exactly one output buffer, got {}.",
-                outputs.len()
-            )));
+            return Err(SemanticExecutionError::Backend(format!(
+            "Fix: dispatch_impact_mask_from_closure expected exactly one output buffer, got {}.",
+            outputs.len()
+        )));
         }
     };
     decode_u32_output_exact(
@@ -129,13 +136,14 @@ fn dispatch_impact_mask_from_closure_into(
 /// needed by cache invalidation callers.
 #[must_use = "GPU impact prediction returns a mask or dispatch error that must be handled"]
 pub fn predict_impact_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     intervention_mask: &[u32],
     n: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut scratch = DoCalculusImpactScratch::default();
-    predict_impact_via_into(dispatcher, adj, intervention_mask, n, &mut scratch)?;
+    predict_impact_via_into(dispatcher, policy, adj, intervention_mask, n, &mut scratch)?;
     Ok(scratch.impact_mask)
 }
 
@@ -143,28 +151,29 @@ pub fn predict_impact_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or semantic execution fails.
 pub fn predict_impact_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     intervention_mask: &[u32],
     n: u32,
     scratch: &mut DoCalculusImpactScratch,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         if !adj.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
+            return Err(SemanticExecutionError::InvalidRequest(format!(
                 "Fix: predict_impact_via requires adj.len() == 0 for n=0, got len={}.",
                 adj.len()
             )));
         }
         if !intervention_mask.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: predict_impact_via requires intervention_mask.len() == 0 for n=0, got len={}.",
-                intervention_mask.len()
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: predict_impact_via requires intervention_mask.len() == 0 for n=0, got len={}.",
+            intervention_mask.len()
+        )));
         }
         scratch.impact_mask.clear();
         scratch.surgically_modified_adj.clear();
@@ -173,6 +182,7 @@ pub fn predict_impact_via_into(
     }
     intervention_delete_incoming_via_into_with_inputs(
         dispatcher,
+        policy,
         adj,
         intervention_mask,
         n,
@@ -181,6 +191,7 @@ pub fn predict_impact_via_into(
     )?;
     reachability_closure_via_into(
         dispatcher,
+        policy,
         &scratch.surgically_modified_adj,
         n,
         n,
@@ -189,6 +200,7 @@ pub fn predict_impact_via_into(
     )?;
     dispatch_impact_mask_from_closure_into(
         dispatcher,
+        policy,
         intervention_mask,
         &scratch.closure,
         n,
@@ -207,18 +219,20 @@ pub fn predict_impact_via_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shapes are invalid, lane counts overflow,
-/// or the backend returns malformed output.
+/// Returns [`SemanticExecutionError`] when shapes are invalid, lane counts overflow,
+/// or the admitted artifact produces malformed output.
 pub fn intervention_delete_incoming_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     intervention_mask: &[u32],
     n: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
     let mut inputs = Vec::new();
     intervention_delete_incoming_via_into_with_inputs(
         dispatcher,
+        policy,
         adj,
         intervention_mask,
         n,
@@ -232,17 +246,19 @@ pub fn intervention_delete_incoming_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or semantic execution fails.
 pub fn intervention_delete_incoming_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     intervention_mask: &[u32],
     n: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut inputs = Vec::new();
     intervention_delete_incoming_via_into_with_inputs(
         dispatcher,
+        policy,
         adj,
         intervention_mask,
         n,
@@ -252,15 +268,17 @@ pub fn intervention_delete_incoming_via_into(
 }
 
 fn intervention_delete_incoming_via_into_with_inputs(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     intervention_mask: &[u32],
     n: u32,
     inputs: &mut Vec<Vec<u8>>,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     dispatch_do_calculus_surgery_into(
         dispatcher,
+        policy,
         adj,
         intervention_mask,
         n,
@@ -282,18 +300,20 @@ fn intervention_delete_incoming_via_into_with_inputs(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shapes are invalid, lane counts overflow, or
-/// the backend returns malformed output.
+/// Returns [`SemanticExecutionError`] when shapes are invalid, lane counts overflow,
+/// or the admitted artifact produces malformed output.
 pub fn rule2_reverse_incoming_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     treatment_mask: &[u32],
     n: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
     let mut inputs = Vec::new();
     rule2_reverse_incoming_via_into_with_inputs(
         dispatcher,
+        policy,
         adj,
         treatment_mask,
         n,
@@ -307,17 +327,19 @@ pub fn rule2_reverse_incoming_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or semantic execution fails.
 pub fn rule2_reverse_incoming_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     treatment_mask: &[u32],
     n: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut inputs = Vec::new();
     rule2_reverse_incoming_via_into_with_inputs(
         dispatcher,
+        policy,
         adj,
         treatment_mask,
         n,
@@ -327,15 +349,17 @@ pub fn rule2_reverse_incoming_via_into(
 }
 
 fn rule2_reverse_incoming_via_into_with_inputs(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     treatment_mask: &[u32],
     n: u32,
     inputs: &mut Vec<Vec<u8>>,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     dispatch_do_calculus_surgery_into(
         dispatcher,
+        policy,
         adj,
         treatment_mask,
         n,
@@ -348,7 +372,8 @@ fn rule2_reverse_incoming_via_into_with_inputs(
 }
 
 fn dispatch_do_calculus_surgery_into<F>(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     mask: &[u32],
     n: u32,
@@ -357,7 +382,7 @@ fn dispatch_do_calculus_surgery_into<F>(
     op_name: &'static str,
     mask_buffer: &'static str,
     build_program: F,
-) -> Result<(), DispatchError>
+) -> Result<(), SemanticExecutionError>
 where
     F: FnOnce(&str, &str, &str, u32) -> Program,
 {
@@ -366,13 +391,13 @@ where
 
     if n == 0 {
         if !adj.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
+            return Err(SemanticExecutionError::InvalidRequest(format!(
                 "Fix: {op_name} requires adj.len() == 0 for n=0, got len={}.",
                 adj.len()
             )));
         }
         if !mask.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
+            return Err(SemanticExecutionError::InvalidRequest(format!(
                 "Fix: {op_name} requires {mask_buffer}.len() == 0 for n=0, got len={}.",
                 mask.len()
             )));
@@ -383,18 +408,18 @@ where
 
     let cells = checked_square_cells(n, op_name)?;
     let cells_u32 = u32::try_from(cells).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: {op_name} n*n exceeds the primitive u32 lane limit for n={n}."
         ))
     })?;
     if adj.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: {op_name} requires adj.len() == n*n, got len={}, n={n}, n*n={cells}.",
             adj.len()
         )));
     }
     if mask.len() != n as usize {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: {op_name} requires {mask_buffer}.len() == n, got len={}, n={n}.",
             mask.len()
         )));
@@ -409,7 +434,7 @@ where
     let out_bytes = cells
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: {op_name} out byte size overflows usize for {cells} cells."
             ))
         })?;
@@ -417,15 +442,18 @@ where
     write_u32_slice_le_bytes(&mut inputs[0], adj);
     write_u32_slice_le_bytes(&mut inputs[1], mask);
     write_zero_bytes(&mut inputs[2], out_bytes);
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &inputs[..3],
-        Some([ceil_div_u32(cells_u32, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     let [out_buf] = match outputs.as_slice() {
         [out_buf] => [out_buf],
         _ => {
-            return Err(DispatchError::BackendError(format!(
+            return Err(SemanticExecutionError::Backend(format!(
                 "Fix: {op_name} expected exactly one output buffer, got {}.",
                 outputs.len()
             )));
@@ -449,19 +477,21 @@ where
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shapes are invalid, `n * n` overflows the lane
-/// limit, or the backend returns anything other than the three output buffers.
+/// Returns [`SemanticExecutionError`] when shapes are invalid, `n * n` overflows the lane
+/// limit, or the admitted artifact does not produce the three required output buffers.
 pub fn rule3_subgraph_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     keep_mask: &[u32],
     n: u32,
-) -> Result<(Vec<u32>, Vec<u32>), DispatchError> {
+) -> Result<(Vec<u32>, Vec<u32>), SemanticExecutionError> {
     let mut reduced = Vec::new();
     let mut kept = Vec::new();
     let mut inputs = Vec::new();
     rule3_subgraph_via_into_with_inputs(
         dispatcher,
+        policy,
         adj,
         keep_mask,
         n,
@@ -476,40 +506,51 @@ pub fn rule3_subgraph_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or semantic execution fails.
 pub fn rule3_subgraph_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     keep_mask: &[u32],
     n: u32,
     reduced: &mut Vec<u32>,
     kept: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut inputs = Vec::new();
-    rule3_subgraph_via_into_with_inputs(dispatcher, adj, keep_mask, n, &mut inputs, reduced, kept)
+    rule3_subgraph_via_into_with_inputs(
+        dispatcher,
+        policy,
+        adj,
+        keep_mask,
+        n,
+        &mut inputs,
+        reduced,
+        kept,
+    )
 }
 
 fn rule3_subgraph_via_into_with_inputs(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     keep_mask: &[u32],
     n: u32,
     inputs: &mut Vec<Vec<u8>>,
     reduced: &mut Vec<u32>,
     kept: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
 
     if n == 0 {
         if !adj.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
+            return Err(SemanticExecutionError::InvalidRequest(format!(
                 "Fix: rule3_subgraph_via requires adj.len() == 0 for n=0, got len={}.",
                 adj.len()
             )));
         }
         if !keep_mask.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
+            return Err(SemanticExecutionError::InvalidRequest(format!(
                 "Fix: rule3_subgraph_via requires keep_mask.len() == 0 for n=0, got len={}.",
                 keep_mask.len()
             )));
@@ -521,20 +562,20 @@ fn rule3_subgraph_via_into_with_inputs(
 
     let cells = checked_square_cells(n, "rule3_subgraph_via")?;
     if adj.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: rule3_subgraph_via requires adj.len() == n*n, got len={}, n={n}, n*n={cells}.",
             adj.len()
         )));
     }
     if keep_mask.len() != n as usize {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: rule3_subgraph_via requires keep_mask.len() == n, got len={}, n={n}.",
             keep_mask.len()
         )));
     }
     let k = keep_mask.iter().filter(|&&v| v != 0).count();
     let k_cells = k.checked_mul(k).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: rule3_subgraph_via reduced k*k overflows usize for k={k}."
         ))
     })?;
@@ -547,7 +588,7 @@ fn rule3_subgraph_via_into_with_inputs(
     let reduced_bytes = cells
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: rule3_subgraph_via reduced byte size overflows usize for {cells} cells."
             ))
         })?;
@@ -559,14 +600,21 @@ fn rule3_subgraph_via_into_with_inputs(
     write_zero_bytes(&mut inputs[3], kept_bytes);
     write_zero_bytes(&mut inputs[4], std::mem::size_of::<u32>());
     // The kernel is lane-0-serial, so a single workgroup covers it.
-    let outputs = dispatcher.dispatch(&program, &inputs[..5], Some([1, 1, 1]))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &inputs[..5],
+        policy,
+    )
+    .map(|output| output.outputs)?;
     let [reduced_out, kept_out, _kept_len_out] = match outputs.as_slice() {
         [r, k_out, kl] => [r, k_out, kl],
         _ => {
-            return Err(DispatchError::BackendError(format!(
-            "Fix: rule3_subgraph_via expected 3 output buffers (reduced, kept, kept_len), got {}.",
-            outputs.len()
-        )))
+            return Err(SemanticExecutionError::Backend(format!(
+        "Fix: rule3_subgraph_via expected 3 output buffers (reduced, kept, kept_len), got {}.",
+        outputs.len()
+            )))
         }
     };
 
@@ -599,13 +647,21 @@ fn rule3_subgraph_via_into_with_inputs(
 /// mask required by cache invalidation and diagnostics.
 #[must_use = "GPU observation-form impact prediction returns a mask or dispatch error that must be handled"]
 pub fn predict_impact_observation_form_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     observation_mask: &[u32],
     n: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut scratch = DoCalculusImpactScratch::default();
-    predict_impact_observation_form_via_into(dispatcher, adj, observation_mask, n, &mut scratch)?;
+    predict_impact_observation_form_via_into(
+        dispatcher,
+        policy,
+        adj,
+        observation_mask,
+        n,
+        &mut scratch,
+    )?;
     Ok(scratch.impact_mask)
 }
 
@@ -613,28 +669,29 @@ pub fn predict_impact_observation_form_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or semantic execution fails.
 pub fn predict_impact_observation_form_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     adj: &[u32],
     observation_mask: &[u32],
     n: u32,
     scratch: &mut DoCalculusImpactScratch,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         if !adj.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: predict_impact_observation_form_via requires adj.len() == 0 for n=0, got len={}.",
-                adj.len()
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: predict_impact_observation_form_via requires adj.len() == 0 for n=0, got len={}.",
+            adj.len()
+        )));
         }
         if !observation_mask.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: predict_impact_observation_form_via requires observation_mask.len() == 0 for n=0, got len={}.",
-                observation_mask.len()
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: predict_impact_observation_form_via requires observation_mask.len() == 0 for n=0, got len={}.",
+            observation_mask.len()
+        )));
         }
         scratch.impact_mask.clear();
         scratch.surgically_modified_adj.clear();
@@ -643,6 +700,7 @@ pub fn predict_impact_observation_form_via_into(
     }
     rule2_reverse_incoming_via_into_with_inputs(
         dispatcher,
+        policy,
         adj,
         observation_mask,
         n,
@@ -651,6 +709,7 @@ pub fn predict_impact_observation_form_via_into(
     )?;
     reachability_closure_via_into(
         dispatcher,
+        policy,
         &scratch.surgically_modified_adj,
         n,
         n,
@@ -659,6 +718,7 @@ pub fn predict_impact_observation_form_via_into(
     )?;
     dispatch_impact_mask_from_closure_into(
         dispatcher,
+        policy,
         observation_mask,
         &scratch.closure,
         n,
@@ -794,16 +854,17 @@ pub struct ImpactedLineageProjectionScratch {
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shapes are invalid, lane counts overflow, or the backend fails.
+/// Returns [`SemanticExecutionError`] when shapes are invalid or semantic execution fails.
 pub fn project_impacted_lineage_entries_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     impact_mask: &[u32],
     closure: &[u32],
     n: u32,
     lineage_cells: &[u32],
     scratch: &mut ImpactedLineageProjectionScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if lineage_cells.is_empty() {
         out.clear();
         return Ok(());
@@ -811,34 +872,34 @@ pub fn project_impacted_lineage_entries_via_into(
 
     if n == 0 {
         if !impact_mask.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: project_impacted_lineage_entries requires impact_mask.len() == 0 for n=0, got len={}.",
-                impact_mask.len()
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: project_impacted_lineage_entries requires impact_mask.len() == 0 for n=0, got len={}.",
+            impact_mask.len()
+        )));
         }
         if !closure.is_empty() {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: project_impacted_lineage_entries requires closure.len() == 0 for n=0, got len={}.",
-                closure.len()
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: project_impacted_lineage_entries requires closure.len() == 0 for n=0, got len={}.",
+            closure.len()
+        )));
         }
     } else {
         let cells = checked_square_cells(n, "project_impacted_lineage_entries")?;
         if closure.len() != cells {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: project_impacted_lineage_entries requires closure.len() == n*n, got len={}, n={n}, n*n={cells}.",
-                closure.len()
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: project_impacted_lineage_entries requires closure.len() == n*n, got len={}, n={n}, n*n={cells}.",
+            closure.len()
+        )));
         }
         if impact_mask.len() != n as usize {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: project_impacted_lineage_entries requires impact_mask.len() == n, got len={}, n={n}.",
-                impact_mask.len()
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: project_impacted_lineage_entries requires impact_mask.len() == n, got len={}, n={n}.",
+            impact_mask.len()
+        )));
         }
     }
     let m = u32::try_from(lineage_cells.len()).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: project_impacted_lineage_entries lineage_cells.len() {} overflows u32.",
             lineage_cells.len()
         ))
@@ -854,15 +915,18 @@ pub fn project_impacted_lineage_entries_via_into(
         write_u32_slice_le_bytes(&mut scratch.dispatch_inputs[1], closure);
     }
     write_u32_slice_le_bytes(&mut scratch.dispatch_inputs[2], lineage_cells);
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.dispatch_inputs[..3],
-        Some([ceil_div_u32(m, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     let [impact_out] = match outputs.as_slice() {
         [impact_out] => [impact_out],
         _ => {
-            return Err(DispatchError::BackendError(format!(
+            return Err(SemanticExecutionError::Backend(format!(
                 "Fix: project_impacted_lineage_entries expected exactly one output buffer, got {}.",
                 outputs.len()
             )));

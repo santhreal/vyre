@@ -2,7 +2,7 @@
 //! the emitted artifact.
 
 use crate::artifact_json::write_json_artifact;
-use crate::backend_selection::{dispatch_capable_backends, select_backends};
+use crate::backend_selection::{select_backends, semantic_execution_backends};
 use crate::operation_selection::{select_entries, unified_entries};
 use crate::proof_options::parse_proof_options;
 use crate::proof_plan::{hash_proof_plan, proof_plan_summary, ProofPlanSummary};
@@ -48,7 +48,7 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
             .into_owned()
         });
 
-    let all_backends = dispatch_capable_backends()?;
+    let all_backends = semantic_execution_backends()?;
     if all_backends.is_empty() {
         return Err(
             "prove refused to emit the certificate: no dispatch-capable backend is linked into this binary. \

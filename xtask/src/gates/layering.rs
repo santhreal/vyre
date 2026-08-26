@@ -89,7 +89,7 @@ const NEUTRAL_LAYERS: &[(&str, bool)] = &[
     ("lowering", true),
     ("packaging", true),
     // Optimizer passes expressed as Vyre programs, dispatched through the
-    // `ProgramDispatcher` seam, so the crate names no backend API.
+    // `SemanticExecutor` seam, so the crate names no backend API.
     ("pass-engine", true),
     ("primitives", true),
     // Substrate-bound by function, not by accident: the link crate must name

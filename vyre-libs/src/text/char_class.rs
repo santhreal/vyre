@@ -83,18 +83,6 @@ pub const CHAR_CLASS_OP_ID: &str = "vyre-libs::text::char_class";
 /// Byte-lane workgroup used by the table-driven classifier.
 pub const CHAR_CLASS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid for classifying `n` byte lanes.
-#[cfg(test)]
-#[must_use]
-pub const fn char_class_dispatch_grid(n: u32) -> [u32; 3] {
-    let blocks = n.div_ceil(CHAR_CLASS_WORKGROUP_SIZE[0]);
-    if blocks == 0 {
-        [1, 1, 1]
-    } else {
-        [blocks, 1, 1]
-    }
-}
-
 /// Build the default ASCII byte-classification table.
 #[must_use]
 pub fn build_char_class_table() -> [u32; 256] {
@@ -291,15 +279,6 @@ mod tests {
 
         assert_eq!(classified.count(), 1);
         assert_eq!(classified.output_byte_range(), Some(0..0));
-    }
-
-    #[test]
-    fn dispatch_grid_packs_byte_lanes_into_blocks() {
-        assert_eq!(char_class_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(char_class_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(char_class_dispatch_grid(256), [1, 1, 1]);
-        assert_eq!(char_class_dispatch_grid(257), [2, 1, 1]);
-        assert_eq!(char_class_dispatch_grid(513), [3, 1, 1]);
     }
 
     #[test]

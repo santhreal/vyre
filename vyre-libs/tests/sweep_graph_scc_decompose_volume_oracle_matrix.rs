@@ -7,7 +7,6 @@ use graph_sweep_fixtures::bitset_words;
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
 
-use vyre_libs::graph::scc_decompose;
 use vyre_reference::composition_witness::scc_decompose_witness;
 
 fn generated_scc_case(seed: u64) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>, u32) {
@@ -71,10 +70,6 @@ fn oracle_scc(
 
 const CASES: usize = 32768;
 
-fn scc_decompose_dispatch_grid(node_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(node_count, scc_decompose::SCC_DECOMPOSE_WORKGROUP_SIZE[0])
-}
-
 #[test]
 fn sweep_graph_scc_decompose_volume_oracle_matrix() {
     for case in 0..CASES {
@@ -83,23 +78,5 @@ fn sweep_graph_scc_decompose_volume_oracle_matrix() {
         let expected = oracle_scc(node_count, &forward, &backward, &component_in, pivot);
         let actual = scc_decompose_witness(node_count, &forward, &backward, &component_in, pivot);
         assert_eq!(actual, expected, "Fix: scc_decompose volume case {case}");
-
-        let grid = scc_decompose_dispatch_grid(node_count);
-        assert_eq!(
-            grid[1], 1,
-            "Fix: SCC grid y dimension drifted at case {case}"
-        );
-        assert_eq!(
-            grid[2], 1,
-            "Fix: SCC grid z dimension drifted at case {case}"
-        );
-        assert!(
-            grid[0] >= 1,
-            "Fix: SCC dispatch grid must keep an empty graph launchable at case {case}"
-        );
-        assert!(
-            grid[0] * scc_decompose::SCC_DECOMPOSE_WORKGROUP_SIZE[0] >= node_count.max(1),
-            "Fix: SCC dispatch grid under-covers node_count={node_count} at case {case}"
-        );
     }
 }

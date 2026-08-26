@@ -31,20 +31,6 @@ pub const BRACKET_KIND_CLOSE: u32 = 2;
 /// Unmatched sentinel written to `match_pairs`.
 pub const BRACKET_MATCH_NONE: u32 = u32::MAX;
 
-/// Dispatch grid for [`bracket_match`].
-#[must_use]
-pub const fn bracket_match_dispatch_grid(n: u32, max_depth: u32) -> [u32; 3] {
-    if max_depth < n {
-        return [1, 1, 1];
-    }
-    let blocks = n.div_ceil(BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE[0]);
-    if blocks == 0 {
-        [1, 1, 1]
-    } else {
-        [blocks, 1, 1]
-    }
-}
-
 /// Build a Program that matches brace tokens using a bounded stack.
 ///
 /// `kinds[i]` is `BRACKET_KIND_OTHER`, `BRACKET_KIND_OPEN`, or `BRACKET_KIND_CLOSE`.
@@ -396,11 +382,11 @@ mod tests {
             program.workgroup_size(),
             BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE
         );
-        assert_eq!(bracket_match_dispatch_grid(0, 0), [1, 1, 1]);
-        assert_eq!(bracket_match_dispatch_grid(1, 1), [1, 1, 1]);
-        assert_eq!(bracket_match_dispatch_grid(256, 256), [1, 1, 1]);
-        assert_eq!(bracket_match_dispatch_grid(257, 257), [2, 1, 1]);
-        assert_eq!(bracket_match_dispatch_grid(513, 513), [3, 1, 1]);
+        assert_eq!(
+            vyre_foundation::guarded_logical_span(&program),
+            Some(513),
+            "Fix: the parallel path must guard one lane per token so the compiler launches over the tokens."
+        );
     }
 
     #[test]
@@ -408,7 +394,11 @@ mod tests {
         let program = bracket_match("kinds", "stack", "match_pairs", 513, 64);
 
         assert_eq!(program.workgroup_size(), [1, 1, 1]);
-        assert_eq!(bracket_match_dispatch_grid(513, 64), [1, 1, 1]);
+        assert_eq!(
+            vyre_foundation::guarded_logical_span(&program),
+            Some(1),
+            "Fix: the depth-capped path walks the whole input on one lane, so its guard must admit one lane and not one per token."
+        );
     }
 
     #[test]

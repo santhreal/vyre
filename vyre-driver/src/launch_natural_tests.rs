@@ -10,7 +10,7 @@ fn natural_gradient_launch_tunes_safe_1d_storage_program() {
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(4096)],
         [32, 1, 1],
-        vec![],
+        vec![Node::store("out", Expr::logical_index(0), Expr::u32(1))],
     );
     let bindings = vec![Binding {
         name: std::sync::Arc::from("out"),

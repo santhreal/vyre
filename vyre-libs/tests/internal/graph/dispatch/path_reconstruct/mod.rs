@@ -41,36 +41,32 @@ fn try_cpu_ref_batched(
         parent, targets, max_depth, paths, lens,
     )
 }
-use crate::test_parity_oracles::StaticOutputs;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use crate::test_parity_oracles::{canonical_inputs, policy, semantic_output, StaticOutputs};
+use vyre_megakernel::{
+    SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest, SemanticExecutor,
+};
 
 struct PathDispatcher;
 
-impl ProgramDispatcher for PathDispatcher {
-    fn dispatch(
+impl SemanticExecutor for PathDispatcher {
+    fn execute(
         &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
+        request: &SemanticExecutionRequest<'_>,
+    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+        let inputs = canonical_inputs(request)?;
         assert_eq!(inputs.len(), 4);
         let parent = crate::dispatch_buffers::read_u32s(&inputs[0]);
         let targets = crate::dispatch_buffers::read_u32s(&inputs[1]);
         let out_words = inputs[2].len() / std::mem::size_of::<u32>();
         let max_depth = out_words / targets.len().max(1);
-        if targets.len() == 1 {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-        } else {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-        }
         let mut paths = Vec::with_capacity(out_words);
         let mut lens = Vec::with_capacity(targets.len());
         try_cpu_ref_batched(&parent, &targets, max_depth as u32, &mut paths, &mut lens)
-            .map_err(DispatchError::BackendError)?;
-        Ok(vec![
-            u32_slice_to_le_bytes(&paths),
-            u32_slice_to_le_bytes(&lens),
-        ])
+            .map_err(SemanticExecutionError::Backend)?;
+        semantic_output(
+            request,
+            vec![u32_slice_to_le_bytes(&paths), u32_slice_to_le_bytes(&lens)],
+        )
     }
 }
 
@@ -148,7 +144,8 @@ fn reconstruct_path_via_dispatches_single_target() {
     let parent = vec![0, 0, 1, 2];
     let mut scratch = Vec::new();
 
-    let len = reconstruct_path_via(&PathDispatcher, &parent, 3, 4, &mut scratch).unwrap();
+    let len =
+        reconstruct_path_via(&PathDispatcher, &policy(), &parent, 3, 4, &mut scratch).unwrap();
 
     assert_eq!(len, 4);
     assert_eq!(scratch, vec![3, 2, 1, 0]);
@@ -162,6 +159,7 @@ fn reconstruct_path_via_with_scratch_reuses_program_by_depth() {
 
     let len = reconstruct_path_via_with_scratch(
         &PathDispatcher,
+        &policy(),
         &parent,
         3,
         4,
@@ -174,6 +172,7 @@ fn reconstruct_path_via_with_scratch_reuses_program_by_depth() {
 
     let len = reconstruct_path_via_with_scratch(
         &PathDispatcher,
+        &policy(),
         &parent,
         2,
         4,
@@ -186,6 +185,7 @@ fn reconstruct_path_via_with_scratch_reuses_program_by_depth() {
 
     reconstruct_path_via_with_scratch(
         &PathDispatcher,
+        &policy(),
         &parent,
         2,
         8,
@@ -213,6 +213,7 @@ fn reconstruct_path_via_with_scratch_refreshes_same_shape_parent_content() {
 
     reconstruct_path_via_with_scratch(
         &dispatcher,
+        &policy(),
         &first_parent,
         3,
         4,
@@ -222,6 +223,7 @@ fn reconstruct_path_via_with_scratch_refreshes_same_shape_parent_content() {
     .expect("Fix: first path dispatch should succeed");
     reconstruct_path_via_with_scratch(
         &dispatcher,
+        &policy(),
         &second_parent,
         3,
         4,
@@ -243,7 +245,7 @@ fn reconstruct_path_via_with_scratch_refreshes_same_shape_parent_content() {
 fn path_to_root_via_truncates_padding() {
     let parent = vec![0, 0, 1, 2];
 
-    let path = path_to_root_via(&PathDispatcher, &parent, 2, 8).unwrap();
+    let path = path_to_root_via(&PathDispatcher, &policy(), &parent, 2, 8).unwrap();
 
     assert_eq!(path, vec![2, 1, 0]);
 }
@@ -264,6 +266,7 @@ fn reconstruct_path_via_rejects_len_readback_beyond_primitive_depth() {
 
     let err = reconstruct_path_via_with_scratch(
         &dispatcher,
+        &policy(),
         &parent,
         3,
         4,
@@ -273,7 +276,7 @@ fn reconstruct_path_via_rejects_len_readback_beyond_primitive_depth() {
     .expect_err("Fix: path reconstruction must reject impossible GPU length readback");
 
     assert!(
-        matches!(err, DispatchError::BackendError(_)),
+        matches!(err, SemanticExecutionError::Backend(_)),
         "unexpected error variant: {err:?}"
     );
 }
@@ -282,7 +285,8 @@ fn reconstruct_path_via_rejects_len_readback_beyond_primitive_depth() {
 fn reconstruct_paths_via_batches_targets_in_one_dispatch() {
     let parent = vec![0, 0, 1, 2];
 
-    let (paths, lens) = reconstruct_paths_via(&PathDispatcher, &parent, &[3, 0, 2], 4).unwrap();
+    let (paths, lens) =
+        reconstruct_paths_via(&PathDispatcher, &policy(), &parent, &[3, 0, 2], 4).unwrap();
 
     assert_eq!(lens, vec![4, 1, 3]);
     assert_eq!(paths, vec![3, 2, 1, 0, 0, 0, 0, 0, 2, 1, 0, 0]);
@@ -305,6 +309,7 @@ fn reconstruct_paths_via_rejects_any_batched_len_beyond_primitive_depth() {
 
     let err = reconstruct_paths_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         &parent,
         &[3, 2],
         4,
@@ -315,7 +320,7 @@ fn reconstruct_paths_via_rejects_any_batched_len_beyond_primitive_depth() {
     .expect_err("Fix: batched path reconstruction must reject impossible GPU length readback");
 
     assert!(
-        matches!(err, DispatchError::BackendError(_)),
+        matches!(err, SemanticExecutionError::Backend(_)),
         "unexpected error variant: {err:?}"
     );
 }
@@ -329,6 +334,7 @@ fn reconstruct_paths_via_with_scratch_reuses_dispatch_and_outputs() {
 
     reconstruct_paths_via_with_scratch_into(
         &PathDispatcher,
+        &policy(),
         &parent,
         &[3, 0, 2],
         4,
@@ -349,6 +355,7 @@ fn reconstruct_paths_via_with_scratch_reuses_dispatch_and_outputs() {
 
     reconstruct_paths_via_with_scratch_into(
         &PathDispatcher,
+        &policy(),
         &parent,
         &[2, 1, 0],
         4,
@@ -374,6 +381,7 @@ fn reconstruct_paths_via_with_scratch_reuses_dispatch_and_outputs() {
 
     reconstruct_paths_via_with_scratch_into(
         &PathDispatcher,
+        &policy(),
         &parent,
         &[3, 2],
         4,
@@ -387,7 +395,7 @@ fn reconstruct_paths_via_with_scratch_reuses_dispatch_and_outputs() {
 
 #[test]
 fn reconstruct_paths_via_rejects_zero_depth() {
-    let err = reconstruct_paths_via(&PathDispatcher, &[0], &[0], 0).unwrap_err();
+    let err = reconstruct_paths_via(&PathDispatcher, &policy(), &[0], &[0], 0).unwrap_err();
 
-    assert!(matches!(err, DispatchError::BadInputs(_)));
+    assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
 }

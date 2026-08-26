@@ -12,10 +12,6 @@ use vyre_libs::graph::tensor_flow_forward::{
 };
 use vyre_reference::composition_witness::try_tensor_flow_forward_witness as try_tensor_flow_forward_cpu;
 
-fn tensor_flow_forward_dispatch_grid(node_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(node_count, TENSOR_FLOW_FORWARD_WORKGROUP_SIZE[0])
-}
-
 fn tensor_words(node_count: u32, context_limit: u32, field_limit: u32) -> u32 {
     try_tensor_words(node_count, context_limit, field_limit)
         .expect("Fix: tensor words should fit valid test shape")
@@ -61,7 +57,6 @@ fn run_tensor_flow(
         vec![0u8; word_count * 4],
     ];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(tensor_flow_forward_dispatch_grid(node_count));
     let outputs = with_live_backend("tensor_flow_forward", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -116,7 +111,10 @@ fn cuda_tensor_flow_reaches_source_past_first_workgroup() {
         &mut expected_probe,
         tensor_bit_index(512, 1, 2, context_limit, field_limit),
     );
-    assert_eq!(tensor_flow_forward_dispatch_grid(node_count), [3, 1, 1]);
+    assert!(
+        node_count > TENSOR_FLOW_FORWARD_WORKGROUP_SIZE[0],
+        "Fix: the fixture must cross a workgroup boundary or it proves nothing about multi-block launches"
+    );
     assert_eq!(expected, expected_probe);
     assert_eq!(gpu, expected);
 }

@@ -11,12 +11,13 @@
 //! (the same Program shipped to users) to analyze Vyre's own IR.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
-    write_zero_bytes,
+    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::tensor_train::tt_contract_step;
 use crate::plumbing::host::scratch::reserve_vec_capacity;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     should_fuse_chain_witness,
@@ -57,24 +58,26 @@ pub(crate) fn reference_fusion_pressure(shared_buffer_ranks: &[u32]) -> f64 {
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError::BadInputs`] when a rank is too large for buffer sizing, the fixed-point
+/// Returns [`SemanticExecutionError::InvalidRequest`] when a rank is too large for buffer sizing, the fixed-point
 /// result would overflow the primitive's u32 lanes, dispatch fails, or the backend returns a
 /// truncated output buffer.
 pub fn fusion_pressure_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     shared_buffer_ranks: &[u32],
-) -> Result<f64, DispatchError> {
+) -> Result<f64, SemanticExecutionError> {
     let mut scratch = TensorTrainFusionGpuScratch::default();
-    fusion_pressure_via_with_scratch(dispatcher, shared_buffer_ranks, &mut scratch)
+    fusion_pressure_via_with_scratch(dispatcher, policy, shared_buffer_ranks, &mut scratch)
 }
 
 /// Compute fusion pressure through the GPU-dispatchable TT contraction
 /// primitive using caller-owned dispatch and intermediate storage.
 pub fn fusion_pressure_via_with_scratch(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     shared_buffer_ranks: &[u32],
     scratch: &mut TensorTrainFusionGpuScratch,
-) -> Result<f64, DispatchError> {
+) -> Result<f64, SemanticExecutionError> {
     use crate::telemetry::{bump, tensor_train_chain_fusion_calls};
     bump(&tensor_train_chain_fusion_calls);
     if shared_buffer_ranks.is_empty() {
@@ -105,18 +108,18 @@ pub fn fusion_pressure_via_with_scratch(
             continue;
         }
         exact_product = exact_product.checked_mul(r_next as u128).ok_or_else(|| {
-            DispatchError::BadInputs(
+            SemanticExecutionError::InvalidRequest(
                 "Fix: fusion_pressure_via rank product overflowed u128.".to_string(),
             )
         })?;
         if exact_product > u32::MAX as u128 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: fusion_pressure_via rank product would overflow u32 lanes; product={exact_product}, max={}.",
-                u32::MAX
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: fusion_pressure_via rank product would overflow u32 lanes; product={exact_product}, max={}.",
+            u32::MAX
+        )));
         }
         let r_prev = u32::try_from(scratch.acc.len()).map_err(|_| {
-            DispatchError::BadInputs(
+            SemanticExecutionError::InvalidRequest(
                 "Fix: fusion_pressure_via accumulator length exceeds u32.".to_string(),
             )
         })?;
@@ -125,6 +128,7 @@ pub fn fusion_pressure_via_with_scratch(
         scratch.core_slice.resize(core_len, FIXED_ONE);
         dispatch_tt_step_with_scratch_into(
             dispatcher,
+            policy,
             &scratch.acc,
             &scratch.core_slice,
             r_prev,
@@ -136,12 +140,15 @@ pub fn fusion_pressure_via_with_scratch(
     }
 
     let r_last = u32::try_from(scratch.acc.len()).map_err(|_| {
-        DispatchError::BadInputs("Fix: fusion_pressure_via final rank exceeds u32.".to_string())
+        SemanticExecutionError::InvalidRequest(
+            "Fix: fusion_pressure_via final rank exceeds u32.".to_string(),
+        )
     })?;
     scratch.core_slice.clear();
     scratch.core_slice.resize(r_last as usize, FIXED_ONE);
     dispatch_tt_step_with_scratch_into(
         dispatcher,
+        policy,
         &scratch.acc,
         &scratch.core_slice,
         r_last,
@@ -153,39 +160,47 @@ pub fn fusion_pressure_via_with_scratch(
 }
 
 fn dispatch_tt_step_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     acc_in: &[u32],
     core_slice: &[u32],
     r_prev: u32,
     r_next: u32,
     inputs: &mut Vec<Vec<u8>>,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let program = tt_contract_step("acc_in", "core_slice", "acc_out", r_prev, r_next);
     let output_len = r_next as usize;
     ensure_input_slots(inputs, 3);
     write_u32_slice_le_bytes(&mut inputs[0], acc_in);
     write_u32_slice_le_bytes(&mut inputs[1], core_slice);
     write_zero_bytes(&mut inputs[2], output_len * std::mem::size_of::<u32>());
-    let grid_x = ceil_div_u32(r_next, 256);
-    let outputs = dispatcher.dispatch(&program, inputs, Some([grid_x, 1, 1]))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        inputs,
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: fusion_pressure_via TT expected at least one output buffer, got {}.",
             outputs.len()
         )));
     }
     decode_u32_output_exact(&outputs[0], output_len, "fusion_pressure_via TT", out)
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
-fn bounded_core_cells(left: u32, right: u32, label: &str) -> Result<usize, DispatchError> {
+fn bounded_core_cells(left: u32, right: u32, label: &str) -> Result<usize, SemanticExecutionError> {
     let value = left.checked_mul(right).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: fusion_pressure_via buffer size overflows {label}: {left} * {right}."
         ))
     })?;
     if value > MAX_TT_DISPATCH_CELLS {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: fusion_pressure_via refuses to allocate {value} TT core cells for {label}; max is {MAX_TT_DISPATCH_CELLS}. Shard the chain or lower ranks before dispatch."
         )));
     }
@@ -213,44 +228,52 @@ mod tests {
 
     struct ReferenceDispatcher;
 
-    impl ProgramDispatcher for ReferenceDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for ReferenceDispatcher {
+        fn execute(
             &self,
-            program: &vyre_foundation::ir::Program,
-            inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            let [acc_bytes, core_bytes, out_bytes] = inputs else {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: TT test dispatcher expected 3 buffers, got {}.",
-                    inputs.len()
-                )));
-            };
-            let acc =
-                crate::dispatch_buffers::decode_u32_input_aligned(acc_bytes, "TT test dispatcher")?;
-            let core = crate::dispatch_buffers::decode_u32_input_aligned(
-                core_bytes,
-                "TT test dispatcher",
-            )?;
-            let out_len = out_bytes.len() / 4;
-            if out_len == 0 || acc.is_empty() || core.len() != acc.len() * out_len {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: invalid TT test-dispatch shape acc={}, core={}, out={out_len}.",
-                    acc.len(),
-                    core.len()
-                )));
-            }
-            assert_eq!(program.workgroup_size(), [256, 1, 1]);
-            let mut out = vec![0u32; out_len];
-            for b in 0..out_len {
-                let mut sum = 0u64;
-                for a in 0..acc.len() {
-                    sum =
-                        sum.wrapping_add(((acc[a] as u64) * (core[a * out_len + b] as u64)) >> 16);
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                let [acc_bytes, core_bytes, out_bytes] = inputs.as_slice() else {
+                    return Err(SemanticExecutionError::InvalidRequest(format!(
+                        "Fix: TT test dispatcher expected 3 buffers, got {}.",
+                        inputs.len()
+                    )));
+                };
+                let acc = crate::dispatch_buffers::decode_u32_input_aligned(
+                    acc_bytes,
+                    "TT test dispatcher",
+                )?;
+                let core = crate::dispatch_buffers::decode_u32_input_aligned(
+                    core_bytes,
+                    "TT test dispatcher",
+                )?;
+                let out_len = out_bytes.len() / 4;
+                if out_len == 0 || acc.is_empty() || core.len() != acc.len() * out_len {
+                    return Err(SemanticExecutionError::InvalidRequest(format!(
+                        "Fix: invalid TT test-dispatch shape acc={}, core={}, out={out_len}.",
+                        acc.len(),
+                        core.len()
+                    )));
                 }
-                out[b] = sum as u32;
+                let mut out = vec![0u32; out_len];
+                for b in 0..out_len {
+                    let mut sum = 0u64;
+                    for a in 0..acc.len() {
+                        sum = sum
+                            .wrapping_add(((acc[a] as u64) * (core[a * out_len + b] as u64)) >> 16);
+                    }
+                    out[b] = sum as u32;
+                }
+                Ok(vec![u32_slice_to_le_bytes(&out)])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
             }
-            Ok(vec![u32_slice_to_le_bytes(&out)])
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -296,7 +319,9 @@ mod tests {
     fn via_pressure_matches_unit_core_reference() {
         let dispatcher = ReferenceDispatcher;
         let ranks = vec![2, 3, 5];
-        let pressure = fusion_pressure_via(&dispatcher, &ranks).expect("Fix: TT dispatch succeeds");
+        let pressure =
+            fusion_pressure_via(&dispatcher, &crate::test_parity_oracles::policy(), &ranks)
+                .expect("Fix: TT dispatch succeeds");
         assert!(approx_eq(pressure, reference_fusion_pressure(&ranks)));
     }
 
@@ -306,14 +331,26 @@ mod tests {
         let ranks = vec![2, 3, 5];
         let mut scratch = TensorTrainFusionGpuScratch::default();
 
-        let pressure = fusion_pressure_via_with_scratch(&dispatcher, &ranks, &mut scratch).unwrap();
+        let pressure = fusion_pressure_via_with_scratch(
+            &dispatcher,
+            &crate::test_parity_oracles::policy(),
+            &ranks,
+            &mut scratch,
+        )
+        .unwrap();
         assert!(approx_eq(pressure, reference_fusion_pressure(&ranks)));
 
         let acc_pool_capacity = scratch.acc.capacity() + scratch.step_out.capacity();
         let core_capacity = scratch.core_slice.capacity();
         let input_capacities = scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>();
 
-        let pressure = fusion_pressure_via_with_scratch(&dispatcher, &ranks, &mut scratch).unwrap();
+        let pressure = fusion_pressure_via_with_scratch(
+            &dispatcher,
+            &crate::test_parity_oracles::policy(),
+            &ranks,
+            &mut scratch,
+        )
+        .unwrap();
 
         assert!(approx_eq(pressure, reference_fusion_pressure(&ranks)));
         assert_eq!(
@@ -330,8 +367,12 @@ mod tests {
     #[test]
     fn via_rejects_fixed_point_overflow() {
         let dispatcher = ReferenceDispatcher;
-        let error = fusion_pressure_via(&dispatcher, &[u32::MAX])
-            .expect_err("oversized TT core must be rejected before allocation or dispatch");
+        let error = fusion_pressure_via(
+            &dispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[u32::MAX],
+        )
+        .expect_err("oversized TT core must be rejected before allocation or dispatch");
         assert!(
             error.to_string().contains("refuses to allocate")
                 || error.to_string().contains("overflow"),

@@ -33,7 +33,7 @@ use vyre_libs::dispatch_buffers::{decode_u32_output_exact, u32_slice_to_le_bytes
 
 use super::encode::{encode_program, EncodeError};
 use super::expr_arena::{encode_expr_arena, ExprArenaEncoding};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentDispatchStep};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Max expression nesting depth this GPU-native pre-filter flags.
 ///
@@ -55,7 +55,6 @@ pub const DEFAULT_MAX_NODE_COUNT: u32 = vyre_foundation::validate::DEFAULT_MAX_N
 
 /// Workgroup size for the limit-validator kernel.
 const VALIDATOR_WORKGROUP_X: u32 = 256;
-const RESIDENT_CACHE_DOMAIN_VALIDATE_LIMITS_RO: u64 = 0x5659_5245_5641_4c31;
 
 /// Index of the V033 (expr-depth) violation bit in the output buffer.
 pub const VIOLATION_INDEX_V033: u32 = 0;
@@ -67,55 +66,42 @@ pub const VIOLATION_INDEX_V019: u32 = 1;
 pub enum ValidateError {
     /// Encoder did not accept the input shape.
     Encode(EncodeError),
-    /// Dispatcher rejected or failed.
-    Dispatch(DispatchError),
+    /// Semantic execution or canonical output decoding failed.
+    Semantic(SemanticExecutionError),
 }
 
 impl std::fmt::Display for ValidateError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Encode(err) => write!(f, "gpu_validate encode error: {err:?}"),
-            Self::Dispatch(err) => write!(f, "gpu_validate dispatch error: {err}"),
+            Self::Semantic(err) => write!(f, "gpu_validate semantic execution error: {err}"),
         }
     }
 }
 
 impl std::error::Error for ValidateError {}
 
-/// Run the limit-checker on `program` via `dispatcher`. Returns a
-/// `[v033_violation: bool, v019_violation: bool]` pair. Both `false`
-/// means the program is within bounds for the migrated checks.
+/// Run the limit checker through semantic execution.
 pub fn gpu_validate_limits(
     program: &Program,
-    dispatcher: &dyn ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
 ) -> Result<[bool; 2], ValidateError> {
     let arena = encode_expr_arena(program).map_err(ValidateError::Encode)?;
     let encoded = encode_program(program).map_err(ValidateError::Encode)?;
-    gpu_validate_limits_from_encoding(&arena, encoded.node_count, dispatcher)
+    gpu_validate_limits_from_encoding(&arena, encoded.node_count, executor, policy)
 }
 
-/// Run the limit-checker from precomputed encodings.
-///
-/// This avoids encoding the Expr arena twice in resident optimizer pipelines:
-/// the same arena columns drive validation and the subsequent optimizer
-/// kernels. `node_count` must come from the matching ProgramGraph encoding.
+/// Run the limit checker from precomputed encodings.
 pub fn gpu_validate_limits_from_encoding(
     arena: &ExprArenaEncoding,
     node_count: u32,
-    dispatcher: &dyn ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
 ) -> Result<[bool; 2], ValidateError> {
-    // Empty programs trivially pass both checks.
     if arena.expr_count == 0 && node_count == 0 {
         return Ok([false, false]);
     }
-
-    let n_exprs = arena.expr_count.max(1);
-
-    let limits_program = build_validate_limits_program(n_exprs);
-    // Pad depths to at least one u32  -  the program declares
-    // `depths` with `count = max(expr_count, 1)`, so an empty arena
-    // still needs a 4-byte buffer to satisfy the static byte-len
-    // contract enforced by the resident dispatcher.
     let depths_bytes = if arena.depths.is_empty() {
         vec![0u8; 4]
     } else {
@@ -127,92 +113,35 @@ pub fn gpu_validate_limits_from_encoding(
         node_count,
         arena.expr_count,
     ]);
-    let violations_bytes = vec![0u8; 8]; // 2 u32 slots, init zero.
-
-    let outputs = if dispatcher.supports_persistent() {
-        dispatch_validate_limits_resident(
-            dispatcher,
-            &limits_program,
-            &[&depths_bytes, &limits_bytes],
-            &violations_bytes,
-        )
-        .map_err(ValidateError::Dispatch)?
-    } else {
-        dispatcher
-            .dispatch(
-                &limits_program,
-                &[depths_bytes, limits_bytes, violations_bytes],
-                Some([1, 1, 1]),
-            )
-            .map_err(ValidateError::Dispatch)?
-    };
-    if outputs.len() != 1 {
-        return Err(ValidateError::Dispatch(DispatchError::BackendError(
+    let mut execution = vyre_megakernel::execute_single_program(
+        executor,
+        "validate-limits",
+        build_validate_limits_program(arena.expr_count.max(1)),
+        &[depths_bytes, limits_bytes],
+        policy,
+    )
+    .map_err(ValidateError::Semantic)?;
+    if execution.outputs.len() != 1 {
+        return Err(ValidateError::Semantic(SemanticExecutionError::Backend(
             format!(
-                "Fix: gpu_validate_limits expected exactly one violations output, got {}.",
-                outputs.len()
+                "validate-limits semantic execution expected one canonical output, got {}",
+                execution.outputs.len()
             ),
         )));
     }
     let mut violations = Vec::with_capacity(2);
     decode_u32_output_exact(
-        &outputs[0],
+        &execution.outputs.remove(0),
         2,
         "gpu_validate_limits violations",
         &mut violations,
     )
-    .map_err(ValidateError::Dispatch)?;
-    let v033 = violations[0] != 0;
-    let v019 = violations[1] != 0;
-    Ok([v033, v019])
-}
-
-fn dispatch_validate_limits_resident(
-    dispatcher: &dyn ProgramDispatcher,
-    program: &Program,
-    static_payloads: &[&[u8]],
-    violations_bytes: &[u8],
-) -> Result<Vec<Vec<u8>>, DispatchError> {
-    let static_set = dispatcher.acquire_resident_static_uploads(
-        RESIDENT_CACHE_DOMAIN_VALIDATE_LIMITS_RO,
-        static_payloads,
-    )?;
-    if static_set.handles.len() != static_payloads.len() {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: gpu_validate_limits resident static cache returned {} handle(s) for {} immutable payload(s).",
-            static_set.handles.len(),
-            static_payloads.len()
-        )));
-    }
-    let violations_h = match dispatcher.alloc_resident_many(&[violations_bytes.len()]) {
-        Ok(handles) => handles[0],
-        Err(error) => {
-            let _ = dispatcher.release_resident_static_uploads(static_set);
-            return Err(error);
-        }
-    };
-    let fills = [(violations_h, violations_bytes.len(), 0)];
-    let handles = [static_set.handles[0], static_set.handles[1], violations_h];
-    let step = ResidentDispatchStep {
-        program,
-        handle_ids: &handles,
-        grid_override: Some([1, 1, 1]),
-    };
-    let mut outputs = Vec::with_capacity(1);
-    let result = dispatcher.fill_upload_resident_many_sequence_read_many_into(
-        &fills,
-        &[],
-        &[step],
-        &[violations_h],
-        &mut outputs,
-    );
-    let _ = dispatcher.free_resident(violations_h);
-    let release_result = dispatcher.release_resident_static_uploads(static_set);
-    match (result, release_result) {
-        (Ok(()), Ok(())) => Ok(outputs),
-        (Err(error), _) => Err(error),
-        (Ok(_), Err(error)) => Err(error),
-    }
+    .map_err(|error| {
+        ValidateError::Semantic(SemanticExecutionError::Backend(format!(
+            "validate-limits semantic output decoding failed: {error}"
+        )))
+    })?;
+    Ok([violations[0] != 0, violations[1] != 0])
 }
 
 /// Build the limit-checker Program. Single workgroup [256, 1, 1].
@@ -229,7 +158,7 @@ pub fn build_validate_limits_program(expr_count: u32) -> Program {
         BufferDecl::storage("depths", 0, BufferAccess::ReadOnly, DataType::U32)
             .with_count(expr_count.max(1)),
         BufferDecl::storage("limits", 1, BufferAccess::ReadOnly, DataType::U32).with_count(4),
-        BufferDecl::storage("violations", 2, BufferAccess::ReadWrite, DataType::U32).with_count(2),
+        BufferDecl::output("violations", 2, DataType::U32).with_count(2),
     ];
 
     // Per-thread strided max-reduce. Each thread t computes a local
@@ -356,76 +285,4 @@ pub fn build_validate_limits_program(expr_count: u32) -> Program {
             body: Arc::new(body),
         }],
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use super::super::arena_kernel::{FixedOutputDispatcher, GridExpectation};
-
-    fn dispatcher(outputs: Vec<Vec<u8>>) -> FixedOutputDispatcher {
-        FixedOutputDispatcher {
-            pass: "validate",
-            expected_inputs: 3,
-            grid: GridExpectation::SingleWorkgroup,
-            outputs,
-        }
-    }
-
-    #[test]
-    fn validate_limits_program_exposes_three_buffers() {
-        let p = build_validate_limits_program(8);
-        let names: Vec<_> = p.buffers().iter().map(|b| b.name().to_string()).collect();
-        assert!(names.contains(&"depths".to_string()));
-        assert!(names.contains(&"limits".to_string()));
-        assert!(names.contains(&"violations".to_string()));
-    }
-
-    #[test]
-    fn validate_limits_decodes_exact_violations() {
-        let dispatcher = dispatcher(vec![u32_slice_to_le_bytes(&[1, 0])]);
-        let program = Program::wrapped(
-            Vec::new(),
-            [1, 1, 1],
-            vec![Node::store("buf", Expr::u32(0), Expr::u32(1))],
-        );
-        let out = gpu_validate_limits(&program, &dispatcher).expect("Fix: dispatch succeeds");
-        assert_eq!(out, [true, false]);
-    }
-
-    #[test]
-    fn validate_limits_rejects_extra_outputs() {
-        let dispatcher = dispatcher(vec![
-            u32_slice_to_le_bytes(&[0, 0]),
-            u32_slice_to_le_bytes(&[0, 0]),
-        ]);
-        let program = Program::wrapped(
-            Vec::new(),
-            [1, 1, 1],
-            vec![Node::store("buf", Expr::u32(0), Expr::u32(1))],
-        );
-        let err =
-            gpu_validate_limits(&program, &dispatcher).expect_err("extra outputs must be rejected");
-        assert!(
-            matches!(err, ValidateError::Dispatch(DispatchError::BackendError(_))),
-            "unexpected error: {err:?}"
-        );
-    }
-
-    #[test]
-    fn validate_limits_rejects_trailing_violation_bytes() {
-        let dispatcher = dispatcher(vec![vec![0, 0, 0, 0, 0, 0, 0, 0, 1]]);
-        let program = Program::wrapped(
-            Vec::new(),
-            [1, 1, 1],
-            vec![Node::store("buf", Expr::u32(0), Expr::u32(1))],
-        );
-        let err = gpu_validate_limits(&program, &dispatcher)
-            .expect_err("trailing bytes must be rejected");
-        assert!(
-            matches!(err, ValidateError::Dispatch(DispatchError::BackendError(_))),
-            "unexpected error: {err:?}"
-        );
-    }
 }

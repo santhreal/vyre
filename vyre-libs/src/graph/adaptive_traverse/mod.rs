@@ -50,6 +50,7 @@ mod plan_cache_key;
 mod sparse_dense_step;
 #[cfg(test)]
 mod test_graphs;
+mod traversal_plan;
 
 pub use dense_step::adaptive_dense_step;
 pub use four_russians::{
@@ -60,14 +61,9 @@ pub use four_russians::{
 #[cfg(test)]
 pub use frontier_plan::{adaptive_frontier_popcount, adaptive_frontier_popcount_in_domain};
 pub use frontier_plan::{
-    adaptive_frontier_stats, adaptive_node_dispatch_grid, plan_adaptive_frontier_work,
-    plan_adaptive_resident_auto_step, plan_adaptive_resident_frontier_step,
-    plan_adaptive_resident_sparse_queue_step, validate_adaptive_frontier,
+    adaptive_frontier_stats, plan_adaptive_frontier_work, validate_adaptive_frontier,
     validate_adaptive_traversal_layout, AdaptiveFrontierLayout, AdaptiveFrontierStats,
-    AdaptiveFrontierWorkPlan, AdaptiveResidentAutoStepPlan, AdaptiveResidentFrontierPlan,
-    AdaptiveResidentSparseQueuePlan, AdaptiveTraversalLayout,
-    ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_LANES, ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE,
-    ADAPTIVE_TRAVERSAL_POPCOUNT_BYTES,
+    AdaptiveFrontierWorkPlan, AdaptiveTraversalLayout,
 };
 #[cfg(test)]
 pub use mode_selection::should_use_dense;
@@ -82,6 +78,12 @@ pub use plan_cache_key::{
     AdaptiveTraversalProgramKind,
 };
 pub use sparse_dense_step::adaptive_sparse_dense_step;
+pub use traversal_plan::{
+    plan_adaptive_dense_step, plan_adaptive_traversal_step, AdaptiveDenseStepPlan,
+    AdaptiveTraversalBuffers, AdaptiveTraversalStepPlan,
+};
+
+const ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 /// Density threshold (percent). Tiles with ≥ this fraction of
 /// frontier bits set use the dense-bitmatrix step; below it, CSR.
@@ -110,3 +112,7 @@ pub const NAME_EDGE_TARGETS: &str = "adap_edge_targets";
 pub const NAME_EDGE_KIND_MASK: &str = "adap_edge_kind_mask";
 /// Canonical dense adjacency-row buffer name.
 pub const NAME_ADJ_ROWS_DENSE: &str = "adap_adj_rows_dense";
+/// Canonical compacted active-source queue buffer name.
+pub const NAME_ACTIVE_QUEUE: &str = "adap_active_queue";
+/// Canonical resident active-queue length buffer name.
+pub const NAME_QUEUE_LEN: &str = "adap_queue_len";

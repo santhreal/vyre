@@ -2,7 +2,7 @@
 
 use vyre_foundation::ir::Program;
 
-use super::{dominator_frontier_dispatch_grid, try_dominator_frontier};
+use super::try_dominator_frontier;
 use crate::bitset::bitset_words;
 
 /// Validated dominance-frontier dispatch layout.
@@ -78,7 +78,6 @@ pub fn dominator_frontier_slice_fingerprint(words: &[u32]) -> DominatorFrontierS
 pub struct DominatorFrontierLaunchPlan {
     layout: DominatorFrontierLayout,
     shape: DominatorFrontierProgramShape,
-    dispatch_grid: [u32; 3],
 }
 
 impl DominatorFrontierLaunchPlan {
@@ -92,12 +91,6 @@ impl DominatorFrontierLaunchPlan {
     #[must_use]
     pub const fn shape(&self) -> DominatorFrontierProgramShape {
         self.shape
-    }
-
-    /// Exact GPU dispatch grid for this query.
-    #[must_use]
-    pub const fn dispatch_grid(&self) -> [u32; 3] {
-        self.dispatch_grid
     }
 
     /// Number of u32 words in the seed/frontier bitsets.
@@ -185,12 +178,6 @@ impl DominatorFrontierDispatchPlan {
         &self.program
     }
 
-    /// Exact GPU dispatch grid for this query.
-    #[must_use]
-    pub const fn dispatch_grid(&self) -> [u32; 3] {
-        self.launch.dispatch_grid()
-    }
-
     /// Number of u32 words in the seed/frontier bitsets.
     #[must_use]
     pub const fn frontier_words(&self) -> usize {
@@ -247,7 +234,6 @@ pub fn plan_dominator_frontier_launch(
             dom_edge_count: layout.dom_edge_count,
             pred_edge_count: layout.pred_edge_count,
         },
-        dispatch_grid: dominator_frontier_dispatch_grid(node_count),
     })
 }
 

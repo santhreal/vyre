@@ -195,9 +195,9 @@ profile = 'test-tooling'
 path = 'vyre-pass-engine'
 owner = 'pass-engine'
 layer = 'pass-engine'
-owned = "Execute the optimizer's own passes as Vyre Programs, dispatched through the ProgramDispatcher seam."
+owned = 'Execute optimizer passes as Vyre Programs through compiler-owned semantic compilation and admitted artifact submission.'
 non_owned = 'Device drivers, pass math semantics, artifact envelope schema authorship, frontends.'
-allowed_dependencies = ['vyre-foundation', 'vyre-libs', 'vyre-primitives']
+allowed_dependencies = ['vyre-foundation', 'vyre-libs', 'vyre-megakernel', 'vyre-primitives']
 profile = 'pass-engine'
 
 [package.vyre-conform-spec]

@@ -1,5 +1,5 @@
 //! End-to-end parity for `math::sheaf_heterophilic_dispatch::diffuse_dispatch_stalks_fixed_via`
-//! through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! through the shared faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `sheaf_diffusion_step`'s IR is run by NO `vyre-primitives/tests/*` file and the consumer's only
@@ -15,9 +15,11 @@
 //! but the oracle mirrors the signed kernel exactly (see BACKLOG FIXED-amg-fixed-path-unsigned-mul)).
 //! That is exactly reproducible in u32, so the oracle here is BIT-EXACT (no tolerance).
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::sheaf_heterophilic_dispatch::diffuse_dispatch_stalks_fixed_via;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::{fixed_mul, xorshift32 as xorshift, FIXED_ONE};
 
 /// Exact u32 oracle for one diagonal sheaf-diffusion step, mirroring the kernel bit-for-bit.
@@ -37,7 +39,7 @@ fn sheaf_step_fixed(stalks: &[u32], restriction: &[u32], damping: u32) -> Vec<u3
 
 #[test]
 fn diffuse_step_via_matches_exact_fixed_point_oracle_over_generated_systems() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x5EAF_0001u32; // arbitrary nonzero seed
     let mut nontrivial = 0u32;
     for case in 0..400u32 {
@@ -57,6 +59,7 @@ fn diffuse_step_via_matches_exact_fixed_point_oracle_over_generated_systems() {
 
         let got = diffuse_dispatch_stalks_fixed_via(
             &dispatcher,
+            &semantic_execution_support::policy(),
             &stalks,
             &restriction,
             damping,
@@ -83,19 +86,34 @@ fn diffuse_step_via_matches_exact_fixed_point_oracle_over_generated_systems() {
 
 #[test]
 fn diffuse_step_via_matches_hand_checked_cases() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
 
     // damping = 0 → no diffusion, stalks unchanged.
     let stalks = vec![FIXED_ONE, 2 * FIXED_ONE, 3 * FIXED_ONE];
     let restriction = vec![FIXED_ONE, FIXED_ONE, FIXED_ONE];
-    let got =
-        diffuse_dispatch_stalks_fixed_via(&dispatcher, &stalks, &restriction, 0, 3, 1).unwrap();
+    let got = diffuse_dispatch_stalks_fixed_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &stalks,
+        &restriction,
+        0,
+        3,
+        1,
+    )
+    .unwrap();
     assert_eq!(got, stalks, "zero damping leaves stalks unchanged");
 
     // damping = 1.0, restriction = 1.0 → delta = stalk, stalks_next = 0.
-    let got =
-        diffuse_dispatch_stalks_fixed_via(&dispatcher, &stalks, &restriction, FIXED_ONE, 3, 1)
-            .unwrap();
+    let got = diffuse_dispatch_stalks_fixed_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &stalks,
+        &restriction,
+        FIXED_ONE,
+        3,
+        1,
+    )
+    .unwrap();
     assert_eq!(
         got,
         vec![0, 0, 0],
@@ -105,6 +123,7 @@ fn diffuse_step_via_matches_hand_checked_cases() {
     // damping = 0.5, restriction = 1.0, stalk = 2.0 → delta = 0.5*1*2 = 1.0 → next = 1.0.
     let got = diffuse_dispatch_stalks_fixed_via(
         &dispatcher,
+        &semantic_execution_support::policy(),
         &[2 * FIXED_ONE],
         &[FIXED_ONE],
         FIXED_ONE / 2,

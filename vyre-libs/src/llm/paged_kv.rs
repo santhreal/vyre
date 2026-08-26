@@ -15,8 +15,6 @@
 use thiserror::Error;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
-#[cfg(test)]
-use crate::nn::attention::layout::attention_layout_dispatch_grid;
 use crate::nn::attention::layout::{
     block_index, check_layout_dims, checked_elements, layout_move_program, IndexMap, LayoutMove,
     LayoutReject, RowMajor,
@@ -144,9 +142,8 @@ impl PagedKvCache<'_> {
 
     /// Elements a move of `tokens` tokens per sequence touches.
     ///
-    /// The guarded domain of both moves and the grid that launches them come
-    /// from here, so a launch cannot cover a different number of elements from
-    /// the one the guard admits.
+    /// This is the guarded domain of both moves, so it is also the launch span
+    /// the compiler reads back out of the emitted guard.
     ///
     /// # Errors
     ///
@@ -281,25 +278,6 @@ pub fn paged_kv_append(
     }))
 }
 
-/// Dispatch grid for a paged move of `tokens` tokens per sequence.
-///
-/// The append is a scatter: it guards on the chunk and declares the whole cache
-/// as its write buffer, so a launch sized from the declared buffers fires one
-/// lane per cache element to move one decoded token. Both moves are launched
-/// over the elements they touch, which is what makes the paged append cost the
-/// chunk rather than the cache.
-///
-/// # Errors
-///
-/// Returns `Err` when the moved element count overflows `u32` indexing.
-#[cfg(test)]
-pub fn paged_kv_dispatch_grid(
-    spec: &PagedKvCache<'_>,
-    tokens: u32,
-) -> Result<[u32; 3], PagedKvError> {
-    Ok(attention_layout_dispatch_grid(spec.moved_elements(tokens)?))
-}
-
 /// The two-block, two-token cache both registration fixtures address.
 ///
 /// Sequence zero maps logical block 0 to physical block 1 and logical block 1
@@ -393,17 +371,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_paged_kv_dispatch_grid_normal_and_overflow() {
+    fn an_append_launches_over_the_chunk_it_moves_not_the_cache_it_writes() {
         let spec = fixture_cache();
-        let grid = paged_kv_dispatch_grid(&spec, 2).expect("Fix: compute grid");
-        assert_eq!(grid, [1, 1, 1]);
+        let chunk = spec.moved_elements(1).expect("chunk elements");
+        assert_eq!(chunk, 2);
+        let program = paged_kv_append(&spec, "chunk", 1, 1).expect("append program");
+        assert_eq!(
+            vyre_foundation::guarded_logical_span(&program),
+            Some(chunk),
+            "a cache-sized launch would run the whole cache per decoded chunk"
+        );
 
         let overflow = PagedKvCache {
             heads: u32::MAX,
             ..fixture_cache()
         };
         assert_eq!(
-            paged_kv_dispatch_grid(&overflow, 4),
+            overflow.moved_elements(4),
             Err(PagedKvError::ElementCountOverflow)
         );
     }

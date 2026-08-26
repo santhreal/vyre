@@ -9,12 +9,23 @@ use harness::{bytes_u32, u32_bytes, with_cuda_optimizer_dispatcher, with_live_ba
 use vyre_driver::DispatchConfig;
 use vyre_libs::graph::csr_forward_or_changed::{
     csr_forward_or_changed_parallel, csr_forward_or_changed_parallel_batch,
-    csr_forward_or_changed_parallel_grid,
 };
 use vyre_libs::graph::dispatch::csr_forward_or_changed::forward_closure_via_change_flag_gpu;
 
-const fn csr_forward_or_changed_parallel_batch_grid(node_count: u32, query_count: u32) -> [u32; 3] {
-    let [groups, _, _] = csr_forward_or_changed_parallel_grid(node_count);
+/// Grid a node-parallel pass needs, derived from the program's own declared
+/// workgroup rather than a library-published launch helper.
+fn parallel_grid(program: &vyre_foundation::ir::Program, node_count: u32) -> [u32; 3] {
+    vyre_primitives::lane_grid(node_count, program.workgroup_size()[0])
+}
+
+/// Batched form: one y group per query, floored at one so a zero-query batch
+/// still launches.
+fn parallel_batch_grid(
+    program: &vyre_foundation::ir::Program,
+    node_count: u32,
+    query_count: u32,
+) -> [u32; 3] {
+    let [groups, _, _] = parallel_grid(program, node_count);
     [groups, if query_count == 0 { 1 } else { query_count }, 1]
 }
 fn reference_forward_closure_via_change_flag(
@@ -62,9 +73,10 @@ fn assert_forward_closure_matches(
         },
         seed,
     );
-    with_cuda_optimizer_dispatcher(label, |dispatcher| {
+    with_cuda_optimizer_dispatcher(label, |dispatcher, policy| {
         let gpu = forward_closure_via_change_flag_gpu(
             dispatcher,
+            policy,
             CsrClosureInputs {
                 graph: CsrGraphView {
                     node_count: n,
@@ -114,7 +126,7 @@ fn cuda_parallel_primitive_reaches_sources_past_first_block() {
         vec![0u8; 4],
     ];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(csr_forward_or_changed_parallel_grid(node_count));
+    config.grid_override = Some(parallel_grid(&program, node_count));
 
     let outputs = with_live_backend("parallel CSR forward primitive", |backend| {
         backend
@@ -168,10 +180,7 @@ fn cuda_parallel_batch_primitive_reaches_sources_past_first_block() {
         vec![0u8; query_count as usize * 4],
     ];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(csr_forward_or_changed_parallel_batch_grid(
-        node_count,
-        query_count,
-    ));
+    config.grid_override = Some(parallel_batch_grid(&program, node_count, query_count));
 
     let outputs = with_live_backend("parallel batched CSR forward primitive", |backend| {
         backend

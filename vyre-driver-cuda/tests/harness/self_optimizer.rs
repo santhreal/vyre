@@ -1,30 +1,16 @@
-//! CUDA harness for the self-hosted optimizer, and the IR shapes its
-//! end-to-end pass suites assert against.
-//!
-//! `vyre_pass_engine::optimizer` drives every GPU pass through
-//! `gpu_pipeline_resident` against a `ProgramDispatcher`. Running that on a live
-//! `CudaBackend` and reading the post-pipeline node shape is one
-//! implementation, not one per pass suite. Each suite keeps only the programs
-//! and expected literals that are its reason to exist.
+//! CUDA harness for self-hosted optimizer semantic execution and shared IR assertions.
 
 use vyre::ir::UnOp;
 use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver_cuda::CudaProgramDispatcher;
-use vyre_pass_engine::optimizer::pipeline_resident::gpu_pipeline_resident;
+use vyre_pass_engine::optimizer::pipeline::gpu_optimize;
 
-use super::live_backend;
+use super::with_cuda_optimizer_dispatcher;
 
-/// Run `p` through the full persistent-resident GPU optimizer pipeline on the
-/// live device.
-///
-/// # Panics
-///
-/// Panics when the pipeline itself fails, which is a backend or pass defect
-/// rather than an unmet expectation about the optimized shape.
+/// Run `p` through the artifact-backed optimizer pipeline on the live device.
 pub(crate) fn run_pipeline(p: Program) -> Program {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
-    gpu_pipeline_resident(p, &dispatcher).expect("pipeline must succeed")
+    with_cuda_optimizer_dispatcher("CUDA optimizer pipeline", |executor, policy| {
+        gpu_optimize(p, executor, policy).expect("pipeline must succeed")
+    })
 }
 
 /// Peel the `Region` wrapper `Program::wrapped` adds and return the top-level

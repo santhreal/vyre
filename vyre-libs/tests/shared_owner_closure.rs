@@ -3,14 +3,14 @@
 //!
 //! A dedup pass fixes the copies that exist. It cannot fix the copy somebody adds
 //! next month, and every class below has already come back at least once after
-//! being cleaned up: `lane_grid` replaced four hand-rolled ceiling helpers and two
-//! more were added afterwards; the Bellman binding record documented itself as
-//! "the only place the six names are spelled" while a second spelling of the same
-//! six lived in another crate; the persistent-fixpoint routing assertions were
-//! copied per op and the copies drifted in what they accepted.
+//! being cleaned up: launch grids were published per operation, cleaned up, and
+//! published again under new names; the Bellman binding record documented itself
+//! as "the only place the six names are spelled" while a second spelling of the
+//! same six lived in another crate; the persistent-fixpoint routing assertions
+//! were copied per op and the copies drifted in what they accepted.
 //!
 //! So each gate derives its MEMBER SET from source at run time rather than from a
-//! list maintained here. A new dispatch-grid function, a new binding record or a
+//! list maintained here. A new launch-grid declaration, a new binding record or a
 //! new routed convergence op turns the suite RED until it is routed onto the
 //! owner. A hardcoded roster would go stale in silence, which is the same failure
 //! as having no gate.
@@ -28,11 +28,13 @@ use vyre_test_support::monorepo::{vyre_crate_directory, vyre_workspace_root};
 /// The crate whose sources every gate below reads.
 ///
 /// The three classes are properties of the composition domains, which live here.
-/// The `lane_grid` owner they must reach is a hardware intrinsic and stays in
-/// `vyre-primitives`, so the owner axis names that crate on its own.
 const SUBJECT_CRATE: &str = "vyre-libs";
 
 /// The crate that owns the one ceiling division from a lane count to a grid.
+///
+/// Nothing here reaches it: launch geometry is derived below admission by
+/// `vyre_driver::infer_dispatch_grid`, which is the only remaining caller class.
+/// The name stays because the meta gate resolves both crate directories.
 const OWNER_CRATE: &str = "vyre-primitives";
 
 /// Every `.rs` file under this crate's `src/`, as (crate-relative path, text).
@@ -211,226 +213,194 @@ fn collect_rs(dir: &Path, root: &Path, out: &mut Vec<(String, String)>) {
     }
 }
 
-/// The lines of `text` making up the body of the free function declared on
-/// `start`, up to and including its closing brace at the declaration's indent.
-///
-/// Indent-terminated rather than brace-counted so a brace inside a string or a
-/// comment cannot desynchronize the scan.
-fn function_body<'a>(lines: &[&'a str], start: usize) -> Vec<&'a str> {
-    let indent = lines[start].len() - lines[start].trim_start().len();
-    let closer = " ".repeat(indent) + "}";
-    let mut body = Vec::new();
-    for line in &lines[start..] {
-        body.push(*line);
-        if *line == closer.as_str() {
-            break;
-        }
-    }
-    body
-}
-
 // ---------------------------------------------------------------------------
-// Class 1: one ceiling division from a lane count to a dispatch grid.
+// Class 1: no operation publishes launch geometry.
 // ---------------------------------------------------------------------------
 
-/// The owner module path, inside `OWNER_CRATE` rather than the walked tree.
-const DISPATCH_GRID_OWNER: &str = "src/dispatch_grid.rs";
-
-/// Free functions that compute a dispatch grid, as (path, function name, body).
+/// Launch geometry an operation publishes, as (path, kind, ident).
 ///
-/// Methods are excluded by requiring no `&self` receiver: a `fn dispatch_grid(&self)`
-/// that returns a stored field is an accessor, not a computation, and holding it to
-/// the ceiling-division rule would be asserting the wrong thing.
-fn dispatch_grid_functions(files: &[(String, String)]) -> Vec<(String, String, String)> {
+/// Three shapes carry a grid out of an operation and into a caller: a function
+/// that returns one, a struct field that stores one, and a constant that names
+/// one. Each is recognized by its declared `[u32; 3]` type rather than by its
+/// identifier, so a rename cannot hide one and a name that only reads like
+/// geometry is not convicted: `persistent_fixpoint_grid` returns a `Program`
+/// built around a grid-sync barrier and publishes no launch. All three are
+/// derived from source text at run time, so a new one enrolls itself and turns
+/// the gate below red.
+fn published_launch_geometry(files: &[(String, String)]) -> Vec<(String, String, String)> {
     let mut found = Vec::new();
     for (path, text) in files {
         let lines: Vec<&str> = text.lines().collect();
+        let mut cfg_test = false;
         for (index, line) in lines.iter().enumerate() {
             let trimmed = line.trim_start();
-            let Some(rest) = trimmed
-                .strip_prefix("pub const fn ")
-                .or_else(|| trimmed.strip_prefix("pub fn "))
-                .or_else(|| trimmed.strip_prefix("const fn "))
-                .or_else(|| trimmed.strip_prefix("fn "))
-                .or_else(|| trimmed.strip_prefix("pub(crate) const fn "))
-                .or_else(|| trimmed.strip_prefix("pub(crate) fn "))
-            else {
-                continue;
-            };
-            let Some((name, args)) = rest.split_once('(') else {
-                continue;
-            };
-            if !name.ends_with("dispatch_grid") && !name.ends_with("grid_x") {
+            // A `#[cfg(test)]` item is unreachable from any caller, so it is not
+            // published surface. The marker applies to the next item only.
+            if trimmed.starts_with("#[cfg(test)]") {
+                cfg_test = true;
                 continue;
             }
-            if args.starts_with("&self") || args.starts_with("self") {
+            if trimmed.starts_with("//") || trimmed.is_empty() {
                 continue;
             }
-            found.push((
-                path.clone(),
-                name.to_string(),
-                function_body(&lines, index).join("\n"),
-            ));
+            if let Some((kind, ident)) = launch_geometry_declaration(&lines, index) {
+                if !cfg_test {
+                    found.push((path.clone(), kind.to_string(), ident));
+                }
+            }
+            cfg_test = false;
         }
     }
     found
 }
 
-/// No dispatch-grid function may hand-roll the ceiling division `lane_grid` owns.
+/// The declaration starting at `index`, joined up to where its type is settled.
 ///
-/// The signature is a `/` or `%` operator inside the body. Ceiling division is the
-/// whole of what these functions do, so a division in one is either the owner's
-/// arithmetic restated or a second, differently-rounded answer to the same
-/// question. Both are the defect: the copies that existed disagreed at zero, where
-/// three underflowed `value - 1` and one produced a grid of zero groups that the
-/// CUDA launcher rejects outright.
-///
-/// Does NOT catch a copy that reaches the same result without a division operator,
-/// such as a lookup table or a loop.
-#[test]
-fn no_dispatch_grid_function_hand_rolls_the_ceiling_division() {
-    let files = source_files();
-    let members = dispatch_grid_functions(&files);
-    assert!(
-        members.len() >= 10,
-        "Fix: only {} dispatch-grid functions were derived; the signature no longer matches this crate's declarations, so the gate would pass by finding nothing.",
-        members.len()
-    );
-
-    let mut offenders = Vec::new();
-    for (path, name, body) in &members {
-        let arithmetic: Vec<&str> = body
-            .lines()
-            .filter(|line| {
-                let code = line.split("//").next().unwrap_or(line);
-                code.contains(" / ") || code.contains(" % ")
-            })
-            .map(str::trim)
-            .collect();
-        if !arithmetic.is_empty() {
-            offenders.push(format!("{path}::{name}: {}", arithmetic.join(" | ")));
+/// A signature that wraps across lines puts its return type several lines below
+/// the identifier, so reading one line would miss every wrapped declaration.
+/// The join stops at the body brace or the terminating semicolon.
+fn declaration_text(lines: &[&str], index: usize) -> String {
+    let mut text = String::new();
+    for line in &lines[index..] {
+        let trimmed = line.trim();
+        if trimmed.starts_with("//") {
+            continue;
+        }
+        text.push(' ');
+        text.push_str(trimmed);
+        if trimmed.ends_with('{') || trimmed.ends_with(';') || trimmed.ends_with(',') {
+            break;
         }
     }
+    text
+}
+
+/// The kind and identifier of the launch-geometry declaration at `index`.
+///
+/// A launch grid and a workgroup shape are both `[u32; 3]`, so the type alone
+/// cannot separate them. A workgroup shape is the extent one invocation group
+/// covers and is a backend lowering fact `structure-gate` owns; a launch grid is
+/// the number of groups, which is the compiler's to choose. The identifier is
+/// the only place the declaration states which of the two it is.
+fn launch_geometry_declaration(lines: &[&str], index: usize) -> Option<(&'static str, String)> {
+    let (kind, name) = launch_shaped_declaration(lines, index)?;
+    (!name.to_ascii_uppercase().contains("WORKGROUP")).then_some((kind, name))
+}
+
+/// The kind and identifier of any `[u32; 3]` declaration at `index`.
+fn launch_shaped_declaration(lines: &[&str], index: usize) -> Option<(&'static str, String)> {
+    let trimmed = lines[index].trim_start();
+    if let Some(rest) = trimmed
+        .strip_prefix("pub const fn ")
+        .or_else(|| trimmed.strip_prefix("pub fn "))
+        .or_else(|| trimmed.strip_prefix("pub(crate) const fn "))
+        .or_else(|| trimmed.strip_prefix("pub(crate) fn "))
+    {
+        let (name, _) = rest.split_once('(')?;
+        return declaration_text(lines, index)
+            .contains("-> [u32; 3]")
+            .then(|| ("function", name.to_string()));
+    }
+    if let Some(rest) = trimmed
+        .strip_prefix("pub const ")
+        .or_else(|| trimmed.strip_prefix("pub(crate) const "))
+    {
+        let (name, tail) = rest.split_once(':')?;
+        return tail
+            .contains("[u32; 3]")
+            .then(|| ("constant", name.trim().to_string()));
+    }
+    let rest = trimmed
+        .strip_prefix("pub ")
+        .or_else(|| trimmed.strip_prefix("pub(crate) "))?;
+    let (name, tail) = rest.split_once(':')?;
+    tail.contains("[u32; 3]")
+        .then(|| ("field", name.trim().to_string()))
+}
+
+/// No operation in this crate may publish launch geometry.
+///
+/// A grid an operation hands back is a launch a caller can pass to a dispatch,
+/// and a caller-chosen launch is not the one the compiler admits. The defect this
+/// closes is a scatter: a paged cache append guards on one decoded chunk and
+/// declares a cache-sized destination, so a published grid sized from the widest
+/// buffer fired one lane per cache element on every decode step. The span is a
+/// property of the program's own guard, so `vyre_foundation::guarded_logical_span`
+/// reads it, and target lowering and `vyre_driver::infer_dispatch_grid` narrow to
+/// it. Nothing below admission needs an operation to publish a number.
+///
+/// Does NOT catch geometry returned under a name this signature does not match,
+/// such as a tuple field or a method returning `LaunchGeometry`, nor a launch
+/// grid declared under a name containing `workgroup`, which is read as the
+/// workgroup shape it claims to be.
+#[test]
+fn no_operation_publishes_launch_geometry() {
+    let offenders: Vec<String> = published_launch_geometry(&source_files())
+        .into_iter()
+        .map(|(path, kind, ident)| format!("{path}: {kind} `{ident}`"))
+        .collect();
 
     assert!(
         offenders.is_empty(),
-        "Fix: these dispatch-grid functions compute their own ceiling division instead of calling the one owner, vyre_primitives::dispatch_grid::lane_grid, whose zero case is the launchable one:\n  {}",
+        "Fix: these declarations publish a launch grid out of an operation. A caller that passes one back overrides the domain the program's guard admits. Delete the declaration and let `vyre_driver::infer_dispatch_grid` derive the launch, or assert `vyre_foundation::guarded_logical_span` where the shape is the contract:\n  {}",
         offenders.join("\n  ")
     );
 }
 
-/// Every dispatch-grid function must be able to reach the owner.
+/// The signature must still match the shapes it claims to reject.
 ///
-/// An owner a caller cannot name is an owner the caller hand-rolls around: that
-/// is exactly how the `decode` copy survived a cleanup that removed four others.
-/// The owner now sits in another crate, so reachability is two properties of the
-/// declarations rather than one property of a feature closure. Both are read from
-/// source at run time, so a `cfg` added to either end turns this red.
+/// An empty result is the passing state of the gate above, so the scan has to be
+/// proven able to see a member at all. Otherwise a broken prefix match would read
+/// as a clean tree forever.
 #[test]
-fn every_domain_with_a_dispatch_grid_can_reach_the_owner() {
-    let owner_root = vyre_crate_directory(OWNER_CRATE);
-    let lib = std::fs::read_to_string(owner_root.join("src/lib.rs"))
-        .unwrap_or_else(|e| panic!("Fix: cannot read {OWNER_CRATE}/src/lib.rs: {e}"));
-    let owner_module = DISPATCH_GRID_OWNER
-        .trim_start_matches("src/")
-        .trim_end_matches(".rs");
-
-    let declaration = format!("mod {owner_module};");
-    let gate = gate_above(&lib, &declaration).unwrap_or_else(|| {
-        panic!(
-            "Fix: {OWNER_CRATE}/src/lib.rs declares no `{declaration}`; the dispatch-grid owner moved and every gate here reads the wrong file."
+fn the_launch_geometry_signature_matches_every_shape_it_rejects() {
+    let sample = vec![(
+        "src/probe.rs".to_string(),
+        concat!(
+            "pub const fn probe_dispatch_grid(n: u32) -> [u32; 3] { [n, 1, 1] }\n",
+            "pub const PROBE_DISPATCH_GRID: [u32; 3] = [1, 1, 1];\n",
+            "pub grid: [u32; 3],\n",
+            "pub high_grid: [u32; 3],\n",
+            "pub const fn probe_words(n: u32) -> u32 { n }\n",
+            "pub const PROBE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];\n",
+            "#[cfg(test)]\n",
+            "pub const fn test_only_dispatch_grid(n: u32) -> [u32; 3] { [n, 1, 1] }\n",
         )
-    });
-    assert!(
-        gate.is_none(),
-        "Fix: `{owner_module}` is now behind `{}`. The dispatch-grid owner must stay unconditional, or a caller that does not enable that feature cannot reach it and will hand-roll the arithmetic again.",
-        gate.unwrap_or_default()
+        .to_string(),
+    )];
+    let kinds: Vec<(String, String)> = published_launch_geometry(&sample)
+        .into_iter()
+        .map(|(_, kind, ident)| (kind, ident))
+        .collect();
+    assert_eq!(
+        kinds,
+        vec![
+            ("function".to_string(), "probe_dispatch_grid".to_string()),
+            ("constant".to_string(), "PROBE_DISPATCH_GRID".to_string()),
+            ("field".to_string(), "grid".to_string()),
+            ("field".to_string(), "high_grid".to_string()),
+        ],
+        "Fix: the launch-geometry signature no longer sees a function, constant or field it must reject, or it now flags a workgroup shape or a word count that is not a launch."
     );
 
-    let export = format!("pub use {owner_module}::lane_grid;");
-    let export_gate = gate_above(&lib, &export).unwrap_or_else(|| {
-        panic!(
-            "Fix: {OWNER_CRATE}/src/lib.rs no longer publishes `{export}`; the module is private, so no other crate can reach the owner at all."
-        )
-    });
-    assert!(
-        export_gate.is_none(),
-        "Fix: the `lane_grid` re-export is now behind `{}`. A caller that does not enable that feature cannot name the owner.",
-        export_gate.unwrap_or_default()
+    // The workgroup constant must be seen as a `[u32; 3]` declaration and then
+    // excluded by role. A prefix match that stopped seeing it altogether would
+    // satisfy the assertion above while going blind to every launch grid too.
+    let lines: Vec<&str> = sample[0].1.lines().collect();
+    let workgroup_index = lines
+        .iter()
+        .position(|line| line.contains("PROBE_WORKGROUP_SIZE"))
+        .expect("the sample declares a workgroup shape");
+    assert_eq!(
+        launch_shaped_declaration(&lines, workgroup_index),
+        Some(("constant", "PROBE_WORKGROUP_SIZE".to_string())),
+        "Fix: the `[u32; 3]` shape scan no longer sees a workgroup constant, so it sees no launch constant either."
     );
-
-    assert!(
-        unconditional_dependency(&vyre_crate_directory(SUBJECT_CRATE), OWNER_CRATE),
-        "Fix: {SUBJECT_CRATE} no longer takes {OWNER_CRATE} as an unconditional `[dependencies]` entry, so a build that switches it off leaves every dispatch-grid function here without the owner."
+    assert_eq!(
+        launch_geometry_declaration(&lines, workgroup_index),
+        None,
+        "Fix: a workgroup shape is not a launch grid; `structure-gate` owns it."
     );
-
-    // The gate is only worth its name while there are members to hold to it.
-    assert!(
-        !dispatch_grid_functions(&source_files()).is_empty(),
-        "Fix: no dispatch-grid function was derived, so this gate proves nothing about reachability."
-    );
-}
-
-/// The `cfg` predicate guarding `declaration`, or `None` when it is unconditional.
-///
-/// Returns `None` for a declaration this file does not hold at all, which the
-/// caller reports separately: an absent owner and an unconditional owner are
-/// opposite answers and must not collapse into one.
-fn gate_above(source: &str, declaration: &str) -> Option<Option<String>> {
-    let lines: Vec<&str> = source.lines().collect();
-    let at = lines.iter().position(|line| {
-        let trimmed = line.trim();
-        trimmed == declaration || trimmed == format!("pub {declaration}")
-    })?;
-    let mut above = at;
-    while above > 0 {
-        above -= 1;
-        let trimmed = lines[above].trim();
-        if trimmed.is_empty() || trimmed.starts_with("///") || trimmed.starts_with("//!") {
-            continue;
-        }
-        if let Some(predicate) = trimmed
-            .strip_prefix("#[cfg(")
-            .and_then(|rest| rest.strip_suffix(")]"))
-        {
-            return Some(Some(predicate.to_string()));
-        }
-        if trimmed.starts_with("#[") {
-            continue;
-        }
-        break;
-    }
-    Some(None)
-}
-
-/// Whether `root`'s manifest takes `package` as a non-optional `[dependencies]`
-/// entry. A dev-dependency does not count: it is absent from the shipped build.
-fn unconditional_dependency(root: &Path, package: &str) -> bool {
-    let manifest = std::fs::read_to_string(root.join("Cargo.toml")).unwrap_or_else(|e| {
-        panic!(
-            "Fix: cannot read {}: {e}",
-            root.join("Cargo.toml").display()
-        )
-    });
-    let mut section = String::new();
-    for line in manifest.lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with('[') {
-            section = trimmed.to_string();
-            continue;
-        }
-        if section != "[dependencies]" {
-            continue;
-        }
-        let Some((name, value)) = trimmed.split_once('=') else {
-            continue;
-        };
-        if name.trim().trim_matches('"') != package {
-            continue;
-        }
-        return !value.contains("optional = true");
-    }
-    false
 }
 
 // ---------------------------------------------------------------------------

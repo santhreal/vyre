@@ -12,8 +12,8 @@ use harness::{
 use vyre::ir::{DataType, Program};
 use vyre_driver::DispatchConfig;
 use vyre_libs::pattern::{
-    bracket_match, bracket_match_dispatch_grid, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
-    BRACKET_KIND_OTHER, BRACKET_MATCH_NONE,
+    bracket_match, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_OTHER, BRACKET_MATCH_NONE,
+    BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE,
 };
 use vyre_libs::text::{build_char_class_table, char_class, char_class_u8};
 use vyre_reference::composition_witness::{
@@ -187,7 +187,6 @@ fn run_bracket_match(kinds: &[u32], max_depth: u32) -> Vec<u32> {
         vec![0u8; max_depth as usize * 4],
     ];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(bracket_match_dispatch_grid(n, max_depth));
     let outputs = with_live_backend("bracket match", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -252,9 +251,9 @@ fn cuda_bracket_match_parallel_crosses_workgroup_boundaries() {
     let expected = reference_bracket_match(&kinds, kinds.len() as u32);
     let gpu = run_bracket_match(&kinds, kinds.len() as u32);
 
-    assert_eq!(
-        bracket_match_dispatch_grid(kinds.len() as u32, kinds.len() as u32),
-        [3, 1, 1]
+    assert!(
+        kinds.len() as u32 > BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE[0],
+        "Fix: the fixture must cross a workgroup boundary or it proves nothing about multi-block launches"
     );
     assert_eq!(gpu, expected);
     assert_eq!(gpu[0], 512);
@@ -277,8 +276,15 @@ fn cuda_bracket_match_bounded_depth_stays_exact_for_overflow_opens() {
     let gpu = run_bracket_match(&kinds, 2);
 
     assert_eq!(
-        bracket_match_dispatch_grid(kinds.len() as u32, 2),
-        [1, 1, 1]
+        vyre_foundation::guarded_logical_span(&bracket_match(
+            "kinds",
+            "stack",
+            "match_pairs",
+            kinds.len() as u32,
+            2
+        )),
+        Some(1),
+        "Fix: the depth-capped path is serial, so it must admit exactly one lane"
     );
     assert_eq!(gpu, expected);
     assert_eq!(
@@ -304,9 +310,9 @@ fn cuda_bracket_match_parallel_generated_mixed_tokens() {
     let expected = reference_bracket_match(&kinds, kinds.len() as u32);
     let gpu = run_bracket_match(&kinds, kinds.len() as u32);
 
-    assert_eq!(
-        bracket_match_dispatch_grid(kinds.len() as u32, kinds.len() as u32),
-        [5, 1, 1]
+    assert!(
+        kinds.len() as u32 > BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE[0],
+        "Fix: the fixture must cross a workgroup boundary or it proves nothing about multi-block launches"
     );
     assert_eq!(gpu, expected);
 }

@@ -3,10 +3,9 @@
 //! Every pass that consumes a per-Expr verdict from a GPU analysis kernel has
 //! to revisit the IR in exactly the order `expr_arena` encoded it, because the
 //! verdict is indexed by the encoder's post-order Expr id. That walk is
-//! identical for const-fold, canonicalize, pattern-match, and the fused
-//! resident decode; only the decision taken at each id differs. This module
-//! supplies the encoder-specific part of that walk and each pass supplies the
-//! decision.
+//! identical for const-fold, canonicalize, pattern-match, and combined delta
+//! decoding; only the decision taken at each id differs. This module supplies
+//! the encoder-specific part of that walk and each pass supplies the decision.
 //!
 //! Which positions of a `Node` a rewrite must visit is not decided here. That
 //! is IR structure, owned by [`vyre_foundation::transform::rewrite_walk`], and

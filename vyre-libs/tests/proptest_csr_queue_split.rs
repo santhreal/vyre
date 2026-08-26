@@ -8,10 +8,7 @@ use wire_words::mix64;
 use proptest::prelude::*;
 use vyre_libs::bitset::bitset_words;
 use vyre_libs::graph::csr_frontier_queue::validate_csr_queue_graph;
-use vyre_libs::graph::csr_queue_split::{
-    csr_queue_split_low_dispatch_grid, csr_queue_split_mixed_logical_lanes,
-    CSR_QUEUE_SPLIT_LOW_FORWARD_WORKGROUP_SIZE,
-};
+use vyre_libs::graph::csr_queue_split::csr_queue_split_mixed_logical_lanes;
 use vyre_libs::graph::csr_queue_strided::{
     CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE, CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE,
 };
@@ -159,24 +156,15 @@ proptest! {
     }
 
     #[test]
-    fn split_low_grid_and_lane_accounting_cover_queue_slots_without_global_striding(
+    fn split_low_lane_accounting_covers_queue_slots_without_global_striding(
         queue_capacity in any::<u32>(),
         high_queue_capacity in any::<u32>(),
     ) {
-        let grid = csr_queue_split_low_dispatch_grid(queue_capacity);
-        let expected_blocks = queue_capacity
-            .div_ceil(CSR_QUEUE_SPLIT_LOW_FORWARD_WORKGROUP_SIZE[0])
-            .max(1);
         let mixed_lanes =
             csr_queue_split_mixed_logical_lanes(queue_capacity, high_queue_capacity);
         let naive_strided_lanes =
             u64::from(queue_capacity) * u64::from(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE);
 
-        prop_assert_eq!(grid, [expected_blocks, 1, 1]);
-        prop_assert!(
-            u64::from(grid[0]) * u64::from(CSR_QUEUE_SPLIT_LOW_FORWARD_WORKGROUP_SIZE[0])
-                >= u64::from(queue_capacity)
-        );
         if high_queue_capacity <= queue_capacity {
             prop_assert!(mixed_lanes >= u64::from(queue_capacity));
             prop_assert!(

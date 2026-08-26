@@ -40,6 +40,12 @@ interpreter arm.
   identity and authenticated
   `TargetPayload` construction. It does not own admission or claim a measured
   winner that no clock produced.
+- `vyre-megakernel` also owns the `SemanticExecutor` seam. A caller submits a
+  validated `LogicalProgramGraph` plus device and external facts, an objective
+  and a budget; the compiler selects the schedule and the launch. The seam
+  accepts no grid, workgroup, persistence or route, so `vyre-libs`,
+  `vyre-pass-engine` and `vyre-driver-reference` declare a dependency on it and
+  `docs/CRATE_OWNERSHIP.toml` records those edges.
 - `vyre-driver` is backend-agnostic machinery. Concrete drivers own names,
   dialects, and device quirks.
 - `vyre-runtime` executes the artifact's selected persistence. It does not

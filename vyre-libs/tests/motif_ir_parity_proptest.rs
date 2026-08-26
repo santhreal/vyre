@@ -39,10 +39,11 @@ use vyre_reference::value::Value;
 
 /// Drive the real motif IR and return the `witness_out` byte-per-node array.
 ///
-/// Buffer binding order (all non-workgroup): pg_nodes(0), pg_edge_offsets(1),
-/// pg_edge_targets(2), pg_edge_kind_mask(3), pg_node_tags(4), motif_hits(5, RW
-/// scratch), witness_out(6, RW). reference_eval returns the two ReadWrite buffers
-/// in binding order, so outputs[1] is witness_out.
+/// Reference input order (read-only): pg_nodes(0), pg_edge_offsets(1),
+/// pg_edge_targets(2), pg_edge_kind_mask(3), pg_node_tags(4). The program's two
+/// ReadWrite buffers, motif_hits(5) and witness_out(6), are written by the
+/// program rather than bound by the caller, and reference_eval returns them in
+/// binding order, so outputs[1] is witness_out.
 fn gpu_witness(
     node_count: u32,
     edge_offsets: &[u32],
@@ -65,7 +66,6 @@ fn gpu_witness(
     kind_mask.resize(padded_edges, 0);
     let node_tags = vec![0u32; node_count as usize];
     let nodes = vec![0u32; node_count as usize];
-    let out_slots = node_count.max(1) as usize;
 
     let outputs = vyre_reference::reference_eval(
         &program,
@@ -75,8 +75,6 @@ fn gpu_witness(
             Value::from(pack(&targets)),
             Value::from(pack(&kind_mask)),
             Value::from(pack(&node_tags)),
-            Value::from(pack(&vec![0u32; out_slots])), // motif_hits scratch
-            Value::from(pack(&vec![0u32; out_slots])), // witness_out
         ],
     )
     .expect("motif reference evaluation must succeed");

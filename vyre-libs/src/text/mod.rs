@@ -24,8 +24,6 @@ pub use byte_histogram::{
     byte_histogram_256, byte_histogram_256_body, byte_histogram_256_child, byte_histogram_256_u8,
     byte_histogram_256_u8_child, BYTE_HISTOGRAM_256_OP_ID,
 };
-#[cfg(test)]
-pub use char_class::char_class_dispatch_grid;
 pub use char_class::{
     build_char_class_table, char_class, char_class_u8, CHAR_CLASS_OP_ID, CHAR_CLASS_WORKGROUP_SIZE,
     C_ALPHA, C_AMP, C_BACKSLASH, C_BANG, C_CARET, C_CLOSE_BRACE, C_CLOSE_BRACKET, C_CLOSE_PAREN,
@@ -46,8 +44,6 @@ pub use line_index::{
 pub use utf8_shape_counts::{
     utf8_shape_counts, utf8_shape_counts_body, utf8_shape_counts_child, UTF8_SHAPE_COUNTS_OP_ID,
 };
-#[cfg(test)]
-pub use utf8_validate::utf8_validate_dispatch_grid;
 pub use utf8_validate::{
     utf8_validate, utf8_validate_u8, UTF8_ASCII, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_2, UTF8_LEAD_3,
     UTF8_LEAD_4, UTF8_VALIDATE_WORKGROUP_SIZE,

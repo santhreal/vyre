@@ -5,11 +5,12 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 use vyre_foundation::validate::BackendCapabilities;
 
+use crate::execution::CompileObjective;
 use crate::identity::{domain_digest, Digest};
 use crate::request::{SearchBudget, ValidatedCompileRequest};
 
 pub(crate) const SOURCE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-source-v2\0";
-pub(crate) const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v3\0";
+pub(crate) const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v4\0";
 pub(crate) const REPRESENTATIVE_INPUT_DOMAIN: &[u8] = b"vyre-megakernel-representative-input-v1\0";
 /// Every fact that makes one compilation of one graph produce one artifact.
 ///
@@ -24,6 +25,7 @@ pub(crate) struct RequestIdentity<'a> {
     constant_identities: Vec<(u32, Digest)>,
     representative_inputs: Vec<(u32, Digest, u64)>,
     expected_launch_batch: u32,
+    objective: CompileObjective,
     search_budget: SearchBudget,
     device_capabilities: DeviceCapabilityIdentity,
     device_cooperative_launch: bool,
@@ -120,6 +122,7 @@ impl<'a> From<&'a ValidatedCompileRequest> for RequestIdentity<'a> {
                 })
                 .collect(),
             expected_launch_batch: request.facts.expected_launch_batch,
+            objective: request.objective,
             search_budget: request.search_budget,
             device_capabilities: request.device.capabilities().into(),
             device_cooperative_launch: request.device.supports_cooperative_launch(),

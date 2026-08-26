@@ -1,10 +1,9 @@
 //! The dispatch plan for an IFDS CSR build: validated layout, program cache
-//! identity, grid, and the padded storage width of every rule buffer.
+//! identity, and the padded storage width of every rule buffer.
 //!
 //! Holding the padded widths here is what keeps a consumer from forking the
 //! dispatch contract by computing its own.
 
-use super::abi::{ifds_csr_dispatch_grid, IFDS_CSR_EMPTY_DISPATCH_GRID};
 use super::layout::{
     IfdsCsrLayout, IfdsCsrProgramCacheKey, IfdsCsrRuleInputFingerprint, IfdsCsrStaticInputKey,
 };
@@ -23,8 +22,6 @@ pub struct IfdsCsrDispatchPlan {
     pub layout: IfdsCsrLayout,
     /// Primitive-owned generated-Program cache identity.
     pub program_key: IfdsCsrProgramCacheKey,
-    /// Dispatch grid override.
-    pub grid: [u32; 3],
     /// Padded words for each intra edge field.
     pub intra_field_words: usize,
     /// Padded words for each inter edge field.
@@ -113,11 +110,6 @@ pub fn plan_ifds_csr_dispatch(
         max_col_count: layout.max_col_count,
         program_key: IfdsCsrProgramCacheKey::from_layout(&layout),
         layout,
-        grid: if layout.empty {
-            IFDS_CSR_EMPTY_DISPATCH_GRID
-        } else {
-            ifds_csr_dispatch_grid(layout.intra_count, layout.total_nodes)
-        },
     })
 }
 

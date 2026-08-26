@@ -98,7 +98,6 @@ pub fn select_adaptive_traversal_mode(
     if should_use_dense_with_popcount(frontier_popcount, node_count, dense_threshold_pct) {
         return AdaptiveTraversalMode::SparseDense;
     }
-    let _ = select_dense_traversal_kernel(node_count, frontier_popcount, 2);
     let frontier_bps = (u64::from(frontier_popcount) * 10_000) / u64::from(node_count);
     let avg_degree_x100 = (u64::from(edge_count) * 100) / u64::from(node_count);
     if frontier_bps <= 625 || (frontier_bps <= 1_250 && avg_degree_x100 >= 400) {

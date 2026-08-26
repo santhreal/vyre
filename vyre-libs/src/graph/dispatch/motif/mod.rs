@@ -8,10 +8,6 @@
 
 mod dispatch;
 
-#[cfg(test)]
-#[path = "../../../../tests/internal/graph/dispatch/motif/mod.rs"]
-mod tests;
-
 pub use dispatch::{
     match_motif_via, match_motif_via_into, match_motif_via_with_scratch_into, motif_matches_via,
     motif_participation_count_via,
@@ -43,3 +39,7 @@ impl MotifGpuScratch {
         self.program_cache.builds()
     }
 }
+
+#[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/motif/mod.rs"]
+mod tests;

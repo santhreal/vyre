@@ -64,10 +64,7 @@ impl vyre_driver_cuda::CudaWarpWordAutomataLayoutRequest
 impl vyre_driver_cuda::CudaWarpWordInstructionClass
 impl vyre_driver_cuda::occupancy::OccupancyEstimate
 impl vyre_driver_cuda::profiler::CudaProfilerRange
-impl<'a> core::ops::drop::Drop for vyre_driver_cuda::CudaProgramDispatcher<'a>
 impl<'a> vyre_driver_cuda::CudaEGraphDeviceBorrowedUploadPlan<'a>
-impl<'a> vyre_driver_cuda::CudaProgramDispatcher<'a>
-impl<'a> vyre_foundation::program_dispatch::ProgramDispatcher for vyre_driver_cuda::CudaProgramDispatcher<'a>
 pub const fn vyre_driver_cuda::CudaEGraphDeviceBorrowedUploadPlan<'a>::byte_layout(&self) -> vyre_driver_cuda::CudaEGraphDeviceByteLayout
 pub const fn vyre_driver_cuda::CudaEGraphDeviceBorrowedUploadPlan<'a>::byte_len(&self) -> usize
 pub const fn vyre_driver_cuda::CudaEGraphDeviceBorrowedUploadPlan<'a>::words(&self) -> &'a [u32]
@@ -367,28 +364,6 @@ pub fn vyre_driver_cuda::CudaMegakernelPlanCache::with_max_entries(max_entries: 
 pub fn vyre_driver_cuda::CudaMegakernelPlanCacheKey::new(graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::CudaMegakernelDeviceKey, frontier_density: f64, memory_pressure_bps: u32, readback_bytes: u64, launch_pressure_bps: u32, fusion_pressure: f64) -> Self
 pub fn vyre_driver_cuda::CudaMegakernelScheduleSample::from_telemetry_snapshot(snapshot: vyre_driver_cuda::CudaTelemetrySnapshot, dispatch_cost_ns: f64) -> Self
 pub fn vyre_driver_cuda::CudaMegakernelSpeedupGateError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::acquire_resident_static_uploads(&self, cache_domain: u64, payloads: &[&[u8]]) -> core::result::Result<vyre_foundation::program_dispatch::resident::ResidentStaticBufferSet, vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::alloc_resident(&self, byte_len: usize) -> core::result::Result<u64, vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::clear_upload_resident_many_sequence_read_many_into(&self, clears: &[(u64, usize)], uploads: &[(u64, &[u8])], steps: &[vyre_foundation::program_dispatch::resident::ResidentDispatchStep<'_>], read_handles: &[u64], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::device_feature_cache_key(&self) -> u64
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], grid_override: core::option::Option<[u32; 3]>) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::dispatch_resident(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, handle_ids: &[u64], grid_override: core::option::Option<[u32; 3]>) -> core::result::Result<(), vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::dispatch_resident_sequence(&self, steps: &[vyre_foundation::program_dispatch::resident::ResidentDispatchStep<'_>]) -> core::result::Result<(), vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::dispatch_resident_sequence_read_many(&self, steps: &[vyre_foundation::program_dispatch::resident::ResidentDispatchStep<'_>], read_handles: &[u64]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::drop(&mut self)
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::fill_upload_resident_many_sequence_read_many_into(&self, fills: &[(u64, usize, u8)], uploads: &[(u64, &[u8])], steps: &[vyre_foundation::program_dispatch::resident::ResidentDispatchStep<'_>], read_handles: &[u64], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::fill_upload_resident_many_sequence_read_ranges_into(&self, fills: &[(u64, usize, u8)], uploads: &[(u64, &[u8])], steps: &[vyre_foundation::program_dispatch::resident::ResidentDispatchStep<'_>], read_ranges: &[vyre_foundation::program_dispatch::resident::ResidentReadRange], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::free_resident(&self, id: u64) -> core::result::Result<(), vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::new(backend: &'a vyre_driver_cuda::CudaBackend) -> Self
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::read_resident(&self, id: u64) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::read_resident_many(&self, ids: &[u64]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::read_resident_ranges(&self, ranges: &[vyre_foundation::program_dispatch::resident::ResidentReadRange]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::supports_persistent(&self) -> bool
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::upload_resident(&self, id: u64, bytes: &[u8]) -> core::result::Result<(), vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::upload_resident_many(&self, uploads: &[(u64, &[u8])]) -> core::result::Result<(), vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::upload_resident_many_sequence_read_many(&self, uploads: &[(u64, &[u8])], steps: &[vyre_foundation::program_dispatch::resident::ResidentDispatchStep<'_>], read_handles: &[u64]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::upload_resident_many_sequence_read_many_into(&self, uploads: &[(u64, &[u8])], steps: &[vyre_foundation::program_dispatch::resident::ResidentDispatchStep<'_>], read_handles: &[u64], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_foundation::program_dispatch::resident::DispatchError>
-pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::upload_resident_many_sequence_read_ranges_into(&self, uploads: &[(u64, &[u8])], steps: &[vyre_foundation::program_dispatch::resident::ResidentDispatchStep<'_>], read_ranges: &[vyre_foundation::program_dispatch::resident::ResidentReadRange], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_foundation::program_dispatch::resident::DispatchError>
 pub fn vyre_driver_cuda::CudaRegexHardwareComparisonEvidence::is_complete(self) -> bool
 pub fn vyre_driver_cuda::CudaResidentGraphSessionError::arithmetic_overflow(field: &'static str) -> Self
 pub fn vyre_driver_cuda::CudaResidentGraphSessionError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -528,7 +503,6 @@ pub struct vyre_driver_cuda::CudaMegakernelPlanCacheStats
 pub struct vyre_driver_cuda::CudaMegakernelScheduleSample
 pub struct vyre_driver_cuda::CudaMegakernelSpeedupProof
 pub struct vyre_driver_cuda::CudaMegakernelSpeedupSample
-pub struct vyre_driver_cuda::CudaProgramDispatcher<'a>
 pub struct vyre_driver_cuda::CudaPtxSourceCacheSnapshot
 pub struct vyre_driver_cuda::CudaRegexHardwareComparisonEvidence
 pub struct vyre_driver_cuda::CudaResidentBuffer

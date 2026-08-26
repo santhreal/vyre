@@ -6,7 +6,6 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::graph::csr_backward_traverse::csr_backward_traverse_dispatch_grid;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_libs::predicate::edge_kind;
 use vyre_libs::predicate::node_kind;
@@ -40,7 +39,6 @@ fn run(
         vec![0u8; words as usize * 4],
     ];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(csr_backward_traverse_dispatch_grid(node_count));
     let outputs = with_live_backend("predicate size argument", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

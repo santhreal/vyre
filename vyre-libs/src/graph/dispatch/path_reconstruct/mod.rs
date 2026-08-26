@@ -19,9 +19,6 @@ pub use dispatch::{
 
 use crate::graph::dispatch::dispatch_bridge::{CachedProgram, ProgramCache};
 use crate::graph::path_reconstruct::PathReconstructStaticInputKey;
-#[cfg(test)]
-use vyre_foundation::ir::Program;
-
 /// Caller-owned GPU dispatch scratch for path reconstruction.
 #[derive(Debug, Default)]
 pub struct PathReconstructGpuScratch {

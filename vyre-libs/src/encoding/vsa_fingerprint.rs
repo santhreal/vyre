@@ -6,12 +6,14 @@
 //! Region trees with reordered children  -  beats byte-equal hashing.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
+    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
 #[cfg(test)]
 use crate::hash::hypervector::hamming_similarity;
 use crate::hash::hypervector::hypervector_xor_bind;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Caller-owned GPU dispatch scratch for VSA fingerprint XOR binding.
 #[derive(Debug, Default)]
@@ -48,16 +50,24 @@ pub fn vsa_fingerprint_words(program: &vyre_foundation::ir::Program) -> [u32; 8]
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError::BadInputs`] when dimensions are zero or mismatched, dispatch fails, or
-/// a backend returns a truncated output buffer.
+/// Returns [`SemanticExecutionError::InvalidRequest`] for zero or mismatched dimensions,
+/// failed semantic execution, or a truncated output buffer.
 pub fn fingerprint_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     kind_hv: &[u32],
     signature_hv: &[u32],
     region_hv: &[u32],
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
-    fingerprint_via_into(dispatcher, kind_hv, signature_hv, region_hv, &mut out)?;
+    fingerprint_via_into(
+        dispatcher,
+        policy,
+        kind_hv,
+        signature_hv,
+        region_hv,
+        &mut out,
+    )?;
     Ok(out)
 }
 
@@ -66,18 +76,20 @@ pub fn fingerprint_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError::BadInputs`] when dimensions are zero or mismatched,
-/// dispatch fails, or a backend returns malformed output.
+/// Returns [`SemanticExecutionError::InvalidRequest`] for zero or mismatched dimensions,
+/// failed semantic execution, or malformed output.
 pub fn fingerprint_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     kind_hv: &[u32],
     signature_hv: &[u32],
     region_hv: &[u32],
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = VsaFingerprintGpuScratch::default();
     fingerprint_via_with_scratch_into(
         dispatcher,
+        policy,
         kind_hv,
         signature_hv,
         region_hv,
@@ -91,19 +103,21 @@ pub fn fingerprint_via_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError::BadInputs`] when dimensions are zero or mismatched,
-/// dispatch fails, or a backend returns malformed output.
+/// Returns [`SemanticExecutionError::InvalidRequest`] for zero or mismatched dimensions,
+/// failed semantic execution, or malformed output.
 pub fn fingerprint_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     kind_hv: &[u32],
     signature_hv: &[u32],
     region_hv: &[u32],
     scratch: &mut VsaFingerprintGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let dim_words = validate_fingerprint_dims(kind_hv, signature_hv, region_hv)?;
     dispatch_xor_bind_with_scratch_into(
         dispatcher,
+        policy,
         kind_hv,
         signature_hv,
         dim_words,
@@ -112,6 +126,7 @@ pub fn fingerprint_via_with_scratch_into(
     )?;
     dispatch_xor_bind_with_scratch_into(
         dispatcher,
+        policy,
         &scratch.bound1,
         region_hv,
         dim_words,
@@ -124,22 +139,22 @@ fn validate_fingerprint_dims(
     kind_hv: &[u32],
     signature_hv: &[u32],
     region_hv: &[u32],
-) -> Result<u32, DispatchError> {
+) -> Result<u32, SemanticExecutionError> {
     if kind_hv.is_empty() {
-        return Err(DispatchError::BadInputs(
+        return Err(SemanticExecutionError::InvalidRequest(
             "Fix: fingerprint_via requires non-empty hypervectors.".to_string(),
         ));
     }
     if kind_hv.len() != signature_hv.len() || kind_hv.len() != region_hv.len() {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: fingerprint_via requires equal hypervector lengths; got kind={}, signature={}, region={}.",
-            kind_hv.len(),
-            signature_hv.len(),
-            region_hv.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: fingerprint_via requires equal hypervector lengths; got kind={}, signature={}, region={}.",
+        kind_hv.len(),
+        signature_hv.len(),
+        region_hv.len()
+    )));
     }
     u32::try_from(kind_hv.len()).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: fingerprint_via hypervector length {} exceeds u32::MAX.",
             kind_hv.len()
         ))
@@ -147,13 +162,14 @@ fn validate_fingerprint_dims(
 }
 
 fn dispatch_xor_bind_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     a: &[u32],
     b: &[u32],
     dim_words: u32,
     inputs: &mut Vec<Vec<u8>>,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let program = hypervector_xor_bind("a", "b", "out", dim_words);
     let out_len = dim_words as usize;
     // `hypervector_xor_bind` declares two read-only inputs. Its write-complete output is
@@ -161,10 +177,17 @@ fn dispatch_xor_bind_with_scratch_into(
     ensure_input_slots(inputs, 2);
     write_u32_slice_le_bytes(&mut inputs[0], a);
     write_u32_slice_le_bytes(&mut inputs[1], b);
-    let grid_x = ceil_div_u32(dim_words, 256);
-    let outputs = dispatcher.dispatch(&program, &inputs[..2], Some([grid_x, 1, 1]))?;
+
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &inputs[..2],
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: fingerprint_via XOR expected at least one output buffer, got {}.",
             outputs.len()
         )));
@@ -200,31 +223,37 @@ mod tests {
 
     struct XorDispatcher;
 
-    impl ProgramDispatcher for XorDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for XorDispatcher {
+        fn execute(
             &self,
-            _program: &vyre_foundation::ir::Program,
-            inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            let [a_bytes, b_bytes] = inputs else {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: XOR test dispatcher expected 2 buffers, got {}.",
-                    inputs.len()
-                )));
-            };
-            let a =
-                crate::dispatch_buffers::decode_u32_input_aligned(a_bytes, "XOR test dispatcher")?;
-            let b =
-                crate::dispatch_buffers::decode_u32_input_aligned(b_bytes, "XOR test dispatcher")?;
-            let out_len = a.len().min(b.len());
-            let out = a
-                .iter()
-                .zip(b.iter())
-                .take(out_len)
-                .map(|(&left, &right)| left ^ right)
-                .collect::<Vec<_>>();
-            Ok(vec![u32_slice_to_le_bytes(&out)])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                let [a_bytes, b_bytes] = inputs.as_slice() else {
+                    return Err(SemanticExecutionError::InvalidRequest(format!(
+                        "Fix: XOR test dispatcher expected 2 buffers, got {}.",
+                        inputs.len()
+                    )));
+                };
+                let a = crate::dispatch_buffers::decode_u32_input_aligned(
+                    a_bytes,
+                    "XOR test dispatcher",
+                )?;
+                let b = crate::dispatch_buffers::decode_u32_input_aligned(
+                    b_bytes,
+                    "XOR test dispatcher",
+                )?;
+                let out_len = a.len().min(b.len());
+                let out = a
+                    .iter()
+                    .zip(b.iter())
+                    .take(out_len)
+                    .map(|(&left, &right)| left ^ right)
+                    .collect::<Vec<_>>();
+                Ok(vec![u32_slice_to_le_bytes(&out)])
+            })()?;
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -273,8 +302,14 @@ mod tests {
         let kind = vec![0xDEAD_BEEFu32; 8];
         let sig = vec![0x1234_5678u32; 8];
         let region = vec![0x9ABC_DEF0u32; 8];
-        let got =
-            fingerprint_via(&dispatcher, &kind, &sig, &region).expect("Fix: dispatch succeeds");
+        let got = fingerprint_via(
+            &dispatcher,
+            &crate::test_parity_oracles::policy(),
+            &kind,
+            &sig,
+            &region,
+        )
+        .expect("Fix: dispatch succeeds");
         assert_eq!(got, reference_fingerprint(&kind, &sig, &region));
     }
 
@@ -287,7 +322,15 @@ mod tests {
         let mut out = Vec::with_capacity(16);
         let ptr = out.as_ptr();
 
-        fingerprint_via_into(&dispatcher, &kind, &sig, &region, &mut out).unwrap();
+        fingerprint_via_into(
+            &dispatcher,
+            &crate::test_parity_oracles::policy(),
+            &kind,
+            &sig,
+            &region,
+            &mut out,
+        )
+        .unwrap();
 
         assert_eq!(out.as_ptr(), ptr);
         assert_eq!(out, reference_fingerprint(&kind, &sig, &region));
@@ -304,6 +347,7 @@ mod tests {
 
         fingerprint_via_with_scratch_into(
             &dispatcher,
+            &crate::test_parity_oracles::policy(),
             &kind,
             &sig,
             &region,
@@ -318,6 +362,7 @@ mod tests {
 
         fingerprint_via_with_scratch_into(
             &dispatcher,
+            &crate::test_parity_oracles::policy(),
             &region,
             &kind,
             &sig,
@@ -338,8 +383,14 @@ mod tests {
     #[test]
     fn fingerprint_via_rejects_mismatched_dimensions() {
         let dispatcher = XorDispatcher;
-        let error = fingerprint_via(&dispatcher, &[1, 2], &[1], &[1, 2])
-            .expect_err("mismatched dimensions must be rejected");
+        let error = fingerprint_via(
+            &dispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[1, 2],
+            &[1],
+            &[1, 2],
+        )
+        .expect_err("mismatched dimensions must be rejected");
         assert!(
             error.to_string().contains("equal hypervector lengths"),
             "expected dimension error, got {error}"

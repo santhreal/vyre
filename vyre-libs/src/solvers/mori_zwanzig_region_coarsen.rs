@@ -47,11 +47,13 @@
 //! coarse system, full workspace analysis stays tractable.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
-    write_u32_slice_le_bytes, write_zero_bytes,
+    checked_square_cells, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
+    write_zero_bytes,
 };
 use crate::math::mori_zwanzig::mz_project_step;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     cluster_projection_matrix_witness_into, mori_zwanzig_coarsen_via_clustering_witness_into,
@@ -160,16 +162,24 @@ pub(crate) fn reference_coarsen_region_state_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shapes are invalid, lane counts overflow,
+/// Returns [`SemanticExecutionError`] when shapes are invalid, lane counts overflow,
 /// or the backend returns malformed output.
 pub fn coarsen_region_state_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     p_matrix_fixed: &[u32],
     state_fixed: &[u32],
     n: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
-    coarsen_region_state_fixed_via_into(dispatcher, p_matrix_fixed, state_fixed, n, &mut out)?;
+    coarsen_region_state_fixed_via_into(
+        dispatcher,
+        policy,
+        p_matrix_fixed,
+        state_fixed,
+        n,
+        &mut out,
+    )?;
     Ok(out)
 }
 
@@ -178,17 +188,19 @@ pub fn coarsen_region_state_fixed_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks or backend execution fail.
 pub fn coarsen_region_state_fixed_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     p_matrix_fixed: &[u32],
     state_fixed: &[u32],
     n: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = RegionCoarsenGpuScratch::default();
     coarsen_region_state_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         p_matrix_fixed,
         state_fixed,
         n,
@@ -202,42 +214,44 @@ pub fn coarsen_region_state_fixed_via_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks or backend execution fail.
 pub fn coarsen_region_state_fixed_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     p_matrix_fixed: &[u32],
     state_fixed: &[u32],
     n: u32,
     scratch: &mut RegionCoarsenGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, mori_zwanzig_region_coarsen_calls};
     bump(&mori_zwanzig_region_coarsen_calls);
 
-    let cells = checked_square_cells(n, "coarsen_region_state_fixed_via")?;
+    let cells = checked_square_cells(n, "coarsen_region_state_fixed_via")
+        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
     let cells_u32 = u32::try_from(cells).map_err(|_| {
-        DispatchError::BadInputs(format!(
-            "Fix: coarsen_region_state_fixed_via n*n exceeds the primitive u32 lane limit for n={n}."
-        ))
+        SemanticExecutionError::InvalidRequest(format!(
+        "Fix: coarsen_region_state_fixed_via n*n exceeds the primitive u32 lane limit for n={n}."
+    ))
     })?;
     if p_matrix_fixed.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: coarsen_region_state_fixed_via requires p_matrix_fixed.len() == n*n, got len={}, n={n}, n*n={cells}.",
-            p_matrix_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: coarsen_region_state_fixed_via requires p_matrix_fixed.len() == n*n, got len={}, n={n}, n*n={cells}.",
+        p_matrix_fixed.len()
+    )));
     }
     if state_fixed.len() != n as usize {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: coarsen_region_state_fixed_via requires state_fixed.len() == n, got len={}, n={n}.",
-            state_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: coarsen_region_state_fixed_via requires state_fixed.len() == n, got len={}, n={n}.",
+        state_fixed.len()
+    )));
     }
 
     let program = mz_project_step("p_matrix", "state", "out", n);
     let out_bytes = (n as usize)
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: coarsen_region_state_fixed_via n={n} overflows output byte count."
             ))
         })?;
@@ -245,13 +259,16 @@ pub fn coarsen_region_state_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[0], p_matrix_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], state_fixed);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs,
-        Some([ceil_div_u32(cells_u32, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: coarsen_region_state_fixed_via expected at least one output buffer, got {}.",
             outputs.len()
         )));
@@ -262,6 +279,7 @@ pub fn coarsen_region_state_fixed_via_with_scratch_into(
         "coarsen_region_state_fixed_via",
         out,
     )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Convenience: derive the projection AND apply it in one step.
@@ -306,7 +324,6 @@ mod tests {
     #![allow(clippy::identity_op, clippy::erasing_op)]
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_foundation::ir::Program;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-9
@@ -391,29 +408,35 @@ mod tests {
 
     struct MoriDispatcher;
 
-    impl ProgramDispatcher for MoriDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for MoriDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 3);
-            let p = crate::dispatch_buffers::read_u32s(&inputs[0]);
-            let state = crate::dispatch_buffers::read_u32s(&inputs[1]);
-            assert_eq!(inputs[2].len(), state.len() * std::mem::size_of::<u32>());
-            let n = state.len();
-            let mut out = vec![0u32; n];
-            for i in 0..n {
-                let mut acc = 0u32;
-                for j in 0..n {
-                    acc =
-                        acc.saturating_add(((p[i * n + j] as u64 * state[j] as u64) >> 16) as u32);
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                assert_eq!(inputs.len(), 3);
+                let p = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                let state = crate::dispatch_buffers::read_u32s(&inputs[1]);
+                assert_eq!(inputs[2].len(), state.len() * std::mem::size_of::<u32>());
+                let n = state.len();
+                let mut out = vec![0u32; n];
+                for i in 0..n {
+                    let mut acc = 0u32;
+                    for j in 0..n {
+                        acc = acc
+                            .saturating_add(((p[i * n + j] as u64 * state[j] as u64) >> 16) as u32);
+                    }
+                    out[i] = acc;
                 }
-                out[i] = acc;
+                Ok(vec![u32_slice_to_le_bytes(&out)])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
             }
-            Ok(vec![u32_slice_to_le_bytes(&out)])
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -423,6 +446,7 @@ mod tests {
         let half = 1u32 << 15;
         let out = coarsen_region_state_fixed_via(
             &MoriDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[half, half, half, half],
             &[10 * one, 20 * one],
             2,
@@ -432,11 +456,16 @@ mod tests {
     }
 
     #[test]
-
     fn fixed_via_rejects_shape_mismatch() {
-        let err =
-            coarsen_region_state_fixed_via(&MoriDispatcher, &[1, 0, 0], &[1, 1], 2).unwrap_err();
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        let err = coarsen_region_state_fixed_via(
+            &MoriDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[1, 0, 0],
+            &[1, 1],
+            2,
+        )
+        .unwrap_err();
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 
     #[test]
@@ -448,6 +477,7 @@ mod tests {
 
         coarsen_region_state_fixed_via_with_scratch_into(
             &MoriDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[half, half, half, half],
             &[10 * one, 20 * one],
             2,
@@ -458,6 +488,7 @@ mod tests {
         let input_ptrs: Vec<*const u8> = scratch.inputs.iter().map(Vec::as_ptr).collect();
         coarsen_region_state_fixed_via_with_scratch_into(
             &MoriDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[half, half, half, half],
             &[12 * one, 18 * one],
             2,

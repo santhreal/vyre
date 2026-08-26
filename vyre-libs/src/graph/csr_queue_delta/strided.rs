@@ -50,14 +50,6 @@ pub const fn csr_queue_delta_strided_logical_lanes_per_launch(active_queue_capac
         .saturating_mul(CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE)
 }
 
-/// Dispatch grid for row-strided queue-to-queue delta expansion.
-#[cfg(test)]
-#[must_use]
-pub const fn csr_queue_delta_strided_dispatch_grid(active_queue_capacity: u32) -> [u32; 3] {
-    let total_lanes = csr_queue_delta_strided_logical_lanes_per_launch(active_queue_capacity);
-    vyre_primitives::lane_grid(total_lanes, CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE[0])
-}
-
 define_csr_queue_delta_entry_point! {
     /// Build a row-strided delta enqueue program for skewed CSR source rows.
     ///
@@ -103,7 +95,7 @@ mod tests {
     use crate::graph::mix32;
 
     #[test]
-    fn emitted_strided_program_keeps_delta_queue_abi_and_expands_grid() {
+    fn emitted_strided_program_keeps_delta_queue_abi_and_expands_lanes() {
         let program = delta_program(csr_queue_delta_strided_enqueue, 64, 7, 8);
 
         assert_eq!(
@@ -115,15 +107,6 @@ mod tests {
         assert_eq!(program.buffers[0].count, 8);
         assert_eq!(program.buffers[6].name.as_ref(), "next_queue");
         assert_eq!(program.buffers[6].count, 16);
-        assert_eq!(
-            csr_queue_delta_strided_dispatch_grid(8),
-            [
-                (8 * CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE)
-                    .div_ceil(CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE[0]),
-                1,
-                1,
-            ]
-        );
         let program_debug = format!("{:?}", program.entry);
         assert!(!program_debug.contains("qds_lane_iter"));
         assert!(program_debug.contains("qds_logical_lane"));
@@ -148,7 +131,7 @@ mod tests {
     }
 
     #[test]
-    fn generated_strided_delta_launch_grid_caps_capacity_and_preserves_coverage() {
+    fn generated_strided_delta_launch_caps_capacity_and_preserves_coverage() {
         const CASES: u32 = 20_000;
         let mut capped_cases = 0_u32;
 
@@ -156,8 +139,6 @@ mod tests {
             let capacity = mix32(case ^ 0x5D17_1D3A);
             let source_slots = csr_queue_delta_strided_source_slots_per_launch(capacity);
             let logical_lanes = csr_queue_delta_strided_logical_lanes_per_launch(capacity);
-            let grid = csr_queue_delta_strided_dispatch_grid(capacity);
-            let launched_lanes = grid[0].saturating_mul(CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE[0]);
 
             assert!(source_slots > 0, "source slots case {case}");
             if capacity == 0 {
@@ -177,14 +158,6 @@ mod tests {
                 logical_lanes,
                 source_slots.saturating_mul(CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE),
                 "logical lanes case {case}"
-            );
-            assert!(
-                launched_lanes >= logical_lanes,
-                "grid underlaunch case {case}"
-            );
-            assert!(
-                launched_lanes < logical_lanes + CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE[0],
-                "grid overlaunch case {case}"
             );
             if capacity > CSR_QUEUE_DELTA_STRIDED_CAPPED_LAUNCH_MIN_CAPACITY {
                 capped_cases += 1;

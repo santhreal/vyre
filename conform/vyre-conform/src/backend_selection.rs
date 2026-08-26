@@ -1,6 +1,5 @@
-//! Discovery and filtering of dispatch-capable registered backends.
+//! Discovery and filtering of semantic-execution-capable registered backends.
 
-use vyre_driver::backend_dispatches;
 use vyre_registry_link::backend::live_backend_registry;
 
 pub(crate) fn backend_registration(
@@ -11,15 +10,13 @@ pub(crate) fn backend_registration(
     let requested = if backend_id == "auto" {
         let mut requested = None;
         for registration in registrations {
-            if backend_dispatches(registration.id)
-                .map_err(|error| format!("backend registry startup failed: {error}"))?
-            {
+            if supports_semantic_execution(registration) {
                 requested = Some(registration.id);
                 break;
             }
         }
         requested.ok_or_else(|| {
-            "no dispatch-capable backend is linked into this binary. Fix: link a concrete driver crate that registers compiler and materializer facets.".to_string()
+            "no semantic-execution-capable backend is linked into this binary. Fix: link a concrete driver crate that registers compiler and materializer facets.".to_string()
         })?
     } else {
         backend_id
@@ -34,19 +31,18 @@ pub(crate) fn backend_registration(
         })
 }
 
-pub(crate) fn dispatch_capable_backends(
+pub(crate) fn semantic_execution_backends(
 ) -> Result<Vec<&'static vyre_driver::BackendRegistration>, String> {
     let registrations = live_backend_registry()
         .map_err(|error| format!("backend registry startup failed: {error}"))?;
-    let mut backends = Vec::new();
-    for backend in registrations {
-        if backend_dispatches(backend.id)
-            .map_err(|error| format!("backend registry startup failed: {error}"))?
-        {
-            backends.push(backend);
-        }
-    }
-    Ok(backends)
+    Ok(registrations
+        .iter()
+        .filter(|backend| supports_semantic_execution(backend))
+        .collect())
+}
+
+fn supports_semantic_execution(backend: &vyre_driver::BackendRegistration) -> bool {
+    !backend.reference_oracle && backend.target_compiler.is_some() && backend.materializer.is_some()
 }
 
 pub(crate) fn select_backends(
@@ -68,7 +64,7 @@ pub(crate) fn select_backends(
             .collect::<Vec<_>>()
             .join(", ");
         return Err(format!(
-            "unknown or non-dispatch backend `{filter}`. Fix: pass `--backend all` or one dispatch-capable backend id: {known}."
+            "unknown or non-semantic backend `{filter}`. Fix: pass `--backend all` or one semantic-execution-capable backend id: {known}."
         ));
     }
     Ok(selected)

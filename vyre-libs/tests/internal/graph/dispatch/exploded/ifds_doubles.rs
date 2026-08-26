@@ -1,6 +1,9 @@
 use super::*;
 use crate::graph::exploded::{build_cpu_reference, canonicalize_csr_within_rows_in_place};
-use vyre_foundation::ir::Program;
+use vyre_driver_reference::ReferenceSemanticExecutor;
+use vyre_megakernel::{
+    SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest, SemanticExecutor,
+};
 
 pub(super) fn canonical_expected(
     num_procs: u32,
@@ -26,23 +29,22 @@ pub(super) fn canonical_expected(
 }
 
 pub(super) struct RecordingIfdsOracle {
-    pub(super) inner: ReferenceEvalDispatcher,
+    pub(super) inner: ReferenceSemanticExecutor,
     pub(super) intra_src_blocks: Mutex<Vec<Vec<u32>>>,
 }
 
-impl ProgramDispatcher for RecordingIfdsOracle {
-    fn dispatch(
+impl SemanticExecutor for RecordingIfdsOracle {
+    fn execute(
         &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
+        request: &SemanticExecutionRequest<'_>,
+    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+        let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
         if inputs.len() >= 2 {
             self.intra_src_blocks
                 .lock()
                 .expect("Fix: IFDS recording mutex should not be poisoned")
                 .push(crate::dispatch_buffers::read_u32s(&inputs[1]));
         }
-        self.inner.dispatch(program, inputs, grid_override)
+        self.inner.execute(request)
     }
 }

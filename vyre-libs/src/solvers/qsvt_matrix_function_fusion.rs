@@ -49,8 +49,8 @@
 //! Wasserstein-distance computation tractable at 1M+ Regions.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
-    require_named_output, write_u32_slice_le_bytes, write_zero_bytes,
+    checked_square_cells, decode_u32_output_exact, ensure_input_slots, require_named_output,
+    write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
 #[cfg(test)]
@@ -88,7 +88,9 @@ fn reference_qsvt_apply_into(
     )
     .unwrap_or_else(|error| panic!("QSVT witness failed: {error}"));
 }
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 /// Caller-owned dispatch scratch for fixed-point QSVT transport residuals.
 #[derive(Debug, Default)]
 pub struct QsvtTransportGpuScratch {
@@ -175,20 +177,22 @@ pub(crate) fn reference_transport_residual_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] for invalid shapes, unsupported polynomial order,
+/// Returns [`SemanticExecutionError`] for invalid shapes, unsupported polynomial order,
 /// dispatch failure, or malformed backend output.
 pub fn transport_residual_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     dispatch_cost_scaled_fixed: &[u32],
     weights_fixed: &[u32],
     coeffs_fixed: &[u32],
     n: u32,
     chebyshev_order: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut scratch = QsvtTransportGpuScratch::default();
     let mut out = Vec::new();
     transport_residual_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         dispatch_cost_scaled_fixed,
         weights_fixed,
         coeffs_fixed,
@@ -204,10 +208,11 @@ pub fn transport_residual_fixed_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] for invalid shapes, unsupported polynomial order,
+/// Returns [`SemanticExecutionError`] for invalid shapes, unsupported polynomial order,
 /// dispatch failure, or malformed backend output.
 pub fn transport_residual_fixed_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     dispatch_cost_scaled_fixed: &[u32],
     weights_fixed: &[u32],
     coeffs_fixed: &[u32],
@@ -215,38 +220,39 @@ pub fn transport_residual_fixed_via_with_scratch_into(
     chebyshev_order: u32,
     scratch: &mut QsvtTransportGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, qsvt_matrix_function_fusion_calls};
     bump(&qsvt_matrix_function_fusion_calls);
 
     if chebyshev_order == 0 || chebyshev_order > CHEBYSHEV_MAX_K {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: transport_residual_fixed_via requires chebyshev_order in 1..={CHEBYSHEV_MAX_K}, got {chebyshev_order}."
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: transport_residual_fixed_via requires chebyshev_order in 1..={CHEBYSHEV_MAX_K}, got {chebyshev_order}."
+    )));
     }
-    let cells = checked_square_cells(n, "transport_residual_fixed_via")?;
+    let cells = checked_square_cells(n, "transport_residual_fixed_via")
+        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
     if dispatch_cost_scaled_fixed.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: transport_residual_fixed_via requires dispatch_cost_scaled_fixed.len() == n*n, got len={}, n={n}, n*n={cells}.",
-            dispatch_cost_scaled_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: transport_residual_fixed_via requires dispatch_cost_scaled_fixed.len() == n*n, got len={}, n={n}, n*n={cells}.",
+        dispatch_cost_scaled_fixed.len()
+    )));
     }
     if weights_fixed.len() != n as usize {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: transport_residual_fixed_via requires weights_fixed.len() == n, got len={}, n={n}.",
-            weights_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: transport_residual_fixed_via requires weights_fixed.len() == n, got len={}, n={n}.",
+        weights_fixed.len()
+    )));
     }
     let coeff_count = (chebyshev_order as usize).checked_add(1).ok_or_else(|| {
-        DispatchError::BadInputs(
+        SemanticExecutionError::InvalidRequest(
             "Fix: transport_residual_fixed_via coefficient count overflowed usize.".to_string(),
         )
     })?;
     if coeffs_fixed.len() != coeff_count {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: transport_residual_fixed_via requires coeffs_fixed.len() == chebyshev_order + 1, got len={}, chebyshev_order={chebyshev_order}.",
-            coeffs_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: transport_residual_fixed_via requires coeffs_fixed.len() == chebyshev_order + 1, got len={}, chebyshev_order={chebyshev_order}.",
+        coeffs_fixed.len()
+    )));
     }
 
     let program = chebyshev_filter(
@@ -270,18 +276,23 @@ pub fn transport_residual_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[2], coeffs_fixed);
     write_zero_bytes(&mut scratch.inputs[3], out_bytes);
     write_zero_bytes(&mut scratch.inputs[4], scratch_bytes);
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program.clone(),
         &scratch.inputs[..5],
-        Some([ceil_div_u32(n, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     let output = require_named_output(
         &outputs,
         &program,
         "transport_residual",
         "transport_residual_fixed_via",
-    )?;
+    )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
     decode_u32_output_exact(output, n as usize, "transport_residual_fixed_via", out)
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 #[cfg(test)]
@@ -295,22 +306,28 @@ mod tests {
 
     struct QsvtDispatcher;
 
-    impl ProgramDispatcher for QsvtDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for QsvtDispatcher {
+        fn execute(
             &self,
-            _program: &vyre_foundation::ir::Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            // chebyshev_filter: 3 RO (cost/weights/coeffs) + plain-RW output(3)+scratch(4) = 5.
-            assert_eq!(inputs.len(), 5);
-            let matrix = crate::dispatch_buffers::read_u32s(&inputs[0]);
-            let weights = crate::dispatch_buffers::read_u32s(&inputs[1]);
-            let coeffs = crate::dispatch_buffers::read_u32s(&inputs[2]);
-            assert_eq!(matrix, vec![1, 0, 0, 1]);
-            assert_eq!(coeffs, vec![1, 0]);
-            Ok(vec![u32_slice_to_le_bytes(&weights)])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                // chebyshev_filter: 3 RO (cost/weights/coeffs) + plain-RW output(3)+scratch(4) = 5.
+                assert_eq!(inputs.len(), 5);
+                let matrix = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                let weights = crate::dispatch_buffers::read_u32s(&inputs[1]);
+                let coeffs = crate::dispatch_buffers::read_u32s(&inputs[2]);
+                assert_eq!(matrix, vec![1, 0, 0, 1]);
+                assert_eq!(coeffs, vec![1, 0]);
+                Ok(vec![u32_slice_to_le_bytes(&weights)])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
+            }
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -405,18 +422,32 @@ mod tests {
 
     #[test]
     fn transport_residual_fixed_via_dispatches_chebyshev_path() {
-        let out =
-            transport_residual_fixed_via(&QsvtDispatcher, &[1, 0, 0, 1], &[7, 11], &[1, 0], 2, 1)
-                .unwrap();
+        let out = transport_residual_fixed_via(
+            &QsvtDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[1, 0, 0, 1],
+            &[7, 11],
+            &[1, 0],
+            2,
+            1,
+        )
+        .unwrap();
         assert_eq!(out, vec![7, 11]);
     }
 
     #[test]
     fn transport_residual_fixed_via_rejects_bad_shapes() {
-        let err =
-            transport_residual_fixed_via(&QsvtDispatcher, &[1, 0, 0], &[7, 11], &[1, 0], 2, 1)
-                .unwrap_err();
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        let err = transport_residual_fixed_via(
+            &QsvtDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[1, 0, 0],
+            &[7, 11],
+            &[1, 0],
+            2,
+            1,
+        )
+        .unwrap_err();
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 
     #[test]
@@ -429,42 +460,55 @@ mod tests {
 
     struct SiblingScratchDispatcher;
 
-    impl ProgramDispatcher for SiblingScratchDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for SiblingScratchDispatcher {
+        fn execute(
             &self,
-            _program: &vyre_foundation::ir::Program,
-            inputs: &[Vec<u8>],
-            _grid: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            let weights = crate::dispatch_buffers::read_u32s(&inputs[1]);
-            let scratch = vec![0u8; weights.len() * 2 * 4];
-            Ok(vec![u32_slice_to_le_bytes(&weights), scratch])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                let weights = crate::dispatch_buffers::read_u32s(&inputs[1]);
+                let scratch = vec![0u8; weights.len() * 2 * 4];
+                Ok(vec![u32_slice_to_le_bytes(&weights), scratch])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
+            }
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
     struct EmptyOutputDispatcher;
 
-    impl ProgramDispatcher for EmptyOutputDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for EmptyOutputDispatcher {
+        fn execute(
             &self,
-            _program: &vyre_foundation::ir::Program,
-            _inputs: &[Vec<u8>],
-            _grid: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            Ok(Vec::new())
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> { Ok(Vec::new()) })();
+            crate::test_parity_oracles::semantic_output(request, ordered?)
         }
     }
 
     struct MalformedOutputDispatcher;
 
-    impl ProgramDispatcher for MalformedOutputDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for MalformedOutputDispatcher {
+        fn execute(
             &self,
-            _program: &vyre_foundation::ir::Program,
-            _inputs: &[Vec<u8>],
-            _grid: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            Ok(vec![vec![1, 2, 3]])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered =
+                (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> { Ok(vec![vec![1, 2, 3]]) })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
+            }
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -472,6 +516,7 @@ mod tests {
     fn transport_residual_fixed_via_accepts_sibling_scratch_output() {
         let out = transport_residual_fixed_via(
             &SiblingScratchDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[1, 0, 0, 1],
             &[7, 11],
             &[1, 0],
@@ -486,6 +531,7 @@ mod tests {
     fn transport_residual_fixed_via_fails_on_empty_outputs() {
         let err = transport_residual_fixed_via(
             &EmptyOutputDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[1, 0, 0, 1],
             &[7, 11],
             &[1, 0],
@@ -493,13 +539,14 @@ mod tests {
             1,
         )
         .unwrap_err();
-        assert!(matches!(err, DispatchError::BackendError(_)));
+        assert!(matches!(err, SemanticExecutionError::Backend(_)));
     }
 
     #[test]
     fn transport_residual_fixed_via_fails_on_malformed_output_bytes() {
         let err = transport_residual_fixed_via(
             &MalformedOutputDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[1, 0, 0, 1],
             &[7, 11],
             &[1, 0],
@@ -507,6 +554,6 @@ mod tests {
             1,
         )
         .unwrap_err();
-        assert!(matches!(err, DispatchError::BackendError(_)));
+        assert!(matches!(err, SemanticExecutionError::Backend(_)));
     }
 }

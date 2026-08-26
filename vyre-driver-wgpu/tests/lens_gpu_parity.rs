@@ -44,7 +44,6 @@ fn cpu_vs_backend_lens_every_eligible_op() {
 fn security_grid_sync_lens_matches_reference_for_every_registered_operation() {
     let be = backend();
     let entries = vyre_libs::operation_catalog::fixture_entries()
-        .into_iter()
         .filter(|entry| entry.id.starts_with("vyre-libs::security::"))
         .filter(|entry| {
             entry

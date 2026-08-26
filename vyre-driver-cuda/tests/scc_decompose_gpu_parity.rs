@@ -9,10 +9,6 @@ use vyre_driver::DispatchConfig;
 use vyre_libs::graph::scc_decompose::{scc_decompose, SCC_DECOMPOSE_WORKGROUP_SIZE};
 use vyre_reference::composition_witness::scc_decompose_witness;
 
-fn scc_decompose_dispatch_grid(node_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(node_count, SCC_DECOMPOSE_WORKGROUP_SIZE[0])
-}
-
 fn run(
     node_count: u32,
     forward: &[u32],
@@ -27,7 +23,6 @@ fn run(
         u32_bytes(component_in),
     ];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(scc_decompose_dispatch_grid(node_count));
     let outputs = with_live_backend("SCC decompose", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

@@ -3525,6 +3525,7 @@ dependencies = [
  "vyre-pass-engine",
  "vyre-primitives",
  "vyre-reference",
+ "vyre-runtime",
  "vyre-test-support",
 ]
 
@@ -3551,6 +3552,7 @@ dependencies = [
  "inventory",
  "vyre-driver",
  "vyre-foundation",
+ "vyre-megakernel",
  "vyre-reference",
 ]
 
@@ -3807,6 +3809,7 @@ dependencies = [
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs",
+ "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-test-support",

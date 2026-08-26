@@ -38,19 +38,6 @@ pub const DOMINATOR_FRONTIER_OUT_BUFFER: u32 = 5;
 /// Candidate-node workgroup for dominance-frontier queries.
 pub const DOMINATOR_FRONTIER_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid for one dominance-frontier query over candidate nodes.
-///
-/// A zero-node query used to return a grid of ZERO groups here while every
-/// sibling graph primitive returned one. `node_count == 0` is accepted by
-/// `validate_dominator_frontier_inputs` (an empty seed is exactly zero words), so
-/// that grid reached the launcher, and the launcher refuses `grid[axis] == 0`
-/// outright. The candidate lanes are already guarded against `node_count`, so one
-/// group of guarded lanes is the no-op the zero-node case wants.
-#[must_use]
-pub const fn dominator_frontier_dispatch_grid(node_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(node_count, DOMINATOR_FRONTIER_WORKGROUP_SIZE[0])
-}
-
 #[path = "dominator_frontier_plan.rs"]
 mod dominator_frontier_plan;
 pub use dominator_frontier_plan::*;
@@ -210,7 +197,8 @@ pub fn try_dominator_frontier(
                 BufferAccess::ReadWrite,
                 DataType::U32,
             )
-            .with_count(words),
+            .with_count(words)
+            .with_pipeline_live_out(true),
         ],
         DOMINATOR_FRONTIER_WORKGROUP_SIZE,
         vec![wrap_anonymous_region(
@@ -348,12 +336,13 @@ inventory::submit! {
         OP_ID,
         || dominator_frontier(4, 4, 4, "idom", "df"),
         Some(|| {
+            // `df` carries the pipeline-live-out result, so the backend allocates
+            // it and the reference takes no seed Value for it.
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0, 1, 2, 3, 4]),
                 vyre_primitives::wire::pack_u32_slice(&[0, 1, 2, 3]),
                 vyre_primitives::wire::pack_u32_slice(&[0, 0, 1, 2, 3]),
                 vyre_primitives::wire::pack_u32_slice(&[0, 1, 2, 0]),
-                vyre_primitives::wire::pack_u32_slice(&[0]),
                 vyre_primitives::wire::pack_u32_slice(&[0]),
             ]]
         }),
@@ -656,7 +645,6 @@ mod tests {
         )
         .expect("Fix: canonical dominance-frontier launch plan should validate");
 
-        assert_eq!(plan.dispatch_grid(), [1, 1, 1]);
         assert_eq!(plan.frontier_words(), 1);
         assert_eq!(plan.dom_target_words(), 7);
         assert_eq!(plan.pred_target_words(), 4);
@@ -677,41 +665,6 @@ mod tests {
     }
 
     #[test]
-    fn launch_plan_packs_candidate_lanes_into_blocks() {
-        // A zero-node query launches ONE guarded group, not zero groups: the
-        // launcher refuses `grid[axis] == 0`, and this used to be the only graph
-        // grid builder that produced it.
-        assert_eq!(dominator_frontier_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(dominator_frontier_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(dominator_frontier_dispatch_grid(256), [1, 1, 1]);
-        assert_eq!(dominator_frontier_dispatch_grid(257), [2, 1, 1]);
-        assert_eq!(dominator_frontier_dispatch_grid(513), [3, 1, 1]);
-    }
-
-    #[test]
-    fn generated_launch_grid_covers_candidate_shapes_to_8192() {
-        for node_count in 1..=8_192 {
-            let grid = dominator_frontier_dispatch_grid(node_count);
-            assert_eq!(
-                grid[1], 1,
-                "Fix: dominator-frontier grid y dimension drifted at node_count={node_count}"
-            );
-            assert_eq!(
-                grid[2], 1,
-                "Fix: dominator-frontier grid z dimension drifted at node_count={node_count}"
-            );
-            assert!(
-                grid[0] * DOMINATOR_FRONTIER_WORKGROUP_SIZE[0] >= node_count,
-                "Fix: dominator-frontier grid under-covers node_count={node_count}"
-            );
-            assert!(
-                grid[0] == 1 || (grid[0] - 1) * DOMINATOR_FRONTIER_WORKGROUP_SIZE[0] < node_count,
-                "Fix: dominator-frontier grid over-launches an avoidable extra block at node_count={node_count}"
-            );
-        }
-    }
-
-    #[test]
     fn dispatch_plan_owns_buffer_slots_grid_and_readback_shape() {
         let plan = plan_dominator_frontier_dispatch(
             4,
@@ -725,7 +678,6 @@ mod tests {
         )
         .expect("Fix: canonical dominance-frontier plan should validate");
 
-        assert_eq!(plan.dispatch_grid(), [1, 1, 1]);
         assert_eq!(plan.frontier_words(), 1);
         assert_eq!(plan.dom_target_words(), 7);
         assert_eq!(plan.pred_target_words(), 4);

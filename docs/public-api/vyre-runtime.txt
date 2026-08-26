@@ -54,7 +54,9 @@ impl core::marker::Sync for vyre_runtime::uring::IoUringState
 impl core::ops::drop::Drop for vyre_runtime::resource_residency::ResourceResidency
 impl core::ops::drop::Drop for vyre_runtime::uring::IoUringState
 impl core::ops::drop::Drop for vyre_runtime::uring::ResidentIoLoop
+impl vyre_megakernel::execution::SemanticExecutor for vyre_runtime::RegisteredSemanticExecutor
 impl vyre_runtime::PipelineError
+impl vyre_runtime::RegisteredSemanticExecutor
 impl vyre_runtime::artifact_admission::AdmittedArtifact
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl vyre_runtime::artifact_admission::ArtifactSession
@@ -166,6 +168,8 @@ impl<'a> vyre_runtime::uring::NvmeGpuIngestDriver<'a>
 impl<'a> vyre_runtime::uring::UringResidentQueuePump<'a>
 impl<R: core::marker::Copy> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>
 impl<R> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>
+pub const fn vyre_runtime::RegisteredSemanticExecutor::new(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration) -> Self
+pub const fn vyre_runtime::RegisteredSemanticExecutor::registration(&self) -> &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::envelope(&self) -> &vyre_megakernel::envelope::ArtifactEnvelope
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) -> &vyre_megakernel::schema::Artifact
 pub const fn vyre_runtime::artifact_admission::ArtifactAdmissionError::diagnostic(&self) -> &vyre_foundation::diagnostics::Diagnostic
@@ -392,6 +396,7 @@ pub enum vyre_runtime::uring::NativeReadPath
 pub fn vyre_runtime::PipelineError::from(err: vyre_driver::backend::error::BackendError) -> Self
 pub fn vyre_runtime::PipelineError::from(err: vyre_runtime::replay::ReplayLogError) -> Self
 pub fn vyre_runtime::PipelineError::is_drain_incomplete(&self) -> bool
+pub fn vyre_runtime::RegisteredSemanticExecutor::execute(&self, request: &vyre_megakernel::execution::SemanticExecutionRequest<'_>) -> core::result::Result<vyre_megakernel::execution::SemanticExecutionOutput, vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_runtime::UringCompletionPump<'_>::default() -> Self
 pub fn vyre_runtime::UringCompletionPump<'a>::is_shutdown_requested(&self) -> bool
 pub fn vyre_runtime::UringCompletionPump<'a>::new() -> Self
@@ -1026,6 +1031,7 @@ pub mod vyre_runtime::safetensors_transfer
 pub mod vyre_runtime::scheduler
 pub mod vyre_runtime::tenant
 pub mod vyre_runtime::uring
+pub struct vyre_runtime::RegisteredSemanticExecutor
 pub struct vyre_runtime::UringCompletionPump<'a>
 pub struct vyre_runtime::artifact_admission::AdmittedArtifact
 pub struct vyre_runtime::artifact_admission::ArtifactAdmissionError

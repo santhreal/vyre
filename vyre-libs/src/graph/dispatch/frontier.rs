@@ -8,7 +8,7 @@ use crate::bitset::bitset_words;
 #[cfg(test)]
 use crate::bitset::frontier as primitive_frontier;
 #[cfg(test)]
-use vyre_foundation::program_dispatch::DispatchError;
+use vyre_megakernel::SemanticExecutionError;
 
 #[cfg(test)]
 pub(crate) use primitive_frontier::{frontier_tail_mask, mask_frontier_tail_bits};
@@ -17,12 +17,12 @@ pub(crate) use primitive_frontier::{frontier_tail_mask, mask_frontier_tail_bits}
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError::BadInputs`] when the primitive count overflows the
+/// Returns [`SemanticExecutionError::InvalidRequest`] when the primitive count overflows the
 /// compact u32 frontier count representation.
 #[cfg(test)]
-pub(crate) fn frontier_popcount(frontier: &[u32]) -> Result<u32, DispatchError> {
+pub(crate) fn frontier_popcount(frontier: &[u32]) -> Result<u32, SemanticExecutionError> {
     primitive_frontier::checked_frontier_popcount(frontier).map_err(|err| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: graph frontier primitive popcount rejected input: {err}"
         ))
     })
@@ -36,7 +36,7 @@ pub(crate) fn frontier_popcount(frontier: &[u32]) -> Result<u32, DispatchError> 
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError::BadInputs`] when the input slices are not shaped
+/// Returns [`SemanticExecutionError::InvalidRequest`] when the input slices are not shaped
 /// for `node_count`.
 #[cfg(test)]
 pub(crate) fn absorb_new_frontier_bits(
@@ -44,11 +44,11 @@ pub(crate) fn absorb_new_frontier_bits(
     visited: &mut [u32],
     neighbors: &[u32],
     next_wave: &mut Vec<u32>,
-) -> Result<bool, DispatchError> {
+) -> Result<bool, SemanticExecutionError> {
     primitive_frontier::absorb_new_frontier_bits(node_count, visited, neighbors, next_wave)
         .map(|summary| summary.added_any)
         .map_err(|err| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: graph frontier closure primitive absorption rejected input for {node_count} nodes: {err}"
             ))
         })

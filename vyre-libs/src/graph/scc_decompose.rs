@@ -17,20 +17,11 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use crate::bitset::bitset_words;
 use crate::graph::frontier_bits::{bind_bit_address, bind_word, bit_is_set, BitAccess};
-#[cfg(test)]
-use vyre_primitives::lane_grid;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::graph::scc_decompose";
 /// Source-lane workgroup for SCC component stamping.
 pub const SCC_DECOMPOSE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
-
-/// Dispatch grid for one SCC decomposition pass over `node_count` lanes.
-#[cfg(test)]
-#[must_use]
-pub const fn scc_decompose_dispatch_grid(node_count: u32) -> [u32; 3] {
-    lane_grid(node_count, SCC_DECOMPOSE_WORKGROUP_SIZE[0])
-}
 
 /// Internal operation id for GPU packing of dense pivot-reachability rows.
 pub(crate) const DENSE_REACHABILITY_BITSETS_OP_ID: &str =
@@ -339,15 +330,6 @@ mod tests {
     fn program_uses_packed_source_lane_workgroup() {
         let program = scc_decompose(513, "fwd", "bwd", "comp", 23);
         assert_eq!(program.workgroup_size(), SCC_DECOMPOSE_WORKGROUP_SIZE);
-    }
-
-    #[test]
-    fn dispatch_grid_packs_node_lanes_into_blocks() {
-        assert_eq!(scc_decompose_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(scc_decompose_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(scc_decompose_dispatch_grid(256), [1, 1, 1]);
-        assert_eq!(scc_decompose_dispatch_grid(257), [2, 1, 1]);
-        assert_eq!(scc_decompose_dispatch_grid(513), [3, 1, 1]);
     }
 
     #[test]

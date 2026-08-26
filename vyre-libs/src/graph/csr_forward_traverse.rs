@@ -25,7 +25,6 @@ pub const OP_ID: &str = "vyre-libs::graph::csr_forward_traverse";
 pub const EXCLUDING_OP_ID: &str = "vyre-libs::graph::csr_forward_traverse_excluding";
 
 pub use crate::graph::csr_frontier_step::{
-    csr_frontier_step_dispatch_grid as csr_forward_traverse_dispatch_grid,
     BINDING_EXCLUDED_SOURCES, BINDING_EXCLUDING_FRONTIER_OUT, BINDING_FRONTIER_IN,
     BINDING_FRONTIER_OUT,
 };

@@ -1,6 +1,6 @@
 //! End-to-end parity for `data::matching_diagnostic_compaction`'s three `_via` entry points
 //! (`bracket_pairs_via`, `sort_regions_via`, `dedup_region_survivor_flags_via`) through the shared
-//! faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes another mock-dispatcher-coherence family (see BACKLOG
 //! `SWEEP-via-consumer-input-output-contract-audit`). The consumer's in-file `MatchingDispatcher`
@@ -23,6 +23,8 @@
 //!
 //! `sort_regions_via` (region_sort_program: RO×3 + ReadWrite outs×3 = 6 input-consuming, passes 6,
 //! `outputs[0]=pids_out`) was audited CLEAN and is covered here as a durable guard.
+
+mod semantic_execution_support;
 
 use vyre_libs::encoding::matching_diagnostic_compaction::{
     bracket_pairs_via, dedup_region_survivor_flags_via, sort_regions_via,
@@ -50,7 +52,7 @@ fn reference_dedup_regions(regions: Vec<RegionTriple>) -> Vec<RegionTriple> {
         .collect()
 }
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// A random brace-token stream: `BRACKET_KIND_OPEN` / `BRACKET_KIND_CLOSE` / `BRACKET_KIND_OTHER(0)` in balanced-ish mix.
@@ -66,7 +68,7 @@ fn random_kinds(state: &mut u32, len: usize) -> Vec<u32> {
 
 #[test]
 fn bracket_pairs_via_matches_primitive_cpu_oracle_over_generated_streams() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x0BEE_F00Du32;
     let mut nontrivial = 0u32;
     for case in 0..400u32 {
@@ -74,8 +76,13 @@ fn bracket_pairs_via_matches_primitive_cpu_oracle_over_generated_streams() {
         let max_depth = 4 + (case % 12);
         let kinds = random_kinds(&mut state, len);
 
-        let pairs = bracket_pairs_via(&dispatcher, &kinds, max_depth)
-            .expect("bracket_pairs_via must dispatch the bracket-match kernel");
+        let pairs = bracket_pairs_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &kinds,
+            max_depth,
+        )
+        .expect("bracket_pairs_via must dispatch the bracket-match kernel");
         let expected = bracket_cpu_ref(&kinds, max_depth);
 
         assert_eq!(
@@ -96,7 +103,7 @@ fn bracket_pairs_via_matches_primitive_cpu_oracle_over_generated_streams() {
 
 #[test]
 fn bracket_pairs_via_matches_known_nested_pairs() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     // "( ( ) ( ) )" → outer 0-5, inner 1-2, inner 3-4.
     let kinds = vec![
         BRACKET_KIND_OPEN,
@@ -106,13 +113,19 @@ fn bracket_pairs_via_matches_known_nested_pairs() {
         BRACKET_KIND_CLOSE,
         BRACKET_KIND_CLOSE,
     ];
-    let pairs = bracket_pairs_via(&dispatcher, &kinds, 8).unwrap();
+    let pairs = bracket_pairs_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &kinds,
+        8,
+    )
+    .unwrap();
     assert_eq!(pairs, vec![5, 2, 1, 4, 3, 0]);
 }
 
 #[test]
 fn sort_regions_via_matches_cpu_sort_over_generated_batches() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x5057_A17Eu32;
     for case in 0..300u32 {
         let count = 1 + (case as usize % 96);
@@ -125,7 +138,7 @@ fn sort_regions_via_matches_cpu_sort_over_generated_batches() {
             })
             .collect::<Vec<_>>();
 
-        let sorted = sort_regions_via(&dispatcher, &regions)
+        let sorted = sort_regions_via(&dispatcher, &semantic_execution_support::policy(), &regions)
             .expect("sort_regions_via must dispatch the region-sort kernel");
         assert_eq!(
             sorted,
@@ -137,7 +150,7 @@ fn sort_regions_via_matches_cpu_sort_over_generated_batches() {
 
 #[test]
 fn dedup_survivor_flags_via_marks_same_cluster_starts_as_cpu_over_generated_batches() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0xD1CE_C0DEu32;
     let mut nontrivial = 0u32;
     for case in 0..400u32 {
@@ -152,8 +165,12 @@ fn dedup_survivor_flags_via_marks_same_cluster_starts_as_cpu_over_generated_batc
             .collect::<Vec<_>>();
         regions.sort();
 
-        let flags = dedup_region_survivor_flags_via(&dispatcher, &regions)
-            .expect("dedup_region_survivor_flags_via must dispatch the region-dedup kernel");
+        let flags = dedup_region_survivor_flags_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &regions,
+        )
+        .expect("dedup_region_survivor_flags_via must dispatch the region-dedup kernel");
         assert_eq!(
             flags.len(),
             regions.len(),

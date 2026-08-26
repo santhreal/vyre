@@ -53,6 +53,7 @@ dashmap.workspace = true
 libc.workspace = true
 
 [dev-dependencies]
+vyre-runtime.workspace = true
 # `ir-fixtures` carries the shared u32 binop parity tables the live-GPU
 # parity suites read their operands and pinned oracle answers from.
 vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
@@ -109,9 +110,6 @@ path = "tests/resident_dispatch_contracts/mod.rs"
 name = "egraph_device_image_upload"
 path = "tests/egraph_device_image_upload/mod.rs"
 
-[[test]]
-name = "csr_frontier_queue_gpu_parity"
-path = "tests/csr_frontier_queue_gpu_parity/mod.rs"
 
 [[test]]
 name = "resident_buffer_contracts"
@@ -121,9 +119,6 @@ path = "tests/resident_buffer_contracts/mod.rs"
 name = "generated_resident_cuda_reference_matrix"
 path = "tests/generated_resident_cuda_reference_matrix/mod.rs"
 
-[[test]]
-name = "adaptive_traverse_vast_walk_gpu_parity"
-path = "tests/adaptive_traverse_vast_walk_gpu_parity/mod.rs"
 
 [[test]]
 name = "int4_quantized_gpu_parity"

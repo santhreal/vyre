@@ -39,11 +39,13 @@
 //! read from telemetry, or produced by another registered primitive.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
-    write_u32_slice_le_bytes, write_zero_bytes,
+    checked_square_cells, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
+    write_zero_bytes,
 };
 use crate::math::natural_gradient::natural_gradient_block_apply;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     identity_matrix_witness_into, natural_gradient_autotune_step_witness_into,
@@ -101,17 +103,19 @@ pub(crate) fn reference_precondition_autotune_gradient_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shapes are invalid or backend readback is
+/// Returns [`SemanticExecutionError`] when shapes are invalid or backend readback is
 /// malformed.
 pub fn precondition_autotune_gradient_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     m_inv_sqrt_fixed: &[u32],
     grad_fixed: &[u32],
     n: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
     precondition_autotune_gradient_fixed_via_into(
         dispatcher,
+        policy,
         m_inv_sqrt_fixed,
         grad_fixed,
         n,
@@ -125,17 +129,19 @@ pub fn precondition_autotune_gradient_fixed_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or backend execution fails.
 pub fn precondition_autotune_gradient_fixed_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     m_inv_sqrt_fixed: &[u32],
     grad_fixed: &[u32],
     n: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = NaturalGradientGpuScratch::default();
     precondition_autotune_gradient_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         m_inv_sqrt_fixed,
         grad_fixed,
         n,
@@ -149,43 +155,45 @@ pub fn precondition_autotune_gradient_fixed_via_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or backend execution fails.
 pub fn precondition_autotune_gradient_fixed_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     m_inv_sqrt_fixed: &[u32],
     grad_fixed: &[u32],
     n: u32,
     scratch: &mut NaturalGradientGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, natural_gradient_autotuner_calls};
     bump(&natural_gradient_autotuner_calls);
 
-    let matrix_cells = checked_square_cells(n, "precondition_autotune_gradient_fixed_via")?;
+    let matrix_cells = checked_square_cells(n, "precondition_autotune_gradient_fixed_via")
+        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
     n.checked_mul(n).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
-            "Fix: precondition_autotune_gradient_fixed_via n*n exceeds the primitive u32 buffer-count limit for n={n}."
-        ))
-    })?;
+    SemanticExecutionError::InvalidRequest(format!(
+        "Fix: precondition_autotune_gradient_fixed_via n*n exceeds the primitive u32 buffer-count limit for n={n}."
+    ))
+})?;
     let n_us = n as usize;
     if m_inv_sqrt_fixed.len() != matrix_cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: precondition_autotune_gradient_fixed_via requires m_inv_sqrt_fixed.len() == n*n, got len={}, n={n}, n*n={matrix_cells}.",
-            m_inv_sqrt_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: precondition_autotune_gradient_fixed_via requires m_inv_sqrt_fixed.len() == n*n, got len={}, n={n}, n*n={matrix_cells}.",
+        m_inv_sqrt_fixed.len()
+    )));
     }
     if grad_fixed.len() != n_us {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: precondition_autotune_gradient_fixed_via requires grad_fixed.len() == n, got len={}, n={n}.",
-            grad_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: precondition_autotune_gradient_fixed_via requires grad_fixed.len() == n, got len={}, n={n}.",
+        grad_fixed.len()
+    )));
     }
 
     let program = natural_gradient_block_apply("m_inv_sqrt", "grad", "grad_nat", n);
     let out_bytes = n_us
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: precondition_autotune_gradient_fixed_via n={n} overflows output byte count."
             ))
         })?;
@@ -193,16 +201,19 @@ pub fn precondition_autotune_gradient_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[0], m_inv_sqrt_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], grad_fixed);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs,
-        Some([ceil_div_u32(n, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: precondition_autotune_gradient_fixed_via expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
+        return Err(SemanticExecutionError::Backend(format!(
+        "Fix: precondition_autotune_gradient_fixed_via expected at least one output buffer, got {}.",
+        outputs.len()
+    )));
     }
     decode_u32_output_exact(
         &outputs[0],
@@ -210,6 +221,7 @@ pub fn precondition_autotune_gradient_fixed_via_with_scratch_into(
         "precondition_autotune_gradient_fixed_via",
         out,
     )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Compute the autotuner step from a plain gradient and learning
@@ -263,7 +275,6 @@ pub(crate) fn identity_fisher_block_into(n: u32, out: &mut Vec<f64>) {
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_foundation::ir::Program;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-9 * (1.0 + a.abs() + b.abs())
@@ -271,29 +282,36 @@ mod tests {
 
     struct NaturalGradientDispatcher;
 
-    impl ProgramDispatcher for NaturalGradientDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for NaturalGradientDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 3);
-            let matrix = crate::dispatch_buffers::read_u32s(&inputs[0]);
-            let grad = crate::dispatch_buffers::read_u32s(&inputs[1]);
-            assert_eq!(inputs[2].len(), grad.len() * std::mem::size_of::<u32>());
-            let n = grad.len();
-            assert_eq!(matrix.len(), n * n);
-            let mut out = vec![0u32; n];
-            for i in 0..n {
-                let mut acc = 0u64;
-                for j in 0..n {
-                    acc = acc.wrapping_add(((matrix[i * n + j] as u64) * (grad[j] as u64)) >> 16);
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                assert_eq!(inputs.len(), 3);
+                let matrix = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                let grad = crate::dispatch_buffers::read_u32s(&inputs[1]);
+                assert_eq!(inputs[2].len(), grad.len() * std::mem::size_of::<u32>());
+                let n = grad.len();
+                assert_eq!(matrix.len(), n * n);
+                let mut out = vec![0u32; n];
+                for i in 0..n {
+                    let mut acc = 0u64;
+                    for j in 0..n {
+                        acc =
+                            acc.wrapping_add(((matrix[i * n + j] as u64) * (grad[j] as u64)) >> 16);
+                    }
+                    out[i] = acc as u32;
                 }
-                out[i] = acc as u32;
+                Ok(vec![u32_slice_to_le_bytes(&out)])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
             }
-            Ok(vec![u32_slice_to_le_bytes(&out)])
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -359,20 +377,30 @@ mod tests {
         let matrix = vec![one, 0, 0, half];
         let grad = vec![10 * one, 10 * one];
 
-        let out =
-            precondition_autotune_gradient_fixed_via(&NaturalGradientDispatcher, &matrix, &grad, 2)
-                .unwrap();
+        let out = precondition_autotune_gradient_fixed_via(
+            &NaturalGradientDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &matrix,
+            &grad,
+            2,
+        )
+        .unwrap();
 
         assert_eq!(out, vec![10 * one, 5 * one]);
     }
 
     #[test]
     fn fixed_via_rejects_invalid_shapes() {
-        let err =
-            precondition_autotune_gradient_fixed_via(&NaturalGradientDispatcher, &[1], &[1, 2], 2)
-                .unwrap_err();
+        let err = precondition_autotune_gradient_fixed_via(
+            &NaturalGradientDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[1],
+            &[1, 2],
+            2,
+        )
+        .unwrap_err();
 
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 
     #[test]
@@ -385,6 +413,7 @@ mod tests {
 
         precondition_autotune_gradient_fixed_via_with_scratch_into(
             &NaturalGradientDispatcher,
+            &crate::test_parity_oracles::policy(),
             &matrix,
             &grad,
             2,
@@ -395,6 +424,7 @@ mod tests {
         let input_ptrs: Vec<*const u8> = scratch.inputs.iter().map(Vec::as_ptr).collect();
         precondition_autotune_gradient_fixed_via_with_scratch_into(
             &NaturalGradientDispatcher,
+            &crate::test_parity_oracles::policy(),
             &matrix,
             &grad,
             2,

@@ -8,7 +8,6 @@ use crate::graph::program_graph::ProgramGraphShape;
 use super::layout::{validate_motif_inputs, MotifLayout};
 use super::pattern::MotifEdge;
 use super::program::motif;
-use super::MOTIF_DISPATCH_GRID;
 
 /// Primitive-owned cache identity for motif Programs.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -74,12 +73,6 @@ impl MotifLaunchPlan {
     #[must_use]
     pub const fn edge_storage_words(&self) -> usize {
         self.layout.edge_storage_words
-    }
-
-    /// Canonical one-workgroup dispatch grid.
-    #[must_use]
-    pub const fn dispatch_grid(&self) -> [u32; 3] {
-        MOTIF_DISPATCH_GRID
     }
 
     /// Materialize the canonical primitive Program for this launch plan.
@@ -171,12 +164,6 @@ impl MotifDispatchPlan {
     #[must_use]
     pub const fn edge_storage_words(&self) -> usize {
         self.layout.edge_storage_words
-    }
-
-    /// Canonical one-workgroup dispatch grid.
-    #[must_use]
-    pub const fn dispatch_grid(&self) -> [u32; 3] {
-        MOTIF_DISPATCH_GRID
     }
 }
 

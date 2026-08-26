@@ -1,26 +1,22 @@
 //! End-to-end parity for `scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via`
-//! through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! through the shared faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
-//! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
-//! `planar_rewrite_schedule`'s IR is run by NO `vyre-primitives/tests/*` file and the consumer's only
-//! coverage is its own in-file dispatcher, so this is the FIRST-EVER execution of the planar
-//! disjoint-rewrite scheduler kernel through a dispatch boundary that models the real backend.
-//!
-//! `planar_rewrite_schedule` binds candidates RO(0) + chosen plain-ReadWrite(1) = 2 input-consuming
-//! (no backend-allocated output → no over/under-feed; consumer correctly passes candidates + a
-//! zero-filled `chosen` slot). The kernel is a greedy raster-order disjoint selection: a candidate
-//! cell is chosen iff no already-chosen cell lies in its k×k above-left footprint, a pure integer
-//! computation, so the oracle here is EXACT (0/1 chosen mask, no tolerance).
+//! `planar_rewrite_schedule` binds candidates RO(0) and chosen plain-ReadWrite(1) as two input graph
+//! values. The wrapper supplies candidates and a zero-filled `chosen` resource. The kernel performs
+//! greedy raster-order disjoint selection: a candidate cell is chosen iff no already-chosen cell
+//! lies in its k×k above-left footprint. The oracle is exact.
+
+mod semantic_execution_support;
 
 use vyre_libs::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via;
 use vyre_reference::composition_witness::planar_rewrite_schedule_witness as reference_planar_rewrite_schedule;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 #[test]
 fn schedule_via_matches_cpu_greedy_disjoint_selection_over_generated_grids() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let executor = ReferenceSemanticExecutor;
     let mut state = 0x9A11_0001_u32;
     let mut nontrivial = 0u32;
     for case in 0..400u32 {
@@ -32,8 +28,15 @@ fn schedule_via_matches_cpu_greedy_disjoint_selection_over_generated_grids() {
         // candidates as 0/1/2 → exercises the "any nonzero is a candidate" semantics (output is 0/1).
         let candidates: Vec<u32> = (0..cells).map(|_| xorshift(&mut state) % 3).collect();
 
-        let got = schedule_disjoint_rewrites_via(&dispatcher, &candidates, h, w, k)
-            .expect("schedule_disjoint_rewrites_via must dispatch the planar-rewrite scheduler");
+        let got = schedule_disjoint_rewrites_via(
+            &executor,
+            &semantic_execution_support::policy(),
+            &candidates,
+            h,
+            w,
+            k,
+        )
+        .expect("schedule_disjoint_rewrites_via must execute the planar-rewrite scheduler");
         let want = reference_planar_rewrite_schedule(&candidates, h, w, k);
         assert_eq!(
             got, want,
@@ -56,12 +59,20 @@ fn schedule_via_matches_cpu_greedy_disjoint_selection_over_generated_grids() {
 
 #[test]
 fn schedule_via_matches_hand_checked_cases() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let executor = ReferenceSemanticExecutor;
 
     // All candidates, footprint 1 (each cell conflicts only with itself) → every candidate chosen.
     let all = vec![1, 1, 1, 1];
     assert_eq!(
-        schedule_disjoint_rewrites_via(&dispatcher, &all, 2, 2, 1).unwrap(),
+        schedule_disjoint_rewrites_via(
+            &executor,
+            &semantic_execution_support::policy(),
+            &all,
+            2,
+            2,
+            1,
+        )
+        .unwrap(),
         vec![1, 1, 1, 1],
         "footprint 1 chooses every candidate"
     );
@@ -70,14 +81,30 @@ fn schedule_via_matches_hand_checked_cases() {
     // (0 is within its 2-wide left footprint), cell 2 picked, cell 3 conflicts → [1,0,1,0].
     let row = vec![1, 1, 1, 1];
     assert_eq!(
-        schedule_disjoint_rewrites_via(&dispatcher, &row, 1, 4, 2).unwrap(),
+        schedule_disjoint_rewrites_via(
+            &executor,
+            &semantic_execution_support::policy(),
+            &row,
+            1,
+            4,
+            2,
+        )
+        .unwrap(),
         vec![1, 0, 1, 0],
         "footprint 2 selects every other candidate in a row"
     );
 
     // No candidates → empty chosen mask.
     assert_eq!(
-        schedule_disjoint_rewrites_via(&dispatcher, &[0, 0, 0], 1, 3, 2).unwrap(),
+        schedule_disjoint_rewrites_via(
+            &executor,
+            &semantic_execution_support::policy(),
+            &[0, 0, 0],
+            1,
+            3,
+            2,
+        )
+        .unwrap(),
         vec![0, 0, 0],
         "no candidates → nothing chosen"
     );

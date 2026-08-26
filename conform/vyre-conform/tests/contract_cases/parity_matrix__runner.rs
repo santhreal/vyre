@@ -4,10 +4,8 @@
 use std::env;
 
 use vyre::ir::Program;
-use vyre_conform::dispatch_grid;
 use vyre_conform::witness_plan::{plan_witness_inputs_into, WitnessInputPlan};
-use vyre_driver::backend_dispatches;
-use vyre_driver::{BackendRegistration, DispatchConfig};
+use vyre_driver::BackendRegistration;
 use vyre_reference::value::Value;
 
 use super::parity_matrix_divergence::Summary;
@@ -24,7 +22,7 @@ pub(crate) struct BackendRunner {
 }
 
 impl BackendRunner {
-    pub(crate) fn dispatch(
+    pub(crate) fn execute(
         &self,
         program: &Program,
         inputs: &[Vec<u8>],
@@ -42,20 +40,18 @@ impl BackendRunner {
             }
             BackendKind::Registered(_) => {
                 let mut backend_inputs = Vec::new();
-                let config = dispatch_grid::config_for_program(program)?;
-                self.dispatch_with_plan(program, inputs, values, None, &mut backend_inputs, &config)
+                self.execute_with_plan(program, inputs, values, None, &mut backend_inputs)
             }
         }
     }
 
-    pub(crate) fn dispatch_with_plan<'a>(
+    pub(crate) fn execute_with_plan<'a>(
         &self,
         program: &Program,
         inputs: &'a [Vec<u8>],
         values: &mut Vec<Value>,
         plan: Option<&'a WitnessInputPlan>,
         backend_inputs: &mut Vec<&'a [u8]>,
-        config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, String> {
         match &self.kind {
             BackendKind::ReferenceBackend => {
@@ -76,18 +72,16 @@ impl BackendRunner {
             }
             BackendKind::Registered(registration) => {
                 let run_submission = |planned_inputs: &[&[u8]]| -> Result<Vec<Vec<u8>>, String> {
-                    let production = vyre_conform::production::ProductionSession::compile_with_representative_inputs(
-                        program,
-                        planned_inputs,
-                        registration,
-                    )
-                    .map_err(|error| error.to_string())?;
-                    if let Some(grid) = config.grid_override {
-                        production.submit_with_invocation_grid(planned_inputs, grid)
-                    } else {
-                        production.submit(planned_inputs)
-                    }
-                    .map_err(|error| error.to_string())
+                    let production =
+                        vyre_conform::production::ProductionSession::from_registration(
+                            program,
+                            registration,
+                        )
+                        .map_err(|error| error.to_string())?;
+                    production
+                        .submit(planned_inputs)
+                        .map(|execution| execution.outputs)
+                        .map_err(|error| error.to_string())
                 };
 
                 if let Some(plan) = plan {
@@ -142,10 +136,10 @@ pub(crate) fn backend_runners(summary: &mut Summary) -> Vec<BackendRunner> {
 pub(crate) fn build_backend_runner(
     registration: &'static BackendRegistration,
 ) -> Option<BackendRunner> {
-    backend_dispatches(registration.id)
-        .expect("valid backend registry")
-        .then_some(BackendRunner {
+    (registration.target_compiler.is_some() && registration.materializer.is_some()).then_some(
+        BackendRunner {
             id: registration.id,
             kind: BackendKind::Registered(registration),
-        })
+        },
+    )
 }

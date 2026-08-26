@@ -12,8 +12,8 @@ use vyre_reference::composition_witness::path_reconstruct_witness;
 fn cuda_reconstruct_path_chain() {
     let parent = vec![0u32, 0, 1, 2];
     let mut gpu_scratch = Vec::new();
-    let gpu_len = with_cuda_optimizer_dispatcher("path chain", |dispatcher| {
-        reconstruct_path_via(dispatcher, &parent, 3, 4, &mut gpu_scratch).expect("dispatch")
+    let gpu_len = with_cuda_optimizer_dispatcher("path chain", |dispatcher, policy| {
+        reconstruct_path_via(dispatcher, policy, &parent, 3, 4, &mut gpu_scratch).expect("dispatch")
     });
     let (expected_scratch, expected_len) = path_reconstruct_witness(&parent, 3, 4);
     assert_eq!(gpu_len, expected_len);
@@ -24,8 +24,8 @@ fn cuda_reconstruct_path_chain() {
 fn cuda_reconstruct_path_root_target() {
     let parent = vec![0u32, 0, 1];
     let mut gpu_scratch = Vec::new();
-    let gpu_len = with_cuda_optimizer_dispatcher("path root", |dispatcher| {
-        reconstruct_path_via(dispatcher, &parent, 0, 4, &mut gpu_scratch).expect("dispatch")
+    let gpu_len = with_cuda_optimizer_dispatcher("path root", |dispatcher, policy| {
+        reconstruct_path_via(dispatcher, policy, &parent, 0, 4, &mut gpu_scratch).expect("dispatch")
     });
     let (expected_scratch, expected_len) = path_reconstruct_witness(&parent, 0, 4);
     assert_eq!(gpu_len, expected_len);
@@ -37,8 +37,8 @@ fn cuda_reconstruct_path_cycle_caps_at_max_depth() {
     // Cycle 0 -> 1 -> 2 -> 0.
     let parent = vec![1u32, 2, 0];
     let mut gpu_scratch = Vec::new();
-    let gpu_len = with_cuda_optimizer_dispatcher("path cycle", |dispatcher| {
-        reconstruct_path_via(dispatcher, &parent, 0, 5, &mut gpu_scratch).expect("dispatch")
+    let gpu_len = with_cuda_optimizer_dispatcher("path cycle", |dispatcher, policy| {
+        reconstruct_path_via(dispatcher, policy, &parent, 0, 5, &mut gpu_scratch).expect("dispatch")
     });
     let (expected_scratch, expected_len) = path_reconstruct_witness(&parent, 0, 5);
     assert_eq!(gpu_len, expected_len);
@@ -50,8 +50,8 @@ fn cuda_reconstruct_paths_batched() {
     let parent = vec![0u32, 0, 1, 2, 3, 4];
     let targets = vec![5u32, 4, 3, 2, 1, 0];
     let max_depth = 6u32;
-    let (paths, lens) = with_cuda_optimizer_dispatcher("batched paths", |dispatcher| {
-        reconstruct_paths_via(dispatcher, &parent, &targets, max_depth).expect("dispatch")
+    let (paths, lens) = with_cuda_optimizer_dispatcher("batched paths", |dispatcher, policy| {
+        reconstruct_paths_via(dispatcher, policy, &parent, &targets, max_depth).expect("dispatch")
     });
     assert_eq!(lens.len(), targets.len());
     for (i, &t) in targets.iter().enumerate() {
@@ -72,8 +72,8 @@ fn cuda_reconstruct_paths_oob_target_self_loops() {
     let parent = vec![0u32, 0, 1];
     // OOB target  -  witness reads parent.get(target).copied().unwrap_or(target) → self-loop.
     let targets = vec![100u32];
-    let (paths, lens) = with_cuda_optimizer_dispatcher("oob target paths", |dispatcher| {
-        reconstruct_paths_via(dispatcher, &parent, &targets, 4).expect("dispatch")
+    let (paths, lens) = with_cuda_optimizer_dispatcher("oob target paths", |dispatcher, policy| {
+        reconstruct_paths_via(dispatcher, policy, &parent, &targets, 4).expect("dispatch")
     });
     let (expected_scratch, expected_len) = path_reconstruct_witness(&parent, 100, 4);
     assert_eq!(lens[0], expected_len);

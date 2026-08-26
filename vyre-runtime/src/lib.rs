@@ -99,6 +99,8 @@ impl From<vyre_driver::BackendError> for PipelineError {
 
 /// Canonical artifact-envelope authentication and exact-format admission.
 pub mod artifact_admission;
+mod semantic_execution;
+pub use semantic_execution::RegisteredSemanticExecutor;
 
 /// Intra-device expert scheduling and inter-device token exchange.
 pub mod expert_scheduling;

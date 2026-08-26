@@ -29,8 +29,8 @@ modules, and submission mechanics.
 1. `ArtifactMaterializer` admits immutable authenticated target bytes for one
    device generation.
 2. `ArtifactInstance` accepts only bindings carrying its artifact digest.
-3. `BindingSet` separates immutable artifact identity from runtime invocation
-   geometry and resident resource selection.
+3. `BindingSet` contains artifact identity and resources only. The admitted
+   `TargetEntryPoint` contains the complete immutable submission geometry.
 4. Device loss invalidates native modules and resident handles from that
    generation. Recovery rematerializes target bytes without re-lowering.
 5. Backend operation support derives from the foundation semantic operation

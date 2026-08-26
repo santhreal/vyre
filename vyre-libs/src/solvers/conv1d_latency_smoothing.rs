@@ -7,12 +7,13 @@
 //! intact while giving the scheduler a stable signal.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
-    write_zero_bytes,
+    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::conv1d::{conv1d_node, conv1d_program, gaussian_weights, pack_params};
 use vyre_foundation::ir::Node;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 #[cfg(test)]
 use vyre_reference::composition_witness::conv1d_witness as reference_conv1d;
 
@@ -40,17 +41,18 @@ pub fn latency_smoothing_node(input: &str, output: &str, weights: &str, params: 
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when the input is too large for the primitive
+/// Returns [`SemanticExecutionError`] when the input is too large for the primitive
 /// buffer contract, `sigma` is not a positive finite value, backend dispatch
 /// fails, or readback is malformed.
 pub fn smooth_latency_trace_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     latency_fixed: &[u32],
     radius: u32,
     sigma: f32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
-    smooth_latency_trace_via_into(dispatcher, latency_fixed, radius, sigma, &mut out)?;
+    smooth_latency_trace_via_into(dispatcher, policy, latency_fixed, radius, sigma, &mut out)?;
     Ok(out)
 }
 
@@ -58,18 +60,20 @@ pub fn smooth_latency_trace_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] on invalid smoothing parameters, dispatch failure,
+/// Returns [`SemanticExecutionError`] on invalid smoothing parameters, dispatch failure,
 /// or malformed backend output.
 pub fn smooth_latency_trace_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     latency_fixed: &[u32],
     radius: u32,
     sigma: f32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = Conv1dLatencySmoothingScratch::default();
     smooth_latency_trace_via_with_scratch_into(
         dispatcher,
+        policy,
         latency_fixed,
         radius,
         sigma,
@@ -82,16 +86,17 @@ pub fn smooth_latency_trace_via_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] on invalid smoothing parameters, dispatch failure,
+/// Returns [`SemanticExecutionError`] on invalid smoothing parameters, dispatch failure,
 /// or malformed backend output.
 pub fn smooth_latency_trace_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     latency_fixed: &[u32],
     radius: u32,
     sigma: f32,
     scratch: &mut Conv1dLatencySmoothingScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, conv1d_latency_smoothing_calls};
     bump(&conv1d_latency_smoothing_calls);
 
@@ -100,12 +105,12 @@ pub fn smooth_latency_trace_via_with_scratch_into(
         return Ok(());
     }
     if !sigma.is_finite() || sigma <= 0.0 {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: smooth_latency_trace_via requires positive finite sigma, got {sigma}."
         )));
     }
     let count = u32::try_from(latency_fixed.len()).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: smooth_latency_trace_via input length {} exceeds u32 primitive count.",
             latency_fixed.len()
         ))
@@ -114,7 +119,7 @@ pub fn smooth_latency_trace_via_with_scratch_into(
         .len()
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: smooth_latency_trace_via input length {} overflows byte count.",
                 latency_fixed.len()
             ))
@@ -132,13 +137,16 @@ pub fn smooth_latency_trace_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[3], &scratch.params);
 
     let program = conv1d_program(count, radius);
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs,
-        Some([ceil_div_u32(count, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: smooth_latency_trace_via expected at least one output buffer, got {}.",
             outputs.len()
         )));
@@ -149,6 +157,7 @@ pub fn smooth_latency_trace_via_with_scratch_into(
         "smooth_latency_trace_via",
         out,
     )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// CPU oracle for latency smoothing, enabled only for parity tests.

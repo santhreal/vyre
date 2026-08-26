@@ -12,7 +12,7 @@ use crate::graph::toposort::{
     ToposortCsrError, ToposortCsrStaticInputKey, TOPOSORT_INDEGREE_SCRATCH_BUFFER,
     TOPOSORT_ORDER_OUT_BUFFER, TOPOSORT_QUEUE_SCRATCH_BUFFER,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Topologically sort a dependency graph through the dispatcher using the
 /// primitive-native CSR representation.
@@ -23,19 +23,21 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when CSR shape validation fails, the backend
+/// Returns [`SemanticExecutionError`] when CSR shape validation fails, the backend
 /// rejects the primitive, or the returned order is not a full permutation of
 /// `0..node_count` (cycle or malformed backend output).
 pub fn topo_order_csr_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     offsets: &[u32],
     targets: &[u32],
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut scratch = ToposortGpuScratch::default();
     let mut order = Vec::new();
     topo_order_csr_via_with_scratch_into(
         dispatcher,
+        policy,
         node_count,
         offsets,
         targets,
@@ -47,28 +49,30 @@ pub fn topo_order_csr_via(
 
 /// Topologically sort a dependency graph through the dispatcher using caller-owned scratch.
 pub fn topo_order_csr_via_with_scratch(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     offsets: &[u32],
     targets: &[u32],
     scratch: &mut ToposortGpuScratch,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut order = Vec::new();
     topo_order_csr_via_with_scratch_into(
-        dispatcher, node_count, offsets, targets, scratch, &mut order,
+        dispatcher, policy, node_count, offsets, targets, scratch, &mut order,
     )?;
     Ok(order)
 }
 
 /// Topologically sort a dependency graph into caller-owned output storage.
 pub fn topo_order_csr_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     offsets: &[u32],
     targets: &[u32],
     scratch: &mut ToposortGpuScratch,
     order: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, toposort_calls};
     bump(&toposort_calls);
 
@@ -91,11 +95,11 @@ pub fn topo_order_csr_via_with_scratch_into(
     refresh_toposort_inputs(inputs, static_input_key, &plan, offsets, targets)?;
     dispatch_single_u32_output_from_prepared_into(
         dispatcher,
-        &cached.program,
+        policy,
+        cached.program.clone(),
         inputs,
         plan.node_words,
         TOPOSORT_ORDER_OUT_BUFFER,
-        Some(plan.grid),
         order,
     )?;
     validate_toposort_csr_order(node_count, offsets, targets, order).map_err(map_toposort_csr_error)
@@ -107,7 +111,7 @@ fn refresh_toposort_inputs(
     plan: &ToposortCsrDispatchPlan,
     offsets: &[u32],
     targets: &[u32],
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let next_key = plan
         .static_input_key(offsets, targets)
         .map_err(map_toposort_csr_error)?;
@@ -126,10 +130,6 @@ fn refresh_toposort_inputs(
                 words: plan.node_words,
                 context: TOPOSORT_QUEUE_SCRATCH_BUFFER,
             },
-            DispatchInput::ZeroU32Words {
-                words: plan.node_words,
-                context: TOPOSORT_ORDER_OUT_BUFFER,
-            },
         ],
         &[
             (
@@ -146,25 +146,18 @@ fn refresh_toposort_inputs(
                     context: TOPOSORT_QUEUE_SCRATCH_BUFFER,
                 },
             ),
-            (
-                4,
-                DispatchInput::ZeroU32Words {
-                    words: plan.node_words,
-                    context: TOPOSORT_ORDER_OUT_BUFFER,
-                },
-            ),
         ],
     )?;
     Ok(())
 }
 
-fn map_toposort_csr_error(error: ToposortCsrError) -> DispatchError {
+fn map_toposort_csr_error(error: ToposortCsrError) -> SemanticExecutionError {
     // `ToposortCsrError` is `#[non_exhaustive]`, which stops another crate from
     // matching it without a wildcard. Both ends live in `vyre-libs` now, so a
     // new variant fails this match at compile time instead of falling into a
     // catch-all that reported the variant name to the caller as a backend error.
     match error {
-        ToposortCsrError::BadCsr { message } => DispatchError::BadInputs(message),
-        ToposortCsrError::BadOrder { message } => DispatchError::BackendError(message),
+        ToposortCsrError::BadCsr { message } => SemanticExecutionError::InvalidRequest(message),
+        ToposortCsrError::BadOrder { message } => SemanticExecutionError::Backend(message),
     }
 }

@@ -2,8 +2,8 @@
 
 use vyre_libs::graph::motif::{
     plan_motif_dispatch, plan_motif_launch, validate_csr_inputs, validate_motif_inputs, MotifEdge,
-    MotifLayout, MotifProgramCacheKey, MOTIF_DISPATCH_GRID, MOTIF_HITS_BUFFER,
-    MOTIF_WITNESS_OUT_BUFFER, MOTIF_WORKGROUP_SIZE, TWO_EDGE_PATH_MOTIF,
+    MotifLayout, MotifProgramCacheKey, MOTIF_HITS_BUFFER, MOTIF_WITNESS_OUT_BUFFER,
+    MOTIF_WORKGROUP_SIZE, TWO_EDGE_PATH_MOTIF,
 };
 use vyre_reference::composition_witness::{motif_witness, reduce_count_non_zero_witness};
 
@@ -155,7 +155,7 @@ fn validate_csr_inputs_accepts_empty_and_canonical_graphs() {
 }
 
 #[test]
-fn dispatch_plan_owns_shape_grid_buffers_and_readback_words() {
+fn dispatch_plan_owns_shape_buffers_and_readback_words() {
     let motif_edges = [MotifEdge {
         from: 0,
         kind_mask: 1,
@@ -173,7 +173,6 @@ fn dispatch_plan_owns_shape_grid_buffers_and_readback_words() {
     assert_eq!(launch.layout().node_count, 3);
     assert_eq!(launch.output_words(), 3);
     assert_eq!(launch.edge_storage_words(), 2);
-    assert_eq!(launch.dispatch_grid(), MOTIF_DISPATCH_GRID);
     assert_eq!(
         launch.cache_key(),
         &MotifProgramCacheKey {
@@ -199,7 +198,6 @@ fn dispatch_plan_owns_shape_grid_buffers_and_readback_words() {
     assert_eq!(plan.layout().motif_edge_count, 1);
     assert_eq!(plan.output_words(), 3);
     assert_eq!(plan.edge_storage_words(), 2);
-    assert_eq!(plan.dispatch_grid(), MOTIF_DISPATCH_GRID);
     assert_eq!(plan.program().workgroup_size, MOTIF_WORKGROUP_SIZE);
     let bindings = plan
         .program()

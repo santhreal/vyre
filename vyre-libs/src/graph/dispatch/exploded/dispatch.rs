@@ -16,7 +16,9 @@ use crate::graph::exploded::{
 
 use crate::dispatch_buffers::decode_u32_output_exact;
 use crate::graph::dispatch::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// GPU dispatch wrapper around the `build_cpu_reference` CPU oracle.
 ///
@@ -30,7 +32,8 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 /// shapes that cannot represent an exploded CSR safely.
 #[allow(clippy::too_many_arguments)]
 pub fn build_ifds_csr_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     num_procs: u32,
     blocks_per_proc: u32,
     facts_per_proc: u32,
@@ -38,11 +41,12 @@ pub fn build_ifds_csr_via(
     inter_edges: &[(u32, u32, u32, u32)],
     flow_gen: &[(u32, u32, u32)],
     flow_kill: &[(u32, u32, u32)],
-) -> Result<(Vec<u32>, Vec<u32>), DispatchError> {
+) -> Result<(Vec<u32>, Vec<u32>), SemanticExecutionError> {
     let mut row_ptr = Vec::new();
     let mut col_idx = Vec::new();
     build_ifds_csr_via_into(
         dispatcher,
+        policy,
         num_procs,
         blocks_per_proc,
         facts_per_proc,
@@ -59,7 +63,8 @@ pub fn build_ifds_csr_via(
 /// GPU dispatch wrapper around the `build_cpu_reference` CPU oracle into caller-owned CSR buffers.
 #[allow(clippy::too_many_arguments)]
 pub fn build_ifds_csr_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     num_procs: u32,
     blocks_per_proc: u32,
     facts_per_proc: u32,
@@ -69,10 +74,11 @@ pub fn build_ifds_csr_via_into(
     flow_kill: &[(u32, u32, u32)],
     row_ptr_out: &mut Vec<u32>,
     col_idx_out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = IfdsCsrGpuScratch::default();
     build_ifds_csr_via_with_scratch_into(
         dispatcher,
+        policy,
         num_procs,
         blocks_per_proc,
         facts_per_proc,
@@ -90,7 +96,8 @@ pub fn build_ifds_csr_via_into(
 /// dispatch scratch and CSR buffers.
 #[allow(clippy::too_many_arguments)]
 pub fn build_ifds_csr_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     num_procs: u32,
     blocks_per_proc: u32,
     facts_per_proc: u32,
@@ -101,7 +108,7 @@ pub fn build_ifds_csr_via_with_scratch_into(
     scratch: &mut IfdsCsrGpuScratch,
     row_ptr_out: &mut Vec<u32>,
     col_idx_out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let plan = plan_ifds_csr_dispatch(
         num_procs,
         blocks_per_proc,
@@ -111,7 +118,7 @@ pub fn build_ifds_csr_via_with_scratch_into(
         flow_gen,
         flow_kill,
     )
-    .map_err(DispatchError::BadInputs)?;
+    .map_err(SemanticExecutionError::InvalidRequest)?;
     if plan.layout.empty {
         row_ptr_out.clear();
         row_ptr_out.push(0);
@@ -125,7 +132,7 @@ pub fn build_ifds_csr_via_with_scratch_into(
             .rule_columns
             .prepare(intra_edges, inter_edges, flow_gen, flow_kill)
             .map_err(|error| {
-                DispatchError::BackendError(format!(
+                SemanticExecutionError::Backend(format!(
                     "Fix: exploded IFDS wrapper could not marshal primitive rule columns: {error}"
                 ))
             })?;
@@ -218,6 +225,7 @@ pub fn build_ifds_csr_via_with_scratch_into(
         });
     dispatch_ifds_csr_outputs_from_prepared_into(
         dispatcher,
+        policy,
         &cached.program,
         &scratch.inputs,
         &plan,
@@ -233,7 +241,6 @@ pub fn build_ifds_csr_via_with_scratch_into(
         plan.col_len_words,
         IFDS_CSR_COL_LEN_BUFFER,
         &mut scratch.col_len_words,
-        Some(plan.grid),
     )?;
     let col_len = validate_ifds_csr_readback(
         &plan.layout,
@@ -241,7 +248,7 @@ pub fn build_ifds_csr_via_with_scratch_into(
         col_idx_out,
         scratch.col_len_words[0],
     )
-    .map_err(DispatchError::BackendError)?;
+    .map_err(SemanticExecutionError::Backend)?;
     col_idx_out.truncate(col_len);
     canonicalize_csr_within_rows_in_place(row_ptr_out, col_idx_out)?;
     Ok(())
@@ -249,7 +256,8 @@ pub fn build_ifds_csr_via_with_scratch_into(
 
 #[allow(clippy::too_many_arguments)]
 fn dispatch_ifds_csr_outputs_from_prepared_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     program: &vyre_foundation::ir::Program,
     scratch_inputs: &[Vec<u8>],
     plan: &IfdsCsrDispatchPlan,
@@ -265,10 +273,16 @@ fn dispatch_ifds_csr_outputs_from_prepared_into(
     col_len_expected_words: usize,
     col_len_context: &str,
     col_len_out: &mut Vec<u32>,
-    grid_override: Option<[u32; 3]>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let expected_killed_bytes = plan.killed_words * std::mem::size_of::<u32>();
-    let outputs = dispatcher.dispatch(program, scratch_inputs, grid_override)?;
+    let outputs = execute_single_program(
+        dispatcher,
+        "build_ifds_csr",
+        program.clone(),
+        scratch_inputs,
+        policy,
+    )?
+    .outputs;
     let (row_ptr_bytes, row_cursor_bytes, col_idx_bytes, col_len_bytes) = match outputs.as_slice() {
         [b0, b1, b2, b3] => (b0.as_slice(), b1.as_slice(), b2.as_slice(), b3.as_slice()),
         [killed, b0, b1, b2, b3] => {
@@ -276,7 +290,7 @@ fn dispatch_ifds_csr_outputs_from_prepared_into(
             (b0.as_slice(), b1.as_slice(), b2.as_slice(), b3.as_slice())
         }
         _ => {
-            return Err(DispatchError::BackendError(format!(
+            return Err(SemanticExecutionError::Backend(format!(
                 "Fix: {row_ptr_context} expected four u32 output buffers or killed scratch plus four u32 output buffers, got {}.",
                 outputs.len()
             )));
@@ -287,32 +301,36 @@ fn dispatch_ifds_csr_outputs_from_prepared_into(
         row_ptr_expected_words,
         row_ptr_context,
         row_ptr_out,
-    )?;
+    )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
     decode_u32_output_exact(
         row_cursor_bytes,
         row_cursor_expected_words,
         row_cursor_context,
         row_cursor_out,
-    )?;
+    )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
     decode_u32_output_exact(
         col_idx_bytes,
         col_idx_expected_words,
         col_idx_context,
         col_idx_out,
-    )?;
+    )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
     decode_u32_output_exact(
         col_len_bytes,
         col_len_expected_words,
         col_len_context,
         col_len_out,
     )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 fn validate_ifds_csr_killed_scratch_bytes(
     actual_len: usize,
     expected_len: usize,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if actual_len != expected_len {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: {IFDS_CSR_KILLED_BUFFER} expected {expected_len} byte(s), got {actual_len}.",
         )));
     }
@@ -322,9 +340,9 @@ fn validate_ifds_csr_killed_scratch_bytes(
 fn canonicalize_csr_within_rows_in_place(
     row_ptr: &[u32],
     col_idx: &mut [u32],
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     primitive_canonicalize_csr_within_rows_in_place(row_ptr, col_idx)
-        .map_err(DispatchError::BackendError)
+        .map_err(SemanticExecutionError::Backend)
 }
 
 fn refresh_ifds_csr_inputs(
@@ -333,7 +351,7 @@ fn refresh_ifds_csr_inputs(
     next_static_input_key: IfdsCsrStaticInputKey,
     plan: &IfdsCsrDispatchPlan,
     all_inputs: &[DispatchInput<'_>],
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     refresh_keyed_dispatch_inputs(
         inputs,
         static_input_key,

@@ -7,7 +7,7 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Vyre pass engine: executes the optimizer's own passes as Vyre Programs, dispatched through the ProgramDispatcher seam."
+description = "Vyre pass engine: executes optimizer analysis Programs through compiler-owned semantic execution."
 readme = "README.md"
 keywords = ["compiler", "optimizer", "dispatch", "vyre"]
 categories = ["compilers", "algorithms"]
@@ -43,6 +43,7 @@ vyre-foundation.workspace = true
 # than through `workspace = true`, which silently ignores `default-features = false`
 # unless the workspace entry states a `default-features` value of its own.
 vyre-libs = { version = "0.8.0", path = "../vyre-libs", default-features = false }
+vyre-megakernel.workspace = true
 vyre-primitives = { workspace = true }
 rustc-hash.workspace = true
 
@@ -50,12 +51,14 @@ rustc-hash.workspace = true
 vyre-test-support.workspace = true
 # Dev-dep only -> gated out of production builds of dependents.
 vyre-primitives = { path = "../vyre-primitives", default-features = false }
-vyre-reference = { path = "../vyre-reference" }
-# The one crate allowed to execute a Program on the host. Every parity test here
-# dispatches through its `ReferenceEvalDispatcher`, so an encoded pass is
-# compared against the interpreter running the same Program rather than against
-# a hand-written oracle that recognized only the programs it was written for.
+# The one crate allowed to execute a Program on the host. Parity tests use its
+# semantic executor, which compiles the same validated graphs as device targets
+# before running them on the reference interpreter.
 vyre-driver-reference = { path = "../vyre-driver-reference" }
+# The parity oracle itself: the reference interpreter the semantic executor runs
+# on, used directly for the lane-reversed differential that proves a program's
+# result does not depend on invocation order.
+vyre-reference = { workspace = true }
 # `vyre_libs::test_support` program-sequence helper and the `graph::dispatch`
 # composition surface the parity suites build programs from. Dev builds only,
 # the same way as the primitives oracles above.

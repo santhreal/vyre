@@ -11,7 +11,7 @@ use vyre_foundation::ir::Expr;
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_spec::c11_token::TOK_IDENTIFIER;
 
-use super::{ast_shunting_yard_with_capacity, MAX_TOK_SCAN, OP_ID};
+use super::{ast_shunting_yard_with_capacity, MAX_TOK_SCAN, OP_ID, STACK_SLOTS_PER_STATEMENT};
 const AST_NODES_BYTE_LEN: usize = (MAX_TOK_SCAN as usize) * 16;
 static EXPECTED_SHUNTING_AST_NODES_BYTES: [u8; AST_NODES_BYTE_LEN] = {
     let mut arr = [0u8; AST_NODES_BYTE_LEN];
@@ -51,6 +51,11 @@ inventory::submit! {
             vec![vec![
                 shunting_token_fixture(),
                 shunting_statement_fixture(),
+                pack_u32(&vec![0u32; (MAX_TOK_SCAN as usize) * 4]),
+                pack_u32(&[0u32]),
+                pack_u32(&vec![0u32; 100]),
+                pack_u32(&vec![0u32; 100 * (STACK_SLOTS_PER_STATEMENT as usize)]),
+                pack_u32(&vec![0u32; 100 * (STACK_SLOTS_PER_STATEMENT as usize)]),
             ]]
         }),
         Some(|| vec![vec![

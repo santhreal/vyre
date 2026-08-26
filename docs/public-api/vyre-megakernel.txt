@@ -12,6 +12,8 @@ impl vyre_megakernel::ExternalFacts
 impl vyre_megakernel::SearchBudget
 impl vyre_megakernel::SelectedLowering
 impl vyre_megakernel::SelectedPlan
+impl vyre_megakernel::SemanticExecutionPolicy
+impl vyre_megakernel::SingleProgramExecutionOutput
 impl vyre_megakernel::TargetModuleBundle
 impl vyre_megakernel::TargetModuleImage
 impl vyre_megakernel::TargetPayload
@@ -19,6 +21,7 @@ impl vyre_megakernel::TargetPayloadFormat
 impl vyre_megakernel::TargetProfile
 impl vyre_megakernel::ValidatedCompileRequest
 impl vyre_megakernel::legality::FusionRejectionReason
+impl<'a> vyre_megakernel::SemanticExecutionRequest<'a>
 pub const fn vyre_megakernel::Artifact::abi(&self) -> &vyre_megakernel::ArtifactAbi
 pub const fn vyre_megakernel::Artifact::digest(&self) -> vyre_megakernel::Digest
 pub const fn vyre_megakernel::Artifact::provenance(&self) -> &vyre_megakernel::Provenance
@@ -27,6 +30,7 @@ pub const fn vyre_megakernel::Artifact::schema_version(&self) -> u16
 pub const fn vyre_megakernel::Artifact::selected_plan(&self) -> &vyre_megakernel::SelectedPlan
 pub const fn vyre_megakernel::ArtifactEnvelope::neutral(&self) -> &vyre_megakernel::Artifact
 pub const fn vyre_megakernel::CompileRequest::new(graph: vyre_foundation::ir_inner::model::program_graph::ProgramGraph, facts: vyre_megakernel::ExternalFacts, device: vyre_megakernel::DeviceFacts, search_budget: vyre_megakernel::SearchBudget, max_artifact_bytes: u64) -> Self
+pub const fn vyre_megakernel::CompileRequest::with_objective(self, objective: vyre_megakernel::CompileObjective) -> Self
 pub const fn vyre_megakernel::DeviceFacts::calibrated_materialization_throughput_bytes_per_ns(&self) -> u64
 pub const fn vyre_megakernel::DeviceFacts::capabilities(&self) -> vyre_foundation::validate::options::BackendCapabilities
 pub const fn vyre_megakernel::DeviceFacts::compute_units(&self) -> u32
@@ -55,6 +59,19 @@ pub const fn vyre_megakernel::DeviceFacts::with_subgroup_size(self, subgroup_siz
 pub const fn vyre_megakernel::Digest::as_bytes(&self) -> &[u8; 32]
 pub const fn vyre_megakernel::SearchBudget::new(max_candidates: u32, max_cpu_work: u64, max_target_compilations: u32, max_measurements: u32, max_elapsed_ns: u64) -> Self
 pub const fn vyre_megakernel::SelectedLowering::descriptor(&self) -> &vyre_lower::descriptor::KernelDescriptor
+pub const fn vyre_megakernel::SemanticExecutionPolicy::budget(&self) -> vyre_megakernel::SearchBudget
+pub const fn vyre_megakernel::SemanticExecutionPolicy::external_facts(&self) -> &vyre_megakernel::ExternalFacts
+pub const fn vyre_megakernel::SemanticExecutionPolicy::max_artifact_bytes(&self) -> u64
+pub const fn vyre_megakernel::SemanticExecutionPolicy::new(external_facts: vyre_megakernel::ExternalFacts, target_facts: vyre_megakernel::DeviceFacts, objective: vyre_megakernel::CompileObjective, budget: vyre_megakernel::SearchBudget, max_artifact_bytes: u64) -> Self
+pub const fn vyre_megakernel::SemanticExecutionPolicy::objective(&self) -> vyre_megakernel::CompileObjective
+pub const fn vyre_megakernel::SemanticExecutionPolicy::target_facts(&self) -> vyre_megakernel::DeviceFacts
+pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::budget(&self) -> vyre_megakernel::SearchBudget
+pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::external_facts(&self) -> &vyre_megakernel::ExternalFacts
+pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::inputs(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, &'a [u8]>
+pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::logical(&self) -> &vyre_foundation::logical::LogicalProgramGraph<'a>
+pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::max_artifact_bytes(&self) -> u64
+pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::objective(&self) -> vyre_megakernel::CompileObjective
+pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::target_facts(&self) -> vyre_megakernel::DeviceFacts
 pub const fn vyre_megakernel::TargetPayload::digest(&self) -> vyre_megakernel::Digest
 pub const fn vyre_megakernel::TargetPayload::format(&self) -> &vyre_megakernel::TargetPayloadFormat
 pub const fn vyre_megakernel::TargetPayload::neutral_artifact(&self) -> vyre_megakernel::Digest
@@ -70,6 +87,7 @@ pub const fn vyre_megakernel::ValidatedCompileRequest::device(&self) -> vyre_meg
 pub const fn vyre_megakernel::ValidatedCompileRequest::facts(&self) -> &vyre_megakernel::ExternalFacts
 pub const fn vyre_megakernel::ValidatedCompileRequest::graph(&self) -> &vyre_foundation::ir_inner::model::program_graph::ProgramGraph
 pub const fn vyre_megakernel::ValidatedCompileRequest::max_artifact_bytes(&self) -> u64
+pub const fn vyre_megakernel::ValidatedCompileRequest::objective(&self) -> vyre_megakernel::CompileObjective
 pub const fn vyre_megakernel::ValidatedCompileRequest::representative_inputs(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::vec::Vec<u8>>
 pub const fn vyre_megakernel::ValidatedCompileRequest::search_budget(&self) -> vyre_megakernel::SearchBudget
 pub const fn vyre_megakernel::legality::FusionRejectionReason::code(self) -> &'static str
@@ -78,6 +96,7 @@ pub const vyre_megakernel::ARTIFACT_SCHEMA_VERSION: u16
 pub const vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16
 pub const vyre_megakernel::TARGET_PAYLOAD_SCHEMA_VERSION: u16
 pub enum vyre_megakernel::AbiAccess
+pub enum vyre_megakernel::CompileObjective
 pub enum vyre_megakernel::DependencyEndpoint
 pub enum vyre_megakernel::DependencyKind
 pub enum vyre_megakernel::ExecutionMode
@@ -86,6 +105,7 @@ pub enum vyre_megakernel::MaterializationReason
 pub enum vyre_megakernel::PlanMeasurement
 pub enum vyre_megakernel::ResidentPartitionMode
 pub enum vyre_megakernel::ResourceLifetime
+pub enum vyre_megakernel::SemanticExecutionError
 pub enum vyre_megakernel::TargetResourceAccess
 pub enum vyre_megakernel::TargetResourceMemory
 pub enum vyre_megakernel::legality::FusionDecision
@@ -115,6 +135,10 @@ pub fn vyre_megakernel::FinalistEvaluator::measure(&self, artifact: &vyre_megake
 pub fn vyre_megakernel::FinalistEvaluator::target_compiler(&self) -> &dyn vyre_megakernel::TargetCompiler
 pub fn vyre_megakernel::ResourceNameCollision::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_megakernel::SelectedPlan::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::SemanticExecutionRequest<'a>::compile_request(&self) -> vyre_megakernel::CompileRequest
+pub fn vyre_megakernel::SemanticExecutionRequest<'a>::new(logical: &'a vyre_foundation::logical::LogicalProgramGraph<'a>, inputs: alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, &'a [u8]>, external_facts: vyre_megakernel::ExternalFacts, target_facts: vyre_megakernel::DeviceFacts, objective: vyre_megakernel::CompileObjective, budget: vyre_megakernel::SearchBudget, max_artifact_bytes: u64) -> core::result::Result<Self, vyre_megakernel::SemanticExecutionError>
+pub fn vyre_megakernel::SemanticExecutor::execute(&self, request: &vyre_megakernel::SemanticExecutionRequest<'_>) -> core::result::Result<vyre_megakernel::SemanticExecutionOutput, vyre_megakernel::SemanticExecutionError>
+pub fn vyre_megakernel::SingleProgramExecutionOutput::buffer(&self, name: &str) -> core::option::Option<&[u8]>
 pub fn vyre_megakernel::TargetCompiler::compile(&self, artifact: &vyre_megakernel::Artifact) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::TargetCompiler::format(&self) -> &vyre_megakernel::TargetPayloadFormat
 pub fn vyre_megakernel::TargetCompiler::profile(&self) -> &vyre_megakernel::TargetProfile
@@ -135,8 +159,11 @@ pub fn vyre_megakernel::attach_target(artifact: vyre_megakernel::Artifact, compi
 pub fn vyre_megakernel::compile(request: &vyre_megakernel::ValidatedCompileRequest) -> core::result::Result<vyre_megakernel::Artifact, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::compile_measured(request: &vyre_megakernel::ValidatedCompileRequest, evaluator: &dyn vyre_megakernel::FinalistEvaluator) -> core::result::Result<vyre_megakernel::Artifact, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::compile_selected_modules(artifact: &vyre_megakernel::Artifact, format: vyre_megakernel::TargetPayloadFormat, profile: vyre_megakernel::TargetProfile, emit: impl core::ops::function::FnMut(&vyre_megakernel::SelectedLowering, &vyre_megakernel::TargetProfile) -> core::result::Result<vyre_megakernel::EmittedTargetModule, vyre_megakernel::TargetCompileError>) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::TargetCompileError>
+pub fn vyre_megakernel::execute_single_program(executor: &dyn vyre_megakernel::SemanticExecutor, node_name: &str, program: vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], policy: &vyre_megakernel::SemanticExecutionPolicy) -> core::result::Result<vyre_megakernel::SingleProgramExecutionOutput, vyre_megakernel::SemanticExecutionError>
 pub fn vyre_megakernel::grid_sync::requires_grid_sync(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> bool
 pub fn vyre_megakernel::legality::analyze_fusion_pair(graph: &vyre_foundation::ir_inner::model::program_graph::ProgramGraph, from: vyre_megakernel::ArtifactNodeId, to: vyre_megakernel::ArtifactNodeId, value: vyre_megakernel::ArtifactValueId) -> vyre_megakernel::legality::FusionDecision
+pub fn vyre_megakernel::writable_graph_value_buffers(node: &vyre_foundation::ir_inner::model::program_graph::ProgramGraphNode) -> alloc::vec::Vec<(vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::string::String)>
+pub fn vyre_megakernel::writable_graph_values(node: &vyre_foundation::ir_inner::model::program_graph::ProgramGraphNode) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program_graph::GraphValueId>
 pub mod vyre_megakernel
 pub mod vyre_megakernel::cost
 pub mod vyre_megakernel::grid_sync
@@ -172,6 +199,10 @@ pub struct vyre_megakernel::SearchWork
 pub struct vyre_megakernel::SelectedLowering
 pub struct vyre_megakernel::SelectedModule
 pub struct vyre_megakernel::SelectedPlan
+pub struct vyre_megakernel::SemanticExecutionOutput
+pub struct vyre_megakernel::SemanticExecutionPolicy
+pub struct vyre_megakernel::SemanticExecutionRequest<'a>
+pub struct vyre_megakernel::SingleProgramExecutionOutput
 pub struct vyre_megakernel::TargetEntryPoint
 pub struct vyre_megakernel::TargetModuleBundle
 pub struct vyre_megakernel::TargetModuleImage
@@ -182,6 +213,7 @@ pub struct vyre_megakernel::TargetResourceBinding
 pub struct vyre_megakernel::ValidatedCompileRequest
 pub struct vyre_megakernel::cost::CostBreakdown
 pub trait vyre_megakernel::FinalistEvaluator
+pub trait vyre_megakernel::SemanticExecutor: core::marker::Send + core::marker::Sync
 pub trait vyre_megakernel::TargetCompiler: core::marker::Send + core::marker::Sync
 pub use vyre_megakernel::Diagnostic
 pub vyre_megakernel::AbiAccess::ReadOnly
@@ -194,6 +226,7 @@ pub vyre_megakernel::BarrierRecord::after_stage: u32
 pub vyre_megakernel::BarrierRecord::before_stage: u32
 pub vyre_megakernel::BarrierRecord::dependencies: alloc::vec::Vec<u32>
 pub vyre_megakernel::CompileError::diagnostic: vyre_foundation::diagnostics::Diagnostic
+pub vyre_megakernel::CompileObjective::MinimizeLatency
 pub vyre_megakernel::DependencyEdge::from: vyre_megakernel::DependencyEndpoint
 pub vyre_megakernel::DependencyEdge::kind: vyre_megakernel::DependencyKind
 pub vyre_megakernel::DependencyEdge::to: vyre_megakernel::DependencyEndpoint
@@ -314,6 +347,17 @@ pub vyre_megakernel::SelectedPlan::search_budget: vyre_megakernel::SearchBudget
 pub vyre_megakernel::SelectedPlan::search_work: vyre_megakernel::SearchWork
 pub vyre_megakernel::SelectedPlan::selection_cost: vyre_megakernel::cost::CostBreakdown
 pub vyre_megakernel::SelectedPlan::topology: vyre_megakernel::ExecutionTopology
+pub vyre_megakernel::SemanticExecutionError::Backend(alloc::string::String)
+pub vyre_megakernel::SemanticExecutionError::Compile(vyre_megakernel::CompileError)
+pub vyre_megakernel::SemanticExecutionError::InvalidRequest(alloc::string::String)
+pub vyre_megakernel::SemanticExecutionError::Target(vyre_megakernel::TargetCompileError)
+pub vyre_megakernel::SemanticExecutionOutput::artifact: vyre_megakernel::Digest
+pub vyre_megakernel::SemanticExecutionOutput::outputs: alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::vec::Vec<u8>>
+pub vyre_megakernel::SemanticExecutionOutput::payload: vyre_megakernel::Digest
+pub vyre_megakernel::SingleProgramExecutionOutput::artifact: vyre_megakernel::Digest
+pub vyre_megakernel::SingleProgramExecutionOutput::output_buffers: alloc::vec::Vec<alloc::string::String>
+pub vyre_megakernel::SingleProgramExecutionOutput::outputs: alloc::vec::Vec<alloc::vec::Vec<u8>>
+pub vyre_megakernel::SingleProgramExecutionOutput::payload: vyre_megakernel::Digest
 pub vyre_megakernel::TargetCompileError::Emission(alloc::string::String)
 pub vyre_megakernel::TargetCompileError::InvalidArtifact(alloc::string::String)
 pub vyre_megakernel::TargetCompileError::ModuleBundle(alloc::string::String)

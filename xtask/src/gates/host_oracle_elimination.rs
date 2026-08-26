@@ -16,7 +16,7 @@
 //!   erasing candidate status.
 //! - Trusted roots require exact canonical qualified type provenance derived from actual workspace
 //!   declarations and imports (`vyre_foundation::ir::*`, `vyre_foundation::operation::OperationRegistration`,
-//!   `vyre_foundation::program_dispatch::*`); bare names, glob imports, `crate::bogus::*`,
+//!   `vyre_megakernel::SemanticExecutor`); bare names, glob imports, `crate::bogus::*`,
 //!   sibling-module imports, and local dummy traits/structs fail closed.
 //! - IR builder roots strictly require returning AST/IR owner types (`Program`, `Node`, `Expr`,
 //!   `OperationRegistration`), optionally wrapped in `Result<T, _>`, `Option<T>`,
@@ -24,8 +24,8 @@
 //!   mixed data-output tuples (`(Vec<u32>, DataType)`) or data results (`Result<Vec<u32>, FusionError>`)
 //!   do NOT establish builder roots.
 //! - Dispatch roots strictly require an exact canonical dispatcher capability parameter
-//!   (`ProgramDispatcher`) AND device dispatch execution in the body, derived dynamically from grounded
-//!   trait signatures taking `Program` or `ResidentDispatchStep` plan types and producing dispatch/readback
+//!   (`SemanticExecutor`) AND device execution in the body, derived dynamically from grounded
+//!   trait signatures taking `Program` or `SemanticExecutionRequest` plan types and producing execution/readback
 //!   effects (capability, metadata, allocation, upload-only, and free methods do not establish execution).
 //!   Passing dispatcher to non-dispatching helpers does not root; helpers that execute dispatch establish execution
 //!   transitively.

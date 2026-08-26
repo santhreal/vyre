@@ -76,5 +76,16 @@ It does not run. An artifact is device-neutral by construction; running it
 means compiling a target payload for a live device and admitting that
 payload. See [backends](backends.md).
 
-It does not dispatch a bare `Program`. Raw `Program` dispatch exists in the
-reference, parity and conformance seams and is not a production route.
+It does not execute. Execution is a separate seam: `SemanticExecutor::execute`
+takes a `SemanticExecutionRequest` built from a validated `LogicalProgramGraph`,
+the byte payload for each canonical graph input, and a
+`SemanticExecutionPolicy` carrying external facts, target facts, a
+`CompileObjective`, a `SearchBudget` and an artifact ceiling. It returns the
+artifact identity, the target payload identity, and one byte buffer per retained
+graph value. No launch geometry crosses that boundary in either direction.
+
+A single schedule-free `Program` reaches the same seam through
+`execute_single_program`, which validates the program as a one-node graph and
+returns a `SingleProgramExecutionOutput` with one buffer per written Program
+buffer, in declaration order. `writable_graph_values` and
+`writable_graph_value_buffers` state that order for one node.

@@ -1,6 +1,6 @@
 //! End-to-end parity for `data::matroid_exact_megakernel::select_optimal_subset_via`, the full
 //! Edmonds matroid-intersection megakernel (provably-optimal fusion subset), through the shared
-//! faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `matroid_intersection_full`'s IR is not run through a faithful dispatch boundary by any
@@ -16,9 +16,7 @@
 //!
 //! This is a SINGLE-THREADED sequential Edmonds algorithm with a NON-IDEMPOTENT toggle
 //! (`set_x[node] = 1 - set_x[node]`); it would race if run by multiple lanes, but its ENTIRE body is
-//! guarded to `InvocationId == 0` so exactly one invocation executes it, correct under ANY grid,
-//! including the grid ReferenceEvalDispatcher infers from buffer shapes (which ignores the consumer's
-//! `[1,1,1]` request and over-fires `n` lanes; the lane-0 guard makes that harmless). Result is exact
+//! guarded to `InvocationId == 0` so one invocation executes it. Result is exact
 //! (deterministic, lowest-id tie-breaks) → compared BIT-FOR-BIT against `reference_select_optimal_subset`.
 //!
 //! Running this IR faithfully surfaced (and this suite locks) TWO real defects that the in-crate mock
@@ -36,10 +34,12 @@
 //!      agree at EVERY `max_augmentations`; `via_multi_augmentation_matches_reference` locks the >1 case
 //!      and the main sweep exercises varying `max_augmentations` (1..4).
 
+mod semantic_execution_support;
+
 use vyre_libs::encoding::matroid_exact_megakernel::select_optimal_subset_via;
 use vyre_reference::composition_witness::matroid_select_optimal_subset_witness as reference_select_optimal_subset;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// A random 0/1 vector of length `len`.
@@ -49,7 +49,7 @@ fn bits(state: &mut u32, len: usize) -> Vec<u32> {
 
 #[test]
 fn select_optimal_subset_via_matches_reference_over_random_exchange_graphs() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let mut state = 0x3A_70_00_01u32;
     let mut nonempty_result = 0u32;
     let mut nontrivial_seed = 0u32;
@@ -75,6 +75,7 @@ fn select_optimal_subset_via_matches_reference_over_random_exchange_graphs() {
 
         let got = select_optimal_subset_via(
             &d,
+            &semantic_execution_support::policy(),
             &exchange_adj,
             &sources,
             &sinks,
@@ -122,12 +123,13 @@ fn select_optimal_subset_via_matches_reference_over_random_exchange_graphs() {
 
 #[test]
 fn select_optimal_subset_via_hand_checked_empty_and_seeded() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
 
     // No exchange edges, no sources/sinks, empty seed: nothing to augment → the empty set.
     let n = 3;
     let got = select_optimal_subset_via(
         &d,
+        &semantic_execution_support::policy(),
         &vec![0; n * n],
         &[0, 0, 0],
         &[0, 0, 0],
@@ -148,8 +150,17 @@ fn select_optimal_subset_via_hand_checked_empty_and_seeded() {
 
     // A pre-seeded independent set with no augmenting structure is preserved by both.
     let seed = vec![1, 0, 1];
-    let got = select_optimal_subset_via(&d, &vec![0; n * n], &[0, 0, 0], &[0, 0, 0], &seed, n, 5)
-        .unwrap();
+    let got = select_optimal_subset_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &vec![0; n * n],
+        &[0, 0, 0],
+        &[0, 0, 0],
+        &seed,
+        n,
+        5,
+    )
+    .unwrap();
     let want =
         reference_select_optimal_subset(&vec![0; n * n], &[0, 0, 0], &[0, 0, 0], &seed, n, 5)
             .unwrap();
@@ -167,7 +178,7 @@ fn select_optimal_subset_via_hand_checked_empty_and_seeded() {
 /// clean length-1 augmenting path AND on a shrink case where the toggle must be reverted.
 #[test]
 fn via_multi_augmentation_matches_reference() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     // n=2 with a clean length-1 augmenting path: source node 0 --exchange--> sink node 1, empty seed.
     let n = 2;
     let exchange_adj = vec![0, 1, 0, 0]; // adj[0*2+1] = 1: edge 0 -> 1
@@ -175,7 +186,17 @@ fn via_multi_augmentation_matches_reference() {
     let sinks = [0, 1]; // node 1 is a sink
     let seed = [0, 0];
 
-    let got1 = select_optimal_subset_via(&d, &exchange_adj, &sources, &sinks, &seed, n, 1).unwrap();
+    let got1 = select_optimal_subset_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &exchange_adj,
+        &sources,
+        &sinks,
+        &seed,
+        n,
+        1,
+    )
+    .unwrap();
     let ref1 =
         reference_select_optimal_subset(&exchange_adj, &sources, &sinks, &seed, n, 1).unwrap();
 
@@ -193,8 +214,17 @@ fn via_multi_augmentation_matches_reference() {
     // Every larger budget must yield the SAME converged answer as the reference (which halts on the
     // seen-state cycle keeping the max-cardinality endpoint s0^P=[1,1], since |[1,1]|=2 > |[0,0]|=0).
     for budget in 2..=5u32 {
-        let got = select_optimal_subset_via(&d, &exchange_adj, &sources, &sinks, &seed, n, budget)
-            .unwrap();
+        let got = select_optimal_subset_via(
+            &d,
+            &semantic_execution_support::policy(),
+            &exchange_adj,
+            &sources,
+            &sinks,
+            &seed,
+            n,
+            budget,
+        )
+        .unwrap();
         let want =
             reference_select_optimal_subset(&exchange_adj, &sources, &sinks, &seed, n, budget)
                 .unwrap();
@@ -224,7 +254,17 @@ fn via_multi_augmentation_matches_reference() {
     let sinks3 = [0, 0, 1];
     let seed3 = [1, 1, 1];
     // Budget 1 toggles unconditionally (reference toggles once): [1,1,1] -> [0,1,0].
-    let got_b1 = select_optimal_subset_via(&d, &adj3, &sources3, &sinks3, &seed3, n3, 1).unwrap();
+    let got_b1 = select_optimal_subset_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &adj3,
+        &sources3,
+        &sinks3,
+        &seed3,
+        n3,
+        1,
+    )
+    .unwrap();
     let ref_b1 = reference_select_optimal_subset(&adj3, &sources3, &sinks3, &seed3, n3, 1).unwrap();
     assert_eq!(
         got_b1, ref_b1,
@@ -233,8 +273,17 @@ fn via_multi_augmentation_matches_reference() {
     // Budget >= 2: reference halts on the 2-cycle keeping max cardinality = the seed [1,1,1]; the IR
     // must revert the shrinking toggle to match.
     for budget in 2..=4u32 {
-        let got =
-            select_optimal_subset_via(&d, &adj3, &sources3, &sinks3, &seed3, n3, budget).unwrap();
+        let got = select_optimal_subset_via(
+            &d,
+            &semantic_execution_support::policy(),
+            &adj3,
+            &sources3,
+            &sinks3,
+            &seed3,
+            n3,
+            budget,
+        )
+        .unwrap();
         let want =
             reference_select_optimal_subset(&adj3, &sources3, &sinks3, &seed3, n3, budget).unwrap();
         assert_eq!(
@@ -260,8 +309,17 @@ fn via_multi_augmentation_matches_reference() {
     let sinks2 = [0, 1];
     let seed2 = [0, 1]; // sink seeded, source not: toggling {0,1} keeps cardinality (1 -> 1)
     for budget in 1..=4u32 {
-        let got =
-            select_optimal_subset_via(&d, &adj2, &sources2, &sinks2, &seed2, n2, budget).unwrap();
+        let got = select_optimal_subset_via(
+            &d,
+            &semantic_execution_support::policy(),
+            &adj2,
+            &sources2,
+            &sinks2,
+            &seed2,
+            n2,
+            budget,
+        )
+        .unwrap();
         let want =
             reference_select_optimal_subset(&adj2, &sources2, &sinks2, &seed2, n2, budget).unwrap();
         assert_eq!(

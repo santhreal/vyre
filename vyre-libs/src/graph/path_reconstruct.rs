@@ -39,8 +39,6 @@ pub const BATCHED_PATH_TARGETS_BUFFER: &str = "batched_path_reconstruct targets"
 pub const BATCHED_PATHS_BUFFER: &str = "batched_path_reconstruct paths";
 /// Canonical batched-length output buffer.
 pub const BATCHED_LENS_BUFFER: &str = "batched_path_reconstruct lens";
-/// Single-lane path-reconstruction dispatch grid.
-pub const PATH_RECONSTRUCT_DISPATCH_GRID: [u32; 3] = [1, 1, 1];
 
 /// Validated batched path-reconstruction buffer layout.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -68,8 +66,6 @@ pub struct PathReconstructDispatchPlan {
     pub len_words: usize,
     /// Maximum path depth accepted by this dispatch.
     pub max_depth: u32,
-    /// Dispatch grid override.
-    pub grid: [u32; 3],
 }
 
 impl PathReconstructDispatchPlan {
@@ -130,8 +126,6 @@ pub struct BatchedPathReconstructDispatchPlan {
     pub len_words: usize,
     /// Maximum path depth accepted by this dispatch.
     pub max_depth: u32,
-    /// Dispatch grid override.
-    pub grid: [u32; 3],
 }
 
 /// Primitive-owned identity for reusable path-reconstruction static inputs.
@@ -443,7 +437,6 @@ pub fn plan_path_reconstruct_dispatch(
         path_words: max_depth as usize,
         len_words: 1,
         max_depth,
-        grid: PATH_RECONSTRUCT_DISPATCH_GRID,
     })
 }
 
@@ -467,7 +460,6 @@ pub fn plan_batched_path_reconstruct_dispatch(
         path_words: layout.path_words,
         len_words: target_len,
         max_depth,
-        grid: vyre_primitives::lane_grid(layout.target_count, BATCHED_WORKGROUP_SIZE),
         layout,
     })
 }
@@ -540,7 +532,6 @@ mod dispatch_plan_tests {
         assert_eq!(plan.target_words, 1);
         assert_eq!(plan.path_words, 8);
         assert_eq!(plan.len_words, 1);
-        assert_eq!(plan.grid, PATH_RECONSTRUCT_DISPATCH_GRID);
     }
 
     #[test]
@@ -582,7 +573,6 @@ mod dispatch_plan_tests {
         assert_eq!(plan.target_words, 513);
         assert_eq!(plan.path_words, 1539);
         assert_eq!(plan.len_words, 513);
-        assert_eq!(plan.grid, [3, 1, 1]);
         assert_eq!(plan.layout.target_count, 513);
     }
 

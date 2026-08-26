@@ -115,9 +115,9 @@ fn empty_offsets_shorthand_is_empty_edge_set_only() {
 }
 
 #[test]
-fn dispatch_plan_selects_changed_history_and_pins_buffer_shape() {
+fn launch_plan_selects_changed_history_and_pins_buffer_shape() {
     let edge_offsets = vec![0u32; 66];
-    let plan = plan_csr_forward_or_changed_dispatch(CsrClosureInputs::allow_all(
+    let plan = plan_csr_forward_or_changed_launch(CsrClosureInputs::allow_all(
         CsrGraphView {
             node_count: 65,
             edge_offsets: &edge_offsets,
@@ -127,6 +127,9 @@ fn dispatch_plan_selects_changed_history_and_pins_buffer_shape() {
         8,
     ))
     .expect("Fix: bounded CSR forward-or-changed plan should validate");
+    let program = plan
+        .program()
+        .expect("Fix: the selected changed-history program should build");
 
     assert_eq!(plan.layout().node_count, 65);
     assert_eq!(plan.frontier_words(), 3);
@@ -140,13 +143,13 @@ fn dispatch_plan_selects_changed_history_and_pins_buffer_shape() {
         plan.changed_read_index(8).is_err(),
         "Fix: changed-history readback index must reject iterations outside the buffer"
     );
-    assert_eq!(plan.dispatch_grid(), [1, 1, 1]);
+    assert_eq!(vyre_foundation::guarded_logical_span(&program), Some(65));
     assert_eq!(
-        plan.program().workgroup_size,
+        program.workgroup_size,
         CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE
     );
     assert!(
-        plan.program()
+        program
             .buffers()
             .iter()
             .any(|buffer| buffer.name() == "changed_slot"),
@@ -155,8 +158,8 @@ fn dispatch_plan_selects_changed_history_and_pins_buffer_shape() {
 }
 
 #[test]
-fn dispatch_plan_uses_single_changed_word_for_unbounded_or_zero_iteration_cases() {
-    let plan = plan_csr_forward_or_changed_dispatch(CsrClosureInputs::allow_all(
+fn launch_plan_uses_single_changed_word_for_unbounded_or_zero_iteration_cases() {
+    let plan = plan_csr_forward_or_changed_launch(CsrClosureInputs::allow_all(
         CsrGraphView {
             node_count: 0,
             edge_offsets: &[],
@@ -166,14 +169,17 @@ fn dispatch_plan_uses_single_changed_word_for_unbounded_or_zero_iteration_cases(
         0,
     ))
     .expect("Fix: zero-node zero-iteration plan should validate");
+    let program = plan
+        .program()
+        .expect("Fix: the zero-node program should build");
     assert_eq!(plan.frontier_words(), 1);
     assert_eq!(plan.changed_words(), 1);
     assert!(!plan.uses_changed_history());
     assert_eq!(plan.changed_slot_value(0), None);
     assert_eq!(plan.changed_read_index(99).unwrap(), 0);
-    assert_eq!(plan.dispatch_grid(), [1, 1, 1]);
+    assert_eq!(vyre_foundation::guarded_logical_span(&program), Some(1));
 
-    let long_plan = plan_csr_forward_or_changed_dispatch(CsrClosureInputs::allow_all(
+    let long_plan = plan_csr_forward_or_changed_launch(CsrClosureInputs::allow_all(
         CsrGraphView {
             node_count: 1,
             edge_offsets: &[0, 0],
@@ -183,27 +189,17 @@ fn dispatch_plan_uses_single_changed_word_for_unbounded_or_zero_iteration_cases(
         65,
     ))
     .expect("Fix: long-running plan should validate without changed history");
+    let long_program = long_plan
+        .program()
+        .expect("Fix: the unbounded program should build");
     assert_eq!(long_plan.changed_words(), 1);
     assert!(!long_plan.uses_changed_history());
     assert!(
-        !long_plan
-            .program()
+        !long_program
             .buffers()
             .iter()
             .any(|buffer| buffer.name() == "changed_slot"),
         "Fix: unbounded path must not carry the changed-history slot input"
-    );
-}
-
-#[test]
-fn parallel_dispatch_grid_packs_source_lanes_into_blocks() {
-    assert_eq!(csr_forward_or_changed_parallel_grid(0), [1, 1, 1]);
-    assert_eq!(csr_forward_or_changed_parallel_grid(65), [1, 1, 1]);
-    assert_eq!(csr_forward_or_changed_parallel_grid(256), [1, 1, 1]);
-    assert_eq!(csr_forward_or_changed_parallel_grid(257), [2, 1, 1]);
-    assert_eq!(
-        csr_forward_or_changed_parallel_batch_grid(513, 3),
-        [3, 3, 1]
     );
 }
 

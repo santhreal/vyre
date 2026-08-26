@@ -57,16 +57,6 @@ pub const BINDING_WHITESPACE_MASK_OUT: u32 = 1;
 /// Word-lane workgroup used by the whitespace classifier.
 pub const WHITESPACE_CLASSIFY_WORD_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-#[cfg(test)]
-pub(crate) const fn whitespace_classify_word_dispatch_grid(word_count: u32) -> [u32; 3] {
-    let blocks = word_count.div_ceil(WHITESPACE_CLASSIFY_WORD_WORKGROUP_SIZE[0]);
-    if blocks == 0 {
-        [1, 1, 1]
-    } else {
-        [blocks, 1, 1]
-    }
-}
-
 /// JSON / CSV / structural whitespace set: SP, TAB, LF, CR.
 const WS_SP: u32 = 0x20;
 const WS_TAB: u32 = 0x09;
@@ -237,7 +227,9 @@ inventory::submit! {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             let mut words = vec![0x78787878; 256];
             words[0] = 0x20 | (0x09 << 8) | (0x78 << 16) | (0x0A << 24);
-            vec![vec![to_bytes(&words)]] // bytes_in
+            // `whitespace_mask_out` is read-write storage, so the reference takes
+            // one seeded Value for it exactly as a device takes one bound buffer.
+            vec![vec![to_bytes(&words), to_bytes(&vec![0u32; 256])]]
         }),
         Some(|| vec![vec![EXPECTED_WHITESPACE_CLASSIFY_WORD_OUTPUT_BYTES.to_vec()]]),
     )
@@ -425,15 +417,6 @@ mod tests {
             program.workgroup_size(),
             WHITESPACE_CLASSIFY_WORD_WORKGROUP_SIZE
         );
-    }
-
-    #[test]
-    fn dispatch_grid_packs_word_lanes_into_blocks() {
-        assert_eq!(whitespace_classify_word_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(whitespace_classify_word_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(whitespace_classify_word_dispatch_grid(256), [1, 1, 1]);
-        assert_eq!(whitespace_classify_word_dispatch_grid(257), [2, 1, 1]);
-        assert_eq!(whitespace_classify_word_dispatch_grid(1025), [5, 1, 1]);
     }
 
     #[test]

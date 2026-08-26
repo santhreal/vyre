@@ -1,5 +1,6 @@
 //! End-to-end parity for `graph::union_find_emit::union_find_alias_via`: the batched lock-free
-//! concurrent union-find (alias analysis) (through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`]).
+//! concurrent union-find (alias analysis) through the shared faithful
+//! [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `union_find_program`'s IR is not run through a faithful dispatch boundary by any
@@ -19,13 +20,15 @@
 //! only up to intermediate parent links, not byte-for-byte), so the assertion is a full partition-equality
 //! check (exact, no tolerance).
 
+mod semantic_execution_support;
+
 use vyre_libs::graph::dispatch::union_find_emit::union_find_alias_via;
 use vyre_reference::composition_witness::{
     canonicalize_union_find_witness as canonicalize_parent_to_roots,
     union_find_alias_witness as reference_union_find_alias,
 };
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// Number of distinct components in a root-canonicalized parent vector.
@@ -38,7 +41,7 @@ fn component_count(roots: &[u32]) -> usize {
 
 #[test]
 fn union_find_alias_via_matches_reference_partition_over_random_graphs() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x0F1_0001u32;
     let mut actually_merged = 0u32; // cases where the batch fused >= 2 seed singletons
     for case in 0..400u32 {
@@ -52,8 +55,14 @@ fn union_find_alias_via_matches_reference_partition_over_random_graphs() {
             edge_b.push(xorshift(&mut state) % n);
         }
 
-        let got = union_find_alias_via(&dispatcher, &parent_init, &edge_a, &edge_b)
-            .expect("union_find_alias_via must dispatch the atomic union-find");
+        let got = union_find_alias_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &parent_init,
+            &edge_a,
+            &edge_b,
+        )
+        .expect("union_find_alias_via must dispatch the atomic union-find");
         let want = reference_union_find_alias(&parent_init, &edge_a, &edge_b);
 
         let got_roots = canonicalize_parent_to_roots(&got);
@@ -76,11 +85,18 @@ fn union_find_alias_via_matches_reference_partition_over_random_graphs() {
 
 #[test]
 fn union_find_alias_via_hand_checked_chain_and_star() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
 
     // A 5-node chain 0-1, 1-2, 2-3, 3-4 → one component, min root 0 everywhere.
     let parent_init: Vec<u32> = (0..5).collect();
-    let got = union_find_alias_via(&d, &parent_init, &[0, 1, 2, 3], &[1, 2, 3, 4]).unwrap();
+    let got = union_find_alias_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &parent_init,
+        &[0, 1, 2, 3],
+        &[1, 2, 3, 4],
+    )
+    .unwrap();
     let roots = canonicalize_parent_to_roots(&got);
     assert_eq!(
         roots,
@@ -98,7 +114,14 @@ fn union_find_alias_via_hand_checked_chain_and_star() {
 
     // Two disjoint pairs {0,2} and {1,3} in a 4-node graph → two components rooted at 0 and 1.
     let parent_init: Vec<u32> = (0..4).collect();
-    let got = union_find_alias_via(&d, &parent_init, &[0, 1], &[2, 3]).unwrap();
+    let got = union_find_alias_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &parent_init,
+        &[0, 1],
+        &[2, 3],
+    )
+    .unwrap();
     let roots = canonicalize_parent_to_roots(&got);
     assert_eq!(
         roots,
@@ -109,7 +132,14 @@ fn union_find_alias_via_hand_checked_chain_and_star() {
 
     // Self-edges are inert: unioning a node with itself changes nothing.
     let parent_init: Vec<u32> = (0..3).collect();
-    let got = union_find_alias_via(&d, &parent_init, &[0, 1, 2], &[0, 1, 2]).unwrap();
+    let got = union_find_alias_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &parent_init,
+        &[0, 1, 2],
+        &[0, 1, 2],
+    )
+    .unwrap();
     let roots = canonicalize_parent_to_roots(&got);
     assert_eq!(
         roots,

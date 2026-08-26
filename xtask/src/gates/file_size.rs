@@ -51,7 +51,7 @@ const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-foundation/src/visit/walk.rs", 529),
     ("vyre-foundation/src/visit/node_parts.rs", 473),
     ("vyre-foundation/src/optimizer/rewrite.rs", 754),
-    ("vyre-driver-wgpu/src/buffer/pool.rs", 910),
+    ("vyre-driver-wgpu/src/buffer/pool.rs", 705),
     ("vyre-runtime/src/uring/stream.rs", 830),
     (
         "vyre-foundation/src/ir_inner/model/program/meta/mod.rs",
@@ -85,6 +85,8 @@ const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-runtime/src/uring/ring.rs", 685),
     ("vyre-foundation/src/execution_plan/policy.rs", 660),
     ("vyre-libs/src/math/semiring_gemm/mod.rs", 356),
+    ("vyre-foundation/src/schedule.rs", 728),
+    ("vyre-foundation/src/schedule/legality.rs", 585),
 ];
 
 /// Per-file ceilings for files the split audit tracks outside the core crates.

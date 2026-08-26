@@ -1,5 +1,5 @@
 //! End-to-end parity for `math::multigrid_matroid_solver::matroid_solve_step_fixed_via`
-//! through the shared faithful [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! through the shared faithful [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `jacobi_smooth_step`'s IR is run by NO `vyre-primitives/tests/*` file and the consumer's only
@@ -21,9 +21,11 @@
 //! BACKLOG `FIXED-amg-fixed-path-unsigned-mul-negatives`). Every operation is exactly reproducible in
 //! u32, so the oracle here is BIT-EXACT (no tolerance) (the same exact-fixed-point route mz_project used).
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::multigrid_matroid_solver::matroid_solve_step_fixed_via;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::{
     fixed_mul, fixed_sdiv_by_positive as sdiv_by_positive, xorshift32 as xorshift, FIXED_ONE,
 };
@@ -54,7 +56,7 @@ fn jacobi_fixed(a: &[u32], b: &[u32], x_in: &[u32], omega: u32, n: usize) -> Vec
 
 #[test]
 fn matroid_step_via_matches_exact_fixed_point_oracle_over_generated_systems() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x4A_C0_B1_01u32; // arbitrary nonzero seed
     let mut nontrivial = 0u32;
     let mut hit_zero_diag = 0u32;
@@ -91,8 +93,16 @@ fn matroid_step_via_matches_exact_fixed_point_oracle_over_generated_systems() {
             .collect();
         let omega = xorshift(&mut state) % (FIXED_ONE + 1); // [0, 1.0]
 
-        let got = matroid_solve_step_fixed_via(&dispatcher, &a, &b, &x_in, omega, n as u32)
-            .expect("matroid_solve_step_fixed_via must dispatch the weighted-Jacobi kernel");
+        let got = matroid_solve_step_fixed_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &a,
+            &b,
+            &x_in,
+            omega,
+            n as u32,
+        )
+        .expect("matroid_solve_step_fixed_via must dispatch the weighted-Jacobi kernel");
         let want = jacobi_fixed(&a, &b, &x_in, omega, n);
         assert_eq!(
             got, want,
@@ -127,13 +137,14 @@ fn matroid_step_via_matches_exact_fixed_point_oracle_over_generated_systems() {
 
 #[test]
 fn matroid_step_via_matches_hand_checked_cases() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
 
     // n=1, A=[1.0], b=[2.0], x_in=[1.0], omega=1.0:
     //   res = 2.0 - fixed_mul(1.0, 1.0) = 1.0; diag_units = 1; delta = fixed_mul(1.0,1.0)/1 = 1.0;
     //   x_out = 1.0 + 1.0 = 2.0.  (Standard Jacobi: 1 + 1*(2 - 1*1)/1 = 2.)
     let got = matroid_solve_step_fixed_via(
         &dispatcher,
+        &semantic_execution_support::policy(),
         &[FIXED_ONE],
         &[2 * FIXED_ONE],
         &[FIXED_ONE],
@@ -150,6 +161,7 @@ fn matroid_step_via_matches_hand_checked_cases() {
     // omega = 0 → delta = 0 → x unchanged regardless of residual.
     let got = matroid_solve_step_fixed_via(
         &dispatcher,
+        &semantic_execution_support::policy(),
         &[3 * FIXED_ONE, FIXED_ONE / 4, FIXED_ONE / 4, 3 * FIXED_ONE],
         &[5 * FIXED_ONE, 7 * FIXED_ONE],
         &[FIXED_ONE, 2 * FIXED_ONE],
@@ -166,8 +178,16 @@ fn matroid_step_via_matches_hand_checked_cases() {
     // diag == 0 guard: A=[0], b=[1.0], x_in=[0], omega=1.0:
     //   res = 1.0 - fixed_mul(0,0) = 1.0; diag_safe = 1; diag_units = 1; delta = fixed_mul(1.0,1.0)/1 = 1.0;
     //   x_out = 0 + 1.0 = 1.0.  Documents that a zero diagonal is treated as a unit scale, not a divide-by-zero.
-    let got =
-        matroid_solve_step_fixed_via(&dispatcher, &[0], &[FIXED_ONE], &[0], FIXED_ONE, 1).unwrap();
+    let got = matroid_solve_step_fixed_via(
+        &dispatcher,
+        &semantic_execution_support::policy(),
+        &[0],
+        &[FIXED_ONE],
+        &[0],
+        FIXED_ONE,
+        1,
+    )
+    .unwrap();
     assert_eq!(
         got,
         vec![FIXED_ONE],
@@ -179,6 +199,7 @@ fn matroid_step_via_matches_hand_checked_cases() {
     //   delta = fixed_mul(1.0, 1.0) / 1 = 1.0; x_out = 0 + 1.0 = 1.0.
     let got = matroid_solve_step_fixed_via(
         &dispatcher,
+        &semantic_execution_support::policy(),
         &[FIXED_ONE / 2],
         &[FIXED_ONE],
         &[0],

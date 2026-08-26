@@ -102,7 +102,6 @@ impl core::error::Error for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDevi
 impl core::error::Error for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError
 impl core::error::Error for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError
 impl core::error::Error for vyre_foundation::program_caps::MissingCapability
-impl core::error::Error for vyre_foundation::program_dispatch::DispatchError
 impl core::error::Error for vyre_foundation::serial::EnvelopeError
 impl core::error::Error for vyre_foundation::serial::text::TextParseError
 impl core::error::Error for vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError
@@ -136,7 +135,6 @@ impl core::fmt::Display for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDevi
 impl core::fmt::Display for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError
 impl core::fmt::Display for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError
 impl core::fmt::Display for vyre_foundation::program_caps::MissingCapability
-impl core::fmt::Display for vyre_foundation::program_dispatch::DispatchError
 impl core::fmt::Display for vyre_foundation::serial::EnvelopeError
 impl core::fmt::Display for vyre_foundation::serial::text::TextParseError
 impl core::fmt::Display for vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError
@@ -658,7 +656,6 @@ pub enum vyre_foundation::optimizer::program_soa::BufferRefKind
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofDomain
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofSort
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofStatus
-pub enum vyre_foundation::program_dispatch::DispatchError
 pub enum vyre_foundation::schedule::MappingLevel
 pub enum vyre_foundation::schedule::MemoryPlacement
 pub enum vyre_foundation::schedule::PipelineRole
@@ -697,6 +694,7 @@ pub fn vyre_foundation::IrError::diagnostic(&self) -> vyre_foundation::diagnosti
 pub fn vyre_foundation::IrError::lowering(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::LaunchGeometry::default() -> Self
 pub fn vyre_foundation::Uniformity::default() -> Self
+pub fn vyre_foundation::admitted_logical_span(program: &vyre_foundation::ir::Program, resource_span: u32) -> u32
 pub fn vyre_foundation::algebraic_law_registry::has_law<F>(op_id: &str, predicate: F) -> bool where F: core::ops::function::Fn(&vyre_spec::algebraic_law::AlgebraicLaw) -> bool
 pub fn vyre_foundation::algebraic_law_registry::is_associative(op_id: &str) -> bool
 pub fn vyre_foundation::algebraic_law_registry::is_commutative(op_id: &str) -> bool
@@ -796,6 +794,7 @@ pub fn vyre_foundation::graph_view::NodeGraph::new(nodes: alloc::vec::Vec<vyre_f
 pub fn vyre_foundation::graph_view::NodeGraph::try_into_program(self) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::graph_view::GraphValidateError>
 pub fn vyre_foundation::graph_view::from_graph(graph: vyre_foundation::graph_view::NodeGraph) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::graph_view::GraphValidateError>
 pub fn vyre_foundation::graph_view::to_graph(program: &vyre_foundation::ir::Program) -> vyre_foundation::graph_view::NodeGraph
+pub fn vyre_foundation::guarded_logical_span(program: &vyre_foundation::ir::Program) -> core::option::Option<u32>
 pub fn vyre_foundation::hashing::update_length_delimited_field(hasher: &mut blake3::Hasher, label: &[u8], value: &[u8])
 pub fn vyre_foundation::ir::BufferDecl::access(&self) -> vyre_spec::buffer_access::BufferAccess
 pub fn vyre_foundation::ir::BufferDecl::binding(&self) -> u32
@@ -1143,6 +1142,7 @@ pub fn vyre_foundation::ir::eval::fold_unary_literal(op: &vyre_spec::un_op::UnOp
 pub fn vyre_foundation::ir::expr_variant_name(item: &vyre_foundation::ir::Expr) -> &'static str
 pub fn vyre_foundation::ir::node_op_id(node: &vyre_foundation::ir::Node) -> &'static str
 pub fn vyre_foundation::ir::node_variant_name(item: &vyre_foundation::ir::Node) -> &'static str
+pub fn vyre_foundation::launch_covers_full_input_span(program: &vyre_foundation::ir::Program) -> bool
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::regions(&self) -> &[vyre_foundation::logical::LogicalRegion]
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::semantic_wire(&self) -> &[u8]
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::validate(graph: &'a vyre_foundation::ir::ProgramGraph, bindings: &alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>) -> core::result::Result<Self, vyre_foundation::logical::LogicalProgramError>
@@ -2249,33 +2249,6 @@ pub fn vyre_foundation::program_caps::RequiredCapabilities::join(self, other: vy
 pub fn vyre_foundation::program_caps::RequiredCapabilities::union(self, other: vyre_foundation::program_caps::RequiredCapabilities) -> Self
 pub fn vyre_foundation::program_caps::check_backend_capabilities(backend_id: &str, support: &vyre_foundation::program_caps::BackendSupport, required: &vyre_foundation::program_caps::RequiredCapabilities) -> core::result::Result<(), vyre_foundation::program_caps::MissingCapability>
 pub fn vyre_foundation::program_caps::scan(program: &vyre_foundation::ir::Program) -> vyre_foundation::program_caps::RequiredCapabilities
-pub fn vyre_foundation::program_dispatch::DispatchError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::acquire_resident_static_uploads(&self, _cache_domain: u64, payloads: &[&[u8]]) -> core::result::Result<vyre_foundation::program_dispatch::ResidentStaticBufferSet, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::alloc_resident(&self, _byte_len: usize) -> core::result::Result<u64, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::alloc_resident_many(&self, byte_lens: &[usize]) -> core::result::Result<alloc::vec::Vec<u64>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::clear_upload_resident_many_sequence_read_many_into(&self, clears: &[(u64, usize)], uploads: &[(u64, &[u8])], steps: &[vyre_foundation::program_dispatch::ResidentDispatchStep<'_>], read_handles: &[u64], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::device_feature_cache_key(&self) -> u64
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::dispatch(&self, program: &vyre_foundation::ir::Program, inputs: &[alloc::vec::Vec<u8>], grid_override: core::option::Option<[u32; 3]>) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::dispatch_resident(&self, _program: &vyre_foundation::ir::Program, _handles: &[u64], _grid_override: core::option::Option<[u32; 3]>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::dispatch_resident_sequence(&self, steps: &[vyre_foundation::program_dispatch::ResidentDispatchStep<'_>]) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::dispatch_resident_sequence_read_many(&self, steps: &[vyre_foundation::program_dispatch::ResidentDispatchStep<'_>], read_handles: &[u64]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::dispatch_resident_sequence_read_ranges(&self, steps: &[vyre_foundation::program_dispatch::ResidentDispatchStep<'_>], read_ranges: &[vyre_foundation::program_dispatch::ResidentReadRange]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::fill_upload_resident_many_sequence_read_many_into(&self, fills: &[(u64, usize, u8)], uploads: &[(u64, &[u8])], steps: &[vyre_foundation::program_dispatch::ResidentDispatchStep<'_>], read_handles: &[u64], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::fill_upload_resident_many_sequence_read_ranges_into(&self, fills: &[(u64, usize, u8)], uploads: &[(u64, &[u8])], steps: &[vyre_foundation::program_dispatch::ResidentDispatchStep<'_>], read_ranges: &[vyre_foundation::program_dispatch::ResidentReadRange], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::free_resident(&self, _handle: u64) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::read_resident(&self, _handle: u64) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::read_resident_many(&self, handles: &[u64]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::read_resident_ranges(&self, ranges: &[vyre_foundation::program_dispatch::ResidentReadRange]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::read_resident_ranges_into(&self, ranges: &[vyre_foundation::program_dispatch::ResidentReadRange], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::release_resident_static_uploads(&self, set: vyre_foundation::program_dispatch::ResidentStaticBufferSet) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::supports_persistent(&self) -> bool
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::upload_resident(&self, _handle: u64, _bytes: &[u8]) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::upload_resident_many(&self, uploads: &[(u64, &[u8])]) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::upload_resident_many_sequence_read_many(&self, uploads: &[(u64, &[u8])], steps: &[vyre_foundation::program_dispatch::ResidentDispatchStep<'_>], read_handles: &[u64]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::upload_resident_many_sequence_read_many_into(&self, uploads: &[(u64, &[u8])], steps: &[vyre_foundation::program_dispatch::ResidentDispatchStep<'_>], read_handles: &[u64], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::upload_resident_many_sequence_read_ranges(&self, uploads: &[(u64, &[u8])], steps: &[vyre_foundation::program_dispatch::ResidentDispatchStep<'_>], read_ranges: &[vyre_foundation::program_dispatch::ResidentReadRange]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::ProgramDispatcher::upload_resident_many_sequence_read_ranges_into(&self, uploads: &[(u64, &[u8])], steps: &[vyre_foundation::program_dispatch::ResidentDispatchStep<'_>], read_ranges: &[vyre_foundation::program_dispatch::ResidentReadRange], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_foundation::program_dispatch::declared_dispatch_outputs(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<&vyre_foundation::ir::BufferDecl>
 pub fn vyre_foundation::schedule::SelectedSchedule::apply(&mut self, transform: vyre_foundation::schedule::ScheduleTransform) -> core::result::Result<(), vyre_foundation::schedule::ScheduleLegalityError>
 pub fn vyre_foundation::schedule::SelectedSchedule::canonical_wire(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::schedule::ScheduleLegalityError>
 pub fn vyre_foundation::schedule::SelectedSchedule::from_logical(logical: &vyre_foundation::logical::LogicalProgramGraph<'_>) -> Self
@@ -2661,7 +2634,6 @@ pub mod vyre_foundation::pass_substrate::string_diagram_ir_rewrite
 pub mod vyre_foundation::pass_substrate::tensor_network_fusion_order
 pub mod vyre_foundation::perf
 pub mod vyre_foundation::program_caps
-pub mod vyre_foundation::program_dispatch
 pub mod vyre_foundation::schedule
 pub mod vyre_foundation::serial
 pub mod vyre_foundation::serial::output_set
@@ -2881,9 +2853,6 @@ pub struct vyre_foundation::perf::PerfScope
 pub struct vyre_foundation::perf::SpanGuard
 pub struct vyre_foundation::program_caps::BackendSupport
 pub struct vyre_foundation::program_caps::MissingCapability
-pub struct vyre_foundation::program_dispatch::ResidentDispatchStep<'a>
-pub struct vyre_foundation::program_dispatch::ResidentReadRange
-pub struct vyre_foundation::program_dispatch::ResidentStaticBufferSet
 pub struct vyre_foundation::schedule::AxisMapping
 pub struct vyre_foundation::schedule::PipelineRoleGroup
 pub struct vyre_foundation::schedule::ScheduleAxis
@@ -2944,7 +2913,6 @@ pub trait vyre_foundation::optimizer::eqsat::ENodeLang: core::clone::Clone + cor
 pub trait vyre_foundation::optimizer::eqsat::Family<L: vyre_foundation::optimizer::eqsat::ENodeLang>
 pub trait vyre_foundation::optimizer::eqsat::Rule<L: vyre_foundation::optimizer::eqsat::ENodeLang>
 pub trait vyre_foundation::optimizer::eqsat_toml::OpIdNode
-pub trait vyre_foundation::program_dispatch::ProgramDispatcher
 pub trait vyre_foundation::serial::wire_round_trip::WireRoundTrip: core::marker::Sized
 pub trait vyre_foundation::transform::rewrite_walk::NodeRewrite
 pub trait vyre_foundation::validate::BackendValidationCapabilities
@@ -4308,18 +4276,6 @@ pub vyre_foundation::program_caps::RequiredCapabilities::subgroup_ops: bool
 pub vyre_foundation::program_caps::RequiredCapabilities::tensor_ops: bool
 pub vyre_foundation::program_caps::RequiredCapabilities::transport_collectives: usize
 pub vyre_foundation::program_caps::RequiredCapabilities::trap: bool
-pub vyre_foundation::program_dispatch::DispatchError::BackendError(alloc::string::String)
-pub vyre_foundation::program_dispatch::DispatchError::BadInputs(alloc::string::String)
-pub vyre_foundation::program_dispatch::DispatchError::Rejected(alloc::string::String)
-pub vyre_foundation::program_dispatch::ResidentDispatchStep::grid_override: core::option::Option<[u32; 3]>
-pub vyre_foundation::program_dispatch::ResidentDispatchStep::handle_ids: &'a [u64]
-pub vyre_foundation::program_dispatch::ResidentDispatchStep::program: &'a vyre_foundation::ir::Program
-pub vyre_foundation::program_dispatch::ResidentReadRange::byte_len: usize
-pub vyre_foundation::program_dispatch::ResidentReadRange::byte_offset: usize
-pub vyre_foundation::program_dispatch::ResidentReadRange::handle_id: u64
-pub vyre_foundation::program_dispatch::ResidentStaticBufferSet::cache_hit: bool
-pub vyre_foundation::program_dispatch::ResidentStaticBufferSet::handles: alloc::vec::Vec<u64>
-pub vyre_foundation::program_dispatch::ResidentStaticBufferSet::retained_by_dispatcher: bool
 pub vyre_foundation::schedule::AxisMapping::axis: vyre_foundation::schedule::ScheduleAxis
 pub vyre_foundation::schedule::AxisMapping::level: vyre_foundation::schedule::MappingLevel
 pub vyre_foundation::schedule::MappingLevel::ComputeUnitPartition

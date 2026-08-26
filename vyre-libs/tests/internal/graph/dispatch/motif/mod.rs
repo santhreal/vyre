@@ -5,8 +5,8 @@ use crate::graph::motif::{
     match_motif, motif_matches, motif_participation_count, plan_motif_launch, try_match_motif,
     try_motif_matches, try_motif_participation_count, MotifEdge,
 };
-use crate::test_parity_oracles::{SequentialOutputs, StaticOutputs};
-use vyre_foundation::program_dispatch::DispatchError;
+use crate::test_parity_oracles::{policy, SequentialOutputs, StaticOutputs};
+use vyre_megakernel::SemanticExecutionError;
 use vyre_reference::composition_witness::motif_witness;
 
 fn reference_motif(
@@ -128,7 +128,6 @@ fn launch_plan_matches_primitive_dispatch_plan() {
     assert_eq!(launch.layout(), dispatch.layout());
     assert_eq!(launch.output_words(), dispatch.output_words());
     assert_eq!(launch.edge_storage_words(), dispatch.edge_storage_words());
-    assert_eq!(launch.dispatch_grid(), dispatch.dispatch_grid());
     let launch_program = launch.program();
     let dispatch_program = dispatch.program();
     assert_eq!(launch_program.entry_op_id, dispatch_program.entry_op_id);
@@ -172,13 +171,13 @@ fn via_decodes_exact_output_into_reused_buffer() {
             u32_slice_to_le_bytes(&[1, 1, 1]),
         ],
     )
-    .expecting_grid([1, 1, 1])
-    .expecting_inputs(&[7]);
+    .expecting_inputs(&[5]);
     let (offsets, targets, masks, motif) = chain_graph();
     let mut witness = Vec::with_capacity(4);
     let ptr = witness.as_ptr();
     match_motif_via_into(
         &dispatcher,
+        &policy(),
         3,
         &offsets,
         &targets,
@@ -201,8 +200,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
             u32_slice_to_le_bytes(&[1, 1, 1]),
         ],
     )
-    .expecting_grid([1, 1, 1])
-    .expecting_inputs(&[7])
+    .expecting_inputs(&[5])
     .recording_input(2);
     let (offsets, targets, masks, motif) = chain_graph();
     let changed_targets = vec![2, 2];
@@ -211,6 +209,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
 
     match_motif_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         3,
         &offsets,
         &targets,
@@ -222,6 +221,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
     .expect("Fix: first motif same-shape dispatch should succeed");
     match_motif_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         3,
         &offsets,
         &changed_targets,
@@ -250,14 +250,14 @@ fn via_with_scratch_reuses_dispatch_storage() {
             u32_slice_to_le_bytes(&[1, 1, 1]),
         ],
     )
-    .expecting_grid([1, 1, 1])
-    .expecting_inputs(&[7]);
+    .expecting_inputs(&[5]);
     let (offsets, targets, masks, motif) = chain_graph();
     let mut scratch = MotifGpuScratch::default();
     let mut witness = Vec::with_capacity(3);
 
     match_motif_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         3,
         &offsets,
         &targets,
@@ -274,6 +274,7 @@ fn via_with_scratch_reuses_dispatch_storage() {
 
     match_motif_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         3,
         &offsets,
         &targets,
@@ -295,6 +296,7 @@ fn via_with_scratch_reuses_dispatch_storage() {
     let same_shape_different_targets = [2, 2];
     match_motif_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         3,
         &offsets,
         &same_shape_different_targets,
@@ -310,6 +312,7 @@ fn via_with_scratch_reuses_dispatch_storage() {
     different_motif[1].to = 0;
     match_motif_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         3,
         &offsets,
         &targets,
@@ -332,11 +335,10 @@ fn via_rejects_extra_outputs() {
             u32_slice_to_le_bytes(&[0]),
         ],
     )
-    .expecting_grid([1, 1, 1])
-    .expecting_inputs(&[7]);
-    let err = match_motif_via(&dispatcher, 1, &[0, 0], &[], &[], &[])
+    .expecting_inputs(&[5]);
+    let err = match_motif_via(&dispatcher, &policy(), 1, &[0, 0], &[], &[], &[])
         .expect_err("extra outputs must be rejected");
-    assert!(matches!(err, DispatchError::BackendError(_)));
+    assert!(matches!(err, SemanticExecutionError::Backend(_)));
 }
 
 #[test]
@@ -348,23 +350,28 @@ fn via_rejects_non_boolean_witness() {
             u32_slice_to_le_bytes(&[1, 2, 0]),
         ],
     )
-    .expecting_grid([1, 1, 1])
-    .expecting_inputs(&[7]);
+    .expecting_inputs(&[5]);
     let (offsets, targets, masks, motif) = chain_graph();
-    let err = match_motif_via(&dispatcher, 3, &offsets, &targets, &masks, &motif)
-        .expect_err("non-boolean witness output must be rejected");
+    let err = match_motif_via(
+        &dispatcher,
+        &policy(),
+        3,
+        &offsets,
+        &targets,
+        &masks,
+        &motif,
+    )
+    .expect_err("non-boolean witness output must be rejected");
 
-    assert!(matches!(err, DispatchError::BackendError(_)));
+    assert!(matches!(err, SemanticExecutionError::Backend(_)));
 }
 
 #[test]
 fn via_rejects_malformed_csr_before_dispatch() {
-    let dispatcher = StaticOutputs::new(MOTIF_CONTRACT, Vec::new())
-        .expecting_grid([1, 1, 1])
-        .expecting_inputs(&[7]);
-    let err = match_motif_via(&dispatcher, 2, &[0, 1, 1], &[1], &[], &[])
+    let dispatcher = StaticOutputs::new(MOTIF_CONTRACT, Vec::new()).expecting_inputs(&[5]);
+    let err = match_motif_via(&dispatcher, &policy(), 2, &[0, 1, 1], &[1], &[], &[])
         .expect_err("mismatched edge arrays must be rejected");
-    assert!(matches!(err, DispatchError::BadInputs(_)));
+    assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
 }
 
 #[test]
@@ -380,8 +387,16 @@ fn motif_matches_via_dispatches_match_and_reduction() {
         ],
     );
     let (offsets, targets, masks, motif) = chain_graph();
-    let matches = motif_matches_via(&dispatcher, 3, &offsets, &targets, &masks, &motif)
-        .expect("motif_matches_via must succeed");
+    let matches = motif_matches_via(
+        &dispatcher,
+        &policy(),
+        3,
+        &offsets,
+        &targets,
+        &masks,
+        &motif,
+    )
+    .expect("motif_matches_via must succeed");
     assert!(matches);
 }
 
@@ -398,7 +413,15 @@ fn motif_participation_count_via_dispatches_match_and_reduction() {
         ],
     );
     let (offsets, targets, masks, motif) = chain_graph();
-    let count = motif_participation_count_via(&dispatcher, 3, &offsets, &targets, &masks, &motif)
-        .expect("motif_participation_count_via must succeed");
+    let count = motif_participation_count_via(
+        &dispatcher,
+        &policy(),
+        3,
+        &offsets,
+        &targets,
+        &masks,
+        &motif,
+    )
+    .expect("motif_participation_count_via must succeed");
     assert_eq!(count, 3);
 }

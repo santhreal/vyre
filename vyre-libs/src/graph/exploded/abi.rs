@@ -45,16 +45,3 @@ pub const IFDS_CSR_COL_LEN_BUFFER: &str = "exploded_ifds_csr col_len";
 pub const IFDS_CSR_KILLED_BUFFER: &str = "exploded_ifds_csr killed";
 /// Serial workgroup for exploded IFDS CSR construction.
 pub const IFDS_CSR_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
-
-/// Dispatch grid for exploded IFDS CSR construction.
-///
-/// The generated Program executes the full CSR build inside global lane `0`, so
-/// the launch contract is a single block. Scaling this grid only launches idle
-/// blocks and burns dispatch overhead without changing observable work.
-#[must_use]
-pub const fn ifds_csr_dispatch_grid(_intra_count: u32, _total_nodes: u32) -> [u32; 3] {
-    [1, 1, 1]
-}
-
-/// Minimum grid for empty no-rule IFDS dispatch plans.
-pub const IFDS_CSR_EMPTY_DISPATCH_GRID: [u32; 3] = [1, 1, 1];

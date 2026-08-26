@@ -28,17 +28,6 @@ pub use program::{utf8_validate, utf8_validate_u8};
 pub(crate) const OP_ID: &str = "vyre-libs::text::utf8_validate";
 /// Byte-lane workgroup used by the UTF-8 classifier.
 pub const UTF8_VALIDATE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
-/// Dispatch grid for one UTF-8 validation pass over `n` bytes.
-#[cfg(test)]
-#[must_use]
-pub const fn utf8_validate_dispatch_grid(n: u32) -> [u32; 3] {
-    let blocks = n.div_ceil(UTF8_VALIDATE_WORKGROUP_SIZE[0]);
-    if blocks == 0 {
-        [1, 1, 1]
-    } else {
-        [blocks, 1, 1]
-    }
-}
 
 /// 0x00..0x7F  -  single-byte ASCII.
 pub const UTF8_ASCII: u32 = 0;

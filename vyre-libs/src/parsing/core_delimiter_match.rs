@@ -80,8 +80,10 @@ inventory::submit! {
         || core_delimiter_match("tok_types", "tok_depths", 8, 12, 13),
         Some(|| {
             let tokens: [u32; 8] = [12, 12, 0, 0, 0, 13, 13, 0];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&tokens);
-            vec![vec![bytes]]
+            let to_bytes = vyre_primitives::wire::pack_u32_slice;
+            // `tok_depths` is read-write storage, so the reference takes one
+            // seeded Value for it exactly as a device takes one bound buffer.
+            vec![vec![to_bytes(&tokens), to_bytes(&[0u32; 8])]]
         }),
         Some(|| {
             vec![vec![EXPECTED_CORE_DELIMITER_MATCH_BYTES.to_vec()]]

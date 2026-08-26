@@ -1,7 +1,7 @@
 //! End-to-end parity for the COMPOSITE
 //! `math::differentiable_autotune::natural_config_gradient_magnitude_pre_exp_fixed_via`, the
 //! Fisher-preconditioned fixed-point autotune gradient, through the shared faithful
-//! [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the two constituent kernels are each parity-covered in isolation (softmax normalization by
@@ -22,9 +22,11 @@
 //!   `nat[t]  = Σ_j fixed_mul_16_16(M[t*n+j], prob[j])`   (SIGNED `((a as i32 as i64 * b as i32 as
 //!   i64) >> 16) as i32 as u32`, wrapping u32 add)
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::differentiable_autotune::natural_config_gradient_magnitude_pre_exp_fixed_via;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::{
     fixed_matvec, fixed_mul as fixed_mul_16_16, signed_fixed_17 as signed_fisher, to_fixed,
     xorshift32 as xorshift, FIXED_ONE,
@@ -45,7 +47,7 @@ fn natural_config_gradient(pre_exp: &[u32], m_inv_sqrt: &[u32]) -> Vec<u32> {
 
 #[test]
 fn natural_config_gradient_via_matches_exact_composite_oracle() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x1A_7E_00_01u32;
     let mut nonzero_gradient = 0u32;
     let mut off_diagonal_mixing = 0u32;
@@ -62,11 +64,13 @@ fn natural_config_gradient_via_matches_exact_composite_oracle() {
             .map(|_| xorshift(&mut state) % FIXED_ONE)
             .collect();
 
-        let got =
-            natural_config_gradient_magnitude_pre_exp_fixed_via(&dispatcher, &pre_exp, &m_inv_sqrt)
-                .expect(
-                    "natural_config_gradient_magnitude_pre_exp_fixed_via must dispatch both stages",
-                );
+        let got = natural_config_gradient_magnitude_pre_exp_fixed_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &pre_exp,
+            &m_inv_sqrt,
+        )
+        .expect("natural_config_gradient_magnitude_pre_exp_fixed_via must dispatch both stages");
         let want = natural_config_gradient(&pre_exp, &m_inv_sqrt);
         assert_eq!(
             got, want,
@@ -99,7 +103,7 @@ fn natural_config_gradient_via_matches_signed_composite_with_negative_fisher_cou
     // Fisher term through the composite. This sweep draws a SIGNED M and asserts the two-stage
     // dispatch bit-exactly matches the signed oracle, locking the signed `fixed_mul_16_16_expr` fix
     // across the softmax→Fisher-matvec composition (pre-fix, a negative `M[t,j]·prob[j]` term diverged).
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x2545_F491u32;
     let mut neg_fisher_inputs = 0u32;
     let mut neg_outputs = 0u32;
@@ -113,11 +117,13 @@ fn natural_config_gradient_via_matches_signed_composite_with_negative_fisher_cou
 
         neg_fisher_inputs += m_inv_sqrt.iter().filter(|&&v| (v as i32) < 0).count() as u32;
 
-        let got =
-            natural_config_gradient_magnitude_pre_exp_fixed_via(&dispatcher, &pre_exp, &m_inv_sqrt)
-                .expect(
-                    "natural_config_gradient_magnitude_pre_exp_fixed_via must dispatch both stages",
-                );
+        let got = natural_config_gradient_magnitude_pre_exp_fixed_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &pre_exp,
+            &m_inv_sqrt,
+        )
+        .expect("natural_config_gradient_magnitude_pre_exp_fixed_via must dispatch both stages");
         let want = natural_config_gradient(&pre_exp, &m_inv_sqrt);
         assert_eq!(
             got, want,
@@ -150,10 +156,16 @@ fn natural_config_gradient_via_hand_checked_negative_fisher_coupling() {
     // over asymmetric probabilities prob = [0.25, 0.75] (from pre_exp = [0.25, 0.75], Σ = 1.0):
     //   nat[0] = (1.0)(0.25) + (-1.0)(0.75) = -0.5
     //   nat[1] = (-1.0)(0.25) + (1.0)(0.75) =  0.5
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let pre_exp = [FIXED_ONE / 4, FIXED_ONE * 3 / 4];
     let m = vec![to_fixed(1.0), to_fixed(-1.0), to_fixed(-1.0), to_fixed(1.0)];
-    let got = natural_config_gradient_magnitude_pre_exp_fixed_via(&d, &pre_exp, &m).unwrap();
+    let got = natural_config_gradient_magnitude_pre_exp_fixed_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &pre_exp,
+        &m,
+    )
+    .unwrap();
     let want = natural_config_gradient(&pre_exp, &m);
     assert_eq!(
         want,
@@ -168,7 +180,7 @@ fn natural_config_gradient_via_hand_checked_negative_fisher_coupling() {
 
 #[test]
 fn natural_config_gradient_via_hand_checked_identity_fisher() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     // With an IDENTITY Fisher block (16.16 one on the diagonal, zero off-diagonal), preconditioning is
     // a no-op: nat[t] = fixed_mul(1.0, prob[t]) = prob[t]. So the composite must reproduce the plain
     // softmax probabilities exactly.
@@ -178,7 +190,13 @@ fn natural_config_gradient_via_hand_checked_identity_fisher() {
     for i in 0..n {
         m[i * n + i] = FIXED_ONE; // 1.0 on the diagonal
     }
-    let got = natural_config_gradient_magnitude_pre_exp_fixed_via(&d, &pre_exp, &m).unwrap();
+    let got = natural_config_gradient_magnitude_pre_exp_fixed_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &pre_exp,
+        &m,
+    )
+    .unwrap();
     let prob = softmax_fixed(&pre_exp);
     assert_eq!(
         got, prob,
@@ -190,7 +208,13 @@ fn natural_config_gradient_via_hand_checked_identity_fisher() {
     for i in 0..n {
         m2[i * n + i] = 2 * FIXED_ONE; // 2.0
     }
-    let got2 = natural_config_gradient_magnitude_pre_exp_fixed_via(&d, &pre_exp, &m2).unwrap();
+    let got2 = natural_config_gradient_magnitude_pre_exp_fixed_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &pre_exp,
+        &m2,
+    )
+    .unwrap();
     let want2: Vec<u32> = prob
         .iter()
         .map(|&p| fixed_mul_16_16(2 * FIXED_ONE, p))

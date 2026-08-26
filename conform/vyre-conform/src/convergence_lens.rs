@@ -8,7 +8,7 @@ use vyre::ir::{BufferAccess, Program};
 use vyre_driver::BackendRegistration;
 use vyre_reference::value::Value;
 
-use crate::ExecutionRoute;
+use crate::ProductionSession;
 
 /// Error from the convergence loop.
 #[derive(Debug)]
@@ -69,37 +69,22 @@ pub fn run_fixpoint_to_convergence(
         changed_name,
         words,
     );
-    let borrowed_inputs: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-    let transfer_session =
-        ExecutionRoute::open_with_representative_inputs(program, &borrowed_inputs, backend)
-            .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
-    let transfer_config = crate::dispatch_grid::config_for_program(program)
-        .map_err(ConvergenceError::IncompatibleLayout)?;
+    let transfer_session = ProductionSession::from_registration(program, backend)
+        .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
 
     let mut state: Vec<Vec<u8>> = Vec::with_capacity(inputs.len());
     state.extend(inputs.iter().cloned());
     let mut changed_buf = vec![0u8; 4];
     let mut rw_outputs: Vec<Vec<u8>> = Vec::with_capacity(program.buffers().len());
 
-    let bitset_representative_inputs = [
-        inputs.get(current_idx).map(Vec::as_slice).unwrap_or(&[]),
-        inputs.get(next_idx).map(Vec::as_slice).unwrap_or(&[]),
-        &changed_buf[..],
-    ];
-    let bitset_session = ExecutionRoute::open_with_representative_inputs(
-        &bitset_program,
-        &bitset_representative_inputs,
-        backend,
-    )
-    .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
-    let bitset_config = crate::dispatch_grid::config_for_program(&bitset_program)
-        .map_err(ConvergenceError::IncompatibleLayout)?;
+    let bitset_session = ProductionSession::from_registration(&bitset_program, backend)
+        .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
     for _ in 0..max_iterations {
         let borrowed: Vec<&[u8]> = state.iter().map(Vec::as_slice).collect();
         let transfer_outputs = transfer_session
-            .submit(&borrowed, &transfer_config)
+            .submit(&borrowed)
             .map_err(|e| ConvergenceError::Dispatch(e.to_string()))?;
-        merge_rw(&mut state, transfer_outputs.as_slice(), program);
+        merge_rw(&mut state, transfer_outputs.outputs.as_slice(), program);
 
         changed_buf.fill(0);
         let converged = {
@@ -107,10 +92,10 @@ pub fn run_fixpoint_to_convergence(
             let next = &state[next_idx][..];
             let bitset_inputs = [current, next, &changed_buf[..]];
             let bitset_outputs = bitset_session
-                .submit(&bitset_inputs, &bitset_config)
+                .submit(&bitset_inputs)
                 .map_err(|e| ConvergenceError::Dispatch(e.to_string()))?;
 
-            if let Some(flag) = bitset_outputs.first() {
+            if let Some(flag) = bitset_outputs.outputs.first() {
                 if let Some(bytes) = flag.get(0..4) {
                     changed_buf.copy_from_slice(bytes);
                 } else {
@@ -183,24 +168,6 @@ fn run_cpu<'a>(
     outputs.clear();
     outputs.extend(evaluated.into_iter().map(|value| value.to_bytes()));
     Ok(outputs.as_slice())
-}
-
-fn convergence_grid(program: &Program) -> Result<[u32; 3], ConvergenceError> {
-    let workgroup = program.workgroup_size();
-    if workgroup[0] == 0 || workgroup[1] != 1 || workgroup[2] != 1 {
-        return Err(ConvergenceError::IncompatibleLayout(format!(
-            "convergence lens requires a nonzero 1D workgroup, got {workgroup:?}"
-        )));
-    }
-    let element_count = program
-        .buffers()
-        .iter()
-        .map(|decl| decl.count())
-        .max()
-        .unwrap_or(1)
-        .max(1);
-    let grid_x = element_count.div_ceil(workgroup[0]).max(1);
-    Ok([grid_x, 1, 1])
 }
 
 fn infer_fixpoint_buffers(program: &Program) -> Result<(&str, &str, u32), ConvergenceError> {

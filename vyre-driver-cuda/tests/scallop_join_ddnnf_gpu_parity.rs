@@ -11,17 +11,14 @@ use vyre_driver_cuda::CudaBackend;
 use vyre_libs::graph::knowledge_compile::{
     ddnnf_evaluate, DDNNF_EVALUATE_WORKGROUP_SIZE, LITERAL_FALSE, LITERAL_TRUE,
 };
-use vyre_libs::math::scallop_join::{scallop_join, scallop_join_dispatch_grid};
+use vyre_libs::math::scallop_join::scallop_join;
+use vyre_libs::math::scallop_join::SCALLOP_JOIN_WORKGROUP_SIZE;
 use vyre_reference::composition_witness::{ddnnf_evaluate_witness, scallop_join_fixpoint_witness};
 
 // ---------------------------------------------------------------------
 // scallop_join. Iterates the Datalog fixpoint inside one dispatch via
 // persistent_fixpoint + the Lineage semiring, over w words per cell.
 // ---------------------------------------------------------------------
-
-fn ddnnf_evaluate_dispatch_grid(n_nodes: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(n_nodes, DDNNF_EVALUATE_WORKGROUP_SIZE[0])
-}
 
 fn run_scallop_join(
     backend: &CudaBackend,
@@ -40,7 +37,6 @@ fn run_scallop_join(
         u32_bytes(join_rules),
     ];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(scallop_join_dispatch_grid(n));
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
@@ -62,7 +58,10 @@ fn cuda_scallop_join_high_cell_chain_converges() {
         let (cpu, _iters) = scallop_join_fixpoint_witness(&state, &join_rules, n, 1, 4);
         let gpu = run_scallop_join(backend, &state, &join_rules, n, 1, 4);
 
-        assert_eq!(scallop_join_dispatch_grid(n), [2, 1, 1]);
+        assert!(
+            n * n > SCALLOP_JOIN_WORKGROUP_SIZE[0],
+            "Fix: the fixture must cross a workgroup boundary or it proves nothing about multi-block launches"
+        );
         assert_eq!(gpu, cpu);
         assert_eq!(gpu[(0 * n + 16) as usize] & 0b0011, 0b0011);
     });
@@ -133,7 +132,10 @@ fn cuda_wide_scallop_join_copies_high_words_past_cell_lane_count() {
             let (cpu, _iters) = scallop_join_fixpoint_witness(&state, &join_rules, n, w, 4);
             let gpu = run_scallop_join(backend, &state, &join_rules, n, w, 4);
 
-            assert_eq!(scallop_join_dispatch_grid(n), [2, 1, 1]);
+            assert!(
+            n * n > SCALLOP_JOIN_WORKGROUP_SIZE[0],
+            "Fix: the fixture must cross a workgroup boundary or it proves nothing about multi-block launches"
+        );
             assert_eq!(gpu, cpu);
             assert_eq!(gpu[cell_word(16, 16, 0)] & 0b0001, 0b0001);
             assert_eq!(gpu[cell_word(16, 16, 1)] & 0b0010, 0b0010);
@@ -186,7 +188,6 @@ fn run_ddnnf(
         vec![0u8; n_nodes as usize * 4],
     ];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(ddnnf_evaluate_dispatch_grid(n_nodes));
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
@@ -298,7 +299,10 @@ fn cuda_ddnnf_literal_wave_crosses_workgroup_boundaries() {
                 &var_assignments,
             );
 
-            assert_eq!(ddnnf_evaluate_dispatch_grid(n_nodes), [5, 1, 1]);
+            assert!(
+                n_nodes > DDNNF_EVALUATE_WORKGROUP_SIZE[0],
+                "Fix: the fixture must cross a workgroup boundary or it proves nothing about multi-block launches"
+            );
             assert_eq!(gpu, cpu);
             assert_eq!(gpu[0], 0);
             assert_eq!(gpu[1], 0);

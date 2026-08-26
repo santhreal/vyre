@@ -1,4 +1,4 @@
-//! Local-pattern rewrite engine as a dispatched compute kernel.
+//! Local-pattern rewrite engine executed as a semantic analysis graph.
 //!
 //! V1 ships a hardcoded bank of algebraic-identity rewrites:
 //!
@@ -9,9 +9,9 @@
 //! - `Mul 0 ?x   →   0u32`
 //! - `Mul ?x 0   →   0u32`
 //!
-//! Each rule fires per-Expr in a single GPU dispatch (no scope walk,
-//! no structural-hash needed for this set). Output is a `rewrite_action`
-//! buffer encoding the per-Expr decision; the decoder applies it.
+//! Each rule fires per expression in one analysis Program. The compiler selects
+//! its physical schedule. The decoder applies the returned `rewrite_action`
+//! buffer.
 //!
 //! This is the architectural prototype for the universal pattern-match
 //! engine: V2 takes the pattern bank as input buffers (kind/op/literal-
@@ -20,8 +20,7 @@
 //! All the hardcoding below is a fixed instance of that more general
 //! kernel.
 //!
-//! No host-reference escape in production. `ProgramDispatcher` injects the
-//! backend; the same kernel runs unchanged on every backend.
+//! The same schedule-free kernel is supplied to every semantic executor.
 
 mod bin_op_cse_rules;
 mod bin_op_rules;

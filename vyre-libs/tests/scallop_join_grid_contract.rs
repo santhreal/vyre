@@ -1,13 +1,13 @@
-//! Launch-geometry and dispatch-cut contracts for `math::scallop_join`.
+//! Launch-domain and dispatch-cut contracts for `math::scallop_join`.
 //!
 //! Two properties the builder must hold at every `w`, neither of which the
 //! bit-exact parity test in `scallop_join_ir_parity.rs` can observe because it
 //! runs a single-word 2x2 matrix:
 //!
-//! 1. **The grid covers every word.** A lane owns one relation CELL and walks
-//!    the `w` contiguous `u32` words of that cell, so a grid sized for `n * n`
-//!    lanes still covers `n * n * w` words. A mapping that sized the grid for
-//!    cells and then indexed words per lane would leave `w - 1` of every `w`
+//! 1. **The admitted domain covers every word.** A lane owns one relation CELL
+//!    and walks the `w` contiguous `u32` words of that cell, so a domain sized
+//!    for `n * n` lanes still covers `n * n * w` words. A mapping that guarded
+//!    on cells and then indexed words per lane would leave `w - 1` of every `w`
 //!    words unwritten, and an unwritten word keeps its seed value. The test
 //!    drives `w = 8, n = 16` (2048 words) through the reference evaluator and
 //!    requires every word to have moved off its seed and to match the oracle.
@@ -25,9 +25,7 @@ use vyre_foundation::ir::{MemoryOrdering, Node};
 use vyre_foundation::transform::grid_sync_split::{
     contains_grid_sync, entry_sequence, loop_nested_grid_sync, split_on_grid_sync,
 };
-use vyre_libs::math::scallop_join::{
-    scallop_join, scallop_join_dispatch_grid, SCALLOP_JOIN_WORKGROUP_SIZE,
-};
+use vyre_libs::math::scallop_join::scallop_join;
 use vyre_reference::composition_witness::scallop_join_fixpoint_witness as cpu_ref;
 use vyre_reference::value::Value;
 
@@ -62,25 +60,18 @@ fn words(value: &Value) -> Vec<u32> {
         .collect()
 }
 
-/// Lanes the dispatch grid launches for an `n`-by-`n` relation.
-fn launched_lanes(n: u32) -> u64 {
-    let grid = scallop_join_dispatch_grid(n);
-    u64::from(grid[0])
-        * u64::from(grid[1])
-        * u64::from(grid[2])
-        * u64::from(SCALLOP_JOIN_WORKGROUP_SIZE[0])
-        * u64::from(SCALLOP_JOIN_WORKGROUP_SIZE[1])
-        * u64::from(SCALLOP_JOIN_WORKGROUP_SIZE[2])
-}
-
 #[test]
-fn wide_grid_launches_one_lane_per_cell() {
+fn a_wide_join_admits_one_lane_per_cell() {
     for n in [1u32, 2, 15, 16, 17, 64, 256] {
         let cells = u64::from(n) * u64::from(n);
+        let program = scallop_join("state", "next", "join_rules", "changed", n, 8, 4);
+        let span = u64::from(
+            vyre_foundation::guarded_logical_span(&program)
+                .expect("Fix: the join guard must bound the launch domain"),
+        );
         assert!(
-            launched_lanes(n) >= cells,
-            "n={n}: the grid launches {} lanes for {cells} cells, so some cell has no owner",
-            launched_lanes(n)
+            span >= cells,
+            "n={n}: the program admits {span} lanes for {cells} cells, so some cell has no owner"
         );
     }
 }

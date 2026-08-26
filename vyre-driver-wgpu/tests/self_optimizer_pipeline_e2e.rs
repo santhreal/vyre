@@ -1,9 +1,7 @@
-//! Multi-pass self-hosted optimizer pipeline running entirely on GPU.
+//! Multi-pass self-hosted optimizer pipeline through admitted WGPU artifacts.
 //!
-//! Composes `gpu_canonicalize → gpu_const_fold → gpu_dce` against the
-//! same input Program through `WgpuBackend::dispatch`. Each pass
-//! re-encodes its input and dispatches its own analysis Program. No
-//! CPU optimizer pass runs at any point.
+//! Composes `gpu_canonicalize → gpu_const_fold → gpu_dce` against the same
+//! explicit executor and immutable semantic policy.
 //!
 //! The input programs and the surviving body each one owes are
 //! `vyre_test_support::pass_programs::PIPELINE_CASES`, shared with the CUDA
@@ -14,7 +12,7 @@
 
 mod harness;
 use harness::acquire_live_backend as live_backend;
-use harness::self_optimizer::WgpuProgramDispatcher;
+use harness::self_optimizer::semantic_execution;
 
 use vyre_pass_engine::optimizer::canonicalize_via_encoded::gpu_canonicalize;
 use vyre_pass_engine::optimizer::const_fold_via_encoded::gpu_const_fold;
@@ -25,12 +23,12 @@ use vyre_test_support::pass_programs::{assert_pipeline_body, pipeline_case};
 /// the case owes.
 fn assert_case_on_real_gpu(label: &str) {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
+    let (executor, policy) = semantic_execution(&backend);
     let case = pipeline_case(label);
 
-    let p = gpu_canonicalize(case.input(), &dispatcher).expect("canonicalize dispatches");
-    let p = gpu_const_fold(p, &dispatcher).expect("const-fold dispatches");
-    let p = gpu_dce(p, &dispatcher).expect("dce dispatches");
+    let p = gpu_canonicalize(case.input(), &executor, &policy).expect("canonicalize dispatches");
+    let p = gpu_const_fold(p, &executor, &policy).expect("const-fold dispatches");
+    let p = gpu_dce(p, &executor, &policy).expect("dce dispatches");
 
     assert_pipeline_body("wgpu", case, &p);
 }

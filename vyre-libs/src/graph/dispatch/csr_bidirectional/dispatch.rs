@@ -10,7 +10,9 @@ use crate::graph::csr_bidirectional::{
 use vyre_foundation::ir::Program;
 
 use crate::graph::dispatch::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Dispatcher-backed bidirectional CSR step.
 ///
@@ -19,17 +21,19 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 /// Propagates dispatch failures and rejects malformed CSR/frontier
 /// shapes or truncated readback.
 pub fn bidirectional_step_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
     edge_kind_mask: &[u32],
     frontier_in: &[u32],
     allow_mask: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
     bidirectional_step_via_into(
         dispatcher,
+        policy,
         node_count,
         edge_offsets,
         edge_targets,
@@ -44,7 +48,8 @@ pub fn bidirectional_step_via(
 /// Dispatcher-backed bidirectional CSR step into caller-owned storage.
 #[allow(clippy::too_many_arguments)]
 pub fn bidirectional_step_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -52,10 +57,11 @@ pub fn bidirectional_step_via_into(
     frontier_in: &[u32],
     allow_mask: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = BidirectionalGpuScratch::default();
     bidirectional_step_via_with_scratch_into(
         dispatcher,
+        policy,
         node_count,
         edge_offsets,
         edge_targets,
@@ -70,7 +76,8 @@ pub fn bidirectional_step_via_into(
 /// Dispatcher-backed bidirectional CSR step with caller-owned scratch.
 #[allow(clippy::too_many_arguments)]
 pub fn bidirectional_step_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -79,7 +86,7 @@ pub fn bidirectional_step_via_with_scratch_into(
     allow_mask: u32,
     scratch: &mut BidirectionalGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let plan = plan_csr_bidirectional_step(
         node_count,
         edge_offsets,
@@ -88,7 +95,7 @@ pub fn bidirectional_step_via_with_scratch_into(
         frontier_in,
         allow_mask,
     )
-    .map_err(DispatchError::BadInputs)?;
+    .map_err(SemanticExecutionError::InvalidRequest)?;
     if node_count == 0 {
         out.clear();
         return Ok(());
@@ -101,7 +108,7 @@ pub fn bidirectional_step_via_with_scratch_into(
     let program_key = plan.program_key();
     let static_key = plan
         .static_input_key(edge_offsets, edge_targets, edge_kind_mask)
-        .map_err(DispatchError::BadInputs)?;
+        .map_err(SemanticExecutionError::InvalidRequest)?;
     let cached = program_cache.get_or_insert_with(program_key, || CachedBidirectionalProgram {
         program: plan.program(),
     });
@@ -117,6 +124,7 @@ pub fn bidirectional_step_via_with_scratch_into(
     )?;
     bidirectional_step_dispatch_prepared_inputs_into(
         dispatcher,
+        policy,
         &plan,
         &cached.program,
         inputs,
@@ -125,17 +133,25 @@ pub fn bidirectional_step_via_with_scratch_into(
 }
 
 pub(super) fn bidirectional_step_dispatch_prepared_inputs_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     plan: &CsrBidirectionalDispatchPlan,
     program: &Program,
     inputs: &[Vec<u8>],
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
-    let outputs = dispatcher.dispatch(program, inputs, Some(plan.grid))?;
+) -> Result<(), SemanticExecutionError> {
+    let outputs = execute_single_program(
+        dispatcher,
+        "csr_bidirectional_step",
+        program.clone(),
+        inputs,
+        policy,
+    )?
+    .outputs;
     let [frontier_out] = match outputs.as_slice() {
         [frontier_out] => [frontier_out],
         _ => {
-            return Err(DispatchError::BackendError(format!(
+            return Err(SemanticExecutionError::Backend(format!(
                 "Fix: {} expected exactly one u32 output buffer, got {}.",
                 CSR_BIDIRECTIONAL_FRONTIER_OUT_BUFFER,
                 outputs.len()
@@ -148,6 +164,7 @@ pub(super) fn bidirectional_step_dispatch_prepared_inputs_into(
         CSR_BIDIRECTIONAL_FRONTIER_OUT_BUFFER,
         out,
     )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -160,7 +177,7 @@ pub(super) fn refresh_bidirectional_step_inputs(
     edge_targets: &[u32],
     edge_kind_mask: &[u32],
     frontier_in: &[u32],
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     refresh_keyed_dispatch_inputs(
         inputs,
         static_input_key,

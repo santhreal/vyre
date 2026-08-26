@@ -1,7 +1,9 @@
+use vyre_foundation::{admitted_logical_span, guarded_logical_span};
+
 use super::*;
 
 #[test]
-fn plan_owns_padding_outputs_and_grid() {
+fn plan_owns_padding_and_outputs() {
     let plan = plan_ifds_csr_dispatch(
         2,
         2,
@@ -13,7 +15,7 @@ fn plan_owns_padding_outputs_and_grid() {
     )
     .expect("Fix: valid IFDS CSR dispatch plan should build");
 
-    assert_eq!(plan.grid, ifds_csr_dispatch_grid(1, 8));
+    assert_eq!(guarded_logical_span(&plan.program()), Some(1));
     assert_eq!(plan.killed_words, 8);
     assert_eq!(plan.intra_field_words, 1);
     assert_eq!(plan.inter_field_words, 1);
@@ -54,31 +56,29 @@ fn empty_plan_keeps_dispatch_buffers_nonempty_without_fake_rules() {
     assert_eq!(plan.row_cursor_words, 1);
     assert_eq!(plan.col_idx_words, 1);
     assert_eq!(plan.col_len_words, 1);
-    assert_eq!(plan.grid, IFDS_CSR_EMPTY_DISPATCH_GRID);
+    assert_eq!(admitted_logical_span(&plan.program(), 1), 1);
 }
 
 #[test]
-fn dispatch_grid_stays_single_block_for_lane_zero_builder() {
+fn the_lane_zero_builder_admits_one_lane_however_many_nodes_it_writes() {
     let plan = plan_ifds_csr_dispatch(2, 2, 2, &[(0, 0, 1), (0, 1, 0), (1, 0, 1)], &[], &[], &[])
         .expect("Fix: multi-edge IFDS dispatch plan should build");
 
     assert_eq!(plan.layout.total_nodes, 8);
     assert_eq!(plan.layout.intra_count, 3);
-    assert_eq!(plan.grid, ifds_csr_dispatch_grid(3, 8));
-    assert_eq!(plan.grid, [1, 1, 1]);
+    assert_eq!(guarded_logical_span(&plan.program()), Some(1));
     assert_eq!(plan.program().workgroup_size, IFDS_CSR_WORKGROUP_SIZE);
 }
 
 #[test]
-fn large_dispatch_plan_does_not_launch_idle_blocks() {
+fn a_large_plan_still_admits_one_lane() {
     let intra = (0..513).map(|edge| (0, edge, edge + 1)).collect::<Vec<_>>();
     let plan = plan_ifds_csr_dispatch(1, 515, 4, &intra, &[], &[], &[])
         .expect("Fix: large IFDS CSR dispatch plan should build");
 
     assert_eq!(plan.layout.total_nodes, 2060);
     assert_eq!(plan.layout.intra_count, 513);
-    assert_eq!(plan.grid, [1, 1, 1]);
-    assert_eq!(ifds_csr_dispatch_grid(513, 2060), [1, 1, 1]);
+    assert_eq!(guarded_logical_span(&plan.program()), Some(1));
 }
 
 #[test]

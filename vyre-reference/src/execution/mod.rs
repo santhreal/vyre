@@ -239,8 +239,8 @@ pub fn run_arena_reference_with_dispatch(
 /// whose size is greater than one, so a program that fans a `[256, 1, 1]`
 /// workgroup across `grid.y` (batched persistent-BFS runs one query per
 /// `grid.y` block) would collapse to `grid.y == 1` and silently compute only the
-/// first query. A caller that knows the real dispatch grid, e.g.
-/// `persistent_bfs_batch_dispatch_grid(node_count, query_count)`, passes it here
+/// first query. A caller that knows the real dispatch grid, e.g. one block per
+/// query alongside the node domain the program's guard admits, passes it here
 /// so the interpreter covers every workgroup the GPU would, per axis. This is the
 /// N-dimensional counterpart of [`reference_eval_with_dispatch`]'s 1-D floor.
 ///

@@ -21,8 +21,9 @@ pub mod operation;
 /// Versioned backend-neutral selected schedule stage.
 pub mod schedule;
 pub use geometry::{
-    CooperativeWidth, ElementPolicy, GeometryConstraintConflict, GeometryLoweringError,
-    GeometryRequirements, GeometryStrategy, LaunchGeometry, Uniformity,
+    admitted_logical_span, guarded_logical_span, launch_covers_full_input_span, CooperativeWidth,
+    ElementPolicy, GeometryConstraintConflict, GeometryLoweringError, GeometryRequirements,
+    GeometryStrategy, LaunchGeometry, Uniformity,
 };
 
 pub mod ir {
@@ -148,10 +149,6 @@ pub mod pass_substrate;
 /// Program → substrate-neutral execution planning for fusion, readback,
 /// provenance, autotune, and accuracy guard decisions.
 pub mod execution_plan;
-
-/// Program dispatch seam: the boundary between building a `Program` and
-/// running one on a backend.
-pub mod program_dispatch;
 
 /// Foundation-owned IR and Program wire failures.
 pub(crate) mod error;

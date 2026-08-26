@@ -31,7 +31,7 @@ use vyre_libs::graph::csr_queue_delta::{
 /// it the same shape, so the reset that seeds its queues matches it.
 pub(crate) const QUEUE_CLOSURE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-const fn csr_queue_delta_strided_dispatch_grid(active_queue_capacity: u32) -> [u32; 3] {
+const fn strided_grid(active_queue_capacity: u32) -> [u32; 3] {
     let source_slots = if active_queue_capacity == 0 {
         1
     } else if active_queue_capacity > 65_536 {
@@ -150,7 +150,7 @@ pub(crate) fn queue_closure_delta_plan(
                 queue_capacity,
                 allow_mask,
             ),
-            grid: csr_queue_delta_strided_dispatch_grid(queue_capacity),
+            grid: strided_grid(queue_capacity),
             row_strided,
         };
     }

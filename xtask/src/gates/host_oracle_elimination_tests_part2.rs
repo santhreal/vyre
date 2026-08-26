@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 #[test]
 fn mutation_catches_spoofed_module_from_le_bytes_helper() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 mod evil {
     pub struct u32;
@@ -19,10 +19,10 @@ mod evil {
 }
 
 pub fn decode_with_spoofed_path(
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<Vec<u32>, DispatchError> {
+    dispatcher: &dyn SemanticExecutor,
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut out = Vec::new();
     for chunk in raw.chunks_exact(4) {
         let word = evil::u32::from_le_bytes(chunk);
@@ -40,13 +40,13 @@ pub fn decode_with_spoofed_path(
 #[test]
 fn mutation_catches_big_endian_decoder_loop() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn decode_be_outputs(
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<Vec<u32>, DispatchError> {
+    dispatcher: &dyn SemanticExecutor,
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut decoded = Vec::new();
     for chunk in raw.chunks_exact(4) {
         decoded.push(u32::from_be_bytes(chunk.try_into().unwrap()));
@@ -64,13 +64,13 @@ pub fn decode_be_outputs(
 #[test]
 fn mutation_catches_native_endian_decoder_loop() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn decode_ne_outputs(
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<Vec<u32>, DispatchError> {
+    dispatcher: &dyn SemanticExecutor,
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut decoded = Vec::new();
     for chunk in raw.chunks_exact(4) {
         decoded.push(u32::from_ne_bytes(chunk.try_into().unwrap()));
@@ -88,14 +88,14 @@ pub fn decode_ne_outputs(
 #[test]
 fn mutation_catches_dynamic_chunk_width_decoder_loop() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn decode_dynamic_width(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     chunk_size: usize,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut decoded = Vec::new();
     for chunk in raw.chunks_exact(chunk_size) {
         decoded.push(u32::from_le_bytes(chunk.try_into().unwrap()));
@@ -113,13 +113,13 @@ pub fn decode_dynamic_width(
 #[test]
 fn mutation_catches_decoder_unwrap_or_fallback() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn decode_with_fallback(
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<Vec<u32>, DispatchError> {
+    dispatcher: &dyn SemanticExecutor,
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut decoded = Vec::new();
     for chunk in raw.chunks_exact(4) {
         let fallback = [0u8; 4];
@@ -139,13 +139,13 @@ pub fn decode_with_fallback(
 #[test]
 fn mutation_catches_decoder_unwrap_or_default_fallback() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn decode_with_default_fallback(
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<Vec<u32>, DispatchError> {
+    dispatcher: &dyn SemanticExecutor,
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut decoded = Vec::new();
     for chunk in raw.chunks_exact(4) {
         let bytes: [u8; 4] = chunk.try_into().unwrap_or_default();
@@ -164,14 +164,14 @@ pub fn decode_with_default_fallback(
 #[test]
 fn mutation_catches_non_codec_indexing_in_decoder_loop() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn decode_with_table_lookup(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     lookup_table: &[u32],
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut decoded = Vec::new();
     for chunk in raw.chunks_exact(4) {
         let word = u32::from_le_bytes(chunk.try_into().unwrap());
@@ -191,35 +191,35 @@ pub fn decode_with_table_lookup(
 #[test]
 fn unrelated_same_basename_helper_without_dispatch_does_not_create_fake_dispatch_root() {
     let module_a_code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
-pub fn predict_impact(dispatcher: &dyn ProgramDispatcher, out: &mut [u8]) -> Result<(), DispatchError> {
-    dispatcher.dispatch_resident(&[], out)
+pub fn predict_impact(dispatcher: &dyn SemanticExecutor, out: &mut [u8]) -> Result<(), SemanticExecutionError> {
+    dispatcher.execute(&[], out)
 }
 "#;
     let module_b_code = r#"
-use vyre_foundation::program_dispatch::ProgramDispatcher;
+use vyre_megakernel::SemanticExecutor;
 
-pub fn predict_impact(dispatcher: &dyn ProgramDispatcher) -> usize {
+pub fn predict_impact(dispatcher: &dyn SemanticExecutor) -> usize {
     // Unrelated helper in module_b with the same base name, but doing NO GPU dispatch
     0
 }
 
 pub fn validate_before_run(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
 ) -> bool {
     let n = predict_impact(dispatcher);
     n == 0
 }
 "#;
     let module_c_code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 use crate::module_a::predict_impact;
 
 pub fn execute_and_filter(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     out: &mut [u8],
-) -> Result<bool, DispatchError> {
+) -> Result<bool, SemanticExecutionError> {
     predict_impact(dispatcher, out)?;
     Ok(out[0] != 0)
 }
@@ -242,14 +242,14 @@ pub fn execute_and_filter(
 #[test]
 fn mutation_catches_post_dispatch_computation_on_borrowed_references_and_slices() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn project_with_borrows(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     cell: u32,
-) -> Result<u32, DispatchError> {
+) -> Result<u32, SemanticExecutionError> {
     let mut raw = vec![0u8; 16];
-    dispatcher.dispatch_resident(&[], &mut raw)?;
+    dispatcher.execute(&[], &mut raw)?;
     let mut decoded = Vec::new();
     for chunk in raw.chunks_exact(4) {
         decoded.push(u32::from_le_bytes(chunk.try_into().unwrap()));
@@ -273,20 +273,20 @@ pub fn project_with_borrows(
 #[test]
 fn mutation_catches_cross_file_dispatch_helper_post_dispatch_projection() {
     let helper_code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
-pub fn execute_gpu_step(dispatcher: &dyn ProgramDispatcher, out: &mut [u8]) -> Result<(), DispatchError> {
-    dispatcher.dispatch_resident(&[], out)
+pub fn execute_gpu_step(dispatcher: &dyn SemanticExecutor, out: &mut [u8]) -> Result<(), SemanticExecutionError> {
+    dispatcher.execute(&[], out)
 }
 "#;
     let driver_code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 use crate::helper::execute_gpu_step;
 
 pub fn run_pipeline_with_host_filter(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     target: u32,
-) -> Result<bool, DispatchError> {
+) -> Result<bool, SemanticExecutionError> {
     let mut buffer = vec![0u8; 8];
     execute_gpu_step(dispatcher, &mut buffer)?;
     let val0 = u32::from_le_bytes(buffer[0..4].try_into().unwrap());
@@ -307,7 +307,7 @@ pub fn run_pipeline_with_host_filter(
 #[test]
 fn clean_dispatcher_with_pre_validation_and_typed_unpacking_passes() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub struct CircuitSummary {
     pub a: u32,
@@ -315,13 +315,13 @@ pub struct CircuitSummary {
 }
 
 pub fn predict_summary_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     weights: &[u32],
-) -> Result<CircuitSummary, DispatchError> {
+) -> Result<CircuitSummary, SemanticExecutionError> {
     if weights.is_empty() {
-        return Err(DispatchError::BadInputs("empty weights".to_string()));
+        return Err(SemanticExecutionError::BadInputs("empty weights".to_string()));
     }
-    let raw = dispatcher.dispatch(1, 2)?;
+    let raw = dispatcher.execute(1, 2)?;
     Ok(CircuitSummary {
         a: raw.get(0).copied().unwrap_or(0),
         b: raw.get(1).copied().unwrap_or(0),
@@ -338,7 +338,7 @@ pub fn predict_summary_via(
 #[test]
 fn clean_dispatcher_with_dispatch_map_unpack_passes() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub struct CircuitSummary {
     pub a: u32,
@@ -353,11 +353,11 @@ fn unpack_only(raw: Vec<u32>) -> CircuitSummary {
 }
 
 pub fn predict_summary_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     weights: &[u32],
-) -> Result<CircuitSummary, DispatchError> {
+) -> Result<CircuitSummary, SemanticExecutionError> {
     dispatcher
-        .dispatch(1, 2)
+        .execute(1, 2)
         .map(unpack_only)
 }
 "#;
@@ -371,21 +371,21 @@ pub fn predict_summary_via(
 #[test]
 fn clean_dispatcher_with_gpu_reduction_chain_passes() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn reduce_any_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     data: &[u32],
-) -> Result<bool, DispatchError> {
-    let _ = dispatcher.dispatch(1, 2)?;
+) -> Result<bool, SemanticExecutionError> {
+    let _ = dispatcher.execute(1, 2)?;
     Ok(true)
 }
 
 pub fn motif_matches_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     words: &[u32],
-) -> Result<bool, DispatchError> {
-    let _ = dispatcher.dispatch(1, 2)?;
+) -> Result<bool, SemanticExecutionError> {
+    let _ = dispatcher.execute(1, 2)?;
     let witness = [1u32, 2];
     reduce_any_via(dispatcher, &witness)
 }
@@ -564,6 +564,54 @@ mod tests {
             .message
             .contains("unisolated host data-processing semantic twin `encode_payload`")),
         "finding message should name the unisolated semantic twin: {findings:?}"
+    );
+}
+
+/// A library wrapper reaches the device through the seam's free helper, not
+/// through the trait method, so the helper name has to read as device execution
+/// for the wrapper to be a production root. When it did not, every wrapper in
+/// the library crates read as an unreachable host oracle at once. The control
+/// case in the same fixture keeps the rule able to fail: identical host
+/// arithmetic with no submission stays flagged.
+#[test]
+fn seam_execution_helper_makes_its_caller_a_production_root() {
+    let code = r#"
+use vyre_megakernel::{execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+
+pub fn scaled_words_via(
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
+    words: &[u32],
+) -> Result<Vec<u32>, SemanticExecutionError> {
+    let inputs = vec![words.iter().flat_map(|w| w.to_le_bytes()).collect()];
+    let output = execute_single_program(dispatcher, "scale", scale_program(), &inputs, policy)?;
+    let mut out = Vec::new();
+    for chunk in output.outputs[0].chunks_exact(4) {
+        out.push(u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+    }
+    Ok(out)
+}
+
+pub fn scaled_words_host(words: &[u32]) -> Vec<u32> {
+    let mut out = Vec::new();
+    for &w in words {
+        out.push(w.wrapping_mul(31));
+    }
+    out
+}
+"#;
+    let findings = analyze_files(&[("vyre-libs/src/analysis/scale.rs", code)]);
+    assert!(
+        !findings
+            .iter()
+            .any(|finding| finding.message.contains("semantic twin `scaled_words_via`")),
+        "a wrapper that submits through the seam helper must be a production root: {findings:?}"
+    );
+    assert!(
+        findings.iter().any(|finding| finding
+            .message
+            .contains("unisolated host data-processing semantic twin `scaled_words_host`")),
+        "the same arithmetic with no submission must stay flagged: {findings:?}"
     );
 }
 
@@ -1227,15 +1275,15 @@ pub fn encode_transformed_payload(dst: &mut [u8], data: &[u32]) -> Result<usize,
 fn mutation_catches_post_dispatch_float_arithmetic_derivation() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
-pub fn total_set_bits_via(dispatcher: &dyn ProgramDispatcher, _input: &[u32]) -> Result<Vec<u8>, DispatchError> {
+pub fn total_set_bits_via(dispatcher: &dyn SemanticExecutor, _input: &[u32]) -> Result<Vec<u8>, SemanticExecutionError> {
     let prog = Program::default();
-    let out = dispatcher.dispatch(&prog, &[vec![]], None)?;
+    let out = dispatcher.execute(&prog, &[vec![]], None)?;
     Ok(out[0].clone())
 }
 
-pub fn saturation_ratio_via(dispatcher: &dyn ProgramDispatcher, input: &[u32]) -> Result<f64, DispatchError> {
+pub fn saturation_ratio_via(dispatcher: &dyn SemanticExecutor, input: &[u32]) -> Result<f64, SemanticExecutionError> {
     if input.is_empty() {
         return Ok(0.0);
     }
@@ -1260,15 +1308,15 @@ pub fn saturation_ratio_via(dispatcher: &dyn ProgramDispatcher, input: &[u32]) -
 fn mutation_catches_imported_alias_transitive_post_dispatch_derivation() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher as CustomDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor as CustomDispatcher};
 
-pub fn leaf_dispatch(d: &dyn CustomDispatcher, _input: &[u32]) -> Result<Vec<u8>, DispatchError> {
+pub fn leaf_dispatch(d: &dyn CustomDispatcher, _input: &[u32]) -> Result<Vec<u8>, SemanticExecutionError> {
     let prog = Program::default();
-    let out = d.dispatch(&prog, &[vec![]], None)?;
+    let out = d.execute(&prog, &[vec![]], None)?;
     Ok(out[0].clone())
 }
 
-pub fn caller_with_arithmetic(d: &dyn CustomDispatcher, input: &[u32]) -> Result<u64, DispatchError> {
+pub fn caller_with_arithmetic(d: &dyn CustomDispatcher, input: &[u32]) -> Result<u64, SemanticExecutionError> {
     let bytes = leaf_dispatch(d, input)?;
     let val = u64::from(bytes[0]);
     Ok(val * 42)
@@ -1289,16 +1337,16 @@ pub fn caller_with_arithmetic(d: &dyn CustomDispatcher, input: &[u32]) -> Result
 fn mutation_permits_post_dispatch_byte_unpacking_and_indexing() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
-pub fn popcount_via(dispatcher: &dyn ProgramDispatcher, _input: &[u32]) -> Result<Vec<u32>, DispatchError> {
+pub fn popcount_via(dispatcher: &dyn SemanticExecutor, _input: &[u32]) -> Result<Vec<u32>, SemanticExecutionError> {
     let prog = Program::default();
-    let out = dispatcher.dispatch(&prog, &[vec![]], None)?;
+    let out = dispatcher.execute(&prog, &[vec![]], None)?;
     let raw_bytes = &out[0];
     unpack_words(raw_bytes)
 }
 
-fn unpack_words(raw_bytes: &[u8]) -> Result<Vec<u32>, DispatchError> {
+fn unpack_words(raw_bytes: &[u8]) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut words = Vec::with_capacity(raw_bytes.len() / 4);
     for i in 0..(raw_bytes.len() / 4) {
         let word = u32::from_le_bytes(raw_bytes[i * 4..(i + 1) * 4].try_into().unwrap());
@@ -1331,21 +1379,21 @@ pub fn is_bitset_equal_program(program: &Program) -> bool {
 }
 
 #[test]
-fn mutation_catches_generic_program_dispatcher_bound_host_reduction() {
+fn mutation_catches_generic_semantic_executor_bound_host_reduction() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
-pub fn pass_conflicts_via<D: ProgramDispatcher>(dispatcher: &D, _input: &[u32]) -> Result<bool, DispatchError> {
+pub fn pass_conflicts_via<D: SemanticExecutor>(dispatcher: &D, _input: &[u32]) -> Result<bool, SemanticExecutionError> {
     let prog = Program::default();
-    let out = dispatcher.dispatch(&prog, &[vec![]], None)?;
+    let out = dispatcher.execute(&prog, &[vec![]], None)?;
     Ok(out[0].iter().any(|&b| b != 0))
 }
 "#;
     let findings = analyze_files(&[("vyre-libs/src/generic_dispatch.rs", code)]);
     assert!(
         !findings.is_empty(),
-        "generic ProgramDispatcher bounded function with post-dispatch reduction must be convicted"
+        "generic SemanticExecutor bounded function with post-dispatch reduction must be convicted"
     );
     assert!(findings.iter().any(|f| f
         .message
@@ -1355,11 +1403,11 @@ pub fn pass_conflicts_via<D: ProgramDispatcher>(dispatcher: &D, _input: &[u32]) 
 fn mutation_catches_post_dispatch_integer_addition_derivation() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
-pub fn popcount_plus_one_via(dispatcher: &dyn ProgramDispatcher, _input: &[u32]) -> Result<u64, DispatchError> {
+pub fn popcount_plus_one_via(dispatcher: &dyn SemanticExecutor, _input: &[u32]) -> Result<u64, SemanticExecutionError> {
     let prog = Program::default();
-    let out = dispatcher.dispatch(&prog, &[vec![]], None)?;
+    let out = dispatcher.execute(&prog, &[vec![]], None)?;
     let decoded_u32 = out[0][0] as u64;
     Ok(decoded_u32 + 1)
 }
@@ -1378,11 +1426,11 @@ pub fn popcount_plus_one_via(dispatcher: &dyn ProgramDispatcher, _input: &[u32])
 fn mutation_catches_post_dispatch_count_ones_reduction() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
-pub fn popcount_count_ones_via(dispatcher: &dyn ProgramDispatcher, _input: &[u32]) -> Result<u32, DispatchError> {
+pub fn popcount_count_ones_via(dispatcher: &dyn SemanticExecutor, _input: &[u32]) -> Result<u32, SemanticExecutionError> {
     let prog = Program::default();
-    let out = dispatcher.dispatch(&prog, &[vec![]], None)?;
+    let out = dispatcher.execute(&prog, &[vec![]], None)?;
     let word = u32::from_le_bytes(out[0][0..4].try_into().unwrap());
     Ok(word.count_ones())
 }

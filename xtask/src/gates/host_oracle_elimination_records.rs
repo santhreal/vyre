@@ -17,9 +17,8 @@ pub(super) const EXACT_CANONICAL_IR_BUILDER_PATHS: &[&str] = &[
     "vyre_primitives::hardware::HardwareEntry",
 ];
 
-/// Exact canonical qualified dispatcher capability traits and types derived from actual source imports.
-pub(super) const EXACT_CANONICAL_DISPATCHER_PATHS: &[&str] =
-    &["vyre_foundation::program_dispatch::ProgramDispatcher"];
+/// Exact canonical qualified execution capability traits and types derived from actual source imports.
+pub(super) const EXACT_CANONICAL_DISPATCHER_PATHS: &[&str] = &["vyre_megakernel::SemanticExecutor"];
 
 /// Exact terminal scalar types.
 pub(super) const SCALAR_TYPES: &[&str] = &[
@@ -130,7 +129,7 @@ pub(super) struct FunctionRecord {
     pub(super) params: Vec<FunctionParamRecord>,
     pub(super) direct_dispatched_param_indices: BTreeSet<usize>,
     pub(super) param_callee_flows: Vec<ParamCalleeFlow>,
-    pub(super) stages_semantic_resident_upload: bool,
+    pub(super) stages_semantic_input_binding: bool,
 }
 
 /// Structural record of a function call or reference site.

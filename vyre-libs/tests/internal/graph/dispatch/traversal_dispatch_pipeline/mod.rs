@@ -1,8 +1,7 @@
 use crate::graph::{
     adaptive_traverse::{adaptive_dense_step, should_use_dense},
-    csr_closure_inputs::{CsrClosureInputs, CsrGraphView},
     csr_forward_or_changed::{
-        cpu_ref_closure_into, csr_forward_or_changed_body, csr_forward_or_changed_body_prefixed,
+        csr_forward_or_changed_body, csr_forward_or_changed_body_prefixed,
         csr_forward_or_changed_child, csr_forward_or_changed_child_prefixed,
         csr_forward_or_changed_parallel, csr_forward_or_changed_parallel_batch,
         csr_forward_or_changed_parallel_batch_global,
@@ -20,6 +19,7 @@ use crate::graph::{
 };
 use vyre_foundation::ir::{Node, Program};
 use vyre_reference::composition_witness::{
+    csr_forward_or_changed_closure_witness_into,
     csr_frontier_degree_sum_witness as csr_frontier_degree_sum_cpu, dense_bitmatrix_step_witness,
 };
 
@@ -263,18 +263,14 @@ fn cpu_oracles_answer_the_traversal_cases_dispatch_assumes() {
 
     let mut current = Vec::new();
     let mut next = Vec::new();
-    cpu_ref_closure_into(
-        CsrClosureInputs {
-            graph: CsrGraphView {
-                node_count: 3,
-                edge_offsets: &[0, 1, 2, 2],
-                edge_targets: &[1, 2],
-                edge_kind_mask: &[1, 1],
-            },
-            allow_mask: 1,
-            max_iters: 4,
-        },
+    csr_forward_or_changed_closure_witness_into(
+        3,
+        &[0, 1, 2, 2],
+        &[1, 2],
+        &[1, 1],
         &[0b001],
+        1,
+        4,
         &mut current,
         &mut next,
     );

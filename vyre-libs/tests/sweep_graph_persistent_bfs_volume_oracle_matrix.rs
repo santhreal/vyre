@@ -2,10 +2,12 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(feature = "graph-dispatch")]
+mod semantic_execution_support;
+
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_libs::graph::dispatch::persistent_bfs::{
     bfs_expand_via_with_scratch_into, PersistentBfsGpuScratch,
 };
@@ -15,7 +17,7 @@ const CASES: usize = 1024;
 
 #[test]
 fn sweep_graph_persistent_bfs_volume_oracle_matrix() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut scratch = PersistentBfsGpuScratch::default();
     let mut output = Vec::new();
     for case_index in 0..CASES {
@@ -59,6 +61,7 @@ fn sweep_graph_persistent_bfs_volume_oracle_matrix() {
         }
         bfs_expand_via_with_scratch_into(
             &dispatcher,
+            &semantic_execution_support::policy(),
             case.inputs(max_iterations),
             &case.frontier,
             &mut scratch,

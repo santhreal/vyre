@@ -1,9 +1,4 @@
-//! The fixed facts every form of this operation shares: op id, workgroup
-//! shapes, the changed-history iteration ceiling, and the grid derived from a
-//! node count.
-//!
-//! One owner for these constants keeps the serial, parallel, and batched forms
-//! from drifting into three different notions of a lane.
+//! Fixed semantic facts shared by every forward-or-changed program.
 
 /// Canonical op id.
 pub(crate) const OP_ID: &str = "vyre-libs::graph::csr_forward_or_changed";
@@ -13,28 +8,6 @@ pub(crate) const CSR_FORWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 pub(crate) const CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// Iteration ceiling where a changed-history buffer avoids per-iteration zeroing.
 pub(crate) const CSR_FORWARD_OR_CHANGED_HISTORY_FAST_PATH_MAX_ITERS: u32 = 64;
-
-/// Dispatch grid for a node-parallel CSR forward-or-changed pass.
-#[must_use]
-pub const fn csr_forward_or_changed_parallel_grid(node_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(
-        node_count,
-        CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE[0],
-    )
-}
-
-/// Dispatch grid for a batched node-parallel CSR forward-or-changed pass.
-///
-/// One y group per query, floored at one so a zero-query batch still launches.
-#[cfg(test)]
-#[must_use]
-pub(crate) const fn csr_forward_or_changed_parallel_batch_grid(
-    node_count: u32,
-    query_count: u32,
-) -> [u32; 3] {
-    let [groups, _, _] = csr_forward_or_changed_parallel_grid(node_count);
-    [groups, if query_count == 0 { 1 } else { query_count }, 1]
-}
 
 /// Validated dispatch layout for the forward-or-changed CSR primitive.
 ///
@@ -59,8 +32,8 @@ pub struct CsrForwardOrChangedLayout {
 /// Program identity for the forward-or-changed CSR primitive.
 ///
 /// Dispatch consumers can cache generated programs by this key without
-/// re-implementing CSR validation, changed-history selection, or launch-grid
-/// policy outside `vyre-primitives`.
+/// re-implementing CSR validation or changed-history selection outside the
+/// graph primitive.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CsrForwardOrChangedProgramKey {
     layout: CsrForwardOrChangedLayout,
@@ -72,8 +45,8 @@ pub struct CsrForwardOrChangedProgramKey {
 /// Primitive-owned identity for reusable CSR forward-or-changed static inputs.
 ///
 /// Dispatch wrappers stage edge offsets, targets, masks, and changed-history
-/// buffers according to the primitive launch plan. This key keeps the content
-/// identity next to that plan so wrappers do not fork graph-fingerprint rules.
+/// buffers according to the primitive buffer layout. This key keeps the content
+/// identity next to that layout so wrappers do not fork graph-fingerprint rules.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CsrForwardOrChangedStaticInputKey {
     /// Program identity selected by the primitive launch planner.

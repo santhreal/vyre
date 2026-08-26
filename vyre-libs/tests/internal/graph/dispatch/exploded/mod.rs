@@ -2,8 +2,8 @@ use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::graph::exploded::{build_cpu_reference, try_build_cpu_reference};
 use std::sync::Mutex;
-use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_driver_reference::ReferenceSemanticExecutor;
+use vyre_megakernel::SemanticExecutionError;
 use vyre_test_support::exploded_ifds_cases::{arm_coverage, declared_groups, ExplodedIfdsCase};
 
 mod ifds_doubles;
@@ -11,9 +11,9 @@ mod ifds_doubles;
 use crate::test_parity_oracles::StaticOutputs;
 use ifds_doubles::{canonical_expected, RecordingIfdsOracle};
 
-/// The readback shapes below are deliberately malformed, so the dispatcher
+/// The readback shapes below are deliberately malformed, so the executor
 /// asserts nothing about its inputs; what is under test is the decoder's
-/// validation. Production parity uses `ReferenceEvalDispatcher`.
+/// validation. Production parity uses `ReferenceSemanticExecutor`.
 const MALFORMED_IFDS_CONTRACT: &str = "malformed exploded-IFDS readback";
 
 /// Every declared exploded-IFDS group has a substrate arm, and every case in it
@@ -41,7 +41,7 @@ fn substrate_exploded_ifds_arms_cover_every_declared_case_group() {
 
 /// The dispatched path decodes to exactly what the host reference builds.
 fn assert_via_dispatch_matches_reference(cases: &[ExplodedIfdsCase]) {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     for case in cases {
         let expected = canonical_expected(
             case.num_procs,
@@ -54,6 +54,7 @@ fn assert_via_dispatch_matches_reference(cases: &[ExplodedIfdsCase]) {
         );
         let actual = build_ifds_csr_via(
             &dispatcher,
+            &crate::test_parity_oracles::policy(),
             case.num_procs,
             case.blocks_per_proc,
             case.facts_per_proc,
@@ -150,7 +151,7 @@ fn round_trip_dense_is_identity() {
 
 #[test]
 fn via_decodes_exact_csr_outputs_into_reused_buffers() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let intra = [(0, 0, 1)];
     let expected = canonical_expected(1, 2, 1, &intra, &[], &[], &[]);
     let mut row_ptr = Vec::with_capacity(4);
@@ -159,6 +160,7 @@ fn via_decodes_exact_csr_outputs_into_reused_buffers() {
     let col_idx_ptr = col_idx.as_ptr();
     build_ifds_csr_via_into(
         &dispatcher,
+        &crate::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -178,7 +180,7 @@ fn via_decodes_exact_csr_outputs_into_reused_buffers() {
 #[test]
 fn via_refreshes_static_rule_inputs_for_same_shape_rule_content_change() {
     let dispatcher = RecordingIfdsOracle {
-        inner: ReferenceEvalDispatcher,
+        inner: ReferenceSemanticExecutor,
         intra_src_blocks: Mutex::new(Vec::new()),
     };
     let mut scratch = IfdsCsrGpuScratch::default();
@@ -187,6 +189,7 @@ fn via_refreshes_static_rule_inputs_for_same_shape_rule_content_change() {
 
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
+        &crate::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -201,6 +204,7 @@ fn via_refreshes_static_rule_inputs_for_same_shape_rule_content_change() {
     .expect("Fix: first IFDS same-shape dispatch should succeed");
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
+        &crate::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -228,7 +232,7 @@ fn via_refreshes_static_rule_inputs_for_same_shape_rule_content_change() {
 
 #[test]
 fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut scratch = IfdsCsrGpuScratch::default();
     let mut row_ptr = Vec::with_capacity(3);
     let mut col_idx = Vec::with_capacity(1);
@@ -238,6 +242,7 @@ fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
 
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
+        &crate::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -265,6 +270,7 @@ fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
 
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
+        &crate::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -302,6 +308,7 @@ fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
 
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
+        &crate::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -322,6 +329,7 @@ fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
 
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
+        &crate::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -343,13 +351,14 @@ fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
 
 #[test]
 fn empty_via_path_does_not_materialize_program_or_dispatch() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut scratch = IfdsCsrGpuScratch::default();
     let mut row_ptr = vec![99];
     let mut col_idx = vec![88];
 
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
+        &crate::test_parity_oracles::policy(),
         0,
         0,
         0,
@@ -389,10 +398,20 @@ fn via_rejects_extra_outputs() {
             u32_slice_to_le_bytes(&[0]),
         ],
     );
-    let err = build_ifds_csr_via(&dispatcher, 1, 1, 1, &[], &[], &[], &[])
-        .expect_err("extra outputs must be rejected");
+    let err = build_ifds_csr_via(
+        &dispatcher,
+        &crate::test_parity_oracles::policy(),
+        1,
+        1,
+        1,
+        &[],
+        &[],
+        &[],
+        &[],
+    )
+    .expect_err("extra outputs must be rejected");
     assert!(
-        matches!(err, DispatchError::BackendError(_)),
+        matches!(err, SemanticExecutionError::Backend(_)),
         "unexpected error: {err:?}"
     );
 }
@@ -408,10 +427,20 @@ fn via_rejects_trailing_col_len_bytes() {
             vec![0, 0, 0, 0, 1],
         ],
     );
-    let err = build_ifds_csr_via(&dispatcher, 1, 1, 1, &[], &[], &[], &[])
-        .expect_err("trailing col_len bytes must be rejected");
+    let err = build_ifds_csr_via(
+        &dispatcher,
+        &crate::test_parity_oracles::policy(),
+        1,
+        1,
+        1,
+        &[],
+        &[],
+        &[],
+        &[],
+    )
+    .expect_err("trailing col_len bytes must be rejected");
     assert!(
-        matches!(err, DispatchError::BackendError(_)),
+        matches!(err, SemanticExecutionError::Backend(_)),
         "unexpected error: {err:?}"
     );
 }
@@ -427,10 +456,20 @@ fn via_rejects_inconsistent_row_ptr_readback() {
             u32_slice_to_le_bytes(&[0]),
         ],
     );
-    let err = build_ifds_csr_via(&dispatcher, 1, 1, 1, &[], &[], &[], &[])
-        .expect_err("row_ptr[0] drift must be rejected");
+    let err = build_ifds_csr_via(
+        &dispatcher,
+        &crate::test_parity_oracles::policy(),
+        1,
+        1,
+        1,
+        &[],
+        &[],
+        &[],
+        &[],
+    )
+    .expect_err("row_ptr[0] drift must be rejected");
     assert!(
-        matches!(err, DispatchError::BackendError(_)),
+        matches!(err, SemanticExecutionError::Backend(_)),
         "unexpected error: {err:?}"
     );
 }

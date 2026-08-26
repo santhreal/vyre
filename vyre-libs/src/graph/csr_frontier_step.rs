@@ -24,12 +24,6 @@ pub const BINDING_EXCLUDED_SOURCES: u32 = BINDING_PRIMITIVE_START + 1;
 pub const BINDING_EXCLUDING_FRONTIER_OUT: u32 = BINDING_PRIMITIVE_START + 2;
 pub(crate) const CSR_FRONTIER_STEP_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid for one source-lane CSR frontier step.
-#[must_use]
-pub const fn csr_frontier_step_dispatch_grid(node_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(node_count, CSR_FRONTIER_STEP_WORKGROUP_SIZE[0])
-}
-
 /// Direction for a one-step CSR frontier traversal.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum CsrFrontierStepKind {
@@ -294,7 +288,7 @@ pub(crate) fn csr_backward_traverse_cpu_ref_into(
 
 #[cfg(test)]
 mod tests {
-    use super::{csr_frontier_step_dispatch_grid, CSR_FRONTIER_STEP_WORKGROUP_SIZE};
+    use super::CSR_FRONTIER_STEP_WORKGROUP_SIZE;
     use vyre_reference::composition_witness::{
         csr_backward_traverse_witness, csr_forward_traverse_witness,
     };
@@ -313,15 +307,6 @@ mod tests {
             program.workgroup_size()[0] > 1,
             "Fix: CSR frontier traversal must not launch one workgroup per source node."
         );
-    }
-
-    #[test]
-    fn dispatch_grid_packs_source_lanes_into_workgroups() {
-        assert_eq!(csr_frontier_step_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(csr_frontier_step_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(csr_frontier_step_dispatch_grid(256), [1, 1, 1]);
-        assert_eq!(csr_frontier_step_dispatch_grid(257), [2, 1, 1]);
-        assert_eq!(csr_frontier_step_dispatch_grid(513), [3, 1, 1]);
     }
 
     #[test]

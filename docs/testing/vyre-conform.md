@@ -42,7 +42,6 @@ The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
 | `test` | `cert_regression_pin` | `conform/vyre-conform/tests/cert_regression_pin/mod.rs` | None | `./cargo_full test -p vyre-conform --test cert_regression_pin` |
 | `test` | `composition_discipline` | `conform/vyre-conform/tests/composition_discipline.rs` | None | `./cargo_full test -p vyre-conform --test composition_discipline` |
 | `test` | `countless_readwrite_output_parity` | `conform/vyre-conform/tests/countless_readwrite_output_parity/mod.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test countless_readwrite_output_parity` |
-| `test` | `dispatch_grid_contracts` | `conform/vyre-conform/tests/dispatch_grid_contracts.rs` | None | `./cargo_full test -p vyre-conform --test dispatch_grid_contracts` |
 | `test` | `fp_parity_ul_policy_contracts` | `conform/vyre-conform/tests/fp_parity_ul_policy_contracts.rs` | None | `./cargo_full test -p vyre-conform --test fp_parity_ul_policy_contracts` |
 | `test` | `invariants` | `conform/vyre-conform/tests/invariants.rs` | None | `./cargo_full test -p vyre-conform --test invariants` |
 | `test` | `lens_buffer_state_contracts` | `conform/vyre-conform/tests/lens_buffer_state_contracts.rs` | None | `./cargo_full test -p vyre-conform --test lens_buffer_state_contracts` |
@@ -58,6 +57,7 @@ The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
 | `test` | `reference_parity_classes` | `conform/vyre-conform/tests/reference_parity_classes/mod.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test reference_parity_classes` |
 | `test` | `replay_capsule_contract` | `conform/vyre-conform/tests/replay_capsule_contract.rs` | None | `./cargo_full test -p vyre-conform --test replay_capsule_contract` |
 | `test` | `schema_compatibility` | `conform/vyre-conform/tests/schema_compatibility.rs` | None | `./cargo_full test -p vyre-conform --test schema_compatibility` |
+| `test` | `semantic_execution_contracts` | `conform/vyre-conform/tests/semantic_execution_contracts.rs` | None | `./cargo_full test -p vyre-conform --test semantic_execution_contracts` |
 | `test` | `ulp_audit` | `conform/vyre-conform/tests/ulp_audit.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test ulp_audit` |
 
 ## Test classes

@@ -2,8 +2,7 @@
 
 use super::program_graph::ProgramGraphShape;
 use super::tensor_flow_forward::{
-    tensor_flow_forward_dispatch_grid, tensor_words, try_tensor_flow_forward,
-    TENSOR_FLOW_FORWARD_WORKGROUP_SIZE,
+    tensor_words, try_tensor_flow_forward, TENSOR_FLOW_FORWARD_WORKGROUP_SIZE,
 };
 
 use vyre_reference::composition_witness::{
@@ -140,7 +139,7 @@ fn generated_tensor_flow_cpu_matches_edge_first_reference() {
 }
 
 #[test]
-fn tensor_flow_launch_packs_source_nodes_into_workgroups() {
+fn tensor_flow_builder_accepts_a_large_node_parallel_shape() {
     let program = try_tensor_flow_forward(
         ProgramGraphShape::new(513, 1),
         "tensor_in",
@@ -152,11 +151,6 @@ fn tensor_flow_launch_packs_source_nodes_into_workgroups() {
     .expect("Fix: tensor-flow builder should accept a large node-parallel shape");
 
     assert_eq!(program.workgroup_size(), TENSOR_FLOW_FORWARD_WORKGROUP_SIZE);
-    assert_eq!(tensor_flow_forward_dispatch_grid(0), [1, 1, 1]);
-    assert_eq!(tensor_flow_forward_dispatch_grid(1), [1, 1, 1]);
-    assert_eq!(tensor_flow_forward_dispatch_grid(256), [1, 1, 1]);
-    assert_eq!(tensor_flow_forward_dispatch_grid(257), [2, 1, 1]);
-    assert_eq!(tensor_flow_forward_dispatch_grid(513), [3, 1, 1]);
 }
 
 #[test]

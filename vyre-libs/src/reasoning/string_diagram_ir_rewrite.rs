@@ -47,11 +47,12 @@
 //! 1.0.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
-    write_u32_slice_le_bytes,
+    checked_product_count, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
 use crate::graph::string_diagram::monoidal_compose;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Reusable buffers for string-diagram IR rewrites.
 #[derive(Debug, Default)]
@@ -76,20 +77,22 @@ impl StringDiagramRewriteScratch {
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape validation fails, lane counts overflow,
-/// or the backend returns malformed output.
+/// Returns [`SemanticExecutionError`] when shape validation fails, lane counts overflow,
+/// or the admitted artifact produces malformed output.
 pub fn compose_ir_arrows_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     f_fixed: &[u32],
     g_fixed: &[u32],
     a: u32,
     b: u32,
     c: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut scratch = StringDiagramRewriteScratch::default();
     let mut out = Vec::new();
     compose_ir_arrows_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         f_fixed,
         g_fixed,
         a,
@@ -105,19 +108,21 @@ pub fn compose_ir_arrows_fixed_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or semantic execution fails.
 pub fn compose_ir_arrows_fixed_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     f_fixed: &[u32],
     g_fixed: &[u32],
     a: u32,
     b: u32,
     c: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = StringDiagramRewriteScratch::default();
     compose_ir_arrows_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         f_fixed,
         g_fixed,
         a,
@@ -133,9 +138,10 @@ pub fn compose_ir_arrows_fixed_via_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or semantic execution fails.
 pub fn compose_ir_arrows_fixed_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     f_fixed: &[u32],
     g_fixed: &[u32],
     a: u32,
@@ -143,7 +149,7 @@ pub fn compose_ir_arrows_fixed_via_with_scratch_into(
     c: u32,
     scratch: &mut StringDiagramRewriteScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, string_diagram_ir_rewrite_calls};
     bump(&string_diagram_ir_rewrite_calls);
 
@@ -151,34 +157,37 @@ pub fn compose_ir_arrows_fixed_via_with_scratch_into(
     let g_cells = checked_product_count(b, c, "b", "c", "compose_ir_arrows_fixed_via g")?;
     let out_cells = checked_product_count(a, c, "a", "c", "compose_ir_arrows_fixed_via out")?;
     let out_cells_u32 = u32::try_from(out_cells).map_err(|_| {
-        DispatchError::BadInputs(format!(
-            "Fix: compose_ir_arrows_fixed_via a*c exceeds the primitive u32 lane limit for a={a}, c={c}."
-        ))
-    })?;
+    SemanticExecutionError::InvalidRequest(format!(
+        "Fix: compose_ir_arrows_fixed_via a*c exceeds the primitive u32 lane limit for a={a}, c={c}."
+    ))
+})?;
     if f_fixed.len() != f_cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: compose_ir_arrows_fixed_via requires f_fixed.len() == a*b, got len={}, expected={f_cells}.",
-            f_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: compose_ir_arrows_fixed_via requires f_fixed.len() == a*b, got len={}, expected={f_cells}.",
+        f_fixed.len()
+    )));
     }
     if g_fixed.len() != g_cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: compose_ir_arrows_fixed_via requires g_fixed.len() == b*c, got len={}, expected={g_cells}.",
-            g_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: compose_ir_arrows_fixed_via requires g_fixed.len() == b*c, got len={}, expected={g_cells}.",
+        g_fixed.len()
+    )));
     }
 
     let program = monoidal_compose("f", "g", "out", a, b, c);
     ensure_input_slots(&mut scratch.dispatch_inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.dispatch_inputs[0], f_fixed);
     write_u32_slice_le_bytes(&mut scratch.dispatch_inputs[1], g_fixed);
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.dispatch_inputs[..2],
-        Some([ceil_div_u32(out_cells_u32, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: compose_ir_arrows_fixed_via expected at least one output buffer, got {}.",
             outputs.len()
         )));
@@ -190,7 +199,7 @@ pub fn compose_ir_arrows_fixed_via_with_scratch_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_foundation::ir::Program;
+
     use vyre_reference::composition_witness::{
         compose_ir_arrows_witness as compose_ir_arrows,
         composition_associates_witness as composition_associates,
@@ -264,6 +273,7 @@ mod tests {
         let mut gh = Vec::new();
         compose_ir_arrows_fixed_via_with_scratch_into(
             &ComposeDispatcher,
+            &crate::test_parity_oracles::policy(),
             &g,
             &h,
             2,
@@ -276,6 +286,7 @@ mod tests {
         let mut left = Vec::new();
         compose_ir_arrows_fixed_via_with_scratch_into(
             &ComposeDispatcher,
+            &crate::test_parity_oracles::policy(),
             &f,
             &gh,
             2,
@@ -289,6 +300,7 @@ mod tests {
         let mut fg = Vec::new();
         compose_ir_arrows_fixed_via_with_scratch_into(
             &ComposeDispatcher,
+            &crate::test_parity_oracles::policy(),
             &f,
             &g,
             2,
@@ -301,6 +313,7 @@ mod tests {
         let mut right = Vec::new();
         compose_ir_arrows_fixed_via_with_scratch_into(
             &ComposeDispatcher,
+            &crate::test_parity_oracles::policy(),
             &fg,
             &h,
             2,
@@ -316,16 +329,15 @@ mod tests {
 
     struct ComposeDispatcher;
 
-    impl ProgramDispatcher for ComposeDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for ComposeDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            if grid != Some([1, 1, 1]) || inputs.len() != 2 {
-                return Err(DispatchError::BadInputs(
-                    "compose dispatch shape mismatch".into(),
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            if inputs.len() != 2 {
+                return Err(SemanticExecutionError::InvalidRequest(
+                    "compose semantic input shape mismatch".into(),
                 ));
             }
             let f = crate::dispatch_buffers::read_u32s(&inputs[0]);
@@ -344,7 +356,7 @@ mod tests {
                     out[i * 2 + j] = acc;
                 }
             }
-            Ok(vec![u32_slice_to_le_bytes(&out)])
+            crate::test_parity_oracles::semantic_output(request, vec![u32_slice_to_le_bytes(&out)])
         }
     }
 
@@ -354,6 +366,7 @@ mod tests {
         let two = 2u32 << 16;
         let out = compose_ir_arrows_fixed_via(
             &ComposeDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[one, two, 0, one],
             &[one, 0, two, one],
             2,
@@ -376,6 +389,7 @@ mod tests {
         let out_ptr = out.as_ptr();
         compose_ir_arrows_fixed_via_with_scratch_into(
             &ComposeDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[one, 0, 0, one],
             2,
@@ -393,9 +407,16 @@ mod tests {
 
     #[test]
     fn fixed_via_rejects_shape_mismatch() {
-        let err =
-            compose_ir_arrows_fixed_via(&ComposeDispatcher, &[1, 2, 3], &[1, 2, 3, 4], 2, 2, 2)
-                .unwrap_err();
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        let err = compose_ir_arrows_fixed_via(
+            &ComposeDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[1, 2, 3],
+            &[1, 2, 3, 4],
+            2,
+            2,
+            2,
+        )
+        .unwrap_err();
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 }

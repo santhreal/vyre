@@ -58,7 +58,9 @@ use crate::dispatch_buffers::{
 };
 use crate::math::scallop_join;
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Default safety cap on Datalog fixpoint iterations. Monotone Datalog
 /// converges in ≤ n² iterations on n-cell systems; this cap is a
@@ -121,7 +123,7 @@ pub fn lineage_for_output_into(closure: &[u32], n: u32, out: u32, row: &mut Vec<
 }
 
 /// Build the provenance program once via [`build_provenance_program`],
-/// dispatch it through the supplied `ProgramDispatcher`, and return
+/// execute it through the supplied `SemanticExecutor`, and return
 /// the converged `n*n` lineage matrix.
 ///
 /// The GPU path runs the entire fixpoint as one dispatch (the
@@ -131,18 +133,19 @@ pub fn lineage_for_output_into(closure: &[u32], n: u32, out: u32, row: &mut Vec<
 ///
 /// # Errors
 ///
-/// Propagates any [`vyre_foundation::program_dispatch::DispatchError`]
-/// surfaced by the dispatcher.
+/// Propagates any [`SemanticExecutionError`] returned by the executor.
 pub fn provenance_closure_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     state: &[u32],
     join_rules: &[u32],
     n: u32,
     max_iterations: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut closure = Vec::new();
     provenance_closure_via_into(
         dispatcher,
+        policy,
         state,
         join_rules,
         n,
@@ -154,16 +157,18 @@ pub fn provenance_closure_via(
 
 /// Dispatch provenance closure into caller-owned storage.
 pub fn provenance_closure_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     state: &[u32],
     join_rules: &[u32],
     n: u32,
     max_iterations: u32,
     closure: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = ScallopProvenanceGpuScratch::default();
     provenance_closure_via_with_scratch_into(
         dispatcher,
+        policy,
         state,
         join_rules,
         n,
@@ -176,20 +181,21 @@ pub fn provenance_closure_via_into(
 /// Dispatch provenance closure into caller-owned dispatch and output
 /// storage.
 pub fn provenance_closure_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     state: &[u32],
     join_rules: &[u32],
     n: u32,
     max_iterations: u32,
     scratch: &mut ScallopProvenanceGpuScratch,
     closure: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, scallop_provenance_calls};
     bump(&scallop_provenance_calls);
 
     let n_usize = n as usize;
     let cells = n_usize.checked_mul(n_usize).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: provenance_closure_via n*n overflows usize for n={n}."
         ))
     })?;
@@ -198,33 +204,33 @@ pub fn provenance_closure_via_with_scratch_into(
             closure.clear();
             return Ok(());
         }
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: provenance_closure_via n=0 requires empty state and join_rules, got state={}, join_rules={}.",
-            state.len(),
-            join_rules.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: provenance_closure_via n=0 requires empty state and join_rules, got state={}, join_rules={}.",
+        state.len(),
+        join_rules.len()
+    )));
     }
     if max_iterations == 0 {
-        return Err(DispatchError::BadInputs(
+        return Err(SemanticExecutionError::InvalidRequest(
             "Fix: provenance_closure_via requires max_iterations > 0.".to_string(),
         ));
     }
     if state.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: provenance_closure_via requires state.len() == n*n ({cells}); got {} for n={n}.",
             state.len()
         )));
     }
     if join_rules.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: provenance_closure_via requires join_rules.len() == n*n ({cells}); got {} for n={n}.",
-            join_rules.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: provenance_closure_via requires join_rules.len() == n*n ({cells}); got {} for n={n}.",
+        join_rules.len()
+    )));
     }
     let state_bytes = cells
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: provenance_closure_via byte size for {cells} cells overflows usize."
             ))
         })?;
@@ -239,14 +245,16 @@ pub fn provenance_closure_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[2], std::mem::size_of::<u32>());
     write_u32_slice_le_bytes(&mut scratch.inputs[3], join_rules);
 
-    let grid_x = u32::try_from(cells.div_ceil(256)).map_err(|_| {
-        DispatchError::BadInputs(format!(
-            "Fix: provenance_closure_via grid size for {cells} cells exceeds u32 index space."
-        ))
-    })?;
-    let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([grid_x, 1, 1]))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &scratch.inputs,
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: scallop provenance dispatch expected at least the state output, got {}.",
             outputs.len()
         )));
@@ -396,8 +404,16 @@ mod tests {
         let join_rules = vec![0u32; 4];
         let mut closure = Vec::with_capacity(8);
         let ptr = closure.as_ptr();
-        provenance_closure_via_into(&dispatcher, &state, &join_rules, 2, 16, &mut closure)
-            .expect("Fix: dispatch succeeds");
+        provenance_closure_via_into(
+            &dispatcher,
+            &crate::test_parity_oracles::policy(),
+            &state,
+            &join_rules,
+            2,
+            16,
+            &mut closure,
+        )
+        .expect("Fix: dispatch succeeds");
         assert_eq!(closure, expected);
         assert_eq!(closure.as_ptr(), ptr);
     }
@@ -418,6 +434,7 @@ mod tests {
 
         provenance_closure_via_with_scratch_into(
             &dispatcher,
+            &crate::test_parity_oracles::policy(),
             &state,
             &join_rules,
             2,
@@ -432,6 +449,7 @@ mod tests {
 
         provenance_closure_via_with_scratch_into(
             &dispatcher,
+            &crate::test_parity_oracles::policy(),
             &state,
             &join_rules,
             2,
@@ -462,8 +480,15 @@ mod tests {
         .expecting_inputs(&[4]);
         let state = vec![0u32; 4];
         let join_rules = vec![0u32; 4];
-        let closure = provenance_closure_via(&dispatcher, &state, &join_rules, 2, 16)
-            .expect("Fix: scratch outputs must not mask the state output");
+        let closure = provenance_closure_via(
+            &dispatcher,
+            &crate::test_parity_oracles::policy(),
+            &state,
+            &join_rules,
+            2,
+            16,
+        )
+        .expect("Fix: scratch outputs must not mask the state output");
         assert_eq!(closure, vec![1, 2, 3, 4]);
     }
 
@@ -474,10 +499,17 @@ mod tests {
                 .expecting_inputs(&[4]);
         let state = vec![0u32; 1];
         let join_rules = vec![0u32; 1];
-        let err = provenance_closure_via(&dispatcher, &state, &join_rules, 1, 16)
-            .expect_err("trailing bytes must be rejected");
+        let err = provenance_closure_via(
+            &dispatcher,
+            &crate::test_parity_oracles::policy(),
+            &state,
+            &join_rules,
+            1,
+            16,
+        )
+        .expect_err("trailing bytes must be rejected");
         assert!(
-            matches!(err, DispatchError::BackendError(_)),
+            matches!(err, SemanticExecutionError::Backend(_)),
             "unexpected error: {err:?}"
         );
     }

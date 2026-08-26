@@ -1,7 +1,7 @@
 //! Tests for do-calculus change impact against the reference witnesses.
 
 use super::*;
-use vyre_foundation::ir::Program;
+use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use vyre_reference::composition_witness::{
     do_rule3_subgraph_witness, do_rule3_subgraph_witness_into,
     predict_impact_observation_form_witness, predict_impact_observation_form_witness_into,
@@ -76,14 +76,15 @@ fn predict_impact_observation_form_with_scratch(
 #[test]
 fn zero_node_validation_precedes_scratch_mutation() {
     struct NoDispatch;
-    impl ProgramDispatcher for NoDispatch {
-        fn dispatch(
+    impl SemanticExecutor for NoDispatch {
+        fn execute(
             &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            panic!("invalid zero-node inputs must fail before dispatch");
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                panic!("invalid zero-node inputs must fail before dispatch");
+            })()?;
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -98,23 +99,63 @@ fn zero_node_validation_precedes_scratch_mutation() {
     };
 
     let mut scratch = seeded_impact_scratch();
-    let result = predict_impact_via_into(&NoDispatch, &[1], &[], 0, &mut scratch);
-    assert!(matches!(result, Err(DispatchError::BadInputs(_))));
+    let result = predict_impact_via_into(
+        &NoDispatch,
+        &crate::test_parity_oracles::policy(),
+        &[1],
+        &[],
+        0,
+        &mut scratch,
+    );
+    assert!(matches!(
+        result,
+        Err(SemanticExecutionError::InvalidRequest(_))
+    ));
     assert_untouched(&scratch, "impact adjacency");
 
     let mut scratch = seeded_impact_scratch();
-    let result = predict_impact_via_into(&NoDispatch, &[], &[1], 0, &mut scratch);
-    assert!(matches!(result, Err(DispatchError::BadInputs(_))));
+    let result = predict_impact_via_into(
+        &NoDispatch,
+        &crate::test_parity_oracles::policy(),
+        &[],
+        &[1],
+        0,
+        &mut scratch,
+    );
+    assert!(matches!(
+        result,
+        Err(SemanticExecutionError::InvalidRequest(_))
+    ));
     assert_untouched(&scratch, "impact mask");
 
     let mut scratch = seeded_impact_scratch();
-    let result = predict_impact_observation_form_via_into(&NoDispatch, &[1], &[], 0, &mut scratch);
-    assert!(matches!(result, Err(DispatchError::BadInputs(_))));
+    let result = predict_impact_observation_form_via_into(
+        &NoDispatch,
+        &crate::test_parity_oracles::policy(),
+        &[1],
+        &[],
+        0,
+        &mut scratch,
+    );
+    assert!(matches!(
+        result,
+        Err(SemanticExecutionError::InvalidRequest(_))
+    ));
     assert_untouched(&scratch, "observation adjacency");
 
     let mut scratch = seeded_impact_scratch();
-    let result = predict_impact_observation_form_via_into(&NoDispatch, &[], &[1], 0, &mut scratch);
-    assert!(matches!(result, Err(DispatchError::BadInputs(_))));
+    let result = predict_impact_observation_form_via_into(
+        &NoDispatch,
+        &crate::test_parity_oracles::policy(),
+        &[],
+        &[1],
+        0,
+        &mut scratch,
+    );
+    assert!(matches!(
+        result,
+        Err(SemanticExecutionError::InvalidRequest(_))
+    ));
     assert_untouched(&scratch, "observation mask");
 }
 
@@ -412,84 +453,96 @@ fn observation_form_empty_graph() {
     assert!(predict_impact_observation_form(&[], &[], 0).is_empty());
 }
 
-fn assert_mock_dispatch_contract(
-    inputs: &[Vec<u8>],
-    grid_override: Option<[u32; 3]>,
-    expected_len: usize,
-) {
-    assert_eq!(grid_override, Some([1, 1, 1]));
+fn assert_mock_dispatch_contract(inputs: &[Vec<u8>], expected_len: usize) {
     assert_eq!(inputs.len(), expected_len);
 }
 
 struct InterventionDispatcher;
 
-impl ProgramDispatcher for InterventionDispatcher {
-    fn dispatch(
+impl SemanticExecutor for InterventionDispatcher {
+    fn execute(
         &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_mock_dispatch_contract(inputs, grid_override, 3);
-        let adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
-        let mask = crate::dispatch_buffers::read_u32s(&inputs[1]);
-        let n = mask.len();
-        let mut out = adj;
-        for j in 0..n {
-            if mask[j] != 0 {
-                for i in 0..n {
-                    out[i * n + j] = 0;
+        request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+    ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+        let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+        let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            assert_mock_dispatch_contract(&inputs, 3);
+            let adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
+            let mask = crate::dispatch_buffers::read_u32s(&inputs[1]);
+            let n = mask.len();
+            let mut out = adj;
+            for j in 0..n {
+                if mask[j] != 0 {
+                    for i in 0..n {
+                        out[i * n + j] = 0;
+                    }
                 }
             }
-        }
-        Ok(vec![u32_slice_to_le_bytes(&out)])
+            Ok(vec![u32_slice_to_le_bytes(&out)])
+        })()?;
+        crate::test_parity_oracles::semantic_output(request, ordered)
     }
 }
 
 #[test]
 fn intervention_delete_incoming_via_dispatches_rule1() {
     let adj = vec![1, 2, 3, 4];
-    let out = intervention_delete_incoming_via(&InterventionDispatcher, &adj, &[1, 0], 2).unwrap();
+    let out = intervention_delete_incoming_via(
+        &InterventionDispatcher,
+        &crate::test_parity_oracles::policy(),
+        &adj,
+        &[1, 0],
+        2,
+    )
+    .unwrap();
     assert_eq!(out, vec![0, 2, 0, 4]);
 }
 
 #[test]
 fn intervention_delete_incoming_via_rejects_bad_shape() {
-    let err = intervention_delete_incoming_via(&InterventionDispatcher, &[1, 2, 3], &[1, 0], 2)
-        .unwrap_err();
-    assert!(matches!(err, DispatchError::BadInputs(_)));
+    let err = intervention_delete_incoming_via(
+        &InterventionDispatcher,
+        &crate::test_parity_oracles::policy(),
+        &[1, 2, 3],
+        &[1, 0],
+        2,
+    )
+    .unwrap_err();
+    assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
 }
 
 struct Rule2Dispatcher;
 
-impl ProgramDispatcher for Rule2Dispatcher {
-    fn dispatch(
+impl SemanticExecutor for Rule2Dispatcher {
+    fn execute(
         &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_mock_dispatch_contract(inputs, grid_override, 3);
-        let adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
-        let mask = crate::dispatch_buffers::read_u32s(&inputs[1]);
-        let n = mask.len();
-        let mut out = vec![0u32; n * n];
-        for row in 0..n {
-            for col in 0..n {
-                let idx = row * n + col;
-                if row == col {
-                    out[idx] = adj[idx];
-                    continue;
-                }
-                if mask[col] == 0 {
-                    out[idx] |= adj[idx];
-                }
-                if mask[row] != 0 {
-                    out[idx] |= adj[col * n + row];
+        request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+    ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+        let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+        let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            assert_mock_dispatch_contract(&inputs, 3);
+            let adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
+            let mask = crate::dispatch_buffers::read_u32s(&inputs[1]);
+            let n = mask.len();
+            let mut out = vec![0u32; n * n];
+            for row in 0..n {
+                for col in 0..n {
+                    let idx = row * n + col;
+                    if row == col {
+                        out[idx] = adj[idx];
+                        continue;
+                    }
+                    if mask[col] == 0 {
+                        out[idx] |= adj[idx];
+                    }
+                    if mask[row] != 0 {
+                        out[idx] |= adj[col * n + row];
+                    }
                 }
             }
-        }
-        Ok(vec![u32_slice_to_le_bytes(&out)])
+            Ok(vec![u32_slice_to_le_bytes(&out)])
+        })()?;
+        crate::test_parity_oracles::semantic_output(request, ordered)
     }
 }
 
@@ -500,7 +553,14 @@ fn rule2_reverse_incoming_via_dispatches_rule2() {
         0, 0, 1, //
         0, 0, 0,
     ];
-    let out = rule2_reverse_incoming_via(&Rule2Dispatcher, &adj, &[0, 1, 0], 3).unwrap();
+    let out = rule2_reverse_incoming_via(
+        &Rule2Dispatcher,
+        &crate::test_parity_oracles::policy(),
+        &adj,
+        &[0, 1, 0],
+        3,
+    )
+    .unwrap();
     assert_eq!(
         out,
         vec![
@@ -514,90 +574,147 @@ fn rule2_reverse_incoming_via_dispatches_rule2() {
 #[test]
 fn rule2_reverse_incoming_via_preserves_bidirectional_fully_treated_edges() {
     let adj = vec![0, 1, 1, 0];
-    let out = rule2_reverse_incoming_via(&Rule2Dispatcher, &adj, &[1, 1], 2).unwrap();
+    let out = rule2_reverse_incoming_via(
+        &Rule2Dispatcher,
+        &crate::test_parity_oracles::policy(),
+        &adj,
+        &[1, 1],
+        2,
+    )
+    .unwrap();
     assert_eq!(out, adj);
 }
 
 #[test]
 fn rule2_reverse_incoming_via_rejects_bad_shape() {
-    let err = rule2_reverse_incoming_via(&Rule2Dispatcher, &[1, 2, 3], &[1, 0], 2).unwrap_err();
-    assert!(matches!(err, DispatchError::BadInputs(_)));
+    let err = rule2_reverse_incoming_via(
+        &Rule2Dispatcher,
+        &crate::test_parity_oracles::policy(),
+        &[1, 2, 3],
+        &[1, 0],
+        2,
+    )
+    .unwrap_err();
+    assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
 }
 
 #[test]
 fn intervention_delete_incoming_via_handles_zero_nodes() {
-    let out = intervention_delete_incoming_via(&InterventionDispatcher, &[], &[], 0).unwrap();
+    let out = intervention_delete_incoming_via(
+        &InterventionDispatcher,
+        &crate::test_parity_oracles::policy(),
+        &[],
+        &[],
+        0,
+    )
+    .unwrap();
     assert!(out.is_empty());
 }
 
 #[test]
 fn intervention_delete_incoming_via_rejects_non_empty_when_n_zero() {
-    let err = intervention_delete_incoming_via(&InterventionDispatcher, &[1], &[], 0).unwrap_err();
-    assert!(matches!(err, DispatchError::BadInputs(_)));
+    let err = intervention_delete_incoming_via(
+        &InterventionDispatcher,
+        &crate::test_parity_oracles::policy(),
+        &[1],
+        &[],
+        0,
+    )
+    .unwrap_err();
+    assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
 }
 
 #[test]
 fn intervention_delete_incoming_via_rejects_extra_outputs() {
     struct ExtraOutDispatcher;
-    impl ProgramDispatcher for ExtraOutDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for ExtraOutDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            Ok(vec![
-                u32_slice_to_le_bytes(&[0, 2, 0, 4]),
-                u32_slice_to_le_bytes(&[0, 0]),
-            ])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                Ok(vec![
+                    u32_slice_to_le_bytes(&[0, 2, 0, 4]),
+                    u32_slice_to_le_bytes(&[0, 0]),
+                ])
+            })()?;
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
-    let err = intervention_delete_incoming_via(&ExtraOutDispatcher, &[1, 2, 3, 4], &[1, 0], 2)
-        .unwrap_err();
-    assert!(matches!(err, DispatchError::BackendError(_)));
+    let err = intervention_delete_incoming_via(
+        &ExtraOutDispatcher,
+        &crate::test_parity_oracles::policy(),
+        &[1, 2, 3, 4],
+        &[1, 0],
+        2,
+    )
+    .unwrap_err();
+    assert!(matches!(err, SemanticExecutionError::Backend(_)));
 }
 
 #[test]
 fn rule2_reverse_incoming_via_handles_zero_nodes() {
-    let out = rule2_reverse_incoming_via(&Rule2Dispatcher, &[], &[], 0).unwrap();
+    let out = rule2_reverse_incoming_via(
+        &Rule2Dispatcher,
+        &crate::test_parity_oracles::policy(),
+        &[],
+        &[],
+        0,
+    )
+    .unwrap();
     assert!(out.is_empty());
 }
 
 #[test]
 fn rule2_reverse_incoming_via_rejects_extra_outputs() {
     struct ExtraOutDispatcher;
-    impl ProgramDispatcher for ExtraOutDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for ExtraOutDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            Ok(vec![
-                u32_slice_to_le_bytes(&[0, 1, 1, 0]),
-                u32_slice_to_le_bytes(&[0]),
-            ])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                Ok(vec![
+                    u32_slice_to_le_bytes(&[0, 1, 1, 0]),
+                    u32_slice_to_le_bytes(&[0]),
+                ])
+            })()?;
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
-    let err =
-        rule2_reverse_incoming_via(&ExtraOutDispatcher, &[0, 1, 1, 0], &[1, 1], 2).unwrap_err();
-    assert!(matches!(err, DispatchError::BackendError(_)));
+    let err = rule2_reverse_incoming_via(
+        &ExtraOutDispatcher,
+        &crate::test_parity_oracles::policy(),
+        &[0, 1, 1, 0],
+        &[1, 1],
+        2,
+    )
+    .unwrap_err();
+    assert!(matches!(err, SemanticExecutionError::Backend(_)));
 }
 
 #[test]
 fn rule3_subgraph_via_handles_zero_nodes() {
     struct DummyDispatcher;
-    impl ProgramDispatcher for DummyDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for DummyDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            panic!("dispatch should not be invoked for n=0");
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                panic!("dispatch should not be invoked for n=0");
+            })()?;
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
-    let (reduced, kept) = rule3_subgraph_via(&DummyDispatcher, &[], &[], 0).unwrap();
+    let (reduced, kept) = rule3_subgraph_via(
+        &DummyDispatcher,
+        &crate::test_parity_oracles::policy(),
+        &[],
+        &[],
+        0,
+    )
+    .unwrap();
     assert!(reduced.is_empty());
     assert!(kept.is_empty());
 }
@@ -605,22 +722,24 @@ fn rule3_subgraph_via_handles_zero_nodes() {
 #[test]
 fn rule3_subgraph_via_derives_shape_from_inputs_not_gpu_scalar() {
     struct CorruptedRedundantScalarDispatcher;
-    impl ProgramDispatcher for CorruptedRedundantScalarDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for CorruptedRedundantScalarDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            Ok(vec![
-                u32_slice_to_le_bytes(&[0, 1, 0, 0]),
-                u32_slice_to_le_bytes(&[0, 1]),
-                u32_slice_to_le_bytes(&[999]),
-            ])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                Ok(vec![
+                    u32_slice_to_le_bytes(&[0, 1, 0, 0]),
+                    u32_slice_to_le_bytes(&[0, 1]),
+                    u32_slice_to_le_bytes(&[999]),
+                ])
+            })()?;
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
     let (reduced, kept) = rule3_subgraph_via(
         &CorruptedRedundantScalarDispatcher,
+        &crate::test_parity_oracles::policy(),
         &[0, 1, 0, 0],
         &[1, 1],
         2,
@@ -632,63 +751,90 @@ fn rule3_subgraph_via_derives_shape_from_inputs_not_gpu_scalar() {
 
 #[test]
 fn rule3_subgraph_via_rejects_missing_outputs() {
+    /// Returns every written graph value but one, which is what an executor
+    /// that drops a declared output looks like across the semantic seam.
     struct MissingOutDispatcher;
-    impl ProgramDispatcher for MissingOutDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for MissingOutDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            Ok(vec![
-                u32_slice_to_le_bytes(&[0, 1, 0, 0]),
-                u32_slice_to_le_bytes(&[0, 1]),
-            ])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let mut output = crate::test_parity_oracles::semantic_output(
+                request,
+                vec![
+                    u32_slice_to_le_bytes(&[0, 1, 0, 0]),
+                    u32_slice_to_le_bytes(&[0, 1]),
+                ],
+            )?;
+            let dropped = *output.outputs.keys().next_back().ok_or_else(|| {
+                SemanticExecutionError::Backend(
+                    "Fix: the graph must write at least one value to drop one.".to_string(),
+                )
+            })?;
+            output.outputs.remove(&dropped);
+            Ok(output)
         }
     }
-    let err = rule3_subgraph_via(&MissingOutDispatcher, &[0, 1, 0, 0], &[1, 1], 2).unwrap_err();
-    assert!(matches!(err, DispatchError::BackendError(_)));
+    let err = rule3_subgraph_via(
+        &MissingOutDispatcher,
+        &crate::test_parity_oracles::policy(),
+        &[0, 1, 0, 0],
+        &[1, 1],
+        2,
+    )
+    .unwrap_err();
+    assert!(matches!(err, SemanticExecutionError::Backend(_)));
 }
 
 #[test]
 fn rule3_subgraph_via_rejects_extra_outputs() {
     struct ExtraOutDispatcher;
-    impl ProgramDispatcher for ExtraOutDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for ExtraOutDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            Ok(vec![
-                u32_slice_to_le_bytes(&[0, 1, 0, 0]),
-                u32_slice_to_le_bytes(&[0, 1]),
-                u32_slice_to_le_bytes(&[0]),
-                u32_slice_to_le_bytes(&[0]),
-            ])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                Ok(vec![
+                    u32_slice_to_le_bytes(&[0, 1, 0, 0]),
+                    u32_slice_to_le_bytes(&[0, 1]),
+                    u32_slice_to_le_bytes(&[0]),
+                    u32_slice_to_le_bytes(&[0]),
+                ])
+            })()?;
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
-    let err = rule3_subgraph_via(&ExtraOutDispatcher, &[0, 1, 0, 0], &[1, 1], 2).unwrap_err();
-    assert!(matches!(err, DispatchError::BackendError(_)));
+    let err = rule3_subgraph_via(
+        &ExtraOutDispatcher,
+        &crate::test_parity_oracles::policy(),
+        &[0, 1, 0, 0],
+        &[1, 1],
+        2,
+    )
+    .unwrap_err();
+    assert!(matches!(err, SemanticExecutionError::Backend(_)));
 }
 
 #[test]
 fn project_impacted_lineage_entries_handles_empty_lineage() {
     struct PanicDispatcher;
-    impl ProgramDispatcher for PanicDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for PanicDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            panic!("empty lineage cells must not dispatch");
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                panic!("empty lineage cells must not dispatch");
+            })()?;
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
     let mut out = vec![99; 4];
     let mut scratch = ImpactedLineageProjectionScratch::default();
     project_impacted_lineage_entries_via_into(
         &PanicDispatcher,
+        &crate::test_parity_oracles::policy(),
         &[1, 0],
         &[0; 4],
         2,
@@ -702,8 +848,8 @@ fn project_impacted_lineage_entries_handles_empty_lineage() {
 
 #[test]
 fn project_impacted_lineage_entries_parity_via_reference() {
-    use vyre_driver_reference::ReferenceEvalDispatcher;
-    let dispatcher = ReferenceEvalDispatcher;
+    use vyre_driver_reference::ReferenceSemanticExecutor;
+    let dispatcher = ReferenceSemanticExecutor;
     let impact_mask = vec![1, 0, 0];
     let mut closure = vec![0u32; 9];
     closure[2 * 3 + 0] = 1; // 2 -> 0
@@ -712,6 +858,7 @@ fn project_impacted_lineage_entries_parity_via_reference() {
     let mut scratch = ImpactedLineageProjectionScratch::default();
     project_impacted_lineage_entries_via_into(
         &dispatcher,
+        &crate::test_parity_oracles::policy(),
         &impact_mask,
         &closure,
         3,
@@ -725,13 +872,14 @@ fn project_impacted_lineage_entries_parity_via_reference() {
 
 #[test]
 fn project_impacted_lineage_entries_zero_n_nonempty_lineage_dispatches_zeros() {
-    use vyre_driver_reference::ReferenceEvalDispatcher;
-    let dispatcher = ReferenceEvalDispatcher;
+    use vyre_driver_reference::ReferenceSemanticExecutor;
+    let dispatcher = ReferenceSemanticExecutor;
     let lineage_cells = vec![0, 1, 99];
     let mut out = Vec::new();
     let mut scratch = ImpactedLineageProjectionScratch::default();
     project_impacted_lineage_entries_via_into(
         &dispatcher,
+        &crate::test_parity_oracles::policy(),
         &[],
         &[],
         0,

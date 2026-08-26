@@ -24,6 +24,7 @@ mod dependency_order;
 mod device_facts;
 mod envelope;
 mod error;
+mod execution;
 mod facts;
 mod frame;
 #[cfg(test)]
@@ -53,6 +54,11 @@ pub use envelope::{
     ARTIFACT_ENVELOPE_SCHEMA_VERSION, TARGET_PAYLOAD_SCHEMA_VERSION,
 };
 pub use error::CompileError;
+pub use execution::{
+    execute_single_program, writable_graph_value_buffers, writable_graph_values, CompileObjective,
+    SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
+    SemanticExecutionRequest, SemanticExecutor, SingleProgramExecutionOutput,
+};
 pub use identity::{
     ArtifactNodeId, ArtifactValueId, DependencyEdge, DependencyEndpoint, DependencyKind, Digest,
     FusionGroupId,

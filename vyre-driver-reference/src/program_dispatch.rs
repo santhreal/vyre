@@ -1,89 +1,175 @@
-//! The reference interpreter behind the `ProgramDispatcher` boundary.
-//!
-//! `CpuRefBackend` exposes `vyre-reference` to the driver registry. Parity
-//! suites need the same interpreter behind the narrower
-//! [`ProgramDispatcher`] surface that every `_via` consumer takes, and this
-//! crate is where a host execution route is allowed to live.
+//! Reference-only semantic parity execution over compiler-admitted graph artifacts.
 
-use vyre_foundation::ir::{BufferAccess, Program};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use std::collections::{BTreeMap, BTreeSet};
+
+use vyre_driver::target_dialect::{EmittedDialectModule, TargetDialect};
+use vyre_foundation::ir::{GraphValueId, ValueLifetime};
+use vyre_megakernel::{
+    CompileObjective, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
+    SemanticExecutor, TargetCompileError, TargetCompiler, TargetProfile,
+};
 use vyre_reference::value::Value;
 
-/// The one `ProgramDispatcher` that actually executes a vyre `Program`.
-///
-/// Backing the dispatch boundary with `vyre_reference::reference_eval` lets
-/// every `*_via` production entry point be tested end to end against its `_cpu`
-/// oracle without a GPU backend. Hand-written per-op CPU oracles recognize only
-/// the programs they were written for; this one runs any program.
-///
-/// The bridge models the real backend's dispatch-input contract exactly, so a
-/// `_via` consumer that passes here also runs correctly on hardware. The
-/// canonical mapping is `vyre-driver`'s `role_for_buffer` /
-/// [`vyre_foundation::ir::BufferDecl::is_backend_allocated_output`]: a buffer is
-/// backend-allocated (the backend creates it, no dispatch input) only when it is
-/// `is_output` / `WriteOnly` / `pipeline_live_out && ReadWrite`. Every other
-/// non-workgroup buffer - `ReadOnly` (role `Input`), plain `ReadWrite` (role
-/// `InputOutput`, whose zero or initial contents the caller supplies), and
-/// `Uniform` - consumes one dispatch input, in buffer order. The real backend
-/// validates this strictly (`inputs.len() == input_indices.len()`), so a
-/// consumer must pass one `Vec<u8>` per input-consuming buffer in buffer order,
-/// zero-filled for plain-`ReadWrite` outputs. `reference_eval` has the same
-/// requirement, so this bridge forwards each input-consuming buffer's dispatch
-/// bytes straight through. No zero-synthesis, which would silently diverge from
-/// the backend when a plain-`ReadWrite` buffer precedes a `ReadOnly` input. The
-/// returned values are the writable buffers in binding order, matching the
-/// dispatch contract.
-#[derive(Debug, Default, Clone, Copy)]
-pub struct ReferenceEvalDispatcher;
+use crate::CPU_REF_BACKEND_ID;
 
-impl ProgramDispatcher for ReferenceEvalDispatcher {
-    fn dispatch(
+pub(crate) const REFERENCE_TARGET_FORMAT: &str = "reference-graph";
+
+const REFERENCE_DIALECT: TargetDialect = TargetDialect {
+    backend_id: CPU_REF_BACKEND_ID,
+    dialect: "reference graph",
+    format: REFERENCE_TARGET_FORMAT,
+    format_version: 1,
+    generation: 1,
+    max_workgroup_size: [1_024, 1, 1],
+    max_invocations_per_workgroup: 1_024,
+    max_dynamic_shared_bytes: 0,
+    subgroup_size: 1,
+    emit: emit_reference_module,
+};
+
+fn emit_reference_module(
+    selected: &vyre_megakernel::SelectedLowering,
+    _profile: &TargetProfile,
+) -> Result<EmittedDialectModule, TargetCompileError> {
+    let mut bytes = Vec::with_capacity(48 + selected.nodes.len() * 4);
+    bytes.extend_from_slice(b"vyre-reference-graph-v1\0");
+    bytes.extend_from_slice(&selected.artifact.0);
+    bytes.extend_from_slice(&selected.group.0.to_le_bytes());
+    bytes.extend_from_slice(&selected.stage.to_le_bytes());
+    for node in &selected.nodes {
+        bytes.extend_from_slice(&node.0.to_le_bytes());
+    }
+    Ok(EmittedDialectModule {
+        entry_point: "reference_eval".to_string(),
+        bytes,
+        dynamic_shared_bytes: 0,
+    })
+}
+
+pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, vyre_driver::BackendError>
+{
+    REFERENCE_DIALECT.compiler()
+}
+
+/// Reference-only parity executor for validated logical graphs.
+///
+/// Neutral compilation and registered target attachment run before the graph is
+/// interpreted. Artifact and payload identities therefore have the same
+/// canonical provenance as device execution rather than test-only digests.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct ReferenceSemanticExecutor;
+
+impl SemanticExecutor for ReferenceSemanticExecutor {
+    fn execute(
         &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        _grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let mut values: Vec<Value> = Vec::new();
-        let mut next_input = inputs.iter();
-        for buffer in program.buffers() {
-            if buffer.access() == BufferAccess::Workgroup {
-                continue;
-            }
-            // Backend-allocated outputs (is_output / WriteOnly / pipeline_live_out&&RW) are created
-            // by the backend and consume NO dispatch input, mirroring `role_for_buffer`.
-            if buffer.is_backend_allocated_output() {
-                continue;
-            }
-            // Every remaining buffer is input-consuming per `role_for_buffer`: ReadOnly (Input),
-            // plain ReadWrite (InputOutput, whose zero/initial contents come from the caller),
-            // Uniform. Take the next dispatch input in buffer order, as the real backend does.
-            let bytes = next_input.next().ok_or_else(|| {
-                DispatchError::BadInputs(format!(
-                    "ReferenceEvalDispatcher: program declares more input-consuming buffers than the \
-                     {} dispatch inputs provided (at buffer `{}`). The backend requires one input per \
-                     {{ReadOnly, plain-ReadWrite, Uniform}} buffer in buffer order; pass a zero-filled \
-                     slot for each plain-ReadWrite output.",
-                    inputs.len(),
-                    buffer.name()
-                ))
-            })?;
-            values.push(Value::from(bytes.clone()));
+        request: &SemanticExecutionRequest<'_>,
+    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+        if request.objective() != CompileObjective::MinimizeLatency {
+            return Err(SemanticExecutionError::InvalidRequest(
+                "reference parity execution received an unsupported compiler objective".to_string(),
+            ));
         }
-        // Faithful to the backend's strict count validation: reject leftover inputs so an
-        // over-feeding consumer is caught here, not silently on hardware.
-        if next_input.next().is_some() {
-            return Err(DispatchError::BadInputs(format!(
-                "ReferenceEvalDispatcher: {} dispatch inputs provided but the program has fewer \
-                 input-consuming buffers. The backend requires exactly one input per {{ReadOnly, \
-                 plain-ReadWrite, Uniform}} buffer; do not pass slots for backend-allocated outputs.",
-                inputs.len()
+        if request.budget().max_measurements != 0 {
+            return Err(SemanticExecutionError::InvalidRequest(
+                "reference parity execution cannot satisfy a device-measurement budget. Fix: use a zero-measurement policy for the reference oracle".to_string(),
+            ));
+        }
+        let compile_request = request
+            .compile_request()
+            .validate()
+            .map_err(SemanticExecutionError::Compile)?;
+        let artifact =
+            vyre_megakernel::compile(&compile_request).map_err(SemanticExecutionError::Compile)?;
+        let registration = vyre_driver::backend_registration(CPU_REF_BACKEND_ID)
+            .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+        let compiler = registration.target_compiler().map_err(|error| {
+            SemanticExecutionError::Target(TargetCompileError::Unsupported(error.to_string()))
+        })?;
+        let payload = compiler
+            .compile(&artifact)
+            .map_err(SemanticExecutionError::Target)?;
+
+        let graph = request.logical().graph();
+        let external_values = graph
+            .values()
+            .iter()
+            .filter(|value| value.producer.is_none())
+            .map(|value| value.id)
+            .collect::<BTreeSet<_>>();
+        let supplied_values = request.inputs().keys().copied().collect::<BTreeSet<_>>();
+        if external_values != supplied_values {
+            let missing = external_values.difference(&supplied_values).count();
+            let undeclared = supplied_values.difference(&external_values).count();
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+                "graph-value inputs disagree with the logical graph: {missing} missing and {undeclared} undeclared value(s). Fix: key every external graph value exactly once"
             )));
         }
-        let outputs = vyre_reference::reference_eval(program, &values).map_err(|err| {
-            DispatchError::BackendError(format!(
-                "ReferenceEvalDispatcher: reference_eval failed. {err}"
-            ))
-        })?;
-        Ok(outputs.iter().map(Value::to_bytes).collect())
+
+        let mut values = request
+            .inputs()
+            .iter()
+            .map(|(value, bytes)| (*value, bytes.to_vec()))
+            .collect::<BTreeMap<_, _>>();
+        for node in graph.nodes() {
+            let mut inputs = Vec::with_capacity(node.inputs.len());
+            for input in &node.inputs {
+                let bytes = values.get(&input.value).ok_or_else(|| {
+                    SemanticExecutionError::InvalidRequest(format!(
+                        "graph node `{}` is missing value {}. Fix: preserve graph dependency order and bind every external input",
+                        node.name, input.value.0
+                    ))
+                })?;
+                inputs.push(Value::from(bytes.clone()));
+            }
+            let outputs = vyre_reference::reference_eval(&node.program, &inputs).map_err(|error| {
+                SemanticExecutionError::Backend(format!(
+                    "reference graph node `{}` failed: {error}. Fix: validate the node Program and graph-value ABI",
+                    node.name
+                ))
+            })?;
+            let written = vyre_megakernel::writable_graph_values(node);
+            let mut output_values = Vec::with_capacity(written.len());
+            for value in written {
+                let replaces_retained = node.inputs.iter().any(|port| port.value == value);
+                output_values.push((value, replaces_retained));
+            }
+            if outputs.len() != output_values.len() {
+                return Err(SemanticExecutionError::Backend(format!(
+                    "reference graph node `{}` returned {} output(s) for {} writable graph value(s). Fix: keep graph ports aligned with the reference output ABI",
+                    node.name,
+                    outputs.len(),
+                    output_values.len()
+                )));
+            }
+            for ((value, replaces_retained), output) in output_values.into_iter().zip(outputs) {
+                let prior = values.insert(value, output.to_bytes());
+                if prior.is_some() != replaces_retained {
+                    return Err(SemanticExecutionError::Backend(format!(
+                        "reference graph node `{}` violated graph value {} replacement semantics. Fix: only read-write inputs may replace retained state",
+                        node.name, value.0
+                    )));
+                }
+            }
+        }
+
+        let mut outputs = BTreeMap::new();
+        for value in graph.values().iter().filter(|value| {
+            matches!(value.contract.lifetime, ValueLifetime::Output) && value.producer.is_some()
+                || matches!(value.contract.lifetime, ValueLifetime::Retained)
+        }) {
+            let bytes = values.remove(&value.id).ok_or_else(|| {
+                SemanticExecutionError::Backend(format!(
+                    "reference graph omitted declared result value {}. Fix: execute every logical graph node before collecting outputs",
+                    value.id.0
+                ))
+            })?;
+            outputs.insert(GraphValueId(value.id.0), bytes);
+        }
+
+        Ok(SemanticExecutionOutput {
+            artifact: artifact.digest(),
+            payload: payload.digest(),
+            outputs,
+        })
     }
 }

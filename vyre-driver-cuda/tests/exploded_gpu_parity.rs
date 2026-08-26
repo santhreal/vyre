@@ -33,9 +33,9 @@ fn assert_ifds_matches_reference(
     kill: &[(u32, u32, u32)],
 ) {
     let cpu = exploded_ifds_csr_witness(procs, blocks, facts, intra, inter, flow_gen, kill);
-    with_cuda_optimizer_dispatcher(label, |dispatcher| {
+    with_cuda_optimizer_dispatcher(label, |dispatcher, policy| {
         let gpu = build_ifds_csr_via(
-            dispatcher, procs, blocks, facts, intra, inter, flow_gen, kill,
+            dispatcher, policy, procs, blocks, facts, intra, inter, flow_gen, kill,
         )
         .expect("dispatch");
         assert_csr_equiv(&cpu, &gpu, label);
@@ -88,8 +88,9 @@ fn cuda_ifds_combined_intra_inter_gen_kill() {
 
 #[test]
 fn cuda_ifds_empty_dimensions_returns_singleton_row_ptr() {
-    with_cuda_optimizer_dispatcher("empty IFDS dimensions", |dispatcher| {
-        let gpu = build_ifds_csr_via(dispatcher, 0, 0, 0, &[], &[], &[], &[]).expect("dispatch");
+    with_cuda_optimizer_dispatcher("empty IFDS dimensions", |dispatcher, policy| {
+        let gpu =
+            build_ifds_csr_via(dispatcher, policy, 0, 0, 0, &[], &[], &[], &[]).expect("dispatch");
         assert_eq!(gpu.0, vec![0u32]);
         assert!(gpu.1.is_empty());
     });

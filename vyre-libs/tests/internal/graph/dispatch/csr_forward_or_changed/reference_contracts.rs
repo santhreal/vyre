@@ -1,12 +1,25 @@
 use super::*;
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-// The two descriptive names live here rather than in the adapter: the adapter
-// file is `#[path]`-included into the `vyre-libs` lib test as well, where these
-// have no reader and an alias with no reader is an unused import.
-use crate::graph::csr_forward_or_changed::{
-    cpu_ref as csr_foc_cpu, cpu_ref_closure as reference_forward_closure_via_change_flag,
+use vyre_reference::composition_witness::{
+    csr_forward_or_changed_closure_witness,
+    csr_forward_or_changed_witness as reference_forward_step_with_change_flag,
 };
-use vyre_reference::composition_witness::csr_forward_or_changed_witness as reference_forward_step_with_change_flag;
+
+fn reference_forward_closure_via_change_flag(
+    inputs: CsrClosureInputs<'_>,
+    seed: &[u32],
+) -> Vec<u32> {
+    let graph = inputs.graph;
+    csr_forward_or_changed_closure_witness(
+        graph.node_count,
+        graph.edge_offsets,
+        graph.edge_targets,
+        graph.edge_kind_mask,
+        seed,
+        inputs.allow_mask,
+        inputs.max_iters,
+    )
+}
 
 #[test]
 fn step_flips_change_flag_when_new_bits_added() {
@@ -25,17 +38,6 @@ fn step_clears_change_flag_at_fixpoint() {
     let (_out, changed) =
         reference_forward_step_with_change_flag(4, &off, &tgt, &msk, &[0b1111], 0xFFFF_FFFF);
     assert_eq!(changed, 0, "no new bits -> flag stays 0");
-}
-
-/// Closure-bar: substrate output equals primitive output exactly.
-#[test]
-fn matches_primitive_directly() {
-    let (off, tgt, msk) = linear_graph();
-    let seed = vec![0b0001];
-    let via_substrate =
-        reference_forward_step_with_change_flag(4, &off, &tgt, &msk, &seed, 0xFFFF_FFFF);
-    let via_primitive = csr_foc_cpu(4, &off, &tgt, &msk, &seed, 0xFFFF_FFFF);
-    assert_eq!(via_substrate, via_primitive);
 }
 
 /// forward_closure_via_change_flag terminates at fixpoint and

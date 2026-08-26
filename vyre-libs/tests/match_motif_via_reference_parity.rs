@@ -1,6 +1,6 @@
 //! End-to-end parity for `graph::motif::{match_motif_via, motif_matches_via,
 //! motif_participation_count_via}`, the CSR subgraph-motif matcher, through the shared faithful
-//! [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the `match_motif` IR is not run through a faithful dispatch boundary by any `vyre-primitives/tests/*`
@@ -13,6 +13,8 @@
 //! `motif_witness` from `vyre-reference` is the authoritative witness;
 //! values are integer witnesses / bool / counts → BIT-EXACT (no tolerance).
 
+mod semantic_execution_support;
+
 use vyre_libs::graph::dispatch::motif::{
     match_motif_via, motif_matches_via, motif_participation_count_via,
 };
@@ -21,7 +23,7 @@ use vyre_reference::composition_witness::{
     motif_witness, reduce_any_witness, reduce_count_non_zero_witness,
 };
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 fn match_motif(
@@ -91,7 +93,7 @@ fn random_motif(state: &mut u32, n: u32) -> Vec<MotifEdge> {
 
 #[test]
 fn match_motif_via_matches_reference_over_random_graphs() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let mut state = 0x30_71_00_01u32;
     let mut some_match = 0u32; // cases where the motif actually matched somewhere
     let mut some_miss = 0u32; // cases where it did not
@@ -100,8 +102,16 @@ fn match_motif_via_matches_reference_over_random_graphs() {
         let (offsets, targets, masks) = random_csr(&mut state, n);
         let motif = random_motif(&mut state, n);
 
-        let got_witness = match_motif_via(&d, n, &offsets, &targets, &masks, &motif)
-            .expect("match_motif_via must dispatch the motif matcher");
+        let got_witness = match_motif_via(
+            &d,
+            &semantic_execution_support::policy(),
+            n,
+            &offsets,
+            &targets,
+            &masks,
+            &motif,
+        )
+        .expect("match_motif_via must dispatch the motif matcher");
         let want_witness = match_motif(n, &offsets, &targets, &masks, &motif);
         assert_eq!(
             got_witness, want_witness,
@@ -109,16 +119,32 @@ fn match_motif_via_matches_reference_over_random_graphs() {
              targets={targets:?} masks={masks:?} motif={motif:?}"
         );
 
-        let got_matches = motif_matches_via(&d, n, &offsets, &targets, &masks, &motif)
-            .expect("motif_matches_via must dispatch");
+        let got_matches = motif_matches_via(
+            &d,
+            &semantic_execution_support::policy(),
+            n,
+            &offsets,
+            &targets,
+            &masks,
+            &motif,
+        )
+        .expect("motif_matches_via must dispatch");
         let want_matches = motif_matches(n, &offsets, &targets, &masks, &motif);
         assert_eq!(
             got_matches, want_matches,
             "case {case}: GPU motif-existence predicate must match the reference"
         );
 
-        let got_count = motif_participation_count_via(&d, n, &offsets, &targets, &masks, &motif)
-            .expect("motif_participation_count_via must dispatch");
+        let got_count = motif_participation_count_via(
+            &d,
+            &semantic_execution_support::policy(),
+            n,
+            &offsets,
+            &targets,
+            &masks,
+            &motif,
+        )
+        .expect("motif_participation_count_via must dispatch");
         let want_count = motif_participation_count(n, &offsets, &targets, &masks, &motif);
         assert_eq!(
             got_count, want_count,
@@ -150,7 +176,7 @@ fn match_motif_via_matches_reference_over_random_graphs() {
 
 #[test]
 fn match_motif_via_hand_checked_chain() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     // Chain graph 0 --(1)--> 1 --(1)--> 2. CSR: offsets [0,1,2,2], targets [1,2], masks [1,1].
     let offsets = [0u32, 1, 2, 2];
     let targets = [1u32, 2];
@@ -168,11 +194,29 @@ fn match_motif_via_hand_checked_chain() {
             to: 2,
         },
     ];
-    let got = match_motif_via(&d, 3, &offsets, &targets, &masks, &motif).unwrap();
+    let got = match_motif_via(
+        &d,
+        &semantic_execution_support::policy(),
+        3,
+        &offsets,
+        &targets,
+        &masks,
+        &motif,
+    )
+    .unwrap();
     let want = match_motif(3, &offsets, &targets, &masks, &motif);
     assert_eq!(got, want, "chain motif witness matches the reference");
     assert!(
-        motif_matches_via(&d, 3, &offsets, &targets, &masks, &motif).unwrap(),
+        motif_matches_via(
+            &d,
+            &semantic_execution_support::policy(),
+            3,
+            &offsets,
+            &targets,
+            &masks,
+            &motif,
+        )
+        .unwrap(),
         "the chain motif is present in the chain graph"
     );
 
@@ -189,13 +233,31 @@ fn match_motif_via_hand_checked_chain() {
             to: 2,
         },
     ];
-    let got_no = match_motif_via(&d, 3, &offsets, &targets, &masks, &motif_no).unwrap();
+    let got_no = match_motif_via(
+        &d,
+        &semantic_execution_support::policy(),
+        3,
+        &offsets,
+        &targets,
+        &masks,
+        &motif_no,
+    )
+    .unwrap();
     assert_eq!(
         got_no,
         match_motif(3, &offsets, &targets, &masks, &motif_no)
     );
     assert!(
-        !motif_matches_via(&d, 3, &offsets, &targets, &masks, &motif_no).unwrap(),
+        !motif_matches_via(
+            &d,
+            &semantic_execution_support::policy(),
+            3,
+            &offsets,
+            &targets,
+            &masks,
+            &motif_no,
+        )
+        .unwrap(),
         "a kind-2 first edge cannot match the kind-1 graph edge"
     );
 }

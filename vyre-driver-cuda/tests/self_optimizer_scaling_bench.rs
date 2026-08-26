@@ -1,31 +1,30 @@
 //! Scaling bench: GPU optimizer wall clock on real CUDA hardware against the
 //! CPU optimizer, over the shared chain and wide fixtures.
 //!
-//! The fixtures, the CPU oracle, its worker stack and the table live in
-//! `vyre_driver::self_optimizer_bench`, so this backend's numbers can be read
-//! against another backend's row for row. What is here is the CUDA device and
-//! the three-pass sequence.
-//!
-//! This measures the sequential per-pass path deliberately, not
-//! `gpu_optimize`'s persistent-resident route: the resident path has its own
-//! end-to-end suite, and comparing the same pass sequence on both backends is
-//! the point of the table.
+//! The shared benchmark owns the fixtures, CPU oracle, worker stack, and table.
+//! This caller supplies one registered executor and explicit immutable policy.
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
-
-use harness::CudaProgramDispatcher;
+use std::collections::BTreeMap;
 use std::thread;
 
 use vyre::ir::Program;
 use vyre_driver::self_optimizer_bench::report_scaling;
-use vyre_driver_cuda::CudaBackend;
-use vyre_foundation::program_dispatch::ProgramDispatcher;
-use vyre_pass_engine::optimizer::pipeline::gpu_sequential_three_pass;
+use vyre_driver_cuda::{registered_backend_id, CUDA_BACKEND_ID};
+use vyre_megakernel::{
+    CompileObjective, Digest, ExternalFacts, SearchBudget, SemanticExecutionPolicy,
+    SemanticExecutor,
+};
+use vyre_pass_engine::optimizer::pipeline::gpu_optimize;
+use vyre_runtime::RegisteredSemanticExecutor;
 
-fn sequential_gpu_pipeline(program: Program, dispatcher: &dyn ProgramDispatcher) -> Program {
-    gpu_sequential_three_pass(program, dispatcher).expect("sequential three-pass pipeline")
+fn semantic_gpu_pipeline(
+    program: Program,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
+) -> Program {
+    gpu_optimize(program, executor, policy).expect("semantic optimizer pipeline")
 }
 
 #[test]
@@ -40,7 +39,17 @@ fn cuda_scaling_bench_gpu_vs_cpu_pipeline() {
 }
 
 fn body() {
-    let backend = CudaBackend::acquire().expect("CudaBackend acquire");
-    let dispatcher = CudaProgramDispatcher::new(&backend);
-    report_scaling("cuda", &dispatcher, sequential_gpu_pipeline);
+    let _ = registered_backend_id();
+    let registration =
+        vyre_driver::backend_registration(CUDA_BACKEND_ID).expect("registered CUDA backend");
+    let device = registration.acquire().expect("live CUDA backend");
+    let executor = RegisteredSemanticExecutor::new(registration);
+    let policy = SemanticExecutionPolicy::new(
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device.device_profile().compile_facts(),
+        CompileObjective::MinimizeLatency,
+        SearchBudget::new(128, 128, 0, 0, 128),
+        60_000,
+    );
+    report_scaling("cuda", &executor, &policy, semantic_gpu_pipeline);
 }

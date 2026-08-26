@@ -9,10 +9,6 @@
 
 mod dispatch;
 
-#[cfg(test)]
-#[path = "../../../../tests/internal/graph/dispatch/exploded/mod.rs"]
-mod tests;
-
 pub use dispatch::{
     build_ifds_csr_via, build_ifds_csr_via_into, build_ifds_csr_via_with_scratch_into,
 };
@@ -46,3 +42,7 @@ impl IfdsCsrGpuScratch {
 
 #[cfg(test)]
 pub use crate::graph::exploded::{ifds_node_count, round_trip_dense};
+
+#[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/exploded/mod.rs"]
+mod tests;

@@ -1,7 +1,7 @@
 //! Shared backend launch validation contracts.
 
 use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 struct GridLimitBackend;
 
@@ -159,7 +159,11 @@ fn launch_plan_prepares_geometry_and_param_words_once() {
             BufferDecl::output("out", 1, DataType::U32).with_count(1_000),
         ],
         [128, 1, 1],
-        vec![Node::Return],
+        vec![Node::store(
+            "out",
+            Expr::logical_index(0),
+            Expr::load("input", Expr::logical_index(0)),
+        )],
     );
     let bindings = vyre_driver::BindingPlan::build(&program)
         .expect("Fix: shared launch-plan test program must build a binding plan.");

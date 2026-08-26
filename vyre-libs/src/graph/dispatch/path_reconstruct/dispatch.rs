@@ -10,7 +10,7 @@ use crate::graph::path_reconstruct::{
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_two_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// GPU dispatch wrapper around the `reconstruct_path` CPU oracle. Returns the
 /// number of valid entries written to `scratch` (zero-padded to
@@ -20,15 +20,17 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 ///
 /// Propagates dispatch failures and rejects malformed readback.
 pub fn reconstruct_path_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     parent: &[u32],
     target: u32,
     max_depth: u32,
     scratch: &mut Vec<u32>,
-) -> Result<u32, DispatchError> {
+) -> Result<u32, SemanticExecutionError> {
     let mut dispatch_scratch = PathReconstructGpuScratch::default();
     reconstruct_path_via_with_scratch(
         dispatcher,
+        policy,
         parent,
         target,
         max_depth,
@@ -39,15 +41,16 @@ pub fn reconstruct_path_via(
 
 /// GPU dispatch wrapper around the path-reconstruction primitive with caller-owned dispatch scratch.
 pub fn reconstruct_path_via_with_scratch(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     parent: &[u32],
     target: u32,
     max_depth: u32,
     dispatch_scratch: &mut PathReconstructGpuScratch,
     scratch: &mut Vec<u32>,
-) -> Result<u32, DispatchError> {
+) -> Result<u32, SemanticExecutionError> {
     let plan = plan_path_reconstruct_dispatch(parent.len(), max_depth)
-        .map_err(DispatchError::BadInputs)?;
+        .map_err(SemanticExecutionError::InvalidRequest)?;
     let PathReconstructGpuScratch {
         inputs,
         len_out,
@@ -58,7 +61,7 @@ pub fn reconstruct_path_via_with_scratch(
     let target_buf = [target];
     let static_key = plan
         .static_input_key(parent)
-        .map_err(DispatchError::BadInputs)?;
+        .map_err(SemanticExecutionError::InvalidRequest)?;
     let cached =
         single_program_cache.get_or_insert_with(plan.max_depth, || CachedSinglePathProgram {
             program: plan.program(),
@@ -99,7 +102,8 @@ pub fn reconstruct_path_via_with_scratch(
     )?;
     dispatch_two_u32_outputs_from_prepared_into(
         dispatcher,
-        &cached.program,
+        policy,
+        cached.program.clone(),
         inputs,
         plan.path_words,
         PATH_OUT_BUFFER,
@@ -107,10 +111,9 @@ pub fn reconstruct_path_via_with_scratch(
         plan.len_words,
         PATH_LEN_BUFFER,
         len_out,
-        Some(plan.grid),
     )?;
     let len = len_out[0];
-    validate_path_reconstruct_readback(&plan, len).map_err(DispatchError::BackendError)?;
+    validate_path_reconstruct_readback(&plan, len).map_err(SemanticExecutionError::Backend)?;
     Ok(len)
 }
 
@@ -122,15 +125,16 @@ pub fn reconstruct_path_via_with_scratch(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or backend execution fails.
 pub fn path_to_root_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     parent: &[u32],
     target: u32,
     max_depth: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut scratch = Vec::new();
-    let len = reconstruct_path_via(dispatcher, parent, target, max_depth, &mut scratch)?;
+    let len = reconstruct_path_via(dispatcher, policy, parent, target, max_depth, &mut scratch)?;
     scratch.truncate(len as usize);
     Ok(scratch)
 }
@@ -145,16 +149,18 @@ pub fn path_to_root_via(
 ///
 /// Propagates path-reconstruction dispatch failures.
 pub fn reconstruct_paths_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     parent: &[u32],
     targets: &[u32],
     max_depth: u32,
-) -> Result<(Vec<u32>, Vec<u32>), DispatchError> {
+) -> Result<(Vec<u32>, Vec<u32>), SemanticExecutionError> {
     let mut scratch = PathReconstructGpuScratch::default();
     let mut paths = Vec::new();
     let mut lens = Vec::new();
     reconstruct_paths_via_with_scratch_into(
         dispatcher,
+        policy,
         parent,
         targets,
         max_depth,
@@ -167,16 +173,17 @@ pub fn reconstruct_paths_via(
 
 /// GPU dispatch wrapper around batched parent-walk into caller-owned output storage.
 pub fn reconstruct_paths_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     parent: &[u32],
     targets: &[u32],
     max_depth: u32,
     scratch: &mut PathReconstructGpuScratch,
     paths: &mut Vec<u32>,
     lens: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let plan = plan_batched_path_reconstruct_dispatch(parent.len(), targets.len(), max_depth)
-        .map_err(DispatchError::BadInputs)?;
+        .map_err(SemanticExecutionError::InvalidRequest)?;
     if plan.layout.target_count == 0 {
         paths.clear();
         lens.clear();
@@ -190,7 +197,7 @@ pub fn reconstruct_paths_via_with_scratch_into(
     } = scratch;
     let static_key = plan
         .static_input_key(parent)
-        .map_err(DispatchError::BadInputs)?;
+        .map_err(SemanticExecutionError::InvalidRequest)?;
     let cached = batched_program_cache.get_or_insert_with(
         (plan.layout.target_count, plan.max_depth),
         || CachedBatchedPathProgram {
@@ -233,17 +240,17 @@ pub fn reconstruct_paths_via_with_scratch_into(
     )?;
     dispatch_two_u32_outputs_from_prepared_into(
         dispatcher,
-        &cached.program,
+        policy,
+        cached.program.clone(),
         inputs,
         plan.path_words,
-        BATCHED_PATHS_BUFFER,
+        "paths",
         paths,
         plan.len_words,
-        BATCHED_LENS_BUFFER,
+        "lens",
         lens,
-        Some(plan.grid),
     )?;
     validate_batched_path_reconstruct_readback(&plan, paths.len(), lens.len(), lens)
-        .map_err(DispatchError::BackendError)?;
+        .map_err(SemanticExecutionError::Backend)?;
     Ok(())
 }

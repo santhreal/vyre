@@ -26,15 +26,6 @@ pub const CSR_QUEUE_SPLIT_LOW_FORWARD_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD: u32 =
     CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE * CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE;
 
-/// Dispatch grid for the one-lane-per-active-source low split pass.
-#[must_use]
-pub const fn csr_queue_split_low_dispatch_grid(queue_capacity: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(
-        queue_capacity,
-        CSR_QUEUE_SPLIT_LOW_FORWARD_WORKGROUP_SIZE[0],
-    )
-}
-
 /// Logical lanes consumed by low split plus a high row-strided follow-up pass.
 #[must_use]
 pub const fn csr_queue_split_mixed_logical_lanes(

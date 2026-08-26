@@ -1,30 +1,29 @@
 //! End-to-end parity for `scheduling::spectral_schedule::shape_spectrum_fixed_via`, the
 //! Marchenko-Pastur outlier-eigenvalue edge clip, through the shared faithful
-//! [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
-//! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
-//! the `mp_edge_clip` IR is not run through a faithful dispatch boundary by any `vyre-primitives/tests/*`
-//! file. This is the FIRST-EVER execution of the MP edge-clip kernel through a boundary that models the
-//! real backend.
+//! The suite executes the MP edge-clip kernel through semantic compilation and reference artifact
+//! execution.
 //!
-//! Contract (audited CLEAN): `mp_edge_clip` (a `u32_vector_scalar_map_program` with `Expr::min`) binds
-//! eigenvalues RO(0) + mp_edge scalar RO(1) = 2 IC; the write-complete output is backend-allocated
-//! and decoded from outputs[0] as the clipped vector.
+//! `mp_edge_clip` binds eigenvalues RO(0) and the mp_edge scalar RO(1) as two input graph values.
+//! Its write-complete output is backend-allocated and decoded from the canonical output graph value.
 //!
 //! BIT-EXACT (no tolerance): the kernel is pure u32 elementwise `out[i] = min(eigenvalues[i], mp_edge)`.
 //! Because `min` is monotone and order-preserving, the u32 result equals the documented f64 reference
 //! `mp_edge_clip_cpu` (`v.min(edge)`) applied to the same magnitudes and re-encoded, so this suite
 //! asserts BOTH the direct u32 min oracle AND agreement with the importable `mp_edge_clip_cpu`.
 
+mod semantic_execution_support;
+
 use vyre_libs::scheduling::spectral_schedule::shape_spectrum_fixed_via;
 use vyre_reference::composition_witness::mp_edge_clip_witness as mp_edge_clip_cpu;
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::{xorshift32 as xorshift, FIXED_ONE};
 
 #[test]
 fn shape_spectrum_via_matches_u32_min_clip_bit_exact() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     let mut state = 0x5A9E_0001u32;
     let mut clipped_some = 0u32; // cases where at least one eigenvalue was actually clipped
     let mut passed_some = 0u32; // cases where at least one eigenvalue was below the edge (unchanged)
@@ -36,8 +35,13 @@ fn shape_spectrum_via_matches_u32_min_clip_bit_exact() {
             .collect();
         let mp_edge = 1 + xorshift(&mut state) % (8 * FIXED_ONE);
 
-        let got = shape_spectrum_fixed_via(&d, &eigenvalues, mp_edge)
-            .expect("shape_spectrum_fixed_via must dispatch the MP edge clip");
+        let got = shape_spectrum_fixed_via(
+            &d,
+            &semantic_execution_support::policy(),
+            &eigenvalues,
+            mp_edge,
+        )
+        .expect("shape_spectrum_fixed_via must execute the MP edge clip");
 
         // Direct u32 oracle = the exact kernel semantics.
         let want: Vec<u32> = eigenvalues.iter().map(|&e| e.min(mp_edge)).collect();
@@ -81,11 +85,12 @@ fn shape_spectrum_via_matches_u32_min_clip_bit_exact() {
 
 #[test]
 fn shape_spectrum_via_hand_checked_clip_boundary() {
-    let d = ReferenceEvalDispatcher;
+    let d = ReferenceSemanticExecutor;
     // Edge = 2.0 (16.16). Eigenvalues 1.0, 2.0, 3.5 → clip to 1.0, 2.0, 2.0.
     let edge = 2 * FIXED_ONE;
     let eig = [FIXED_ONE, 2 * FIXED_ONE, 7 * FIXED_ONE / 2];
-    let got = shape_spectrum_fixed_via(&d, &eig, edge).unwrap();
+    let got =
+        shape_spectrum_fixed_via(&d, &semantic_execution_support::policy(), &eig, edge).unwrap();
     assert_eq!(
         got,
         vec![FIXED_ONE, 2 * FIXED_ONE, 2 * FIXED_ONE],
@@ -93,7 +98,13 @@ fn shape_spectrum_via_hand_checked_clip_boundary() {
     );
 
     // All below the edge → identity.
-    let got = shape_spectrum_fixed_via(&d, &[FIXED_ONE / 2, FIXED_ONE], edge).unwrap();
+    let got = shape_spectrum_fixed_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &[FIXED_ONE / 2, FIXED_ONE],
+        edge,
+    )
+    .unwrap();
     assert_eq!(
         got,
         vec![FIXED_ONE / 2, FIXED_ONE],
@@ -101,7 +112,13 @@ fn shape_spectrum_via_hand_checked_clip_boundary() {
     );
 
     // All above the edge → every value collapses to the edge.
-    let got = shape_spectrum_fixed_via(&d, &[3 * FIXED_ONE, 5 * FIXED_ONE], edge).unwrap();
+    let got = shape_spectrum_fixed_via(
+        &d,
+        &semantic_execution_support::policy(),
+        &[3 * FIXED_ONE, 5 * FIXED_ONE],
+        edge,
+    )
+    .unwrap();
     assert_eq!(
         got,
         vec![edge, edge],

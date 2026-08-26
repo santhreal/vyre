@@ -3,8 +3,8 @@
 
 use crate::proof_options::ShardSpec;
 use crate::witness_fixtures::{synthesize_witness_cases, FixtureCases, FixtureFn};
+use vyre_conform::convergence_lens;
 use vyre_conform::witness_plan::{plan_witness_inputs_into, WitnessInputPlan};
-use vyre_conform::{convergence_lens, dispatch_grid};
 use vyre_reference::value::Value;
 
 #[derive(Clone, Copy)]
@@ -18,7 +18,6 @@ pub(crate) struct UnifiedEntry {
 pub(crate) struct PreparedEntry {
     pub(crate) id: &'static str,
     pub(crate) program: vyre::Program,
-    pub(crate) dispatch_config: vyre_driver::DispatchConfig,
     pub(crate) cases: FixtureCases,
     pub(crate) reference_cases: FixtureCases,
     pub(crate) input_plan: WitnessInputPlan,
@@ -91,7 +90,6 @@ pub(crate) fn prepare_entry(entry: UnifiedEntry) -> Result<PreparedEntry, String
     let program = entry
         .build
         .ok_or_else(|| format!("{} has no neutral Program builder", entry.id))?();
-    let dispatch_config = dispatch_grid::config_for_program(&program)?;
     let cases = match entry.test_inputs {
         Some(test_inputs) => test_inputs(),
         None => synthesize_witness_cases(&program)?,
@@ -133,7 +131,6 @@ pub(crate) fn prepare_entry(entry: UnifiedEntry) -> Result<PreparedEntry, String
     Ok(PreparedEntry {
         id: entry.id,
         program,
-        dispatch_config,
         cases,
         reference_cases,
         input_plan,

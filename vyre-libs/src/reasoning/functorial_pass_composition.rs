@@ -39,9 +39,11 @@
 //! Whole-pass migrations compose this primitive with the tree topology
 //! helpers instead of changing this row-level contract.
 
-use crate::dispatch_buffers::{ceil_div_u32, decode_u32_output_exact, u32_slice_to_le_bytes};
+use crate::dispatch_buffers::{decode_u32_output_exact, u32_slice_to_le_bytes};
 use crate::graph::functorial::functor_apply_sized;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Dispatcher-backed functor application for IR-view rows.
 ///
@@ -51,16 +53,24 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shapes are invalid or backend output is
-/// malformed.
+/// Returns [`SemanticExecutionError`] when shapes are invalid or the admitted artifact
+/// produces malformed output.
 pub fn apply_pass_functor_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     view_in: &[u32],
     column_mapping: &[u32],
     target_n_cols: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
-    apply_pass_functor_via_into(dispatcher, view_in, column_mapping, target_n_cols, &mut out)?;
+    apply_pass_functor_via_into(
+        dispatcher,
+        policy,
+        view_in,
+        column_mapping,
+        target_n_cols,
+        &mut out,
+    )?;
     Ok(out)
 }
 
@@ -68,34 +78,35 @@ pub fn apply_pass_functor_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or semantic execution fails.
 pub fn apply_pass_functor_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     view_in: &[u32],
     column_mapping: &[u32],
     target_n_cols: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, functorial_pass_composition_calls};
     bump(&functorial_pass_composition_calls);
 
     if target_n_cols == 0 {
-        return Err(DispatchError::BadInputs(
+        return Err(SemanticExecutionError::InvalidRequest(
             "Fix: apply_pass_functor_via requires target_n_cols > 0.".to_string(),
         ));
     }
     if view_in.len() != column_mapping.len() {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: apply_pass_functor_via requires view_in.len() == column_mapping.len(), got view_in.len()={}, column_mapping.len()={}.",
-            view_in.len(),
-            column_mapping.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: apply_pass_functor_via requires view_in.len() == column_mapping.len(), got view_in.len()={}, column_mapping.len()={}.",
+        view_in.len(),
+        column_mapping.len()
+    )));
     }
     let n_cols = u32::try_from(view_in.len()).map_err(|_| {
-        DispatchError::BadInputs(format!(
-            "Fix: apply_pass_functor_via source column count {} exceeds the primitive u32 lane limit.",
-            view_in.len()
-        ))
+        SemanticExecutionError::InvalidRequest(format!(
+        "Fix: apply_pass_functor_via source column count {} exceeds the primitive u32 lane limit.",
+        view_in.len()
+    ))
     })?;
     if n_cols == 0 {
         out.clear();
@@ -110,17 +121,20 @@ pub fn apply_pass_functor_via_into(
         n_cols,
         target_n_cols,
     );
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &[
             u32_slice_to_le_bytes(view_in),
             u32_slice_to_le_bytes(column_mapping),
             vec![0u8; target_n_cols as usize * std::mem::size_of::<u32>()],
         ],
-        Some([ceil_div_u32(target_n_cols, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: apply_pass_functor_via expected at least one output buffer, got {}.",
             outputs.len()
         )));
@@ -145,20 +159,18 @@ pub use vyre_reference::composition_witness::{
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::Program;
 
     struct FunctorDispatcher;
 
-    impl ProgramDispatcher for FunctorDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for FunctorDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            if grid != Some([1, 1, 1]) || inputs.len() != 3 {
-                return Err(DispatchError::BadInputs(
-                    "functor dispatch shape mismatch".into(),
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            if inputs.len() != 3 {
+                return Err(SemanticExecutionError::InvalidRequest(
+                    "functor semantic input shape mismatch".into(),
                 ));
             }
             let source = crate::dispatch_buffers::read_u32s(&inputs[0]);
@@ -166,7 +178,7 @@ mod tests {
             let target_n_cols = inputs[2].len() / std::mem::size_of::<u32>();
             assert_eq!(source.len(), mapping.len());
             let out = apply_pass_functor(&source, &mapping, target_n_cols as u32);
-            Ok(vec![u32_slice_to_le_bytes(&out)])
+            crate::test_parity_oracles::semantic_output(request, vec![u32_slice_to_le_bytes(&out)])
         }
     }
 
@@ -203,7 +215,14 @@ mod tests {
     fn apply_pass_functor_via_dispatches_sized_primitive() {
         let view_in = vec![10u32, 20, 30];
         let mapping = vec![2u32, 0, 1];
-        let out = apply_pass_functor_via(&FunctorDispatcher, &view_in, &mapping, 4).unwrap();
+        let out = apply_pass_functor_via(
+            &FunctorDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &view_in,
+            &mapping,
+            4,
+        )
+        .unwrap();
         assert_eq!(out, vec![20, 30, 10, 0]);
     }
 
@@ -211,14 +230,28 @@ mod tests {
     fn apply_pass_functor_via_preserves_duplicate_last_wins_contract() {
         let view_in = vec![7u32, 8, 9];
         let mapping = vec![1u32, 1, 1];
-        let out = apply_pass_functor_via(&FunctorDispatcher, &view_in, &mapping, 3).unwrap();
+        let out = apply_pass_functor_via(
+            &FunctorDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &view_in,
+            &mapping,
+            3,
+        )
+        .unwrap();
         assert_eq!(out, vec![0, 9, 0]);
     }
 
     #[test]
     fn apply_pass_functor_via_rejects_shape_mismatch() {
-        let err = apply_pass_functor_via(&FunctorDispatcher, &[1, 2], &[0], 2).unwrap_err();
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        let err = apply_pass_functor_via(
+            &FunctorDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[1, 2],
+            &[0],
+            2,
+        )
+        .unwrap_err();
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 
     #[test]

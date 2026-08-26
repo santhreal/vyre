@@ -59,16 +59,6 @@ pub const BINDING_CARRY_PARTIAL_OUT: u32 = 3;
 /// One lane per bigint limb in the split add-carry pass.
 pub const BIGINT_ADD_CARRY_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid that covers every bigint limb lane.
-///
-/// One lane per limb, over the [`vyre_primitives::lane_grid`] owner, so the
-/// zero-limb case still yields a launchable grid.
-#[cfg(test)]
-#[must_use]
-pub const fn bigint_add_carry_dispatch_grid(limb_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(limb_count, BIGINT_ADD_CARRY_WORKGROUP_SIZE[0])
-}
-
 /// Bigint CPU-reference error.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
@@ -529,15 +519,6 @@ mod tests {
             "a, b, sum_partial, carry_partial"
         );
         assert_eq!(program.workgroup_size(), BIGINT_ADD_CARRY_WORKGROUP_SIZE);
-    }
-
-    #[test]
-    fn dispatch_grid_packs_limb_lanes_into_workgroups() {
-        assert_eq!(bigint_add_carry_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(bigint_add_carry_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(bigint_add_carry_dispatch_grid(256), [1, 1, 1]);
-        assert_eq!(bigint_add_carry_dispatch_grid(257), [2, 1, 1]);
-        assert_eq!(bigint_add_carry_dispatch_grid(1025), [5, 1, 1]);
     }
 
     #[test]

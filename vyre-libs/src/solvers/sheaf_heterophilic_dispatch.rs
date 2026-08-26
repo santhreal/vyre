@@ -56,11 +56,13 @@
 //! structures they actually are. Paradigm shift, not optimization.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
-    write_u32_slice_le_bytes, write_zero_bytes,
+    checked_product_count, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
+    write_zero_bytes,
 };
 use crate::graph::sheaf::sheaf_diffusion_step;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Caller-owned dispatch scratch for fixed-point sheaf diffusion.
 #[derive(Debug, Default)]
@@ -76,19 +78,21 @@ pub struct SheafDispatchGpuScratch {
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shapes are invalid, the primitive lane
+/// Returns [`SemanticExecutionError`] when shapes are invalid, the primitive lane
 /// space is exceeded, or the backend returns a malformed output buffer.
 pub fn diffuse_dispatch_stalks_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     stalks_fixed: &[u32],
     restriction_diag_fixed: &[u32],
     damping_fixed: u32,
     n_nodes: u32,
     d: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
     diffuse_dispatch_stalks_fixed_via_into(
         dispatcher,
+        policy,
         stalks_fixed,
         restriction_diag_fixed,
         damping_fixed,
@@ -103,19 +107,21 @@ pub fn diffuse_dispatch_stalks_fixed_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks or backend execution fail.
 pub fn diffuse_dispatch_stalks_fixed_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     stalks_fixed: &[u32],
     restriction_diag_fixed: &[u32],
     damping_fixed: u32,
     n_nodes: u32,
     d: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = SheafDispatchGpuScratch::default();
     diffuse_dispatch_stalks_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         stalks_fixed,
         restriction_diag_fixed,
         damping_fixed,
@@ -130,9 +136,10 @@ pub fn diffuse_dispatch_stalks_fixed_via_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks or backend execution fail.
 pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     stalks_fixed: &[u32],
     restriction_diag_fixed: &[u32],
     damping_fixed: u32,
@@ -140,7 +147,7 @@ pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
     d: u32,
     scratch: &mut SheafDispatchGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, sheaf_heterophilic_dispatch_calls};
     bump(&sheaf_heterophilic_dispatch_calls);
 
@@ -150,23 +157,24 @@ pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
         "n_nodes",
         "d",
         "diffuse_dispatch_stalks_fixed_via",
-    )?;
+    )
+    .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
     let cells_u32 = u32::try_from(cells).map_err(|_| {
-        DispatchError::BadInputs(format!(
-            "Fix: diffuse_dispatch_stalks_fixed_via n_nodes*d exceeds the primitive u32 lane limit for n_nodes={n_nodes}, d={d}."
-        ))
-    })?;
+    SemanticExecutionError::InvalidRequest(format!(
+        "Fix: diffuse_dispatch_stalks_fixed_via n_nodes*d exceeds the primitive u32 lane limit for n_nodes={n_nodes}, d={d}."
+    ))
+})?;
     if stalks_fixed.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: diffuse_dispatch_stalks_fixed_via requires stalks_fixed.len() == n_nodes*d, got len={}, n_nodes={n_nodes}, d={d}, cells={cells}.",
-            stalks_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: diffuse_dispatch_stalks_fixed_via requires stalks_fixed.len() == n_nodes*d, got len={}, n_nodes={n_nodes}, d={d}, cells={cells}.",
+        stalks_fixed.len()
+    )));
     }
     if restriction_diag_fixed.len() != cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: diffuse_dispatch_stalks_fixed_via requires restriction_diag_fixed.len() == n_nodes*d, got len={}, n_nodes={n_nodes}, d={d}, cells={cells}.",
-            restriction_diag_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: diffuse_dispatch_stalks_fixed_via requires restriction_diag_fixed.len() == n_nodes*d, got len={}, n_nodes={n_nodes}, d={d}, cells={cells}.",
+        restriction_diag_fixed.len()
+    )));
     }
 
     let program = sheaf_diffusion_step(
@@ -178,10 +186,10 @@ pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
         d,
     );
     let out_bytes = cells.checked_mul(std::mem::size_of::<u32>()).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
-            "Fix: diffuse_dispatch_stalks_fixed_via output byte count overflows usize for cells={cells}."
-        ))
-    })?;
+    SemanticExecutionError::InvalidRequest(format!(
+        "Fix: diffuse_dispatch_stalks_fixed_via output byte count overflows usize for cells={cells}."
+    ))
+})?;
     scratch.damping.clear();
     scratch.damping.push(damping_fixed);
     ensure_input_slots(&mut scratch.inputs, 4);
@@ -189,18 +197,22 @@ pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], restriction_diag_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[2], &scratch.damping);
     write_zero_bytes(&mut scratch.inputs[3], out_bytes);
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs,
-        Some([ceil_div_u32(cells_u32, 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: diffuse_dispatch_stalks_fixed_via expected at least one output buffer, got {}.",
             outputs.len()
         )));
     }
     decode_u32_output_exact(&outputs[0], cells, "diffuse_dispatch_stalks_fixed_via", out)
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Iterate sheaf diffusion until convergence (stalks stop changing
@@ -322,7 +334,6 @@ pub(crate) fn flag_fusion_incompatible_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_foundation::ir::Program;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-9 * (1.0 + a.abs() + b.abs())
@@ -387,29 +398,35 @@ mod tests {
 
     struct SheafDispatcher;
 
-    impl ProgramDispatcher for SheafDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for SheafDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 4);
-            let stalks = crate::dispatch_buffers::read_u32s(&inputs[0]);
-            let restrictions = crate::dispatch_buffers::read_u32s(&inputs[1]);
-            let damping = crate::dispatch_buffers::read_u32s(&inputs[2])[0];
-            assert_eq!(inputs[3].len(), stalks.len() * std::mem::size_of::<u32>());
-            let out: Vec<u32> = stalks
-                .iter()
-                .zip(restrictions.iter())
-                .map(|(&s, &r)| {
-                    let damped_r = ((damping as u64 * r as u64) >> 16) as u32;
-                    let delta = ((damped_r as u64 * s as u64) >> 16) as u32;
-                    s.saturating_sub(delta)
-                })
-                .collect();
-            Ok(vec![u32_slice_to_le_bytes(&out)])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                assert_eq!(inputs.len(), 4);
+                let stalks = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                let restrictions = crate::dispatch_buffers::read_u32s(&inputs[1]);
+                let damping = crate::dispatch_buffers::read_u32s(&inputs[2])[0];
+                assert_eq!(inputs[3].len(), stalks.len() * std::mem::size_of::<u32>());
+                let out: Vec<u32> = stalks
+                    .iter()
+                    .zip(restrictions.iter())
+                    .map(|(&s, &r)| {
+                        let damped_r = ((damping as u64 * r as u64) >> 16) as u32;
+                        let delta = ((damped_r as u64 * s as u64) >> 16) as u32;
+                        s.saturating_sub(delta)
+                    })
+                    .collect();
+                Ok(vec![u32_slice_to_le_bytes(&out)])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
+            }
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -419,6 +436,7 @@ mod tests {
         let half = 1u32 << 15;
         let out = diffuse_dispatch_stalks_fixed_via(
             &SheafDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[10 * one, 20 * one],
             &[one, one],
             half,
@@ -431,9 +449,17 @@ mod tests {
 
     #[test]
     fn fixed_via_rejects_shape_mismatch() {
-        let err = diffuse_dispatch_stalks_fixed_via(&SheafDispatcher, &[1, 2, 3], &[1, 2], 1, 2, 2)
-            .unwrap_err();
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        let err = diffuse_dispatch_stalks_fixed_via(
+            &SheafDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[1, 2, 3],
+            &[1, 2],
+            1,
+            2,
+            2,
+        )
+        .unwrap_err();
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 
     #[test]
@@ -445,6 +471,7 @@ mod tests {
 
         diffuse_dispatch_stalks_fixed_via_with_scratch_into(
             &SheafDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[10 * one, 20 * one],
             &[one, one],
             half,
@@ -457,6 +484,7 @@ mod tests {
         let input_ptrs: Vec<*const u8> = scratch.inputs.iter().map(Vec::as_ptr).collect();
         diffuse_dispatch_stalks_fixed_via_with_scratch_into(
             &SheafDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[8 * one, 12 * one],
             &[one, one],
             half,

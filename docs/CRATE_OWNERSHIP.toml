@@ -778,7 +778,7 @@ package = "vyre-pass-engine"
 path = "vyre-pass-engine"
 owner = "pass-engine"
 layer = "pass-engine"
-responsibility = "Execute the optimizer's own passes as Vyre Programs, dispatched through the ProgramDispatcher seam."
+responsibility = "Execute optimizer passes as Vyre Programs through compiler-owned semantic compilation and admitted artifact submission."
 
 [[crate.dependency]]
 package = "vyre-foundation"
@@ -801,6 +801,17 @@ optional = false
 default_features = false
 boundary = "private"
 seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "whole-graph compilation and immutable artifact contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "megakernel-compiler"
 
 [[crate.dependency]]
 package = "vyre-primitives"

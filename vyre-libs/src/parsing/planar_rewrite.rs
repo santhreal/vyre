@@ -234,7 +234,9 @@ inventory::submit! {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             let mut cands = vec![0; 16];
             cands[5] = 1;
-            vec![vec![to_bytes(&cands)]] // candidates
+            // `chosen` is read-write storage, so the reference takes one seeded
+            // Value for it exactly as a device takes one bound buffer.
+            vec![vec![to_bytes(&cands), to_bytes(&vec![0u32; 16])]]
         }),
         Some(|| {
             vec![vec![EXPECTED_PLANAR_REWRITE_BYTES.to_vec()]]

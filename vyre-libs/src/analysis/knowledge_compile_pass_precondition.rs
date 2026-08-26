@@ -47,11 +47,13 @@
 //! topological order buffers.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
+    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
 use crate::graph::knowledge_compile::ddnnf_evaluate;
 use crate::plumbing::host::scratch::reserve_vec_capacity;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Caller-owned scratch for pass-precondition d-DNNF dispatch.
 #[derive(Debug, Default)]
@@ -71,20 +73,22 @@ pub struct KnowledgeCompilePassScratch {
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when circuit shape validation fails, wave ordering
-/// is invalid, or a backend dispatch/output contract is malformed.
+/// Returns [`SemanticExecutionError`] when circuit shape validation fails, wave ordering
+/// is invalid, or the admitted artifact produces malformed output.
 pub fn pass_applies_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     nodes: &[(u32, u32, u32)],
     node_var: &[u32],
     children: &[u32],
     var_assignments: &[u32],
     waves: &[Vec<u32>],
-) -> Result<u32, DispatchError> {
+) -> Result<u32, SemanticExecutionError> {
     let mut scratch = KnowledgeCompilePassScratch::default();
     let mut evals = Vec::new();
     pass_applies_via_with_scratch_into(
         dispatcher,
+        policy,
         nodes,
         node_var,
         children,
@@ -104,19 +108,21 @@ pub fn pass_applies_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or semantic execution fails.
 pub fn pass_applies_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     nodes: &[(u32, u32, u32)],
     node_var: &[u32],
     children: &[u32],
     var_assignments: &[u32],
     waves: &[Vec<u32>],
     evals_out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = KnowledgeCompilePassScratch::default();
     pass_applies_via_with_scratch_into(
         dispatcher,
+        policy,
         nodes,
         node_var,
         children,
@@ -132,9 +138,10 @@ pub fn pass_applies_via_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or semantic execution fails.
 pub fn pass_applies_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     nodes: &[(u32, u32, u32)],
     node_var: &[u32],
     children: &[u32],
@@ -142,7 +149,7 @@ pub fn pass_applies_via_with_scratch_into(
     waves: &[Vec<u32>],
     scratch: &mut KnowledgeCompilePassScratch,
     evals_out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, knowledge_compile_pass_precondition_calls};
     bump(&knowledge_compile_pass_precondition_calls);
 
@@ -151,32 +158,30 @@ pub fn pass_applies_via_with_scratch_into(
         return Ok(());
     }
     if var_assignments.is_empty() {
-        return Err(DispatchError::BadInputs(
-            "Fix: pass_applies_via requires at least one variable assignment for non-empty circuits."
-                .to_string(),
-        ));
+        return Err(SemanticExecutionError::InvalidRequest("Fix: pass_applies_via requires at least one variable assignment for non-empty circuits."
+        .to_string()));
     }
     if node_var.len() != nodes.len() {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: pass_applies_via requires node_var.len() == nodes.len(), got {} vs {}.",
             node_var.len(),
             nodes.len()
         )));
     }
     let n_nodes = u32::try_from(nodes.len()).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: pass_applies_via node count exceeds u32 lane space: {}.",
             nodes.len()
         ))
     })?;
     let n_children = u32::try_from(children.len()).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: pass_applies_via child count exceeds u32 lane space: {}.",
             children.len()
         ))
     })?;
     let n_vars = u32::try_from(var_assignments.len()).map_err(|_| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: pass_applies_via variable count exceeds u32 lane space: {}.",
             var_assignments.len()
         ))
@@ -202,15 +207,15 @@ pub fn pass_applies_via_with_scratch_into(
     )?;
     for (idx, &(kind, offset, count)) in nodes.iter().enumerate() {
         let end = offset.checked_add(count).ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: pass_applies_via node {idx} child range overflows u32."
             ))
         })?;
         if end as usize > children.len() {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: pass_applies_via node {idx} child range [{offset}, {end}) exceeds children.len()={}.",
-                children.len()
-            )));
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: pass_applies_via node {idx} child range [{offset}, {end}) exceeds children.len()={}.",
+            children.len()
+        )));
         }
         scratch.node_kinds.push(kind);
         scratch.child_offsets.push(offset);
@@ -218,14 +223,14 @@ pub fn pass_applies_via_with_scratch_into(
     }
     for (idx, &var) in node_var.iter().enumerate() {
         if var >= n_vars {
-            return Err(DispatchError::BadInputs(format!(
+            return Err(SemanticExecutionError::InvalidRequest(format!(
                 "Fix: pass_applies_via node_var[{idx}]={var} outside n_vars={n_vars}."
             )));
         }
     }
     for (idx, &child) in children.iter().enumerate() {
         if child >= n_nodes {
-            return Err(DispatchError::BadInputs(format!(
+            return Err(SemanticExecutionError::InvalidRequest(format!(
                 "Fix: pass_applies_via children[{idx}]={child} outside n_nodes={n_nodes}."
             )));
         }
@@ -259,13 +264,16 @@ pub fn pass_applies_via_with_scratch_into(
             continue;
         }
         write_u32_slice_le_bytes(&mut scratch.inputs[6], evals_out);
-        let outputs = dispatcher.dispatch(
-            &program,
+        let outputs = execute_single_program(
+            dispatcher,
+            crate::dispatch_buffers::HOST_WRAPPER_NODE,
+            program.clone(),
             &scratch.inputs[..7],
-            Some([ceil_div_u32(n_nodes, 256), 1, 1]),
-        )?;
+            policy,
+        )
+        .map(|output| output.outputs)?;
         if outputs.is_empty() {
-            return Err(DispatchError::BackendError(format!(
+            return Err(SemanticExecutionError::Backend(format!(
                 "Fix: pass_applies_via expected exactly one eval output buffer, got {}.",
                 outputs.len()
             )));
@@ -279,18 +287,20 @@ pub fn pass_applies_via_with_scratch_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when circuit validation or backend execution
+/// Returns [`SemanticExecutionError`] when circuit validation or semantic execution
 /// fails.
 pub fn pass_conflicts_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     nodes: &[(u32, u32, u32)],
     node_var: &[u32],
     children: &[u32],
     var_assignments: &[u32],
     waves: &[Vec<u32>],
-) -> Result<bool, DispatchError> {
+) -> Result<bool, SemanticExecutionError> {
     Ok(pass_applies_via(
         dispatcher,
+        policy,
         nodes,
         node_var,
         children,
@@ -304,17 +314,17 @@ fn validate_waves(
     nodes: &[(u32, u32, u32)],
     children: &[u32],
     waves: &[Vec<u32>],
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut seen = vec![false; n_nodes as usize];
     for (wave_idx, wave) in waves.iter().enumerate() {
         for &node in wave {
             if node >= n_nodes {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: pass_applies_via wave {wave_idx} contains node {node} outside n_nodes={n_nodes}."
-                )));
+                return Err(SemanticExecutionError::InvalidRequest(format!(
+                "Fix: pass_applies_via wave {wave_idx} contains node {node} outside n_nodes={n_nodes}."
+            )));
             }
             if seen[node as usize] {
-                return Err(DispatchError::BadInputs(format!(
+                return Err(SemanticExecutionError::InvalidRequest(format!(
                     "Fix: pass_applies_via node {node} appears in multiple waves."
                 )));
             }
@@ -322,9 +332,9 @@ fn validate_waves(
             for child_idx in offset..offset + count {
                 let child = children[child_idx as usize];
                 if !seen[child as usize] {
-                    return Err(DispatchError::BadInputs(format!(
-                        "Fix: pass_applies_via node {node} appears before child {child}; waves must be child-before-parent."
-                    )));
+                    return Err(SemanticExecutionError::InvalidRequest(format!(
+                    "Fix: pass_applies_via node {node} appears before child {child}; waves must be child-before-parent."
+                )));
                 }
             }
         }
@@ -333,7 +343,7 @@ fn validate_waves(
         }
     }
     if let Some((missing, _)) = seen.iter().enumerate().find(|(_, present)| !**present) {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: pass_applies_via waves omit node {missing}."
         )));
     }
@@ -345,7 +355,7 @@ mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use crate::graph::knowledge_compile::{AND_NODE, LITERAL_TRUE};
-    use vyre_foundation::ir::Program;
+
     use vyre_reference::composition_witness::ddnnf_evaluate_witness as reference_ddnnf_evaluate;
 
     fn reference_pass_applies(
@@ -465,40 +475,41 @@ mod tests {
 
     struct DdnnfDispatcher;
 
-    impl ProgramDispatcher for DdnnfDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for DdnnfDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 7);
-            let node_kinds = crate::dispatch_buffers::read_u32s(&inputs[0]);
-            let node_var = crate::dispatch_buffers::read_u32s(&inputs[1]);
-            let child_offsets = crate::dispatch_buffers::read_u32s(&inputs[2]);
-            let child_counts = crate::dispatch_buffers::read_u32s(&inputs[3]);
-            let children = crate::dispatch_buffers::read_u32s(&inputs[4]);
-            let assignments = crate::dispatch_buffers::read_u32s(&inputs[5]);
-            let mut out = crate::dispatch_buffers::read_u32s(&inputs[6]);
-            for node in 0..node_kinds.len() {
-                match node_kinds[node] {
-                    LITERAL_TRUE => {
-                        let assigned = assignments[node_var[node] as usize];
-                        out[node] = u32::from(assigned == 1 || assigned == u32::MAX);
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                assert_eq!(inputs.len(), 7);
+                let node_kinds = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                let node_var = crate::dispatch_buffers::read_u32s(&inputs[1]);
+                let child_offsets = crate::dispatch_buffers::read_u32s(&inputs[2]);
+                let child_counts = crate::dispatch_buffers::read_u32s(&inputs[3]);
+                let children = crate::dispatch_buffers::read_u32s(&inputs[4]);
+                let assignments = crate::dispatch_buffers::read_u32s(&inputs[5]);
+                let mut out = crate::dispatch_buffers::read_u32s(&inputs[6]);
+                for node in 0..node_kinds.len() {
+                    match node_kinds[node] {
+                        LITERAL_TRUE => {
+                            let assigned = assignments[node_var[node] as usize];
+                            out[node] = u32::from(assigned == 1 || assigned == u32::MAX);
+                        }
+                        AND_NODE => {
+                            let start = child_offsets[node] as usize;
+                            let end = start + child_counts[node] as usize;
+                            out[node] = children[start..end]
+                                .iter()
+                                .map(|&child| out[child as usize])
+                                .product();
+                        }
+                        _ => {}
                     }
-                    AND_NODE => {
-                        let start = child_offsets[node] as usize;
-                        let end = start + child_counts[node] as usize;
-                        out[node] = children[start..end]
-                            .iter()
-                            .map(|&child| out[child as usize])
-                            .product();
-                    }
-                    _ => {}
                 }
-            }
-            Ok(vec![u32_slice_to_le_bytes(&out)])
+                Ok(vec![u32_slice_to_le_bytes(&out)])
+            })()?;
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -515,6 +526,7 @@ mod tests {
         let waves = vec![vec![0u32, 1u32], vec![2u32]];
         let applies = pass_applies_via(
             &DdnnfDispatcher,
+            &crate::test_parity_oracles::policy(),
             &nodes,
             &node_var,
             &children,
@@ -551,6 +563,7 @@ mod tests {
         let mut evals = Vec::with_capacity(8);
         pass_applies_via_with_scratch_into(
             &DdnnfDispatcher,
+            &crate::test_parity_oracles::policy(),
             &nodes,
             &node_var,
             &children,
@@ -564,6 +577,7 @@ mod tests {
         let evals_cap = evals.capacity();
         pass_applies_via_with_scratch_into(
             &DdnnfDispatcher,
+            &crate::test_parity_oracles::policy(),
             &nodes,
             &node_var,
             &children,
@@ -593,6 +607,7 @@ mod tests {
         let waves = vec![vec![0u32, 1u32], vec![2u32]];
         let conflicts = pass_conflicts_via(
             &DdnnfDispatcher,
+            &crate::test_parity_oracles::policy(),
             &nodes,
             &node_var,
             &children,
@@ -612,6 +627,7 @@ mod tests {
         ];
         let err = pass_applies_via(
             &DdnnfDispatcher,
+            &crate::test_parity_oracles::policy(),
             &nodes,
             &[0, 1, 0],
             &[0, 1],
@@ -619,6 +635,6 @@ mod tests {
             &[vec![2], vec![0, 1]],
         )
         .unwrap_err();
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 }

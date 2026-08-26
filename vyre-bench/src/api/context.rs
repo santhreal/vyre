@@ -142,17 +142,13 @@ impl BenchContext {
         &self,
         prog: &vyre::ir::Program,
         inputs: &[Vec<u8>],
-        config: &DispatchConfig,
+        _config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
-        let config = dispatch_config_with_inferred_grid(prog, inputs, config)?;
         let session = self.artifact_session_for(prog)?;
         let borrowed_inputs = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
-        let mut bindings = session
+        let bindings = session
             .host_bindings(&borrowed_inputs)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        if let Some(grid) = config.grid_override {
-            bindings.set_invocation_grid(grid)?;
-        }
         let completion = session
             .submit_and_wait(bindings)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
@@ -165,17 +161,13 @@ impl BenchContext {
         &self,
         prog: &vyre::ir::Program,
         inputs: &[Vec<u8>],
-        config: &DispatchConfig,
+        _config: &DispatchConfig,
     ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
-        let config = dispatch_config_with_inferred_grid(prog, inputs, config)?;
         let session = self.artifact_session_for(prog)?;
         let borrowed_inputs = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
-        let mut bindings = session
+        let bindings = session
             .host_bindings(&borrowed_inputs)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        if let Some(grid) = config.grid_override {
-            bindings.set_invocation_grid(grid)?;
-        }
         let start = Instant::now();
         let completion = session
             .submit_and_wait(bindings)
@@ -213,16 +205,13 @@ impl BenchContext {
         &self,
         prog: &vyre::ir::Program,
         resources: &[vyre_driver::Resource],
-        config: &DispatchConfig,
+        _config: &DispatchConfig,
         include_readback: bool,
     ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
         let session = self.artifact_session_for(prog)?;
-        let mut bindings = session
+        let bindings = session
             .program_resident_bindings(prog, resources)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        if let Some(grid) = config.grid_override {
-            bindings.set_invocation_grid(grid)?;
-        }
         let start = Instant::now();
         let completion = session
             .submit_and_wait(bindings)
@@ -333,12 +322,9 @@ impl BenchContext {
             }
         }
         let session = self.artifact_session_for(step.program)?;
-        let mut bindings = session
+        let bindings = session
             .program_resident_bindings(step.program, step.resources)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        if let Some(grid) = step.grid_override {
-            bindings.set_invocation_grid(grid)?;
-        }
         let completion = session
             .submit_and_wait(bindings.clone())
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;

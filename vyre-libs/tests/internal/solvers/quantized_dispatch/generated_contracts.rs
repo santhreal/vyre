@@ -52,7 +52,7 @@ pub(super) fn generated_quantized_wrappers_match_oracles_across_boundary_shapes(
         let lhs_scale = 0.125 + case_idx as f32 * 0.03125;
         let rhs_scale = 0.25 + case_idx as f32 * 0.015625;
         let actual = i4x8_dot_f32_scaled_via(
-            &QuantizedDotDispatcher,
+            &QuantizedDotDispatcher, &crate::test_parity_oracles::policy(),
             &lhs,
             &rhs,
             lhs_scale,
@@ -81,7 +81,7 @@ pub(super) fn generated_quantized_wrappers_match_oracles_across_boundary_shapes(
             .map(|value| value.abs() + 0.125)
             .collect::<Vec<_>>();
         let actual = i4x8_matvec_f32_scaled_via(
-            &QuantizedMatvecDispatcher,
+            &QuantizedMatvecDispatcher, &crate::test_parity_oracles::policy(),
             &weights,
             &x,
             &row_scales,

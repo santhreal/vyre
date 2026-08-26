@@ -1,9 +1,9 @@
-//! Host-side dispatch of a non-resident persistent BFS.
+//! Semantic execution of the complete persistent-BFS algorithm.
 //!
-//! Every launch re-uploads the graph. Callers that run many queries over one
-//! topology use the resident form in [`super::resident`] instead.
+//! The semantic executor compiles the complete program and selects its
+//! artifact schedule.
 
-use super::resident_scratch::{copy_frontier_seed_into, PersistentBfsGpuScratch};
+use super::scratch::{copy_frontier_seed_into, PersistentBfsGpuScratch};
 
 use crate::dispatch_buffers::decode_u32_output_exact;
 use crate::graph::csr_closure_inputs::CsrClosureInputs;
@@ -12,7 +12,9 @@ use crate::graph::persistent_bfs::{
     plan_persistent_bfs_dispatch, validate_persistent_bfs_changed_flag,
     validate_persistent_bfs_converged_flag,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Dispatcher-backed persistent BFS expansion. Returns the saturated frontier,
 /// the sticky changed-flag, and the device converged word.
@@ -27,12 +29,14 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 /// Propagates dispatch failures and rejects malformed CSR/frontier
 /// shapes or truncated readback.
 pub fn bfs_expand_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
-) -> Result<(Vec<u32>, u32, u32), DispatchError> {
+) -> Result<(Vec<u32>, u32, u32), SemanticExecutionError> {
     let mut frontier = Vec::new();
-    let (changed, converged) = bfs_expand_via_into(dispatcher, inputs, frontier_in, &mut frontier)?;
+    let (changed, converged) =
+        bfs_expand_via_into(dispatcher, policy, inputs, frontier_in, &mut frontier)?;
     Ok((frontier, changed, converged))
 }
 
@@ -43,13 +47,21 @@ pub fn bfs_expand_via(
 /// Propagates dispatch failures and rejects malformed CSR/frontier
 /// shapes or truncated readback.
 pub fn bfs_expand_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
     frontier_out: &mut Vec<u32>,
-) -> Result<(u32, u32), DispatchError> {
+) -> Result<(u32, u32), SemanticExecutionError> {
     let mut scratch = PersistentBfsGpuScratch::default();
-    bfs_expand_via_with_scratch_into(dispatcher, inputs, frontier_in, &mut scratch, frontier_out)
+    bfs_expand_via_with_scratch_into(
+        dispatcher,
+        policy,
+        inputs,
+        frontier_in,
+        &mut scratch,
+        frontier_out,
+    )
 }
 
 /// Dispatcher-backed persistent BFS expansion into caller-owned frontier and dispatch scratch.
@@ -59,16 +71,17 @@ pub fn bfs_expand_via_into(
 /// Propagates dispatch failures and rejects malformed CSR/frontier
 /// shapes or truncated readback.
 pub fn bfs_expand_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     inputs: CsrClosureInputs<'_>,
     frontier_in: &[u32],
     scratch: &mut PersistentBfsGpuScratch,
     frontier_out: &mut Vec<u32>,
-) -> Result<(u32, u32), DispatchError> {
+) -> Result<(u32, u32), SemanticExecutionError> {
     let max_iters = inputs.max_iters;
     let graph = inputs.graph;
-    let plan =
-        plan_persistent_bfs_dispatch(inputs, frontier_in).map_err(DispatchError::BadInputs)?;
+    let plan = plan_persistent_bfs_dispatch(inputs, frontier_in)
+        .map_err(SemanticExecutionError::InvalidRequest)?;
     let layout = plan.layout();
     let words = plan.frontier_words();
     if layout.node_count == 0 {
@@ -85,10 +98,7 @@ pub fn bfs_expand_via_with_scratch_into(
         // No confirming step ran, so the seed is not proven converged.
         return Ok((0, 0));
     }
-    let key = plan.program_cache_key(dispatcher.device_feature_cache_key());
-    let program = scratch
-        .plan_cache
-        .get_or_build(key, || plan.program("frontier_in", "frontier_out"));
+    let program = plan.program("frontier_in", "frontier_out");
     let changed_words = program
         .buffers()
         .iter()
@@ -134,11 +144,18 @@ pub fn bfs_expand_via_with_scratch_into(
             ),
         ],
     )?;
-    let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some(plan.dispatch_grid()))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        "persistent_bfs_expand",
+        program,
+        &scratch.inputs,
+        policy,
+    )?
+    .outputs;
     let [frontier_buf, changed_buf, converged_buf] = match outputs.as_slice() {
         [frontier_buf, changed_buf, converged_buf] => [frontier_buf, changed_buf, converged_buf],
         _ => {
-            return Err(DispatchError::BackendError(format!(
+            return Err(SemanticExecutionError::Backend(format!(
                 "Fix: bfs_expand_via expected exactly three u32 output buffers (frontier_out, changed, converged), got {}.",
                 outputs.len()
             )));
@@ -149,22 +166,25 @@ pub fn bfs_expand_via_with_scratch_into(
         words,
         "bfs_expand_via frontier_out",
         frontier_out,
-    )?;
+    )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
     decode_u32_output_exact(
         changed_buf,
         changed_words,
         "bfs_expand_via changed",
         &mut scratch.changed,
-    )?;
+    )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
     decode_u32_output_exact(
         converged_buf,
         1,
         "bfs_expand_via converged",
         &mut scratch.converged,
-    )?;
+    )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
     let changed = scratch.changed[0];
-    validate_persistent_bfs_changed_flag(changed).map_err(DispatchError::BackendError)?;
+    validate_persistent_bfs_changed_flag(changed).map_err(SemanticExecutionError::Backend)?;
     let converged = scratch.converged[0];
-    validate_persistent_bfs_converged_flag(converged).map_err(DispatchError::BackendError)?;
+    validate_persistent_bfs_converged_flag(converged).map_err(SemanticExecutionError::Backend)?;
     Ok((changed, converged))
 }

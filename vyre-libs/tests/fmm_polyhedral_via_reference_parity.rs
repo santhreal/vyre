@@ -1,7 +1,7 @@
 //! End-to-end parity for `math::fmm_polyhedral_compress::{aggregate_to_cells_via,
 //! translate_to_targets_via, evaluate_at_regions_via}`, the three zeroth-order Fast-Multipole stages
 //! (P2M aggregate, M2L translate, L2P evaluate), through the shared faithful
-//! [`vyre_driver_reference::ReferenceEvalDispatcher`].
+//! [`vyre_driver_reference::ReferenceSemanticExecutor`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the FMM f32 IRs are not run through a faithful dispatch boundary by any `vyre-primitives/tests/*`
@@ -16,6 +16,8 @@
 //! sinkhorn f32 suites do). Inputs are bounded (and M2L distances kept >= 1 so the reciprocal is
 //! well-conditioned) so rounding stays far below tolerance while a wrong kernel fails by orders.
 
+mod semantic_execution_support;
+
 use vyre_libs::solvers::fmm_polyhedral_compress::{
     aggregate_to_cells_via, evaluate_at_regions_via, translate_to_targets_via,
 };
@@ -23,7 +25,7 @@ use vyre_reference::composition_witness::{
     l2p_zeroth_all_witness, m2l_zeroth_all_witness, p2m_zeroth_moment_witness,
 };
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 /// A bounded f32 in [0, 1).
@@ -63,7 +65,7 @@ fn l2p_oracle(cell_local: &[f32], cell_assignment: &[u32]) -> Vec<f64> {
 
 #[test]
 fn p2m_aggregate_via_matches_inline_f64_oracle() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0xF3_31_00_01u32;
     let mut multi_region_cell = 0u32;
     for case in 0..300u32 {
@@ -74,8 +76,13 @@ fn p2m_aggregate_via_matches_inline_f64_oracle() {
             .map(|_| xorshift(&mut state) % n_cells)
             .collect();
 
-        let got = aggregate_to_cells_via(&dispatcher, &scores, &cell_assignment)
-            .expect("aggregate_to_cells_via must dispatch");
+        let got = aggregate_to_cells_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &scores,
+            &cell_assignment,
+        )
+        .expect("aggregate_to_cells_via must dispatch");
         approx_slice(
             &got,
             &p2m_oracle(&scores, &cell_assignment),
@@ -98,7 +105,7 @@ fn p2m_aggregate_via_matches_inline_f64_oracle() {
 
 #[test]
 fn m2l_translate_via_matches_inline_f64_oracle() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x0312_0001_u32;
     for case in 0..300u32 {
         let n_cells = 2 + (case % 4) as usize; // 2..5
@@ -108,8 +115,13 @@ fn m2l_translate_via_matches_inline_f64_oracle() {
             .map(|_| 1.0 + 3.0 * unit_f32(&mut state))
             .collect();
 
-        let got = translate_to_targets_via(&dispatcher, &moments, &distances)
-            .expect("translate_to_targets_via must dispatch");
+        let got = translate_to_targets_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &moments,
+            &distances,
+        )
+        .expect("translate_to_targets_via must dispatch");
         approx_slice(
             &got,
             &m2l_oracle(&moments, &distances),
@@ -120,7 +132,7 @@ fn m2l_translate_via_matches_inline_f64_oracle() {
 
 #[test]
 fn l2p_evaluate_via_matches_inline_f64_oracle() {
-    let dispatcher = ReferenceEvalDispatcher;
+    let dispatcher = ReferenceSemanticExecutor;
     let mut state = 0x51_2A_00_01u32;
     for case in 0..300u32 {
         let n_cells = 2 + (case % 4); // 2..5
@@ -130,8 +142,14 @@ fn l2p_evaluate_via_matches_inline_f64_oracle() {
             .map(|_| xorshift(&mut state) % n_cells)
             .collect();
 
-        let got = evaluate_at_regions_via(&dispatcher, &cell_local, &cell_assignment, n)
-            .expect("evaluate_at_regions_via must dispatch");
+        let got = evaluate_at_regions_via(
+            &dispatcher,
+            &semantic_execution_support::policy(),
+            &cell_local,
+            &cell_assignment,
+            n,
+        )
+        .expect("evaluate_at_regions_via must dispatch");
         approx_slice(
             &got,
             &l2p_oracle(&cell_local, &cell_assignment),

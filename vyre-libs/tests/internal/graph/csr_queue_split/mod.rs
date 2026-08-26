@@ -130,10 +130,6 @@ fn split_low_rejects_offset_count_overflow_without_panic() {
 
 #[test]
 fn mixed_logical_lanes_charge_low_rows_once_and_high_rows_as_lane_teams() {
-    assert_eq!(csr_queue_split_low_dispatch_grid(0), [1, 1, 1]);
-    assert_eq!(csr_queue_split_low_dispatch_grid(1), [1, 1, 1]);
-    assert_eq!(csr_queue_split_low_dispatch_grid(256), [1, 1, 1]);
-    assert_eq!(csr_queue_split_low_dispatch_grid(257), [2, 1, 1]);
     assert_eq!(csr_queue_split_mixed_logical_lanes(12_057, 256), 20_249);
     assert!(
         csr_queue_split_mixed_logical_lanes(12_057, 256)

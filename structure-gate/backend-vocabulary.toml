@@ -79,8 +79,8 @@ neutral = true
 name = "packaging"
 neutral = true
 
-# Optimizer passes expressed as Vyre programs, dispatched through the
-# ProgramDispatcher seam, so the crate names no backend API.
+# Optimizer passes expressed as Vyre programs, executed through the
+# SemanticExecutor seam, so the crate names no backend API.
 [[layer]]
 name = "pass-engine"
 neutral = true

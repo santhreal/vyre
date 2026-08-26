@@ -13,15 +13,6 @@ pub const OP_ID: &str = "vyre-libs::graph::union_find";
 /// One lane per union edge in a batch.
 pub const UNION_FIND_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid that covers every union edge lane.
-///
-/// One lane per union edge, over the [`vyre_primitives::lane_grid`] owner, so the
-/// zero-edge case still yields a launchable grid.
-#[must_use]
-pub const fn union_find_dispatch_grid(edge_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(edge_count, UNION_FIND_WORKGROUP_SIZE[0])
-}
-
 /// Build the path-halving body used by [`union_roots_body`].
 ///
 /// `id_var` is read at entry. On exit `root_var` contains the discovered root
@@ -379,15 +370,6 @@ mod tests {
         let program = union_find_program("parent", "edge_a", "edge_b", 8, 4);
         assert_eq!(program.buffers().len(), 3);
         assert_eq!(program.workgroup_size(), UNION_FIND_WORKGROUP_SIZE);
-    }
-
-    #[test]
-    fn dispatch_grid_packs_union_edges_into_workgroups() {
-        assert_eq!(union_find_dispatch_grid(0), [1, 1, 1]);
-        assert_eq!(union_find_dispatch_grid(1), [1, 1, 1]);
-        assert_eq!(union_find_dispatch_grid(256), [1, 1, 1]);
-        assert_eq!(union_find_dispatch_grid(257), [2, 1, 1]);
-        assert_eq!(union_find_dispatch_grid(1025), [5, 1, 1]);
     }
 
     #[test]

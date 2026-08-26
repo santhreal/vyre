@@ -10,9 +10,7 @@ mod line_splice_generated_corpus;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::parsing::line_splice_classify::{
-    line_splice_classify, line_splice_classify_dispatch_grid, line_splice_classify_u8,
-};
+use vyre_libs::parsing::line_splice_classify::{line_splice_classify, line_splice_classify_u8};
 use vyre_reference::composition_witness::line_splice_classify_witness as reference_line_splice_classify;
 
 fn pack_bytes(bytes: &[u8]) -> Vec<u32> {
@@ -35,7 +33,6 @@ fn run_line_splice(source: &[u8]) -> Vec<u32> {
     let program = line_splice_classify(byte_count);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(&words), vec![0u8; byte_count.max(1) as usize * 4]];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(line_splice_classify_dispatch_grid(byte_count));
     let outputs = with_live_backend("line splice classify", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -53,7 +50,6 @@ fn run_line_splice_u8(source: &[u8]) -> Vec<u32> {
     let program = line_splice_classify_u8(byte_count);
     let inputs: Vec<Vec<u8>> = vec![source.to_vec(), vec![0u8; byte_count.max(1) as usize * 4]];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(line_splice_classify_dispatch_grid(byte_count));
     let outputs = with_live_backend("raw-u8 line splice classify", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

@@ -27,11 +27,13 @@
 //! provably-tight bounds on the matroid LP relaxation residual.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, checked_product_count, checked_square_cells, decode_u32_output_exact,
-    ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+    checked_product_count, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
+    write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::amg_v_cycle::amg_v_cycle;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Caller-owned dispatch scratch for fixed-point AMG V-cycle execution.
 #[derive(Debug, Default)]
@@ -58,11 +60,12 @@ pub const DEFAULT_OMEGA_FIXED: u32 = 43_254;
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shapes are invalid, primitive lane counts
+/// Returns [`SemanticExecutionError`] when shapes are invalid, primitive lane counts
 /// overflow, or the backend returns malformed output.
 #[allow(clippy::too_many_arguments)]
 pub fn smooth_matroid_flow_fixed_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     a_fixed: &[u32],
     b_fixed: &[u32],
     x_fixed: &[u32],
@@ -71,10 +74,11 @@ pub fn smooth_matroid_flow_fixed_via(
     a_c_fixed: &[u32],
     n_fine: u32,
     n_coarse: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
     smooth_matroid_flow_fixed_via_into(
         dispatcher,
+        policy,
         a_fixed,
         b_fixed,
         x_fixed,
@@ -92,10 +96,11 @@ pub fn smooth_matroid_flow_fixed_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks or backend execution fail.
 #[allow(clippy::too_many_arguments)]
 pub fn smooth_matroid_flow_fixed_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     a_fixed: &[u32],
     b_fixed: &[u32],
     x_fixed: &[u32],
@@ -105,10 +110,11 @@ pub fn smooth_matroid_flow_fixed_via_into(
     n_fine: u32,
     n_coarse: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = AmgPassGpuScratch::default();
     smooth_matroid_flow_fixed_via_with_scratch_into(
         dispatcher,
+        policy,
         a_fixed,
         b_fixed,
         x_fixed,
@@ -126,10 +132,11 @@ pub fn smooth_matroid_flow_fixed_via_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when shape checks or backend execution fail.
+/// Returns [`SemanticExecutionError`] when shape checks or backend execution fail.
 #[allow(clippy::too_many_arguments)]
 pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     a_fixed: &[u32],
     b_fixed: &[u32],
     x_fixed: &[u32],
@@ -140,60 +147,63 @@ pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
     n_coarse: u32,
     scratch: &mut AmgPassGpuScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{amg_pass_solver_calls, bump};
     bump(&amg_pass_solver_calls);
 
     if n_coarse >= n_fine {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: smooth_matroid_flow_fixed_via requires 0 < n_coarse < n_fine, got n_coarse={n_coarse}, n_fine={n_fine}."
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: smooth_matroid_flow_fixed_via requires 0 < n_coarse < n_fine, got n_coarse={n_coarse}, n_fine={n_fine}."
+    )));
     }
-    let fine_cells = checked_square_cells(n_fine, "smooth_matroid_flow_fixed_via fine matrix")?;
+    let fine_cells = checked_square_cells(n_fine, "smooth_matroid_flow_fixed_via fine matrix")
+        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
     let coarse_cells =
-        checked_square_cells(n_coarse, "smooth_matroid_flow_fixed_via coarse matrix")?;
+        checked_square_cells(n_coarse, "smooth_matroid_flow_fixed_via coarse matrix")
+            .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
     let transfer_cells = checked_product_count(
         n_coarse,
         n_fine,
         "n_coarse",
         "n_fine",
         "smooth_matroid_flow_fixed_via transfer matrix",
-    )?;
+    )
+    .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
     if a_fixed.len() != fine_cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: smooth_matroid_flow_fixed_via requires a_fixed.len() == n_fine*n_fine, got len={}, expected={fine_cells}.",
-            a_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: smooth_matroid_flow_fixed_via requires a_fixed.len() == n_fine*n_fine, got len={}, expected={fine_cells}.",
+        a_fixed.len()
+    )));
     }
     if b_fixed.len() != n_fine as usize {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: smooth_matroid_flow_fixed_via requires b_fixed.len() == n_fine, got len={}, n_fine={n_fine}.",
-            b_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: smooth_matroid_flow_fixed_via requires b_fixed.len() == n_fine, got len={}, n_fine={n_fine}.",
+        b_fixed.len()
+    )));
     }
     if x_fixed.len() != n_fine as usize {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: smooth_matroid_flow_fixed_via requires x_fixed.len() == n_fine, got len={}, n_fine={n_fine}.",
-            x_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: smooth_matroid_flow_fixed_via requires x_fixed.len() == n_fine, got len={}, n_fine={n_fine}.",
+        x_fixed.len()
+    )));
     }
     if r_mat_fixed.len() != transfer_cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: smooth_matroid_flow_fixed_via requires r_mat_fixed.len() == n_coarse*n_fine, got len={}, expected={transfer_cells}.",
-            r_mat_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: smooth_matroid_flow_fixed_via requires r_mat_fixed.len() == n_coarse*n_fine, got len={}, expected={transfer_cells}.",
+        r_mat_fixed.len()
+    )));
     }
     if p_mat_fixed.len() != transfer_cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: smooth_matroid_flow_fixed_via requires p_mat_fixed.len() == n_fine*n_coarse, got len={}, expected={transfer_cells}.",
-            p_mat_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: smooth_matroid_flow_fixed_via requires p_mat_fixed.len() == n_fine*n_coarse, got len={}, expected={transfer_cells}.",
+        p_mat_fixed.len()
+    )));
     }
     if a_c_fixed.len() != coarse_cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: smooth_matroid_flow_fixed_via requires a_c_fixed.len() == n_coarse*n_coarse, got len={}, expected={coarse_cells}.",
-            a_c_fixed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: smooth_matroid_flow_fixed_via requires a_c_fixed.len() == n_coarse*n_coarse, got len={}, expected={coarse_cells}.",
+        a_c_fixed.len()
+    )));
     }
 
     let program = amg_v_cycle(
@@ -213,15 +223,15 @@ pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
     let fine_bytes = (n_fine as usize)
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
-            "Fix: smooth_matroid_flow_fixed_via n_fine={n_fine} overflows fine scratch byte count."
-        ))
+            SemanticExecutionError::InvalidRequest(format!(
+        "Fix: smooth_matroid_flow_fixed_via n_fine={n_fine} overflows fine scratch byte count."
+                ))
         })?;
     let coarse_bytes = (n_coarse as usize).checked_mul(std::mem::size_of::<u32>()).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
-            "Fix: smooth_matroid_flow_fixed_via n_coarse={n_coarse} overflows coarse scratch byte count."
-        ))
-    })?;
+    SemanticExecutionError::InvalidRequest(format!(
+        "Fix: smooth_matroid_flow_fixed_via n_coarse={n_coarse} overflows coarse scratch byte count."
+    ))
+})?;
     scratch.omega.clear();
     scratch.omega.push(DEFAULT_OMEGA_FIXED);
     ensure_input_slots(&mut scratch.inputs, 11);
@@ -236,15 +246,18 @@ pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[8], coarse_bytes);
     write_zero_bytes(&mut scratch.inputs[9], coarse_bytes);
     write_zero_bytes(&mut scratch.inputs[10], coarse_bytes);
-    let outputs = dispatcher.dispatch(
-        &program,
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
         &scratch.inputs,
-        Some([ceil_div_u32(n_fine.max(n_coarse), 256), 1, 1]),
-    )?;
+        policy,
+    )
+    .map(|output| output.outputs)?;
     let [out_buf, ..] = match outputs.as_slice() {
         [b, ..] => [b],
         _ => {
-            return Err(DispatchError::BackendError(format!(
+            return Err(SemanticExecutionError::Backend(format!(
                 "Fix: smooth_matroid_flow_fixed_via expected at least one output buffer, got {}.",
                 outputs.len()
             )))
@@ -256,13 +269,13 @@ pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
         "smooth_matroid_flow_fixed_via",
         out,
     )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_foundation::ir::Program;
 
     /// Caller-owned scratch for CPU reference AMG V-cycle execution.
     #[derive(Debug, Default, Clone)]
@@ -508,27 +521,33 @@ mod tests {
 
     struct AmgDispatcher;
 
-    impl ProgramDispatcher for AmgDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for AmgDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 11);
-            let b = crate::dispatch_buffers::read_u32s(&inputs[1]);
-            let x = crate::dispatch_buffers::read_u32s(&inputs[2]);
-            assert_eq!(
-                crate::dispatch_buffers::read_u32s(&inputs[6])[0],
-                DEFAULT_OMEGA_FIXED
-            );
-            let out: Vec<u32> = x
-                .iter()
-                .zip(b.iter())
-                .map(|(&current, &rhs)| current.max(rhs))
-                .collect();
-            Ok(vec![u32_slice_to_le_bytes(&out)])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                assert_eq!(inputs.len(), 11);
+                let b = crate::dispatch_buffers::read_u32s(&inputs[1]);
+                let x = crate::dispatch_buffers::read_u32s(&inputs[2]);
+                assert_eq!(
+                    crate::dispatch_buffers::read_u32s(&inputs[6])[0],
+                    DEFAULT_OMEGA_FIXED
+                );
+                let out: Vec<u32> = x
+                    .iter()
+                    .zip(b.iter())
+                    .map(|(&current, &rhs)| current.max(rhs))
+                    .collect();
+                Ok(vec![u32_slice_to_le_bytes(&out)])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
+            }
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -537,6 +556,7 @@ mod tests {
         let one = 1u32 << 16;
         let out = smooth_matroid_flow_fixed_via(
             &AmgDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[3 * one, 4 * one],
             &[0, 0],
@@ -554,6 +574,7 @@ mod tests {
     fn fixed_via_rejects_invalid_level_shape() {
         let err = smooth_matroid_flow_fixed_via(
             &AmgDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[1, 0, 0, 1],
             &[1, 1],
             &[0, 0],
@@ -564,7 +585,7 @@ mod tests {
             2,
         )
         .unwrap_err();
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 
     #[test]
@@ -575,6 +596,7 @@ mod tests {
 
         smooth_matroid_flow_fixed_via_with_scratch_into(
             &AmgDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[3 * one, 4 * one],
             &[0, 0],
@@ -590,6 +612,7 @@ mod tests {
         let input_ptrs: Vec<*const u8> = scratch.inputs.iter().map(Vec::as_ptr).collect();
         smooth_matroid_flow_fixed_via_with_scratch_into(
             &AmgDispatcher,
+            &crate::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[2 * one, 5 * one],
             &[0, 0],

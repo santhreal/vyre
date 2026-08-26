@@ -17,6 +17,7 @@ categories = ["algorithms", "api-bindings"]
 vyre-driver.workspace = true
 vyre-foundation.workspace = true
 vyre-reference.workspace = true
+vyre-megakernel.workspace = true
 inventory.workspace = true
 
 [package.metadata.docs.rs]

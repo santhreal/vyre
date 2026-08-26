@@ -13,10 +13,6 @@ use vyre_libs::math::bigint_add_carry::{
 };
 use vyre_reference::composition_witness::bigint_add_carry_witness;
 
-fn bigint_add_carry_dispatch_grid(limb_count: u32) -> [u32; 3] {
-    vyre_primitives::lane_grid(limb_count, BIGINT_ADD_CARRY_WORKGROUP_SIZE[0])
-}
-
 fn run_bigint_add_carry(a: &[u32], b: &[u32]) -> (Vec<u32>, Vec<u32>) {
     assert_eq!(a.len(), b.len());
     let limb_count = a.len() as u32;
@@ -27,7 +23,6 @@ fn run_bigint_add_carry(a: &[u32], b: &[u32]) -> (Vec<u32>, Vec<u32>) {
     inputs[BINDING_SUM_PARTIAL_OUT as usize] = vec![0u8; limb_count as usize * 4];
     inputs[BINDING_CARRY_PARTIAL_OUT as usize] = vec![0u8; limb_count as usize * 4];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(bigint_add_carry_dispatch_grid(limb_count));
     let outputs = with_live_backend("bigint add carry", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -104,7 +99,10 @@ fn cuda_bigint_add_carry_multi_block_overflow_pattern() {
     let (cpu_sum, cpu_carry) = bigint_add_carry_witness(&a, &b).expect("ok");
     let (gpu_sum, gpu_carry) = run_bigint_add_carry(&a, &b);
 
-    assert_eq!(bigint_add_carry_dispatch_grid(limb_count), [5, 1, 1]);
+    assert!(
+        limb_count > BIGINT_ADD_CARRY_WORKGROUP_SIZE[0],
+        "Fix: the fixture must cross a workgroup boundary or it proves nothing about multi-block launches"
+    );
     assert_eq!(gpu_sum, cpu_sum);
     assert_eq!(gpu_carry, cpu_carry);
     assert_eq!(gpu_sum[0], 0);

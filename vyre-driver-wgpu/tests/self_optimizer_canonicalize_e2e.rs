@@ -15,7 +15,7 @@
 
 mod harness;
 use harness::acquire_live_backend as live_backend;
-use harness::self_optimizer::WgpuProgramDispatcher;
+use harness::self_optimizer::semantic_execution;
 
 use vyre_pass_engine::optimizer::canonicalize_via_encoded::gpu_canonicalize;
 use vyre_test_support::pass_programs::{assert_canonicalized, canonicalize_case};
@@ -24,9 +24,9 @@ use vyre_test_support::pass_programs::{assert_canonicalized, canonicalize_case};
 /// rewrite the case owes.
 fn assert_case_on_real_gpu(label: &str) {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
+    let (executor, policy) = semantic_execution(&backend);
     let case = canonicalize_case(label);
-    let canon = gpu_canonicalize(case.input(), &dispatcher).expect("dispatches");
+    let canon = gpu_canonicalize(case.input(), &executor, &policy).expect("dispatches");
     assert_canonicalized("wgpu", case, &canon);
 }
 

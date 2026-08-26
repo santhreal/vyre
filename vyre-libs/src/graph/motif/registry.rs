@@ -14,11 +14,11 @@ inventory::submit! {
         OP_ID,
         || motif(ProgramGraphShape::new(4, 4), &[MotifEdge { from: 0, to: 1, kind_mask: 1 }], "witness"),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![crate::graph::program_graph::sample_program_graph_inputs(&[
-                to_bytes(&[0, 0, 0, 0]),          // motif_hits
-                to_bytes(&[0, 0, 0, 0]),          // witness
-            ])]
+            // Both results are pipeline-live-out, so the backend allocates them
+            // and the reference takes no seed Value for either.
+            vec![crate::graph::program_graph::sample_program_graph_inputs(
+                &[],
+            )]
         }),
         Some(|| {
             vec![vec![

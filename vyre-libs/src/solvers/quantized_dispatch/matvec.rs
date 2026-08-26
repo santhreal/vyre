@@ -1,7 +1,9 @@
 //! Device dispatch of packed INT4 row-scaled matrix-vector products.
 
 use super::*;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Compute a packed signed INT4 row-scaled matrix-vector product through the backend.
 ///
@@ -11,20 +13,22 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when dimensions are zero, input shapes are wrong,
+/// Returns [`SemanticExecutionError`] when dimensions are zero, input shapes are wrong,
 /// dispatch fails, or backend readback is malformed.
 pub fn i4x8_matvec_f32_scaled_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     weights_packed: &[u32],
     x: &[f32],
     row_scales: &[f32],
     rows: u32,
     cols: u32,
-) -> Result<Vec<f32>, DispatchError> {
+) -> Result<Vec<f32>, SemanticExecutionError> {
     let mut scratch = QuantizedMatvecGpuScratch::default();
     let mut out = Vec::new();
     i4x8_matvec_f32_scaled_via_with_scratch_into(
         dispatcher,
+        policy,
         weights_packed,
         x,
         row_scales,
@@ -42,10 +46,11 @@ pub fn i4x8_matvec_f32_scaled_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] under the same conditions as
+/// Returns [`SemanticExecutionError`] under the same conditions as
 /// [`i4x8_matvec_f32_scaled_via`].
 pub fn i4x8_matvec_f32_scaled_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     weights_packed: &[u32],
     x: &[f32],
     row_scales: &[f32],
@@ -53,35 +58,35 @@ pub fn i4x8_matvec_f32_scaled_via_with_scratch_into(
     cols: u32,
     scratch: &mut QuantizedMatvecGpuScratch,
     out: &mut Vec<f32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if rows == 0 || cols == 0 {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: i4x8_matvec_f32_scaled_via requires rows > 0 and cols > 0, got rows={rows} cols={cols}."
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: i4x8_matvec_f32_scaled_via requires rows > 0 and cols > 0, got rows={rows} cols={cols}."
+    )));
     }
     let words_per_row = i4_packed_words(cols) as usize;
     let expected_weight_words = (rows as usize).checked_mul(words_per_row).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
-            "Fix: i4x8_matvec_f32_scaled_via weight word count overflows usize for rows={rows} cols={cols}."
-        ))
-    })?;
+    SemanticExecutionError::InvalidRequest(format!(
+        "Fix: i4x8_matvec_f32_scaled_via weight word count overflows usize for rows={rows} cols={cols}."
+    ))
+})?;
     if weights_packed.len() != expected_weight_words {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: i4x8_matvec_f32_scaled_via requires weights_packed.len() == rows*i4_packed_words(cols), got len={} expected={expected_weight_words} for rows={rows} cols={cols}.",
-            weights_packed.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: i4x8_matvec_f32_scaled_via requires weights_packed.len() == rows*i4_packed_words(cols), got len={} expected={expected_weight_words} for rows={rows} cols={cols}.",
+        weights_packed.len()
+    )));
     }
     if x.len() != cols as usize {
-        return Err(DispatchError::BadInputs(format!(
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: i4x8_matvec_f32_scaled_via requires x.len() == cols, got len={} cols={cols}.",
             x.len()
         )));
     }
     if row_scales.len() != rows as usize {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: i4x8_matvec_f32_scaled_via requires row_scales.len() == rows, got len={} rows={rows}.",
-            row_scales.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: i4x8_matvec_f32_scaled_via requires row_scales.len() == rows, got len={} rows={rows}.",
+        row_scales.len()
+    )));
     }
     let QuantizedMatvecGpuScratch {
         inputs,
@@ -97,11 +102,19 @@ pub fn i4x8_matvec_f32_scaled_via_with_scratch_into(
     write_f32_slice_le_bytes(&mut inputs[1], x);
     write_f32_slice_le_bytes(&mut inputs[2], row_scales);
 
-    let outputs = dispatcher.dispatch(program, &inputs[..3], Some([rows, 1, 1]))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program.clone(),
+        &inputs[..3],
+        policy,
+    )
+    .map(|output| output.outputs)?;
     decode_f32_output_exact(
         expect_one_output("i4x8_matvec_f32_scaled_via", &outputs)?,
         rows as usize,
         "i4x8_matvec_f32_scaled_via",
         out,
     )
+    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }

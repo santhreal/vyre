@@ -34,11 +34,9 @@ pub const OP_ID: &str = "vyre-pass-engine::optimizer::dce_program";
 
 /// Workgroup size for the DCE BFS kernels.
 ///
-/// THIS PROGRAM MUST BE DISPATCHED AS EXACTLY ONE WORKGROUP. Every caller pins it:
-/// `pipeline_resident.rs` with `dce_grid_x = 1`, `dce_via_encoded.rs` with
-/// `Some([1, 1, 1])`. That is not a tuning choice, it is the condition under which
-/// the early exit is correct, and this comment exists because the reasoning has
-/// misled three separate attempts at this file.
+/// Schedule legality requires one cooperative workgroup because the early-exit
+/// flag has workgroup scope. The semantic executor's compiler enforces this
+/// constraint; pass-engine callers do not select launch geometry.
 ///
 /// One workgroup suffices, because WORKGROUP 0'S LANES ALONE VISIT EVERY SOURCE:
 /// the step strides `src = gid_x() + stride * DCE_WORKGROUP_X` for

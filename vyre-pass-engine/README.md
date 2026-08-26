@@ -1,7 +1,7 @@
 # vyre-pass-engine
 
-The optimizer's own passes, executed as vyre Programs through the
-dispatcher seam. The compiler running on the device it compiles for.
+The optimizer's own passes, executed as Vyre Programs through compiler-owned
+semantic compilation and admitted artifact submission.
 
 Pass semantics belong to `vyre-foundation`. This crate encodes a
 `Program` into the canonical 5-buffer `ProgramGraph` ABI and runs the
@@ -12,10 +12,10 @@ key, constant folding is `level_wave` bottom-up evaluation.
 Not here: host reimplementations of passes that exist as compositions.
 
 Dispatched entry points, including the `*_via_encoded` passes, take a
-`vyre_foundation::program_dispatch::ProgramDispatcher`. Parity tests run
-the pass against `vyre_driver_reference::ReferenceEvalDispatcher`, which
-executes the Program on the reference interpreter. Production runs the
-identical Program against a backend dispatcher.
+`vyre_megakernel::SemanticExecutor` and an explicit
+`SemanticExecutionPolicy`. Parity tests use
+`vyre_driver_reference::ReferenceSemanticExecutor`. Production uses the same
+validated graph request with a registered device executor.
 
 ## Dep direction
 
@@ -41,7 +41,7 @@ vyre-driver / vyre-runtime / vyre-driver-{cuda,wgpu}
   `pattern_match_via_encoded`, `validate_via_encoded`, and the `dce_program`
   analysis Program they build on.
 - Cross-scope CSE over the returned Program: `cse_via_encoded`.
-- Sequencing: `pipeline`, `pipeline_resident`, `pipeline_resident_decode`.
+- Sequencing: `pipeline` and `combined_decode`.
 
 Nine module trees that used to live here (scheduling solvers, analysis, logic,
 data, math, graph, hardware-boundary contracts, telemetry counters, and the
@@ -56,7 +56,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Execute the optimizer's own passes as Vyre Programs, dispatched through the ProgramDispatcher seam.
+Execute optimizer passes as Vyre Programs through compiler-owned semantic compilation and admitted artifact submission.
 
 ### Boundaries
 

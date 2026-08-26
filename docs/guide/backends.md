@@ -85,8 +85,8 @@ validated ProgramGraph
 programs from an `Artifact` rather than a caller-owned `Program`.
 `ArtifactMaterializer` acquires one device generation, authenticates
 payload identity and format, and owns resident allocation for that
-generation. `ArtifactInstance` accepts only a `BindingSet` carrying the
-same artifact digest, and every submission grid axis must be positive.
+generation. `ArtifactInstance` accepts only a `BindingSet` carrying the same
+artifact digest. The admitted target entry point fixes all submission geometry.
 
 Device loss invalidates the native modules and resident handles of that
 device generation. Recovery rematerializes the authenticated payload bytes;

@@ -138,7 +138,6 @@ fn first_replay_mismatch(
 mod tests {
     use super::*;
     use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
-    use vyre_conform::dispatch_grid;
     use vyre_conform::witness_plan::WitnessInputPlan;
     use vyre_conform_spec::ConformanceResult;
 
@@ -158,8 +157,6 @@ mod tests {
         let backend_output = vec![1, 2, 9, 4];
         let prepared = PreparedEntry {
             id: "test.replay_capsule",
-            dispatch_config: dispatch_grid::config_for_program(&program)
-                .expect("Fix: one-workgroup program must have a dispatch grid."),
             input_plan: WitnessInputPlan::for_program(&program)
                 .expect("Fix: replay-capsule test program must plan backend inputs."),
             program,
@@ -229,8 +226,6 @@ mod tests {
         );
         let prepared = PreparedEntry {
             id: "test.failure",
-            dispatch_config: dispatch_grid::config_for_program(&program)
-                .expect("Fix: output-only program must have a dispatch grid."),
             input_plan: WitnessInputPlan::for_program(&program)
                 .expect("Fix: output-only program must still have a backend plan."),
             program,

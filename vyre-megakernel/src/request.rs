@@ -9,6 +9,7 @@ use vyre_foundation::validate::{validate_with_options, BackendCapabilities, Vali
 
 use crate::device_facts::{validate_device_support, DeviceFacts};
 use crate::error::{failure, CompileError, CompilerFailureKind};
+use crate::execution::CompileObjective;
 use crate::grid_sync;
 use crate::identity::Digest;
 
@@ -103,6 +104,7 @@ pub struct CompileRequest {
     pub(crate) graph: ProgramGraph,
     pub(crate) facts: ExternalFacts,
     pub(crate) device: DeviceFacts,
+    pub(crate) objective: CompileObjective,
     pub(crate) search_budget: SearchBudget,
     pub(crate) max_artifact_bytes: u64,
     representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
@@ -121,6 +123,7 @@ impl CompileRequest {
         Self {
             graph,
             facts,
+            objective: CompileObjective::MinimizeLatency,
             device,
             search_budget,
             max_artifact_bytes,
@@ -135,6 +138,13 @@ impl CompileRequest {
         representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
     ) -> Self {
         self.representative_inputs = representative_inputs;
+        self
+    }
+
+    /// Select the explicit compiler ranking objective.
+    #[must_use]
+    pub const fn with_objective(mut self, objective: CompileObjective) -> Self {
+        self.objective = objective;
         self
     }
 
@@ -202,6 +212,7 @@ impl CompileRequest {
             facts: self.facts,
             representative_inputs: self.representative_inputs,
             device: self.device,
+            objective: self.objective,
             search_budget: self.search_budget,
             max_artifact_bytes: self.max_artifact_bytes,
         })
@@ -239,6 +250,7 @@ pub struct ValidatedCompileRequest {
     pub(crate) graph: ProgramGraph,
     pub(crate) facts: ExternalFacts,
     pub(crate) device: DeviceFacts,
+    pub(crate) objective: CompileObjective,
     pub(crate) search_budget: SearchBudget,
     pub(crate) max_artifact_bytes: u64,
     representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
@@ -267,6 +279,12 @@ impl ValidatedCompileRequest {
     #[must_use]
     pub const fn search_budget(&self) -> SearchBudget {
         self.search_budget
+    }
+
+    /// Return the explicit compiler ranking objective.
+    #[must_use]
+    pub const fn objective(&self) -> CompileObjective {
+        self.objective
     }
 
     /// Return the maximum accepted artifact byte length.

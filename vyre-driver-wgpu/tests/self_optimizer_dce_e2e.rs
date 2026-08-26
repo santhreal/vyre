@@ -1,18 +1,13 @@
-//! End-to-end test: vyre's DCE pass running as a vyre Program on the
-//! GPU through the canonical `WgpuBackend::dispatch` API.
+//! End-to-end test for DCE through the WGPU artifact-backed semantic executor.
 //!
-//! No CPU fallback. The test wires a `WgpuProgramDispatcher` that
-//! satisfies the `vyre_foundation::program_dispatch::ProgramDispatcher`
-//! trait and calls `gpu_dce`. Result is asserted fingerprint-equal to
-//! the foundation CPU `dce` pass on the same input  -  proving the
-//! self-hosted GPU pass is semantically identical, with the substrate
-//! actually running on hardware.
+//! Result is fingerprint-equal to the foundation CPU `dce` pass on the same
+//! input while production execution runs on hardware.
 
 #![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 use harness::acquire_live_backend as live_backend;
-use harness::self_optimizer::{wrapped, WgpuProgramDispatcher};
+use harness::self_optimizer::{semantic_execution, wrapped};
 
 use vyre::ir::{Expr, Node};
 use vyre_foundation::optimizer::fingerprint_program;
@@ -21,13 +16,14 @@ use vyre_pass_engine::optimizer::dce_via_encoded::gpu_dce;
 
 fn assert_gpu_dce_matches_cpu_oracle(entry: Vec<Node>) {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
+    let dispatcher = semantic_execution(&backend);
 
     let oracle_in = wrapped(entry.clone());
     let test_in = wrapped(entry);
 
     let oracle_out = cpu_dce_oracle(oracle_in);
-    let gpu_out = gpu_dce(test_in, &dispatcher).expect("gpu_dce dispatches through wgpu cleanly");
+    let gpu_out = gpu_dce(test_in, &dispatcher.0, &dispatcher.1)
+        .expect("gpu_dce dispatches through wgpu cleanly");
     assert_eq!(
         fingerprint_program(&oracle_out),
         fingerprint_program(&gpu_out),

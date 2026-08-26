@@ -53,11 +53,11 @@ fn dominance_frontier(
 
 use dominance_frontier as reference_dominator_frontier;
 use std::sync::Mutex;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::SemanticExecutionError;
 
 mod dispatcher_doubles;
 
-use crate::test_parity_oracles::StaticOutputs;
+use crate::test_parity_oracles::{policy, StaticOutputs};
 use dispatcher_doubles::{DominatorInputShapeDispatcher, RecordingDominatorDispatcher};
 
 const DOMINATOR_CONTRACT: &str = "dominance frontier dispatch";
@@ -211,8 +211,7 @@ fn frontier_size_counts_set_bits() {
 #[test]
 fn via_decodes_exact_frontier_into_reused_buffer() {
     let dispatcher = StaticOutputs::new(DOMINATOR_CONTRACT, vec![u32_slice_to_le_bytes(&[0b1000])])
-        .expecting_grid([1, 1, 1])
-        .expecting_inputs(&[6]);
+        .expecting_inputs(&[5]);
     let dom_offsets = vec![0, 4, 5, 6, 7];
     let dom_targets = vec![0, 1, 2, 3, 1, 2, 3];
     let pred_offsets = vec![0, 0, 1, 2, 4];
@@ -221,6 +220,7 @@ fn via_decodes_exact_frontier_into_reused_buffer() {
     let ptr = out.as_ptr();
     dominance_frontier_via_into(
         &dispatcher,
+        &policy(),
         4,
         &dom_offsets,
         &dom_targets,
@@ -237,8 +237,7 @@ fn via_decodes_exact_frontier_into_reused_buffer() {
 #[test]
 fn via_with_scratch_reuses_dispatch_storage() {
     let dispatcher = StaticOutputs::new(DOMINATOR_CONTRACT, vec![u32_slice_to_le_bytes(&[0b1000])])
-        .expecting_grid([1, 1, 1])
-        .expecting_inputs(&[6]);
+        .expecting_inputs(&[5]);
     let dom_offsets = vec![0, 4, 5, 6, 7];
     let dom_targets = vec![0, 1, 2, 3, 1, 2, 3];
     let pred_offsets = vec![0, 0, 1, 2, 4];
@@ -248,6 +247,7 @@ fn via_with_scratch_reuses_dispatch_storage() {
 
     dominance_frontier_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         4,
         &dom_offsets,
         &dom_targets,
@@ -265,6 +265,7 @@ fn via_with_scratch_reuses_dispatch_storage() {
 
     dominance_frontier_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         4,
         &dom_offsets,
         &dom_targets,
@@ -287,6 +288,7 @@ fn via_with_scratch_reuses_dispatch_storage() {
     let shorter_dom_targets = vec![0, 1, 2, 1, 2, 3];
     dominance_frontier_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         4,
         &shorter_dom_offsets,
         &shorter_dom_targets,
@@ -316,6 +318,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
 
     dominance_frontier_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         4,
         &dom_offsets,
         &dom_targets,
@@ -328,6 +331,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
     .expect("Fix: first dominance frontier dispatch should succeed");
     dominance_frontier_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         4,
         &dom_offsets,
         &changed_dom_targets,
@@ -364,6 +368,7 @@ fn via_reuses_static_graph_inputs_and_refreshes_dynamic_seed() {
 
     dominance_frontier_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         4,
         &dom_offsets,
         &dom_targets,
@@ -382,6 +387,7 @@ fn via_reuses_static_graph_inputs_and_refreshes_dynamic_seed() {
         .collect::<Vec<_>>();
     dominance_frontier_via_with_scratch_into(
         &dispatcher,
+        &policy(),
         4,
         &dom_offsets,
         &dom_targets,
@@ -421,6 +427,7 @@ fn via_zero_edge_graph_uses_primitive_padding_plan() {
     let mut out = Vec::new();
     dominance_frontier_via_into(
         &DominatorInputShapeDispatcher,
+        &policy(),
         1,
         &[0, 0],
         &[],
@@ -443,14 +450,14 @@ fn via_rejects_extra_outputs() {
             u32_slice_to_le_bytes(&[0]),
         ],
     )
-    .expecting_grid([1, 1, 1])
-    .expecting_inputs(&[6]);
+    .expecting_inputs(&[5]);
     let dom_offsets = vec![0, 4, 5, 6, 7];
     let dom_targets = vec![0, 1, 2, 3, 1, 2, 3];
     let pred_offsets = vec![0, 0, 1, 2, 4];
     let pred_targets = vec![0, 0, 1, 2];
     let err = dominance_frontier_via(
         &dispatcher,
+        &policy(),
         4,
         &dom_offsets,
         &dom_targets,
@@ -460,22 +467,22 @@ fn via_rejects_extra_outputs() {
     )
     .expect_err("extra outputs must be rejected");
     assert!(
-        matches!(err, DispatchError::BackendError(_)),
+        matches!(err, SemanticExecutionError::Backend(_)),
         "unexpected error: {err:?}"
     );
 }
 
 #[test]
 fn via_rejects_trailing_frontier_bytes() {
-    let dispatcher = StaticOutputs::new(DOMINATOR_CONTRACT, vec![vec![0, 0, 0, 0, 1]])
-        .expecting_grid([1, 1, 1])
-        .expecting_inputs(&[6]);
+    let dispatcher =
+        StaticOutputs::new(DOMINATOR_CONTRACT, vec![vec![0, 0, 0, 0, 1]]).expecting_inputs(&[5]);
     let dom_offsets = vec![0, 4, 5, 6, 7];
     let dom_targets = vec![0, 1, 2, 3, 1, 2, 3];
     let pred_offsets = vec![0, 0, 1, 2, 4];
     let pred_targets = vec![0, 0, 1, 2];
     let err = dominance_frontier_via(
         &dispatcher,
+        &policy(),
         4,
         &dom_offsets,
         &dom_targets,
@@ -485,7 +492,7 @@ fn via_rejects_trailing_frontier_bytes() {
     )
     .expect_err("trailing frontier bytes must be rejected");
     assert!(
-        matches!(err, DispatchError::BackendError(_)),
+        matches!(err, SemanticExecutionError::Backend(_)),
         "unexpected error: {err:?}"
     );
 }

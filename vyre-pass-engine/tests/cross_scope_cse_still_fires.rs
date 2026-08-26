@@ -1,17 +1,13 @@
-//! Cross-scope CSE still hoists a repeated top-level Expr.
-//!
-//! WHY: the hoist runs only from the resident pipeline, whose end-to-end suites
-//! need a live GPU backend. Nothing runnable on a host observed it, so a hoist
-//! that stopped planning any occurrence left every gate green. This drives the
-//! real path: canonical ids come from the dispatched CSE kernels running on the
-//! reference interpreter, not from a hand-written id table, so a change in how
-//! the kernels number canonicals fails here rather than being papered over.
-//!
-//! Not covered: the sparse `SparseCanonicalMap` lookup, which the dense slice
-//! path here shares every decision with apart from the id lookup itself.
+//! Cross-scope CSE hoists a repeated top-level expression after semantic
+//! execution of the two CSE analysis graphs.
 
-use vyre_driver_reference::ReferenceEvalDispatcher;
+use std::collections::BTreeMap;
+
+use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_megakernel::{
+    CompileObjective, DeviceFacts, Digest, ExternalFacts, SearchBudget, SemanticExecutionPolicy,
+};
 use vyre_pass_engine::optimizer::cse_via_encoded::{apply_cross_scope_cse, gpu_cse_canonicals};
 
 /// `src[0] + src[1]`, the repeated operand the hoist is supposed to find.
@@ -42,9 +38,19 @@ fn entry_scope(program: &Program) -> Vec<Node> {
     }
 }
 
+fn policy() -> SemanticExecutionPolicy {
+    SemanticExecutionPolicy::new(
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        CompileObjective::MinimizeLatency,
+        SearchBudget::new(8, 64, 0, 0, 1_000),
+        1_000_000,
+    )
+}
+
 fn hoisted(program: &Program) -> Program {
-    let (arena, canonical) = gpu_cse_canonicals(program, &ReferenceEvalDispatcher)
-        .expect("the CSE kernels run on the reference interpreter");
+    let (arena, canonical) = gpu_cse_canonicals(program, &ReferenceSemanticExecutor, &policy())
+        .expect("the CSE kernels execute through the reference semantic executor");
     apply_cross_scope_cse(program, &arena, &canonical)
 }
 

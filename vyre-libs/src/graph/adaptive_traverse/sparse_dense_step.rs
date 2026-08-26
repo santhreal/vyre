@@ -5,9 +5,8 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use super::frontier_plan::ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE;
 use super::mode_selection::dense_cutover_nodes;
-use super::HYBRID_OP_ID;
+use super::{ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE, HYBRID_OP_ID};
 /// Build the GPU Program for one adaptive sparse/dense step.
 ///
 /// Each invocation uses the device-resident `frontier_popcount[0]` to choose

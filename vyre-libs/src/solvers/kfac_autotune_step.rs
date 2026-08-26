@@ -12,10 +12,11 @@ use crate::math::kfac_block_inverse::kfac_block_inverse;
 use vyre_foundation::ir::Program;
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes,
-    write_zero_bytes,
+    decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Canonical op ID for the autotune step.
 pub const OP_ID: &str = "vyre-libs::self_substrate::kfac_autotune_step";
@@ -51,13 +52,14 @@ pub fn kfac_autotune_step_program(
 ///
 /// Propagates dispatch failures and rejects malformed dimensions or readback.
 pub fn kfac_autotune_step_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     blocks_in: &[f32],
     num_blocks: u32,
     n: u32,
-) -> Result<Vec<f32>, DispatchError> {
+) -> Result<Vec<f32>, SemanticExecutionError> {
     let mut out = Vec::new();
-    kfac_autotune_step_via_into(dispatcher, blocks_in, num_blocks, n, &mut out)?;
+    kfac_autotune_step_via_into(dispatcher, policy, blocks_in, num_blocks, n, &mut out)?;
     Ok(out)
 }
 
@@ -68,15 +70,17 @@ pub fn kfac_autotune_step_via(
 ///
 /// Propagates dispatch failures and rejects malformed dimensions or readback.
 pub fn kfac_autotune_step_via_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     blocks_in: &[f32],
     num_blocks: u32,
     n: u32,
     out: &mut Vec<f32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = KfacAutotuneGpuScratch::default();
     kfac_autotune_step_via_with_scratch_into(
         dispatcher,
+        policy,
         blocks_in,
         num_blocks,
         n,
@@ -92,40 +96,41 @@ pub fn kfac_autotune_step_via_into(
 ///
 /// Propagates dispatch failures and rejects malformed dimensions or readback.
 pub fn kfac_autotune_step_via_with_scratch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     blocks_in: &[f32],
     num_blocks: u32,
     n: u32,
     scratch: &mut KfacAutotuneGpuScratch,
     out: &mut Vec<f32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if num_blocks == 0 || n == 0 {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: kfac_autotune_step_via requires num_blocks > 0 and n > 0; got num_blocks={num_blocks}, n={n}."
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: kfac_autotune_step_via requires num_blocks > 0 and n > 0; got num_blocks={num_blocks}, n={n}."
+    )));
     }
     let block_cells = n.checked_mul(n).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: kfac_autotune_step_via block size overflows n*n for n={n}."
         ))
     })?;
     let total_cells = num_blocks.checked_mul(block_cells).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
-            "Fix: kfac_autotune_step_via total size overflows num_blocks*n*n for num_blocks={num_blocks}, n={n}."
-        ))
-    })? as usize;
+    SemanticExecutionError::InvalidRequest(format!(
+        "Fix: kfac_autotune_step_via total size overflows num_blocks*n*n for num_blocks={num_blocks}, n={n}."
+    ))
+})? as usize;
     if blocks_in.len() != total_cells {
-        return Err(DispatchError::BadInputs(format!(
-            "Fix: kfac_autotune_step_via expected blocks_in.len() == num_blocks*n*n == {total_cells}, got {}.",
-            blocks_in.len()
-        )));
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+        "Fix: kfac_autotune_step_via expected blocks_in.len() == num_blocks*n*n == {total_cells}, got {}.",
+        blocks_in.len()
+    )));
     }
 
     let program = kfac_autotune_step_program("blocks_out", "blocks_in", "scratch", num_blocks, n);
     let byte_len = total_cells
         .checked_mul(std::mem::size_of::<f32>())
         .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
+            SemanticExecutionError::InvalidRequest(format!(
                 "Fix: kfac_autotune_step_via byte size overflows usize for {total_cells} cells."
             ))
         })?;
@@ -133,15 +138,22 @@ pub fn kfac_autotune_step_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[0], byte_len);
     write_f32_slice_le_bytes(&mut scratch.inputs[1], blocks_in);
     write_zero_bytes(&mut scratch.inputs[2], byte_len);
-    let grid_x = ceil_div_u32(num_blocks, 256);
-    let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([grid_x, 1, 1]))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &scratch.inputs,
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: kfac_autotune_step_via expected at least the blocks_out output buffer, got {}.",
             outputs.len()
         )));
     }
     decode_f32_output_exact(&outputs[0], total_cells, "kfac_autotune_step_via", out)
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 #[cfg(test)]
@@ -153,20 +165,26 @@ mod tests {
 
     struct KfacDispatcher;
 
-    impl ProgramDispatcher for KfacDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for KfacDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 3);
-            assert_eq!(inputs[0].len(), inputs[1].len());
-            assert_eq!(inputs[2].len(), inputs[1].len());
-            let blocks_in = crate::dispatch_buffers::read_f32s(&inputs[1]);
-            let out = reference_kfac_block_inverse(&blocks_in, 1, 2);
-            Ok(vec![f32_slice_to_le_bytes(&out)])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                assert_eq!(inputs.len(), 3);
+                assert_eq!(inputs[0].len(), inputs[1].len());
+                assert_eq!(inputs[2].len(), inputs[1].len());
+                let blocks_in = crate::dispatch_buffers::read_f32s(&inputs[1]);
+                let out = reference_kfac_block_inverse(&blocks_in, 1, 2);
+                Ok(vec![f32_slice_to_le_bytes(&out)])
+            })();
+            let mut ordered = ordered?;
+            let output_count = request.logical().graph().nodes()[0].outputs.len();
+            if ordered.len() < output_count {
+                ordered.resize(output_count, Vec::new());
+            }
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -246,7 +264,14 @@ mod tests {
     fn kfac_autotune_step_via_dispatches_primitive() {
         let blocks_in = vec![2.0, 0.0, 0.0, 4.0];
 
-        let out = kfac_autotune_step_via(&KfacDispatcher, &blocks_in, 1, 2).unwrap();
+        let out = kfac_autotune_step_via(
+            &KfacDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &blocks_in,
+            1,
+            2,
+        )
+        .unwrap();
 
         assert_eq!(out, vec![0.5, 0.0, 0.0, 0.25]);
     }
@@ -257,7 +282,15 @@ mod tests {
         let mut out = Vec::with_capacity(8);
         let ptr = out.as_ptr();
 
-        kfac_autotune_step_via_into(&KfacDispatcher, &blocks_in, 1, 2, &mut out).unwrap();
+        kfac_autotune_step_via_into(
+            &KfacDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &blocks_in,
+            1,
+            2,
+            &mut out,
+        )
+        .unwrap();
 
         assert_eq!(out.as_ptr(), ptr);
         assert_eq!(out, vec![0.5, 0.0, 0.0, 0.25]);
@@ -271,6 +304,7 @@ mod tests {
 
         kfac_autotune_step_via_with_scratch_into(
             &KfacDispatcher,
+            &crate::test_parity_oracles::policy(),
             &blocks_in,
             1,
             2,
@@ -284,6 +318,7 @@ mod tests {
 
         kfac_autotune_step_via_with_scratch_into(
             &KfacDispatcher,
+            &crate::test_parity_oracles::policy(),
             &blocks_in,
             1,
             2,
@@ -302,8 +337,15 @@ mod tests {
 
     #[test]
     fn kfac_autotune_step_via_rejects_bad_shape() {
-        let err = kfac_autotune_step_via(&KfacDispatcher, &[1.0, 0.0], 1, 2).unwrap_err();
+        let err = kfac_autotune_step_via(
+            &KfacDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[1.0, 0.0],
+            1,
+            2,
+        )
+        .unwrap_err();
 
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
     }
 }

@@ -207,7 +207,7 @@ pub enum ProgramGraphError {
 }
 
 /// Connected executable Programs with canonical typed values.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ProgramGraph {
     nodes: Vec<ProgramGraphNode>,
     values: Vec<ProgramGraphValue>,

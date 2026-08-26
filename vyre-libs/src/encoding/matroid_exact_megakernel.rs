@@ -34,7 +34,9 @@ use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::matroid_intersection_full::matroid_intersection_full;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 
 /// Caller-owned dispatch scratch for exact megakernel matroid certification.
 #[derive(Debug, Default)]
@@ -172,19 +174,19 @@ fn validate_full_for_dispatch(
     sinks: &[u32],
     seed_x: &[u32],
     n: usize,
-) -> Result<u32, DispatchError> {
+) -> Result<u32, SemanticExecutionError> {
     validate_full(exchange_adj, sources, sinks, seed_x, n)
-        .map_err(|error| DispatchError::BadInputs(format!("Fix: {error}")))?;
+        .map_err(|error| SemanticExecutionError::InvalidRequest(format!("Fix: {error}")))?;
     let n_u32 = u32::try_from(n).map_err(|_| {
-        DispatchError::BadInputs(format!(
-            "Fix: exact matroid solver n={n} exceeds the primitive u32 dimension limit; shard the exchange graph before dispatch."
-        ))
-    })?;
+    SemanticExecutionError::InvalidRequest(format!(
+        "Fix: exact matroid solver n={n} exceeds the primitive u32 dimension limit; shard the exchange graph before dispatch."
+    ))
+})?;
     n_u32.checked_mul(n_u32).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
-            "Fix: exact matroid solver n*n exceeds the primitive u32 buffer-count limit for n={n_u32}; shard the exchange graph before dispatch."
-        ))
-    })?;
+    SemanticExecutionError::InvalidRequest(format!(
+        "Fix: exact matroid solver n*n exceeds the primitive u32 buffer-count limit for n={n_u32}; shard the exchange graph before dispatch."
+    ))
+})?;
     Ok(n_u32)
 }
 
@@ -198,22 +200,23 @@ fn validate_full_for_dispatch(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when input shapes are invalid, dimensions exceed
-/// primitive limits, the dispatcher rejects the Program, or the backend returns
-/// malformed output.
+/// Returns [`SemanticExecutionError`] when input shapes are invalid, dimensions exceed
+/// primitive limits, the executor rejects the admitted artifact, or its output is malformed.
 #[allow(clippy::too_many_arguments)]
 pub fn select_optimal_subset_via(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     exchange_adj: &[u32],
     sources: &[u32],
     sinks: &[u32],
     seed_x: &[u32],
     n: usize,
     max_augmentations: u32,
-) -> Result<Vec<u32>, DispatchError> {
+) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut out = Vec::new();
     select_optimal_subset_via_into(
         dispatcher,
+        policy,
         exchange_adj,
         sources,
         sinks,
@@ -230,10 +233,11 @@ pub fn select_optimal_subset_via(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or semantic execution fails.
 #[allow(clippy::too_many_arguments)]
 pub fn select_optimal_subset_via_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     exchange_adj: &[u32],
     sources: &[u32],
     sinks: &[u32],
@@ -241,10 +245,11 @@ pub fn select_optimal_subset_via_into(
     n: usize,
     max_augmentations: u32,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = ExactMatroidDispatchScratch::default();
     select_optimal_subset_via_with_scratch_into(
         dispatcher,
+        policy,
         exchange_adj,
         sources,
         sinks,
@@ -265,10 +270,11 @@ pub fn select_optimal_subset_via_into(
 ///
 /// # Errors
 ///
-/// Returns [`DispatchError`] when validation or backend execution fails.
+/// Returns [`SemanticExecutionError`] when validation or semantic execution fails.
 #[allow(clippy::too_many_arguments)]
 pub fn select_optimal_subset_via_with_scratch_into(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     exchange_adj: &[u32],
     sources: &[u32],
     sinks: &[u32],
@@ -277,7 +283,7 @@ pub fn select_optimal_subset_via_with_scratch_into(
     max_augmentations: u32,
     scratch: &mut ExactMatroidDispatchScratch,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     use crate::telemetry::{bump, matroid_exact_megakernel_calls};
     bump(&matroid_exact_megakernel_calls);
 
@@ -288,7 +294,7 @@ pub fn select_optimal_subset_via_with_scratch_into(
     }
 
     let n_bytes = n.checked_mul(std::mem::size_of::<u32>()).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
+        SemanticExecutionError::InvalidRequest(format!(
             "Fix: select_optimal_subset_via n={n} overflows u32 byte buffer size."
         ))
     })?;
@@ -322,9 +328,16 @@ pub fn select_optimal_subset_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[10], one_word_bytes);
     write_zero_bytes(&mut scratch.inputs[11], one_word_bytes);
 
-    let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([1, 1, 1]))?;
+    let outputs = execute_single_program(
+        dispatcher,
+        crate::dispatch_buffers::HOST_WRAPPER_NODE,
+        program,
+        &scratch.inputs,
+        policy,
+    )
+    .map(|output| output.outputs)?;
     if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
+        return Err(SemanticExecutionError::Backend(format!(
             "Fix: select_optimal_subset_via expected at least one output buffer, got {}.",
             outputs.len()
         )));
@@ -336,7 +349,7 @@ pub fn select_optimal_subset_via_with_scratch_into(
 mod tests {
     #![allow(clippy::identity_op, clippy::erasing_op)]
     use super::*;
-    use vyre_foundation::ir::Program;
+
     use vyre_reference::composition_witness::reduce_count_non_zero_witness as count_selected;
     #[derive(Debug, Default)]
     struct ExactMatroidScratch {
@@ -612,38 +625,39 @@ mod tests {
 
     struct MatroidDispatcher;
 
-    impl ProgramDispatcher for MatroidDispatcher {
-        fn dispatch(
+    impl SemanticExecutor for MatroidDispatcher {
+        fn execute(
             &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 12);
-            let exchange_adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
-            let sources = crate::dispatch_buffers::read_u32s(&inputs[1]);
-            let sinks = crate::dispatch_buffers::read_u32s(&inputs[2]);
-            let seed_x = crate::dispatch_buffers::read_u32s(&inputs[3]);
-            let n = seed_x.len();
-            assert_eq!(exchange_adj.len(), n * n);
-            assert_eq!(sources.len(), n);
-            assert_eq!(sinks.len(), n);
-            for scratch in &inputs[4..8] {
-                assert_eq!(scratch.len(), n * std::mem::size_of::<u32>());
-            }
-            assert_eq!(inputs[8].len(), std::mem::size_of::<u32>());
-            assert_eq!(inputs[9].len(), n * std::mem::size_of::<u32>());
-            assert_eq!(inputs[10].len(), std::mem::size_of::<u32>());
-            assert_eq!(inputs[11].len(), std::mem::size_of::<u32>());
-            let mut out = seed_x;
-            if let Some(first_source) = sources.iter().position(|&source| source != 0) {
-                out[first_source] = 1;
-            }
-            if let Some(first_sink) = sinks.iter().position(|&sink| sink != 0) {
-                out[first_sink] = 1;
-            }
-            Ok(vec![u32_slice_to_le_bytes(&out)])
+            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                assert_eq!(inputs.len(), 12);
+                let exchange_adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                let sources = crate::dispatch_buffers::read_u32s(&inputs[1]);
+                let sinks = crate::dispatch_buffers::read_u32s(&inputs[2]);
+                let seed_x = crate::dispatch_buffers::read_u32s(&inputs[3]);
+                let n = seed_x.len();
+                assert_eq!(exchange_adj.len(), n * n);
+                assert_eq!(sources.len(), n);
+                assert_eq!(sinks.len(), n);
+                for scratch in &inputs[4..8] {
+                    assert_eq!(scratch.len(), n * std::mem::size_of::<u32>());
+                }
+                assert_eq!(inputs[8].len(), std::mem::size_of::<u32>());
+                assert_eq!(inputs[9].len(), n * std::mem::size_of::<u32>());
+                assert_eq!(inputs[10].len(), std::mem::size_of::<u32>());
+                assert_eq!(inputs[11].len(), std::mem::size_of::<u32>());
+                let mut out = seed_x;
+                if let Some(first_source) = sources.iter().position(|&source| source != 0) {
+                    out[first_source] = 1;
+                }
+                if let Some(first_sink) = sinks.iter().position(|&sink| sink != 0) {
+                    out[first_sink] = 1;
+                }
+                Ok(vec![u32_slice_to_le_bytes(&out)])
+            })()?;
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -657,20 +671,36 @@ mod tests {
         let sinks = vec![0, 0, 1];
         let seed = vec![0u32; 3];
 
-        let result =
-            select_optimal_subset_via(&MatroidDispatcher, &adj, &sources, &sinks, &seed, n, 8)
-                .unwrap();
+        let result = select_optimal_subset_via(
+            &MatroidDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &adj,
+            &sources,
+            &sinks,
+            &seed,
+            n,
+            8,
+        )
+        .unwrap();
 
         assert_eq!(result, vec![1, 0, 1]);
     }
 
     #[test]
     fn select_optimal_subset_via_rejects_invalid_shapes() {
-        let err =
-            select_optimal_subset_via(&MatroidDispatcher, &[0], &[1, 0], &[0, 1], &[0, 0], 2, 4)
-                .unwrap_err();
+        let err = select_optimal_subset_via(
+            &MatroidDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[0],
+            &[1, 0],
+            &[0, 1],
+            &[0, 0],
+            2,
+            4,
+        )
+        .unwrap_err();
 
-        assert!(matches!(err, DispatchError::BadInputs(_)));
+        assert!(matches!(err, SemanticExecutionError::InvalidRequest(_)));
         assert!(
             err.to_string().contains("dense row-major n*n"),
             "unexpected error: {err}"
@@ -679,8 +709,17 @@ mod tests {
 
     #[test]
     fn select_optimal_subset_via_empty_input_is_zero_work() {
-        let result =
-            select_optimal_subset_via(&MatroidDispatcher, &[], &[], &[], &[], 0, 4).unwrap();
+        let result = select_optimal_subset_via(
+            &MatroidDispatcher,
+            &crate::test_parity_oracles::policy(),
+            &[],
+            &[],
+            &[],
+            &[],
+            0,
+            4,
+        )
+        .unwrap();
 
         assert!(result.is_empty());
     }
@@ -699,6 +738,7 @@ mod tests {
 
         select_optimal_subset_via_with_scratch_into(
             &MatroidDispatcher,
+            &crate::test_parity_oracles::policy(),
             &adj,
             &sources,
             &sinks,
@@ -712,6 +752,7 @@ mod tests {
         let input_ptrs: Vec<*const u8> = scratch.inputs.iter().map(Vec::as_ptr).collect();
         select_optimal_subset_via_with_scratch_into(
             &MatroidDispatcher,
+            &crate::test_parity_oracles::policy(),
             &adj,
             &sources,
             &sinks,

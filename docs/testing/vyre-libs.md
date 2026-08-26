@@ -72,7 +72,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `argmax_of_marginals_ir_parity_proptest` | `vyre-libs/tests/argmax_of_marginals_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test argmax_of_marginals_ir_parity_proptest` |
 | `test` | `ast_shunting_yard` | `vyre-libs/tests/ast_shunting_yard.rs` | `parsing` | `./cargo_full test -p vyre-libs --test ast_shunting_yard` |
 | `test` | `attention_head_to_token_contract` | `vyre-libs/tests/attention_head_to_token_contract.rs` | `nn-attention` | `./cargo_full test -p vyre-libs --test attention_head_to_token_contract` |
-| `test` | `attention_layout_dispatch_grid` | `vyre-libs/tests/attention_layout_dispatch_grid.rs` | `llm` | `./cargo_full test -p vyre-libs --test attention_layout_dispatch_grid` |
+| `test` | `attention_layout_launch_domain` | `vyre-libs/tests/attention_layout_launch_domain.rs` | `llm` | `./cargo_full test -p vyre-libs --test attention_layout_launch_domain` |
 | `test` | `bellman_oob_edge_parity` | `vyre-libs/tests/bellman_oob_edge_parity.rs` | None | `./cargo_full test -p vyre-libs --test bellman_oob_edge_parity` |
 | `test` | `bellman_shortest_path_via_reference_parity` | `vyre-libs/tests/bellman_shortest_path_via_reference_parity.rs` | `solvers` | `./cargo_full test -p vyre-libs --test bellman_shortest_path_via_reference_parity` |
 | `test` | `betti_persistence_parity` | `vyre-libs/tests/betti_persistence_parity.rs` | None | `./cargo_full test -p vyre-libs --test betti_persistence_parity` |
@@ -191,6 +191,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `kv_cache_append_contract` | `vyre-libs/tests/kv_cache_append_contract.rs` | `nn-attention` | `./cargo_full test -p vyre-libs --test kv_cache_append_contract` |
 | `test` | `kv_cache_typed_contract` | `vyre-libs/tests/kv_cache_typed_contract.rs` | `nn-attention` | `./cargo_full test -p vyre-libs --test kv_cache_typed_contract` |
 | `test` | `last_dim_l2_norm_contract` | `vyre-libs/tests/last_dim_l2_norm_contract.rs` | `nn-norm` | `./cargo_full test -p vyre-libs --test last_dim_l2_norm_contract` |
+| `test` | `launch_seam_registry_closure` | `vyre-libs/tests/launch_seam_registry_closure.rs` | None | `./cargo_full test -p vyre-libs --test launch_seam_registry_closure` |
 | `test` | `library_operation_provenance` | `vyre-libs/tests/library_operation_provenance.rs` | None | `./cargo_full test -p vyre-libs --test library_operation_provenance` |
 | `test` | `line_splice_classify_roundtrip` | `vyre-libs/tests/line_splice_classify_roundtrip.rs` | `parsing-kernels` | `./cargo_full test -p vyre-libs --test line_splice_classify_roundtrip` |
 | `test` | `linear_rows_contract` | `vyre-libs/tests/linear_rows_contract.rs` | `nn-linear` | `./cargo_full test -p vyre-libs --test linear_rows_contract` |
@@ -353,6 +354,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `segment_reduce_ir_parity_proptest` | `vyre-libs/tests/segment_reduce_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test segment_reduce_ir_parity_proptest` |
 | `test` | `select_arm_range_catalog` | `vyre-libs/tests/select_arm_range_catalog.rs` | None | `./cargo_full test -p vyre-libs --test select_arm_range_catalog` |
 | `test` | `self_consumer_conform` | `vyre-libs/tests/self_consumer_conform.rs` | `encoding` | `./cargo_full test -p vyre-libs --test self_consumer_conform` |
+| `test` | `semantic_execution_support` | `vyre-libs/tests/semantic_execution_support.rs` | None | `./cargo_full test -p vyre-libs --test semantic_execution_support` |
 | `test` | `semiring_gemm_via_reference_parity` | `vyre-libs/tests/semiring_gemm_via_reference_parity.rs` | `analysis` | `./cargo_full test -p vyre-libs --test semiring_gemm_via_reference_parity` |
 | `test` | `semiring_gemm_wide_parity` | `vyre-libs/tests/semiring_gemm_wide_parity.rs` | None | `./cargo_full test -p vyre-libs --test semiring_gemm_wide_parity` |
 | `test` | `semiring_registry` | `vyre-libs/tests/semiring_registry.rs` | None | `./cargo_full test -p vyre-libs --test semiring_registry` |

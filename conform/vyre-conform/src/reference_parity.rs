@@ -5,7 +5,7 @@ use crate::operation_selection::PreparedEntry;
 use crate::proof_scheduler::panic_message;
 use crate::replay_capsule::build_replay_capsule;
 use vyre_conform::witness_plan::plan_witness_inputs_into;
-use vyre_conform::{convergence_lens, ExecutionRoute};
+use vyre_conform::{convergence_lens, ProductionSession};
 use vyre_conform_spec::ConformanceResult;
 use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
 
@@ -19,7 +19,7 @@ enum Execution {
     /// Fixpoint entry, converged by `convergence_lens` under this bound.
     Fixpoint { max_iterations: u32 },
     /// Direct entry, submitted once per case on this route.
-    Direct(ExecutionRoute),
+    Direct(ProductionSession),
 }
 
 pub(crate) fn compare_backend_against_reference(
@@ -56,11 +56,7 @@ pub(crate) fn compare_backend_against_reference(
                 };
             }
         }
-        match ExecutionRoute::open_with_representative_inputs(
-            &prepared.program,
-            &first_inputs,
-            backend,
-        ) {
+        match ProductionSession::from_registration(&prepared.program, backend) {
             Ok(route) => Execution::Direct(route),
             Err(error) => {
                 return ConformanceResult {
@@ -136,10 +132,11 @@ pub(crate) fn compare_backend_against_reference(
                 }
                 let dispatch_result =
                     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        route.submit(&backend_inputs, &prepared.dispatch_config)
+                        route.submit(&backend_inputs)
                     }));
                 match dispatch_result {
-                    Ok(Ok(outputs)) => {
+                    Ok(Ok(execution)) => {
+                        let outputs = execution.outputs;
                         if let BufferParity::Mismatch(detail) =
                             compare_output_buffers(&prepared.program, &outputs, reference)
                         {

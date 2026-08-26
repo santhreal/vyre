@@ -1,39 +1,28 @@
-//! Wgpu adapter for the self-hosted optimizer, and the two IR shapes its
-//! end-to-end suites assert against.
-//!
-//! `vyre_pass_engine::optimizer` drives every GPU pass through
-//! [`ProgramDispatcher`]. Satisfying that trait from a live `WgpuBackend` is one
-//! implementation, not one per suite.
+//! Shared semantic executor policy for the self-hosted optimizer suites.
 
-use vyre::ir::Program;
-use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_driver_wgpu::WgpuBackend;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use std::collections::BTreeMap;
 
-/// Adapts a live `WgpuBackend` to the dispatcher the self-hosted optimizer
-/// expects.
-pub(crate) struct WgpuProgramDispatcher<'a> {
-    backend: &'a WgpuBackend,
-}
+use vyre_driver_wgpu::{WgpuBackend, WGPU_BACKEND_ID};
+use vyre_megakernel::{
+    CompileObjective, Digest, ExternalFacts, SearchBudget, SemanticExecutionPolicy,
+};
+use vyre_runtime::RegisteredSemanticExecutor;
 
-impl<'a> WgpuProgramDispatcher<'a> {
-    pub(crate) fn new(backend: &'a WgpuBackend) -> Self {
-        Self { backend }
-    }
-}
-
-impl ProgramDispatcher for WgpuProgramDispatcher<'_> {
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let mut config = DispatchConfig::default();
-        config.grid_override = grid_override;
-        VyreBackend::dispatch(self.backend, program, inputs, &config)
-            .map_err(|err| DispatchError::BackendError(err.to_string()))
-    }
+pub(crate) fn semantic_execution(
+    backend: &WgpuBackend,
+) -> (RegisteredSemanticExecutor, SemanticExecutionPolicy) {
+    let _ = vyre_driver_wgpu::registered_backend_id();
+    let registration =
+        vyre_driver::backend_registration(WGPU_BACKEND_ID).expect("registered WGPU backend");
+    let executor = RegisteredSemanticExecutor::new(registration);
+    let policy = SemanticExecutionPolicy::new(
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        backend.device_profile().compile_facts(),
+        CompileObjective::MinimizeLatency,
+        SearchBudget::new(128, 128, 0, 0, 128),
+        60_000,
+    );
+    (executor, policy)
 }
 
 /// The program shape every optimizer pass suite feeds in, and the reader that

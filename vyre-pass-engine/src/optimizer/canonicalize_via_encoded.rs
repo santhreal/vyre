@@ -15,7 +15,7 @@ use vyre_foundation::ir::{Expr, Node, Program};
 
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, expr_kind, ExprArenaEncoding};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 #[derive(Debug, Default)]
 struct CanonicalizeKernelScratch {
@@ -27,15 +27,15 @@ struct CanonicalizeKernelScratch {
 pub enum CanonicalizeError {
     /// Expression-arena encoding failed.
     Encode(EncodeError),
-    /// Backend dispatch or output decoding failed.
-    Dispatch(DispatchError),
+    /// Semantic execution or output decoding failed.
+    Semantic(SemanticExecutionError),
 }
 
 impl std::fmt::Display for CanonicalizeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Encode(err) => write!(f, "gpu_canonicalize encode error: {err:?}"),
-            Self::Dispatch(err) => write!(f, "gpu_canonicalize dispatch error: {err}"),
+            Self::Semantic(err) => write!(f, "gpu_canonicalize semantic execution error: {err}"),
         }
     }
 }
@@ -45,7 +45,8 @@ impl std::error::Error for CanonicalizeError {}
 /// Run literal-on-right canonicalization on `program`.
 pub fn gpu_canonicalize(
     program: Program,
-    dispatcher: &dyn ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
 ) -> Result<Program, CanonicalizeError> {
     let arena = encode_expr_arena(&program).map_err(CanonicalizeError::Encode)?;
     if arena.expr_count == 0 {
@@ -53,30 +54,39 @@ pub fn gpu_canonicalize(
     }
     let mut scratch = CanonicalizeKernelScratch::default();
     let mut swap_mask = Vec::with_capacity(arena.expr_count as usize);
-    run_canonicalize_kernel_with_scratch_into(&arena, dispatcher, &mut scratch, &mut swap_mask)
-        .map_err(CanonicalizeError::Dispatch)?;
+    run_canonicalize_kernel_with_scratch_into(
+        &arena,
+        executor,
+        policy,
+        &mut scratch,
+        &mut swap_mask,
+    )
+    .map_err(CanonicalizeError::Semantic)?;
     Ok(rewrite_program_with_swap_mask(program, &swap_mask))
 }
 
 #[cfg(test)]
 fn run_canonicalize_kernel_into(
     arena: &ExprArenaEncoding,
-    dispatcher: &dyn ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     swap_mask: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let mut scratch = CanonicalizeKernelScratch::default();
-    run_canonicalize_kernel_with_scratch_into(&arena, dispatcher, &mut scratch, swap_mask)
+    run_canonicalize_kernel_with_scratch_into(arena, executor, policy, &mut scratch, swap_mask)
 }
 
 fn run_canonicalize_kernel_with_scratch_into(
     arena: &ExprArenaEncoding,
-    dispatcher: &dyn ProgramDispatcher,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     scratch: &mut CanonicalizeKernelScratch,
     swap_mask: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     super::run_encoded_analysis_kernel(
         arena,
-        dispatcher,
+        executor,
+        policy,
         &mut scratch.inputs,
         swap_mask,
         build_canonicalize_program,
@@ -245,88 +255,40 @@ mod tests {
     use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
     use super::super::arena_kernel::{
-        single_lit_u32_arena as one_expr_arena, FixedOutputDispatcher, GridExpectation,
+        semantic_test_policy, single_lit_u32_arena as one_expr_arena, FixedOutputExecutor,
     };
 
-    fn dispatcher(outputs: Vec<Vec<u8>>) -> FixedOutputDispatcher {
-        FixedOutputDispatcher {
+    fn executor(outputs: Vec<Vec<u8>>) -> FixedOutputExecutor {
+        FixedOutputExecutor {
             pass: "canonicalize",
-            expected_inputs: 5,
-            grid: GridExpectation::SingleWorkgroup,
+            expected_inputs: 4,
             outputs,
         }
     }
 
     #[test]
-    fn kernel_into_decodes_exact_swap_mask_into_reused_buffer() {
-        let dispatcher = dispatcher(vec![u32_slice_to_le_bytes(&[1])]);
+    fn kernel_decodes_canonical_graph_output() {
+        let executor = executor(vec![u32_slice_to_le_bytes(&[1])]);
         let arena = one_expr_arena();
         let mut swap_mask = Vec::with_capacity(4);
         let ptr = swap_mask.as_ptr();
-        run_canonicalize_kernel_into(&arena, &dispatcher, &mut swap_mask)
-            .expect("Fix: dispatch succeeds");
+        run_canonicalize_kernel_into(&arena, &executor, &semantic_test_policy(), &mut swap_mask)
+            .expect("semantic execution succeeds");
         assert_eq!(swap_mask, vec![1]);
         assert_eq!(swap_mask.as_ptr(), ptr);
     }
 
     #[test]
-    fn kernel_with_scratch_reuses_dispatch_and_output_storage() {
-        let dispatcher = dispatcher(vec![u32_slice_to_le_bytes(&[1])]);
-        let arena = one_expr_arena();
-        let mut scratch = CanonicalizeKernelScratch::default();
-        let mut swap_mask = Vec::with_capacity(1);
-
-        run_canonicalize_kernel_with_scratch_into(
-            &arena,
-            &dispatcher,
-            &mut scratch,
+    fn kernel_rejects_trailing_canonical_output_bytes() {
+        let executor = executor(vec![vec![1, 0, 0, 0, 2]]);
+        let mut swap_mask = Vec::new();
+        let err = run_canonicalize_kernel_into(
+            &one_expr_arena(),
+            &executor,
+            &semantic_test_policy(),
             &mut swap_mask,
         )
-        .expect("Fix: dispatch succeeds");
-
-        let input_capacities = scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>();
-        let swap_capacity = swap_mask.capacity();
-
-        run_canonicalize_kernel_with_scratch_into(
-            &arena,
-            &dispatcher,
-            &mut scratch,
-            &mut swap_mask,
-        )
-        .expect("Fix: dispatch succeeds");
-
-        assert_eq!(
-            scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>(),
-            input_capacities
-        );
-        assert_eq!(swap_mask.capacity(), swap_capacity);
-        assert_eq!(swap_mask, vec![1]);
-    }
-
-    #[test]
-    fn kernel_rejects_extra_outputs() {
-        let dispatcher = dispatcher(vec![
-            u32_slice_to_le_bytes(&[1]),
-            u32_slice_to_le_bytes(&[0]),
-        ]);
-        let mut swap_mask = Vec::new();
-        let err = run_canonicalize_kernel_into(&one_expr_arena(), &dispatcher, &mut swap_mask)
-            .expect_err("extra outputs must be rejected");
-        assert!(
-            matches!(err, DispatchError::BackendError(_)),
-            "unexpected error: {err:?}"
-        );
-    }
-
-    #[test]
-    fn kernel_rejects_trailing_swap_mask_bytes() {
-        let dispatcher = dispatcher(vec![vec![1, 0, 0, 0, 2]]);
-        let mut swap_mask = Vec::new();
-        let err = run_canonicalize_kernel_into(&one_expr_arena(), &dispatcher, &mut swap_mask)
-            .expect_err("trailing bytes must be rejected");
-        assert!(
-            matches!(err, DispatchError::BackendError(_)),
-            "unexpected error: {err:?}"
-        );
+        .expect_err("trailing bytes must be rejected");
+        assert!(matches!(err, SemanticExecutionError::Backend(_)));
     }
 }

@@ -5,7 +5,7 @@
 //! collide on the hash but differ in width cannot alias one another's storage.
 
 use crate::dispatch_buffers::{ensure_input_slots, write_u32_slice_le_bytes, write_zero_u32_words};
-use vyre_foundation::program_dispatch::DispatchError;
+use vyre_megakernel::SemanticExecutionError;
 
 /// Stable fingerprint for a u32 dispatch slice.
 ///
@@ -98,7 +98,7 @@ impl<'a> DispatchInput<'a> {
 pub(crate) fn prepare_dispatch_inputs(
     scratch_inputs: &mut Vec<Vec<u8>>,
     inputs: &[DispatchInput<'_>],
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     write_dispatch_inputs(scratch_inputs, inputs)
 }
 
@@ -115,11 +115,11 @@ pub(crate) fn refresh_keyed_dispatch_inputs<K: Copy + Eq>(
     next_key: K,
     all_inputs: &[DispatchInput<'_>],
     mutable_inputs: &[(usize, DispatchInput<'_>)],
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     if *current_key == Some(next_key) && scratch_inputs.len() == all_inputs.len() {
         for &(slot_index, input) in mutable_inputs {
             let Some(slot) = scratch_inputs.get_mut(slot_index) else {
-                return Err(DispatchError::BadInputs(format!(
+                return Err(SemanticExecutionError::InvalidRequest(format!(
                     "Fix: keyed graph dispatch mutable input slot {slot_index} exceeds prepared input count {}.",
                     scratch_inputs.len()
                 )));
@@ -136,7 +136,7 @@ pub(crate) fn refresh_keyed_dispatch_inputs<K: Copy + Eq>(
 pub(super) fn write_dispatch_inputs(
     scratch_inputs: &mut Vec<Vec<u8>>,
     inputs: &[DispatchInput<'_>],
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     ensure_input_slots(scratch_inputs, inputs.len());
     for (slot, input) in scratch_inputs.iter_mut().zip(inputs.iter().copied()) {
         write_dispatch_input(slot, input)?;
@@ -148,7 +148,7 @@ pub(super) fn write_dispatch_inputs(
 pub(crate) fn write_dispatch_input(
     slot: &mut Vec<u8>,
     input: DispatchInput<'_>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     match input {
         DispatchInput::U32Slice(values) => write_u32_slice_le_bytes(slot, values),
         DispatchInput::U32SliceOrZeroWords {
@@ -157,13 +157,15 @@ pub(crate) fn write_dispatch_input(
             context,
         } => {
             if values.is_empty() {
-                write_zero_u32_words(slot, words, context)?;
+                write_zero_u32_words(slot, words, context)
+                    .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
             } else {
                 write_u32_slice_le_bytes(slot, values);
             }
         }
         DispatchInput::ZeroU32Words { words, context } => {
-            write_zero_u32_words(slot, words, context)?;
+            write_zero_u32_words(slot, words, context)
+                .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
         }
     }
     Ok(())

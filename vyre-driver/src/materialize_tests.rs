@@ -1,15 +1,25 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ValueLifetime,
 };
-use vyre_megakernel::{ArtifactNodeId, ArtifactValueId, TargetResourceAccess};
+use vyre_megakernel::{
+    compile_selected_modules, ArtifactNodeId, ArtifactValueId, EmittedTargetModule,
+    TargetResourceAccess,
+};
 
 use crate::materialize::materialize_test_fixtures::{
-    compile_graph, contract, entry_point, global_bindings, test_instance_core, test_payload,
+    compile_graph, contract, entry_point, global_bindings, test_format, test_instance_core,
+    test_payload, test_profile,
 };
-use crate::materialize::{retained_chain_relates, unbound_input, unbound_resident_buffer};
-use crate::{BackendError, BindingPlan, Resource};
+use crate::materialize::{
+    admit, partition_bindings, retained_chain_relates, unbound_input, unbound_resident_buffer,
+    ExecutableModule, MaterializerTarget,
+};
+use crate::{
+    BackendError, BindingPlan, BindingSet, BoundResource, DispatchConfig, Resource,
+    TimedDispatchResult,
+};
 
 #[test]
 fn sparse_and_reordered_module_binding_identities() {
@@ -904,4 +914,105 @@ fn payload_access_decides_projection_membership_at_every_lifetime() {
             );
         }
     }
+}
+
+struct GeometryTestModule {
+    program: Arc<Program>,
+    config: DispatchConfig,
+}
+
+impl ExecutableModule for GeometryTestModule {
+    fn program(&self) -> &Program {
+        &self.program
+    }
+
+    fn config(&self) -> &DispatchConfig {
+        &self.config
+    }
+}
+
+/// WHY: artifact bindings are caller-controlled resource bytes, not a launch
+/// control channel. Every concrete materializer dispatches through this shared
+/// loop, which must pass the authenticated target entry geometry unchanged and
+/// preserve both neutral artifact and exact payload identity.
+#[test]
+fn hostile_binding_bytes_cannot_resize_admitted_launch_geometry() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(3),
+            BufferDecl::output("output", 1, DataType::U32).with_count(1),
+        ],
+        [8, 1, 1],
+        vec![Node::store(
+            "output",
+            Expr::u32(0),
+            Expr::load("input", Expr::u32(0)),
+        )],
+    );
+    let graph = ProgramGraph::from_program("geometry", program)
+        .expect("the geometry fixture must lift to a graph");
+    let artifact = compile_graph(graph);
+    let input = artifact
+        .resources()
+        .iter()
+        .find(|resource| resource.name == "input")
+        .expect("the artifact must contain its input")
+        .value;
+    let admitted_grid = [7, 3, 1];
+    let payload =
+        compile_selected_modules(&artifact, test_format(), test_profile(), |selected, _| {
+            Ok(EmittedTargetModule {
+                entry_point: "main".to_string(),
+                grid_size: admitted_grid,
+                dynamic_shared_bytes: 0,
+                workgroup_size: [8, 1, 1],
+                resource_bindings: selected.canonical_bindings.clone(),
+                bytes: vec![1, 2, 3],
+            })
+        })
+        .expect("the geometry fixture must compile a target payload");
+    let artifact_identity = artifact.digest();
+    let payload_identity = payload.digest();
+    let core = test_instance_core(&artifact, &payload).expect("the payload must materialize");
+    let mut admitted = admit(
+        &artifact,
+        &payload,
+        MaterializerTarget {
+            backend_id: "test",
+            format: payload.format(),
+            profile: payload.profile(),
+        },
+    )
+    .expect("the target entry must be admitted");
+    let admitted = admitted.pop().expect("the payload must contain one module");
+    let modules = [GeometryTestModule {
+        program: admitted.program,
+        config: admitted.config,
+    }];
+
+    let hostile_bytes = [u32::MAX, 0, 1]
+        .into_iter()
+        .flat_map(u32::to_le_bytes)
+        .collect::<Vec<_>>();
+    let mut bindings = BindingSet::new(artifact_identity);
+    bindings.insert(input, BoundResource::Host(hostile_bytes.clone()));
+    let state = partition_bindings(&bindings).host;
+    let completion = core
+        .execute_modules(
+            &modules,
+            state,
+            |_, _| panic!("the fixture dispatch returns its declared output"),
+            |_, _, _, config, state| {
+                assert_eq!(config.grid_override, Some(admitted_grid));
+                assert_eq!(config.dispatch_grid, Some(admitted_grid));
+                assert_eq!(state[&input], hostile_bytes);
+                Ok(TimedDispatchResult::host_timed(vec![vec![42, 0, 0, 0]], 0))
+            },
+        )
+        .expect("resource bindings must submit with admitted geometry");
+
+    assert_eq!(bindings.artifact(), artifact_identity);
+    assert_eq!(completion.artifact, artifact_identity);
+    assert_eq!(core.artifact, artifact_identity);
+    assert_eq!(core.payload, payload_identity);
 }
