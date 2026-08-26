@@ -45,6 +45,8 @@ pub enum PruneReason {
     Representation,
     /// A schedule transform precondition failed.
     ScheduleLegality,
+    /// Target compilation rejected the plan, so it never reached measurement.
+    Emission,
 }
 
 impl PruneReason {
@@ -63,6 +65,7 @@ impl PruneReason {
         Self::TargetFacts,
         Self::Representation,
         Self::ScheduleLegality,
+        Self::Emission,
     ];
 
     /// Stable machine-readable diagnostic code.
@@ -82,6 +85,7 @@ impl PruneReason {
             Self::TargetFacts => "MKC011_TARGET_FACTS",
             Self::Representation => "MKC012_REPRESENTATION",
             Self::ScheduleLegality => "MKC013_SCHEDULE_LEGALITY",
+            Self::Emission => "MKC014_EMISSION",
         }
     }
 }

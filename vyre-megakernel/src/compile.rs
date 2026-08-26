@@ -3,9 +3,10 @@
 
 use std::time::Instant;
 
-use crate::certificate::SearchCertificate;
+use crate::certificate::{PruneReason, SearchCertificate};
 use crate::envelope::TargetPayload;
 use crate::error::{failure, overflow, serialization_failure, CompileError, CompilerFailureKind};
+use crate::grammar::ScheduleProduction;
 use crate::identity::domain_digest;
 use crate::identity::{ArtifactNodeId, DependencyEdge, Digest};
 use crate::request::{SearchWork, ValidatedCompileRequest};
@@ -119,6 +120,7 @@ fn assemble(
     request: &ValidatedCompileRequest,
     context: &CompileContext<'_>,
     selection: &select::Selection,
+    certificate: &SearchCertificate,
     work: SearchWork,
     measurement: PlanMeasurement,
 ) -> Result<Artifact, CompileError> {
@@ -133,7 +135,7 @@ fn assemble(
         facts: &context.facts,
         selection,
         pruned_fusions: &context.pruned_fusions,
-        certificate: &context.certificate,
+        certificate,
         external: &request.facts,
         device: request.device,
         budget: request.search_budget,
@@ -263,6 +265,7 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
         request,
         &context,
         selection,
+        &context.certificate,
         context.work,
         PlanMeasurement::Unbudgeted,
     )
@@ -288,18 +291,26 @@ pub trait FinalistEvaluator {
     ) -> Result<u64, TargetCompileError>;
 }
 
-/// Compile with the ranked finalists compiled for the target and timed on the
+/// Compile with the ranked finalists emitted for the target and timed on the
 /// device, selecting the plan with the lowest median device time.
 ///
-/// The analytic ranking chooses which plans are worth a target compilation. The
-/// top `max_target_compilations` of them are compiled and each launched
-/// `max_measurements` times; the winner is the finalist with the lowest median.
-/// [`SearchWork::target_compilations`] and [`SearchWork::measurements`] carry the
-/// counts actually spent, and the recorded [`PlanMeasurement`] states whether a
-/// measurement decided the plan at all: a zero measurement budget records
-/// [`PlanMeasurement::Unbudgeted`] and a device with no launch timestamps records
-/// [`PlanMeasurement::UntimedDevice`], neither of which is reported as a measured
-/// selection.
+/// Evaluation is a ladder of rising fidelity and rising cost. The symbolic bound
+/// eliminates a candidate no descendant can bring under the incumbent, the
+/// analytic cost model ranks what survives, emission answers what the target
+/// compiler accepts, and device measurement decides among the finalists that
+/// emitted. The top `max_target_compilations` ranked plans are emitted; a plan
+/// the target compiler rejects is eliminated with
+/// [`PruneReason::Emission`](crate::PruneReason::Emission) and the ladder
+/// continues, so one unemittable plan no longer ends the compilation. Each
+/// survivor is launched `max_measurements` times and the winner is the lowest
+/// median. [`SearchWork::target_compilations`] and [`SearchWork::measurements`]
+/// carry the counts actually spent, and the recorded [`PlanMeasurement`] states
+/// whether a measurement decided the plan at all: a zero measurement budget
+/// records [`PlanMeasurement::Unbudgeted`] and a device with no launch
+/// timestamps records [`PlanMeasurement::UntimedDevice`], neither of which is
+/// reported as a measured selection. A compilation where no finalist emitted
+/// fails with the last emission error rather than returning a plan the target
+/// cannot build.
 pub fn compile_measured(
     request: &ValidatedCompileRequest,
     evaluator: &dyn FinalistEvaluator,
@@ -311,6 +322,7 @@ pub fn compile_measured(
             request,
             &context,
             first_ranked(&context)?,
+            &context.certificate,
             context.work,
             PlanMeasurement::Unbudgeted,
         );
@@ -320,6 +332,7 @@ pub fn compile_measured(
             request,
             &context,
             first_ranked(&context)?,
+            &context.certificate,
             context.work,
             PlanMeasurement::UntimedDevice,
         );
@@ -331,29 +344,42 @@ pub fn compile_measured(
         .min(budget.max_target_compilations as usize);
     let started = Instant::now();
     let mut work = context.work;
-    let mut winner: Option<(usize, u64, u32)> = None;
+    let mut certificate = context.certificate.clone();
+    let mut emitted: Vec<(usize, Artifact, TargetPayload)> = Vec::new();
+    let mut rejection = None;
     for index in 0..finalists {
-        let elapsed = u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX);
-        if elapsed >= budget.max_elapsed_ns {
+        if spent(started) >= budget.max_elapsed_ns {
             break;
         }
         let provisional = assemble(
             request,
             &context,
             &context.ranked[index],
+            &context.certificate,
             context.work,
             PlanMeasurement::Unbudgeted,
         )?;
-        let payload = evaluator
-            .target_compiler()
-            .compile(&provisional)
-            .map_err(|error| finalist_failure(index, &error))?;
         work.target_compilations = work.target_compilations.saturating_add(1);
+        match evaluator.target_compiler().compile(&provisional) {
+            Ok(payload) => emitted.push((index, provisional, payload)),
+            Err(error) => {
+                eliminate(&mut certificate, &context.ranked[index]);
+                rejection = Some(finalist_failure(index, &error));
+            }
+        }
+    }
+    certificate.canonicalize();
+
+    let mut winner: Option<(usize, u64, u32)> = None;
+    for (index, provisional, payload) in &emitted {
+        if spent(started) >= budget.max_elapsed_ns {
+            break;
+        }
         let mut samples = Vec::with_capacity(budget.max_measurements as usize);
         for _ in 0..budget.max_measurements {
             let sample = evaluator
-                .measure(&provisional, &payload)
-                .map_err(|error| finalist_failure(index, &error))?;
+                .measure(provisional, payload)
+                .map_err(|error| finalist_failure(*index, &error))?;
             samples.push(sample);
             work.measurements = work.measurements.saturating_add(1);
         }
@@ -363,31 +389,54 @@ pub fn compile_measured(
             continue;
         };
         if winner.is_none_or(|(_, best, _)| median < best) {
-            winner = Some((index, median, launches));
+            winner = Some((*index, median, launches));
         }
     }
-    work.elapsed_ns = work
-        .elapsed_ns
-        .saturating_add(u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX));
+    work.elapsed_ns = work.elapsed_ns.saturating_add(spent(started));
     match winner {
         Some((index, median_ns, launches)) => assemble(
             request,
             &context,
             &context.ranked[index],
+            &certificate,
             work,
             PlanMeasurement::Measured {
                 launches,
                 median_ns,
             },
         ),
-        None => assemble(
-            request,
-            &context,
-            first_ranked(&context)?,
-            work,
-            PlanMeasurement::Unbudgeted,
-        ),
+        None => match rejection {
+            Some(error) => Err(error),
+            None => assemble(
+                request,
+                &context,
+                first_ranked(&context)?,
+                &certificate,
+                work,
+                PlanMeasurement::Unbudgeted,
+            ),
+        },
     }
+}
+
+/// Nanoseconds the measured path has spent since it started.
+fn spent(started: Instant) -> u64 {
+    u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX)
+}
+
+/// Record that emission eliminated the family that derived one ranked plan.
+///
+/// The elimination is charged to the production of the last step that derived
+/// the plan, because that step is what made the plan unemittable. A plan with no
+/// derivation is the baseline, which is charged to the fusion family it would
+/// have been contracted by.
+fn eliminate(certificate: &mut SearchCertificate, selection: &select::Selection) {
+    let production = selection
+        .candidate
+        .derivation
+        .last()
+        .map_or(ScheduleProduction::Fusion, |step| step.production);
+    certificate.pruned(production, PruneReason::Emission);
 }
 
 fn first_ranked<'a>(

@@ -144,6 +144,7 @@ never scored. Each eliminated family records a stable reason.
 | `MKC011_TARGET_FACTS` | an operand needs a capability no authenticated fact reports |
 | `MKC012_REPRESENTATION` | the artifact cannot represent the derived organization |
 | `MKC013_SCHEDULE_LEGALITY` | a typed schedule precondition failed |
+| `MKC014_EMISSION` | the target compiler rejected the plan before measurement |
 
 `PruneReason::ALL` is the variant space, and the certificate records one row per
 eliminated family with its count, so a plan that looks unfused says which
@@ -247,6 +248,27 @@ re-expanded. Two runs over the same graph, facts, device and budget therefore
 derive the same candidates in the same order and record the same certificate.
 Selection over a deterministic set is what makes an artifact digest identify a
 compile rather than a run.
+
+## Evaluation is a bounded ladder
+
+Fidelity and cost rise together, so a level runs only on what the level below it
+kept.
+
+| Level | What it answers | What it spends |
+|---|---|---|
+| symbolic bound | can any descendant of this candidate beat the incumbent | CPU work |
+| analytic cost | how the admitted candidates rank | CPU work |
+| emission | which ranked plans the target compiler builds | `max_target_compilations` |
+| measurement | which built plan is fastest on the device | `max_measurements` |
+
+`compile_measured` emits the top `max_target_compilations` ranked plans. A plan
+the target compiler rejects is eliminated with `MKC014_EMISSION` charged to the
+production that derived it, and the ladder continues with the next ranked plan,
+so one unbuildable plan does not fail the compilation. Each plan that emitted is
+launched `max_measurements` times and the lowest median device time wins, which
+can select a plan the analytic model ranked behind another. A compilation where
+no ranked plan emitted fails with the rejection instead of returning a plan the
+target cannot build.
 
 ## Unmeasured is recorded as unmeasured
 

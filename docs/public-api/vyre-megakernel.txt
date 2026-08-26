@@ -346,6 +346,7 @@ pub vyre_megakernel::Provenance::source_graph: vyre_megakernel::Digest
 pub vyre_megakernel::PruneReason::AliasOrEffect
 pub vyre_megakernel::PruneReason::BarrierVisibility
 pub vyre_megakernel::PruneReason::Dependence
+pub vyre_megakernel::PruneReason::Emission
 pub vyre_megakernel::PruneReason::Numerical
 pub vyre_megakernel::PruneReason::ObjectiveDominated
 pub vyre_megakernel::PruneReason::Occupancy

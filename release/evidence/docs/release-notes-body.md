@@ -1541,6 +1541,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   headroom for the next copy. `total_lines` is measured too, not carried
   forward, because a stale total makes the ratio it exists to report
   meaningless.
+- A ranked plan the target compiler rejects is eliminated with a stable
+  emission reason and candidate evaluation continues, instead of failing the
+  compilation.
 - The duplication pins for the four emitter crates now sit at what the tree
   measures: vyre-emit-metal 29 to 22, vyre-emit-naga 404 to 221, vyre-emit-ptx
   295 to 105, vyre-emit-spirv 49 to 43. A pin that passes with room under it
