@@ -12,8 +12,8 @@ use crate::request_identity::{RequestIdentity, REQUEST_DIGEST_DOMAIN, SOURCE_DIG
 use crate::resource_records::{build_abi, build_resources};
 use crate::schema::encode_payload;
 use crate::schema::{
-    Artifact, ArtifactPayload, FusionRejection, NodeRecord, PlanMeasurement, Provenance,
-    ARTIFACT_SCHEMA_VERSION,
+    Artifact, ArtifactPayload, FusionRejection, GeometryRecord, NodeRecord, PlanMeasurement,
+    Provenance, ARTIFACT_SCHEMA_VERSION,
 };
 use crate::target::{TargetCompileError, TargetCompiler};
 use crate::{artifact, facts, normalize, search, select};
@@ -143,6 +143,8 @@ fn assemble(
         &stages,
     )?;
     let abi = build_abi(&request.graph)?;
+    let workspace = artifact::workspace_plan(&resources, &abi.entries)?;
+    let nodes = frozen_nodes(&context.nodes, &geometry)?;
     let request_bytes =
         serde_json::to_vec(&RequestIdentity::from(request)).map_err(serialization_failure)?;
     let provenance = Provenance {
@@ -152,13 +154,14 @@ fn assemble(
     };
     let payload = ArtifactPayload {
         schema_version: ARTIFACT_SCHEMA_VERSION,
-        nodes: context.nodes.clone(),
+        nodes,
         dependencies: context.dependencies.clone(),
         selected_plan,
         abi,
         resources,
         resource_envelope,
         geometry,
+        workspace,
         provenance,
     };
     let framed = encode_payload(&payload)?;
@@ -179,6 +182,60 @@ fn assemble(
         payload,
         digest: Digest(framed.digest),
     })
+}
+
+/// Re-encode every node program at the geometry the search selected.
+///
+/// The workgroup a source program declares is an input to the search. Leaving
+/// the declared shape in the artifact made target compilation rewrite it during
+/// emission, so the bytes the artifact authenticated and the bytes the device
+/// ran disagreed on the one field a launch cannot recover from.
+fn frozen_nodes(
+    nodes: &[NodeRecord],
+    geometry: &[GeometryRecord],
+) -> Result<Vec<NodeRecord>, CompileError> {
+    nodes
+        .iter()
+        .map(|record| {
+            let selected = geometry
+                .iter()
+                .find(|entry| entry.node == record.id)
+                .ok_or_else(|| {
+                    failure(
+                        CompilerFailureKind::InvalidProgram,
+                        format!("planner.geometry[{}]", record.id.0),
+                        "node has no selected launch geometry",
+                        "report the compiler defect",
+                    )
+                })?;
+            let mut program =
+                vyre_foundation::ir::Program::from_wire(&record.program).map_err(|error| {
+                    failure(
+                        CompilerFailureKind::InvalidProgram,
+                        format!("planner.nodes[{}].program", record.id.0),
+                        error.to_string(),
+                        "report the compiler defect",
+                    )
+                })?;
+            if program.workgroup_size == selected.workgroup_size {
+                return Ok(record.clone());
+            }
+            program.set_workgroup_size(selected.workgroup_size);
+            let program = program.canonical_wire_bytes().map_err(|error| {
+                failure(
+                    CompilerFailureKind::InvalidProgram,
+                    format!("planner.nodes[{}].program", record.id.0),
+                    error.to_string(),
+                    "report the compiler defect",
+                )
+            })?;
+            Ok(NodeRecord {
+                id: record.id,
+                name: record.name.clone(),
+                program,
+            })
+        })
+        .collect()
 }
 
 /// Compile one validated typed graph into a canonical backend-neutral artifact.
@@ -349,4 +406,86 @@ fn finalist_failure(index: usize, error: &TargetCompileError) -> CompileError {
         error.to_string(),
         "supply a finalist evaluator whose target compiler and device accept every ranked plan",
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::schema::{EntryPersistence, LaunchResourceIntent};
+    use crate::ArtifactNodeId;
+    use vyre_foundation::ir::Program;
+    use vyre_foundation::schedule::SchedulePhaseId;
+
+    fn program(workgroup: [u32; 3]) -> Vec<u8> {
+        Program::wrapped(Vec::new(), workgroup, Vec::new())
+            .canonical_wire_bytes()
+            .expect("fixture program encodes")
+    }
+
+    fn record(node: u32, workgroup: [u32; 3]) -> GeometryRecord {
+        GeometryRecord {
+            node: ArtifactNodeId(node),
+            phase: SchedulePhaseId(node),
+            predecessors: Vec::new(),
+            logical_coverage: [64, 1, 1],
+            grid: GeometryRecord::covering_grid([64, 1, 1], workgroup).expect("positive extents"),
+            workgroup_size: workgroup,
+            vector_width: 1,
+            roles: Vec::new(),
+            ring_slots: 0,
+            barrier_phases: Vec::new(),
+            dynamic_shared_bytes: 0,
+            launch_intent: LaunchResourceIntent::default(),
+            persistence: EntryPersistence::Static,
+        }
+    }
+
+    fn node(id: u32, workgroup: [u32; 3]) -> NodeRecord {
+        NodeRecord {
+            id: ArtifactNodeId(id),
+            name: format!("n{id}"),
+            program: program(workgroup),
+        }
+    }
+
+    /// WHY: the workgroup a source program declares is an input to the search.
+    /// Emission used to rewrite it while lowering, so the program the artifact
+    /// authenticated and the module the device ran disagreed on the one field a
+    /// launch cannot recover from. Freezing happens once, here, and the artifact
+    /// carries the result.
+    #[test]
+    fn a_recorded_program_declares_the_workgroup_the_search_selected() {
+        let frozen = frozen_nodes(
+            &[node(0, [8, 1, 1]), node(1, [32, 1, 1])],
+            &[record(0, [32, 1, 1]), record(1, [32, 1, 1])],
+        )
+        .expect("both nodes carry selected geometry");
+
+        for record in &frozen {
+            let program = Program::from_wire(&record.program).expect("a frozen program decodes");
+            assert_eq!(program.workgroup_size, [32, 1, 1], "node {}", record.id.0);
+        }
+        assert_eq!(
+            frozen[1].program,
+            program([32, 1, 1]),
+            "a program already at the selected shape is carried through unchanged"
+        );
+    }
+
+    /// WHY: a node with no selected geometry has no shape to be frozen at, and
+    /// re-encoding it at its declared shape would reintroduce exactly the
+    /// disagreement freezing exists to end.
+    #[test]
+    fn a_node_without_selected_geometry_is_refused() {
+        let error = frozen_nodes(&[node(0, [8, 1, 1])], &[record(1, [32, 1, 1])])
+            .expect_err("a node with no geometry cannot be frozen");
+        assert_eq!(
+            error
+                .diagnostic
+                .location
+                .as_ref()
+                .and_then(|location| location.path.as_deref()),
+            Some("planner.geometry[0]")
+        );
+    }
 }

@@ -52,7 +52,7 @@ impl TargetCompiler for FixtureCompiler {
     }
 
     fn compile(&self, artifact: &Artifact) -> Result<TargetPayload, TargetCompileError> {
-        let entries = vec![entry_point()];
+        let entries = vec![entry_point(artifact)];
         TargetPayload::new(
             artifact,
             self.format.clone(),
@@ -65,8 +65,9 @@ impl TargetCompiler for FixtureCompiler {
 }
 
 /// WHY: absent geometry cannot be represented by a zero extent and later
-/// defaulted to one. Every target entry must authenticate complete positive
-/// workgroup and grid geometry before admission.
+/// defaulted to one. The artifact records a launchable shape for every node, so
+/// a zero extent in a payload entry is a shape the compiler never selected and
+/// admission refuses it at the field that states it.
 #[test]
 fn target_payload_rejects_every_zero_geometry_class() {
     let neutral = neutral_artifact([8, 1, 1]);
@@ -74,17 +75,19 @@ fn target_payload_rejects_every_zero_geometry_class() {
         ("workgroup_size", [0, 1, 1], [1, 1, 1]),
         ("grid_size", [8, 1, 1], [0, 1, 1]),
     ] {
-        let mut entry = entry_point();
+        let mut entry = entry_point(&neutral);
         entry.workgroup_size = workgroup_size;
         entry.grid_size = grid_size;
         let error = TargetPayload::new(&neutral, format(1), profile(1), vec![entry], vec![1])
             .expect_err("zero target geometry must fail instead of defaulting to one");
         assert_eq!(
             diagnostic_path(&error),
-            Some(format!("target_payload.entries[0].{field}[0]").as_str())
+            Some(format!("target_payload.entries[0].{field}").as_str())
         );
-        assert!(error.to_string().contains("geometry extent is zero"));
-        assert!(error.to_string().contains("materialize explicit positive"));
+        assert!(error.to_string().contains("the artifact selected"));
+        assert!(error
+            .to_string()
+            .contains("attach the geometry the neutral artifact recorded"));
     }
 }
 
@@ -117,7 +120,7 @@ fn neutral_envelope_and_target_payload_round_trip_exactly() {
         &neutral,
         format(7),
         profile(7),
-        vec![entry_point()],
+        vec![entry_point(&neutral)],
         vec![0, 3, 7, 255],
     )
     .expect("valid target payload must bind");
@@ -155,17 +158,15 @@ fn target_identity_includes_the_neutral_schedule() {
         &first,
         format(1),
         profile(1),
-        vec![entry_point()],
+        vec![entry_point(&first)],
         vec![9, 8, 7],
     )
     .expect("first target payload must validate");
-    let mut second_entry = entry_point();
-    second_entry.workgroup_size = [16, 1, 1];
     let second_payload = TargetPayload::new(
         &second,
         format(1),
         profile(1),
-        vec![second_entry],
+        vec![entry_point(&second)],
         vec![9, 8, 7],
     )
     .expect("second target payload must validate");
@@ -183,7 +184,7 @@ fn target_payload_rejects_a_different_neutral_artifact_digest() {
         &first,
         format(1),
         profile(1),
-        vec![entry_point()],
+        vec![entry_point(&first)],
         vec![9, 8, 7],
     )
     .expect("payload must bind to its source artifact");
@@ -210,7 +211,7 @@ fn target_payload_schema_and_format_version_skew_are_rejected() {
         &neutral,
         format(2),
         profile(2),
-        vec![entry_point()],
+        vec![entry_point(&neutral)],
         vec![1, 2, 3],
     )
     .expect("payload must construct");
@@ -252,7 +253,7 @@ fn corrupted_target_payload_identity_is_rejected() {
         &neutral,
         format(1),
         profile(1),
-        vec![entry_point()],
+        vec![entry_point(&neutral)],
         vec![11, 22, 33],
     )
     .expect("payload must construct");
@@ -482,9 +483,6 @@ fn fused_multi_node_binding_resolution_uses_exact_name_ownership_over_colliding_
         captured_bindings = selected.canonical_bindings.clone();
         Ok(EmittedTargetModule {
             entry_point: "fused_entry".into(),
-            workgroup_size: [32, 1, 1],
-            grid_size: [1, 1, 1],
-            dynamic_shared_bytes: 0,
             resource_bindings: selected.canonical_bindings.clone(),
             bytes: vec![1, 2, 3],
         })
@@ -538,6 +536,7 @@ fn target_payload_rejects_duplicate_slot_within_entry() {
             access: TargetResourceAccess::WriteOnly,
         },
     ];
+    let launch = &neutral.geometry()[0];
     let error = TargetPayload::new(
         &neutral,
         format(1),
@@ -545,9 +544,9 @@ fn target_payload_rejects_duplicate_slot_within_entry() {
         vec![TargetEntryPoint {
             name: "dup_slot".into(),
             node: ArtifactNodeId(0),
-            workgroup_size: [8, 1, 1],
-            grid_size: [1, 1, 1],
-            dynamic_shared_bytes: 0,
+            workgroup_size: launch.workgroup_size,
+            grid_size: launch.grid,
+            dynamic_shared_bytes: launch.dynamic_shared_bytes,
             resource_bindings: bindings,
         }],
         vec![1, 2, 3],
@@ -579,6 +578,7 @@ fn target_payload_accepts_same_resource_at_distinct_slots() {
             access: TargetResourceAccess::WriteOnly,
         },
     ];
+    let launch = &neutral.geometry()[0];
     let payload = TargetPayload::new(
         &neutral,
         format(1),
@@ -586,9 +586,9 @@ fn target_payload_accepts_same_resource_at_distinct_slots() {
         vec![TargetEntryPoint {
             name: "distinct_slots_same_res".into(),
             node: ArtifactNodeId(0),
-            workgroup_size: [8, 1, 1],
-            grid_size: [1, 1, 1],
-            dynamic_shared_bytes: 0,
+            workgroup_size: launch.workgroup_size,
+            grid_size: launch.grid,
+            dynamic_shared_bytes: launch.dynamic_shared_bytes,
             resource_bindings: bindings,
         }],
         vec![1, 2, 3],
@@ -608,6 +608,7 @@ fn target_payload_rejects_unknown_canonical_resource() {
         memory: TargetResourceMemory::Global,
         access: TargetResourceAccess::ReadOnly,
     }];
+    let launch = &neutral.geometry()[0];
     let error = TargetPayload::new(
         &neutral,
         format(1),
@@ -615,9 +616,9 @@ fn target_payload_rejects_unknown_canonical_resource() {
         vec![TargetEntryPoint {
             name: "unknown_res".into(),
             node: ArtifactNodeId(0),
-            workgroup_size: [8, 1, 1],
-            grid_size: [1, 1, 1],
-            dynamic_shared_bytes: 0,
+            workgroup_size: launch.workgroup_size,
+            grid_size: launch.grid,
+            dynamic_shared_bytes: launch.dynamic_shared_bytes,
             resource_bindings: bindings,
         }],
         vec![1, 2, 3],
@@ -717,9 +718,6 @@ fn selected_span(chunk: u32, cache: u32, guard: Option<u32>) -> u32 {
         span = Some(selected.logical_element_count);
         Ok(EmittedTargetModule {
             entry_point: "scatter_entry".into(),
-            workgroup_size: [32, 1, 1],
-            grid_size: [1, 1, 1],
-            dynamic_shared_bytes: 0,
             resource_bindings: selected.canonical_bindings.clone(),
             bytes: vec![1],
         })
@@ -764,4 +762,83 @@ fn a_guard_never_raises_the_span_above_the_resources_or_lowers_it_below_one() {
         1,
         "a zero-domain guard must still leave a launchable span"
     );
+}
+
+/// WHY: the artifact records the geometry the search selected, and a target
+/// payload is what the device launches. Admission used to check only that each
+/// extent was positive, so a payload that stated a different shape attached and
+/// the launch disagreed with the authenticated schedule. Every field a launch
+/// reads is now compared against the record it projects.
+#[test]
+fn target_payload_rejects_geometry_the_artifact_did_not_select() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    TargetPayload::new(
+        &neutral,
+        format(1),
+        profile(1),
+        vec![entry_point(&neutral)],
+        vec![1],
+    )
+    .expect("the recorded geometry attaches");
+
+    let cases: Vec<(&str, fn(&mut TargetEntryPoint))> = vec![
+        ("workgroup_size", |entry| entry.workgroup_size = [4, 1, 1]),
+        ("grid_size", |entry| entry.grid_size[0] += 1),
+        ("dynamic_shared_bytes", |entry| {
+            entry.dynamic_shared_bytes += 32;
+        }),
+    ];
+    for (field, mutate) in cases {
+        let mut entry = entry_point(&neutral);
+        mutate(&mut entry);
+        let error = TargetPayload::new(&neutral, format(1), profile(1), vec![entry], vec![1])
+            .expect_err("emitted geometry the artifact did not select must not attach");
+        assert_eq!(
+            error.diagnostic.code.as_str(),
+            "MKC020_TARGET_PAYLOAD_ASSOCIATION_MISMATCH"
+        );
+        assert_eq!(
+            diagnostic_path(&error),
+            Some(format!("target_payload.entries[0].{field}").as_str())
+        );
+    }
+
+    let mut foreign = entry_point(&neutral);
+    foreign.node = ArtifactNodeId(9);
+    let error = TargetPayload::new(&neutral, format(1), profile(1), vec![foreign], vec![1])
+        .expect_err("an entry for a node the artifact does not carry must not attach");
+    assert_eq!(
+        diagnostic_path(&error),
+        Some("target_payload.entries[0].node")
+    );
+}
+
+/// WHY: an emitter reports bytes and bindings; it no longer reports a shape.
+/// The entry the seam packages therefore has to come from the artifact record,
+/// and the module it packages beside it has to be the program the artifact froze
+/// at that same workgroup.
+#[test]
+fn emission_packages_exactly_the_recorded_launch() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let recorded = neutral.geometry()[0].clone();
+    let payload =
+        compile_selected_modules(&neutral, format(1), profile(1), |selected, _profile| {
+            Ok(EmittedTargetModule {
+                entry_point: "entry".into(),
+                resource_bindings: selected.canonical_bindings.clone(),
+                bytes: vec![7],
+            })
+        })
+        .expect("selected module compilation must succeed");
+
+    let entry = &payload.entries()[0];
+    assert_eq!(entry.node, recorded.node);
+    assert_eq!(entry.workgroup_size, recorded.workgroup_size);
+    assert_eq!(entry.grid_size, recorded.grid);
+    assert_eq!(entry.dynamic_shared_bytes, recorded.dynamic_shared_bytes);
+
+    let bundle =
+        TargetModuleBundle::from_bytes(payload.bytes()).expect("packaged bundle must be canonical");
+    let program = Program::from_wire(&bundle.modules[0].program).expect("module program decodes");
+    assert_eq!(program.workgroup_size, recorded.workgroup_size);
 }

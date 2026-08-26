@@ -59,9 +59,6 @@ impl TargetCompiler for FixtureTargetCompiler {
             |selected, _profile| {
                 Ok(EmittedTargetModule {
                     entry_point: "main".to_string(),
-                    grid_size: [1, 1, 1],
-                    dynamic_shared_bytes: 0,
-                    workgroup_size: selected.descriptor().dispatch.workgroup_size,
                     resource_bindings: selected.canonical_bindings.clone(),
                     bytes: b"target-payload-fixture".to_vec(),
                 })
@@ -95,11 +92,19 @@ inventory::submit! {
     }
 }
 
-pub(crate) fn compiled_artifact() -> ArtifactEnvelope {
-    compiled_artifact_with_grid([1, 1, 1])
+/// The launch geometry `neutral` recorded for `node`.
+fn recorded_launch(
+    neutral: &vyre_megakernel::Artifact,
+    node: vyre_megakernel::ArtifactNodeId,
+) -> &vyre_megakernel::GeometryRecord {
+    neutral
+        .geometry()
+        .iter()
+        .find(|record| record.node == node)
+        .expect("the fixture artifact records geometry for every node it carries")
 }
 
-pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> ArtifactEnvelope {
+pub(crate) fn compiled_artifact() -> ArtifactEnvelope {
     let neutral = compile_graph(
         graph_over(
             "main",
@@ -128,6 +133,7 @@ pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> ArtifactEnvelo
         0,
     );
     let node = neutral.nodes()[0].id;
+    let launch = recorded_launch(&neutral, node);
     let params = neutral
         .resources()
         .iter()
@@ -164,9 +170,9 @@ pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> ArtifactEnvelo
         vec![TargetEntryPoint {
             name: "main".into(),
             node,
-            workgroup_size: [64, 1, 1],
-            grid_size,
-            dynamic_shared_bytes: 0,
+            workgroup_size: launch.workgroup_size,
+            grid_size: launch.grid,
+            dynamic_shared_bytes: launch.dynamic_shared_bytes,
             resource_bindings: vec![
                 TargetResourceBinding {
                     resource: params,
@@ -204,12 +210,14 @@ pub(crate) fn artifact_over(
     let graph = ProgramGraph::from_program("main", program.clone())
         .expect("fixture Program must enter the canonical graph");
     let neutral = compile_graph(graph, 0);
+    let node = neutral.nodes()[0].id;
+    let launch = recorded_launch(&neutral, node);
     let entry = TargetEntryPoint {
         name: "main".to_string(),
-        node: neutral.nodes()[0].id,
-        workgroup_size: program.workgroup_size,
-        grid_size: [1, 1, 1],
-        dynamic_shared_bytes: 0,
+        node,
+        workgroup_size: launch.workgroup_size,
+        grid_size: launch.grid,
+        dynamic_shared_bytes: launch.dynamic_shared_bytes,
         resource_bindings: neutral
             .abi()
             .resources

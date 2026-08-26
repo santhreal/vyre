@@ -137,30 +137,29 @@ pub(super) fn global_bindings(
         .collect()
 }
 
-/// One entry point over the fixture launch geometry.
+/// One entry point over the launch geometry the artifact recorded.
+///
+/// The geometry is read out of the record rather than stated by the caller. A
+/// payload states what the device launches, and admission accepts only the
+/// geometry the compiler selected, so a stated shape here would be a fixture
+/// that can never be attached to the artifact it names.
 pub(super) fn entry_point(
+    artifact: &Artifact,
     name: &str,
     node: ArtifactNodeId,
     resource_bindings: Vec<TargetResourceBinding>,
 ) -> TargetEntryPoint {
-    entry_point_with_geometry(name, node, [32, 1, 1], [1, 1, 1], 0, resource_bindings)
-}
-
-/// One entry point over a stated launch geometry.
-pub(super) fn entry_point_with_geometry(
-    name: &str,
-    node: ArtifactNodeId,
-    workgroup_size: [u32; 3],
-    grid_size: [u32; 3],
-    dynamic_shared_bytes: u32,
-    resource_bindings: Vec<TargetResourceBinding>,
-) -> TargetEntryPoint {
+    let selected = artifact
+        .geometry()
+        .iter()
+        .find(|record| record.node == node)
+        .expect("the fixture artifact records geometry for every node it carries");
     TargetEntryPoint {
-        name: name.into(),
+        name: name.to_string(),
         node,
-        workgroup_size,
-        grid_size,
-        dynamic_shared_bytes,
+        workgroup_size: selected.workgroup_size,
+        grid_size: selected.grid,
+        dynamic_shared_bytes: selected.dynamic_shared_bytes,
         resource_bindings,
     }
 }

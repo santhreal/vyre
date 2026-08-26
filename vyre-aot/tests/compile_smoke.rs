@@ -8,9 +8,9 @@ use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 fn trivial_xor_program() -> Program {
     Program::wrapped(
         vec![
-            BufferDecl::read("a", 0, DataType::U32),
-            BufferDecl::read("b", 1, DataType::U32),
-            BufferDecl::read_write("out", 2, DataType::U32),
+            BufferDecl::read("a", 0, DataType::U32).with_count(1),
+            BufferDecl::read("b", 1, DataType::U32).with_count(1),
+            BufferDecl::read_write("out", 2, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
         vec![

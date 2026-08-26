@@ -42,7 +42,6 @@ fn emit_reference_module(
     Ok(EmittedDialectModule {
         entry_point: "reference_eval".to_string(),
         bytes,
-        dynamic_shared_bytes: 0,
     })
 }
 

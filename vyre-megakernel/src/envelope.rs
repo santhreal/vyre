@@ -617,30 +617,48 @@ fn validate_entries(
                 "associate the target entry with a canonical neutral node identity",
             ));
         }
-        if !neutral
+        let recorded = neutral
             .geometry()
             .iter()
-            .any(|geometry| geometry.node == entry.node)
-        {
-            return Err(failure(
-                CompilerFailureKind::TargetPayloadAssociationMismatch,
-                format!("{path}.node"),
-                "target entry node has no canonical neutral geometry record",
-                "compile a complete neutral artifact before attaching target bytes",
-            ));
-        }
-        for (field, geometry) in [
-            ("workgroup_size", entry.workgroup_size),
-            ("grid_size", entry.grid_size),
+            .find(|geometry| geometry.node == entry.node)
+            .ok_or_else(|| {
+                failure(
+                    CompilerFailureKind::TargetPayloadAssociationMismatch,
+                    format!("{path}.node"),
+                    "target entry node has no canonical neutral geometry record",
+                    "compile a complete neutral artifact before attaching target bytes",
+                )
+            })?;
+        // The neutral record is the selected schedule projected onto one launch.
+        // A payload that carried its own geometry could differ from it, and the
+        // difference is a kernel launched at a shape nothing compiled.
+        for (field, emitted, selected) in [
+            (
+                "workgroup_size",
+                entry.workgroup_size,
+                recorded.workgroup_size,
+            ),
+            ("grid_size", entry.grid_size, recorded.grid),
         ] {
-            if let Some(axis) = geometry.iter().position(|extent| *extent == 0) {
+            if emitted != selected {
                 return Err(failure(
-                    CompilerFailureKind::MalformedTargetPayload,
-                    format!("{path}.{field}[{axis}]"),
-                    "target entry geometry extent is zero",
-                    "materialize explicit positive target geometry",
+                    CompilerFailureKind::TargetPayloadAssociationMismatch,
+                    format!("{path}.{field}"),
+                    format!("target entry states {emitted:?} and the artifact selected {selected:?}"),
+                    "attach the geometry the neutral artifact recorded",
                 ));
             }
+        }
+        if entry.dynamic_shared_bytes != recorded.dynamic_shared_bytes {
+            return Err(failure(
+                CompilerFailureKind::TargetPayloadAssociationMismatch,
+                format!("{path}.dynamic_shared_bytes"),
+                format!(
+                    "target entry states {} shared bytes and the artifact selected {}",
+                    entry.dynamic_shared_bytes, recorded.dynamic_shared_bytes
+                ),
+                "attach the shared-memory requirement the neutral artifact recorded",
+            ));
         }
         let limits = profile.max_workgroup_size();
         if let Some(axis) = entry

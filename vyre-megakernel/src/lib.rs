@@ -67,11 +67,12 @@ pub use request::{
     CompileRequest, ExternalFacts, SearchBudget, SearchWork, ValidatedCompileRequest,
 };
 pub use schema::{
-    AbiAccess, Artifact, ArtifactAbi, BarrierRecord, EntryAbiRecord, EntryResourceBinding,
-    ExecutionMode, FusionRecord, FusionRejection, GeometryRecord, MaterializationReason,
-    MaterializationRecord, NodeRecord, PlanMeasurement, Provenance, ResourceAbiRecord,
-    ResourceEnvelope, ResourceLifetime, ResourceNameCollision, ResourceRecord, SelectedPlan,
-    ARTIFACT_SCHEMA_VERSION,
+    AbiAccess, Artifact, ArtifactAbi, BarrierPhaseRecord, BarrierRecord, EntryAbiRecord,
+    EntryPersistence, EntryResourceBinding, ExecutionMode, FusionRecord, FusionRejection,
+    GeometryRecord, LaunchResourceIntent, MaterializationReason, MaterializationRecord, NodeRecord,
+    PlanMeasurement, Provenance, ResourceAbiRecord, ResourceEnvelope, ResourceLifetime,
+    ResourceNameCollision, ResourceRecord, SelectedPlan, WorkspacePlan, WorkspaceRegion,
+    ARTIFACT_SCHEMA_VERSION, WORKSPACE_REGION_ALIGNMENT,
 };
 pub use target::SelectedModule;
 pub use target::{

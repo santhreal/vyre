@@ -17,9 +17,9 @@ use vyre_foundation::ir::{
 };
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileRequest, DeviceFacts,
-    Digest, ExternalFacts, SearchBudget, TargetCompileError, TargetCompiler, TargetEntryPoint,
-    TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
-    TargetResourceMemory,
+    Digest, ExternalFacts, GeometryRecord, SearchBudget, TargetCompileError, TargetCompiler,
+    TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess,
+    TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_runtime::artifact_admission::{
     admit_artifact, admit_cached_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession,
@@ -73,6 +73,19 @@ fn resident_projection_artifact() -> Artifact {
     compile_graph(graph, 0)
 }
 
+/// The launch geometry `neutral` recorded for `node`.
+///
+/// A payload states what the device launches, and admission accepts only the
+/// geometry the compiler selected, so a fixture reads the record instead of
+/// restating a shape.
+fn recorded_launch(neutral: &Artifact, node: ArtifactNodeId) -> &GeometryRecord {
+    neutral
+        .geometry()
+        .iter()
+        .find(|record| record.node == node)
+        .expect("the fixture artifact records geometry for every node it carries")
+}
+
 fn resident_projection_payload(neutral: &Artifact) -> TargetPayload {
     let bindings = [
         (
@@ -101,6 +114,7 @@ fn resident_projection_payload(neutral: &Artifact) -> TargetPayload {
         access,
     })
     .collect();
+    let launch = recorded_launch(neutral, ArtifactNodeId(0));
     TargetPayload::new(
         neutral,
         format("test.cache-target", 1),
@@ -108,9 +122,9 @@ fn resident_projection_payload(neutral: &Artifact) -> TargetPayload {
         vec![TargetEntryPoint {
             name: "resident-projection".to_string(),
             node: ArtifactNodeId(0),
-            workgroup_size: [1, 1, 1],
-            grid_size: [1, 1, 1],
-            dynamic_shared_bytes: 0,
+            workgroup_size: launch.workgroup_size,
+            grid_size: launch.grid,
+            dynamic_shared_bytes: launch.dynamic_shared_bytes,
             resource_bindings: bindings,
         }],
         vec![7, 8, 9],
@@ -131,6 +145,7 @@ fn queue_payload(neutral: &Artifact) -> TargetPayload {
             access: TargetResourceAccess::ReadWrite,
         })
         .collect();
+    let launch = recorded_launch(neutral, ArtifactNodeId(0));
     TargetPayload::new(
         neutral,
         format("test.cache-target", 1),
@@ -138,9 +153,9 @@ fn queue_payload(neutral: &Artifact) -> TargetPayload {
         vec![TargetEntryPoint {
             name: "queue".to_string(),
             node: ArtifactNodeId(0),
-            workgroup_size: [1, 1, 1],
-            grid_size: [1, 1, 1],
-            dynamic_shared_bytes: 0,
+            workgroup_size: launch.workgroup_size,
+            grid_size: launch.grid,
+            dynamic_shared_bytes: launch.dynamic_shared_bytes,
             resource_bindings: bindings,
         }],
         vec![1, 2, 3],
@@ -164,7 +179,7 @@ fn payload(neutral: &Artifact, payload_format: TargetPayloadFormat, bytes: &[u8]
         neutral,
         payload_format,
         profile,
-        vec![entry_point()],
+        vec![entry_point(neutral)],
         bytes.to_vec(),
     )
     .expect("fixture payload must be valid")
@@ -483,6 +498,7 @@ fn packaged_envelope_admits_through_runtime_without_recompile() {
     let resource = neutral.resources()[0].value;
     // Match the fixture package payload format identity and version.
     let required = format("fixture-target-format", 1);
+    let launch = recorded_launch(&neutral, node);
     let attached = TargetPayload::new(
         &neutral,
         required.clone(),
@@ -490,9 +506,9 @@ fn packaged_envelope_admits_through_runtime_without_recompile() {
         vec![TargetEntryPoint {
             name: "main".into(),
             node,
-            workgroup_size: [64, 1, 1],
-            grid_size: [1, 1, 1],
-            dynamic_shared_bytes: 0,
+            workgroup_size: launch.workgroup_size,
+            grid_size: launch.grid,
+            dynamic_shared_bytes: launch.dynamic_shared_bytes,
             resource_bindings: vec![TargetResourceBinding {
                 resource,
                 group: 0,
@@ -788,7 +804,7 @@ impl TargetCompiler for RecordingCompiler {
             artifact,
             self.format.clone(),
             self.profile.clone(),
-            vec![entry_point()],
+            vec![entry_point(artifact)],
             vec![4, 2],
         )
         .map_err(Into::into)
@@ -963,6 +979,7 @@ fn resident_bindings_preserve_canonical_value_identity_with_reordered_target_slo
             access: TargetResourceAccess::ReadOnly,
         },
     ];
+    let launch = recorded_launch(&neutral, ArtifactNodeId(0));
     let payload = TargetPayload::new(
         &neutral,
         format("test.cache-target", 1),
@@ -970,9 +987,9 @@ fn resident_bindings_preserve_canonical_value_identity_with_reordered_target_slo
         vec![TargetEntryPoint {
             name: "resident-projection".to_string(),
             node: ArtifactNodeId(0),
-            workgroup_size: [1, 1, 1],
-            grid_size: [1, 1, 1],
-            dynamic_shared_bytes: 0,
+            workgroup_size: launch.workgroup_size,
+            grid_size: launch.grid,
+            dynamic_shared_bytes: launch.dynamic_shared_bytes,
             resource_bindings: reordered_bindings,
         }],
         vec![7, 8, 9],
@@ -1418,13 +1435,16 @@ fn payload_over_every_node(neutral: &Artifact) -> TargetPayload {
     let entries = neutral
         .nodes()
         .iter()
-        .map(|node| TargetEntryPoint {
-            name: "main".to_string(),
-            node: node.id,
-            workgroup_size: [1, 1, 1],
-            grid_size: [1, 1, 1],
-            dynamic_shared_bytes: 0,
-            resource_bindings: bindings.clone(),
+        .map(|node| {
+            let launch = recorded_launch(neutral, node.id);
+            TargetEntryPoint {
+                name: "main".to_string(),
+                node: node.id,
+                workgroup_size: launch.workgroup_size,
+                grid_size: launch.grid,
+                dynamic_shared_bytes: launch.dynamic_shared_bytes,
+                resource_bindings: bindings.clone(),
+            }
         })
         .collect();
     TargetPayload::new(

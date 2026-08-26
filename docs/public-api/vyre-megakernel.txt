@@ -9,6 +9,7 @@ impl vyre_megakernel::CompileRequest
 impl vyre_megakernel::DeviceFacts
 impl vyre_megakernel::Digest
 impl vyre_megakernel::ExternalFacts
+impl vyre_megakernel::GeometryRecord
 impl vyre_megakernel::SearchBudget
 impl vyre_megakernel::SelectedLowering
 impl vyre_megakernel::SelectedPlan
@@ -20,6 +21,7 @@ impl vyre_megakernel::TargetPayload
 impl vyre_megakernel::TargetPayloadFormat
 impl vyre_megakernel::TargetProfile
 impl vyre_megakernel::ValidatedCompileRequest
+impl vyre_megakernel::WorkspacePlan
 impl vyre_megakernel::legality::FusionRejectionReason
 impl<'a> vyre_megakernel::SemanticExecutionRequest<'a>
 pub const fn vyre_megakernel::Artifact::abi(&self) -> &vyre_megakernel::ArtifactAbi
@@ -28,6 +30,7 @@ pub const fn vyre_megakernel::Artifact::provenance(&self) -> &vyre_megakernel::P
 pub const fn vyre_megakernel::Artifact::resource_envelope(&self) -> vyre_megakernel::ResourceEnvelope
 pub const fn vyre_megakernel::Artifact::schema_version(&self) -> u16
 pub const fn vyre_megakernel::Artifact::selected_plan(&self) -> &vyre_megakernel::SelectedPlan
+pub const fn vyre_megakernel::Artifact::workspace(&self) -> &vyre_megakernel::WorkspacePlan
 pub const fn vyre_megakernel::ArtifactEnvelope::neutral(&self) -> &vyre_megakernel::Artifact
 pub const fn vyre_megakernel::CompileRequest::new(graph: vyre_foundation::ir_inner::model::program_graph::ProgramGraph, facts: vyre_megakernel::ExternalFacts, device: vyre_megakernel::DeviceFacts, search_budget: vyre_megakernel::SearchBudget, max_artifact_bytes: u64) -> Self
 pub const fn vyre_megakernel::CompileRequest::with_objective(self, objective: vyre_megakernel::CompileObjective) -> Self
@@ -95,10 +98,12 @@ pub const vyre_megakernel::ARTIFACT_ENVELOPE_SCHEMA_VERSION: u16
 pub const vyre_megakernel::ARTIFACT_SCHEMA_VERSION: u16
 pub const vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16
 pub const vyre_megakernel::TARGET_PAYLOAD_SCHEMA_VERSION: u16
+pub const vyre_megakernel::WORKSPACE_REGION_ALIGNMENT: u64
 pub enum vyre_megakernel::AbiAccess
 pub enum vyre_megakernel::CompileObjective
 pub enum vyre_megakernel::DependencyEndpoint
 pub enum vyre_megakernel::DependencyKind
+pub enum vyre_megakernel::EntryPersistence
 pub enum vyre_megakernel::ExecutionMode
 pub enum vyre_megakernel::ExecutionTopology
 pub enum vyre_megakernel::MaterializationReason
@@ -119,6 +124,7 @@ pub fn vyre_megakernel::Artifact::materializations(&self) -> &[vyre_megakernel::
 pub fn vyre_megakernel::Artifact::nodes(&self) -> &[vyre_megakernel::NodeRecord]
 pub fn vyre_megakernel::Artifact::resources(&self) -> &[vyre_megakernel::ResourceRecord]
 pub fn vyre_megakernel::Artifact::to_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::Artifact::validate_geometry(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::ArtifactEnvelope::attach_target_payload(&mut self, payload: vyre_megakernel::TargetPayload) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::ArtifactEnvelope::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::ArtifactEnvelope::new(neutral: vyre_megakernel::Artifact) -> Self
@@ -133,6 +139,8 @@ pub fn vyre_megakernel::ExternalFacts::new(configuration_digest: vyre_megakernel
 pub fn vyre_megakernel::ExternalFacts::with_expected_launch_batch(self, expected_launch_batch: u32) -> Self
 pub fn vyre_megakernel::FinalistEvaluator::measure(&self, artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::TargetPayload) -> core::result::Result<u64, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::FinalistEvaluator::target_compiler(&self) -> &dyn vyre_megakernel::TargetCompiler
+pub fn vyre_megakernel::GeometryRecord::covering_grid(coverage: [u64; 3], workgroup: [u32; 3]) -> core::result::Result<[u32; 3], vyre_megakernel::CompileError>
+pub fn vyre_megakernel::GeometryRecord::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::ResourceNameCollision::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_megakernel::SelectedPlan::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::SemanticExecutionRequest<'a>::compile_request(&self) -> vyre_megakernel::CompileRequest
@@ -155,6 +163,7 @@ pub fn vyre_megakernel::TargetPayloadFormat::identity(&self) -> &str
 pub fn vyre_megakernel::TargetPayloadFormat::new(identity: impl core::convert::Into<alloc::string::String>, version: u16) -> core::result::Result<Self, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::TargetProfile::identity(&self) -> &str
 pub fn vyre_megakernel::TargetProfile::new(identity: impl core::convert::Into<alloc::string::String>, generation: u64, max_workgroup_size: [u32; 3], max_invocations_per_workgroup: u32, max_dynamic_shared_bytes: u32, subgroup_size: u32) -> core::result::Result<Self, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::WorkspacePlan::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::attach_target(artifact: vyre_megakernel::Artifact, compiler: &dyn vyre_megakernel::TargetCompiler) -> core::result::Result<vyre_megakernel::ArtifactEnvelope, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::compile(request: &vyre_megakernel::ValidatedCompileRequest) -> core::result::Result<vyre_megakernel::Artifact, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::compile_measured(request: &vyre_megakernel::ValidatedCompileRequest, evaluator: &dyn vyre_megakernel::FinalistEvaluator) -> core::result::Result<vyre_megakernel::Artifact, vyre_megakernel::CompileError>
@@ -173,6 +182,7 @@ pub struct vyre_megakernel::ArtifactAbi
 pub struct vyre_megakernel::ArtifactEnvelope
 pub struct vyre_megakernel::ArtifactNodeId(pub u32)
 pub struct vyre_megakernel::ArtifactValueId(pub u32)
+pub struct vyre_megakernel::BarrierPhaseRecord
 pub struct vyre_megakernel::BarrierRecord
 pub struct vyre_megakernel::CompileError
 pub struct vyre_megakernel::CompileRequest
@@ -187,6 +197,7 @@ pub struct vyre_megakernel::FusionGroupId(pub u32)
 pub struct vyre_megakernel::FusionRecord
 pub struct vyre_megakernel::FusionRejection
 pub struct vyre_megakernel::GeometryRecord
+pub struct vyre_megakernel::LaunchResourceIntent
 pub struct vyre_megakernel::MaterializationRecord
 pub struct vyre_megakernel::NodeRecord
 pub struct vyre_megakernel::Provenance
@@ -211,6 +222,8 @@ pub struct vyre_megakernel::TargetPayloadFormat
 pub struct vyre_megakernel::TargetProfile
 pub struct vyre_megakernel::TargetResourceBinding
 pub struct vyre_megakernel::ValidatedCompileRequest
+pub struct vyre_megakernel::WorkspacePlan
+pub struct vyre_megakernel::WorkspaceRegion
 pub struct vyre_megakernel::cost::CostBreakdown
 pub trait vyre_megakernel::FinalistEvaluator
 pub trait vyre_megakernel::SemanticExecutor: core::marker::Send + core::marker::Sync
@@ -222,6 +235,8 @@ pub vyre_megakernel::AbiAccess::Uniform
 pub vyre_megakernel::AbiAccess::WriteOnly
 pub vyre_megakernel::ArtifactAbi::entries: alloc::vec::Vec<vyre_megakernel::EntryAbiRecord>
 pub vyre_megakernel::ArtifactAbi::resources: alloc::vec::Vec<vyre_megakernel::ResourceAbiRecord>
+pub vyre_megakernel::BarrierPhaseRecord::phases: alloc::vec::Vec<vyre_foundation::schedule::SchedulePhaseId>
+pub vyre_megakernel::BarrierPhaseRecord::scope: vyre_foundation::schedule::SynchronizationScope
 pub vyre_megakernel::BarrierRecord::after_stage: u32
 pub vyre_megakernel::BarrierRecord::before_stage: u32
 pub vyre_megakernel::BarrierRecord::dependencies: alloc::vec::Vec<u32>
@@ -237,16 +252,16 @@ pub vyre_megakernel::DependencyKind::Data
 pub vyre_megakernel::DependencyKind::Materialization
 pub vyre_megakernel::DependencyKind::Retained
 pub vyre_megakernel::EmittedTargetModule::bytes: alloc::vec::Vec<u8>
-pub vyre_megakernel::EmittedTargetModule::dynamic_shared_bytes: u32
 pub vyre_megakernel::EmittedTargetModule::entry_point: alloc::string::String
-pub vyre_megakernel::EmittedTargetModule::grid_size: [u32; 3]
 pub vyre_megakernel::EmittedTargetModule::resource_bindings: alloc::vec::Vec<vyre_megakernel::TargetResourceBinding>
-pub vyre_megakernel::EmittedTargetModule::workgroup_size: [u32; 3]
 pub vyre_megakernel::EntryAbiRecord::input_bindings: alloc::vec::Vec<vyre_megakernel::EntryResourceBinding>
 pub vyre_megakernel::EntryAbiRecord::inputs: alloc::vec::Vec<vyre_megakernel::ArtifactValueId>
 pub vyre_megakernel::EntryAbiRecord::node: vyre_megakernel::ArtifactNodeId
 pub vyre_megakernel::EntryAbiRecord::output_bindings: alloc::vec::Vec<vyre_megakernel::EntryResourceBinding>
 pub vyre_megakernel::EntryAbiRecord::outputs: alloc::vec::Vec<vyre_megakernel::ArtifactValueId>
+pub vyre_megakernel::EntryPersistence::Persistent
+pub vyre_megakernel::EntryPersistence::Persistent::queue_capacity: u32
+pub vyre_megakernel::EntryPersistence::Static
 pub vyre_megakernel::EntryResourceBinding::buffer: alloc::string::String
 pub vyre_megakernel::EntryResourceBinding::value: vyre_megakernel::ArtifactValueId
 pub vyre_megakernel::ExecutionMode::Persistent
@@ -270,8 +285,21 @@ pub vyre_megakernel::FusionRejection::from: vyre_megakernel::ArtifactNodeId
 pub vyre_megakernel::FusionRejection::reason: vyre_megakernel::legality::FusionRejectionReason
 pub vyre_megakernel::FusionRejection::to: vyre_megakernel::ArtifactNodeId
 pub vyre_megakernel::FusionRejection::value: vyre_megakernel::ArtifactValueId
+pub vyre_megakernel::GeometryRecord::barrier_phases: alloc::vec::Vec<vyre_megakernel::BarrierPhaseRecord>
+pub vyre_megakernel::GeometryRecord::dynamic_shared_bytes: u32
+pub vyre_megakernel::GeometryRecord::grid: [u32; 3]
+pub vyre_megakernel::GeometryRecord::launch_intent: vyre_megakernel::LaunchResourceIntent
+pub vyre_megakernel::GeometryRecord::logical_coverage: [u64; 3]
 pub vyre_megakernel::GeometryRecord::node: vyre_megakernel::ArtifactNodeId
+pub vyre_megakernel::GeometryRecord::persistence: vyre_megakernel::EntryPersistence
+pub vyre_megakernel::GeometryRecord::phase: vyre_foundation::schedule::SchedulePhaseId
+pub vyre_megakernel::GeometryRecord::predecessors: alloc::vec::Vec<vyre_megakernel::ArtifactNodeId>
+pub vyre_megakernel::GeometryRecord::ring_slots: u32
+pub vyre_megakernel::GeometryRecord::roles: alloc::vec::Vec<vyre_foundation::schedule::PipelineRoleGroup>
+pub vyre_megakernel::GeometryRecord::vector_width: u32
 pub vyre_megakernel::GeometryRecord::workgroup_size: [u32; 3]
+pub vyre_megakernel::LaunchResourceIntent::private_bytes: u64
+pub vyre_megakernel::LaunchResourceIntent::registers_per_invocation: u32
 pub vyre_megakernel::MaterializationReason::CrossGroupUse
 pub vyre_megakernel::MaterializationReason::Output
 pub vyre_megakernel::MaterializationReason::Retained
@@ -389,6 +417,14 @@ pub vyre_megakernel::TargetResourceBinding::slot: u32
 pub vyre_megakernel::TargetResourceMemory::Constant
 pub vyre_megakernel::TargetResourceMemory::Global
 pub vyre_megakernel::TargetResourceMemory::Shared
+pub vyre_megakernel::WorkspacePlan::regions: alloc::vec::Vec<vyre_megakernel::WorkspaceRegion>
+pub vyre_megakernel::WorkspacePlan::total_bytes: u64
+pub vyre_megakernel::WorkspaceRegion::bytes: u64
+pub vyre_megakernel::WorkspaceRegion::first_entry: vyre_megakernel::ArtifactNodeId
+pub vyre_megakernel::WorkspaceRegion::last_entry: vyre_megakernel::ArtifactNodeId
+pub vyre_megakernel::WorkspaceRegion::lifetime: vyre_megakernel::ResourceLifetime
+pub vyre_megakernel::WorkspaceRegion::offset: u64
+pub vyre_megakernel::WorkspaceRegion::value: vyre_megakernel::ArtifactValueId
 pub vyre_megakernel::cost::CostBreakdown::launch_ns: u64
 pub vyre_megakernel::cost::CostBreakdown::launches: u64
 pub vyre_megakernel::cost::CostBreakdown::live_value_peak: u64

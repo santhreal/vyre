@@ -60,7 +60,13 @@ constructs a `PhysicalKernel`.
 physical invocation, workgroup, local, and barrier IR before descriptor
 construction. `lower_physical` rejects any unresolved logical marker.
 
-The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 9`.
+The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 10`. Schema 10 records
+the selected launch of every entry point: the entry dependency order, logical
+coverage, grid, workgroup, vector width, pipeline roles, ring slots, barrier
+phases, dynamic shared bytes, launch resource intent, and persistence, together
+with the workspace plan a runtime allocates. A target payload states the same
+geometry or admission rejects it, and emission carries the recorded launch
+rather than reporting one.
 
 ## Legality before cost
 

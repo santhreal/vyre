@@ -1,451 +1,31 @@
 //! The canonical artifact schema: every versioned record, and the immutable
 //! container that frames them.
 
+mod geometry;
+mod plan;
+mod records;
+
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use vyre_foundation::{ir::DataType, schedule::SelectedSchedule};
 
 use crate::error::{failure, serialization_failure, CompileError, CompilerFailureKind};
 use crate::frame;
-use crate::identity::{ArtifactNodeId, ArtifactValueId, DependencyEdge, Digest, FusionGroupId};
-use crate::request::{SearchBudget, SearchWork};
-use crate::{cost, legality};
+use crate::identity::{ArtifactValueId, DependencyEdge, Digest};
+
+pub use geometry::{
+    BarrierPhaseRecord, EntryPersistence, GeometryRecord, LaunchResourceIntent, WorkspacePlan,
+    WorkspaceRegion, WORKSPACE_REGION_ALIGNMENT,
+};
+pub use plan::{ExecutionMode, PlanMeasurement, SelectedPlan};
+pub use records::{
+    AbiAccess, ArtifactAbi, BarrierRecord, EntryAbiRecord, EntryResourceBinding, FusionRecord,
+    FusionRejection, MaterializationReason, MaterializationRecord, NodeRecord, Provenance,
+    ResourceAbiRecord, ResourceEnvelope, ResourceLifetime, ResourceNameCollision, ResourceRecord,
+};
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 9;
-
-/// Canonical executable-node payload.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct NodeRecord {
-    /// Graph node identity preserved from [`ProgramGraph`](vyre_foundation::ir::ProgramGraph).
-    pub id: ArtifactNodeId,
-    /// Stable diagnostic name; graph ID assignment never depends on lexical order.
-    pub name: String,
-    /// Canonical versioned program wire bytes.
-    pub program: Vec<u8>,
-}
-
-/// Compiler-selected per-node launch geometry.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct GeometryRecord {
-    /// Node this geometry launches.
-    pub node: ArtifactNodeId,
-    /// Workgroup dimensions the search selected for this node.
-    ///
-    /// Every consumer launches this geometry. The workgroup the node program
-    /// declares is an input to the search, not its result, so a consumer that
-    /// reads the program instead of this record can launch a shape the emitted
-    /// module does not have.
-    pub workgroup_size: [u32; 3],
-}
-
-/// Graph value lifetime represented in the artifact schema.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ResourceLifetime {
-    /// Immutable constant input.
-    Constant,
-    /// Temporary value for one submission.
-    Invocation,
-    /// Mutable value retained across submissions.
-    Retained,
-    /// Caller-visible graph output.
-    Output,
-}
-
-/// Canonical resource and liveness fact for one typed graph value.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ResourceRecord {
-    /// Canonical value identity.
-    pub value: ArtifactValueId,
-    /// Stable graph value name.
-    pub name: String,
-    /// Resolved logical element count.
-    pub element_count: u64,
-    /// Canonical packed byte count.
-    pub byte_count: u64,
-    /// Semantic lifetime class.
-    pub lifetime: ResourceLifetime,
-    /// Prior retained value when this resource replaces retained state.
-    pub retained_predecessor: Option<ArtifactValueId>,
-    /// First barrier stage needing the value.
-    pub first_stage: u32,
-    /// Last barrier stage needing the value.
-    pub last_stage: u32,
-}
-
-/// One resource name claimed by two canonical values.
-///
-/// Carried as its own type rather than a formatted error so each consumer can
-/// report it in the error vocabulary of its own boundary while the detection
-/// stays with the resource set.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ResourceNameCollision {
-    /// The reused resource name.
-    pub name: String,
-    /// The value the name reached first.
-    pub first: ArtifactValueId,
-    /// The value that reused the name.
-    pub second: ArtifactValueId,
-}
-
-impl std::fmt::Display for ResourceNameCollision {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "artifact resource name `{}` names both value {} and value {}. Fix: resource names carry descriptor binding identity, so one artifact must not reuse a name for two values.",
-            self.name, self.first.0, self.second.0
-        )
-    }
-}
-
-impl std::error::Error for ResourceNameCollision {}
-
-/// Aggregate checked resource envelope.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ResourceEnvelope {
-    /// Sum of all canonical value byte counts.
-    pub total_bytes: u64,
-    /// Maximum bytes simultaneously live in any artifact stage.
-    pub peak_live_bytes: u64,
-}
-
-/// Canonical neutral resource access.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum AbiAccess {
-    /// Read-only resource.
-    ReadOnly,
-    /// Write-only resource.
-    WriteOnly,
-    /// Read-write resource.
-    ReadWrite,
-    /// Uniform read-only resource.
-    Uniform,
-}
-
-/// One canonical resource slot in the whole-program ABI.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ResourceAbiRecord {
-    /// Dense canonical slot.
-    pub slot: u32,
-    /// Typed graph value occupying this slot.
-    pub value: ArtifactValueId,
-    /// Element representation.
-    pub dtype: DataType,
-    /// Required access.
-    pub access: AbiAccess,
-}
-
-/// One named Program buffer projected onto a canonical graph value.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EntryResourceBinding {
-    /// Program buffer name at the executable entry boundary.
-    pub buffer: String,
-    /// Canonical graph value bound to that buffer.
-    pub value: ArtifactValueId,
-}
-
-/// One canonical executable entry in the whole-program ABI.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EntryAbiRecord {
-    /// Typed graph node implemented by this entry.
-    pub node: ArtifactNodeId,
-    /// Input value identities in Program buffer order.
-    pub inputs: Vec<ArtifactValueId>,
-    /// Input identities paired with their exact Program buffer names.
-    pub input_bindings: Vec<EntryResourceBinding>,
-    /// Output value identities in Program buffer order.
-    pub outputs: Vec<ArtifactValueId>,
-    /// Output identities paired with their exact Program buffer names.
-    pub output_bindings: Vec<EntryResourceBinding>,
-}
-
-/// Canonical resource and entry ABI projected to every target payload.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ArtifactAbi {
-    /// Dense resource slots.
-    pub resources: Vec<ResourceAbiRecord>,
-    /// Executable entries.
-    pub entries: Vec<EntryAbiRecord>,
-}
-
-/// Canonical compiler-selected fusion group.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct FusionRecord {
-    /// Stable group identity.
-    pub id: FusionGroupId,
-    /// Typed group members.
-    pub members: Vec<ArtifactNodeId>,
-    /// Dependency stage selected for this group.
-    pub stage: u32,
-    /// Compiler-derived semantic-legality identities used to form the group.
-    pub legality: Vec<Digest>,
-}
-/// Stable evidence that one proposed fusion was pruned before selection.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct FusionRejection {
-    /// Proposed producer.
-    pub from: ArtifactNodeId,
-    /// Proposed consumer.
-    pub to: ArtifactNodeId,
-    /// Connecting value.
-    pub value: ArtifactValueId,
-    /// Stable semantic rejection reason.
-    pub reason: legality::FusionRejectionReason,
-}
-
-/// Dependency-completion boundary between canonical stages.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BarrierRecord {
-    /// Stage that must complete.
-    pub before_stage: u32,
-    /// Stage admitted after completion.
-    pub after_stage: u32,
-    /// Sorted dependency-edge indices requiring the boundary.
-    pub dependencies: Vec<u32>,
-}
-
-/// Reason a typed value crosses a fusion-group boundary.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum MaterializationReason {
-    /// Value is consumed by a different fusion group.
-    CrossGroupUse,
-    /// Value is observable after artifact completion.
-    Output,
-    /// Value is retained for a later submission.
-    Retained,
-}
-
-/// Canonical value materialization fact.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct MaterializationRecord {
-    /// Materialized value.
-    pub value: ArtifactValueId,
-    /// Producing fusion group.
-    pub producer: FusionGroupId,
-    /// Earliest stage at which the value exists.
-    pub stage: u32,
-    /// Stable semantic reason.
-    pub reason: MaterializationReason,
-}
-
-/// How the runtime executes one compiled artifact.
-///
-/// The compiler decides this, not the dispatcher: the decision needs the launch
-/// count the caller declared and the device launch costs, both of which are
-/// compile-time facts recorded in the request. A consumer executes the mode the
-/// artifact names.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ExecutionMode {
-    /// One kernel launch per stage per submission.
-    Static,
-    /// One resident kernel that polls a device-side work queue for the whole
-    /// launch batch, paying one setup cost instead of one launch per item.
-    Persistent {
-        /// Launch overhead this mode removes, less the setup it pays, in
-        /// nanoseconds. Computed from the device launch costs and the declared
-        /// launch batch, and always positive: a non-positive figure is recorded
-        /// as [`Self::Static`].
-        saved_ns: u64,
-    },
-}
-
-/// Whether a device measurement selected the plan, and what it measured.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum PlanMeasurement {
-    /// The search budget allowed no measurement, so the plan is the analytic
-    /// winner and carries no measured device time.
-    Unbudgeted,
-    /// The device reports no launch timestamp, so nothing measured on it would
-    /// be a device time.
-    UntimedDevice,
-    /// Selected by lowest median device time across measured finalists.
-    Measured {
-        /// Timestamped launches performed against the winning finalist.
-        launches: u32,
-        /// Median device time of those launches in nanoseconds.
-        median_ns: u64,
-    },
-}
-
-/// Immutable compiler-selected whole-program plan.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SelectedPlan {
-    /// Executable queue or resident-partition topology selected by search.
-    pub topology: crate::candidate::ExecutionTopology,
-    /// Versioned backend-neutral phase and transform schedule selected by search.
-    pub schedule: SelectedSchedule,
-    /// Selected fusion groups.
-    pub fusion: Vec<FusionRecord>,
-    /// Required dependency-completion boundaries.
-    pub barriers: Vec<BarrierRecord>,
-    /// Required cross-stage value materializations.
-    pub materializations: Vec<MaterializationRecord>,
-    /// Number of legal candidates examined.
-    pub candidates_explored: u32,
-    /// Search bounds under which this plan was selected.
-    pub search_budget: SearchBudget,
-    /// Exact work charged against the bounded search.
-    pub search_work: SearchWork,
-    /// Open-model cost of the selected plan.
-    pub selection_cost: cost::CostBreakdown,
-    /// Illegal producer-consumer fusions pruned with stable reasons.
-    pub pruned_fusions: Vec<FusionRejection>,
-    /// How the runtime executes this artifact.
-    pub execution: ExecutionMode,
-    /// Whether a device measurement chose this plan over its finalists.
-    pub measurement: PlanMeasurement,
-}
-
-impl SelectedPlan {
-    /// Validate the immutable selected-schedule stage and its bounded search
-    /// provenance.
-    ///
-    /// # Errors
-    ///
-    /// Returns a malformed-artifact diagnostic when topology cardinalities,
-    /// search accounting, or measurement provenance are inconsistent.
-    pub fn validate(&self) -> Result<(), CompileError> {
-        let invalid = |path: &str, message: String, fix: &str| {
-            failure(
-                CompilerFailureKind::MalformedArtifact,
-                format!("artifact.body.selected_plan.{path}"),
-                message,
-                fix,
-            )
-        };
-        self.schedule.validate().map_err(|error| {
-            invalid(
-                "schedule",
-                error.to_string(),
-                "re-run bounded schedule search and persist only a validated neutral schedule",
-            )
-        })?;
-        match self.topology {
-            crate::candidate::ExecutionTopology::Sequential => {}
-            crate::candidate::ExecutionTopology::ConcurrentQueue { queues } if queues > 0 => {}
-            crate::candidate::ExecutionTopology::ResidentPartition { partitions, .. }
-                if partitions > 0 => {}
-            crate::candidate::ExecutionTopology::ConcurrentQueue { .. } => {
-                return Err(invalid(
-                    "topology.queues",
-                    "concurrent queue topology contains zero queues".to_string(),
-                    "select at least one executable queue",
-                ));
-            }
-            crate::candidate::ExecutionTopology::ResidentPartition { .. } => {
-                return Err(invalid(
-                    "topology.partitions",
-                    "resident topology contains zero partitions".to_string(),
-                    "select at least one resident partition",
-                ));
-            }
-        }
-        if self.candidates_explored == 0 {
-            return Err(invalid(
-                "candidates_explored",
-                "selected schedule records no explored legal candidate".to_string(),
-                "record the executable unfused baseline candidate",
-            ));
-        }
-        if self.candidates_explored != self.search_work.candidates_explored {
-            return Err(invalid(
-                "search_work.candidates_explored",
-                format!(
-                    "selected plan records {} explored candidates but search work records {}",
-                    self.candidates_explored, self.search_work.candidates_explored
-                ),
-                "derive both fields from the same bounded search result",
-            ));
-        }
-        for (path, actual, limit) in [
-            (
-                "search_work.candidates_explored",
-                u64::from(self.search_work.candidates_explored),
-                u64::from(self.search_budget.max_candidates),
-            ),
-            (
-                "search_work.cpu_work",
-                self.search_work.cpu_work,
-                self.search_budget.max_cpu_work,
-            ),
-            (
-                "search_work.target_compilations",
-                u64::from(self.search_work.target_compilations),
-                u64::from(self.search_budget.max_target_compilations),
-            ),
-            (
-                "search_work.measurements",
-                u64::from(self.search_work.measurements),
-                u64::from(self.search_budget.max_measurements)
-                    .saturating_mul(u64::from(self.search_work.target_compilations)),
-            ),
-        ] {
-            if actual > limit {
-                return Err(invalid(
-                    path,
-                    format!("search charged {actual} units against a limit of {limit}"),
-                    "record a schedule selected within its authenticated search budget",
-                ));
-            }
-        }
-        match self.measurement {
-            PlanMeasurement::Measured {
-                launches,
-                median_ns,
-            } => {
-                if launches == 0 || median_ns == 0 {
-                    return Err(invalid(
-                        "measurement",
-                        "measured selection contains a zero launch count or device time"
-                            .to_string(),
-                        "record positive measured launches and device nanoseconds",
-                    ));
-                }
-                if launches > self.search_work.measurements {
-                    return Err(invalid(
-                        "measurement.launches",
-                        format!(
-                            "winning finalist records {launches} launches but the search records only {} measurements",
-                            self.search_work.measurements
-                        ),
-                        "derive winning launch count from the recorded search samples",
-                    ));
-                }
-            }
-            PlanMeasurement::Unbudgeted | PlanMeasurement::UntimedDevice
-                if self.search_work.measurements != 0 =>
-            {
-                return Err(invalid(
-                    "measurement",
-                    format!(
-                        "unmeasured selection records {} on-device measurements",
-                        self.search_work.measurements
-                    ),
-                    "record measured evidence when samples selected the plan, or record zero samples",
-                ));
-            }
-            PlanMeasurement::Unbudgeted | PlanMeasurement::UntimedDevice => {}
-        }
-        Ok(())
-    }
-}
-
-/// Deterministic identities establishing how an artifact was produced.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Provenance {
-    /// Canonical source-graph content identity.
-    pub source_graph: Digest,
-    /// Canonical validated-request identity.
-    pub request: Digest,
-    /// Compiler crate version.
-    pub compiler_version: String,
-}
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 10;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -458,6 +38,7 @@ pub(crate) struct ArtifactPayload {
     pub(crate) resources: Vec<ResourceRecord>,
     pub(crate) resource_envelope: ResourceEnvelope,
     pub(crate) geometry: Vec<GeometryRecord>,
+    pub(crate) workspace: WorkspacePlan,
     pub(crate) provenance: Provenance,
 }
 
@@ -542,6 +123,111 @@ impl Artifact {
         &self.payload.geometry
     }
 
+    /// Exact workspace allocation and cross-entry offsets.
+    #[must_use]
+    pub const fn workspace(&self) -> &WorkspacePlan {
+        &self.payload.workspace
+    }
+
+    /// Reject recorded geometry or workspace a consumer could not submit.
+    ///
+    /// One record per node, every predecessor and workspace value known, and
+    /// every field a launch reads present. Decoded bytes reach this check
+    /// before any consumer reads a launch out of them, because a partial
+    /// geometry set is the one shape a consumer would fill in itself.
+    ///
+    /// # Errors
+    ///
+    /// Returns when a node has no geometry, two records name one node, a
+    /// record is unlaunchable, or the workspace plan names a value the
+    /// artifact does not carry.
+    pub fn validate_geometry(&self) -> Result<(), CompileError> {
+        let mut recorded = BTreeMap::new();
+        for record in self.geometry() {
+            record.validate()?;
+            if recorded.insert(record.node, record).is_some() {
+                return Err(failure(
+                    CompilerFailureKind::MalformedArtifact,
+                    "artifact.body.geometry",
+                    format!("node {} carries two geometry records", record.node.0),
+                    "record one selected geometry per canonical node",
+                ));
+            }
+        }
+        for node in self.nodes() {
+            if !recorded.contains_key(&node.id) {
+                return Err(failure(
+                    CompilerFailureKind::MalformedArtifact,
+                    "artifact.body.geometry",
+                    format!("node {} carries no selected geometry", node.id.0),
+                    "compile the artifact with a compiler that records geometry for every node",
+                ));
+            }
+        }
+        for record in self.geometry() {
+            for predecessor in &record.predecessors {
+                if !recorded.contains_key(predecessor) {
+                    return Err(failure(
+                        CompilerFailureKind::MalformedArtifact,
+                        "artifact.body.geometry",
+                        format!(
+                            "node {} depends on entry point {} the artifact does not carry",
+                            record.node.0, predecessor.0
+                        ),
+                        "record the entry-point dependency order the selected plan implies",
+                    ));
+                }
+            }
+        }
+        self.workspace().validate()?;
+        let lifetimes: BTreeMap<ArtifactValueId, ResourceLifetime> = self
+            .resources()
+            .iter()
+            .map(|resource| (resource.value, resource.lifetime))
+            .collect();
+        for region in &self.workspace().regions {
+            match lifetimes.get(&region.value) {
+                Some(lifetime) if *lifetime == region.lifetime => {}
+                Some(_) => {
+                    return Err(failure(
+                        CompilerFailureKind::MalformedArtifact,
+                        "artifact.body.workspace",
+                        format!(
+                            "workspace region for value {} disagrees with its resource lifetime",
+                            region.value.0
+                        ),
+                        "record the lifetime the resource set states",
+                    ))
+                }
+                None => {
+                    return Err(failure(
+                        CompilerFailureKind::MalformedArtifact,
+                        "artifact.body.workspace",
+                        format!(
+                            "workspace region names value {} the artifact does not carry",
+                            region.value.0
+                        ),
+                        "reserve workspace only for values the resource set records",
+                    ))
+                }
+            }
+            if !recorded.contains_key(&region.first_entry)
+                || !recorded.contains_key(&region.last_entry)
+            {
+                return Err(failure(
+                    CompilerFailureKind::MalformedArtifact,
+                    "artifact.body.workspace",
+                    format!(
+                        "workspace region for value {} names an entry point the artifact does not carry",
+                        region.value.0
+                    ),
+                    "record the live range across entry points the selected plan implies",
+                ));
+            }
+        }
+        Ok(())
+    }
+
     /// Canonical materialization records.
     #[must_use]
     pub fn materializations(&self) -> &[MaterializationRecord] {
@@ -610,6 +296,7 @@ impl Artifact {
             digest: Digest(decoded.digest),
         };
         artifact.payload.selected_plan.validate()?;
+        artifact.validate_geometry()?;
         // A compiled artifact cannot carry a duplicate resource name because graph
         // value names are unique, so this is a check on decoded bytes rather than on
         // this crate's own output. Refusing here keeps every consumer's name lookup
@@ -631,7 +318,6 @@ pub(crate) fn encode_payload(payload: &ArtifactPayload) -> Result<frame::Framed,
     let body = serde_json::to_vec(payload).map_err(serialization_failure)?;
     frame::ARTIFACT.encode(payload.schema_version, &body)
 }
-
 // Inline: the tamper this suite needs is a re-framed `ArtifactPayload`, and both
 // `ArtifactPayload` and `frame::ARTIFACT` are crate-private. Recomputing the frame
 // from its documented layout in an integration test would put a second copy of the
@@ -653,7 +339,9 @@ mod tests {
 
     use super::*;
     use crate::cost::CostBreakdown;
-    use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform};
+    use crate::identity::ArtifactNodeId;
+    use crate::request::{SearchBudget, SearchWork};
+    use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform, SelectedSchedule};
 
     fn payload(resources: Vec<ResourceRecord>) -> ArtifactPayload {
         ArtifactPayload {
@@ -687,6 +375,7 @@ mod tests {
                 peak_live_bytes: 0,
             },
             geometry: Vec::new(),
+            workspace: WorkspacePlan::default(),
             provenance: Provenance {
                 source_graph: Digest([0; 32]),
                 request: Digest([0; 32]),
@@ -915,5 +604,185 @@ mod tests {
                 record.name
             );
         }
+    }
+
+    fn entry_node(id: u32) -> NodeRecord {
+        NodeRecord {
+            id: ArtifactNodeId(id),
+            name: format!("n{id}"),
+            program: Vec::new(),
+        }
+    }
+
+    fn launch(node: u32) -> GeometryRecord {
+        GeometryRecord {
+            node: ArtifactNodeId(node),
+            phase: vyre_foundation::schedule::SchedulePhaseId(0),
+            predecessors: Vec::new(),
+            logical_coverage: [64, 1, 1],
+            grid: [2, 1, 1],
+            workgroup_size: [32, 1, 1],
+            vector_width: 1,
+            roles: Vec::new(),
+            ring_slots: 0,
+            barrier_phases: Vec::new(),
+            dynamic_shared_bytes: 0,
+            launch_intent: LaunchResourceIntent::default(),
+            persistence: EntryPersistence::Static,
+        }
+    }
+
+    fn launchable() -> ArtifactPayload {
+        let mut payload = payload(vec![ResourceRecord {
+            value: ArtifactValueId(1),
+            name: "scratch".to_string(),
+            element_count: 64,
+            byte_count: 256,
+            lifetime: ResourceLifetime::Invocation,
+            retained_predecessor: None,
+            first_stage: 0,
+            last_stage: 0,
+        }]);
+        payload.nodes = vec![entry_node(0)];
+        payload.geometry = vec![launch(0)];
+        payload.workspace = WorkspacePlan {
+            total_bytes: 256,
+            regions: vec![WorkspaceRegion {
+                value: ArtifactValueId(1),
+                offset: 0,
+                bytes: 256,
+                lifetime: ResourceLifetime::Invocation,
+                first_entry: ArtifactNodeId(0),
+                last_entry: ArtifactNodeId(0),
+            }],
+        };
+        payload
+    }
+
+    fn rejection_path(payload: ArtifactPayload, case: &str) -> String {
+        let error = decode_payload(payload).unwrap_err();
+        error
+            .diagnostic
+            .location
+            .as_ref()
+            .and_then(|location| location.path.clone())
+            .unwrap_or_else(|| panic!("{case}: diagnostic carries no path: {error}"))
+    }
+
+    /// WHY: recording geometry is what stops a consumer from computing one. A
+    /// node with no record leaves exactly the hole a consumer fills in itself,
+    /// and two records for one node let two consumers launch different shapes
+    /// out of one authenticated artifact.
+    #[test]
+    fn decode_rejects_a_geometry_set_that_does_not_cover_every_node_exactly_once() {
+        decode_payload(launchable()).expect("a covered node set decodes");
+
+        let mut missing = launchable();
+        missing.geometry.clear();
+        let error = decode_payload(missing).expect_err("a node without geometry must not decode");
+        assert!(
+            error
+                .diagnostic
+                .message
+                .contains("node 0 carries no selected geometry"),
+            "diagnostic must name the uncovered node: {error}"
+        );
+
+        let mut doubled = launchable();
+        doubled.geometry.push(launch(0));
+        let error = decode_payload(doubled).expect_err("two records for one node must not decode");
+        assert!(
+            error
+                .diagnostic
+                .message
+                .contains("node 0 carries two geometry records"),
+            "diagnostic must name the doubly recorded node: {error}"
+        );
+    }
+
+    /// WHY: field-level launchability is checked beside the records, and decode
+    /// is the boundary that has to apply it. Bytes that reached a consumer with
+    /// an unlaunchable record would be launched, because the consumer no longer
+    /// has geometry of its own to fall back on.
+    #[test]
+    fn decode_refuses_an_unlaunchable_record_before_a_consumer_reads_it() {
+        let mut invalid = launchable();
+        invalid.geometry[0].grid = [1, 1, 1];
+        assert_eq!(
+            rejection_path(invalid, "grid that does not cover the recorded points"),
+            "artifact.geometry[0].grid"
+        );
+    }
+
+    /// WHY: a predecessor names the entry point a submission waits on. One the
+    /// artifact does not carry is a dependency the runtime would drop, which
+    /// reorders the submission instead of failing it.
+    #[test]
+    fn decode_rejects_a_predecessor_the_artifact_does_not_carry() {
+        let mut invalid = launchable();
+        invalid.geometry[0].predecessors = vec![ArtifactNodeId(9)];
+        let error = decode_payload(invalid).expect_err("an unknown predecessor must not decode");
+        assert!(
+            error
+                .diagnostic
+                .message
+                .contains("depends on entry point 9 the artifact does not carry"),
+            "diagnostic must name the missing entry point: {error}"
+        );
+    }
+
+    /// WHY: the runtime allocates the recorded plan and binds its offsets
+    /// verbatim, so a region the resource set does not back is a bind of a
+    /// buffer that has no owner, and an unbindable plan must not survive decode.
+    #[test]
+    fn decode_rejects_a_workspace_the_resource_set_does_not_back() {
+        let cases: Vec<(&str, fn(&mut ArtifactPayload), &str)> = vec![
+            (
+                "region for a value the artifact does not carry",
+                |payload| payload.workspace.regions[0].value = ArtifactValueId(7),
+                "artifact.body.workspace",
+            ),
+            (
+                "region disagreeing with its resource lifetime",
+                |payload| payload.workspace.regions[0].lifetime = ResourceLifetime::Retained,
+                "artifact.body.workspace",
+            ),
+            (
+                "live range naming an entry point the artifact does not carry",
+                |payload| payload.workspace.regions[0].last_entry = ArtifactNodeId(4),
+                "artifact.body.workspace",
+            ),
+            (
+                "misaligned region",
+                |payload| {
+                    payload.workspace.regions[0].offset = 8;
+                    payload.workspace.total_bytes = 264;
+                },
+                "artifact.workspace.regions[0].offset",
+            ),
+        ];
+        for (case, mutate, expected) in cases {
+            let mut invalid = launchable();
+            mutate(&mut invalid);
+            assert_eq!(rejection_path(invalid, case), expected, "{case}");
+        }
+    }
+
+    /// WHY: a body written by the previous schema carries no geometry set and no
+    /// workspace plan, so a reader that accepted one would submit an artifact
+    /// with no recorded launch. The version is read before the body, so stale
+    /// bytes are refused instead of partially interpreted.
+    #[test]
+    fn bytes_stamped_with_the_previous_schema_are_refused() {
+        let framed = encode_payload(&launchable()).expect("fixture payload must frame");
+        Artifact::from_bytes(&framed.bytes).expect("the current schema decodes");
+
+        let mut stale = framed.bytes.clone();
+        stale[4..6].copy_from_slice(&(ARTIFACT_SCHEMA_VERSION - 1).to_le_bytes());
+        let error = Artifact::from_bytes(&stale).expect_err("a stale schema must not decode");
+        assert_eq!(
+            error.diagnostic.code.as_str(),
+            CompilerFailureKind::VersionSkew.as_str()
+        );
     }
 }

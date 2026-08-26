@@ -130,9 +130,21 @@ pub fn admit(
             Arc::new(Program::from_wire(&image.program).map_err(|error| {
                 invalid_module(&format!("selected Program is malformed: {error}"))
             })?);
+        // The neutral record is the selected schedule projected onto one launch,
+        // and the envelope already refused a payload that states another shape.
+        // Reading it here rather than the payload keeps one authority for the
+        // submitted geometry.
+        let geometry = artifact
+            .geometry()
+            .iter()
+            .find(|geometry| geometry.node == entry_node)
+            .ok_or_else(|| {
+                invalid_module("admitted node has no selected launch geometry in the artifact")
+            })?;
         let mut config = DispatchConfig::default();
-        config.grid_override = Some(entry.grid_size);
-        config.dispatch_grid = Some(entry.grid_size);
+        config.grid_override = Some(geometry.grid);
+        config.dispatch_grid = Some(geometry.grid);
+        config.workgroup_override = Some(geometry.workgroup_size);
         admitted.push(AdmittedModule {
             image,
             program,

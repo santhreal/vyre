@@ -151,13 +151,22 @@ pub(crate) fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
 }
 
 /// The single-binding entry point the target payload fixtures attach.
-pub(crate) fn entry_point() -> TargetEntryPoint {
+///
+/// Geometry is read out of the artifact rather than restated here. The envelope
+/// admits only the geometry the compiler selected, so a hand-written shape would
+/// be a fixture that can never be attached to the artifact it names.
+pub(crate) fn entry_point(artifact: &Artifact) -> TargetEntryPoint {
+    let selected = artifact
+        .geometry()
+        .iter()
+        .find(|record| record.node == ArtifactNodeId(0))
+        .expect("fixture artifact records geometry for its only node");
     TargetEntryPoint {
         name: "entry".into(),
         node: ArtifactNodeId(0),
-        workgroup_size: [8, 1, 1],
-        grid_size: [4, 1, 1],
-        dynamic_shared_bytes: 64,
+        workgroup_size: selected.workgroup_size,
+        grid_size: selected.grid,
+        dynamic_shared_bytes: selected.dynamic_shared_bytes,
         resource_bindings: vec![TargetResourceBinding {
             resource: ArtifactValueId(0),
             group: 0,

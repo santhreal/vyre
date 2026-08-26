@@ -270,7 +270,7 @@ fn validate_artifact_for_bundle(
             )
         })?;
     validate_axes("workgroup_size", geometry.workgroup_size)?;
-    validate_axes("grid_size", entry.grid_size)?;
+    validate_axes("grid_size", geometry.grid)?;
     validate_resource_bindings(envelope, entry)?;
     validate_weight_payload_fits_first_finite_resource(envelope, entry, weights)
 }

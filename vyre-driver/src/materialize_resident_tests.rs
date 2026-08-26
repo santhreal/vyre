@@ -10,8 +10,7 @@ use vyre_megakernel::{
 
 use crate::materialize::materialize_test_fixtures::{
     binding, compile_graph, compile_graph_with_facts, compile_graph_with_search, contract,
-    entry_point, entry_point_with_geometry, global_bindings, test_instance_core, test_payload,
-    try_payload,
+    entry_point, global_bindings, test_instance_core, test_payload, try_payload,
 };
 use crate::materialize::unbound_input;
 use crate::BindingPlan;
@@ -63,6 +62,7 @@ fn read_write_retained_preserves_input_output_and_order() {
     let payload = test_payload(
         &artifact,
         vec![entry_point(
+            &artifact,
             "entry0",
             ArtifactNodeId(0),
             global_bindings(&[
@@ -135,6 +135,7 @@ fn write_only_output_and_read_only_input_separation() {
     let payload = test_payload(
         &artifact,
         vec![entry_point(
+            &artifact,
             "entry0",
             ArtifactNodeId(0),
             vec![
@@ -208,6 +209,7 @@ fn read_write_invocation_lifetime_is_input_and_output() {
     let payload = test_payload(
         &artifact,
         vec![entry_point(
+            &artifact,
             "entry0",
             ArtifactNodeId(0),
             global_bindings(&[(ArtifactValueId(val_inv.0), TargetResourceAccess::ReadWrite)]),
@@ -268,6 +270,7 @@ fn read_write_constant_lifetime_is_input_and_output() {
     let payload = test_payload(
         &artifact,
         vec![entry_point(
+            &artifact,
             "entry0",
             ArtifactNodeId(0),
             global_bindings(&[(
@@ -380,6 +383,7 @@ fn module_aliases_with_mixed_access_and_lifetimes_contract() {
         &artifact,
         vec![
             entry_point(
+                &artifact,
                 "entry0",
                 ArtifactNodeId(node0.0),
                 global_bindings(&[
@@ -388,6 +392,7 @@ fn module_aliases_with_mixed_access_and_lifetimes_contract() {
                 ]),
             ),
             entry_point(
+                &artifact,
                 "entry1",
                 ArtifactNodeId(node1.0),
                 global_bindings(&[
@@ -471,12 +476,10 @@ fn target_descriptor_order_does_not_reorder_program_inputs() {
         .value;
     let payload = try_payload(
         &artifact,
-        vec![entry_point_with_geometry(
+        vec![entry_point(
+            &artifact,
             "walk",
             ArtifactNodeId(0),
-            [1, 1, 1],
-            [1, 1, 1],
-            0,
             global_bindings(&[
                 (out, TargetResourceAccess::ReadWrite),
                 (nodes, TargetResourceAccess::ReadOnly),
@@ -551,6 +554,7 @@ fn bidirectional_retained_lineage_and_exact_slot_resolution_fails_closed() {
     let payload = test_payload(
         &artifact,
         vec![entry_point(
+            &artifact,
             "stage_entry",
             ArtifactNodeId(node_id.0),
             global_bindings(&[

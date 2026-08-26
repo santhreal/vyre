@@ -22,16 +22,14 @@ use crate::BackendError;
 
 /// Target bytes for one selected lowering, plus the entry point that runs them.
 ///
-/// The grid size, the workgroup size and the resource bindings are not here on
-/// purpose: they follow from the selected lowering, so the shell derives them
-/// and no dialect can disagree about them.
+/// The grid size, the workgroup size, the shared-memory requirement and the
+/// resource bindings are not here on purpose: the artifact records all four, so
+/// the shell copies them through and no dialect can disagree about them.
 pub struct EmittedDialectModule {
     /// Entry point name inside the emitted module.
     pub entry_point: String,
     /// Emitted bytes in the dialect's own format.
     pub bytes: Vec<u8>,
-    /// Dynamic shared memory the entry point requires, zero when it needs none.
-    pub dynamic_shared_bytes: u32,
 }
 
 /// Emit one selected lowering as target bytes. The only per-backend half of a
@@ -155,16 +153,8 @@ impl TargetCompiler for DialectCompiler {
             self.profile.clone(),
             move |selected, profile| {
                 let emitted = emit(selected, profile)?;
-                let grid_size = crate::infer_dispatch_grid_for_count(
-                    selected.logical_element_count,
-                    selected.descriptor().dispatch.workgroup_size,
-                )
-                .map_err(|error| TargetCompileError::Emission(error.to_string()))?;
                 Ok(EmittedTargetModule {
                     entry_point: emitted.entry_point,
-                    grid_size,
-                    dynamic_shared_bytes: emitted.dynamic_shared_bytes,
-                    workgroup_size: selected.descriptor().dispatch.workgroup_size,
                     resource_bindings: selected.canonical_bindings.clone(),
                     bytes: emitted.bytes,
                 })

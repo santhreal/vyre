@@ -35,7 +35,6 @@ fn emit_metal_module(
     Ok(EmittedDialectModule {
         entry_point,
         bytes,
-        dynamic_shared_bytes: 0,
     })
 }
 

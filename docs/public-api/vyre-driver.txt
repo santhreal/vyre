@@ -782,7 +782,7 @@ pub fn vyre_driver::dispatch_element_count_for_program(program: &vyre_foundation
 pub fn vyre_driver::dispatch_param_words_into(bindings: &[vyre_driver::Binding], element_count: u32, words: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::dispatch_policy::DispatchPolicyVerdict::primary_execution_mode(&self) -> vyre_driver::dispatch_policy::DispatchExecutionMode
 pub fn vyre_driver::dispatch_policy::evaluate_dispatch_policy(inputs: &vyre_driver::dispatch_policy::DispatchPolicyInputs) -> vyre_driver::dispatch_policy::DispatchPolicyVerdict
-pub fn vyre_driver::dispatch_policy::select_primary_execution_mode(execution: vyre_megakernel::schema::ExecutionMode, command_reuse: vyre_driver::command_reuse_policy::CommandReuseDecision) -> vyre_driver::dispatch_policy::DispatchExecutionMode
+pub fn vyre_driver::dispatch_policy::select_primary_execution_mode(execution: vyre_megakernel::schema::plan::ExecutionMode, command_reuse: vyre_driver::command_reuse_policy::CommandReuseDecision) -> vyre_driver::dispatch_policy::DispatchExecutionMode
 pub fn vyre_driver::dispatch_policy_cache_digest(config: &vyre_driver::DispatchConfig) -> [u8; 32]
 pub fn vyre_driver::dispatch_policy_cache_string(config: &vyre_driver::DispatchConfig) -> alloc::string::String
 pub fn vyre_driver::dispatch_prefilter_confirm<B, F>(backend: &B, speculator: &vyre_driver::AdaptiveSpeculator, plan: vyre_driver::SpeculativeDispatchPlan<'_>, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig, confirm_two_stage: F) -> core::result::Result<vyre_driver::SpeculativeDispatchOutcome, vyre_driver::BackendError> where B: vyre_driver::VyreBackend + ?core::marker::Sized, F: core::ops::function::FnMut(vyre_driver::OutputBuffers) -> core::result::Result<vyre_driver::OutputBuffers, vyre_driver::BackendError>
@@ -2106,14 +2106,14 @@ pub vyre_driver::dispatch_policy::DispatchPolicyInputs::arm_a: vyre_driver::arm_
 pub vyre_driver::dispatch_policy::DispatchPolicyInputs::arm_b: vyre_driver::arm_independence::ArmBindingSummary
 pub vyre_driver::dispatch_policy::DispatchPolicyInputs::bindless: vyre_driver::bindless_policy::BindlessInputs
 pub vyre_driver::dispatch_policy::DispatchPolicyInputs::copy_dst_slot: core::option::Option<u32>
-pub vyre_driver::dispatch_policy::DispatchPolicyInputs::execution: vyre_megakernel::schema::ExecutionMode
+pub vyre_driver::dispatch_policy::DispatchPolicyInputs::execution: vyre_megakernel::schema::plan::ExecutionMode
 pub vyre_driver::dispatch_policy::DispatchPolicyInputs::graph: vyre_driver::command_reuse_policy::CommandReuseInputs
 pub vyre_driver::dispatch_policy::DispatchPolicyInputs::trace_jit: vyre_driver::trace_jit_policy::TraceJitInputs
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::arm_independence: vyre_driver::arm_independence::ArmIndependenceVerdict
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::bindless: vyre_driver::bindless_policy::BindlessDecision
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::command_reuse: vyre_driver::command_reuse_policy::CommandReuseDecision
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::copy_overlap: core::option::Option<vyre_driver::async_copy_overlap::CopyOverlapDecision>
-pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::execution: vyre_megakernel::schema::ExecutionMode
+pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::execution: vyre_megakernel::schema::plan::ExecutionMode
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::trace_jit: vyre_driver::trace_jit_policy::TraceJitDecision
 pub vyre_driver::extraction_cost::NodeHints::compile_time_constant: bool
 pub vyre_driver::extraction_cost::NodeHints::fp16_eligible: bool
@@ -2516,7 +2516,6 @@ pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental::argu
 pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental::degree: u8
 pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental::op: vyre_foundation::optimizer::passes::algebraic::precision_hint::TranscendentalOp
 pub vyre_driver::target_dialect::EmittedDialectModule::bytes: alloc::vec::Vec<u8>
-pub vyre_driver::target_dialect::EmittedDialectModule::dynamic_shared_bytes: u32
 pub vyre_driver::target_dialect::EmittedDialectModule::entry_point: alloc::string::String
 pub vyre_driver::target_dialect::TargetDialect::backend_id: &'static str
 pub vyre_driver::target_dialect::TargetDialect::dialect: &'static str

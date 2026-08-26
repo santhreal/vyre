@@ -43,7 +43,6 @@ fn emit_ptx_module(
     Ok(EmittedDialectModule {
         entry_point: "main".to_string(),
         bytes: source.into_bytes(),
-        dynamic_shared_bytes: 0,
     })
 }
 

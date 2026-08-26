@@ -92,7 +92,12 @@ fn sparse_and_reordered_module_binding_identities() {
 
     let payload = test_payload(
         &artifact,
-        vec![entry_point("entry0", ArtifactNodeId(0), bindings)],
+        vec![entry_point(
+            &artifact,
+            "entry0",
+            ArtifactNodeId(0),
+            bindings,
+        )],
     );
 
     let core = test_instance_core(&artifact, &payload).unwrap();
@@ -273,6 +278,7 @@ fn transitive_retained_predecessor_lineage_preservation() {
         &artifact,
         vec![
             entry_point(
+                &artifact,
                 "seg0_entry",
                 ArtifactNodeId(node0.0),
                 global_bindings(&[(
@@ -281,6 +287,7 @@ fn transitive_retained_predecessor_lineage_preservation() {
                 )]),
             ),
             entry_point(
+                &artifact,
                 "seg1_entry",
                 ArtifactNodeId(node1.0),
                 global_bindings(&[
@@ -476,6 +483,7 @@ fn later_module_inputs_and_outputs_resolve_by_named_entry_identity() {
     let artifact = compile_graph(graph);
     let entry = |node, input, output| {
         entry_point(
+            &artifact,
             "main",
             node,
             global_bindings(&[
@@ -610,6 +618,7 @@ fn write_only_binding_of_an_output_value_is_output_only() {
     let payload = test_payload(
         &artifact,
         vec![entry_point(
+            &artifact,
             "entry0",
             ArtifactNodeId(0),
             global_bindings(&[
@@ -737,6 +746,7 @@ fn a_read_write_buffer_keeps_both_ends_of_its_retained_chain_under_one_name() {
     let payload = test_payload(
         &artifact,
         vec![entry_point(
+            &artifact,
             "step_entry",
             ArtifactNodeId(node.0),
             global_bindings(&[(
@@ -876,6 +886,7 @@ fn payload_access_decides_projection_membership_at_every_lifetime() {
             let payload = test_payload(
                 &artifact,
                 vec![entry_point(
+                    &artifact,
                     "entry0",
                     ArtifactNodeId(0),
                     global_bindings(&[
@@ -958,14 +969,15 @@ fn hostile_binding_bytes_cannot_resize_admitted_launch_geometry() {
         .find(|resource| resource.name == "input")
         .expect("the artifact must contain its input")
         .value;
-    let admitted_grid = [7, 3, 1];
+    let recorded = artifact
+        .geometry()
+        .first()
+        .expect("the artifact records geometry for its only node")
+        .clone();
     let payload =
         compile_selected_modules(&artifact, test_format(), test_profile(), |selected, _| {
             Ok(EmittedTargetModule {
                 entry_point: "main".to_string(),
-                grid_size: admitted_grid,
-                dynamic_shared_bytes: 0,
-                workgroup_size: [8, 1, 1],
                 resource_bindings: selected.canonical_bindings.clone(),
                 bytes: vec![1, 2, 3],
             })
@@ -1003,8 +1015,9 @@ fn hostile_binding_bytes_cannot_resize_admitted_launch_geometry() {
             state,
             |_, _| panic!("the fixture dispatch returns its declared output"),
             |_, _, _, config, state| {
-                assert_eq!(config.grid_override, Some(admitted_grid));
-                assert_eq!(config.dispatch_grid, Some(admitted_grid));
+                assert_eq!(config.grid_override, Some(recorded.grid));
+                assert_eq!(config.dispatch_grid, Some(recorded.grid));
+                assert_eq!(config.workgroup_override, Some(recorded.workgroup_size));
                 assert_eq!(state[&input], hostile_bytes);
                 Ok(TimedDispatchResult::host_timed(vec![vec![42, 0, 0, 0]], 0))
             },

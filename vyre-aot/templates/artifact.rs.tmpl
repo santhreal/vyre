@@ -223,8 +223,8 @@ pub fn load_bundle(dir: &Path) -> Result<LoadedBundle, Box<dyn std::error::Error
             entry_point: entry.name.clone(),
             dispatch: DispatchConfig {
                 workgroup_size: geometry.workgroup_size,
-                grid_size: entry.grid_size,
-                dynamic_shared_bytes: entry.dynamic_shared_bytes,
+                grid_size: geometry.grid,
+                dynamic_shared_bytes: geometry.dynamic_shared_bytes,
             },
             buffers,
             notes: package.notes,

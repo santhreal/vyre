@@ -33,7 +33,6 @@ fn emit_spirv_module(
     Ok(EmittedDialectModule {
         entry_point: "main".to_string(),
         bytes,
-        dynamic_shared_bytes: 0,
     })
 }
 

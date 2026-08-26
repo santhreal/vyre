@@ -278,16 +278,14 @@ fn fuse_selected_module(module: &SelectedModule) -> Result<Program, TargetCompil
 }
 
 /// Target-native bytes and the exact emitted entry metadata.
+///
+/// An emitter reports what it produced, never how it is launched. Geometry
+/// reported here was geometry the emitter chose, and an emitter that chose one
+/// could disagree with the artifact that authenticated it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EmittedTargetModule {
     /// Entry point exported by the target-native module.
     pub entry_point: String,
-    /// Exact target grid dimensions.
-    pub grid_size: [u32; 3],
-    /// Entry-local dynamic shared byte requirement.
-    pub dynamic_shared_bytes: u32,
-    /// Exact target workgroup dimensions.
-    pub workgroup_size: [u32; 3],
     /// Exact target resource projection.
     pub resource_bindings: Vec<TargetResourceBinding>,
     /// Immutable target-native module bytes.
@@ -357,13 +355,23 @@ pub fn compile_selected_modules(
                 selected.group.0
             ))
         })?;
+        let geometry = artifact
+            .geometry()
+            .iter()
+            .find(|geometry| geometry.node == node)
+            .ok_or_else(|| {
+                TargetCompileError::InvalidArtifact(format!(
+                    "node {} has no selected launch geometry",
+                    node.0
+                ))
+            })?;
         let entry_point = emitted.entry_point;
         entries.push(TargetEntryPoint {
             name: entry_point.clone(),
             node,
-            workgroup_size: emitted.workgroup_size,
-            grid_size: emitted.grid_size,
-            dynamic_shared_bytes: emitted.dynamic_shared_bytes,
+            workgroup_size: geometry.workgroup_size,
+            grid_size: geometry.grid,
+            dynamic_shared_bytes: geometry.dynamic_shared_bytes,
             resource_bindings: emitted.resource_bindings,
         });
         let program = selected.program.to_wire().map_err(|error| {
@@ -592,12 +600,13 @@ fn selected_abi(artifact: &Artifact, module: &SelectedModule) -> ArtifactAbi {
     }
 }
 
-/// Decode one selected group's programs at the geometry the search selected.
+/// Decode one selected group's programs and refuse a program whose declared
+/// geometry is not the one the artifact authenticated.
 ///
-/// The workgroup a node program declares is an input to the compiler search, not
-/// its result. The artifact records the selected geometry per node, so the
-/// decoded programs are set to it before fusion and the emitted module declares
-/// the shape every consumer launches.
+/// The artifact freezes every node program at the selected workgroup, so this
+/// boundary has nothing to choose. It used to rewrite the shape here instead,
+/// which meant the authenticated bytes and the emitted module could disagree on
+/// the one field a launch cannot recover from.
 fn decode_group(
     artifact: &Artifact,
     group: &FusionRecord,
@@ -617,7 +626,7 @@ fn decode_group(
                         group.id.0, node.0
                     ))
                 })?;
-            let mut program = Program::from_wire(&record.program).map_err(|error| {
+            let program = Program::from_wire(&record.program).map_err(|error| {
                 TargetCompileError::InvalidArtifact(format!(
                     "node {} canonical Program failed to decode: {error}",
                     node.0
@@ -634,7 +643,10 @@ fn decode_group(
                     ))
                 })?;
             if program.workgroup_size != geometry.workgroup_size {
-                program.set_workgroup_size(geometry.workgroup_size);
+                return Err(TargetCompileError::InvalidArtifact(format!(
+                    "node {} declares workgroup {:?} and the artifact selected {:?}",
+                    node.0, program.workgroup_size, geometry.workgroup_size
+                )));
             }
             Ok::<Program, TargetCompileError>(program)
         })

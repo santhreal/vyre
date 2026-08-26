@@ -776,6 +776,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `apply_cross_scope_cse`, `apply_cross_scope_cse_with_lookup`,
   `build_canonical_id_program`, `build_canonical_delta_compact_program` and
   `build_structural_hash_program` keep the path the documentation always named.
+- An artifact framed under an earlier schema is refused with a version-skew
+  diagnostic before its body is read.
 - The registry-linkage rule read `inventory::submit!` and a hand-kept roster of
   four macros that submit a registration on a caller's behalf. The workspace
   already had eighteen, so a crate whose only submission came through one of
@@ -786,6 +788,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   submits, however many links out. The call is read at code offsets, so a
   comment quoting the registry and a string literal holding the call are not
   submissions.
+- Target payload admission rejects an entry point whose workgroup, grid, or
+  dynamic shared bytes differ from the geometry the artifact recorded for that
+  node.
 - A materialize test states a binding by the value it names and the access it
   declares. materialize_test_fixtures::global_bindings derives the bind group
   and the slot index from position, so a test no longer restates group 0 and a
@@ -3084,6 +3089,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   described `vyre-primitives` as marker types with no runtime behavior and no
   bench, while it owns the Tier 2.5 substrate and declares the
   `wire_throughput` bench.
+- Artifact schema 10 records the selected launch of every entry point,
+  including the entry dependency order, logical coverage, grid, workgroup,
+  vector width, pipeline roles, ring slots, barrier phases, dynamic shared
+  bytes, launch resource intent, persistence, and the workspace plan a runtime
+  allocates.
 - The command-line contract is a registered gate. `scripts/cli_docs.py`
   declared the binaries, ran every help route and generated the CLI section of
   each crate README, and it read the xtask command set by matching a
@@ -3637,6 +3647,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   directly: `check_signature` returns the unpermitted row as a verdict and
   `residual_effects` names what stays open after a handler discharges. Handler
   composition is row union, so it needs no function of its own.
+- `EmittedTargetModule` and `EmittedDialectModule` no longer carry workgroup,
+  grid, or dynamic shared byte fields, so an emitter reports target bytes and
+  the artifact record states the launch.
 - vyre_lower::emit_adversarial_corpus no longer exports EmitAdversarialBackend,
   REQUIRED_BACKENDS or required_backends. Each emitter test asserted only that
   the hand-written list named its own variant while already running the corpus.

@@ -1,10 +1,18 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 use vyre_foundation::logical::LogicalProgramGraph;
+use vyre_foundation::schedule::{
+    PipelineRoleGroup, SchedulePhase, SchedulePhaseId, ScheduleTransform, SelectedSchedule,
+};
 
 use crate::{
     build_barriers, build_materializations, domain_digest, facts::PlanningFacts, failure,
-    group_stages, select::Selection, ArtifactNodeId, CompileError, CompilerFailureKind,
-    DependencyEdge, DeviceFacts, ExecutionMode, ExternalFacts, FusionGroupId, FusionRecord,
-    FusionRejection, GeometryRecord, PlanMeasurement, SearchBudget, SearchWork, SelectedPlan,
+    group_stages, select::Selection, ArtifactNodeId, ArtifactValueId, BarrierPhaseRecord,
+    CompileError, CompilerFailureKind, DependencyEdge, DependencyEndpoint, DeviceFacts,
+    EntryAbiRecord, EntryPersistence, ExecutionMode, ExternalFacts, FusionGroupId, FusionRecord,
+    FusionRejection, GeometryRecord, LaunchResourceIntent, PlanMeasurement, ResourceLifetime,
+    ResourceRecord, SearchBudget, SearchWork, SelectedPlan, WorkspacePlan, WorkspaceRegion,
+    WORKSPACE_REGION_ALIGNMENT,
 };
 
 const LEGALITY_DIGEST_DOMAIN: &[u8] = b"VYRE_FUSION_LEGALITY_V1\0";
@@ -92,19 +100,10 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
             }
         })
         .collect();
-    let geometry = graph
-        .nodes()
-        .iter()
-        .enumerate()
-        .map(|(index, node)| GeometryRecord {
-            node: ArtifactNodeId(node.id.0),
-            workgroup_size: candidate.group_workgroup(candidate.node_groups[index], facts),
-        })
-        .collect();
     let barriers = build_barriers(dependencies, &node_groups, &stages)?;
     let materializations = build_materializations(graph, &node_groups, &stages);
     let execution = execution_mode(device, external, selection.cost.launches);
-    let schedule = candidate.selected_schedule(facts).map_err(|error| {
+    let mut schedule = candidate.selected_schedule(facts).map_err(|error| {
         failure(
             CompilerFailureKind::InvalidProgram,
             "planner.schedule",
@@ -112,6 +111,38 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
             "repair schedule candidate generation before selecting an artifact",
         )
     })?;
+    // A persistent route is a schedule decision, so it is applied to the
+    // schedule rather than recorded beside it. Recording the mode alone left
+    // the queue capacity nowhere, and a consumer that needed one sized it.
+    if let ExecutionMode::Persistent { .. } = execution {
+        let capacity = u32::try_from(selection.cost.launches.max(1)).unwrap_or(u32::MAX);
+        let phases: Vec<SchedulePhaseId> = schedule.phases.iter().map(|phase| phase.id).collect();
+        for phase in phases {
+            schedule
+                .apply(ScheduleTransform::PersistentQueue { phase, capacity })
+                .map_err(|error| {
+                    failure(
+                        CompilerFailureKind::InvalidProgram,
+                        "planner.schedule.persistent_queue",
+                        error.to_string(),
+                        "select a static route when the schedule cannot carry a bounded queue",
+                    )
+                })?;
+        }
+    }
+    let predecessors = entry_predecessors(dependencies);
+    let geometry = graph
+        .nodes()
+        .iter()
+        .map(|node| {
+            let node_id = ArtifactNodeId(node.id.0);
+            geometry_record(
+                node_id,
+                &schedule,
+                predecessors.get(&node_id).cloned().unwrap_or_default(),
+            )
+        })
+        .collect::<Result<Vec<_>, CompileError>>()?;
     let selected_plan = SelectedPlan {
         topology: candidate.topology(),
         schedule,
@@ -165,4 +196,203 @@ fn execution_mode(
     ExecutionMode::Persistent {
         saved_ns: u64::try_from(removed - setup).unwrap_or(u64::MAX),
     }
+}
+
+/// Entry-point predecessors implied by the canonical dependency edges.
+///
+/// Value endpoints are projected onto the nodes that carry them, because a
+/// consumer submits entry points and never a value.
+fn entry_predecessors(
+    dependencies: &[DependencyEdge],
+) -> BTreeMap<ArtifactNodeId, Vec<ArtifactNodeId>> {
+    let mut predecessors = BTreeMap::<ArtifactNodeId, BTreeSet<ArtifactNodeId>>::new();
+    for edge in dependencies {
+        if let (DependencyEndpoint::Node(from), DependencyEndpoint::Node(to)) = (edge.from, edge.to)
+        {
+            if from != to {
+                predecessors.entry(to).or_default().insert(from);
+            }
+        }
+    }
+    predecessors
+        .into_iter()
+        .map(|(node, set)| (node, set.into_iter().collect()))
+        .collect()
+}
+
+/// Project the selected schedule phase covering one node onto its launch record.
+fn geometry_record(
+    node: ArtifactNodeId,
+    schedule: &SelectedSchedule,
+    predecessors: Vec<ArtifactNodeId>,
+) -> Result<GeometryRecord, CompileError> {
+    let phase = schedule.phase_for_region(node.0).ok_or_else(|| {
+        failure(
+            CompilerFailureKind::InvalidProgram,
+            format!("planner.geometry[{}]", node.0),
+            "no selected schedule phase covers this node",
+            "select a schedule whose phases cover every graph node",
+        )
+    })?;
+    let (roles, ring_slots) = pipeline_assignment(schedule, phase.id);
+    let record = GeometryRecord {
+        node,
+        phase: phase.id,
+        predecessors,
+        logical_coverage: phase.grid,
+        grid: GeometryRecord::covering_grid(phase.grid, phase.workgroup)?,
+        workgroup_size: phase.workgroup,
+        vector_width: phase.vector_width,
+        roles,
+        ring_slots,
+        barrier_phases: barrier_phases(schedule, phase.id),
+        dynamic_shared_bytes: shared_bytes(node, phase)?,
+        launch_intent: LaunchResourceIntent {
+            private_bytes: phase.resources.private_bytes,
+            registers_per_invocation: phase.resources.registers_per_invocation,
+        },
+        persistence: persistence(schedule, phase.id),
+    };
+    record.validate()?;
+    Ok(record)
+}
+
+/// Workgroup-shared bytes the phase reserves, as a launch reads them.
+fn shared_bytes(node: ArtifactNodeId, phase: &SchedulePhase) -> Result<u32, CompileError> {
+    u32::try_from(phase.resources.shared_bytes).map_err(|_| {
+        failure(
+            CompilerFailureKind::ResourceOverflow,
+            format!("planner.geometry[{}].dynamic_shared_bytes", node.0),
+            "selected workgroup-shared bytes exceed the launch limit",
+            "place the value in device memory instead of workgroup-shared storage",
+        )
+    })
+}
+
+/// Pipeline roles and ring depth the schedule assigned to one phase.
+fn pipeline_assignment(
+    schedule: &SelectedSchedule,
+    phase: SchedulePhaseId,
+) -> (Vec<PipelineRoleGroup>, u32) {
+    for record in &schedule.transforms {
+        if let ScheduleTransform::Pipeline {
+            producer,
+            consumer,
+            ring_slots,
+            roles,
+        } = &record.transform
+        {
+            if *producer == phase || *consumer == phase {
+                return (roles.clone(), *ring_slots);
+            }
+        }
+    }
+    (Vec::new(), 0)
+}
+
+/// Synchronization boundaries the schedule placed across one phase.
+fn barrier_phases(schedule: &SelectedSchedule, phase: SchedulePhaseId) -> Vec<BarrierPhaseRecord> {
+    schedule
+        .transforms
+        .iter()
+        .filter_map(|record| match &record.transform {
+            ScheduleTransform::Synchronize { phases, scope } if phases.contains(&phase) => {
+                Some(BarrierPhaseRecord {
+                    scope: *scope,
+                    phases: phases.clone(),
+                })
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+/// Persistence the schedule selected for one phase.
+fn persistence(schedule: &SelectedSchedule, phase: SchedulePhaseId) -> EntryPersistence {
+    for record in &schedule.transforms {
+        if let ScheduleTransform::PersistentQueue {
+            phase: persistent,
+            capacity,
+        } = record.transform
+        {
+            if persistent == phase {
+                return EntryPersistence::Persistent {
+                    queue_capacity: capacity,
+                };
+            }
+        }
+    }
+    EntryPersistence::Static
+}
+
+/// Assign one workspace offset per value the artifact produces inside itself.
+///
+/// A region is storage the runtime allocates because nothing outside the
+/// artifact owns it: some entry point writes the value, and a later entry point
+/// or a retained successor reads it. Constants and graph inputs are bound by the
+/// caller and outputs are read back by the caller, so none of them is workspace
+/// even when their lifetime class matches. The live range is the span of entry
+/// points that bind the value.
+pub(crate) fn workspace_plan(
+    resources: &[ResourceRecord],
+    entries: &[EntryAbiRecord],
+) -> Result<WorkspacePlan, CompileError> {
+    let mut produced = BTreeSet::<ArtifactValueId>::new();
+    let mut span = BTreeMap::<ArtifactValueId, (ArtifactNodeId, ArtifactNodeId)>::new();
+    for entry in entries {
+        produced.extend(entry.outputs.iter().copied());
+        for value in entry.inputs.iter().chain(entry.outputs.iter()) {
+            span.entry(*value)
+                .and_modify(|range| {
+                    range.0 = range.0.min(entry.node);
+                    range.1 = range.1.max(entry.node);
+                })
+                .or_insert((entry.node, entry.node));
+        }
+    }
+    let mut plan = WorkspacePlan::default();
+    for resource in resources {
+        if !matches!(
+            resource.lifetime,
+            ResourceLifetime::Invocation | ResourceLifetime::Retained
+        ) || !produced.contains(&resource.value)
+        {
+            continue;
+        }
+        let Some((first_entry, last_entry)) = span.get(&resource.value).copied() else {
+            continue;
+        };
+        if resource.byte_count == 0 {
+            continue;
+        }
+        let offset = plan
+            .total_bytes
+            .checked_next_multiple_of(WORKSPACE_REGION_ALIGNMENT)
+            .ok_or_else(|| {
+                failure(
+                    CompilerFailureKind::ResourceOverflow,
+                    "planner.workspace.offset",
+                    "workspace offset exceeds the addressable range",
+                    "reduce the retained working set",
+                )
+            })?;
+        plan.total_bytes = offset.checked_add(resource.byte_count).ok_or_else(|| {
+            failure(
+                CompilerFailureKind::ResourceOverflow,
+                "planner.workspace.total_bytes",
+                "workspace allocation exceeds the addressable range",
+                "reduce the retained working set",
+            )
+        })?;
+        plan.regions.push(WorkspaceRegion {
+            value: resource.value,
+            offset,
+            bytes: resource.byte_count,
+            lifetime: resource.lifetime,
+            first_entry,
+            last_entry,
+        });
+    }
+    plan.validate()?;
+    Ok(plan)
 }

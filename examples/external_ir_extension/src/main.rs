@@ -60,9 +60,6 @@ impl TargetCompiler for ExternalTargetCompiler {
                 let bytes = selected.descriptor().id.as_bytes().to_vec();
                 Ok(EmittedTargetModule {
                     entry_point: "external_entry".to_string(),
-                    grid_size: [selected.logical_element_count, 1, 1],
-                    dynamic_shared_bytes: 0,
-                    workgroup_size: selected.descriptor().dispatch.workgroup_size,
                     resource_bindings: selected.canonical_bindings.clone(),
                     bytes,
                 })
