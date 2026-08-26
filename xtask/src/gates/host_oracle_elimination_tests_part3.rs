@@ -6,17 +6,21 @@ use crate::gates::scan::{attribute_is_test_only, test_module_files, Tree};
 
 use super::host_oracle_elimination_eval::analyze_sources;
 use super::host_oracle_elimination_records::TARGET_ROOTS;
+use super::host_oracle_elimination_test_fixtures::{
+    canonical_dispatch_fn, resident_staging_source, self_binding_staging_source,
+    CANONICAL_DISPATCH_IMPORTS,
+};
 use super::host_oracle_elimination_tests_part1::analyze_files;
 
 #[test]
 fn mutation_catches_post_dispatch_integer_division_derivation() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
-pub fn average_via(dispatcher: &dyn ProgramDispatcher, input: &[u32]) -> Result<u64, DispatchError> {
+pub fn average_via(dispatcher: &dyn SemanticExecutor, input: &[u32]) -> Result<u64, SemanticExecutionError> {
     let prog = Program::default();
-    let out = dispatcher.dispatch(&prog, &[vec![]], None)?;
+    let out = dispatcher.execute(&prog, &[vec![]], None)?;
     let total = u64::from(out[0][0]);
     let count = input.len() as u64;
     Ok(total / count)
@@ -34,9 +38,9 @@ pub fn average_via(dispatcher: &dyn ProgramDispatcher, input: &[u32]) -> Result<
 #[test]
 fn mutation_catches_metadata_only_dispatcher_call_not_establishing_execution() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
-pub fn fake_oracle_capabilities_only(dispatcher: &dyn ProgramDispatcher, input: &[u32]) -> u32 {
+pub fn fake_oracle_capabilities_only(dispatcher: &dyn SemanticExecutor, input: &[u32]) -> u32 {
     let _caps = dispatcher.capabilities();
     let mut sum = 0u32;
     for &x in input {
@@ -58,7 +62,7 @@ pub fn fake_oracle_capabilities_only(dispatcher: &dyn ProgramDispatcher, input: 
 #[test]
 fn mutation_catches_unrelated_field_receiver_masquerading_as_dispatch() {
     let code = r#"
-use vyre_foundation::program_dispatch::ProgramDispatcher;
+use vyre_megakernel::SemanticExecutor;
 
 struct LocalDevice;
 impl LocalDevice {
@@ -70,11 +74,11 @@ struct LocalContext {
 }
 
 pub fn fake_field_dispatch(
-    _dispatcher: &dyn ProgramDispatcher,
+    _dispatcher: &dyn SemanticExecutor,
     input: &[u32],
 ) -> u32 {
     let context = LocalContext { device: LocalDevice };
-    context.device.dispatch(1, 2);
+    context.device.execute(1, 2);
     input.iter().copied().sum()
 }
 "#;
@@ -92,13 +96,13 @@ pub fn fake_field_dispatch(
 #[test]
 fn mutation_catches_non_dispatching_helper_not_establishing_execution() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
-fn record_dispatcher(_dispatcher: &dyn ProgramDispatcher) {
+fn record_dispatcher(_dispatcher: &dyn SemanticExecutor) {
     // telemetry/record only, does not dispatch
 }
 
-pub fn fake_oracle_with_record(dispatcher: &dyn ProgramDispatcher, input: &[u32]) -> u32 {
+pub fn fake_oracle_with_record(dispatcher: &dyn SemanticExecutor, input: &[u32]) -> u32 {
     record_dispatcher(dispatcher);
     let mut sum = 0u32;
     for &x in input {
@@ -121,14 +125,14 @@ pub fn fake_oracle_with_record(dispatcher: &dyn ProgramDispatcher, input: &[u32]
 fn mutation_permits_transitive_dispatch_helper_execution() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
-fn helper_dispatch(dispatcher: &dyn ProgramDispatcher, _input: &[u32]) -> Result<Vec<Vec<u8>>, DispatchError> {
+fn helper_dispatch(dispatcher: &dyn SemanticExecutor, _input: &[u32]) -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
     let prog = Program::default();
-    dispatcher.dispatch(&prog, &[vec![]], None)
+    dispatcher.execute(&prog, &[vec![]], None)
 }
 
-pub fn wrapper_dispatch_via(dispatcher: &dyn ProgramDispatcher, input: &[u32]) -> Result<Vec<u8>, DispatchError> {
+pub fn wrapper_dispatch_via(dispatcher: &dyn SemanticExecutor, input: &[u32]) -> Result<Vec<u8>, SemanticExecutionError> {
     let out = helper_dispatch(dispatcher, input)?;
     Ok(out[0].clone())
 }
@@ -144,7 +148,7 @@ fn mutation_catches_generic_masquerade_with_similar_ident() {
     let code = r#"
 pub struct NotD;
 
-pub fn fake_oracle_with_not_d<D: vyre_foundation::program_dispatch::ProgramDispatcher>(
+pub fn fake_oracle_with_not_d<D: vyre_megakernel::SemanticExecutor>(
     not_d: &NotD,
     input: &[u32],
 ) -> u32 {
@@ -158,7 +162,7 @@ pub fn fake_oracle_with_not_d<D: vyre_foundation::program_dispatch::ProgramDispa
     let findings = analyze_files(&[("vyre-libs/src/encoding/not_d.rs", code)]);
     assert!(
             !findings.is_empty(),
-            "function taking NotD where D is bounded by ProgramDispatcher must be convicted as unisolated host algorithm"
+            "function taking NotD where D is bounded by SemanticExecutor must be convicted as unisolated host algorithm"
         );
     assert!(findings.iter().any(|f| f
         .message
@@ -168,15 +172,15 @@ pub fn fake_oracle_with_not_d<D: vyre_foundation::program_dispatch::ProgramDispa
 fn mutation_permits_legitimate_transpose_input_staging() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn forward_backward_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     adj: &[u32],
     n: usize,
-) -> Result<(Vec<u8>, Vec<u8>), DispatchError> {
+) -> Result<(Vec<u8>, Vec<u8>), SemanticExecutionError> {
     let prog1 = Program::default();
-    let fwd = dispatcher.dispatch(&prog1, &[vec![]], None)?;
+    let fwd = dispatcher.execute(&prog1, &[vec![]], None)?;
     let mut transpose = vec![0u32; n * n];
     for i in 0..n {
         for j in 0..n {
@@ -184,7 +188,7 @@ pub fn forward_backward_via(
         }
     }
     let prog2 = Program::default();
-    let bwd = dispatcher.dispatch(&prog2, &[transpose], None)?;
+    let bwd = dispatcher.execute(&prog2, &[transpose], None)?;
     Ok((fwd[0].clone(), bwd[0].clone()))
 }
 "#;
@@ -199,17 +203,17 @@ pub fn forward_backward_via(
 fn mutation_catches_unrelated_sum_between_dispatches_returned_afterward() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn evasion_unrelated_sum_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     _input: &[u32],
-) -> Result<(u32, Vec<u8>), DispatchError> {
+) -> Result<(u32, Vec<u8>), SemanticExecutionError> {
     let prog1 = Program::default();
-    let out1 = dispatcher.dispatch(&prog1, &[vec![]], None)?;
+    let out1 = dispatcher.execute(&prog1, &[vec![]], None)?;
     let host_sum = out1[0].iter().map(|&x| x as u32).sum::<u32>();
     let prog2 = Program::default();
-    let out2 = dispatcher.dispatch(&prog2, &[vec![]], None)?;
+    let out2 = dispatcher.execute(&prog2, &[vec![]], None)?;
     Ok((host_sum, out2[0].clone()))
 }
 "#;
@@ -230,19 +234,19 @@ pub fn evasion_unrelated_sum_via(
 fn mutation_catches_unrelated_semantic_side_effect_between_dispatches() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn evasion_side_effect_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     acc: &mut Vec<u32>,
-) -> Result<Vec<u8>, DispatchError> {
+) -> Result<Vec<u8>, SemanticExecutionError> {
     let prog1 = Program::default();
-    let out1 = dispatcher.dispatch(&prog1, &[vec![]], None)?;
+    let out1 = dispatcher.execute(&prog1, &[vec![]], None)?;
     for &b in &out1[0] {
         acc.push((b as u32) * 2);
     }
     let prog2 = Program::default();
-    let out2 = dispatcher.dispatch(&prog2, &[vec![]], None)?;
+    let out2 = dispatcher.execute(&prog2, &[vec![]], None)?;
     Ok(out2[0].clone())
 }
 "#;
@@ -265,16 +269,16 @@ pub fn evasion_side_effect_via(
 fn mutation_catches_terminal_post_dispatch_math() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn evasion_terminal_math_via(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     _input: &[u32],
-) -> Result<u64, DispatchError> {
+) -> Result<u64, SemanticExecutionError> {
     let prog1 = Program::default();
-    let _out1 = dispatcher.dispatch(&prog1, &[vec![]], None)?;
+    let _out1 = dispatcher.execute(&prog1, &[vec![]], None)?;
     let prog2 = Program::default();
-    let out2 = dispatcher.dispatch(&prog2, &[vec![]], None)?;
+    let out2 = dispatcher.execute(&prog2, &[vec![]], None)?;
     let total = (out2[0][0] as u64) + 100;
     Ok(total)
 }
@@ -295,14 +299,14 @@ pub fn evasion_terminal_math_via(
 fn mutation_permits_arbitrary_index_names_in_inter_dispatch_staging() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn staged_arbitrary_names_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     matrix: &[u32],
     dim_rows: usize,
     dim_cols: usize,
-) -> Result<Vec<Vec<u8>>, DispatchError> {
+) -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
     let mut staged_transpose = vec![0u8; dim_rows * dim_cols * 4];
     for row_arbitrary_alpha in 0..dim_rows {
         for col_arbitrary_beta in 0..dim_cols {
@@ -313,7 +317,7 @@ pub fn staged_arbitrary_names_into(
         }
     }
     let prog = Program::default();
-    dispatcher.dispatch(&prog, &[staged_transpose], None)
+    dispatcher.execute(&prog, &[staged_transpose], None)
 }
 "#;
     let findings = analyze_files(&[("vyre-libs/src/clean_staging_names.rs", code)]);
@@ -327,13 +331,13 @@ pub fn staged_arbitrary_names_into(
 fn mutation_catches_semantic_scalar_named_index_or_idx() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn evasion_semantic_scalar_named_idx(
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<u64, DispatchError> {
+    dispatcher: &dyn SemanticExecutor,
+) -> Result<u64, SemanticExecutionError> {
     let prog = Program::default();
-    let out = dispatcher.dispatch(&prog, &[vec![]], None)?;
+    let out = dispatcher.execute(&prog, &[vec![]], None)?;
     let idx = (out[0][0] as u64) + 10;
     let index = idx * 2;
     Ok(index)
@@ -353,14 +357,14 @@ pub fn evasion_semantic_scalar_named_idx(
 fn mutation_catches_post_dispatch_decoded_value_comparison() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn evasion_post_dispatch_comparison(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     threshold: u8,
-) -> Result<bool, DispatchError> {
+) -> Result<bool, SemanticExecutionError> {
     let prog = Program::default();
-    let out = dispatcher.dispatch(&prog, &[vec![]], None)?;
+    let out = dispatcher.execute(&prog, &[vec![]], None)?;
     let decoded_byte = out[0][0];
     if decoded_byte > threshold {
         Ok(true)
@@ -382,13 +386,13 @@ pub fn evasion_post_dispatch_comparison(
 #[test]
 fn mutation_catches_post_dispatch_reconstruction_loop_with_scalar_math() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn evasion_reconstruction_with_math_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     outputs: &mut Vec<Vec<u8>>,
-) -> Result<(), DispatchError> {
-    let readbacks = dispatcher.dispatch(&vec![], &[vec![]], None)?;
+) -> Result<(), SemanticExecutionError> {
+    let readbacks = dispatcher.execute(&vec![], &[vec![]], None)?;
     for (output, readback) in outputs.iter_mut().zip(&readbacks) {
         output.clear();
         output.extend_from_slice(readback);
@@ -411,22 +415,22 @@ pub fn evasion_reconstruction_with_math_into(
 #[test]
 fn mutation_catches_post_dispatch_decoder_loop_with_accumulation() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 fn decode_u32_output_exact(
     _readback: &[u8],
     _expected_words: usize,
     _context: &str,
     _out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     Ok(())
 }
 
 pub fn evasion_decode_batch_into(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     mut outs: Vec<(usize, &'static str, &mut Vec<u32>)>,
-) -> Result<u32, DispatchError> {
-    let readbacks = dispatcher.dispatch(&vec![], &[vec![]], None)?;
+) -> Result<u32, SemanticExecutionError> {
+    let readbacks = dispatcher.execute(&vec![], &[vec![]], None)?;
     let mut total_words = 0u32;
     for (index, (expected_words, context, out)) in outs.into_iter().enumerate() {
         decode_u32_output_exact(&readbacks[index], expected_words, context, out)?;
@@ -449,12 +453,12 @@ pub fn evasion_decode_batch_into(
 #[test]
 fn mutation_catches_post_dispatch_output_base_arithmetic_derivation() {
     let code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn evasion_output_base_scalar_math_via(
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<u64, DispatchError> {
-    let outputs = dispatcher.dispatch(&vec![], &[vec![]], None)?;
+    dispatcher: &dyn SemanticExecutor,
+) -> Result<u64, SemanticExecutionError> {
+    let outputs = dispatcher.execute(&vec![], &[vec![]], None)?;
     let output_base = outputs[0][0] as u64;
     let computed = output_base + 42;
     Ok(computed)
@@ -488,13 +492,13 @@ pub fn unpack_custom_u32_slice_into(src: &[u8], count: usize, out: &mut Vec<u32>
 "#;
     let caller_code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn resident_caller_using_unpack(
-    dispatcher: &dyn ProgramDispatcher,
+    dispatcher: &dyn SemanticExecutor,
     out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
-    let readbacks = dispatcher.dispatch(&vec![], &[vec![]], None)?;
+) -> Result<(), SemanticExecutionError> {
+    let readbacks = dispatcher.execute(&vec![], &[vec![]], None)?;
     crate::wire::unpack_custom_u32_slice_into(&readbacks[0], 10, out);
     Ok(())
 }
@@ -596,122 +600,70 @@ pub fn arbitrary_catalog_query_into(
 
 #[test]
 fn mutation_permits_genuine_resident_staging_consumed_by_canonical_dispatch() {
-    let staging_code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-
-pub struct ResidentDemoGraph {
-    pub handles: [u64; 2],
-}
-
-pub fn upload_resident_demo_graph(
-    dispatcher: &impl ProgramDispatcher,
-    node_count: u32,
-    edges: &[u32],
-) -> Result<ResidentDemoGraph, DispatchError> {
-    let mut packed = Vec::with_capacity(edges.len() * 4);
-    for &edge in edges {
-        let encoded = (edge ^ 0x5A5A_5A5A).wrapping_mul(node_count | 1);
-        packed.extend_from_slice(&encoded.to_le_bytes());
-    }
-    let h0 = dispatcher.alloc_resident(packed.len())?;
-    dispatcher.upload_resident(h0, &packed)?;
-    let h1 = dispatcher.alloc_resident(16)?;
-    Ok(ResidentDemoGraph { handles: [h0, h1] })
-}
-"#;
-    let dispatch_code = r#"
-use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentDispatchStep};
-use crate::staging::{upload_resident_demo_graph, ResidentDemoGraph};
-
-pub fn execute_demo_traversal(
-    dispatcher: &impl ProgramDispatcher,
-    graph: &ResidentDemoGraph,
-) -> Result<(), DispatchError> {
-    let prog = Program::default();
-    let step = ResidentDispatchStep {
-        program: &prog,
-        handle_ids: &graph.handles,
-        grid_override: Some([1, 1, 1]),
-    };
-    dispatcher.dispatch_resident_sequence(&[step])
-}
-
+    let staging_code = resident_staging_source(
+        "ResidentDemoGraph",
+        "pub ",
+        &[("upload_resident_demo_graph", "0x5A5A_5A5A")],
+    );
+    let dispatch_code = format!(
+        "{CANONICAL_DISPATCH_IMPORTS}use crate::staging::{{upload_resident_demo_graph, ResidentDemoGraph}};
+{dispatch}
 pub fn run_demo_traversal(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    logical: &LogicalProgramGraph<'_>,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     edges: &[u32],
-) -> Result<(), DispatchError> {
-    let graph = upload_resident_demo_graph(dispatcher, node_count, edges)?;
-    execute_demo_traversal(dispatcher, &graph)
-}
-"#;
+) -> Result<(), SemanticExecutionError> {{
+    let graph = upload_resident_demo_graph(node_count, edges)?;
+    execute_demo_traversal(dispatcher, logical, policy, &graph)
+}}
+",
+        dispatch = canonical_dispatch_fn("pub ", "execute_demo_traversal", "ResidentDemoGraph", "", "")
+    );
     let findings = analyze_files(&[
-        ("vyre-libs/src/staging.rs", staging_code),
-        ("vyre-libs/src/dispatch.rs", dispatch_code),
+        ("vyre-libs/src/staging.rs", staging_code.as_str()),
+        ("vyre-libs/src/dispatch.rs", dispatch_code.as_str()),
     ]);
     assert!(
-            findings.is_empty(),
-            "resident staging consumed by genuine canonical dispatch must not be convicted: {findings:?}"
-        );
+        findings.is_empty(),
+        "resident staging consumed by genuine canonical dispatch must not be convicted: {findings:?}"
+    );
 }
 
 #[test]
 fn mutation_catches_same_basename_in_different_modules_rejected() {
-    let staging_a = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-
-pub struct ResidentDemoGraph {
-    pub handles: [u64; 2],
-}
-
-pub fn upload_resident_demo_graph(
-    dispatcher: &impl ProgramDispatcher,
-    node_count: u32,
-    edges: &[u32],
-) -> Result<ResidentDemoGraph, DispatchError> {
-    let mut packed = Vec::with_capacity(edges.len() * 4);
-    for &edge in edges {
-        let encoded = (edge ^ 0x5A5A_5A5A).wrapping_mul(node_count | 1);
-        packed.extend_from_slice(&encoded.to_le_bytes());
-    }
-    let h0 = dispatcher.alloc_resident(packed.len())?;
-    dispatcher.upload_resident(h0, &packed)?;
-    let h1 = dispatcher.alloc_resident(16)?;
-    Ok(ResidentDemoGraph { handles: [h0, h1] })
-}
-"#;
-    let dispatch_b = r#"
-use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentDispatchStep};
-
-pub struct ResidentDemoGraph {
-    pub handles: [u64; 2],
-}
-
-pub fn execute_demo_traversal(
-    dispatcher: &impl ProgramDispatcher,
-    graph: &ResidentDemoGraph,
-) -> Result<(), DispatchError> {
-    let prog = Program::default();
-    let step = ResidentDispatchStep {
-        program: &prog,
-        handle_ids: &graph.handles,
-        grid_override: Some([1, 1, 1]),
-    };
-    dispatcher.dispatch_resident_sequence(&[step])
-}
-
+    let staging_a = resident_staging_source(
+        "ResidentDemoGraph",
+        "pub ",
+        &[("upload_resident_demo_graph", "0x5A5A_5A5A")],
+    );
+    let dispatch_b = format!(
+        "{CANONICAL_DISPATCH_IMPORTS}
+pub struct ResidentDemoGraph {{
+    pub packed: Vec<u8>,
+}}
+{dispatch}
 pub fn run_b(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    logical: &LogicalProgramGraph<'_>,
+    policy: &SemanticExecutionPolicy,
     graph: &ResidentDemoGraph,
-) -> Result<(), DispatchError> {
-    execute_demo_traversal(dispatcher, graph)
-}
-"#;
+) -> Result<(), SemanticExecutionError> {{
+    execute_demo_traversal(dispatcher, logical, policy, graph)
+}}
+",
+        dispatch = canonical_dispatch_fn(
+            "pub ",
+            "execute_demo_traversal",
+            "ResidentDemoGraph",
+            "",
+            ""
+        )
+    );
     let findings = analyze_files(&[
-        ("vyre-libs/src/staging_a.rs", staging_a),
-        ("vyre-libs/src/dispatch_b.rs", dispatch_b),
+        ("vyre-libs/src/staging_a.rs", staging_a.as_str()),
+        ("vyre-libs/src/dispatch_b.rs", dispatch_b.as_str()),
     ]);
     assert!(
         !findings.is_empty(),
@@ -727,75 +679,33 @@ pub fn run_b(
 
 #[test]
 fn mutation_catches_unused_alternative_producer_rejected() {
-    let staging_code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-
-pub struct ResidentDemoGraph {
-    pub handles: [u64; 2],
-}
-
-pub fn upload_resident_demo_graph(
-    dispatcher: &impl ProgramDispatcher,
-    node_count: u32,
-    edges: &[u32],
-) -> Result<ResidentDemoGraph, DispatchError> {
-    let mut packed = Vec::with_capacity(edges.len() * 4);
-    for &edge in edges {
-        let encoded = (edge ^ 0x5A5A_5A5A).wrapping_mul(node_count | 1);
-        packed.extend_from_slice(&encoded.to_le_bytes());
-    }
-    let h0 = dispatcher.alloc_resident(packed.len())?;
-    dispatcher.upload_resident(h0, &packed)?;
-    let h1 = dispatcher.alloc_resident(16)?;
-    Ok(ResidentDemoGraph { handles: [h0, h1] })
-}
-
-pub fn upload_unused_alt_graph(
-    dispatcher: &impl ProgramDispatcher,
-    node_count: u32,
-    edges: &[u32],
-) -> Result<ResidentDemoGraph, DispatchError> {
-    let mut packed = Vec::with_capacity(edges.len() * 4);
-    for &edge in edges {
-        let encoded = (edge ^ 0x1234_5678).wrapping_mul(node_count | 1);
-        packed.extend_from_slice(&encoded.to_le_bytes());
-    }
-    let h0 = dispatcher.alloc_resident(packed.len())?;
-    dispatcher.upload_resident(h0, &packed)?;
-    let h1 = dispatcher.alloc_resident(16)?;
-    Ok(ResidentDemoGraph { handles: [h0, h1] })
-}
-"#;
-    let dispatch_code = r#"
-use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentDispatchStep};
-use crate::staging::{upload_resident_demo_graph, ResidentDemoGraph};
-
-pub fn execute_demo_traversal(
-    dispatcher: &impl ProgramDispatcher,
-    graph: &ResidentDemoGraph,
-) -> Result<(), DispatchError> {
-    let prog = Program::default();
-    let step = ResidentDispatchStep {
-        program: &prog,
-        handle_ids: &graph.handles,
-        grid_override: Some([1, 1, 1]),
-    };
-    dispatcher.dispatch_resident_sequence(&[step])
-}
-
+    let staging_code = resident_staging_source(
+        "ResidentDemoGraph",
+        "pub ",
+        &[
+            ("upload_resident_demo_graph", "0x5A5A_5A5A"),
+            ("upload_unused_alt_graph", "0x1234_5678"),
+        ],
+    );
+    let dispatch_code = format!(
+        "{CANONICAL_DISPATCH_IMPORTS}use crate::staging::{{upload_resident_demo_graph, ResidentDemoGraph}};
+{dispatch}
 pub fn run_demo_traversal(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    logical: &LogicalProgramGraph<'_>,
+    policy: &SemanticExecutionPolicy,
     node_count: u32,
     edges: &[u32],
-) -> Result<(), DispatchError> {
-    let graph = upload_resident_demo_graph(dispatcher, node_count, edges)?;
-    execute_demo_traversal(dispatcher, &graph)
-}
-"#;
+) -> Result<(), SemanticExecutionError> {{
+    let graph = upload_resident_demo_graph(node_count, edges)?;
+    execute_demo_traversal(dispatcher, logical, policy, &graph)
+}}
+",
+        dispatch = canonical_dispatch_fn("pub ", "execute_demo_traversal", "ResidentDemoGraph", "", "")
+    );
     let findings = analyze_files(&[
-        ("vyre-libs/src/staging.rs", staging_code),
-        ("vyre-libs/src/dispatch.rs", dispatch_code),
+        ("vyre-libs/src/staging.rs", staging_code.as_str()),
+        ("vyre-libs/src/dispatch.rs", dispatch_code.as_str()),
     ]);
     assert!(
         !findings.is_empty(),
@@ -818,22 +728,20 @@ pub fn run_demo_traversal(
 #[test]
 fn mutation_catches_unrelated_upload_only_host_math_not_consumed_by_dispatch() {
     let upload_only_code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::SemanticExecutionError;
 
 pub struct UnusedResidentGraph {
-    pub handle: u64,
+    pub packed: Vec<u8>,
 }
 
 pub fn upload_unused_graph_with_math(
-    dispatcher: &impl ProgramDispatcher,
     edges: &[u32],
-) -> Result<UnusedResidentGraph, DispatchError> {
-    let mut sum = 0u32;
+) -> Result<UnusedResidentGraph, SemanticExecutionError> {
+    let mut packed = Vec::new();
     for &e in edges {
-        sum = sum.wrapping_add(e ^ 0x1234_5678);
+        packed.extend_from_slice(&(e ^ 0x1234_5678).to_le_bytes());
     }
-    let handle = dispatcher.alloc_resident(sum as usize)?;
-    Ok(UnusedResidentGraph { handle })
+    Ok(UnusedResidentGraph { packed })
 }
 "#;
     let findings = analyze_files(&[("vyre-libs/src/upload_only.rs", upload_only_code)]);
@@ -851,55 +759,50 @@ pub fn upload_unused_graph_with_math(
 
 #[test]
 fn mutation_catches_resident_staging_values_not_uploaded_before_dispatch() {
-    let code = r#"
-use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentDispatchStep};
+    let code = format!(
+        "{CANONICAL_DISPATCH_IMPORTS}
+struct ResidentGraph {{
+    packed: Vec<u8>,
+}}
 
-struct ResidentGraph {
-    handles: [u64; 1],
-}
-
-fn prepare_graph_without_upload(
-    dispatcher: &impl ProgramDispatcher,
-    edges: &[u32],
-) -> Result<ResidentGraph, DispatchError> {
+fn prepare_graph_without_binding(edges: &[u32]) -> ResidentGraph {{
     let mut packed = Vec::with_capacity(edges.len() * 4);
-    for &edge in edges {
-        let encoded = edge.wrapping_mul(3);
-        packed.extend_from_slice(&encoded.to_le_bytes());
-    }
-    let handle = dispatcher.alloc_resident(packed.len())?;
-    Ok(ResidentGraph { handles: [handle] })
-}
-
-fn dispatch_graph(
-    dispatcher: &impl ProgramDispatcher,
-    graph: &ResidentGraph,
-) -> Result<(), DispatchError> {
-    let program = Program::default();
-    let step = ResidentDispatchStep {
-        program: &program,
-        handle_ids: &graph.handles,
-        grid_override: None,
-    };
-    dispatcher.dispatch_resident_sequence(&[step])
-}
+    for &edge in edges {{
+        packed.extend_from_slice(&edge.wrapping_mul(3).to_le_bytes());
+    }}
+    ResidentGraph {{ packed }}
+}}
 
 pub fn run_graph(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    logical: &LogicalProgramGraph<'_>,
+    policy: &SemanticExecutionPolicy,
     edges: &[u32],
-) -> Result<(), DispatchError> {
-    let graph = prepare_graph_without_upload(dispatcher, edges)?;
-    dispatch_graph(dispatcher, &graph)
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/unconsumed_staging.rs", code)]);
+) -> Result<(), SemanticExecutionError> {{
+    let graph = prepare_graph_without_binding(edges);
+    let _ = graph;
+    let inputs = BTreeMap::new();
+    let request = SemanticExecutionRequest::new(
+        logical,
+        inputs,
+        policy.external_facts().clone(),
+        policy.target_facts(),
+        policy.objective(),
+        policy.budget(),
+        policy.max_artifact_bytes(),
+    )?;
+    dispatcher.execute(&request)?;
+    Ok(())
+}}
+"
+    );
+    let findings = analyze_files(&[("vyre-libs/src/unconsumed_staging.rs", code.as_str())]);
     assert!(
-            findings
-                .iter()
-                .any(|finding| finding.message.contains("prepare_graph_without_upload")),
-            "resident semantic staging that never feeds a canonical upload must be convicted: {findings:?}"
-        );
+        findings
+            .iter()
+            .any(|finding| finding.message.contains("prepare_graph_without_binding")),
+        "host staging whose bytes never reach the seam must be convicted: {findings:?}"
+    );
 }
 
 #[test]
@@ -909,13 +812,13 @@ pub struct FakeResidentGraph {
     pub handle: u64,
 }
 
-pub trait ProgramDispatcher {
+pub trait SemanticExecutor {
     fn alloc_resident(&self, bytes: usize) -> Result<u64, String>;
     fn dispatch(&self, prog: u32, handles: &[u64]) -> Result<(), String>;
 }
 
 pub fn upload_fake_graph(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     edges: &[u32],
 ) -> Result<FakeResidentGraph, String> {
     let mut sum = 0u32;
@@ -927,10 +830,10 @@ pub fn upload_fake_graph(
 }
 
 pub fn fake_dispatch(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     graph: &FakeResidentGraph,
 ) -> Result<(), String> {
-    dispatcher.dispatch(1, &[graph.handle])
+    dispatcher.execute(1, &[graph.handle])
 }
 "#;
     let findings = analyze_files(&[("vyre-libs/src/fake_staging.rs", fake_code)]);
@@ -979,178 +882,100 @@ pub fn upload_ambiguous_graph(
 
 #[test]
 fn mutation_permits_genuine_resident_staging_separate_apis_unique_producer() {
-    let staging_code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-
-pub struct ResidentDemoGraph {
-    pub(crate) handles: [u64; 2],
-}
-
-pub fn upload_resident_demo_graph(
-    dispatcher: &impl ProgramDispatcher,
-    node_count: u32,
-    edges: &[u32],
-) -> Result<ResidentDemoGraph, DispatchError> {
-    let mut packed = Vec::with_capacity(edges.len() * 4);
-    for &edge in edges {
-        let encoded = (edge ^ 0x5A5A_5A5A).wrapping_mul(node_count | 1);
-        packed.extend_from_slice(&encoded.to_le_bytes());
-    }
-    let h0 = dispatcher.alloc_resident(packed.len())?;
-    dispatcher.upload_resident(h0, &packed)?;
-    let h1 = dispatcher.alloc_resident(16)?;
-    Ok(ResidentDemoGraph { handles: [h0, h1] })
-}
-"#;
-    let dispatch_code = r#"
-use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentDispatchStep};
-use crate::staging::ResidentDemoGraph;
-
-pub fn execute_demo_traversal(
-    dispatcher: &impl ProgramDispatcher,
-    graph: &ResidentDemoGraph,
-) -> Result<(), DispatchError> {
-    let prog = Program::default();
-    let step = ResidentDispatchStep {
-        program: &prog,
-        handle_ids: &graph.handles,
-        grid_override: Some([1, 1, 1]),
-    };
-    dispatcher.dispatch_resident_sequence(&[step])
-}
-"#;
+    let staging_code = resident_staging_source(
+        "ResidentDemoGraph",
+        "pub(crate) ",
+        &[("upload_resident_demo_graph", "0x5A5A_5A5A")],
+    );
+    let dispatch_code = format!(
+        "{CANONICAL_DISPATCH_IMPORTS}use crate::staging::ResidentDemoGraph;
+{dispatch}",
+        dispatch = canonical_dispatch_fn(
+            "pub ",
+            "execute_demo_traversal",
+            "ResidentDemoGraph",
+            "",
+            ""
+        )
+    );
     let findings = analyze_files(&[
-        ("vyre-libs/src/staging.rs", staging_code),
-        ("vyre-libs/src/dispatch.rs", dispatch_code),
+        ("vyre-libs/src/staging.rs", staging_code.as_str()),
+        ("vyre-libs/src/dispatch.rs", dispatch_code.as_str()),
     ]);
     assert!(
-            findings.is_empty(),
-            "genuine staging with separate upload and dispatch APIs and unique producer must not be convicted: {findings:?}"
-        );
+        findings.is_empty(),
+        "genuine staging with separate upload and dispatch APIs and unique producer must not be convicted: {findings:?}"
+    );
 }
 
 #[test]
 fn mutation_catches_staging_type_with_pub_fields_without_call_path() {
-    let staging_code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-
-pub struct ResidentDemoGraphWithPubFields {
-    pub handles: [u64; 2],
-}
-
-pub fn upload_resident_demo_graph(
-    dispatcher: &impl ProgramDispatcher,
-    node_count: u32,
-    edges: &[u32],
-) -> Result<ResidentDemoGraphWithPubFields, DispatchError> {
-    let mut packed = Vec::with_capacity(edges.len() * 4);
-    for &edge in edges {
-        let encoded = (edge ^ 0x5A5A_5A5A).wrapping_mul(node_count | 1);
-        packed.extend_from_slice(&encoded.to_le_bytes());
-    }
-    let h0 = dispatcher.alloc_resident(packed.len())?;
-    dispatcher.upload_resident(h0, &packed)?;
-    let h1 = dispatcher.alloc_resident(16)?;
-    Ok(ResidentDemoGraphWithPubFields { handles: [h0, h1] })
-}
-"#;
-    let dispatch_code = r#"
-use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentDispatchStep};
-use crate::staging::ResidentDemoGraphWithPubFields;
-
-pub fn execute_demo_traversal(
-    dispatcher: &impl ProgramDispatcher,
-    graph: &ResidentDemoGraphWithPubFields,
-) -> Result<(), DispatchError> {
-    let prog = Program::default();
-    let step = ResidentDispatchStep {
-        program: &prog,
-        handle_ids: &graph.handles,
-        grid_override: Some([1, 1, 1]),
-    };
-    dispatcher.dispatch_resident_sequence(&[step])
-}
-"#;
+    let staging_code = resident_staging_source(
+        "ResidentDemoGraphWithPubFields",
+        "pub ",
+        &[("upload_resident_demo_graph", "0x5A5A_5A5A")],
+    );
+    let dispatch_code = format!(
+        "{CANONICAL_DISPATCH_IMPORTS}use crate::staging::ResidentDemoGraphWithPubFields;
+{dispatch}",
+        dispatch = canonical_dispatch_fn(
+            "pub ",
+            "execute_demo_traversal",
+            "ResidentDemoGraphWithPubFields",
+            "",
+            ""
+        )
+    );
     let findings = analyze_files(&[
-        ("vyre-libs/src/staging.rs", staging_code),
-        ("vyre-libs/src/dispatch.rs", dispatch_code),
+        ("vyre-libs/src/staging.rs", staging_code.as_str()),
+        ("vyre-libs/src/dispatch.rs", dispatch_code.as_str()),
     ]);
-    assert!(
-            !findings.is_empty(),
-            "staging type with pub fields without call path must not gain nominal rooting and must be convicted"
-        );
     assert!(
         findings
             .iter()
             .any(|f| f.message.contains("upload_resident_demo_graph")),
-        "upload_resident_demo_graph must be flagged: {findings:?}"
+        "a carrier a caller can build field by field does not make its producer reachable: {findings:?}"
     );
 }
 
 #[test]
 fn mutation_catches_staging_with_ignored_metadata_parameter_rejected() {
-    let staging_code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-
-pub struct ResidentDemoGraph {
-    pub(crate) handles: [u64; 2],
-}
-
-pub struct UnusedConfig {
+    let staging_code = format!(
+        "{staging}
+pub struct UnusedConfig {{
     pub(crate) threshold: u32,
-}
-
-pub fn upload_resident_demo_graph(
-    dispatcher: &impl ProgramDispatcher,
-    node_count: u32,
-    edges: &[u32],
-) -> Result<ResidentDemoGraph, DispatchError> {
-    let mut packed = Vec::with_capacity(edges.len() * 4);
-    for &edge in edges {
-        let encoded = (edge ^ 0x5A5A_5A5A).wrapping_mul(node_count | 1);
-        packed.extend_from_slice(&encoded.to_le_bytes());
-    }
-    let h0 = dispatcher.alloc_resident(packed.len())?;
-    dispatcher.upload_resident(h0, &packed)?;
-    let h1 = dispatcher.alloc_resident(16)?;
-    Ok(ResidentDemoGraph { handles: [h0, h1] })
-}
+}}
 
 pub fn upload_unused_config_with_math(
     edges: &[u32],
-) -> Result<UnusedConfig, DispatchError> {
+) -> Result<UnusedConfig, SemanticExecutionError> {{
     let mut sum = 0u32;
-    for &e in edges {
+    for &e in edges {{
         sum = sum.wrapping_add(e ^ 0x7777);
-    }
-    Ok(UnusedConfig { threshold: sum })
-}
-"#;
-    let dispatch_code = r#"
-use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentDispatchStep};
-use crate::staging::{ResidentDemoGraph, UnusedConfig};
-
-pub fn execute_demo_traversal_with_config(
-    dispatcher: &impl ProgramDispatcher,
-    graph: &ResidentDemoGraph,
-    config: &UnusedConfig,
-) -> Result<(), DispatchError> {
-    let _ = config;
-    let prog = Program::default();
-    let step = ResidentDispatchStep {
-        program: &prog,
-        handle_ids: &graph.handles,
-        grid_override: Some([1, 1, 1]),
-    };
-    dispatcher.dispatch_resident_sequence(&[step])
-}
-"#;
+    }}
+    Ok(UnusedConfig {{ threshold: sum }})
+}}
+",
+        staging = resident_staging_source(
+            "ResidentDemoGraph",
+            "pub(crate) ",
+            &[("upload_resident_demo_graph", "0x5A5A_5A5A")]
+        )
+    );
+    let dispatch_code = format!(
+        "{CANONICAL_DISPATCH_IMPORTS}use crate::staging::{{ResidentDemoGraph, UnusedConfig}};
+{dispatch}",
+        dispatch = canonical_dispatch_fn(
+            "pub ",
+            "execute_demo_traversal_with_config",
+            "ResidentDemoGraph",
+            "\n    config: &UnusedConfig,",
+            "\n    let _ = config;"
+        )
+    );
     let findings = analyze_files(&[
-        ("vyre-libs/src/staging.rs", staging_code),
-        ("vyre-libs/src/dispatch.rs", dispatch_code),
+        ("vyre-libs/src/staging.rs", staging_code.as_str()),
+        ("vyre-libs/src/dispatch.rs", dispatch_code.as_str()),
     ]);
     assert!(
         !findings.is_empty(),
@@ -1166,63 +991,34 @@ pub fn execute_demo_traversal_with_config(
         !findings
             .iter()
             .any(|f| f.message.contains("upload_resident_demo_graph")),
-        "upload_resident_demo_graph feeding handle_ids must NOT be flagged: {findings:?}"
+        "the producer whose bytes reach the seam must NOT be flagged: {findings:?}"
     );
 }
 
 #[test]
 fn mutation_permits_genuine_resident_staging_transitive_helper_dispatch() {
-    let staging_code = r#"
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-
-pub struct ResidentDemoGraph {
-    pub(crate) handles: [u64; 2],
-}
-
-pub fn upload_resident_demo_graph(
-    dispatcher: &impl ProgramDispatcher,
-    node_count: u32,
-    edges: &[u32],
-) -> Result<ResidentDemoGraph, DispatchError> {
-    let mut packed = Vec::with_capacity(edges.len() * 4);
-    for &edge in edges {
-        let encoded = (edge ^ 0x5A5A_5A5A).wrapping_mul(node_count | 1);
-        packed.extend_from_slice(&encoded.to_le_bytes());
-    }
-    let h0 = dispatcher.alloc_resident(packed.len())?;
-    dispatcher.upload_resident(h0, &packed)?;
-    let h1 = dispatcher.alloc_resident(16)?;
-    Ok(ResidentDemoGraph { handles: [h0, h1] })
-}
-"#;
-    let dispatch_code = r#"
-use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentDispatchStep};
-use crate::staging::ResidentDemoGraph;
-
-fn helper_dispatch(
-    dispatcher: &impl ProgramDispatcher,
-    handles: &[u64; 2],
-) -> Result<(), DispatchError> {
-    let prog = Program::default();
-    let step = ResidentDispatchStep {
-        program: &prog,
-        handle_ids: handles,
-        grid_override: Some([1, 1, 1]),
-    };
-    dispatcher.dispatch_resident_sequence(&[step])
-}
-
+    let staging_code = resident_staging_source(
+        "ResidentDemoGraph",
+        "pub(crate) ",
+        &[("upload_resident_demo_graph", "0x5A5A_5A5A")],
+    );
+    let dispatch_code = format!(
+        "{CANONICAL_DISPATCH_IMPORTS}use crate::staging::ResidentDemoGraph;
+{helper}
 pub fn execute_demo_traversal(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
+    logical: &LogicalProgramGraph<'_>,
+    policy: &SemanticExecutionPolicy,
     graph: &ResidentDemoGraph,
-) -> Result<(), DispatchError> {
-    helper_dispatch(dispatcher, &graph.handles)
-}
-"#;
+) -> Result<(), SemanticExecutionError> {{
+    helper_dispatch(dispatcher, logical, policy, graph)
+}}
+",
+        helper = canonical_dispatch_fn("", "helper_dispatch", "ResidentDemoGraph", "", "")
+    );
     let findings = analyze_files(&[
-        ("vyre-libs/src/staging.rs", staging_code),
-        ("vyre-libs/src/dispatch.rs", dispatch_code),
+        ("vyre-libs/src/staging.rs", staging_code.as_str()),
+        ("vyre-libs/src/dispatch.rs", dispatch_code.as_str()),
     ]);
     assert!(
         findings.is_empty(),
@@ -1234,7 +1030,7 @@ pub fn execute_demo_traversal(
 fn mutation_catches_pre_dispatch_host_math_helper_in_gpu_dispatch_fn() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn pre_calc_weights(input: &[f32]) -> Vec<f32> {
     let mut out = Vec::new();
@@ -1245,12 +1041,12 @@ pub fn pre_calc_weights(input: &[f32]) -> Vec<f32> {
 }
 
 pub fn execute_with_pre_calc(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     input: &[f32],
-) -> Result<(), DispatchError> {
+) -> Result<(), SemanticExecutionError> {
     let weights = pre_calc_weights(input);
     let prog = Program::default();
-    dispatcher.dispatch(&prog, &[&weights], &mut [])
+    dispatcher.execute(&prog, &[&weights], &mut [])
 }
 "#;
     let findings = analyze_files(&[("vyre-libs/src/pre_calc.rs", code)]);
@@ -1271,15 +1067,15 @@ pub fn execute_with_pre_calc(
 fn mutation_recognizes_dispatcher_in_wrapper_struct_and_catches_post_dispatch_math() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
-pub struct DispatchContext<'a, D: ProgramDispatcher> {
+pub struct DispatchContext<'a, D: SemanticExecutor> {
     pub dispatcher: &'a D,
 }
 
-impl<'a, D: ProgramDispatcher> DispatchContext<'a, D> {
-    pub fn run_pipeline(&self, prog: &Program, out: &mut [u8]) -> Result<u32, DispatchError> {
-        self.dispatcher.dispatch(prog, &[], out)?;
+impl<'a, D: SemanticExecutor> DispatchContext<'a, D> {
+    pub fn run_pipeline(&self, prog: &Program, out: &mut [u8]) -> Result<u32, SemanticExecutionError> {
+        self.dispatcher.execute(prog, &[], out)?;
         let mut sum = 0u32;
         for &b in out.iter() {
             sum = sum.wrapping_add(b as u32);
@@ -1339,18 +1135,18 @@ pub fn register_op() -> OperationRegistration {
 fn mutation_permits_post_dispatch_non_data_diagnostic_telemetry_methods() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub struct DispatchMetrics {
     pub total_ops: u32,
 }
 
 pub fn execute_with_metrics(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     prog: &Program,
     metrics: &mut DispatchMetrics,
-) -> Result<(), DispatchError> {
-    dispatcher.dispatch(prog, &[], &mut [])?;
+) -> Result<(), SemanticExecutionError> {
+    dispatcher.execute(prog, &[], &mut [])?;
     metrics.total_ops = metrics.total_ops.wrapping_add(1);
     Ok(())
 }
@@ -1366,18 +1162,18 @@ pub fn execute_with_metrics(
 fn mutation_permits_inter_dispatch_staging_buffer_operations() {
     let code = r#"
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 pub fn execute_two_stage_pipeline(
-    dispatcher: &impl ProgramDispatcher,
+    dispatcher: &impl SemanticExecutor,
     stage1_prog: &Program,
     stage2_prog: &Program,
     intermediate_scratch: &mut Vec<u8>,
-) -> Result<(), DispatchError> {
-    dispatcher.dispatch(stage1_prog, &[], intermediate_scratch.as_mut_slice())?;
+) -> Result<(), SemanticExecutionError> {
+    dispatcher.execute(stage1_prog, &[], intermediate_scratch.as_mut_slice())?;
     intermediate_scratch.clear();
     intermediate_scratch.resize(64, 0);
-    dispatcher.dispatch(stage2_prog, &[], intermediate_scratch.as_mut_slice())
+    dispatcher.execute(stage2_prog, &[], intermediate_scratch.as_mut_slice())
 }
 "#;
     let findings = analyze_files(&[("vyre-libs/src/multi_stage.rs", code)]);
@@ -1466,5 +1262,69 @@ fn a_cfg_test_module_named_by_a_path_attribute_is_test_scoped() {
     assert!(
         missed.is_empty(),
         "every file named by a `#[cfg(test)] #[path = ...]` module is test-scoped: {missed:?}"
+    );
+}
+
+#[test]
+fn mutation_permits_staging_that_binds_its_own_payload_into_a_request() {
+    let staging_code = format!(
+        "{staging}
+pub fn run_demo_traversal(
+    dispatcher: &impl SemanticExecutor,
+    logical: &LogicalProgramGraph<'_>,
+    policy: &SemanticExecutionPolicy,
+    node_count: u32,
+    edges: &[u32],
+) -> Result<(), SemanticExecutionError> {{
+    let mut packed = Vec::new();
+    let request = stage_demo_request(logical, policy, &mut packed, node_count, edges)?;
+    dispatcher.execute(&request)?;
+    Ok(())
+}}
+",
+        staging = self_binding_staging_source(true)
+    );
+    let findings = analyze_files(&[("vyre-libs/src/self_binding.rs", staging_code.as_str())]);
+    assert!(
+        findings.is_empty(),
+        "a producer that binds its own payload into a canonical request is proven staging: {findings:?}"
+    );
+}
+
+#[test]
+fn mutation_catches_staging_that_leaves_binding_to_its_caller() {
+    let staging_code = format!(
+        "{staging}
+pub fn run_demo_traversal(
+    dispatcher: &impl SemanticExecutor,
+    logical: &LogicalProgramGraph<'_>,
+    policy: &SemanticExecutionPolicy,
+    node_count: u32,
+    edges: &[u32],
+) -> Result<(), SemanticExecutionError> {{
+    let packed = stage_demo_request(node_count, edges)?;
+    let mut inputs = BTreeMap::new();
+    inputs.insert(GraphValueId(0), packed.as_slice());
+    let request = SemanticExecutionRequest::new(
+        logical,
+        inputs,
+        policy.external_facts().clone(),
+        policy.target_facts(),
+        policy.objective(),
+        policy.budget(),
+        policy.max_artifact_bytes(),
+    )?;
+    dispatcher.execute(&request)?;
+    Ok(())
+}}
+",
+        staging = self_binding_staging_source(false)
+    );
+    let findings = analyze_files(&[("vyre-libs/src/caller_binding.rs", staging_code.as_str())]);
+    assert!(
+        findings
+            .iter()
+            .any(|finding| finding.message.contains("stage_demo_request")),
+        "host bytes computed outside the seam are convicted even when the caller binds them: {findings:?}"
     );
 }

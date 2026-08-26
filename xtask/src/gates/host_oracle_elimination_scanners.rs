@@ -1,4 +1,4 @@
-//! Dispatch and resident upload scanners, dependency flow trackers, and method extractors.
+//! Execution and input-binding scanners, dependency flow trackers, and method extractors.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -13,6 +13,7 @@ use super::host_oracle_elimination_extract::{
 use super::host_oracle_elimination_records::{
     base_module_path, extract_use_tree, normalize_qualified_path, ParamCalleeFlow,
 };
+use crate::gates::scan::attribute_is_test_only;
 
 pub(super) struct SemanticOperationScanner<'a> {
     pub(super) visitor: &'a AstAnalysisVisitor,
@@ -98,21 +99,17 @@ pub(super) fn stmt_contains_semantic_operation(
     scanner.has_semantic_op
 }
 
-pub(super) struct ResidentUploadScanner<'a> {
+pub(super) struct InputBindingScanner<'a> {
     pub(super) visitor: &'a AstAnalysisVisitor,
     pub(super) dispatcher_params: &'a BTreeSet<String>,
     pub(super) semantic_taint: &'a BTreeSet<String>,
     pub(super) consumes_semantic_storage: bool,
 }
 
-impl<'ast> Visit<'ast> for ResidentUploadScanner<'_> {
+impl<'ast> Visit<'ast> for InputBindingScanner<'_> {
     fn visit_expr_method_call(&mut self, call: &'ast syn::ExprMethodCall) {
         let method = call.method.to_string();
-        if self
-            .visitor
-            .derived_trait_resident_upload_methods
-            .contains(&method)
-        {
+        if self.visitor.derived_input_binding_methods.contains(&method) {
             let receiver_idents = extract_read_idents_from_expr(&call.receiver);
             let receiver_is_dispatcher = receiver_idents
                 .iter()
@@ -129,6 +126,40 @@ impl<'ast> Visit<'ast> for ResidentUploadScanner<'_> {
         }
         syn::visit::visit_expr_method_call(self, call);
     }
+
+    /// Binding at this seam is a request constructor, not a device upload.
+    ///
+    /// The request type owns input binding, so a staging function binds bytes by
+    /// calling that constructor and never needs an executor at all. Requiring a
+    /// dispatcher receiver would leave every staging function at this seam
+    /// unrecognized, which reads as unreachable host data processing.
+    fn visit_expr_call(&mut self, call: &'ast syn::ExprCall) {
+        if let syn::Expr::Path(path_expr) = &*call.func {
+            let segments = &path_expr.path.segments;
+            let names_binding_constructor = segments.len() >= 2
+                && segments.last().is_some_and(|segment| {
+                    self.visitor
+                        .derived_input_binding_methods
+                        .contains(&segment.ident.to_string())
+                })
+                && ident_names_canonical_execution_request(&segments[segments.len() - 2].ident);
+            let payload_is_semantic = call.args.iter().any(|argument| {
+                extract_read_idents_from_expr(argument)
+                    .iter()
+                    .any(|ident| self.semantic_taint.contains(ident))
+            });
+            if names_binding_constructor && payload_is_semantic {
+                self.consumes_semantic_storage = true;
+                return;
+            }
+        }
+        syn::visit::visit_expr_call(self, call);
+    }
+}
+
+/// Whether an identifier names the canonical semantic execution request type.
+pub(super) fn ident_names_canonical_execution_request(ident: &syn::Ident) -> bool {
+    ident == "SemanticExecutionRequest"
 }
 pub(super) fn type_is_canonical_ir_program(ty: &syn::Type) -> bool {
     match ty {
@@ -148,20 +179,18 @@ pub(super) fn type_is_canonical_ir_program(ty: &syn::Type) -> bool {
     }
 }
 
-pub(super) fn type_is_canonical_resident_step(ty: &syn::Type) -> bool {
+pub(super) fn type_is_canonical_execution_request(ty: &syn::Type) -> bool {
     match ty {
-        syn::Type::Path(tp) => {
-            if let Some(seg) = tp.path.segments.last() {
-                seg.ident == "ResidentDispatchStep"
-            } else {
-                false
-            }
-        }
-        syn::Type::Reference(r) => type_is_canonical_resident_step(&r.elem),
-        syn::Type::Slice(s) => type_is_canonical_resident_step(&s.elem),
-        syn::Type::Array(a) => type_is_canonical_resident_step(&a.elem),
-        syn::Type::Group(g) => type_is_canonical_resident_step(&g.elem),
-        syn::Type::Paren(p) => type_is_canonical_resident_step(&p.elem),
+        syn::Type::Path(tp) => tp
+            .path
+            .segments
+            .last()
+            .is_some_and(|seg| ident_names_canonical_execution_request(&seg.ident)),
+        syn::Type::Reference(r) => type_is_canonical_execution_request(&r.elem),
+        syn::Type::Slice(s) => type_is_canonical_execution_request(&s.elem),
+        syn::Type::Array(a) => type_is_canonical_execution_request(&a.elem),
+        syn::Type::Group(g) => type_is_canonical_execution_request(&g.elem),
+        syn::Type::Paren(p) => type_is_canonical_execution_request(&p.elem),
         _ => false,
     }
 }
@@ -220,7 +249,7 @@ pub(super) fn type_contains_immutable_byte_slice(ty: &syn::Type) -> bool {
     }
 }
 
-pub(super) fn is_trait_method_resident_upload(sig: &syn::Signature) -> bool {
+pub(super) fn is_request_input_binding_method(sig: &syn::Signature) -> bool {
     let has_immutable_byte_payload = sig.inputs.iter().any(|input| {
         matches!(
             input,
@@ -241,10 +270,10 @@ pub(super) fn is_trait_method_resident_upload(sig: &syn::Signature) -> bool {
 }
 
 pub(super) fn is_trait_method_dispatch_execution(sig: &syn::Signature) -> bool {
-    let has_program_or_step_param = sig.inputs.iter().any(|input| {
+    let has_program_or_request_param = sig.inputs.iter().any(|input| {
         if let syn::FnArg::Typed(pat_type) = input {
             type_is_canonical_ir_program(&pat_type.ty)
-                || type_is_canonical_resident_step(&pat_type.ty)
+                || type_is_canonical_execution_request(&pat_type.ty)
         } else {
             false
         }
@@ -265,36 +294,69 @@ pub(super) fn is_trait_method_dispatch_execution(sig: &syn::Signature) -> bool {
         },
     };
 
-    has_program_or_step_param && returns_result_or_data
+    has_program_or_request_param && returns_result_or_data
 }
 
-pub(super) fn derive_canonical_dispatcher_methods(
+/// Each `OperationRegistration` constructor, mapped to the argument position of
+/// its `expected_output` parameter.
+///
+/// A registration's fixture and expected-output callbacks are passed by name, so
+/// the walk has to know which argument is the expected-output one to separate a
+/// reached callback from a host oracle executed while producing expected bytes.
+/// The map is read out of the `impl OperationRegistration` block rather than
+/// listed here: a hardcoded roster went stale when the constructors were renamed
+/// with the `_unconstrained` suffix, and the whole registered-fixture class then
+/// read as unreachable host data processing while an oracle inside
+/// `expected_output` went unconvicted.
+pub(super) fn derive_registration_expected_output_indices(
     file: &syn::File,
-    dispatch_methods: &mut BTreeSet<String>,
-    resident_upload_methods: &mut BTreeSet<String>,
-) {
-    fn inspect_items(
-        items: &[syn::Item],
-        dispatch_methods: &mut BTreeSet<String>,
-        resident_upload_methods: &mut BTreeSet<String>,
-    ) {
+) -> BTreeMap<String, usize> {
+    fn inspect_items(items: &[syn::Item], out: &mut BTreeMap<String, usize>) {
         for item in items {
             match item {
-                syn::Item::Trait(item_trait) if item_trait.ident == "ProgramDispatcher" => {
-                    for trait_item in &item_trait.items {
-                        if let syn::TraitItem::Fn(method) = trait_item {
-                            if is_trait_method_dispatch_execution(&method.sig) {
-                                dispatch_methods.insert(method.sig.ident.to_string());
-                            }
-                            if is_trait_method_resident_upload(&method.sig) {
-                                resident_upload_methods.insert(method.sig.ident.to_string());
+                syn::Item::Impl(item_impl)
+                    if item_impl.trait_.is_none()
+                        && matches!(
+                            &*item_impl.self_ty,
+                            syn::Type::Path(path)
+                                if path.path.segments.last().is_some_and(|segment| {
+                                    segment.ident == "OperationRegistration"
+                                })
+                        ) =>
+                {
+                    for impl_item in &item_impl.items {
+                        let syn::ImplItem::Fn(method) = impl_item else {
+                            continue;
+                        };
+                        let position = method.sig.inputs.iter().position(|input| {
+                            matches!(
+                                input,
+                                syn::FnArg::Typed(pat_type)
+                                    if matches!(
+                                        &*pat_type.pat,
+                                        syn::Pat::Ident(pat)
+                                            if pat.ident == "expected_output"
+                                    )
+                            )
+                        });
+                        let takes_receiver = method
+                            .sig
+                            .inputs
+                            .first()
+                            .is_some_and(|input| matches!(input, syn::FnArg::Receiver(_)));
+                        if let Some(position) = position {
+                            if !takes_receiver {
+                                out.insert(method.sig.ident.to_string(), position);
                             }
                         }
                     }
                 }
                 syn::Item::Mod(item_mod) => {
-                    if let Some((_, inner_items)) = &item_mod.content {
-                        inspect_items(inner_items, dispatch_methods, resident_upload_methods);
+                    if item_mod.attrs.iter().any(attribute_is_test_only) {
+                        continue;
+                    }
+                    if let Some((_, inner)) = &item_mod.content {
+                        inspect_items(inner, out);
                     }
                 }
                 _ => {}
@@ -302,7 +364,227 @@ pub(super) fn derive_canonical_dispatcher_methods(
         }
     }
 
-    inspect_items(&file.items, dispatch_methods, resident_upload_methods);
+    let mut out = BTreeMap::new();
+    inspect_items(&file.items, &mut out);
+    out
+}
+
+fn type_names_canonical_executor(ty: &syn::Type) -> bool {
+    fn bound_names_executor(bound: &syn::TypeParamBound) -> bool {
+        matches!(
+            bound,
+            syn::TypeParamBound::Trait(trait_bound)
+                if trait_bound
+                    .path
+                    .segments
+                    .last()
+                    .is_some_and(|segment| segment.ident == "SemanticExecutor")
+        )
+    }
+
+    match ty {
+        syn::Type::Path(path) => path
+            .path
+            .segments
+            .last()
+            .is_some_and(|segment| segment.ident == "SemanticExecutor"),
+        syn::Type::TraitObject(object) => object.bounds.iter().any(bound_names_executor),
+        syn::Type::ImplTrait(imp) => imp.bounds.iter().any(bound_names_executor),
+        syn::Type::Reference(reference) => type_names_canonical_executor(&reference.elem),
+        syn::Type::Group(group) => type_names_canonical_executor(&group.elem),
+        syn::Type::Paren(paren) => type_names_canonical_executor(&paren.elem),
+        _ => false,
+    }
+}
+
+/// Bindings of a signature's parameters that carry the canonical executor.
+///
+/// Both spellings the seam admits are covered: a trait object parameter and a
+/// generic parameter bounded by the trait, whether the bound sits inline or in a
+/// where clause.
+fn executor_param_bindings(sig: &syn::Signature) -> BTreeSet<String> {
+    let mut executor_generics = BTreeSet::new();
+    for param in &sig.generics.params {
+        if let syn::GenericParam::Type(type_param) = param {
+            if type_param.bounds.iter().any(|bound| {
+                matches!(
+                    bound,
+                    syn::TypeParamBound::Trait(trait_bound)
+                        if trait_bound
+                            .path
+                            .segments
+                            .last()
+                            .is_some_and(|segment| segment.ident == "SemanticExecutor")
+                )
+            }) {
+                executor_generics.insert(type_param.ident.to_string());
+            }
+        }
+    }
+    if let Some(where_clause) = &sig.generics.where_clause {
+        for predicate in &where_clause.predicates {
+            if let syn::WherePredicate::Type(predicate) = predicate {
+                let names_executor = predicate.bounds.iter().any(|bound| {
+                    matches!(
+                        bound,
+                        syn::TypeParamBound::Trait(trait_bound)
+                            if trait_bound
+                                .path
+                                .segments
+                                .last()
+                                .is_some_and(|segment| segment.ident == "SemanticExecutor")
+                    )
+                });
+                if names_executor {
+                    if let syn::Type::Path(path) = &predicate.bounded_ty {
+                        if let Some(ident) = path.path.get_ident() {
+                            executor_generics.insert(ident.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut bindings = BTreeSet::new();
+    for input in &sig.inputs {
+        let syn::FnArg::Typed(pat_type) = input else {
+            continue;
+        };
+        let carries_executor = type_names_canonical_executor(&pat_type.ty)
+            || executor_generics
+                .iter()
+                .any(|generic| type_is_exact_generic_param(&pat_type.ty, generic));
+        if carries_executor {
+            extract_pat_bindings(&pat_type.pat, &mut bindings);
+        }
+    }
+    bindings
+}
+
+struct ExecutorExecutionScanner<'a> {
+    executor_params: &'a BTreeSet<String>,
+    dispatch_methods: &'a BTreeSet<String>,
+    executes: bool,
+}
+
+impl<'ast, 'a> Visit<'ast> for ExecutorExecutionScanner<'a> {
+    fn visit_expr_method_call(&mut self, call: &'ast syn::ExprMethodCall) {
+        if self.dispatch_methods.contains(&call.method.to_string())
+            && extract_read_idents_from_expr(&call.receiver)
+                .iter()
+                .any(|ident| self.executor_params.contains(ident))
+        {
+            self.executes = true;
+        }
+        syn::visit::visit_expr_method_call(self, call);
+    }
+}
+
+/// Derive the free execution helpers the canonical seam publishes.
+///
+/// A library caller reaches a device through one of these rather than through
+/// the trait method, because request construction and canonical output ordering
+/// live behind the helper. The seam crate is outside the scanned roots, so
+/// without this set no call in a scanned crate resolves to device execution and
+/// every wrapper reads as an unreachable host oracle. The names are read out of
+/// the seam source, so a helper added beside the existing one is picked up
+/// without a second edit.
+pub(super) fn derive_canonical_execution_fns(
+    file: &syn::File,
+    dispatch_methods: &BTreeSet<String>,
+) -> BTreeSet<String> {
+    fn inspect_items(
+        items: &[syn::Item],
+        dispatch_methods: &BTreeSet<String>,
+        found: &mut BTreeSet<String>,
+    ) {
+        for item in items {
+            match item {
+                syn::Item::Fn(item_fn) => {
+                    let executor_params = executor_param_bindings(&item_fn.sig);
+                    if executor_params.is_empty() {
+                        continue;
+                    }
+                    let mut scanner = ExecutorExecutionScanner {
+                        executor_params: &executor_params,
+                        dispatch_methods,
+                        executes: false,
+                    };
+                    scanner.visit_block(&item_fn.block);
+                    if scanner.executes {
+                        found.insert(item_fn.sig.ident.to_string());
+                    }
+                }
+                syn::Item::Mod(item_mod) => {
+                    if item_mod.attrs.iter().any(attribute_is_test_only) {
+                        continue;
+                    }
+                    if let Some((_, inner)) = &item_mod.content {
+                        inspect_items(inner, dispatch_methods, found);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let mut found = BTreeSet::new();
+    inspect_items(&file.items, dispatch_methods, &mut found);
+    found
+}
+
+/// Derive the execution and input-binding method names from the canonical seam.
+///
+/// The trait carries execution; the request type carries input binding, because
+/// a caller at this seam cannot upload to a device and instead binds byte
+/// payloads into the request it submits. Both sets are read out of the source
+/// rather than listed here, so a method added to either one is picked up without
+/// a second edit.
+pub(super) fn derive_canonical_dispatcher_methods(
+    file: &syn::File,
+    dispatch_methods: &mut BTreeSet<String>,
+    input_binding_methods: &mut BTreeSet<String>,
+) {
+    fn inspect_items(
+        items: &[syn::Item],
+        dispatch_methods: &mut BTreeSet<String>,
+        input_binding_methods: &mut BTreeSet<String>,
+    ) {
+        for item in items {
+            match item {
+                syn::Item::Trait(item_trait) if item_trait.ident == "SemanticExecutor" => {
+                    for trait_item in &item_trait.items {
+                        if let syn::TraitItem::Fn(method) = trait_item {
+                            if is_trait_method_dispatch_execution(&method.sig) {
+                                dispatch_methods.insert(method.sig.ident.to_string());
+                            }
+                        }
+                    }
+                }
+                syn::Item::Impl(item_impl)
+                    if item_impl.trait_.is_none()
+                        && type_is_canonical_execution_request(&item_impl.self_ty) =>
+                {
+                    for impl_item in &item_impl.items {
+                        if let syn::ImplItem::Fn(method) = impl_item {
+                            if is_request_input_binding_method(&method.sig) {
+                                input_binding_methods.insert(method.sig.ident.to_string());
+                            }
+                        }
+                    }
+                }
+                syn::Item::Mod(item_mod) => {
+                    if let Some((_, inner_items)) = &item_mod.content {
+                        inspect_items(inner_items, dispatch_methods, input_binding_methods);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    inspect_items(&file.items, dispatch_methods, input_binding_methods);
 }
 
 pub(super) struct BlockDispatchScanner<'a> {
@@ -484,14 +766,15 @@ pub(super) fn collect_wrapper_structs_item(item: &syn::Item, visitor: &mut AstAn
 pub(super) fn compute_known_dispatch_exec_fns_multi(
     files: &[(&Path, &syn::File)],
     canonical_dispatch_methods: &BTreeSet<String>,
-    canonical_resident_upload_methods: &BTreeSet<String>,
+    canonical_input_binding_methods: &BTreeSet<String>,
+    canonical_execution_fns: &BTreeSet<String>,
 ) -> BTreeSet<String> {
     let mut temp_visitor = AstAnalysisVisitor::new(
         PathBuf::from("<multi>"),
         false,
         0,
         canonical_dispatch_methods.clone(),
-        canonical_resident_upload_methods.clone(),
+        canonical_input_binding_methods.clone(),
     );
 
     for (file_path, file) in files {
@@ -531,7 +814,7 @@ pub(super) fn compute_known_dispatch_exec_fns_multi(
         }
     }
 
-    let mut exec_set = BTreeSet::new();
+    let mut exec_set = canonical_execution_fns.clone();
     for scan in &scans {
         if scan.has_direct_dispatch {
             exec_set.insert(scan.name.clone());
@@ -565,10 +848,12 @@ pub(super) fn compute_known_dispatch_exec_fns(
     visitor: &mut AstAnalysisVisitor,
 ) -> BTreeSet<String> {
     let file_tuple = [(visitor.file.as_path(), file)];
+    let seed = visitor.known_dispatch_exec_fns.clone();
     compute_known_dispatch_exec_fns_multi(
         &file_tuple,
         &visitor.derived_trait_dispatch_exec_methods,
-        &visitor.derived_trait_resident_upload_methods,
+        &visitor.derived_input_binding_methods,
+        &seed,
     )
 }
 pub(super) fn extract_expr_param_deps(
@@ -631,12 +916,12 @@ pub(super) fn extract_expr_param_deps(
                 .path
                 .segments
                 .last()
-                .is_some_and(|seg| seg.ident == "ResidentDispatchStep");
+                .is_some_and(|seg| seg.ident == "SemanticExecutionRequest");
             let is_read_range = s
                 .path
                 .segments
                 .last()
-                .is_some_and(|seg| seg.ident == "ResidentReadRange");
+                .is_some_and(|seg| seg.ident == "SemanticExecutionOutput");
             if is_resident_step {
                 for f in &s.fields {
                     if let syn::Member::Named(ident) = &f.member {
@@ -702,6 +987,21 @@ pub(super) fn extract_expr_param_deps(
     deps
 }
 
+/// Methods that move a payload into the collection they are called on.
+///
+/// The semantic seam binds a byte payload to a graph value through a map, so a
+/// parameter reaches submission by being inserted into a local collection that
+/// the request constructor then consumes. Without these the dataflow stops at
+/// the local and every staged carrier looks unconsumed.
+const PAYLOAD_ACCUMULATING_METHODS: &[&str] = &[
+    "push",
+    "extend",
+    "insert",
+    "append",
+    "push_str",
+    "extend_from_slice",
+];
+
 pub(super) fn scan_block_for_param_dispatch_flow(
     block: &syn::Block,
     dispatcher_params: &BTreeSet<String>,
@@ -750,7 +1050,7 @@ pub(super) fn scan_block_for_param_dispatch_flow(
                     }
                 } else if let syn::Expr::MethodCall(mc) = expr {
                     let mname = mc.method.to_string();
-                    if mname == "push" || mname == "extend" {
+                    if PAYLOAD_ACCUMULATING_METHODS.contains(&mname.as_str()) {
                         if let syn::Expr::Path(p) = &*mc.receiver {
                             if let Some(ident) = p.path.get_ident() {
                                 for arg in &mc.args {

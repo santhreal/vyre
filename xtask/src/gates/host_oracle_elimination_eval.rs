@@ -13,6 +13,7 @@ use super::host_oracle_elimination_records::{
 };
 use super::host_oracle_elimination_scanners::{
     compute_known_dispatch_exec_fns_multi, derive_canonical_dispatcher_methods,
+    derive_canonical_execution_fns, derive_registration_expected_output_indices,
 };
 
 pub(super) fn analyze_sources(
@@ -20,42 +21,79 @@ pub(super) fn analyze_sources(
     sources: &[PathBuf],
     test_scoped_files: &BTreeSet<PathBuf>,
 ) -> Result<Vec<Finding>, GateError> {
-    let canonical_path = PathBuf::from("vyre-foundation/src/program_dispatch/mod.rs");
+    let canonical_path = PathBuf::from("vyre-megakernel/src/execution.rs");
     let text = tree.read(&canonical_path).map_err(|err| {
         GateError::new(
             format!(
-                "failed to read canonical ProgramDispatcher source `{}`: {err}",
+                "failed to read canonical SemanticExecutor source `{}`: {err}",
                 canonical_path.display()
             ),
-            "ensure canonical `vyre-foundation/src/program_dispatch/mod.rs` exists and is readable",
+            "ensure canonical `vyre-megakernel/src/execution.rs` exists and is readable",
         )
     })?;
 
     let file_ast = syn::parse_file(&text).map_err(|err| {
         GateError::new(
             format!(
-                "failed to parse canonical ProgramDispatcher source `{}`: {err}",
+                "failed to parse canonical SemanticExecutor source `{}`: {err}",
                 canonical_path.display()
             ),
-            "fix syntax defect in ProgramDispatcher trait definition",
+            "fix syntax defect in SemanticExecutor trait definition",
         )
     })?;
 
     let mut canonical_trait_methods = BTreeSet::new();
-    let mut canonical_resident_upload_methods = BTreeSet::new();
+    let mut canonical_input_binding_methods = BTreeSet::new();
     derive_canonical_dispatcher_methods(
         &file_ast,
         &mut canonical_trait_methods,
-        &mut canonical_resident_upload_methods,
+        &mut canonical_input_binding_methods,
     );
 
-    if canonical_trait_methods.is_empty() || canonical_resident_upload_methods.is_empty() {
+    let canonical_execution_fns =
+        derive_canonical_execution_fns(&file_ast, &canonical_trait_methods);
+
+    if canonical_trait_methods.is_empty()
+        || canonical_input_binding_methods.is_empty()
+        || canonical_execution_fns.is_empty()
+    {
         return Err(GateError::new(
             format!(
-                "canonical ProgramDispatcher in `{}` yielded zero dispatch execution or resident upload methods",
+                "canonical SemanticExecutor in `{}` yielded zero execution methods, input-binding methods, or free execution helpers",
                 canonical_path.display()
             ),
-            "ensure ProgramDispatcher trait defines canonical execution methods (e.g. `dispatch`, `dispatch_resident`) taking Program/ResidentDispatchStep parameters and returning Result",
+            "ensure the SemanticExecutor trait defines an execution method taking a SemanticExecutionRequest and returning Result, that SemanticExecutionRequest defines a constructor taking byte payloads, and that at least one free helper takes the executor and calls that method",
+        ));
+    }
+
+    let registration_path = PathBuf::from("vyre-foundation/src/operation/mod.rs");
+    let registration_text = tree.read(&registration_path).map_err(|err| {
+        GateError::new(
+            format!(
+                "failed to read operation registration source `{}`: {err}",
+                registration_path.display()
+            ),
+            "ensure canonical `vyre-foundation/src/operation/mod.rs` exists and is readable",
+        )
+    })?;
+    let registration_ast = syn::parse_file(&registration_text).map_err(|err| {
+        GateError::new(
+            format!(
+                "failed to parse operation registration source `{}`: {err}",
+                registration_path.display()
+            ),
+            "fix syntax defect in the OperationRegistration definition",
+        )
+    })?;
+    let registration_expected_output_indices =
+        derive_registration_expected_output_indices(&registration_ast);
+    if registration_expected_output_indices.is_empty() {
+        return Err(GateError::new(
+            format!(
+                "`impl OperationRegistration` in `{}` declares no constructor taking an `expected_output` argument",
+                registration_path.display()
+            ),
+            "keep an OperationRegistration constructor whose expected-output callback parameter is named `expected_output`, so the gate can separate a reached fixture from a host oracle producing expected bytes",
         ));
     }
     let mut parsed_sources = Vec::new();
@@ -73,7 +111,9 @@ pub(super) fn analyze_sources(
     Ok(analyze_parsed(
         &parsed_sources,
         &canonical_trait_methods,
-        &canonical_resident_upload_methods,
+        &canonical_input_binding_methods,
+        &canonical_execution_fns,
+        &registration_expected_output_indices,
     ))
 }
 
@@ -86,7 +126,9 @@ pub(super) fn analyze_sources(
 pub(super) fn analyze_parsed(
     parsed_sources: &[(PathBuf, syn::File, bool)],
     canonical_trait_methods: &BTreeSet<String>,
-    canonical_resident_upload_methods: &BTreeSet<String>,
+    canonical_input_binding_methods: &BTreeSet<String>,
+    canonical_execution_fns: &BTreeSet<String>,
+    registration_expected_output_indices: &BTreeMap<String, usize>,
 ) -> Vec<Finding> {
     let file_asts: Vec<(&Path, &syn::File)> = parsed_sources
         .iter()
@@ -95,7 +137,8 @@ pub(super) fn analyze_parsed(
     let global_known_dispatch_exec_fns = compute_known_dispatch_exec_fns_multi(
         &file_asts,
         canonical_trait_methods,
-        canonical_resident_upload_methods,
+        canonical_input_binding_methods,
+        canonical_execution_fns,
     );
 
     let mut all_functions = Vec::new();
@@ -110,9 +153,10 @@ pub(super) fn analyze_parsed(
             *is_test_scoped,
             fn_offset,
             canonical_trait_methods.clone(),
-            canonical_resident_upload_methods.clone(),
+            canonical_input_binding_methods.clone(),
         );
         visitor.known_dispatch_exec_fns = global_known_dispatch_exec_fns.clone();
+        visitor.registration_expected_output_indices = registration_expected_output_indices.clone();
         // Pre-discover all types declared locally in this file
         for item in &file_ast.items {
             match item {
@@ -421,7 +465,8 @@ pub(super) fn evaluate_rules(
         }
     }
 
-    // Seed production roots established strictly by canonical foundation types, device dispatch calls, and driver infrastructure
+    // Seed production roots established strictly by canonical foundation types,
+    // device dispatch calls, driver infrastructure, and operation registrations.
     for (idx, func) in functions.iter().enumerate() {
         if func.is_test_scoped {
             continue;
@@ -648,7 +693,7 @@ pub(super) fn evaluate_rules(
         if is_gpu_dispatch_exec[idx] {
             for &callee_idx in &adjacency[idx] {
                 if is_gpu_dispatch_exec[callee_idx] {
-                    // Both caller and callee are verified ProgramDispatcher/GPU dispatch wrappers
+                    // Both caller and callee are verified SemanticExecutor/GPU dispatch wrappers
                     continue;
                 }
                 let callee = &functions[callee_idx];
@@ -656,8 +701,16 @@ pub(super) fn evaluate_rules(
                     continue;
                 }
                 if is_candidate[callee_idx] {
-                    let is_proven_resident_staging = callee.stages_semantic_resident_upload
-                        && callee.return_custom_types.iter().any(|return_type| {
+                    // A staging helper is legitimate on either of two proofs: it
+                    // binds a tainted payload into a canonical request itself, or
+                    // the exact type it returns is a parameter of a canonical
+                    // dispatch function that structural dataflow proves reaches
+                    // submission. Binding is the submitting function's work at
+                    // this seam, so requiring it of the producer would leave no
+                    // legitimate staging shape at all.
+                    let binds_payload_into_request = callee.stages_semantic_input_binding;
+                    let carrier_reaches_submission =
+                        callee.return_custom_types.iter().any(|return_type| {
                             func_dispatched_custom_types.iter().enumerate().any(
                                 |(consumer_idx, dispatched_types)| {
                                     is_gpu_dispatch_exec[consumer_idx]
@@ -665,12 +718,12 @@ pub(super) fn evaluate_rules(
                                 },
                             )
                         });
+                    let is_proven_resident_staging =
+                        binds_payload_into_request || carrier_reaches_submission;
                     if is_proven_resident_staging {
                         continue;
                     }
-                    let has_payload_inputs =
-                        callee.has_collection_payload_inputs || callee.is_explicit_oracle_name;
-                    if !is_proven_resident_staging && has_payload_inputs {
+                    if callee.has_collection_payload_inputs || callee.is_explicit_oracle_name {
                         findings.push(Finding::at(
                             func.file.clone(),
                             func.line,

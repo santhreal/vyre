@@ -20,7 +20,7 @@ use super::host_oracle_elimination_records::{
 };
 use super::host_oracle_elimination_scanners::{
     scan_block_for_param_dispatch_flow, stmt_contains_semantic_operation,
-    type_is_exact_generic_param, ResidentUploadScanner,
+    type_is_exact_generic_param, InputBindingScanner,
 };
 
 /// Where a recorded call sits, which decides the context flags its
@@ -80,8 +80,11 @@ pub(super) struct AstAnalysisVisitor {
     pub(super) dispatcher_params: BTreeSet<String>,
     pub(super) non_data_diagnostic_params: BTreeSet<String>,
     pub(super) known_dispatch_exec_fns: BTreeSet<String>,
+    /// Each `OperationRegistration` constructor mapped to the argument position
+    /// of its `expected_output` callback, read from the registration source.
+    pub(super) registration_expected_output_indices: BTreeMap<String, usize>,
     pub(super) derived_trait_dispatch_exec_methods: BTreeSet<String>,
-    pub(super) derived_trait_resident_upload_methods: BTreeSet<String>,
+    pub(super) derived_input_binding_methods: BTreeSet<String>,
     pub(super) local_declared_types: BTreeSet<String>,
     pub(super) scope_imports: Vec<BTreeMap<String, String>>,
     pub(super) struct_types_with_dispatcher: BTreeSet<String>,
@@ -101,7 +104,7 @@ impl AstAnalysisVisitor {
         file_is_test_scoped: bool,
         fn_index_offset: usize,
         derived_trait_dispatch_exec_methods: BTreeSet<String>,
-        derived_trait_resident_upload_methods: BTreeSet<String>,
+        derived_input_binding_methods: BTreeSet<String>,
     ) -> Self {
         let base_mod = base_module_path(&file);
         Self {
@@ -125,8 +128,9 @@ impl AstAnalysisVisitor {
             dispatcher_params: BTreeSet::new(),
             non_data_diagnostic_params: BTreeSet::new(),
             known_dispatch_exec_fns: BTreeSet::new(),
+            registration_expected_output_indices: BTreeMap::new(),
             derived_trait_dispatch_exec_methods,
-            derived_trait_resident_upload_methods,
+            derived_input_binding_methods,
             local_declared_types: BTreeSet::new(),
             scope_imports: vec![BTreeMap::new()],
             struct_types_with_dispatcher: BTreeSet::new(),
@@ -572,10 +576,10 @@ impl AstAnalysisVisitor {
                         && last_ident != "String"
                         && last_ident != "str"
                         && last_ident != "Self"
-                        && last_ident != "DispatchError"
-                        && last_ident != "ProgramDispatcher"
-                        && last_ident != "ResidentDispatchStep"
-                        && last_ident != "ResidentReadRange"
+                        && last_ident != "SemanticExecutionError"
+                        && last_ident != "SemanticExecutor"
+                        && last_ident != "SemanticExecutionRequest"
+                        && last_ident != "SemanticExecutionOutput"
                         && last_ident != "Program"
                         && resolved.starts_with("crate::")
                     {
@@ -1191,7 +1195,7 @@ impl AstAnalysisVisitor {
             false,
             0,
             self.derived_trait_dispatch_exec_methods.clone(),
-            self.derived_trait_resident_upload_methods.clone(),
+            self.derived_input_binding_methods.clone(),
         );
         temp_visitor.dispatcher_params = dispatcher_params;
         temp_visitor.known_dispatch_exec_fns = self.known_dispatch_exec_fns.clone();
@@ -1332,10 +1336,8 @@ impl AstAnalysisVisitor {
         self.dispatched_data_vars = prev_dispatched_vars;
     }
 
-    pub(super) fn stages_semantic_resident_upload(&self, stmts: &[syn::Stmt]) -> bool {
-        if self.dispatcher_params.is_empty()
-            || self.derived_trait_resident_upload_methods.is_empty()
-        {
+    pub(super) fn stages_semantic_input_binding(&self, stmts: &[syn::Stmt]) -> bool {
+        if self.derived_input_binding_methods.is_empty() {
             return false;
         }
 
@@ -1348,7 +1350,7 @@ impl AstAnalysisVisitor {
                 semantic_taint.extend(extract_mutated_storage_from_stmt(stmt));
             }
 
-            let mut scanner = ResidentUploadScanner {
+            let mut scanner = InputBindingScanner {
                 visitor: self,
                 dispatcher_params: &self.dispatcher_params,
                 semantic_taint: &semantic_taint,
