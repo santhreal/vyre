@@ -156,23 +156,43 @@ pub(crate) fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
 /// admits only the geometry the compiler selected, so a hand-written shape would
 /// be a fixture that can never be attached to the artifact it names.
 pub(crate) fn entry_point(artifact: &Artifact) -> TargetEntryPoint {
-    let selected = artifact
-        .geometry()
-        .iter()
-        .find(|record| record.node == ArtifactNodeId(0))
-        .expect("fixture artifact records geometry for its only node");
-    TargetEntryPoint {
-        name: "entry".into(),
-        node: ArtifactNodeId(0),
-        workgroup_size: selected.workgroup_size,
-        grid_size: selected.grid,
-        dynamic_shared_bytes: selected.dynamic_shared_bytes,
-        resource_bindings: vec![TargetResourceBinding {
+    entry_over(
+        artifact,
+        "entry",
+        ArtifactNodeId(0),
+        vec![TargetResourceBinding {
             resource: ArtifactValueId(0),
             group: 0,
             slot: 3,
             memory: TargetResourceMemory::Global,
             access: TargetResourceAccess::ReadOnly,
         }],
+    )
+}
+
+/// One entry point over `bindings`, launched at the geometry the artifact
+/// recorded for `node`.
+///
+/// Both suites that build payload entries read the launch out of the artifact
+/// and then restate the same six fields. Naming and binding are what the cases
+/// vary, so those are arguments and the rest is here once.
+pub(crate) fn entry_over(
+    artifact: &Artifact,
+    name: &str,
+    node: ArtifactNodeId,
+    resource_bindings: Vec<TargetResourceBinding>,
+) -> TargetEntryPoint {
+    let launch = artifact
+        .geometry()
+        .iter()
+        .find(|record| record.node == node)
+        .unwrap_or_else(|| panic!("fixture artifact records no geometry for node {}", node.0));
+    TargetEntryPoint {
+        name: name.to_string(),
+        node,
+        workgroup_size: launch.workgroup_size,
+        grid_size: launch.grid,
+        dynamic_shared_bytes: launch.dynamic_shared_bytes,
+        resource_bindings,
     }
 }

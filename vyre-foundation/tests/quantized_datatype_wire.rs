@@ -96,17 +96,7 @@ fn quantized_buffer_rejects_float32_storage_before_wire_emission() {
 
 #[test]
 fn generated_quantized_buffer_matrix_roundtrips_through_program_wire() {
-    let storages = [
-        DataType::I4,
-        DataType::I8,
-        DataType::I16,
-        DataType::U8,
-        DataType::U16,
-        DataType::F8E4M3,
-        DataType::F8E5M2,
-        DataType::FP4,
-        DataType::NF4,
-    ];
+    let storages = DataType::QUANTIZED_STORAGE;
     let scales = [
         QuantizationScale::PerTensor,
         QuantizationScale::PerChannel { axis: 0 },

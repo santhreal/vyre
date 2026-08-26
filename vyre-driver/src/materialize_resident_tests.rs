@@ -10,7 +10,7 @@ use vyre_megakernel::{
 
 use crate::materialize::materialize_test_fixtures::{
     binding, compile_graph, compile_graph_with_facts, compile_graph_with_search, contract,
-    entry_point, global_bindings, test_instance_core, test_payload, try_payload,
+    entry_point, global_bindings, single_entry, test_instance_core, test_payload, try_payload,
 };
 use crate::materialize::unbound_input;
 use crate::BindingPlan;
@@ -57,22 +57,15 @@ fn read_write_retained_preserves_input_output_and_order() {
         .unwrap();
     let state_out = outputs[0];
 
-    let artifact = compile_graph(graph);
-
-    let payload = test_payload(
-        &artifact,
-        vec![entry_point(
-            &artifact,
-            "entry0",
-            ArtifactNodeId(0),
-            global_bindings(&[
-                (ArtifactValueId(state_in.0), TargetResourceAccess::ReadWrite),
-                (
-                    ArtifactValueId(state_out.0),
-                    TargetResourceAccess::ReadWrite,
-                ),
-            ]),
-        )],
+    let (artifact, payload) = single_entry(
+        graph,
+        &[
+            (ArtifactValueId(state_in.0), TargetResourceAccess::ReadWrite),
+            (
+                ArtifactValueId(state_out.0),
+                TargetResourceAccess::ReadWrite,
+            ),
+        ],
     );
 
     let core = test_instance_core(&artifact, &payload).unwrap();
@@ -204,16 +197,9 @@ fn read_write_invocation_lifetime_is_input_and_output() {
         .unwrap();
     let out_id = outputs[0];
 
-    let artifact = compile_graph(graph);
-
-    let payload = test_payload(
-        &artifact,
-        vec![entry_point(
-            &artifact,
-            "entry0",
-            ArtifactNodeId(0),
-            global_bindings(&[(ArtifactValueId(val_inv.0), TargetResourceAccess::ReadWrite)]),
-        )],
+    let (artifact, payload) = single_entry(
+        graph,
+        &[(ArtifactValueId(val_inv.0), TargetResourceAccess::ReadWrite)],
     );
 
     let core = test_instance_core(&artifact, &payload).unwrap();

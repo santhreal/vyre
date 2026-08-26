@@ -1,17 +1,18 @@
-//! The hand-written `DataType` and `CollectiveOp` variant tables, and the
-//! proptest generators that draw from them.
+//! The `DataType` and `CollectiveOp` variant tables, and the proptest
+//! generators that draw from them.
 //!
 //! A schema is a wire format, so a sweep that generates only part of one proves
 //! the round trip only for that part, and a table copied per target drifts
 //! variant by variant. Both copies of the `DataType` generator had already
 //! diverged: the signature byte-accounting sweep was missing quantized, opaque,
 //! device-mesh and block-sparse types, so nothing checked that an `OpSignature`
-//! carrying one of them survives serialization. The tables live here so adding a
-//! variant widens every sweep at once.
+//! carrying one of them survives serialization. The generators live here so
+//! adding a variant widens every sweep at once.
 //!
-//! `DataType` and `CollectiveOp` are `#[non_exhaustive]` and expose no variant
-//! iterator, so these lists cannot be derived from the type. They are written by
-//! hand exactly once instead.
+//! `DataType::SCALAR_LEAVES` and `DataType::QUANTIZED_STORAGE` are the tables
+//! themselves, on the type that owns the variants. `CollectiveOp` is
+//! `#[non_exhaustive]` and publishes no such list, so its table is written by
+//! hand here.
 #![allow(dead_code)]
 
 use proptest::prelude::*;
@@ -19,46 +20,10 @@ use vyre_spec::extension::ExtensionDataTypeId;
 use vyre_spec::{CollectiveOp, DataType, QuantizationScale, QuantizationZeroPoint, TypeId};
 
 /// Storage element types a quantized `DataType` may wrap.
-///
-/// `DataType::is_quantized_storage` answers for exactly this set;
-/// `data_type_surface.rs` holds the contract that the two agree.
-pub(crate) const QUANTIZED_STORAGE_TYPES: [DataType; 9] = [
-    DataType::I4,
-    DataType::I8,
-    DataType::I16,
-    DataType::U8,
-    DataType::U16,
-    DataType::F8E4M3,
-    DataType::F8E5M2,
-    DataType::FP4,
-    DataType::NF4,
-];
+pub(crate) const QUANTIZED_STORAGE_TYPES: [DataType; 9] = DataType::QUANTIZED_STORAGE;
 
 /// Every `DataType` that carries neither an element type nor a payload.
-pub(crate) const SCALAR_LEAF_TYPES: [DataType; 22] = [
-    DataType::U8,
-    DataType::U16,
-    DataType::U32,
-    DataType::U64,
-    DataType::I8,
-    DataType::I16,
-    DataType::I32,
-    DataType::I64,
-    DataType::Bool,
-    DataType::F16,
-    DataType::BF16,
-    DataType::F32,
-    DataType::F64,
-    DataType::F8E4M3,
-    DataType::F8E5M2,
-    DataType::I4,
-    DataType::FP4,
-    DataType::NF4,
-    DataType::Vec2U32,
-    DataType::Vec4U32,
-    DataType::Bytes,
-    DataType::Tensor,
-];
+pub(crate) const SCALAR_LEAF_TYPES: [DataType; 22] = DataType::SCALAR_LEAVES;
 
 /// Storage types a quantized `DataType` may wrap.
 pub(crate) fn quantized_storage_strategy() -> impl Strategy<Value = DataType> {

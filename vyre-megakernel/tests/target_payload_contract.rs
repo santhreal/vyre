@@ -12,7 +12,7 @@ use vyre_megakernel::{
 #[path = "../../tests/support/artifact_fixtures.rs"]
 mod artifact_fixtures;
 
-use artifact_fixtures::{entry_point, neutral_artifact};
+use artifact_fixtures::{entry_over, entry_point, neutral_artifact};
 
 fn diagnostic_path(error: &CompileError) -> Option<&str> {
     error
@@ -536,19 +536,16 @@ fn target_payload_rejects_duplicate_slot_within_entry() {
             access: TargetResourceAccess::WriteOnly,
         },
     ];
-    let launch = &neutral.geometry()[0];
     let error = TargetPayload::new(
         &neutral,
         format(1),
         profile(1),
-        vec![TargetEntryPoint {
-            name: "dup_slot".into(),
-            node: ArtifactNodeId(0),
-            workgroup_size: launch.workgroup_size,
-            grid_size: launch.grid,
-            dynamic_shared_bytes: launch.dynamic_shared_bytes,
-            resource_bindings: bindings,
-        }],
+        vec![entry_over(
+            &neutral,
+            "dup_slot",
+            ArtifactNodeId(0),
+            bindings,
+        )],
         vec![1, 2, 3],
     )
     .expect_err("duplicate (group, slot) must fail admission");
@@ -578,19 +575,16 @@ fn target_payload_accepts_same_resource_at_distinct_slots() {
             access: TargetResourceAccess::WriteOnly,
         },
     ];
-    let launch = &neutral.geometry()[0];
     let payload = TargetPayload::new(
         &neutral,
         format(1),
         profile(1),
-        vec![TargetEntryPoint {
-            name: "distinct_slots_same_res".into(),
-            node: ArtifactNodeId(0),
-            workgroup_size: launch.workgroup_size,
-            grid_size: launch.grid,
-            dynamic_shared_bytes: launch.dynamic_shared_bytes,
-            resource_bindings: bindings,
-        }],
+        vec![entry_over(
+            &neutral,
+            "distinct_slots_same_res",
+            ArtifactNodeId(0),
+            bindings,
+        )],
         vec![1, 2, 3],
     )
     .expect("same resource at distinct slots must be admitted");
@@ -608,19 +602,16 @@ fn target_payload_rejects_unknown_canonical_resource() {
         memory: TargetResourceMemory::Global,
         access: TargetResourceAccess::ReadOnly,
     }];
-    let launch = &neutral.geometry()[0];
     let error = TargetPayload::new(
         &neutral,
         format(1),
         profile(1),
-        vec![TargetEntryPoint {
-            name: "unknown_res".into(),
-            node: ArtifactNodeId(0),
-            workgroup_size: launch.workgroup_size,
-            grid_size: launch.grid,
-            dynamic_shared_bytes: launch.dynamic_shared_bytes,
-            resource_bindings: bindings,
-        }],
+        vec![entry_over(
+            &neutral,
+            "unknown_res",
+            ArtifactNodeId(0),
+            bindings,
+        )],
         vec![1, 2, 3],
     )
     .expect_err("unknown resource must fail admission");

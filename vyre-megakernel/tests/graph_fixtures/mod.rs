@@ -11,9 +11,10 @@
 #![allow(dead_code)]
 
 use vyre_foundation::ir::{
-    BufferAccess, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
+    BufferAccess, DataType, GraphInput, GraphOutput, GraphValueId, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
 };
+use vyre_test_support::graph_values::u32_symbolic;
 use vyre_test_support::pass_programs::copy_program;
 
 /// A `u32` value of symbolic length that lives for one invocation.
@@ -201,4 +202,27 @@ pub(crate) fn asymmetric_join_graph() -> ProgramGraph {
         )
         .unwrap();
     graph
+}
+
+/// The read-only ports a node declares over one caller value and one constant.
+///
+/// Two suites build a node that adds a caller input to a constant, and the port
+/// declarations were the same eleven lines in both. Only the program and the
+/// output around them differ, so those stay at the call site.
+pub(crate) fn value_and_constant_ports(
+    input: GraphValueId,
+    constant: GraphValueId,
+) -> Vec<GraphInput> {
+    vec![
+        GraphInput {
+            buffer: "input".into(),
+            value: input,
+            contract: u32_symbolic(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        },
+        GraphInput {
+            buffer: "constant".into(),
+            value: constant,
+            contract: u32_symbolic(BufferAccess::ReadOnly, ValueLifetime::Constant),
+        },
+    ]
 }

@@ -217,6 +217,51 @@ pub enum DataType {
 
 #[allow(clippy::match_same_arms)]
 impl DataType {
+    /// Every data type that carries neither an element type nor a payload.
+    ///
+    /// A sweep, a cast candidate set, or a wire round trip that hand-lists the
+    /// scalar leaves goes stale the moment one is added. This is the list, on
+    /// the type that owns the variants.
+    pub const SCALAR_LEAVES: [Self; 22] = [
+        Self::U8,
+        Self::U16,
+        Self::U32,
+        Self::U64,
+        Self::I8,
+        Self::I16,
+        Self::I32,
+        Self::I64,
+        Self::Bool,
+        Self::F16,
+        Self::BF16,
+        Self::F32,
+        Self::F64,
+        Self::F8E4M3,
+        Self::F8E5M2,
+        Self::I4,
+        Self::FP4,
+        Self::NF4,
+        Self::Vec2U32,
+        Self::Vec4U32,
+        Self::Bytes,
+        Self::Tensor,
+    ];
+
+    /// Every storage element type [`Self::Quantized`] may wrap.
+    ///
+    /// [`Self::is_quantized_storage`] answers for exactly this set.
+    pub const QUANTIZED_STORAGE: [Self; 9] = [
+        Self::I4,
+        Self::I8,
+        Self::I16,
+        Self::U8,
+        Self::U16,
+        Self::F8E4M3,
+        Self::F8E5M2,
+        Self::FP4,
+        Self::NF4,
+    ];
+
     /// Frozen builtin wire tag for this data type.
     ///
     /// Returns `None` for extension-declared opaque types because their wire

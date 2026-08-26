@@ -1,9 +1,5 @@
 use super::*;
-use vyre_foundation::ir::DataType;
-
-fn test_key(tenant: &str, trust: Option<&str>, gen: u64) -> PrefixCacheKey {
-    PrefixCacheKey::test_sample(tenant, trust, gen)
-}
+use crate::prefix_cache_fixtures::prefix_key as test_key;
 
 #[test]
 fn prefix_cache_cold_miss_and_warm_hit() {
@@ -133,27 +129,4 @@ fn prefix_cache_duplicate_release_rejected() {
     // Duplicate release must fail with DuplicateRelease error
     let err = cache.release(&pages).unwrap_err();
     assert!(matches!(err, PrefixCacheError::DuplicateRelease(_)));
-}
-
-impl PrefixCacheKey {
-    /// Constructs a representative prefix cache key for testing.
-    #[cfg(test)]
-    pub fn test_sample(tenant: &str, trust: Option<&str>, gen: u64) -> Self {
-        Self {
-            model_id: [10u8; 32],
-            tokenizer_id: [20u8; 32],
-            weights_digest: [30u8; 32],
-            config_digest: [40u8; 32],
-            dtype: DataType::F32,
-            layout: PrefixCacheLayout {
-                kv_heads: 2,
-                head_dim: 32,
-                block_tokens: 16,
-            },
-            device_generation: gen,
-            cache_schema_version: 1,
-            isolation_domain: tenant.to_string(),
-            trust_domain: trust.map(|s| s.to_string()),
-        }
-    }
 }

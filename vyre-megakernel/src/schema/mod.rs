@@ -667,21 +667,7 @@ mod tests {
     }
 
     fn launch(node: u32) -> GeometryRecord {
-        GeometryRecord {
-            node: ArtifactNodeId(node),
-            phase: vyre_foundation::schedule::SchedulePhaseId(0),
-            predecessors: Vec::new(),
-            logical_coverage: [64, 1, 1],
-            grid: [2, 1, 1],
-            workgroup_size: [32, 1, 1],
-            vector_width: 1,
-            roles: Vec::new(),
-            ring_slots: 0,
-            barrier_phases: Vec::new(),
-            dynamic_shared_bytes: 0,
-            launch_intent: LaunchResourceIntent::default(),
-            persistence: EntryPersistence::Static,
-        }
+        crate::geometry_fixtures::geometry(node, 0, [32, 1, 1])
     }
 
     fn launchable() -> ArtifactPayload {

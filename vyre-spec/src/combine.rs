@@ -1,78 +1,89 @@
 use crate::{AtomicOp, CollectiveOp, SubgroupReduceOp};
 
-/// The combine one operator applies, independent of where it appears.
+/// Every combine, in law-id order, with the lower-case spelling, the frozen
+/// subgroup wire tag, and whether it operates on bit patterns.
 ///
 /// Atomic read-modify-writes, subgroup reductions and collectives name the same
-/// seven combines under three vocabularies. One kind answers all three, so a
-/// consumer asking whether an order of application is observable consults one
-/// law table instead of three.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum CombineKind {
-    /// Addition, or a sum reduction.
-    Add,
-    /// Multiplication, or a product reduction.
-    Mul,
-    /// Minimum.
-    Min,
-    /// Maximum.
-    Max,
-    /// Bitwise AND.
-    And,
-    /// Bitwise OR.
-    Or,
-    /// Bitwise XOR.
-    Xor,
+/// seven combines under three vocabularies. This table is where they are named:
+/// it expands into [`CombineKind`], into [`SubgroupReduceOp`], and into the
+/// projections between them, so a combine cannot exist in one vocabulary and be
+/// missing from another.
+macro_rules! for_each_combine {
+    ($emit:ident) => {
+        $emit! {
+            Add "add" 0x01 false,
+            Mul "mul" 0x02 false,
+            Min "min" 0x03 false,
+            Max "max" 0x04 false,
+            And "and" 0x05 true,
+            Or "or" 0x06 true,
+            Xor "xor" 0x07 true,
+        }
+    };
 }
 
-impl CombineKind {
-    /// Every combine kind, in law-id order.
-    pub const ALL: [Self; 7] = [
-        Self::Add,
-        Self::Mul,
-        Self::Min,
-        Self::Max,
-        Self::And,
-        Self::Or,
-        Self::Xor,
-    ];
+pub(crate) use for_each_combine;
 
-    /// Op id under which this combine's algebraic laws are registered.
-    ///
-    /// The same combine over an exact element type and over a rounding one are
-    /// separate operators for law purposes: `x + (y + z)` and `(x + y) + z`
-    /// agree on integers and disagree on floats.
-    #[must_use]
-    pub const fn law_id(self, exact: bool) -> &'static str {
-        match (self, exact) {
-            (Self::Add, true) => "vyre.combine.exact.add",
-            (Self::Add, false) => "vyre.combine.rounding.add",
-            (Self::Mul, true) => "vyre.combine.exact.mul",
-            (Self::Mul, false) => "vyre.combine.rounding.mul",
-            (Self::Min, true) => "vyre.combine.exact.min",
-            (Self::Min, false) => "vyre.combine.rounding.min",
-            (Self::Max, true) => "vyre.combine.exact.max",
-            (Self::Max, false) => "vyre.combine.rounding.max",
-            (Self::And, true) => "vyre.combine.exact.and",
-            (Self::And, false) => "vyre.combine.rounding.and",
-            (Self::Or, true) => "vyre.combine.exact.or",
-            (Self::Or, false) => "vyre.combine.rounding.or",
-            (Self::Xor, true) => "vyre.combine.exact.xor",
-            (Self::Xor, false) => "vyre.combine.rounding.xor",
+macro_rules! define_combine_kind {
+    ($($variant:ident $spelling:literal $tag:literal $bitwise:literal,)+) => {
+        /// The combine one operator applies, independent of where it appears.
+        ///
+        /// One kind answers for all three vocabularies, so a consumer asking
+        /// whether an order of application is observable consults one law table
+        /// instead of three.
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+        pub enum CombineKind {
+            $(
+                #[doc = concat!("The `", $spelling, "` combine.")]
+                $variant,
+            )+
         }
-    }
 
-    /// Whether this combine operates on bit patterns rather than numeric value.
-    ///
-    /// A bitwise combine is exact whatever the element type, because it does not
-    /// round.
-    #[must_use]
-    pub const fn is_bitwise(self) -> bool {
-        match self {
-            Self::And | Self::Or | Self::Xor => true,
-            Self::Add | Self::Mul | Self::Min | Self::Max => false,
+        impl CombineKind {
+            /// Every combine kind, in law-id order.
+            pub const ALL: [Self; [$(Self::$variant),+].len()] = [$(Self::$variant),+];
+
+            /// Op id under which this combine's algebraic laws are registered.
+            ///
+            /// The same combine over an exact element type and over a rounding
+            /// one are separate operators for law purposes: `x + (y + z)` and
+            /// `(x + y) + z` agree on integers and disagree on floats.
+            #[must_use]
+            pub const fn law_id(self, exact: bool) -> &'static str {
+                match (self, exact) {
+                    $(
+                        (Self::$variant, true) => concat!("vyre.combine.exact.", $spelling),
+                        (Self::$variant, false) => concat!("vyre.combine.rounding.", $spelling),
+                    )+
+                }
+            }
+
+            /// Whether this combine operates on bit patterns rather than
+            /// numeric value.
+            ///
+            /// A bitwise combine is exact whatever the element type, because it
+            /// does not round.
+            #[must_use]
+            pub const fn is_bitwise(self) -> bool {
+                match self {
+                    $(Self::$variant => $bitwise,)+
+                }
+            }
         }
-    }
+
+        impl SubgroupReduceOp {
+            /// The combine this reduction applies.
+            #[must_use]
+            pub const fn combine(self) -> CombineKind {
+                match self {
+                    $(Self::$variant => CombineKind::$variant,)+
+                }
+            }
+        }
+    };
 }
+
+for_each_combine!(define_combine_kind);
 
 impl AtomicOp {
     /// The combine this atomic applies, or `None` when the operator's result
@@ -97,22 +108,6 @@ impl AtomicOp {
             | Self::FetchNand
             | Self::LruUpdate
             | Self::Opaque(_) => None,
-        }
-    }
-}
-
-impl SubgroupReduceOp {
-    /// The combine this reduction applies.
-    #[must_use]
-    pub const fn combine(self) -> CombineKind {
-        match self {
-            Self::Add => CombineKind::Add,
-            Self::Mul => CombineKind::Mul,
-            Self::Min => CombineKind::Min,
-            Self::Max => CombineKind::Max,
-            Self::And => CombineKind::And,
-            Self::Or => CombineKind::Or,
-            Self::Xor => CombineKind::Xor,
         }
     }
 }

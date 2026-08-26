@@ -266,7 +266,7 @@ mod tests {
     use crate::prefix_cache::PrefixCacheLimits;
 
     fn test_key() -> PrefixCacheKey {
-        PrefixCacheKey::test_sample("tenant_mtp", None, 1)
+        crate::prefix_cache_fixtures::prefix_key("tenant_mtp", None, 1)
     }
 
     #[test]

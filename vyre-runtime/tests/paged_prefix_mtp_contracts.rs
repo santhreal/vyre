@@ -18,29 +18,13 @@ use vyre_runtime::paged_residency::{
     BlockTableSpec, PagedKVSlabSpec, PagedResidencyError, PagedResidencyPlanner,
     PagedResourceBinding, PagingCandidateStrategy,
 };
-use vyre_runtime::prefix_cache::{
-    PrefixCache, PrefixCacheError, PrefixCacheKey, PrefixCacheLayout, PrefixCacheLimits,
-};
+use vyre_runtime::prefix_cache::{PrefixCache, PrefixCacheError, PrefixCacheLimits};
 use vyre_runtime::resource_residency::{StateId, StateLease};
 
-fn test_prefix_key(tenant: &str, trust: Option<&str>, gen: u64) -> PrefixCacheKey {
-    PrefixCacheKey {
-        model_id: [10u8; 32],
-        tokenizer_id: [20u8; 32],
-        weights_digest: [30u8; 32],
-        config_digest: [40u8; 32],
-        dtype: DataType::F32,
-        layout: PrefixCacheLayout {
-            kv_heads: 2,
-            head_dim: 32,
-            block_tokens: 16,
-        },
-        device_generation: gen,
-        cache_schema_version: 1,
-        isolation_domain: tenant.to_string(),
-        trust_domain: trust.map(|s| s.to_string()),
-    }
-}
+#[path = "prefix_cache_fixtures/mod.rs"]
+mod prefix_cache_fixtures;
+
+use prefix_cache_fixtures::prefix_key as test_prefix_key;
 
 // -----------------------------------------------------------------------------
 // 191.2 & 191.8: Prefix Cache Lifecycle, COW, Isolation, and Bounds

@@ -581,10 +581,8 @@ fn finalist_failure(index: usize, error: &TargetCompileError) -> CompileError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schema::{EntryPersistence, LaunchResourceIntent};
     use crate::ArtifactNodeId;
     use vyre_foundation::ir::Program;
-    use vyre_foundation::schedule::SchedulePhaseId;
 
     fn program(workgroup: [u32; 3]) -> Vec<u8> {
         Program::wrapped(Vec::new(), workgroup, Vec::new())
@@ -593,21 +591,7 @@ mod tests {
     }
 
     fn record(node: u32, workgroup: [u32; 3]) -> GeometryRecord {
-        GeometryRecord {
-            node: ArtifactNodeId(node),
-            phase: SchedulePhaseId(node),
-            predecessors: Vec::new(),
-            logical_coverage: [64, 1, 1],
-            grid: GeometryRecord::covering_grid([64, 1, 1], workgroup).expect("positive extents"),
-            workgroup_size: workgroup,
-            vector_width: 1,
-            roles: Vec::new(),
-            ring_slots: 0,
-            barrier_phases: Vec::new(),
-            dynamic_shared_bytes: 0,
-            launch_intent: LaunchResourceIntent::default(),
-            persistence: EntryPersistence::Static,
-        }
+        crate::geometry_fixtures::geometry(node, node, workgroup)
     }
 
     fn node(id: u32, workgroup: [u32; 3]) -> NodeRecord {

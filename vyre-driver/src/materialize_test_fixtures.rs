@@ -187,3 +187,24 @@ pub(super) fn try_payload(
         vec![1, 2, 3],
     )
 }
+/// The artifact `graph` compiles to, and a one-entry payload binding `values`.
+///
+/// Most materialize fixtures are a single-node graph launched by a single entry
+/// point that binds every value in group 0. That shape is stated here so a test
+/// states the graph and the bindings and nothing about the seam between them.
+pub(super) fn single_entry(
+    graph: ProgramGraph,
+    values: &[(ArtifactValueId, TargetResourceAccess)],
+) -> (Artifact, TargetPayload) {
+    let artifact = compile_graph(graph);
+    let payload = test_payload(
+        &artifact,
+        vec![entry_point(
+            &artifact,
+            "entry0",
+            ArtifactNodeId(0),
+            global_bindings(values),
+        )],
+    );
+    (artifact, payload)
+}

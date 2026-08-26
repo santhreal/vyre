@@ -30,6 +30,9 @@ mod error;
 mod execution;
 mod facts;
 mod frame;
+#[cfg(test)]
+#[path = "../tests/geometry_fixtures/mod.rs"]
+mod geometry_fixtures;
 /// Versioned production grammar candidate search derives plans from, re-exported
 /// as `ScheduleProduction`, `DerivationStep` and `SCHEDULE_GRAMMAR_VERSION`.
 mod grammar;

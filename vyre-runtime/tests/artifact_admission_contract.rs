@@ -8,7 +8,7 @@ use vyre_driver::materialize::{DeviceSpec, MaterializerDevice};
 use vyre_driver::BackendRegistration;
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource, Completion,
-    Device, DeviceIdentity, ResidentOwner, Resource, Submission, VyreBackend,
+    Device, ResidentOwner, Resource, VyreBackend,
 };
 use vyre_foundation::diagnostics::{DiagnosticStage, RetryClass};
 use vyre_foundation::ir::{
@@ -17,9 +17,9 @@ use vyre_foundation::ir::{
 };
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileRequest, DeviceFacts,
-    Digest, EmittedResources, ExternalFacts, GeometryRecord, SearchBudget, TargetCompileError,
-    TargetCompiler, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
-    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    Digest, ExternalFacts, SearchBudget, TargetCompileError, TargetCompiler, TargetPayload,
+    TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
+    TargetResourceMemory,
 };
 use vyre_runtime::artifact_admission::{
     admit_artifact, admit_cached_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession,
@@ -33,9 +33,14 @@ use vyre_runtime::recovery::{classify_backend_error, recover_artifact_session};
 
 #[path = "../../tests/support/artifact_fixtures.rs"]
 mod artifact_fixtures;
+#[path = "../../tests/support/fixture_instance.rs"]
+mod fixture_instance;
+
+use fixture_instance::{completion, FixtureInstance};
 
 use artifact_fixtures::{
-    compile_graph, contract, entry_point, graph_over, neutral_artifact, single_input_graph,
+    compile_graph, contract, entry_over, entry_point, graph_over, neutral_artifact,
+    single_input_graph,
 };
 use vyre_test_support::pass_programs::{add_program, copy_program};
 
@@ -73,19 +78,6 @@ fn resident_projection_artifact() -> Artifact {
     compile_graph(graph, 0)
 }
 
-/// The launch geometry `neutral` recorded for `node`.
-///
-/// A payload states what the device launches, and admission accepts only the
-/// geometry the compiler selected, so a fixture reads the record instead of
-/// restating a shape.
-fn recorded_launch(neutral: &Artifact, node: ArtifactNodeId) -> &GeometryRecord {
-    neutral
-        .geometry()
-        .iter()
-        .find(|record| record.node == node)
-        .expect("the fixture artifact records geometry for every node it carries")
-}
-
 fn resident_projection_payload(neutral: &Artifact) -> TargetPayload {
     let bindings = [
         (
@@ -114,19 +106,16 @@ fn resident_projection_payload(neutral: &Artifact) -> TargetPayload {
         access,
     })
     .collect();
-    let launch = recorded_launch(neutral, ArtifactNodeId(0));
     TargetPayload::new(
         neutral,
         format("test.cache-target", 1),
         profile("test.cache-target", 1),
-        vec![TargetEntryPoint {
-            name: "resident-projection".to_string(),
-            node: ArtifactNodeId(0),
-            workgroup_size: launch.workgroup_size,
-            grid_size: launch.grid,
-            dynamic_shared_bytes: launch.dynamic_shared_bytes,
-            resource_bindings: bindings,
-        }],
+        vec![entry_over(
+            neutral,
+            "resident-projection",
+            ArtifactNodeId(0),
+            bindings,
+        )],
         vec![7, 8, 9],
     )
     .expect("resident projection payload must be valid")
@@ -145,19 +134,11 @@ fn queue_payload(neutral: &Artifact) -> TargetPayload {
             access: TargetResourceAccess::ReadWrite,
         })
         .collect();
-    let launch = recorded_launch(neutral, ArtifactNodeId(0));
     TargetPayload::new(
         neutral,
         format("test.cache-target", 1),
         profile("test.cache-target", 1),
-        vec![TargetEntryPoint {
-            name: "queue".to_string(),
-            node: ArtifactNodeId(0),
-            workgroup_size: launch.workgroup_size,
-            grid_size: launch.grid,
-            dynamic_shared_bytes: launch.dynamic_shared_bytes,
-            resource_bindings: bindings,
-        }],
+        vec![entry_over(neutral, "queue", ArtifactNodeId(0), bindings)],
         vec![1, 2, 3],
     )
     .unwrap()
@@ -498,25 +479,22 @@ fn packaged_envelope_admits_through_runtime_without_recompile() {
     let resource = neutral.resources()[0].value;
     // Match the fixture package payload format identity and version.
     let required = format("fixture-target-format", 1);
-    let launch = recorded_launch(&neutral, node);
     let attached = TargetPayload::new(
         &neutral,
         required.clone(),
         profile("fixture-target-format", 1),
-        vec![TargetEntryPoint {
-            name: "main".into(),
+        vec![entry_over(
+            &neutral,
+            "main",
             node,
-            workgroup_size: launch.workgroup_size,
-            grid_size: launch.grid,
-            dynamic_shared_bytes: launch.dynamic_shared_bytes,
-            resource_bindings: vec![TargetResourceBinding {
+            vec![TargetResourceBinding {
                 resource,
                 group: 0,
                 slot: 0,
                 memory: TargetResourceMemory::Global,
                 access: TargetResourceAccess::ReadOnly,
             }],
-        }],
+        )],
         b"target-payload-fixture".to_vec(),
     )
     .expect("packaged fixture payload must bind");
@@ -600,92 +578,61 @@ impl ArtifactMaterializer for TestMaterializer {
                 fix: "Fix: test payload association must match the neutral artifact.".to_string(),
             });
         }
-        Ok(Box::new(TestInstance {
-            artifact: artifact.digest(),
-            payload: payload.digest(),
-            device: self.device.identity().clone(),
-            retained: artifact
-                .resources()
-                .iter()
-                .filter(|resource| resource.lifetime == vyre_megakernel::ResourceLifetime::Retained)
-                .map(|resource| resource.value)
-                .collect(),
-        }))
-    }
-}
-
-struct TestInstance {
-    artifact: Digest,
-    payload: Digest,
-    device: DeviceIdentity,
-    retained: BTreeSet<ArtifactValueId>,
-}
-
-impl ArtifactInstance for TestInstance {
-    fn artifact(&self) -> Digest {
-        self.artifact
-    }
-
-    fn payload(&self) -> Digest {
-        self.payload
-    }
-
-    fn device(&self) -> &DeviceIdentity {
-        &self.device
-    }
-
-    fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-        if bindings.artifact() != self.artifact {
-            return Err(BackendError::InvalidProgram {
-                fix: "Fix: test bindings must name the materialized artifact.".to_string(),
-            });
-        }
-        let retained = bindings
+        let retained: BTreeSet<ArtifactValueId> = artifact
             .resources()
             .iter()
-            .filter_map(|(value, resource)| {
-                self.retained.contains(value).then(|| match resource {
-                    BoundResource::Host(bytes) => {
-                        let mut next = bytes.clone();
-                        if next.len() == 4 {
-                            let counter = u32::from_le_bytes([next[0], next[1], next[2], next[3]]);
-                            std::thread::yield_now();
-                            next = counter.wrapping_add(1).to_le_bytes().to_vec();
-                        }
-                        Ok((*value, next))
-                    }
-                    BoundResource::Resident(_) => Err(BackendError::UnsupportedFeature {
-                        name: "test resident resource".to_string(),
-                        backend: "test-artifact".to_string(),
-                    }),
-                })
-            })
-            .collect::<Result<BTreeMap<_, _>, _>>()?;
-        Ok(Box::new(TestSubmission(Some(Completion {
-            artifact: self.artifact,
-            outputs: BTreeMap::new(),
-            retained,
-            device_ns: None,
-        }))))
-    }
-
-    fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError> {
-        Ok(vec![EmittedResources::default()])
+            .filter(|resource| resource.lifetime == vyre_megakernel::ResourceLifetime::Retained)
+            .map(|resource| resource.value)
+            .collect();
+        Ok(FixtureInstance::new(
+            artifact,
+            payload,
+            self.device.identity(),
+            move |artifact, bindings| increment_retained(artifact, bindings, &retained),
+        ))
     }
 }
 
-struct TestSubmission(Option<Completion>);
-
-impl Submission for TestSubmission {
-    fn is_ready(&self) -> bool {
-        true
+/// Complete `bindings`, bumping every retained host counter by one.
+///
+/// The increment is what the concurrency contracts observe: a retained value
+/// read back after a submission must carry the value this instance wrote, not
+/// the bytes the caller supplied.
+fn increment_retained(
+    artifact: Digest,
+    bindings: BindingSet,
+    retained: &BTreeSet<ArtifactValueId>,
+) -> Result<Completion, BackendError> {
+    if bindings.artifact() != artifact {
+        return Err(BackendError::InvalidProgram {
+            fix: "Fix: test bindings must name the materialized artifact.".to_string(),
+        });
     }
-
-    fn wait(mut self: Box<Self>) -> Result<Completion, BackendError> {
-        self.0.take().ok_or_else(|| BackendError::InvalidProgram {
-            fix: "Fix: consume the test submission only once.".to_string(),
+    let readback = bindings
+        .resources()
+        .iter()
+        .filter_map(|(value, resource)| {
+            retained.contains(value).then(|| match resource {
+                BoundResource::Host(bytes) => {
+                    let mut next = bytes.clone();
+                    if next.len() == 4 {
+                        let counter = u32::from_le_bytes([next[0], next[1], next[2], next[3]]);
+                        std::thread::yield_now();
+                        next = counter.wrapping_add(1).to_le_bytes().to_vec();
+                    }
+                    Ok((*value, next))
+                }
+                BoundResource::Resident(_) => Err(BackendError::UnsupportedFeature {
+                    name: "test resident resource".to_string(),
+                    backend: "test-artifact".to_string(),
+                }),
+            })
         })
-    }
+        .collect::<Result<BTreeMap<_, _>, _>>()?;
+    Ok(Completion {
+        retained: readback,
+        ..completion(artifact)
+    })
 }
 
 fn test_backend_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
@@ -728,47 +675,27 @@ static RECORDED_VALUE_ID: AtomicU32 = AtomicU32::new(u32::MAX);
 static RECORDED_BYTE_LEN: AtomicU64 = AtomicU64::new(0);
 static RECORDED_FIRST_BYTE: AtomicU32 = AtomicU32::new(0);
 
-struct RecordingInstance {
-    artifact: Digest,
-    payload: Digest,
-    device: DeviceIdentity,
-}
-
-impl ArtifactInstance for RecordingInstance {
-    fn artifact(&self) -> Digest {
-        self.artifact
-    }
-
-    fn payload(&self) -> Digest {
-        self.payload
-    }
-
-    fn device(&self) -> &DeviceIdentity {
-        &self.device
-    }
-
-    fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-        for (value, resource) in bindings.resources() {
-            if let BoundResource::Host(bytes) = resource {
-                RECORDED_VALUE_ID.store(value.0, Ordering::Release);
-                RECORDED_BYTE_LEN.store(bytes.len() as u64, Ordering::Release);
-                RECORDED_FIRST_BYTE.store(
-                    bytes.first().copied().unwrap_or(0) as u32,
-                    Ordering::Release,
-                );
-            }
+/// Record the first host binding a submission carried, then complete.
+///
+/// The recorded value id, byte length and first byte are what the
+/// representative-input contracts assert: the runtime must bind the exact bytes
+/// the caller supplied, so a fixture that only counted submissions could not
+/// see a substituted buffer.
+fn record_host_binding(artifact: Digest, bindings: BindingSet) -> Result<Completion, BackendError> {
+    for (value, resource) in bindings.resources() {
+        if let BoundResource::Host(bytes) = resource {
+            RECORDED_VALUE_ID.store(value.0, Ordering::Release);
+            RECORDED_BYTE_LEN.store(bytes.len() as u64, Ordering::Release);
+            RECORDED_FIRST_BYTE.store(
+                bytes.first().copied().unwrap_or(0) as u32,
+                Ordering::Release,
+            );
         }
-        Ok(Box::new(TestSubmission(Some(Completion {
-            artifact: self.artifact,
-            outputs: BTreeMap::new(),
-            retained: BTreeMap::new(),
-            device_ns: Some(42),
-        }))))
     }
-
-    fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError> {
-        Ok(vec![EmittedResources::default()])
-    }
+    Ok(Completion {
+        device_ns: Some(42),
+        ..completion(artifact)
+    })
 }
 
 struct RecordingMaterializer {
@@ -785,11 +712,12 @@ impl ArtifactMaterializer for RecordingMaterializer {
         artifact: &Artifact,
         payload: &TargetPayload,
     ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-        Ok(Box::new(RecordingInstance {
-            artifact: artifact.digest(),
-            payload: payload.digest(),
-            device: self.device.identity().clone(),
-        }))
+        Ok(FixtureInstance::new(
+            artifact,
+            payload,
+            self.device.identity(),
+            record_host_binding,
+        ))
     }
 }
 
@@ -987,19 +915,16 @@ fn resident_bindings_preserve_canonical_value_identity_with_reordered_target_slo
             access: TargetResourceAccess::ReadOnly,
         },
     ];
-    let launch = recorded_launch(&neutral, ArtifactNodeId(0));
     let payload = TargetPayload::new(
         &neutral,
         format("test.cache-target", 1),
         profile("test.cache-target", 1),
-        vec![TargetEntryPoint {
-            name: "resident-projection".to_string(),
-            node: ArtifactNodeId(0),
-            workgroup_size: launch.workgroup_size,
-            grid_size: launch.grid,
-            dynamic_shared_bytes: launch.dynamic_shared_bytes,
-            resource_bindings: reordered_bindings,
-        }],
+        vec![entry_over(
+            &neutral,
+            "resident-projection",
+            ArtifactNodeId(0),
+            reordered_bindings,
+        )],
         vec![7, 8, 9],
     )
     .expect("reordered resident projection payload must be valid");
@@ -1443,17 +1368,7 @@ fn payload_over_every_node(neutral: &Artifact) -> TargetPayload {
     let entries = neutral
         .nodes()
         .iter()
-        .map(|node| {
-            let launch = recorded_launch(neutral, node.id);
-            TargetEntryPoint {
-                name: "main".to_string(),
-                node: node.id,
-                workgroup_size: launch.workgroup_size,
-                grid_size: launch.grid,
-                dynamic_shared_bytes: launch.dynamic_shared_bytes,
-                resource_bindings: bindings.clone(),
-            }
-        })
+        .map(|node| entry_over(neutral, "main", node.id, bindings.clone()))
         .collect();
     TargetPayload::new(
         neutral,

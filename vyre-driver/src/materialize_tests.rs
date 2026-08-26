@@ -11,8 +11,8 @@ use vyre_megakernel::{
 use vyre_test_support::graph_values::graph_output;
 
 use crate::materialize::materialize_test_fixtures::{
-    compile_graph, contract, entry_point, global_bindings, test_format, test_instance_core,
-    test_payload, test_profile,
+    compile_graph, contract, entry_point, global_bindings, single_entry, test_format,
+    test_instance_core, test_payload, test_profile,
 };
 use crate::materialize::{
     admit, partition_bindings, retained_chain_relates, unbound_input, unbound_resident_buffer,
@@ -613,19 +613,12 @@ fn write_only_binding_of_an_output_value_is_output_only() {
         .unwrap();
     let out_id = outputs[0];
 
-    let artifact = compile_graph(graph);
-
-    let payload = test_payload(
-        &artifact,
-        vec![entry_point(
-            &artifact,
-            "entry0",
-            ArtifactNodeId(0),
-            global_bindings(&[
-                (ArtifactValueId(val_in.0), TargetResourceAccess::ReadOnly),
-                (ArtifactValueId(out_id.0), TargetResourceAccess::WriteOnly),
-            ]),
-        )],
+    let (artifact, payload) = single_entry(
+        graph,
+        &[
+            (ArtifactValueId(val_in.0), TargetResourceAccess::ReadOnly),
+            (ArtifactValueId(out_id.0), TargetResourceAccess::WriteOnly),
+        ],
     );
 
     let core = test_instance_core(&artifact, &payload).unwrap();
@@ -882,18 +875,12 @@ fn payload_access_decides_projection_membership_at_every_lifetime() {
                 .unwrap();
             let acc_id = ArtifactValueId(outputs[0].0);
 
-            let artifact = compile_graph(graph);
-            let payload = test_payload(
-                &artifact,
-                vec![entry_point(
-                    &artifact,
-                    "entry0",
-                    ArtifactNodeId(0),
-                    global_bindings(&[
-                        (ArtifactValueId(val_in.0), TargetResourceAccess::ReadOnly),
-                        (acc_id, access),
-                    ]),
-                )],
+            let (artifact, payload) = single_entry(
+                graph,
+                &[
+                    (ArtifactValueId(val_in.0), TargetResourceAccess::ReadOnly),
+                    (acc_id, access),
+                ],
             );
 
             let core = test_instance_core(&artifact, &payload).unwrap();

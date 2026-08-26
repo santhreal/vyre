@@ -10,6 +10,17 @@
 // carries a `SAFETY:` comment the `lint-unsafe-justification` gate validates.
 #![allow(unsafe_code)]
 
+// A fixture module shared with the integration suites names this crate by its
+// own name, so the same file compiles inside the library and inside a test
+// binary.
+#[cfg(test)]
+extern crate self as vyre_runtime;
+
+// The prefix-cache key fixture the integration proofs own.
+#[cfg(test)]
+#[path = "../tests/prefix_cache_fixtures/mod.rs"]
+mod prefix_cache_fixtures;
+
 /// Errors surfaced by the runtime layer. Every variant carries a
 /// `Fix:`-bearing message so a reviewer can act on the failure.
 #[derive(Debug, Clone, thiserror::Error)]

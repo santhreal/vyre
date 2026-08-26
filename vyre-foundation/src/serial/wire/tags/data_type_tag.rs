@@ -309,67 +309,48 @@ mod tests {
     /// and AOT artifact format both rely on.
     #[test]
     fn every_supported_data_type_round_trips_through_the_wire() {
-        let cases: Vec<DataType> = vec![
-            DataType::U8,
-            DataType::U16,
-            DataType::U32,
-            DataType::U64,
-            DataType::I8,
-            DataType::I16,
-            DataType::I32,
-            DataType::I64,
-            DataType::F16,
-            DataType::BF16,
-            DataType::F32,
-            DataType::F64,
-            DataType::Bool,
-            DataType::Bytes,
-            DataType::Tensor,
-            DataType::Vec2U32,
-            DataType::Vec4U32,
-            DataType::F8E4M3,
-            DataType::F8E5M2,
-            DataType::I4,
-            DataType::FP4,
-            DataType::NF4,
-            DataType::Array { element_size: 16 },
-            DataType::Handle(vyre_spec::TypeId(0xDEAD_BEEF)),
-            DataType::Vec {
-                element: Box::new(DataType::F32),
-                count: 4,
-            },
-            DataType::TensorShaped {
-                element: Box::new(DataType::F32),
-                shape: smallvec![32, 32],
-            },
-            DataType::SparseCsr {
-                element: Box::new(DataType::F32),
-            },
-            DataType::SparseCoo {
-                element: Box::new(DataType::F32),
-            },
-            DataType::SparseBsr {
-                element: Box::new(DataType::F32),
-                block_rows: 8,
-                block_cols: 8,
-            },
-            DataType::DeviceMesh {
-                axes: smallvec![4, 8, 16],
-            },
-            DataType::Quantized {
-                storage: Box::new(DataType::I4),
-                scale: vyre_spec::QuantizationScale::PerGroup { group_size: 128 },
-                zero_point: vyre_spec::QuantizationZeroPoint::Absent,
-            },
-            DataType::Quantized {
-                storage: Box::new(DataType::I8),
-                scale: vyre_spec::QuantizationScale::PerChannel { axis: 1 },
-                zero_point: vyre_spec::QuantizationZeroPoint::PerChannel { axis: 1 },
-            },
-            // Extension ids must have the high bit set per
-            // reject_reserved_extension_id (low half is reserved for core IR).
-            DataType::Opaque(vyre_spec::extension::ExtensionDataTypeId(0x8000_0001)),
-        ];
+        let cases: Vec<DataType> = DataType::SCALAR_LEAVES
+            .into_iter()
+            .chain([
+                DataType::Array { element_size: 16 },
+                DataType::Handle(vyre_spec::TypeId(0xDEAD_BEEF)),
+                DataType::Vec {
+                    element: Box::new(DataType::F32),
+                    count: 4,
+                },
+                DataType::TensorShaped {
+                    element: Box::new(DataType::F32),
+                    shape: smallvec![32, 32],
+                },
+                DataType::SparseCsr {
+                    element: Box::new(DataType::F32),
+                },
+                DataType::SparseCoo {
+                    element: Box::new(DataType::F32),
+                },
+                DataType::SparseBsr {
+                    element: Box::new(DataType::F32),
+                    block_rows: 8,
+                    block_cols: 8,
+                },
+                DataType::DeviceMesh {
+                    axes: smallvec![4, 8, 16],
+                },
+                DataType::Quantized {
+                    storage: Box::new(DataType::I4),
+                    scale: vyre_spec::QuantizationScale::PerGroup { group_size: 128 },
+                    zero_point: vyre_spec::QuantizationZeroPoint::Absent,
+                },
+                DataType::Quantized {
+                    storage: Box::new(DataType::I8),
+                    scale: vyre_spec::QuantizationScale::PerChannel { axis: 1 },
+                    zero_point: vyre_spec::QuantizationZeroPoint::PerChannel { axis: 1 },
+                },
+                // Extension ids must have the high bit set per
+                // reject_reserved_extension_id (low half is reserved for core IR).
+                DataType::Opaque(vyre_spec::extension::ExtensionDataTypeId(0x8000_0001)),
+            ])
+            .collect();
 
         for ty in &cases {
             let mut encoded = Vec::new();

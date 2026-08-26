@@ -8,29 +8,31 @@
 //! buffer the compiler never planned for. These contracts pin the plan as the
 //! only authority over that storage.
 
-use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use vyre_driver::materialize::{DeviceSpec, MaterializerDevice};
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, BindingSet,
-    BoundResource, Completion, Device, DeviceIdentity, ResidentOwner, Resource, Submission,
-    VyreBackend,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, BoundResource,
+    Device, ResidentOwner, Resource, VyreBackend,
 };
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
-    Artifact, ArtifactEnvelope, ArtifactValueId, Digest, EmittedResources, TargetEntryPoint,
-    TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
+    Artifact, ArtifactEnvelope, ArtifactValueId, TargetEntryPoint, TargetPayload,
+    TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
     TargetResourceMemory,
 };
 use vyre_runtime::artifact_admission::ArtifactSession;
 
 #[path = "../../tests/support/artifact_fixtures.rs"]
 mod artifact_fixtures;
+#[path = "../../tests/support/fixture_instance.rs"]
+mod fixture_instance;
+
+use fixture_instance::FixtureInstance;
 
 const FORMAT: &str = "workspace.target";
 const MIDDLE: &str = "middle";
@@ -194,11 +196,11 @@ impl ArtifactMaterializer for WorkspaceMaterializer {
         artifact: &Artifact,
         payload: &TargetPayload,
     ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-        Ok(Box::new(WorkspaceInstance {
-            artifact: artifact.digest(),
-            payload: payload.digest(),
-            device: self.device.identity().clone(),
-        }))
+        Ok(FixtureInstance::neutral(
+            artifact,
+            payload,
+            self.device.identity(),
+        ))
     }
 
     fn allocate_resident(&self, byte_len: usize) -> Result<Resource, BackendError> {
@@ -216,53 +218,6 @@ impl ArtifactMaterializer for WorkspaceMaterializer {
             .expect("the fixture release log must not be poisoned")
             .push(resource);
         Ok(())
-    }
-}
-
-struct WorkspaceInstance {
-    artifact: Digest,
-    payload: Digest,
-    device: DeviceIdentity,
-}
-
-impl ArtifactInstance for WorkspaceInstance {
-    fn artifact(&self) -> Digest {
-        self.artifact
-    }
-
-    fn payload(&self) -> Digest {
-        self.payload
-    }
-
-    fn device(&self) -> &DeviceIdentity {
-        &self.device
-    }
-
-    fn submit(&self, _bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-        Ok(Box::new(WorkspaceSubmission(Some(Completion {
-            artifact: self.artifact,
-            outputs: BTreeMap::new(),
-            retained: BTreeMap::new(),
-            device_ns: None,
-        }))))
-    }
-
-    fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError> {
-        Ok(vec![EmittedResources::default()])
-    }
-}
-
-struct WorkspaceSubmission(Option<Completion>);
-
-impl Submission for WorkspaceSubmission {
-    fn is_ready(&self) -> bool {
-        true
-    }
-
-    fn wait(mut self: Box<Self>) -> Result<Completion, BackendError> {
-        self.0.take().ok_or_else(|| BackendError::InvalidProgram {
-            fix: "Fix: consume the fixture submission once.".to_string(),
-        })
     }
 }
 

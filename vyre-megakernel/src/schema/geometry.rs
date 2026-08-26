@@ -281,21 +281,7 @@ mod tests {
     use vyre_foundation::schedule::PipelineRole;
 
     fn record() -> GeometryRecord {
-        GeometryRecord {
-            node: ArtifactNodeId(0),
-            phase: SchedulePhaseId(0),
-            predecessors: Vec::new(),
-            logical_coverage: [64, 1, 1],
-            grid: [2, 1, 1],
-            workgroup_size: [32, 1, 1],
-            vector_width: 1,
-            roles: Vec::new(),
-            ring_slots: 0,
-            barrier_phases: Vec::new(),
-            dynamic_shared_bytes: 0,
-            launch_intent: LaunchResourceIntent::default(),
-            persistence: EntryPersistence::Static,
-        }
+        crate::geometry_fixtures::geometry(0, 0, [32, 1, 1])
     }
 
     fn region(offset: u64, bytes: u64) -> WorkspaceRegion {
