@@ -30,8 +30,7 @@ pub fn region_loop_skeleton_fixed_via(
     epsilon_fixed: u32,
     n: u32,
 ) -> Result<Vec<u32>, SemanticExecutionError> {
-    let cells = checked_square_cells(n, "region_loop_skeleton_fixed_via")
-        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
+    let cells = checked_square_cells(n, "region_loop_skeleton_fixed_via")?;
     if dist_matrix_fixed.len() != cells {
         return Err(SemanticExecutionError::InvalidRequest(format!(
             "distance matrix len {} != n*n ({cells})",
@@ -63,8 +62,7 @@ pub fn region_loop_skeleton_fixed_via_into(
     n: u32,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    let cells = checked_square_cells(n, "region_loop_skeleton_fixed_via_into")
-        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
+    let cells = checked_square_cells(n, "region_loop_skeleton_fixed_via_into")?;
     if dist_matrix_fixed.len() != cells {
         return Err(SemanticExecutionError::InvalidRequest(format!(
             "distance matrix len {} != n*n ({cells})",
@@ -91,7 +89,6 @@ pub fn region_loop_skeleton_fixed_via_into(
         ));
     }
     decode_u32_output_exact(&outputs[0], cells, "region_loop_skeleton_fixed_via", out)
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 #[cfg(test)]

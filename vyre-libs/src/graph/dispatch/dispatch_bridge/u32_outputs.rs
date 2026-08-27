@@ -28,7 +28,6 @@ pub(crate) fn dispatch_single_u32_output_from_prepared_into(
         execute_single_program(executor, HOST_WRAPPER_NODE, program, scratch_inputs, policy)?;
     let bytes = named_output(&output, buffer)?;
     decode_u32_output_exact(bytes, expected_output_words, buffer, out)
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Dispatch already-prepared inputs and decode two named u32 output buffers.
@@ -49,15 +48,13 @@ pub(crate) fn dispatch_two_u32_outputs_from_prepared_into(
         execute_single_program(executor, HOST_WRAPPER_NODE, program, scratch_inputs, policy)?;
     let first_bytes = named_output(&output, first_buffer)?;
     let second_bytes = named_output(&output, second_buffer)?;
-    decode_u32_output_exact(first_bytes, first_expected_words, first_buffer, first_out)
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    decode_u32_output_exact(first_bytes, first_expected_words, first_buffer, first_out)?;
     decode_u32_output_exact(
         second_bytes,
         second_expected_words,
         second_buffer,
         second_out,
     )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 fn named_output<'a>(

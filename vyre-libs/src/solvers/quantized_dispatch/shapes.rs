@@ -161,5 +161,4 @@ where
         context,
         out,
     )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }

@@ -190,7 +190,6 @@ fn dispatch_tt_step_with_scratch_into(
         )));
     }
     decode_u32_output_exact(&outputs[0], output_len, "fusion_pressure_via TT", out)
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 fn bounded_core_cells(left: u32, right: u32, label: &str) -> Result<usize, SemanticExecutionError> {

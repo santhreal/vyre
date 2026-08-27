@@ -1,15 +1,21 @@
 //! Every quantized INT4 dispatch entry point validates the backend's readback
-//! the same way, in two stages: `expect_one_output` rejects a buffer count
-//! other than one, then `decode_*_output_exact` rejects a byte count other
-//! than the exact one the kernel writes.
+//! the same way: `decode_*_output_exact` rejects a byte count other than the
+//! exact one the kernel writes, after `expect_one_output` has taken the sole
+//! buffer.
 //!
 //! Each entry point used to pin that contract in its own suite, and the copies
 //! disagreed about which half to pin. `i4x8_batched_matmul_top1_f32_scaled_via`
-//! was the only one that rejected two buffers, and the only one that rejected
-//! an output SHORTER than the contract; every other suite rejected only an
-//! output LONGER than it, and none rejected two buffers. Both halves hold for
+//! was the only one that rejected an output SHORTER than the contract; every
+//! other suite rejected only an output LONGER than it. Both directions hold for
 //! all six entry points, so no suite was wrong about behaviour and every suite
 //! was missing half the boundary.
+//!
+//! The buffer count reaching readback is not a backend choice:
+//! `execute_single_program` returns one buffer per written graph value, so a
+//! count other than one means the entry point's program declares a writable
+//! buffer count other than one. That half is pinned as the program property it
+//! is, and the canonical boundary owns rejection of an executor that omits or
+//! invents a graph value.
 //!
 //! This gate owns the contract for the whole family. Its member set is read
 //! from the `pub use` re-export block of
@@ -18,22 +24,43 @@
 
 mod semantic_execution_support;
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Mutex;
 
+use vyre_foundation::ir::GraphValueId;
 use vyre_libs::solvers::quantized_dispatch::{
     i4x8_batched_matmul_f32_scaled_via, i4x8_batched_matmul_top1_f32_scaled_via,
     i4x8_batched_matvec_f32_scaled_via, i4x8_dot_f32_scaled_via, i4x8_matvec_f32_scaled_via,
     unpack_i4x8_via,
 };
 use vyre_megakernel::{
-    Digest, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
-    SemanticExecutor,
+    writable_graph_values, Digest, SemanticExecutionError, SemanticExecutionOutput,
+    SemanticExecutionRequest, SemanticExecutor,
 };
 
 /// A dispatcher that returns exactly the output buffers it was handed, so the
-/// entry point's readback validation is the only thing under test.
+/// entry point's readback validation is the only thing under test. The written
+/// graph value count of each call is recorded, because that count decides how
+/// many buffers readback sees.
 struct FixedOutputDispatcher {
     outputs: Vec<Vec<u8>>,
+    written: Mutex<Vec<usize>>,
+}
+
+impl FixedOutputDispatcher {
+    fn new(outputs: Vec<Vec<u8>>) -> Self {
+        Self {
+            outputs,
+            written: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn written_counts(&self) -> Vec<usize> {
+        self.written
+            .lock()
+            .expect("fixture recording lock is uncontended")
+            .clone()
+    }
 }
 
 impl SemanticExecutor for FixedOutputDispatcher {
@@ -42,22 +69,79 @@ impl SemanticExecutor for FixedOutputDispatcher {
         request: &SemanticExecutionRequest<'_>,
     ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
         let node = &request.logical().graph().nodes()[0];
-        if self.outputs.len() != node.outputs.len() {
+        // A read-write output buffer carries a retained input value, not a
+        // node output port, so the written set comes from the canonical
+        // derivation rather than `node.outputs`.
+        let written = writable_graph_values(node);
+        self.written
+            .lock()
+            .expect("fixture recording lock is uncontended")
+            .push(written.len());
+        if self.outputs.len() != written.len() {
             return Err(SemanticExecutionError::Backend(format!(
                 "Fix: fixed-output executor received {} outputs for {} graph values.",
                 self.outputs.len(),
-                node.outputs.len()
+                written.len()
             )));
         }
         Ok(SemanticExecutionOutput {
             artifact: Digest([1; 32]),
             payload: Digest([2; 32]),
-            outputs: node
-                .outputs
-                .iter()
-                .copied()
-                .zip(self.outputs.clone())
-                .collect(),
+            outputs: written.into_iter().zip(self.outputs.clone()).collect(),
+        })
+    }
+}
+
+/// A dispatcher that breaks the canonical output contract instead of the
+/// readback contract: one graph value short, or one value the graph never
+/// declared.
+struct MalformedDispatcher {
+    surplus: bool,
+    filler: Vec<u8>,
+    written: Mutex<Vec<u32>>,
+}
+
+impl MalformedDispatcher {
+    fn new(surplus: bool, filler: Vec<u8>) -> Self {
+        Self {
+            surplus,
+            filler,
+            written: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn first_written_value(&self) -> u32 {
+        *self
+            .written
+            .lock()
+            .expect("fixture recording lock is uncontended")
+            .first()
+            .expect("the entry point reached the executor")
+    }
+}
+
+impl SemanticExecutor for MalformedDispatcher {
+    fn execute(
+        &self,
+        request: &SemanticExecutionRequest<'_>,
+    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+        let node = &request.logical().graph().nodes()[0];
+        let written = writable_graph_values(node);
+        self.written
+            .lock()
+            .expect("fixture recording lock is uncontended")
+            .extend(written.iter().map(|value| value.0));
+        let mut outputs = BTreeMap::new();
+        if self.surplus {
+            for value in written {
+                outputs.insert(value, self.filler.clone());
+            }
+            outputs.insert(GraphValueId(u32::MAX), self.filler.clone());
+        }
+        Ok(SemanticExecutionOutput {
+            artifact: Digest([1; 32]),
+            payload: Digest([2; 32]),
+            outputs,
         })
     }
 }
@@ -68,7 +152,7 @@ impl SemanticExecutor for FixedOutputDispatcher {
 struct EntryPoint {
     name: &'static str,
     output_bytes: usize,
-    call: Box<dyn Fn(&FixedOutputDispatcher) -> Result<(), SemanticExecutionError>>,
+    call: Box<dyn Fn(&dyn SemanticExecutor) -> Result<(), SemanticExecutionError>>,
 }
 
 /// `cols = 8` packs into exactly one u32 word per row, so every shape below is
@@ -237,34 +321,64 @@ fn every_published_quantized_entry_point_has_a_readback_contract_row() {
     );
 }
 
+/// The buffer count readback sees follows from the program: one buffer per
+/// written graph value. Every entry point writes exactly one, which is what
+/// makes its `expect_one_output` stage pass, so a program that grew or lost a
+/// writable buffer fails here.
 #[test]
-fn every_quantized_entry_point_rejects_a_buffer_count_other_than_one() {
+fn every_quantized_entry_point_writes_exactly_one_graph_value() {
     for entry in entry_points() {
-        let filler = vec![0u8; entry.output_bytes];
+        let dispatcher = FixedOutputDispatcher::new(vec![vec![0u8; entry.output_bytes]]);
+        assert!(
+            (entry.call)(&dispatcher).is_ok(),
+            "Fix: {} must accept a single output buffer of exactly {} bytes.",
+            entry.name,
+            entry.output_bytes
+        );
+        assert_eq!(
+            dispatcher.written_counts(),
+            vec![1],
+            "Fix: {} must declare exactly one writable buffer per dispatch; readback takes the sole buffer.",
+            entry.name
+        );
+    }
+}
 
-        for (label, outputs) in [
-            ("zero output buffers", Vec::new()),
-            ("two output buffers", vec![filler.clone(), filler.clone()]),
-        ] {
-            let count = outputs.len();
-            let dispatcher = FixedOutputDispatcher { outputs };
-            let Err(error) = (entry.call)(&dispatcher) else {
-                panic!(
-                    "Fix: {} must reject {label} from the backend before decoding.",
-                    entry.name
-                );
-            };
-            let expected = format!(
-                "dispatcher backend error: Fix: {} expected exactly one output buffer, got {count}.",
+/// A value count other than the declared one is rejected by the canonical
+/// boundary before any entry point's readback runs, in both directions.
+#[test]
+fn the_boundary_rejects_an_executor_that_omits_or_invents_a_graph_value() {
+    for entry in entry_points() {
+        let omitting = MalformedDispatcher::new(false, vec![0u8; entry.output_bytes]);
+        let Err(error) = (entry.call)(&omitting) else {
+            panic!(
+                "Fix: {} must reject an executor that returned no graph value.",
                 entry.name
             );
-            assert_eq!(
-                error.to_string(),
-                expected,
-                "Fix: {} must report the buffer-count contract verbatim for {label}.",
+        };
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "semantic artifact execution failed: executor omitted canonical output value {}. Fix: return every graph output exactly once",
+                omitting.first_written_value()
+            ),
+            "Fix: {} must surface the canonical omitted-value rejection.",
+            entry.name
+        );
+
+        let inventing = MalformedDispatcher::new(true, vec![0u8; entry.output_bytes]);
+        let Err(error) = (entry.call)(&inventing) else {
+            panic!(
+                "Fix: {} must reject an executor that returned an undeclared graph value.",
                 entry.name
             );
-        }
+        };
+        assert_eq!(
+            error.to_string(),
+            "semantic artifact execution failed: executor returned 1 undeclared output value(s). Fix: return only canonical graph outputs",
+            "Fix: {} must surface the canonical undeclared-value rejection.",
+            entry.name
+        );
     }
 }
 
@@ -277,35 +391,31 @@ fn every_quantized_entry_point_rejects_a_byte_count_other_than_the_exact_one() {
             ("an output shorter than the contract", exact - 4),
             ("an output longer than the contract", exact + 4),
         ] {
-            let dispatcher = FixedOutputDispatcher {
-                outputs: vec![vec![0u8; len]],
-            };
+            let dispatcher = FixedOutputDispatcher::new(vec![vec![0u8; len]]);
             let Err(error) = (entry.call)(&dispatcher) else {
                 panic!("Fix: {} must reject {label}.", entry.name);
             };
             let expected = format!(
-                "dispatcher backend error: Fix: {} expected {exact} output bytes, got {len}.",
+                "semantic artifact execution failed: Fix: {} expected {exact} output bytes, got {len}.",
                 entry.name
             );
             assert_eq!(
                 error.to_string(),
                 expected,
-                "Fix: {} must report the byte-count contract verbatim for {label}.",
+                "Fix: {} must report the byte-count contract verbatim for {label}, with one error prefix.",
                 entry.name
             );
         }
     }
 }
 
-/// Negative control for the two rejection tests: the byte count each row
-/// declares is the one the entry point actually accepts, so neither rejection
-/// above can pass because the row's constant is wrong.
+/// Negative control for the rejection rows: the byte count each row declares is
+/// the one the entry point actually accepts, so no rejection above can pass
+/// because the row's constant is wrong.
 #[test]
 fn every_quantized_entry_point_accepts_the_exact_contracted_byte_count() {
     for entry in entry_points() {
-        let dispatcher = FixedOutputDispatcher {
-            outputs: vec![vec![0u8; entry.output_bytes]],
-        };
+        let dispatcher = FixedOutputDispatcher::new(vec![vec![0u8; entry.output_bytes]]);
         assert!(
             (entry.call)(&dispatcher).is_ok(),
             "Fix: {} must accept a single output buffer of exactly {} bytes; this gate's other rows assert against that count.",

@@ -91,5 +91,4 @@ pub fn unpack_i4x8_via_with_scratch_into(
         "unpack_i4x8_via",
         out,
     )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }

@@ -229,8 +229,7 @@ pub fn transport_residual_fixed_via_with_scratch_into(
         "Fix: transport_residual_fixed_via requires chebyshev_order in 1..={CHEBYSHEV_MAX_K}, got {chebyshev_order}."
     )));
     }
-    let cells = checked_square_cells(n, "transport_residual_fixed_via")
-        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
+    let cells = checked_square_cells(n, "transport_residual_fixed_via")?;
     if dispatch_cost_scaled_fixed.len() != cells {
         return Err(SemanticExecutionError::InvalidRequest(format!(
         "Fix: transport_residual_fixed_via requires dispatch_cost_scaled_fixed.len() == n*n, got len={}, n={n}, n*n={cells}.",
@@ -289,10 +288,8 @@ pub fn transport_residual_fixed_via_with_scratch_into(
         &program,
         "transport_residual",
         "transport_residual_fixed_via",
-    )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    )?;
     decode_u32_output_exact(output, n as usize, "transport_residual_fixed_via", out)
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 #[cfg(test)]

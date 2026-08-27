@@ -184,7 +184,16 @@ fn launch_plan_uses_single_changed_word_for_unbounded_or_zero_iteration_cases() 
     assert!(!plan.uses_changed_history());
     assert_eq!(plan.changed_slot_value(0), None);
     assert_eq!(plan.changed_read_index(99).unwrap(), 0);
-    assert_eq!(vyre_foundation::guarded_logical_span(&program), Some(1));
+    assert_eq!(
+        vyre_foundation::guarded_logical_span(&program),
+        Some(0),
+        "Fix: a zero-node program admits no index, so the guarded span is zero"
+    );
+    assert_eq!(
+        vyre_foundation::admitted_logical_span(&program, 1),
+        1,
+        "Fix: the launch floor of one belongs to whoever sizes the launch, not to the span analysis"
+    );
 
     let long_plan = plan_csr_forward_or_changed_launch(CsrClosureInputs::allow_all(
         CsrGraphView {

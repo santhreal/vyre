@@ -157,8 +157,7 @@ pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
         "n_nodes",
         "d",
         "diffuse_dispatch_stalks_fixed_via",
-    )
-    .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
+    )?;
     let cells_u32 = u32::try_from(cells).map_err(|_| {
     SemanticExecutionError::InvalidRequest(format!(
         "Fix: diffuse_dispatch_stalks_fixed_via n_nodes*d exceeds the primitive u32 lane limit for n_nodes={n_nodes}, d={d}."
@@ -212,7 +211,6 @@ pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
         )));
     }
     decode_u32_output_exact(&outputs[0], cells, "diffuse_dispatch_stalks_fixed_via", out)
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Iterate sheaf diffusion until convergence (stalks stop changing

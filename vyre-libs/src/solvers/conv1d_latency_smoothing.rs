@@ -157,7 +157,6 @@ pub fn smooth_latency_trace_via_with_scratch_into(
         "smooth_latency_trace_via",
         out,
     )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// CPU oracle for latency smoothing, enabled only for parity tests.

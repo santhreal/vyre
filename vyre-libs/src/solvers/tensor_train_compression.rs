@@ -213,15 +213,13 @@ pub fn compress_cost_tensor_f32_via_with_scratch_into(
             core_words,
             "compress_cost_tensor_f32_via u_out",
             &mut cores_out[mode],
-        )
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+        )?;
         decode_f32_output_exact(
             rem_out_bytes,
             rem_words,
             "compress_cost_tensor_f32_via rem_out",
             &mut scratch.remainder,
-        )
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+        )?;
         std::mem::swap(&mut scratch.current, &mut scratch.remainder);
         r_prev = r_next;
     }

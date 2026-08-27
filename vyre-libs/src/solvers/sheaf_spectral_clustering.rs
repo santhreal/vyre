@@ -182,8 +182,7 @@ pub fn dominant_spectrum_fixed_via_with_scratch_into(
     use crate::telemetry::{bump, sheaf_spectral_clustering_calls};
     bump(&sheaf_spectral_clustering_calls);
 
-    let cells = checked_product_count(n_nodes, d, "n_nodes", "d", "dominant_spectrum_fixed_via")
-        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
+    let cells = checked_product_count(n_nodes, d, "n_nodes", "d", "dominant_spectrum_fixed_via")?;
     let cells_u32 = u32::try_from(cells).map_err(|_| {
     SemanticExecutionError::InvalidRequest(format!(
         "Fix: dominant_spectrum_fixed_via n_nodes*d exceeds the primitive u32 lane limit for n_nodes={n_nodes}, d={d}."
@@ -251,16 +250,14 @@ pub fn dominant_spectrum_fixed_via_with_scratch_into(
         cells,
         "dominant_spectrum_fixed_via eigenvector",
         eigenvector_out,
-    )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    )?;
     let mut lambda = Vec::with_capacity(1);
     decode_u32_output_exact(
         lambda_out_buf,
         1,
         "dominant_spectrum_fixed_via lambda",
         &mut lambda,
-    )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    )?;
     Ok(lambda[0])
 }
 

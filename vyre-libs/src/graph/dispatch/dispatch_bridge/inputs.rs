@@ -157,15 +157,13 @@ pub(crate) fn write_dispatch_input(
             context,
         } => {
             if values.is_empty() {
-                write_zero_u32_words(slot, words, context)
-                    .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
+                write_zero_u32_words(slot, words, context)?;
             } else {
                 write_u32_slice_le_bytes(slot, values);
             }
         }
         DispatchInput::ZeroU32Words { words, context } => {
-            write_zero_u32_words(slot, words, context)
-                .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
+            write_zero_u32_words(slot, words, context)?;
         }
     }
     Ok(())

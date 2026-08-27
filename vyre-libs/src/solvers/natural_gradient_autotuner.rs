@@ -168,8 +168,7 @@ pub fn precondition_autotune_gradient_fixed_via_with_scratch_into(
     use crate::telemetry::{bump, natural_gradient_autotuner_calls};
     bump(&natural_gradient_autotuner_calls);
 
-    let matrix_cells = checked_square_cells(n, "precondition_autotune_gradient_fixed_via")
-        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
+    let matrix_cells = checked_square_cells(n, "precondition_autotune_gradient_fixed_via")?;
     n.checked_mul(n).ok_or_else(|| {
     SemanticExecutionError::InvalidRequest(format!(
         "Fix: precondition_autotune_gradient_fixed_via n*n exceeds the primitive u32 buffer-count limit for n={n}."
@@ -221,7 +220,6 @@ pub fn precondition_autotune_gradient_fixed_via_with_scratch_into(
         "precondition_autotune_gradient_fixed_via",
         out,
     )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Compute the autotuner step from a plain gradient and learning

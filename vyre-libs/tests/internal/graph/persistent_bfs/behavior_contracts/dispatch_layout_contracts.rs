@@ -183,9 +183,13 @@ fn dispatch_plans_pin_grid_cache_shape_and_program_builders() {
     assert_eq!(batch.query_count_u32(), 2);
     assert_eq!(batch.total_words(), 2);
     assert_eq!(batch.words_per_query(), 1);
+    // The batch step guards its edge scan on a source-activity value that the
+    // program forces to zero outside `node_count`, so the domain the guards
+    // admit is the node count. The word count is the frontier bitset stride,
+    // which never bounded the scan.
     assert_eq!(
         guarded_logical_span(&batch.program("frontier_in", "frontier_out", "changed", "converged")),
-        Some(batch.words_per_query())
+        Some(batch.program_shape().node_count)
     );
     assert!(batch.words_per_query() * 32 >= 4);
     assert_eq!(
@@ -301,7 +305,7 @@ fn large_dispatch_plans_cover_every_node_with_parallel_grid() {
             "changed",
             "converged"
         )),
-        Some(resident_batch.words_per_query())
+        Some(resident_batch.program_shape().node_count)
     );
     assert!(resident_batch.words_per_query() * 32 >= node_count);
 }

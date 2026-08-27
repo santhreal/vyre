@@ -105,5 +105,4 @@ pub fn i4x8_dot_f32_scaled_via_with_scratch_into(
         "i4x8_dot_f32_scaled_via",
         out,
     )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }

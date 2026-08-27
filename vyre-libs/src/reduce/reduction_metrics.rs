@@ -364,7 +364,6 @@ fn decode_first_output(
         )));
     }
     crate::dispatch_buffers::decode_u32_output_exact(&outputs[0], words, context, out)
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 fn decode_scalar(

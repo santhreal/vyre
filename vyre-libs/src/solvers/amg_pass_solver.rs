@@ -156,19 +156,16 @@ pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
         "Fix: smooth_matroid_flow_fixed_via requires 0 < n_coarse < n_fine, got n_coarse={n_coarse}, n_fine={n_fine}."
     )));
     }
-    let fine_cells = checked_square_cells(n_fine, "smooth_matroid_flow_fixed_via fine matrix")
-        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
+    let fine_cells = checked_square_cells(n_fine, "smooth_matroid_flow_fixed_via fine matrix")?;
     let coarse_cells =
-        checked_square_cells(n_coarse, "smooth_matroid_flow_fixed_via coarse matrix")
-            .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
+        checked_square_cells(n_coarse, "smooth_matroid_flow_fixed_via coarse matrix")?;
     let transfer_cells = checked_product_count(
         n_coarse,
         n_fine,
         "n_coarse",
         "n_fine",
         "smooth_matroid_flow_fixed_via transfer matrix",
-    )
-    .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
+    )?;
     if a_fixed.len() != fine_cells {
         return Err(SemanticExecutionError::InvalidRequest(format!(
         "Fix: smooth_matroid_flow_fixed_via requires a_fixed.len() == n_fine*n_fine, got len={}, expected={fine_cells}.",
@@ -269,7 +266,6 @@ pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
         "smooth_matroid_flow_fixed_via",
         out,
     )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 #[cfg(test)]

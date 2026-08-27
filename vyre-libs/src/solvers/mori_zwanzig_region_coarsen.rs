@@ -227,8 +227,7 @@ pub fn coarsen_region_state_fixed_via_with_scratch_into(
     use crate::telemetry::{bump, mori_zwanzig_region_coarsen_calls};
     bump(&mori_zwanzig_region_coarsen_calls);
 
-    let cells = checked_square_cells(n, "coarsen_region_state_fixed_via")
-        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
+    let cells = checked_square_cells(n, "coarsen_region_state_fixed_via")?;
     let cells_u32 = u32::try_from(cells).map_err(|_| {
         SemanticExecutionError::InvalidRequest(format!(
         "Fix: coarsen_region_state_fixed_via n*n exceeds the primitive u32 lane limit for n={n}."
@@ -279,7 +278,6 @@ pub fn coarsen_region_state_fixed_via_with_scratch_into(
         "coarsen_region_state_fixed_via",
         out,
     )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Convenience: derive the projection AND apply it in one step.

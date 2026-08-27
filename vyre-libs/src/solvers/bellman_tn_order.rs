@@ -242,7 +242,6 @@ pub fn bellman_tn_order_via_with_scratch_into(
         )));
     }
     decode_u32_output_exact(&outputs[0], n_nodes as usize, "bellman_tn_order_via", out)
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 #[cfg(test)]

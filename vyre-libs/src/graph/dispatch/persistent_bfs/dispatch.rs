@@ -166,22 +166,19 @@ pub fn bfs_expand_via_with_scratch_into(
         words,
         "bfs_expand_via frontier_out",
         frontier_out,
-    )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    )?;
     decode_u32_output_exact(
         changed_buf,
         changed_words,
         "bfs_expand_via changed",
         &mut scratch.changed,
-    )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    )?;
     decode_u32_output_exact(
         converged_buf,
         1,
         "bfs_expand_via converged",
         &mut scratch.converged,
-    )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    )?;
     let changed = scratch.changed[0];
     validate_persistent_bfs_changed_flag(changed).map_err(SemanticExecutionError::Backend)?;
     let converged = scratch.converged[0];

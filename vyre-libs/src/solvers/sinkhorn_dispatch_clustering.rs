@@ -518,7 +518,6 @@ pub fn sinkhorn_clustering_via_with_scratch_into(
         "sinkhorn_clustering_via out_assignments",
         assignments_out,
     )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 fn checked_product(

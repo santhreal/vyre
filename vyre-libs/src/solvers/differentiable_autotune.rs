@@ -123,7 +123,6 @@ pub fn pick_config_pre_exp_fixed_via_with_scratch_into(
         "pick_config_pre_exp_fixed_via",
         out,
     )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Return fixed-point gradient magnitudes for the soft-picked cost.

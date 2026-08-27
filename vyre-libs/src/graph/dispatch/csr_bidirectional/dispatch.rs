@@ -164,7 +164,6 @@ pub(super) fn bidirectional_step_dispatch_prepared_inputs_into(
         CSR_BIDIRECTIONAL_FRONTIER_OUT_BUFFER,
         out,
     )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 #[allow(clippy::too_many_arguments)]

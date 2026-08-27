@@ -301,29 +301,25 @@ fn dispatch_ifds_csr_outputs_from_prepared_into(
         row_ptr_expected_words,
         row_ptr_context,
         row_ptr_out,
-    )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    )?;
     decode_u32_output_exact(
         row_cursor_bytes,
         row_cursor_expected_words,
         row_cursor_context,
         row_cursor_out,
-    )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    )?;
     decode_u32_output_exact(
         col_idx_bytes,
         col_idx_expected_words,
         col_idx_context,
         col_idx_out,
-    )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    )?;
     decode_u32_output_exact(
         col_len_bytes,
         col_len_expected_words,
         col_len_context,
         col_len_out,
     )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 fn validate_ifds_csr_killed_scratch_bytes(
     actual_len: usize,

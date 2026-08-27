@@ -271,10 +271,8 @@ pub fn aggregate_to_cells_via_with_scratch_into(
         policy,
     )
     .map(|output| output.outputs)?;
-    let output = require_exactly_one_output(&outputs, "aggregate_to_cells_via")
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    let output = require_exactly_one_output(&outputs, "aggregate_to_cells_via")?;
     decode_f32_output_exact(output, n_cells as usize, "aggregate_to_cells_via", out)
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Translate source-cell moments to target-cell locals through the active backend.
@@ -342,10 +340,8 @@ pub fn translate_to_targets_via_with_scratch_into(
         policy,
     )
     .map(|output| output.outputs)?;
-    let output = require_exactly_one_output(&outputs, "translate_to_targets_via")
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    let output = require_exactly_one_output(&outputs, "translate_to_targets_via")?;
     decode_f32_output_exact(output, n_cells as usize, "translate_to_targets_via", out)
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Evaluate target-cell locals into per-region affinity scores through the active backend.
@@ -426,10 +422,8 @@ pub fn evaluate_at_regions_via_with_scratch_into(
         policy,
     )
     .map(|output| output.outputs)?;
-    let output = require_exactly_one_output(&outputs, "evaluate_at_regions_via")
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    let output = require_exactly_one_output(&outputs, "evaluate_at_regions_via")?;
     decode_f32_output_exact(output, out_len, "evaluate_at_regions_via", out)
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Run the full P2M → M2L → L2P FMM compressor through the active backend.

@@ -424,8 +424,7 @@ fn decode_forward_fixpoint_outputs(
         readback.frontier_words,
         "csr_forward_or_changed frontier_out",
         frontier,
-    )
-    .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+    )?;
 
     for (iter, value) in readback.stage_changed.iter().enumerate() {
         let bytes = outputs.remove(value).ok_or_else(|| {
@@ -439,8 +438,7 @@ fn decode_forward_fixpoint_outputs(
             readback.changed_words,
             "csr_forward_or_changed changed",
             changed_out,
-        )
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
+        )?;
         let changed_index = readback
             .plan
             .changed_read_index(iter as u32)

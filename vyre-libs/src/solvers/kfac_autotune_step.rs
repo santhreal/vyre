@@ -153,7 +153,6 @@ pub fn kfac_autotune_step_via_with_scratch_into(
         )));
     }
     decode_f32_output_exact(&outputs[0], total_cells, "kfac_autotune_step_via", out)
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 #[cfg(test)]

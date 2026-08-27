@@ -187,8 +187,7 @@ pub fn matroid_solve_step_fixed_via_with_scratch_into(
     use crate::telemetry::{bump, multigrid_matroid_solver_calls};
     bump(&multigrid_matroid_solver_calls);
 
-    let cells = checked_square_cells(n, "matroid_solve_step_fixed_via")
-        .map_err(|error| SemanticExecutionError::InvalidRequest(error.to_string()))?;
+    let cells = checked_square_cells(n, "matroid_solve_step_fixed_via")?;
     let _matrix_cells_fit_u32 = u32::try_from(cells).map_err(|_| {
         SemanticExecutionError::InvalidRequest(format!(
             "Fix: matroid_solve_step_fixed_via n*n exceeds the primitive u32 lane limit for n={n}."
@@ -244,7 +243,6 @@ pub fn matroid_solve_step_fixed_via_with_scratch_into(
         )));
     }
     decode_u32_output_exact(&outputs[0], n as usize, "matroid_solve_step_fixed_via", out)
-        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Iterate Jacobi smoothing until residual norm drops below `tol`
