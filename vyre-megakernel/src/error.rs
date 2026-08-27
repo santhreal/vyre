@@ -50,6 +50,15 @@ pub(crate) enum CompilerFailureKind {
     UnknownRepresentativeInput,
     /// A representative input byte length does not match the graph value's static size.
     RepresentativeInputLengthMismatch,
+    /// The stated compile objective is internally inconsistent.
+    InvalidObjective,
+    /// A stated objective metric is priced by a fact this device never reported.
+    MissingCalibratedFact,
+    /// Every legal candidate exceeds a hard bound the objective states.
+    ObjectiveBoundViolated,
+    /// One artifact cannot satisfy the artifact coverage policy the objective
+    /// states.
+    PortfolioCoverageUnsatisfied,
 }
 
 impl CompilerFailureKind {
@@ -81,6 +90,10 @@ impl CompilerFailureKind {
             Self::RepresentativeInputLengthMismatch => {
                 "MKC028_REPRESENTATIVE_INPUT_LENGTH_MISMATCH"
             }
+            Self::InvalidObjective => "MKC029_INVALID_OBJECTIVE",
+            Self::MissingCalibratedFact => "MKC030_MISSING_CALIBRATED_FACT",
+            Self::ObjectiveBoundViolated => "MKC031_OBJECTIVE_BOUND_VIOLATED",
+            Self::PortfolioCoverageUnsatisfied => "MKC032_PORTFOLIO_COVERAGE_UNSATISFIED",
         }
     }
 }
@@ -95,10 +108,13 @@ const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
         | CompilerFailureKind::UnknownConstantIdentity
         | CompilerFailureKind::InvalidDeviceFacts
         | CompilerFailureKind::UnknownRepresentativeInput
-        | CompilerFailureKind::RepresentativeInputLengthMismatch => DiagnosticStage::Validate,
-        CompilerFailureKind::DependencyCycle | CompilerFailureKind::FinalistEvaluation => {
-            DiagnosticStage::Plan
-        }
+        | CompilerFailureKind::RepresentativeInputLengthMismatch
+        | CompilerFailureKind::InvalidObjective
+        | CompilerFailureKind::MissingCalibratedFact => DiagnosticStage::Validate,
+        CompilerFailureKind::DependencyCycle
+        | CompilerFailureKind::FinalistEvaluation
+        | CompilerFailureKind::ObjectiveBoundViolated
+        | CompilerFailureKind::PortfolioCoverageUnsatisfied => DiagnosticStage::Plan,
         CompilerFailureKind::ResourceOverflow | CompilerFailureKind::UnsizedResource => {
             DiagnosticStage::Lower
         }

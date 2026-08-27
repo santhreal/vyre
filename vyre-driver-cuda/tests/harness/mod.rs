@@ -12,8 +12,8 @@ use vyre_driver::DispatchConfig;
 pub(crate) use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_megakernel::{
-    CompileObjective, Digest, ExternalFacts, SearchBudget, SemanticExecutionPolicy,
-    SemanticExecutor,
+    CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
+    SemanticExecutionPolicy, SemanticExecutor,
 };
 use vyre_reference::value::Value;
 use vyre_runtime::RegisteredSemanticExecutor;
@@ -163,9 +163,8 @@ pub(crate) fn cuda_semantic_execution() -> (RegisteredSemanticExecutor, Semantic
     let policy = SemanticExecutionPolicy::new(
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         device.device_profile().compile_facts(),
-        CompileObjective::MinimizeLatency,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 60_000),
         SearchBudget::new(128, 128, 0, 0, 128),
-        60_000,
     );
     (executor, policy)
 }
@@ -251,7 +250,8 @@ pub(crate) fn compiled_cuda_outputs_with_config(
         ),
         compile_facts,
         vyre_megakernel::SearchBudget::new(128, 128, 0, 0, 128),
-        60_000,
+        vyre_megakernel::CompileObjective::minimize_latency()
+            .with_bound(vyre_megakernel::ObjectiveMetric::ArtifactBytes, 60_000),
     )
     .validate()
     .unwrap_or_else(|error| {

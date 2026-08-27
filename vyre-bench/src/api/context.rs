@@ -76,7 +76,10 @@ pub(crate) fn benchmark_compile_request(
         vyre::compiler::ExternalFacts::new(vyre::compiler::Digest([0; 32]), BTreeMap::new()),
         profile.compile_facts(),
         vyre::compiler::SearchBudget::new(256, 100_000, 1, 0, 1_000_000_000),
-        64 * 1024 * 1024,
+        vyre::compiler::CompileObjective::minimize_latency().with_bound(
+            vyre::compiler::ObjectiveMetric::ArtifactBytes,
+            64 * 1024 * 1024,
+        ),
     )
     .validate()
     .map_err(|error| vyre_driver::BackendError::new(error.to_string()))

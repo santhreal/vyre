@@ -30,8 +30,8 @@ use vyre_lower::artifact_golden::{
 };
 use vyre_lower::program_stability_corpus::{self, StabilityCase};
 use vyre_megakernel::{
-    Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, TargetCompiler,
-    TargetPayload,
+    Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
+    ObjectiveMetric, SearchBudget, TargetCompiler, TargetPayload,
 };
 
 fn golden_path() -> PathBuf {
@@ -76,7 +76,7 @@ fn artifact_for(case: &StabilityCase) -> Artifact {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         cuda_emission_device_facts(&case.program),
         SearchBudget::new(1, 1, 0, 0, 1),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .unwrap_or_else(|error| panic!("Fix: corpus case `{}` must validate: {error}", case.id));

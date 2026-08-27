@@ -85,9 +85,8 @@ pub(super) const CANONICAL_REQUEST_ARGUMENTS: &str = "        logical,
         inputs,
         policy.external_facts().clone(),
         policy.target_facts(),
-        policy.objective(),
-        policy.budget(),
-        policy.max_artifact_bytes(),";
+        *policy.objective(),
+        policy.budget(),";
 
 /// A function that binds staged bytes into a request and submits it.
 ///

@@ -7,8 +7,8 @@ use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_foundation::transform::inline::inline_calls_with_resolver;
 use vyre_foundation::transform::inline::OpResolver;
 use vyre_megakernel::{
-    Artifact, ArtifactEnvelope, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
-    TargetCompiler,
+    Artifact, ArtifactEnvelope, CompileObjective, CompileRequest, DeviceFacts, Digest,
+    ExternalFacts, ObjectiveMetric, SearchBudget, TargetCompiler,
 };
 
 use crate::artifact::{registration, TargetId};
@@ -85,7 +85,8 @@ fn compile_neutral_artifact(program: &Program) -> Result<Artifact, CompileError>
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
-        MAX_NEUTRAL_ARTIFACT_BYTES,
+        CompileObjective::minimize_latency()
+            .with_bound(ObjectiveMetric::ArtifactBytes, MAX_NEUTRAL_ARTIFACT_BYTES),
     )
     .validate()
     .map_err(|source| CompileError::CanonicalArtifact {

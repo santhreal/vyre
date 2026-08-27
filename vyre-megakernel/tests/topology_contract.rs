@@ -18,8 +18,8 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::{
-    compile, Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
-    ARTIFACT_SCHEMA_VERSION,
+    compile, Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
+    ObjectiveMetric, SearchBudget, ARTIFACT_SCHEMA_VERSION,
 };
 
 #[path = "graph_fixtures/mod.rs"]
@@ -52,7 +52,7 @@ fn sequential_baseline_is_always_legal_and_retained() {
         facts(),
         device_default(),
         SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("request must validate");
@@ -77,7 +77,7 @@ fn unknown_device_facts_reject_dependent_topologies() {
         facts(),
         unknown_device,
         SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("request must validate");
@@ -104,7 +104,7 @@ fn independent_arms_admit_concurrent_queue_topology() {
         facts(),
         device,
         SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("request must validate");
@@ -127,7 +127,7 @@ fn raw_waw_conflicts_reject_concurrent_execution() {
         facts(),
         device,
         SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("request must validate");
@@ -153,7 +153,7 @@ fn fixed_spatial_mask_rejected_without_enforceable_hardware_capability() {
         facts(),
         device,
         SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("request must validate");
@@ -176,7 +176,7 @@ fn bounded_work_queue_rejected_without_cooperative_launch() {
         facts(),
         device,
         SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("request must validate");
@@ -204,7 +204,7 @@ fn occupancy_exceeded_rejects_resident_partition_candidate() {
         facts(),
         tiny_device,
         SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("request must validate");
@@ -227,14 +227,14 @@ fn artifact_encoding_preserves_schema_12_and_compiled_topology_schedule() {
         facts(),
         device,
         SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("request must validate");
 
     let artifact = compile(&request).expect("compilation must succeed");
     assert_eq!(artifact.schema_version(), ARTIFACT_SCHEMA_VERSION);
-    assert_eq!(artifact.schema_version(), 12);
+    assert_eq!(artifact.schema_version(), 13);
 
     let wire_bytes = artifact.to_bytes().expect("artifact must encode");
     let decoded = Artifact::from_bytes(&wire_bytes).expect("artifact must decode");
@@ -274,7 +274,7 @@ fn asymmetric_join_rejected_without_cooperative_launch() {
         facts(),
         device_no_coop,
         SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("request must validate");
@@ -299,7 +299,7 @@ fn topology_ranking_prefers_concurrent_over_sequential_when_device_has_queues() 
         facts(),
         device_concurrent,
         SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("request must validate");
@@ -309,7 +309,7 @@ fn topology_ranking_prefers_concurrent_over_sequential_when_device_has_queues() 
         facts(),
         device_sequential,
         SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("request must validate");

@@ -20,6 +20,7 @@ use crate::{
     facts::PlanningFacts,
     grammar::{self, GrammarContext, ScheduleProduction, SCHEDULE_GRAMMAR_VERSION},
     legality::{analyze_topology_legality, TopologyDecision},
+    objective::{CompileObjective, MetricFigures},
     DependencyEdge, DeviceFacts, SearchBudget,
 };
 
@@ -48,6 +49,7 @@ pub(crate) fn derive(
     dependencies: &[DependencyEdge],
     budget: SearchBudget,
     device: DeviceFacts,
+    objective: &CompileObjective,
 ) -> Derivation {
     let grammar = GrammarContext { facts };
     let constraint = ConstraintContext {
@@ -65,7 +67,11 @@ pub(crate) fn derive(
     let mut certificate = SearchCertificate::new(SCHEDULE_GRAMMAR_VERSION);
     let mut seen = BTreeSet::new();
     seen.insert(baseline.canonical_key());
-    let mut incumbent = cost::evaluate(&baseline, facts, dependencies, device).total;
+    let mut incumbent = primary_figure(
+        &cost::evaluate(&baseline, facts, dependencies, device),
+        device,
+        objective,
+    );
     let mut candidates = vec![baseline.clone()];
     let mut frontier = vec![baseline];
     let mut cpu_work = 0_u64;
@@ -84,6 +90,7 @@ pub(crate) fn derive(
                 dependencies,
                 device,
                 budget,
+                objective,
                 remaining: MAX_DEPTH.saturating_sub(depth),
             },
             &mut Accumulator {
@@ -120,6 +127,7 @@ struct Expansion<'a, 'graph> {
     dependencies: &'a [DependencyEdge],
     device: DeviceFacts,
     budget: SearchBudget,
+    objective: &'a CompileObjective,
     /// Productions a descendant of this frontier may still apply.
     remaining: u32,
 }
@@ -130,7 +138,7 @@ struct Accumulator<'a> {
     seen: &'a mut BTreeSet<CandidateKey>,
     candidates: &'a mut Vec<CandidatePlan>,
     next: &'a mut Vec<CandidatePlan>,
-    /// Lowest proved cost any admitted candidate has reached.
+    /// Lowest primary-metric figure any admitted candidate has reached.
     incumbent: &'a mut u64,
     cpu_work: &'a mut u64,
 }
@@ -171,20 +179,25 @@ fn expand(
                     into.certificate.pruned(*production, reason);
                     continue;
                 }
-                let bound = objective_bound(&candidate, expansion.remaining, expansion.device);
-                if bound >= *into.incumbent {
+                let bound = objective_bound(
+                    &candidate,
+                    expansion.remaining,
+                    expansion.device,
+                    expansion.objective,
+                );
+                if bound > 0 && bound >= *into.incumbent {
                     into.certificate
                         .pruned(*production, PruneReason::ObjectiveDominated);
                     continue;
                 }
-                let total = cost::evaluate(
+                let scored = cost::evaluate(
                     &candidate,
                     expansion.facts,
                     expansion.dependencies,
                     expansion.device,
-                )
-                .total;
-                *into.incumbent = (*into.incumbent).min(total);
+                );
+                let figure = primary_figure(&scored, expansion.device, expansion.objective);
+                *into.incumbent = (*into.incumbent).min(figure);
                 into.certificate.admitted(*production);
                 into.candidates.push(candidate.clone());
                 into.next.push(candidate);
@@ -230,23 +243,65 @@ fn can_spend(cpu_work: u64, budget: SearchBudget) -> bool {
     cpu_work < budget.max_cpu_work && cpu_work < budget.max_elapsed_ns
 }
 
-/// Lowest cost this candidate or any descendant of it can reach.
+/// The objective's primary figure for one scored candidate.
+///
+/// Search compares candidates on the metric the objective ranks by, not on the
+/// cost model's own total, so raising an artifact-byte bound or asking for
+/// throughput over a horizon changes which candidates survive rather than only
+/// which one is reported first.
+fn primary_figure(
+    cost: &cost::CostBreakdown,
+    device: DeviceFacts,
+    objective: &CompileObjective,
+) -> u64 {
+    let horizon = objective.amortization_launches();
+    let per_class = objective
+        .workload()
+        .as_slice()
+        .iter()
+        .map(|class| MetricFigures::derive(cost, device, *class, horizon))
+        .collect::<Vec<_>>();
+    objective
+        .aggregate(&per_class)
+        .get(objective.primary())
+        .unwrap_or(u64::MAX)
+}
+
+/// Best primary figure this candidate or any descendant of it can reach.
 ///
 /// Fusion is the only production that removes a generated launch, and it
 /// contracts one pair at a time, so a descendant reachable within `remaining`
 /// productions issues at least `groups - remaining` launches. Concurrent queues
 /// and resident partitions can issue those launches together, so the bound
-/// divides by the widest arrangement the device grants. The traffic and
-/// occupancy terms are non-negative and are left out, which keeps the figure a
+/// divides by the widest arrangement the device grants. The traffic, occupancy
+/// and setup terms are non-negative and are left out, which keeps the figure a
 /// bound rather than an estimate: a candidate eliminated against it cannot beat
 /// the incumbent, whatever it is later specialized into.
-fn objective_bound(candidate: &CandidatePlan, remaining: u32, device: DeviceFacts) -> u64 {
+///
+/// Zero means this objective has no derivable lower bound on its primary metric,
+/// and the search prunes nothing on it.
+fn objective_bound(
+    candidate: &CandidatePlan,
+    remaining: u32,
+    device: DeviceFacts,
+    objective: &CompileObjective,
+) -> u64 {
     let groups = u64::try_from(candidate.group_count()).unwrap_or(u64::MAX);
-    groups
+    let unavoidable_ns = groups
         .saturating_sub(u64::from(remaining))
         .max(1)
         .div_ceil(launch_divisor(device))
-        .saturating_mul(cost::launch_cost_ns(device))
+        .saturating_mul(cost::launch_cost_ns(device));
+    let per_class = objective
+        .workload()
+        .as_slice()
+        .iter()
+        .map(|class| MetricFigures::unavoidable(unavoidable_ns, *class))
+        .collect::<Vec<_>>();
+    objective
+        .aggregate(&per_class)
+        .get(objective.primary())
+        .unwrap_or(0)
 }
 
 /// Widest set of generated launches this device can issue at once.

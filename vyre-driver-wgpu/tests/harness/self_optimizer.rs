@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use vyre_driver_wgpu::{WgpuBackend, WGPU_BACKEND_ID};
 use vyre_megakernel::{
-    CompileObjective, Digest, ExternalFacts, SearchBudget, SemanticExecutionPolicy,
+    CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, SemanticExecutionPolicy,
 };
 use vyre_runtime::RegisteredSemanticExecutor;
 
@@ -18,9 +18,8 @@ pub(crate) fn semantic_execution(
     let policy = SemanticExecutionPolicy::new(
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         backend.device_profile().compile_facts(),
-        CompileObjective::MinimizeLatency,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 60_000),
         SearchBudget::new(128, 128, 0, 0, 128),
-        60_000,
     );
     (executor, policy)
 }

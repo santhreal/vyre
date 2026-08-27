@@ -30,7 +30,8 @@ use vyre_foundation::validate::BackendCapabilities;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_libs::security::taint_pollution;
 use vyre_megakernel::{
-    CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, ValidatedCompileRequest,
+    CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
+    SearchBudget, ValidatedCompileRequest,
 };
 
 /// 33 nodes puts the bitset one node past a word boundary, which is the shape the
@@ -64,7 +65,7 @@ fn validated(program: Program) -> ValidatedCompileRequest {
         )
         .with_occupancy(0, 4096),
         SearchBudget::new(128, 1_000_000, 8, 4, 1_000_000_000),
-        1 << 24,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1 << 24),
     )
     .validate()
     .expect("a whole-grid fence must be cut, not rejected")

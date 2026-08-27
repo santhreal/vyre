@@ -13,9 +13,10 @@ use vyre_foundation::ir::{
     BufferAccess, DataType, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileRequest, DeviceFacts, Digest,
-    ExternalFacts, SearchBudget, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
-    TargetProfile, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
+    DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetEntryPoint,
+    TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
+    TargetResourceMemory,
 };
 
 use crate::materialize::{InstanceCore, NEUTRAL_MESSAGES};
@@ -90,7 +91,7 @@ fn compile_request(graph: ProgramGraph, facts: ExternalFacts, search: u32) -> Ar
         facts,
         DeviceFacts::unknown(),
         SearchBudget::new(search, 1_000_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .unwrap();

@@ -10,8 +10,8 @@ use std::collections::BTreeMap;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, GraphValueId, Node, Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_megakernel::{
-    CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
-    SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
+    CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
+    SearchBudget, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
     SemanticExecutionRequest, SemanticExecutor, ValidatedCompileRequest,
 };
 
@@ -30,9 +30,8 @@ pub fn unknown_policy(
     SemanticExecutionPolicy::new(
         ExternalFacts::new(external_digest, BTreeMap::new()),
         DeviceFacts::unknown(),
-        CompileObjective::MinimizeLatency,
+        latency_within(max_artifact_bytes),
         budget,
-        max_artifact_bytes,
     )
 }
 
@@ -52,10 +51,20 @@ pub fn granted_policy(
     SemanticExecutionPolicy::new(
         ExternalFacts::new(external_digest, BTreeMap::new()),
         DeviceFacts::new(crate::backend_capabilities::all_granted(), 1024),
-        CompileObjective::MinimizeLatency,
+        latency_within(max_artifact_bytes),
         budget,
-        max_artifact_bytes,
     )
+}
+
+/// The latency objective every shared fixture compiles under, bounded at
+/// `max_artifact_bytes`.
+///
+/// A suite here proves the seam rather than a service level, so it states the one
+/// bound the seam refuses a request for and orders on latency alone.
+#[must_use]
+pub const fn latency_within(max_artifact_bytes: u64) -> CompileObjective {
+    CompileObjective::minimize_latency()
+        .with_bound(ObjectiveMetric::ArtifactBytes, max_artifact_bytes)
 }
 
 /// The budget a device-backed contract runs under: search allowed, measurement not.
@@ -115,9 +124,8 @@ pub fn request<'a>(
         inputs,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         target_facts,
-        CompileObjective::MinimizeLatency,
+        latency_within(max_artifact_bytes),
         budget,
-        max_artifact_bytes,
     )
 }
 
@@ -141,7 +149,7 @@ pub fn validated_unknown_request(
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         DeviceFacts::unknown(),
         budget,
-        max_artifact_bytes,
+        latency_within(max_artifact_bytes),
     )
     .validate()
     .expect(

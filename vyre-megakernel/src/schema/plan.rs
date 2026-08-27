@@ -70,6 +70,14 @@ pub struct SelectedPlan {
     pub materializations: Vec<MaterializationRecord>,
     /// Number of legal candidates examined.
     pub candidates_explored: u32,
+    /// Legal candidates no other candidate dominated on the metrics the stated
+    /// objective orders by.
+    ///
+    /// One means the legal set had a single non-dominated plan and the ordering
+    /// only confirmed it. More than one means every candidate on the frontier
+    /// traded one metric for another, and the objective's tie breakers and
+    /// bounds are what selected between them.
+    pub pareto_frontier: u32,
     /// Search bounds under which this plan was selected.
     pub search_budget: SearchBudget,
     /// Exact work charged against the bounded search.
@@ -200,6 +208,23 @@ impl SelectedPlan {
                 "candidates_explored",
                 "selected schedule records no explored legal candidate".to_string(),
                 "record the executable unfused baseline candidate",
+            ));
+        }
+        if self.pareto_frontier == 0 {
+            return Err(invalid(
+                "pareto_frontier",
+                "selected schedule records no non-dominated legal candidate".to_string(),
+                "record the frontier the ranking preserved, which always holds the selected plan",
+            ));
+        }
+        if self.pareto_frontier > self.candidates_explored {
+            return Err(invalid(
+                "pareto_frontier",
+                format!(
+                    "selected plan records {} non-dominated candidates out of {} explored",
+                    self.pareto_frontier, self.candidates_explored
+                ),
+                "derive the frontier from the same ranked candidate set",
             ));
         }
         if self.candidates_explored != self.search_work.candidates_explored {

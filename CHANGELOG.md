@@ -18,6 +18,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   not declare.
 - Binding over an allocated workspace rejects a caller resource for a
   workspace-owned canonical value.
+- `compile_portfolio` and `compile_portfolio_measured` jointly select the
+  artifact set an objective's coverage policy retains, enumerating every legal
+  partition of the stated workload classes under the variant and aggregate byte
+  bounds, while the single-artifact paths refuse a coverage policy one artifact
+  cannot satisfy with `MKC032_PORTFOLIO_COVERAGE_UNSATISFIED`.
 - The `contract-in-source` gate reports a comment that defers its contract to a
   published document instead of stating it. A pointer costs a reader a second
   file and outlives the file it names: when the book those comments pointed
@@ -709,6 +714,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   shadow, and the tier vocabulary in the tier-claim gate. Each now states the
   rule where the code has to follow it. The document remains the manual; a
   comment that points at a file cannot tell when that file is deleted.
+- Every production compile now states a versioned `CompileObjective`: a primary
+  ordered metric, tie breakers, weighted or worst-case workload classes, a risk
+  statistic, an amortization horizon, hard per-metric bounds including the
+  artifact byte ceiling, and an artifact portfolio policy. Candidate selection
+  preserves the legal Pareto frontier until the objective orders it, a metric
+  priced by a target fact the device withheld is refused by name, and the
+  objective participates in request, artifact and cache identity.
 - `CONTRIBUTING.md` states the stale build artifact recovery as a product fact.
   The section described how work is produced here and named the build
   directory, which is a property of one machine that a reader who has just

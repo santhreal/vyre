@@ -24,7 +24,10 @@ use std::collections::BTreeMap;
 use vyre_foundation::ir::ProgramGraph;
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::cost::{CostBreakdown, CostTermRole};
-use vyre_megakernel::{compile, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget};
+use vyre_megakernel::{
+    compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
+    SearchBudget,
+};
 
 use graph_fixtures::producer_consumer_pair;
 use vyre_test_support::pass_programs::copy_program;
@@ -58,7 +61,7 @@ fn cost_for(device: DeviceFacts) -> CostBreakdown {
         facts,
         device,
         SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("fixture request must validate");

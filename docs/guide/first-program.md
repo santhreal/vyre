@@ -3,7 +3,10 @@
 ```rust
 use std::collections::BTreeMap;
 
-use vyre::compiler::{compile, CompileRequest, Digest, ExternalFacts, SearchBudget};
+use vyre::compiler::{
+    compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
+    SearchBudget,
+};
 use vyre::ir::{
     BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
     ValueLifetime,
@@ -33,8 +36,9 @@ graph.add_node(
 let request = CompileRequest::new(
     graph,
     ExternalFacts::new(Digest([9; 32]), BTreeMap::new()),
+    DeviceFacts::unknown(),
     SearchBudget::new(1, 1, 1, 0, 1_000_000),
-    1_000_000,
+    CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
 )
 .validate()?;
 
@@ -58,12 +62,19 @@ and its output values. A `Program` is IR: buffer declarations, a workgroup
 geometry and a node list. Nothing about a device appears in it.
 
 **Validate the request.** `CompileRequest::new` takes the graph, the
-external facts the topology does not encode, an explicit `SearchBudget`,
-and a resource ceiling. `validate` is what turns it into a
+external facts the topology does not encode, the target facts, an explicit
+`SearchBudget`, and a `CompileObjective`. `validate` is what turns it into a
 `ValidatedCompileRequest`; `compile` accepts nothing else. The budget
 arguments are `max_candidates`, `max_cpu_work`, `max_target_compilations`,
 `max_measurements` and `max_elapsed_ns`, in that order. There is no
 implicit budget: the caller states the search it will pay for.
+
+The objective states what the compile optimizes and every hard bound it refuses
+to exceed, including the artifact byte ceiling, which is required. There is no
+implicit objective either: a plan selected without one cannot state what it was
+selected for. `minimize_latency` is the single-submission case; see
+[compile search](../architecture/compile-search.md) for the metrics, the
+calibrated facts each one needs, and the bounds.
 
 **Compile.** `compile` returns one immutable `Artifact`: node records,
 resource records, the whole-program ABI, the selected plan, and a
@@ -80,7 +91,7 @@ It does not execute. Execution is a separate seam: `SemanticExecutor::execute`
 takes a `SemanticExecutionRequest` built from a validated `LogicalProgramGraph`,
 the byte payload for each canonical graph input, and a
 `SemanticExecutionPolicy` carrying external facts, target facts, a
-`CompileObjective`, a `SearchBudget` and an artifact ceiling. It returns the
+`CompileObjective` and a `SearchBudget`. It returns the
 artifact identity, the target payload identity, and one byte buffer per retained
 graph value. No launch geometry crosses that boundary in either direction.
 

@@ -16,10 +16,10 @@ use vyre_foundation::ir::{
     ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
-    Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileRequest, DeviceFacts,
-    Digest, ExternalFacts, SearchBudget, TargetCompileError, TargetCompiler, TargetPayload,
-    TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
-    TargetResourceMemory,
+    Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
+    DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetCompileError,
+    TargetCompiler, TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess,
+    TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_runtime::artifact_admission::{
     admit_artifact, admit_cached_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession,
@@ -789,10 +789,16 @@ fn finalist_measurement_binds_exact_representative_inputs() {
 
     let device = DeviceFacts::unknown().with_device_timestamps(true);
     let budget = SearchBudget::new(1, 1, 1, 1, 1_000_000_000);
-    let request = CompileRequest::new(graph, facts, device, budget, 1_000_000)
-        .with_representative_inputs(representative_inputs)
-        .validate()
-        .expect("compile request must validate");
+    let request = CompileRequest::new(
+        graph,
+        facts,
+        device,
+        budget,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .with_representative_inputs(representative_inputs)
+    .validate()
+    .expect("compile request must validate");
 
     let session = ArtifactSession::compile(&RECORDING_REGISTRATION, &request)
         .expect("measured compilation must succeed with representative inputs");
@@ -837,10 +843,16 @@ fn finalist_measurement_fails_closed_on_missing_representative_inputs() {
         BTreeMap::from([(vyre_foundation::ir::GraphValueId(0), vec![0xAB; 32])]);
     let device = DeviceFacts::unknown().with_device_timestamps(true);
     let budget = SearchBudget::new(1, 1, 1, 1, 1_000_000_000);
-    let request = CompileRequest::new(graph, facts, device, budget, 1_000_000)
-        .with_representative_inputs(representative_inputs)
-        .validate()
-        .expect("compile request must validate");
+    let request = CompileRequest::new(
+        graph,
+        facts,
+        device,
+        budget,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .with_representative_inputs(representative_inputs)
+    .validate()
+    .expect("compile request must validate");
 
     let error = ArtifactSession::compile(&RECORDING_REGISTRATION, &request)
         .err()

@@ -24,9 +24,9 @@ use vyre_foundation::ir::{
     ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileRequest, DeviceFacts, Digest,
-    ExternalFacts, SearchBudget, TargetEntryPoint, TargetResourceAccess, TargetResourceBinding,
-    TargetResourceMemory,
+    compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
+    DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetEntryPoint,
+    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 
 /// A single-dimension external value contract.
@@ -118,7 +118,7 @@ pub(crate) fn compile_graph(graph: ProgramGraph, facts_seed: u8) -> Artifact {
         facts,
         DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("fixture request must validate");

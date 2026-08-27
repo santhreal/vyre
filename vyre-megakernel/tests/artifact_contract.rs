@@ -15,8 +15,8 @@ use vyre_foundation::ir::{
 use vyre_megakernel::{
     compile,
     legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason},
-    Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompileRequest, DependencyKind,
-    DeviceFacts, Digest, ExternalFacts, SearchBudget,
+    Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompileObjective, CompileRequest,
+    DependencyKind, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
 };
 
 use vyre_test_support::graph_values::{graph_output, u32_symbolic};
@@ -223,7 +223,8 @@ fn request_with(
         facts,
         DeviceFacts::unknown(),
         budget,
-        max_artifact_bytes,
+        CompileObjective::minimize_latency()
+            .with_bound(ObjectiveMetric::ArtifactBytes, max_artifact_bytes),
     )
     .validate()
     .expect("fixture request must validate")
@@ -241,7 +242,7 @@ fn request_with_representative_inputs(
         facts(),
         DeviceFacts::unknown(),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .with_representative_inputs(representative_inputs)
     .validate()
@@ -395,13 +396,24 @@ fn lexical_name_order_does_not_reassign_graph_ids() {
     assert_eq!(artifact.nodes()[1].id.0, 1);
 }
 
-/// WHY: admission policy bounds may reject an artifact but cannot rename accepted bytes.
+/// WHY: the artifact byte bound is a stated hard constraint, so it is part of
+/// what a schedule was selected under. A cache keyed on identity that ignored
+/// it would serve a plan chosen under a looser bound to a caller that cannot
+/// retain it. Recompiling under the same bound still reproduces one artifact.
 #[test]
-fn artifact_admission_bound_is_not_artifact_identity() {
+fn the_retained_artifact_bound_is_part_of_artifact_identity() {
     let first = compile(&request(LIMIT)).unwrap();
-    let second = compile(&request(LIMIT * 2)).unwrap();
-    assert_eq!(first.digest(), second.digest());
-    assert_eq!(first.to_bytes().unwrap(), second.to_bytes().unwrap());
+    let again = compile(&request(LIMIT)).unwrap();
+    assert_eq!(first.digest(), again.digest());
+    assert_eq!(first.to_bytes().unwrap(), again.to_bytes().unwrap());
+
+    let looser = compile(&request(LIMIT * 2)).unwrap();
+    assert_ne!(
+        first.digest(),
+        looser.digest(),
+        "Fix: a different retained-bytes bound is a different constraint, so it \
+         must reach the request identity the artifact records"
+    );
 }
 /// WHY: every semantic fact and search bound that can alter selection is authenticated.
 #[test]
@@ -453,7 +465,7 @@ fn missing_symbol_and_constant_identity_have_stable_diagnostics() {
         missing_symbol,
         DeviceFacts::unknown(),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .err()
@@ -471,7 +483,7 @@ fn missing_symbol_and_constant_identity_have_stable_diagnostics() {
         missing_constant,
         DeviceFacts::unknown(),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .err()
@@ -495,7 +507,7 @@ fn unknown_and_mismatched_representative_inputs_have_stable_diagnostics() {
         facts(),
         DeviceFacts::unknown(),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .with_representative_inputs(unknown_value)
     .validate()
@@ -516,7 +528,7 @@ fn unknown_and_mismatched_representative_inputs_have_stable_diagnostics() {
         facts(),
         DeviceFacts::unknown(),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .with_representative_inputs(produced_value)
     .validate()
@@ -537,7 +549,7 @@ fn unknown_and_mismatched_representative_inputs_have_stable_diagnostics() {
         facts(),
         DeviceFacts::unknown(),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .with_representative_inputs(mismatched_length)
     .validate()
@@ -582,7 +594,7 @@ fn representative_input_size_overflow_fails_closed() {
         oversized_facts,
         DeviceFacts::unknown(),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .with_representative_inputs(representative_inputs)
     .validate()
@@ -599,7 +611,7 @@ fn zero_mandatory_search_bound_is_rejected() {
         facts(),
         DeviceFacts::unknown(),
         SearchBudget::new(0, 1, 0, 0, 1),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .err()
@@ -639,7 +651,7 @@ fn compile_request_accepts_semantically_valid_subgroup_ir() {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         device_with(|capabilities| capabilities.supports_subgroup_ops = true),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .expect("compiler validation must accept subgroup semantics on a subgroup device");
@@ -676,7 +688,7 @@ fn device_without_a_needed_capability_rejects_the_program() {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         device_with(|capabilities| capabilities.supports_subgroup_ops = false),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .err()
@@ -703,7 +715,7 @@ fn a_cuttable_grid_fence_compiles_without_cooperative_launch() {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         device_with(|_| ()),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .expect("Fix: a fence the planner cuts must compile on a device without cooperative launch");
@@ -752,7 +764,7 @@ fn grid_fence_split_carries_every_mutable_sibling_value() {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         device_with(|_| ()),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .expect("every mutable sibling carrier must survive the launch split");
@@ -817,7 +829,7 @@ fn grid_fence_split_accepts_a_first_write_carrier_without_retained_input() {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         device_with(|_| ()),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .expect("a first-write carrier must order split launches");
@@ -870,7 +882,7 @@ fn grid_fence_split_preserves_a_crossing_caller_output() {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         device_with(|_| ()),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .expect("a caller output crossing a fence must survive the launch split");
@@ -914,7 +926,7 @@ fn a_cooperative_device_preserves_a_cuttable_grid_fence() {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         device_with(|_| ()).with_cooperative_launch(true),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .expect("Fix: a cooperative device must keep and admit the fenced kernel");
@@ -946,7 +958,7 @@ fn an_uncuttable_grid_fence_fails_without_cooperative_launch() {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         device_with(|_| ()),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .err()
@@ -972,7 +984,7 @@ fn an_uncuttable_grid_fence_compiles_with_cooperative_launch() {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         device_with(|_| ()).with_cooperative_launch(true),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .expect("Fix: a cooperative device must accept a whole-grid fence");
@@ -1044,7 +1056,7 @@ fn resource_shape_overflow_has_stable_diagnostic() {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         DeviceFacts::unknown(),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .unwrap();
@@ -1128,7 +1140,7 @@ fn entry_abi_inputs_and_outputs_preserve_program_buffer_order_despite_port_reord
         ExternalFacts::new(Digest([0; 32]), symbols),
         DeviceFacts::unknown(),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .unwrap();
@@ -1205,7 +1217,7 @@ fn resource_record_retained_predecessor_round_trips() {
         ExternalFacts::new(Digest([0; 32]), symbols),
         DeviceFacts::unknown(),
         budget(),
-        LIMIT,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
     )
     .validate()
     .unwrap();

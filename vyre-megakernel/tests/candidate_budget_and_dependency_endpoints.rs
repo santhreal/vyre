@@ -4,8 +4,9 @@ use std::collections::BTreeMap;
 use vyre_foundation::ir::ProgramGraph;
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::{
-    compile, ArtifactNodeId, ArtifactValueId, CompileRequest, DependencyEdge, DependencyEndpoint,
-    DependencyKind, DeviceFacts, Digest, ExternalFacts, SearchBudget,
+    compile, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest, DependencyEdge,
+    DependencyEndpoint, DependencyKind, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
+    SearchBudget,
 };
 
 #[path = "graph_fixtures/mod.rs"]
@@ -40,7 +41,8 @@ fn candidate_search_respects_max_candidates_budget() {
             fixture_facts(),
             fixture_device(),
             budget,
-            1_000_000,
+            CompileObjective::minimize_latency()
+                .with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
         )
         .validate()
         .expect("compile request must validate");
@@ -242,7 +244,7 @@ fn compiled_graph_contains_all_dependency_endpoint_and_kind_variants() {
         fixture_facts(),
         fixture_device(),
         SearchBudget::new(32, 1_000_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("compile request must validate");

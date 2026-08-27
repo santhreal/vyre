@@ -13,8 +13,8 @@ use vyre::ir::Program;
 use vyre_driver::self_optimizer_bench::report_scaling;
 use vyre_driver_cuda::{registered_backend_id, CUDA_BACKEND_ID};
 use vyre_megakernel::{
-    CompileObjective, Digest, ExternalFacts, SearchBudget, SemanticExecutionPolicy,
-    SemanticExecutor,
+    CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
+    SemanticExecutionPolicy, SemanticExecutor,
 };
 use vyre_pass_engine::optimizer::pipeline::gpu_optimize;
 use vyre_runtime::RegisteredSemanticExecutor;
@@ -47,9 +47,8 @@ fn body() {
     let policy = SemanticExecutionPolicy::new(
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         device.device_profile().compile_facts(),
-        CompileObjective::MinimizeLatency,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 60_000),
         SearchBudget::new(128, 128, 0, 0, 128),
-        60_000,
     );
     report_scaling("cuda", &executor, &policy, semantic_gpu_pipeline);
 }

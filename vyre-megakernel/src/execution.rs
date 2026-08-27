@@ -2,23 +2,16 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use vyre_foundation::ir::{BufferAccess, GraphValueId, Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
 
 use crate::error::CompileError;
+use crate::objective::CompileObjective;
 use crate::request::CompileRequest;
 use crate::target::TargetCompileError;
 use crate::{DeviceFacts, Digest, ExternalFacts, SearchBudget};
 
-/// Compiler objective applied while ranking legal schedules.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum CompileObjective {
-    /// Minimize measured or modeled end-to-end device latency.
-    MinimizeLatency,
-}
 /// Immutable non-geometric policy supplied to semantic compilation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SemanticExecutionPolicy {
@@ -26,7 +19,6 @@ pub struct SemanticExecutionPolicy {
     target_facts: DeviceFacts,
     objective: CompileObjective,
     budget: SearchBudget,
-    max_artifact_bytes: u64,
 }
 
 impl SemanticExecutionPolicy {
@@ -37,14 +29,12 @@ impl SemanticExecutionPolicy {
         target_facts: DeviceFacts,
         objective: CompileObjective,
         budget: SearchBudget,
-        max_artifact_bytes: u64,
     ) -> Self {
         Self {
             external_facts,
             target_facts,
             objective,
             budget,
-            max_artifact_bytes,
         }
     }
 
@@ -60,22 +50,16 @@ impl SemanticExecutionPolicy {
         self.target_facts
     }
 
-    /// Return the explicit ranking objective.
+    /// Borrow the stated compile objective.
     #[must_use]
-    pub const fn objective(&self) -> CompileObjective {
-        self.objective
+    pub const fn objective(&self) -> &CompileObjective {
+        &self.objective
     }
 
     /// Return the bounded compiler search budget.
     #[must_use]
     pub const fn budget(&self) -> SearchBudget {
         self.budget
-    }
-
-    /// Return the maximum admitted neutral artifact size.
-    #[must_use]
-    pub const fn max_artifact_bytes(&self) -> u64 {
-        self.max_artifact_bytes
     }
 }
 
@@ -88,7 +72,6 @@ pub struct SemanticExecutionRequest<'a> {
     target_facts: DeviceFacts,
     objective: CompileObjective,
     budget: SearchBudget,
-    max_artifact_bytes: u64,
 }
 
 impl<'a> SemanticExecutionRequest<'a> {
@@ -105,7 +88,6 @@ impl<'a> SemanticExecutionRequest<'a> {
         target_facts: DeviceFacts,
         objective: CompileObjective,
         budget: SearchBudget,
-        max_artifact_bytes: u64,
     ) -> Result<Self, SemanticExecutionError> {
         let expected = logical
             .graph()
@@ -137,7 +119,6 @@ impl<'a> SemanticExecutionRequest<'a> {
             target_facts,
             objective,
             budget,
-            max_artifact_bytes,
         })
     }
 
@@ -165,22 +146,16 @@ impl<'a> SemanticExecutionRequest<'a> {
         self.target_facts
     }
 
-    /// Return the explicit ranking objective.
+    /// Borrow the stated compile objective.
     #[must_use]
-    pub const fn objective(&self) -> CompileObjective {
-        self.objective
+    pub const fn objective(&self) -> &CompileObjective {
+        &self.objective
     }
 
     /// Return the bounded compiler search budget.
     #[must_use]
     pub const fn budget(&self) -> SearchBudget {
         self.budget
-    }
-
-    /// Return the maximum admitted neutral artifact size.
-    #[must_use]
-    pub const fn max_artifact_bytes(&self) -> u64 {
-        self.max_artifact_bytes
     }
 
     /// Project the semantic request into the canonical neutral compiler request.
@@ -194,9 +169,8 @@ impl<'a> SemanticExecutionRequest<'a> {
             self.external_facts.clone(),
             self.target_facts,
             self.budget,
-            self.max_artifact_bytes,
-        )
-        .with_objective(self.objective);
+            self.objective,
+        );
         if self.budget.max_measurements > 0 {
             let representative_inputs = self
                 .inputs
@@ -360,7 +334,6 @@ pub fn execute_single_program(
         policy.target_facts,
         policy.objective,
         policy.budget,
-        policy.max_artifact_bytes,
     )?;
     let output = executor.execute(&request)?;
     let SemanticExecutionOutput {
@@ -413,6 +386,9 @@ mod tests {
     use super::*;
 
     const BUDGET: SearchBudget = SearchBudget::new(8, 64, 1, 0, 1_000);
+    const OBJECTIVE: CompileObjective = CompileObjective::minimize_latency()
+        .with_bound(crate::objective::ObjectiveMetric::ArtifactBytes, 1_000_000);
+
     /// The crate under test cannot reach the shared fixture: linking
     /// `vyre-test-support` with its semantic feature would compile this crate
     /// twice and the two `SemanticExecutionPolicy` types would not unify.
@@ -420,9 +396,8 @@ mod tests {
         SemanticExecutionPolicy::new(
             ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
             DeviceFacts::unknown(),
-            CompileObjective::MinimizeLatency,
+            OBJECTIVE,
             BUDGET,
-            1_000_000,
         )
     }
 
@@ -440,15 +415,21 @@ mod tests {
             request: &SemanticExecutionRequest<'_>,
         ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
             self.calls.fetch_add(1, Ordering::Relaxed);
-            assert_eq!(request.objective(), CompileObjective::MinimizeLatency);
+            assert_eq!(*request.objective(), OBJECTIVE);
             assert_eq!(request.budget(), BUDGET);
             assert_eq!(request.target_facts(), DeviceFacts::unknown());
-            assert_eq!(request.max_artifact_bytes(), 1_000_000);
             let projected = request
                 .compile_request()
                 .validate()
                 .expect("semantic request must project to one valid compiler request");
-            assert_eq!(projected.objective(), CompileObjective::MinimizeLatency);
+            assert_eq!(*projected.objective(), OBJECTIVE);
+            assert_eq!(
+                projected
+                    .objective()
+                    .bounds()
+                    .limit(crate::objective::ObjectiveMetric::ArtifactBytes),
+                Some(1_000_000)
+            );
             let node = &request.logical().graph().nodes()[0];
             assert_eq!(request.inputs()[&node.inputs[0].value], [7, 0, 0, 0]);
             Ok(SemanticExecutionOutput {

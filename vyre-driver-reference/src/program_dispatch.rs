@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use vyre_driver::target_dialect::{EmittedDialectModule, TargetDialect};
 use vyre_foundation::ir::{GraphValueId, ValueLifetime};
 use vyre_megakernel::{
-    CompileObjective, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
+    ObjectiveMetric, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
     SemanticExecutor, TargetCompileError, TargetCompiler, TargetProfile,
 };
 use vyre_reference::value::Value;
@@ -63,10 +63,11 @@ impl SemanticExecutor for ReferenceSemanticExecutor {
         &self,
         request: &SemanticExecutionRequest<'_>,
     ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
-        if request.objective() != CompileObjective::MinimizeLatency {
-            return Err(SemanticExecutionError::InvalidRequest(
-                "reference parity execution received an unsupported compiler objective".to_string(),
-            ));
+        if request.objective().primary() != ObjectiveMetric::Latency {
+            return Err(SemanticExecutionError::InvalidRequest(format!(
+                "reference parity execution ranks nothing, so it cannot honour a `{}` objective. Fix: state a latency objective for the reference oracle",
+                request.objective().primary().name()
+            )));
         }
         if request.budget().max_measurements != 0 {
             return Err(SemanticExecutionError::InvalidRequest(

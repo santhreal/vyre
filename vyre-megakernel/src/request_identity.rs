@@ -5,12 +5,12 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 use vyre_foundation::validate::BackendCapabilities;
 
-use crate::execution::CompileObjective;
 use crate::identity::{domain_digest, Digest};
+use crate::objective::CompileObjective;
 use crate::request::{SearchBudget, ValidatedCompileRequest};
 
 pub(crate) const SOURCE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-source-v2\0";
-pub(crate) const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v4\0";
+pub(crate) const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v5\0";
 pub(crate) const REPRESENTATIVE_INPUT_DOMAIN: &[u8] = b"vyre-megakernel-representative-input-v1\0";
 /// Every fact that makes one compilation of one graph produce one artifact.
 ///

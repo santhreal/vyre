@@ -3,11 +3,7 @@
 use std::collections::{BTreeMap, HashSet};
 use std::sync::LazyLock;
 
-use vyre::compiler::{
-    self, compile_selected_modules, CompileRequest, DeviceFacts, Digest, EmittedTargetModule,
-    ExternalFacts, SearchBudget, TargetCompileError, TargetCompiler, TargetPayload,
-    TargetPayloadFormat, TargetProfile,
-};
+use vyre::compiler::{self, compile_selected_modules, CompileObjective, CompileRequest, DeviceFacts, Digest, EmittedTargetModule, ExternalFacts, ObjectiveMetric, SearchBudget, TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat, TargetProfile};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, OpId, Program, ProgramGraph};
 use vyre_driver::{BackendError, BackendRegistration};
 use vyre_foundation::operation::{
@@ -116,7 +112,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .map_err(|error| format!("the extension compile request is invalid: {error}"))?;

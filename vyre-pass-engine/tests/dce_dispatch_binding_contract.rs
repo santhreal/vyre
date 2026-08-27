@@ -7,8 +7,9 @@ use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, GraphValueId, Node, Program, ValueLifetime};
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::{
-    CompileObjective, DeviceFacts, Digest, ExternalFacts, SearchBudget, SemanticExecutionError,
-    SemanticExecutionOutput, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
+    CompileObjective, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
+    SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
+    SemanticExecutionRequest, SemanticExecutor,
 };
 use vyre_pass_engine::optimizer::dce_via_encoded::DceError;
 use vyre_pass_engine::optimizer::pipeline::{gpu_optimize, GpuOptimizeError};
@@ -22,7 +23,6 @@ struct RequestSnapshot {
     target_facts: DeviceFacts,
     objective: CompileObjective,
     budget: SearchBudget,
-    max_artifact_bytes: u64,
 }
 
 struct RecordingExecutor {
@@ -67,9 +67,8 @@ impl SemanticExecutor for RecordingExecutor {
                     .collect(),
                 external_facts: request.external_facts().clone(),
                 target_facts: request.target_facts(),
-                objective: request.objective(),
+                objective: *request.objective(),
                 budget: request.budget(),
-                max_artifact_bytes: request.max_artifact_bytes(),
             });
         if self.fail_stage == Some(stage) {
             return Err(SemanticExecutionError::Backend(format!(
@@ -150,9 +149,8 @@ fn policy() -> SemanticExecutionPolicy {
             },
             256,
         ),
-        CompileObjective::MinimizeLatency,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
         SearchBudget::new(8, 64, 0, 0, 1_000),
-        1_000_000,
     )
 }
 

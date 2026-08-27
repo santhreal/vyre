@@ -18,7 +18,8 @@ use vyre_foundation::ir::{
 };
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::{
-    compile, Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
+    compile, Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
+    ObjectiveMetric, SearchBudget, ValidatedCompileRequest,
 };
 use vyre_test_support::pass_programs::{add_program, copy_program};
 
@@ -217,9 +218,39 @@ pub(crate) fn budget() -> SearchBudget {
     SearchBudget::new(512, 200_000, 4, 0, 1_000_000_000)
 }
 
-pub(crate) fn compiled(device: DeviceFacts, budget: SearchBudget) -> Artifact {
-    let request = CompileRequest::new(joined_graph(), facts(), device, budget, 4_000_000)
+/// Artifact byte ceiling every fixture request states, well above what the
+/// fixture graphs compile to.
+pub(crate) const ARTIFACT_BYTES: u64 = 4_000_000;
+
+/// Minimize the latency of one submission within the fixture byte ceiling.
+pub(crate) fn latency_objective() -> CompileObjective {
+    CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, ARTIFACT_BYTES)
+}
+
+/// The fixture graph and facts as an unvalidated request.
+///
+/// Every suite here compiles the same graph under the same external facts and
+/// differs only in device, budget, and objective. A suite that also states
+/// recorded measurement evidence adds it before validating.
+pub(crate) fn fixture_request(
+    device: DeviceFacts,
+    budget: SearchBudget,
+    objective: CompileObjective,
+) -> CompileRequest {
+    CompileRequest::new(joined_graph(), facts(), device, budget, objective)
+}
+
+/// The fixture request validated for `device`, `budget` and `objective`.
+pub(crate) fn validated(
+    device: DeviceFacts,
+    budget: SearchBudget,
+    objective: CompileObjective,
+) -> ValidatedCompileRequest {
+    fixture_request(device, budget, objective)
         .validate()
-        .expect("request must validate");
-    compile(&request).expect("compilation must succeed")
+        .expect("Fix: state fixture facts the compiler accepts")
+}
+
+pub(crate) fn compiled(device: DeviceFacts, budget: SearchBudget) -> Artifact {
+    compile(&validated(device, budget, latency_objective())).expect("compilation must succeed")
 }

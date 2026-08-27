@@ -6,8 +6,9 @@ use std::sync::{Arc, Mutex};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_conform::ProductionSession;
 use vyre_megakernel::{
-    CompileObjective, DeviceFacts, Digest, ExternalFacts, SearchBudget, SemanticExecutionError,
-    SemanticExecutionOutput, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
+    CompileObjective, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
+    SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
+    SemanticExecutionRequest, SemanticExecutor,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -15,7 +16,6 @@ struct ObservedRequest {
     inputs: Vec<Vec<u8>>,
     objective: CompileObjective,
     budget: SearchBudget,
-    max_artifact_bytes: u64,
     target_facts: DeviceFacts,
 }
 
@@ -38,9 +38,8 @@ impl SemanticExecutor for RecordingExecutor {
             .collect();
         *self.observed.lock().expect("recording executor lock") = Some(ObservedRequest {
             inputs,
-            objective: request.objective(),
+            objective: *request.objective(),
             budget: request.budget(),
-            max_artifact_bytes: request.max_artifact_bytes(),
             target_facts: request.target_facts(),
         });
         let terminal_values = request
@@ -90,12 +89,13 @@ fn semantic_request_and_admitted_output_cross_the_production_boundary() {
     });
     let target_facts = DeviceFacts::unknown();
     let budget = SearchBudget::new(19, 23, 1, 1, 31);
+    let objective =
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 65_536);
     let policy = SemanticExecutionPolicy::new(
         ExternalFacts::new(Digest([7; 32]), BTreeMap::new()),
         target_facts,
-        CompileObjective::MinimizeLatency,
+        objective,
         budget,
-        65_536,
     );
     let session = ProductionSession::with_executor(
         &program,
@@ -116,9 +116,8 @@ fn semantic_request_and_admitted_output_cross_the_production_boundary() {
         *executor.observed.lock().expect("recording executor lock"),
         Some(ObservedRequest {
             inputs: vec![input.to_vec()],
-            objective: CompileObjective::MinimizeLatency,
+            objective,
             budget,
-            max_artifact_bytes: 65_536,
             target_facts,
         })
     );

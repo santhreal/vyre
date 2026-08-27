@@ -362,9 +362,8 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
         request_inputs,
         policy.external_facts().clone(),
         policy.target_facts(),
-        policy.objective(),
+        *policy.objective(),
         policy.budget(),
-        policy.max_artifact_bytes(),
     )?;
     crate::telemetry::bump(&crate::telemetry::graph_dispatch_calls);
     let outputs = dispatcher.execute(&request)?.outputs;

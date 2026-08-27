@@ -464,7 +464,8 @@ fn fused_multi_node_binding_resolution_uses_exact_name_ownership_over_colliding_
         vyre_megakernel::ExternalFacts::new(vyre_megakernel::Digest([0; 32]), symbols),
         vyre_megakernel::DeviceFacts::unknown(),
         vyre_megakernel::SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        vyre_megakernel::CompileObjective::minimize_latency()
+            .with_bound(vyre_megakernel::ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .unwrap();
@@ -698,7 +699,8 @@ fn selected_span(chunk: u32, cache: u32, guard: Option<u32>) -> u32 {
         vyre_megakernel::ExternalFacts::new(vyre_megakernel::Digest([0; 32]), symbols),
         vyre_megakernel::DeviceFacts::unknown(),
         vyre_megakernel::SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        vyre_megakernel::CompileObjective::minimize_latency()
+            .with_bound(vyre_megakernel::ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("scatter request must validate");

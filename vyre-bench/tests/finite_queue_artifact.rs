@@ -4,7 +4,10 @@
 #![cfg(not(target_os = "macos"))]
 
 use std::collections::BTreeMap;
-use vyre::compiler::{self, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget};
+use vyre::compiler::{
+    self, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
+    SearchBudget,
+};
 use vyre_foundation::ir::ProgramGraph;
 
 /// WHY: finite host-submitted queue programs must reach the canonical CUDA target compiler;
@@ -21,7 +24,8 @@ fn finite_queue_program_compiles_to_authenticated_cuda_payload() {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 0, 0, 1),
-        64 * 1024 * 1024,
+        CompileObjective::minimize_latency()
+            .with_bound(ObjectiveMetric::ArtifactBytes, 64 * 1024 * 1024),
     )
     .validate()
     .expect("finite queue compile request must validate");

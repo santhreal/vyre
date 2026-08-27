@@ -13,9 +13,9 @@ use vyre_foundation::ir::{
 };
 use vyre_foundation::schedule::ScheduleTransform;
 use vyre_megakernel::{
-    compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileRequest, DependencyEndpoint,
-    DeviceFacts, Digest, EntryPersistence, ExecutionMode, ExternalFacts, GeometryRecord,
-    ResourceLifetime, SearchBudget, WORKSPACE_REGION_ALIGNMENT,
+    compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
+    DependencyEndpoint, DeviceFacts, Digest, EntryPersistence, ExecutionMode, ExternalFacts,
+    GeometryRecord, ObjectiveMetric, ResourceLifetime, SearchBudget, WORKSPACE_REGION_ALIGNMENT,
 };
 
 use vyre_test_support::graph_values::{graph_output, u32_symbolic};
@@ -94,7 +94,7 @@ fn artifact_for(device: DeviceFacts, launch_batch: u32) -> Artifact {
         facts(launch_batch),
         device,
         SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("fixture request must validate");
@@ -134,7 +134,7 @@ fn every_recorded_launch_is_the_selected_schedule_phase_that_covers_the_node() {
     let schedule = &artifact.selected_plan().schedule;
 
     assert_eq!(artifact.geometry().len(), artifact.nodes().len());
-    assert_eq!(artifact.schema_version(), 12);
+    assert_eq!(artifact.schema_version(), 13);
 
     for node in artifact.nodes() {
         let record = record_for(&artifact, node.id);

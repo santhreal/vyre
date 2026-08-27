@@ -12,7 +12,7 @@ use vyre_driver::{BackendRegistration, BindingPlan};
 use vyre_foundation::ir::{BufferDecl, GraphValueId, Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_megakernel::{
-    CompileObjective, Digest, ExternalFacts, SearchBudget, SemanticExecutionError,
+    CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, SemanticExecutionError,
     SemanticExecutionOutput, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
 };
 use vyre_runtime::RegisteredSemanticExecutor;
@@ -229,9 +229,9 @@ pub fn semantic_policy_for_registration(
     Ok(SemanticExecutionPolicy::new(
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         target_facts,
-        CompileObjective::MinimizeLatency,
+        CompileObjective::minimize_latency()
+            .with_bound(ObjectiveMetric::ArtifactBytes, MAX_ARTIFACT_BYTES),
         CONFORMANCE_SEARCH_BUDGET,
-        MAX_ARTIFACT_BYTES,
     ))
 }
 
@@ -289,9 +289,8 @@ fn execute_program(
         request_inputs,
         policy.external_facts().clone(),
         policy.target_facts(),
-        policy.objective(),
+        *policy.objective(),
         policy.budget(),
-        policy.max_artifact_bytes(),
     )?;
     let SemanticExecutionOutput {
         artifact,

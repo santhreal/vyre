@@ -24,7 +24,8 @@ use vyre_foundation::ir::{
     ProgramGraph, ShapeDim, SubgroupReduceOp, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, CompileRequest, PruneReason, ScheduleProduction, SearchBudget, SearchCertificate,
+    compile, CompileObjective, CompileRequest, ObjectiveMetric, PruneReason, ScheduleProduction,
+    SearchBudget, SearchCertificate,
 };
 
 /// Productions whose transforms change the order invocations combine in.
@@ -200,7 +201,7 @@ fn certificate(element: &DataType) -> SearchCertificate {
         facts(),
         rich_device(),
         SearchBudget::new(512, 200_000, 4, 0, 1_000_000_000),
-        4_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 4_000_000),
     )
     .validate()
     .expect("request must validate");

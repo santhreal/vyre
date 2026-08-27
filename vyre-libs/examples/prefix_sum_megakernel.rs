@@ -10,7 +10,8 @@ use vyre_foundation::ir::{
 };
 use vyre_libs::math::scan::scan_prefix_sum;
 use vyre_megakernel::{
-    compile, Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
+    compile, Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
+    ObjectiveMetric, SearchBudget,
 };
 
 const ELEMENTS: u32 = 256;
@@ -74,7 +75,7 @@ fn compile_artifact(program: &Program) -> Result<Artifact, Box<dyn std::error::E
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 0, 0, 1),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()?;
     Ok(compile(&request)?)

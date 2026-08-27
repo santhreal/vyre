@@ -6,6 +6,7 @@ use vyre_foundation::ir::DataType;
 
 use crate::identity::{ArtifactNodeId, ArtifactValueId, Digest, FusionGroupId};
 use crate::legality;
+use crate::objective::CompileObjective;
 
 /// Canonical executable-node payload.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -210,13 +211,21 @@ pub struct MaterializationRecord {
     pub reason: MaterializationReason,
 }
 
-/// Deterministic identities establishing how an artifact was produced.
+/// Deterministic identities establishing how an artifact was produced, and what
+/// the plan inside it was selected to optimize.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Provenance {
     /// Canonical source-graph content identity.
     pub source_graph: Digest,
     /// Canonical validated-request identity.
     pub request: Digest,
+    /// Objective the recorded plan was selected under.
+    ///
+    /// A reader of the artifact can state what "best" meant for it: the request
+    /// digest authenticates the whole request, and this states the part of it
+    /// that decided the selection, so a latency artifact is never compared
+    /// against a throughput one as though they answered the same question.
+    pub objective: CompileObjective,
     /// Compiler crate version.
     pub compiler_version: String,
 }

@@ -16,7 +16,8 @@ use vyre_foundation::ir::{
     BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
+    compile, Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
+    ObjectiveMetric, SearchBudget,
 };
 
 pub(crate) fn tiny_artifact() -> Artifact {
@@ -55,7 +56,7 @@ pub(crate) fn artifact_for_program(program: Program) -> Artifact {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 0, 0, 1),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .unwrap();

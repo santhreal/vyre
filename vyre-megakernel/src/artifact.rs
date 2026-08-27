@@ -37,6 +37,7 @@ pub(crate) struct PlanInputs<'a, 'graph> {
     pub(crate) budget: SearchBudget,
     pub(crate) work: SearchWork,
     pub(crate) measurement: PlanMeasurement,
+    pub(crate) pareto_frontier: u32,
 }
 
 pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileError> {
@@ -52,6 +53,7 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
         budget,
         work,
         measurement,
+        pareto_frontier,
     } = inputs;
     let graph = logical.graph();
     let candidate = &selection.candidate;
@@ -154,6 +156,7 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
         barriers,
         materializations,
         candidates_explored: work.candidates_explored,
+        pareto_frontier,
         search_budget: budget,
         search_work: work,
         selection_cost: selection.cost,

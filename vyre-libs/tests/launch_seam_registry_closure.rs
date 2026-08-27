@@ -19,7 +19,7 @@ use vyre_foundation::operation::OperationRegistry;
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::{
     compile, Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExecutionMode,
-    ExecutionTopology, ExternalFacts, SearchBudget,
+    ExecutionTopology, ExternalFacts, ObjectiveMetric, SearchBudget,
 };
 
 /// Exact extent bound to every symbolic graph dimension.
@@ -82,9 +82,8 @@ fn compile_registered(
         external_facts(graph, expected_launch_batch),
         target_facts(),
         budget(),
-        4 << 20,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 4 << 20),
     )
-    .with_objective(CompileObjective::MinimizeLatency)
     .validate()
     .map_err(|error| error.to_string())?;
     compile(&request).map_err(|error| error.to_string())

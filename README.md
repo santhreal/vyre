@@ -22,7 +22,7 @@ the facade's backend features. See [install](docs/guide/install.md).
 ## What it looks like
 
 ```rust
-let request = CompileRequest::new(graph, facts, budget, ceiling).validate()?;
+let request = CompileRequest::new(graph, facts, device, budget, objective).validate()?;
 let artifact = compile(&request)?;
 assert_eq!(artifact.digest(), compile(&request)?.digest());
 ```

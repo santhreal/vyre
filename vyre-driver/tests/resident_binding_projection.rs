@@ -13,7 +13,10 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{compile, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget};
+use vyre_megakernel::{
+    compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
+    SearchBudget,
+};
 
 /// WHY: workgroup scratch is module-internal memory, not an artifact value. A
 /// resident launch must bind every host-visible role and no shared scratch, or
@@ -144,7 +147,7 @@ fn project_resources_derives_values_from_canonical_values_by_name() {
         ExternalFacts::new(Digest([0xA5; 32]), BTreeMap::new()),
         DeviceFacts::unknown(),
         SearchBudget::new(1, 100_000, 1, 0, 100_000_000),
-        1_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("compile request must validate");

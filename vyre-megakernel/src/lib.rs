@@ -49,6 +49,8 @@ mod level_stage;
 /// one measured selection retains.
 pub mod measure;
 mod normalize;
+mod objective;
+mod portfolio;
 mod request;
 mod request_identity;
 mod resource_records;
@@ -69,7 +71,7 @@ pub use envelope::{
 };
 pub use error::CompileError;
 pub use execution::{
-    execute_single_program, writable_graph_value_buffers, writable_graph_values, CompileObjective,
+    execute_single_program, writable_graph_value_buffers, writable_graph_values,
     SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
     SemanticExecutionRequest, SemanticExecutor, SingleProgramExecutionOutput,
 };
@@ -79,6 +81,12 @@ pub use identity::{
     FusionGroupId,
 };
 pub use level_stage::{registered_level_stage, PayloadAttachment};
+pub use objective::{
+    BoundViolation, CompileObjective, CoveragePolicy, MetricFigures, MetricSequence,
+    ObjectiveBounds, ObjectiveMetric, PortfolioPolicy, RequiredFact, RiskStatistic,
+    WorkloadAggregation, WorkloadClass, WorkloadProfile, OBJECTIVE_SCHEMA_VERSION,
+};
+pub use portfolio::{compile_portfolio, compile_portfolio_measured, ArtifactPortfolio};
 pub use request::{
     CompileRequest, ExternalFacts, SearchBudget, SearchWork, ValidatedCompileRequest,
 };

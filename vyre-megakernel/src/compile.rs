@@ -32,6 +32,9 @@ struct CompileContext<'a> {
     dependencies: Vec<DependencyEdge>,
     facts: facts::PlanningFacts,
     ranked: Vec<select::Selection>,
+    /// Legal candidates no other candidate dominates on the metrics the
+    /// objective orders by.
+    pareto_frontier: u32,
     pruned_fusions: Vec<FusionRejection>,
     certificate: SearchCertificate,
     work: SearchWork,
@@ -81,14 +84,27 @@ fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext<'_>, Comp
         &dependencies,
         request.search_budget,
         request.device,
+        &request.objective,
     );
+    let mut certificate = search.certificate;
     let ranked = select::rank(
         search.candidates,
         &planning_facts,
         &dependencies,
         request.device,
+        &request.objective,
+        &mut certificate,
     );
-    if ranked.is_empty() {
+    certificate.canonicalize();
+    if let Some(violation) = ranked.refused {
+        return Err(failure(
+            CompilerFailureKind::ObjectiveBoundViolated,
+            "request.objective.bounds",
+            violation.statement(),
+            "raise the bound the objective states, state a different primary metric, or reduce the source graph",
+        ));
+    }
+    if ranked.admitted.is_empty() {
         return Err(failure(
             CompilerFailureKind::InvalidSearchBudget,
             "search.candidates",
@@ -112,11 +128,26 @@ fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext<'_>, Comp
         nodes,
         dependencies,
         facts: planning_facts,
-        ranked,
+        pareto_frontier: frontier_width(&ranked.admitted),
+        ranked: ranked.admitted,
         pruned_fusions,
-        certificate: search.certificate,
+        certificate,
         work: search.work,
     })
+}
+
+/// Legal candidates in one ranking no other candidate dominates.
+///
+/// Recorded in the artifact, so a reader can tell a selection the objective had
+/// to order from one the legal set decided on its own: a frontier of one means
+/// no other legal plan traded a metric for another, and a wide frontier means
+/// the tie breakers and bounds are what chose.
+fn frontier_width(ranked: &[select::Selection]) -> u32 {
+    let width = ranked
+        .iter()
+        .filter(|selection| selection.on_frontier)
+        .count();
+    u32::try_from(width).unwrap_or(u32::MAX)
 }
 
 /// Turn one ranked candidate into a complete canonical artifact.
@@ -145,6 +176,7 @@ fn assemble(
         budget: request.search_budget,
         work,
         measurement,
+        pareto_frontier: context.pareto_frontier,
     })?;
     let (resources, resource_envelope) = build_resources(
         &request.graph,
@@ -160,6 +192,7 @@ fn assemble(
     let provenance = Provenance {
         source_graph: context.source_graph,
         request: domain_digest(REQUEST_DIGEST_DOMAIN, &request_bytes),
+        objective: request.objective,
         compiler_version: env!("CARGO_PKG_VERSION").to_string(),
     };
     let payload = ArtifactPayload {
@@ -177,15 +210,13 @@ fn assemble(
     let framed = encode_payload(&payload)?;
     let byte_len = u64::try_from(framed.bytes.len())
         .map_err(|_| overflow("artifact", "artifact length exceeds u64"))?;
-    if byte_len > request.max_artifact_bytes {
+    let artifact_bytes_limit = request.max_artifact_bytes();
+    if byte_len > artifact_bytes_limit {
         return Err(failure(
             CompilerFailureKind::ArtifactLimit,
             "artifact",
-            format!(
-                "canonical artifact is {byte_len} bytes; limit is {}",
-                request.max_artifact_bytes
-            ),
-            "raise the explicit artifact bound or reduce the source graph",
+            format!("canonical artifact is {byte_len} bytes; limit is {artifact_bytes_limit}"),
+            "raise the artifact-byte bound the objective states or reduce the source graph",
         ));
     }
     Ok(Artifact {
@@ -263,6 +294,7 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
             "compile through compile_measured with a finalist evaluator, or set max_measurements to zero",
         ));
     }
+    require_single_artifact(request)?;
     let context = prepare(request)?;
     let selection = first_ranked(&context)?;
     assemble(
@@ -382,6 +414,7 @@ pub fn compile_measured(
     request: &ValidatedCompileRequest,
     evaluator: &dyn FinalistEvaluator,
 ) -> Result<Artifact, CompileError> {
+    require_single_artifact(request)?;
     let context = prepare(request)?;
     let budget = request.search_budget;
     if budget.max_measurements == 0 || budget.max_target_compilations == 0 {
@@ -690,6 +723,31 @@ fn eliminate(certificate: &mut SearchCertificate, selection: &select::Selection)
         .last()
         .map_or(ScheduleProduction::Fusion, |step| step.production);
     certificate.pruned(production, PruneReason::Emission);
+}
+
+/// Refuse a compile that emits one artifact for an objective whose retained set
+/// cannot be one artifact.
+///
+/// The coverage policy states how many artifacts the caller keeps. A path that
+/// emits one used to accept a per-class policy and return a single member of the
+/// set with nothing recording which member it was, so the refusal names the path
+/// that retains a set instead.
+fn require_single_artifact(request: &ValidatedCompileRequest) -> Result<(), CompileError> {
+    let objective = request.objective();
+    let classes = objective.workload().len();
+    if objective.portfolio().admits(1, classes) {
+        return Ok(());
+    }
+    Err(failure(
+        CompilerFailureKind::PortfolioCoverageUnsatisfied,
+        "request.objective.portfolio.coverage",
+        format!(
+            "coverage `{}` over {classes} workload classes retains {} artifacts and this path emits one",
+            objective.portfolio().coverage().name(),
+            objective.portfolio().coverage().minimum_variants(classes)
+        ),
+        "compile through compile_portfolio, or state a coverage policy one artifact satisfies",
+    ))
 }
 
 fn first_ranked<'a>(

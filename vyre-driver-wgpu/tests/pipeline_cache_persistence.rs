@@ -16,7 +16,9 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
 use vyre_foundation::ir::ProgramGraph;
 use vyre_foundation::operation::SemanticOperation;
-use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
+use vyre_megakernel::{
+    CompileObjective, CompileRequest, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
+};
 
 const HELPER_FLAG: &str = "VYRE_PIPELINE_CACHE_HELPER_OUT";
 const HELPER_CASE_ID: &str = "VYRE_PIPELINE_CACHE_HELPER_CASE";
@@ -44,7 +46,7 @@ fn compile_case(case: &SemanticOperation) -> (Duration, Vec<Vec<u8>>) {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         backend.device_profile().compile_facts(),
         SearchBudget::new(128, 128, 0, 0, 128),
-        60_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 60_000),
     )
     .validate()
     .expect("Fix: persistence regression compile request must validate");

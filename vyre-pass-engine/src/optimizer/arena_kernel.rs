@@ -192,8 +192,8 @@ pub(super) fn semantic_test_policy() -> vyre_megakernel::SemanticExecutionPolicy
             std::collections::BTreeMap::new(),
         ),
         vyre_megakernel::DeviceFacts::unknown(),
-        vyre_megakernel::CompileObjective::MinimizeLatency,
+        vyre_megakernel::CompileObjective::minimize_latency()
+            .with_bound(vyre_megakernel::ObjectiveMetric::ArtifactBytes, 1_000_000),
         vyre_megakernel::SearchBudget::new(8, 64, 0, 0, 1_000),
-        1_000_000,
     )
 }

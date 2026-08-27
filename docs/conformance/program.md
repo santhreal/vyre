@@ -66,8 +66,8 @@ conformance run and a release run submit the same bytes.
 
 `RegisteredSemanticExecutor` binds a session to one `BackendRegistration`. The
 policy takes its target facts from that registration's acquired device, an
-external-facts digest, `CompileObjective::MinimizeLatency`, the conformance
-search budget and an artifact ceiling. A backend row in the matrix therefore
+external-facts digest, a latency objective bounded at the conformance artifact
+ceiling, and the conformance search budget. A backend row in the matrix therefore
 differs from another only in the device it acquires.
 
 ## Boundaries

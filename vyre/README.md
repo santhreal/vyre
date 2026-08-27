@@ -16,7 +16,10 @@ cargo add vyre
 
 ```rust
 use std::collections::BTreeMap;
-use vyre::compiler::{compile, CompileRequest, Digest, ExternalFacts, SearchBudget};
+use vyre::compiler::{
+    compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
+    ObjectiveMetric, SearchBudget,
+};
 use vyre::ir::{
     BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
@@ -47,7 +50,7 @@ let request = CompileRequest::new(
     ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
     DeviceFacts::unknown(),
     SearchBudget::new(1, 1, 1, 0, 1_000_000),
-    1_000_000,
+    CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
 )
 .validate()?;
 let artifact = compile(&request)?;

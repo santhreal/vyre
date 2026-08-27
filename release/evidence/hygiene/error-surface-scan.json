@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:d9bcd400a6ad14708796af12741b9277fca821f8:dirty=true:worktree=04b5ce828135e338277c0087ad956cec76e9012c3a8b7396a2383d6650951baf",
+  "source_fingerprint": "git:fcead95f37263065a9b4007c01bf4f3add4f43cb:dirty=true:worktree=5b6f1ae8dbfb2d5349b4f539868776ce0e2ba9e1d945745b3fdb23d9618ff83d",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -863,25 +863,25 @@
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 48,
+      "line": 49,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 52,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 61,
+      "line": 53,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
       "line": 62,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
+      "line": 63,
       "pattern": "unwrap_call",
       "text": "compile(&request).unwrap()"
     },
@@ -1055,25 +1055,37 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 359,
+      "line": 327,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|err| panic!(\"Fix: cannot read {path:?} to derive the level set: {err}\"));"
+    },
+    {
+      "path": "vyre-test-support/src/lib.rs",
+      "line": 329,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|| panic!(\"Fix: {path:?} no longer declares `pub enum IrLevel`\"));"
+    },
+    {
+      "path": "vyre-test-support/src/lib.rs",
+      "line": 380,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 402,
+      "line": 423,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 497,
+      "line": 518,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 505,
+      "line": 526,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -1103,25 +1115,25 @@
     },
     {
       "path": "vyre-test-support/src/pass_programs.rs",
-      "line": 117,
+      "line": 131,
       "pattern": "documented_panic_contract",
       "text": "body => panic!(\"expected single Let in body, got {body:?}\"),"
     },
     {
       "path": "vyre-test-support/src/pass_programs.rs",
-      "line": 119,
+      "line": 133,
       "pattern": "documented_panic_contract",
       "text": "entry => panic!(\"expected wrapped Program with single Region, got {entry:?}\"),"
     },
     {
       "path": "vyre-test-support/src/pass_programs.rs",
-      "line": 311,
+      "line": 325,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "vyre-test-support/src/pass_programs.rs",
-      "line": 329,
+      "line": 343,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -1141,77 +1153,77 @@
       "path": "vyre-test-support/src/selected_schedules.rs",
       "line": 45,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"an exact workgroup shape is legal\");"
+      "text": ".expect(\"Fix: restate the workgroup shape so it divides the phase extents\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
       "line": 52,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"mapping an axis of the phase is legal\");"
+      "text": ".expect(\"Fix: map an axis this phase declares, at a level the schedule admits\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
       "line": 69,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"a bounded pipeline between two phases is legal\");"
+      "text": ".expect(\"Fix: state ring slots and role workers a two-phase pipeline admits\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
       "line": 75,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"a workgroup synchronization boundary is legal\");"
+      "text": ".expect(\"Fix: synchronize phases that share the workgroup scope\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
       "line": 95,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"a device synchronization boundary is legal\");"
+      "text": ".expect(\"Fix: synchronize a phase the device scope reaches\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
       "line": 101,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"a bounded persistent queue is legal\");"
+      "text": ".expect(\"Fix: state a persistent queue capacity the phase admits\");"
     },
     {
       "path": "vyre-test-support/src/semantic_requests.rs",
-      "line": 92,
+      "line": 101,
       "pattern": "expect_call",
       "text": ".expect(\"valid graph. Fix: keep add_program() a single-node program a graph admits.\")"
     },
     {
       "path": "vyre-test-support/src/semantic_requests.rs",
-      "line": 147,
+      "line": 155,
       "pattern": "documented_panic_contract",
       "text": ".expect("
     },
     {
       "path": "vyre-test-support/src/semantic_requests.rs",
-      "line": 175,
+      "line": 183,
       "pattern": "expect_call",
       "text": ".expect(\"logical graph. Fix: bind every external value the graph reads, or none.\");"
     },
     {
       "path": "vyre-test-support/src/semantic_requests.rs",
-      "line": 180,
+      "line": 188,
       "pattern": "expect_call",
       "text": "let request = request(&logical, inputs, target_facts, DEVICE_BUDGET, 60_000).expect("
     },
     {
       "path": "vyre-test-support/src/semantic_requests.rs",
-      "line": 186,
+      "line": 194,
       "pattern": "expect_call",
       "text": ".expect(\"semantic execution. Fix: admit a validated request under the stated budget.\");"
     },
     {
       "path": "vyre-test-support/src/semantic_requests.rs",
-      "line": 207,
+      "line": 215,
       "pattern": "expect_call",
       "text": ".expect(\"logical graph. Fix: bind every external value the graph reads, or none.\");"
     },
     {
       "path": "vyre-test-support/src/semantic_requests.rs",
-      "line": 212,
+      "line": 220,
       "pattern": "expect_call",
       "text": "let request = request(&logical, inputs, target_facts, DEVICE_BUDGET, 0).expect("
     },

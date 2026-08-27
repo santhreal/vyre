@@ -7,10 +7,12 @@ pub use vyre::ArtifactSession
 pub use vyre::ArtifactSessionError
 pub use vyre::BindingSet
 pub use vyre::ByteRange
+pub use vyre::CompileObjective
 pub use vyre::CompileRequest
 pub use vyre::Completion
 pub use vyre::DeviceIdentity
 pub use vyre::ExternalFacts
+pub use vyre::ObjectiveMetric
 pub use vyre::PersistentExecutor
 pub use vyre::Program
 pub use vyre::RetainedArtifactSession

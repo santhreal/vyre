@@ -15,16 +15,16 @@ use std::sync::Mutex;
 
 use vyre_megakernel::measure::{DeviceState, MeasurementProtocol, MeasurementRecord};
 use vyre_megakernel::{
-    compile_measured, compile_selected_modules, Artifact, CompileRequest, DeviceFacts,
-    EmittedResources, EmittedTargetModule, FinalistEvaluator, PlanMeasurement, PruneReason,
-    SearchBudget, TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat,
-    TargetProfile,
+    compile_measured, compile_selected_modules, Artifact, CompileObjective, CompileRequest,
+    DeviceFacts, EmittedResources, EmittedTargetModule, FinalistEvaluator, ObjectiveMetric,
+    PlanMeasurement, PruneReason, SearchBudget, TargetCompileError, TargetCompiler, TargetPayload,
+    TargetPayloadFormat, TargetProfile,
 };
 
 #[path = "support/search_fixtures.rs"]
 mod search_fixtures;
 
-use search_fixtures::{facts, joined_graph, launch_bound_device};
+use search_fixtures::{fixture_request, latency_objective, launch_bound_device, validated};
 
 /// Launches the fixture times against every surviving finalist.
 const LAUNCHES: u32 = 3;
@@ -322,9 +322,7 @@ fn measured_compile(
     budget: SearchBudget,
     evaluator: &LadderEvaluator,
 ) -> Result<Artifact, vyre_megakernel::CompileError> {
-    let request = CompileRequest::new(joined_graph(), facts(), device, budget, 4_000_000)
-        .validate()
-        .expect("request must validate");
+    let request = validated(device, budget, latency_objective());
     compile_measured(&request, evaluator)
 }
 
@@ -710,7 +708,7 @@ fn measured_recompile(
     evaluator: &LadderEvaluator,
     recorded: MeasurementRecord,
 ) -> Result<Artifact, vyre_megakernel::CompileError> {
-    let request = CompileRequest::new(joined_graph(), facts(), device, budget(LAUNCHES), 4_000_000)
+    let request = fixture_request(device, budget(LAUNCHES), latency_objective())
         .with_recorded_measurement(recorded)
         .validate()
         .expect("request must validate");

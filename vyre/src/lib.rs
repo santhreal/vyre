@@ -38,8 +38,8 @@ pub use vyre_megakernel as compiler;
 
 /// Canonical compiler artifact and request types.
 pub use vyre_megakernel::{
-    Artifact, ArtifactEnvelope, CompileRequest, ExternalFacts, SearchBudget, TargetPayload,
-    TargetPayloadFormat, TargetProfile, ValidatedCompileRequest,
+    Artifact, ArtifactEnvelope, CompileObjective, CompileRequest, ExternalFacts, ObjectiveMetric,
+    SearchBudget, TargetPayload, TargetPayloadFormat, TargetProfile, ValidatedCompileRequest,
 };
 
 /// Retry classification shared by every diagnostic that can be retried.

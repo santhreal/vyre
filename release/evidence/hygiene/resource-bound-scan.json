@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:00da3989f3d836301c2176546db7d76135fa46ae:dirty=true:worktree=b4c40f65a32bd535f226ee7add243fbadee523d59d39500e09e95e67de94fd41",
+  "source_fingerprint": "git:fcead95f37263065a9b4007c01bf4f3add4f43cb:dirty=true:worktree=5b6f1ae8dbfb2d5349b4f539868776ce0e2ba9e1d945745b3fdb23d9618ff83d",
   "schema_version": 1,
   "scan": "resource-bound",
   "findings": [
@@ -14,6 +14,12 @@
       "line": 158,
       "pattern": "thread_sleep",
       "text": "std::thread::sleep(sleep.min(deadline - waited));"
+    },
+    {
+      "path": "vyre-test-support/src/lib.rs",
+      "line": 326,
+      "pattern": "unbounded_read",
+      "text": "let source = std::fs::read_to_string(&path)"
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",

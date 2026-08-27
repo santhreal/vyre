@@ -47,6 +47,9 @@ pub enum PruneReason {
     ScheduleLegality,
     /// Target compilation rejected the plan, so it never reached measurement.
     Emission,
+    /// The candidate's aggregated figures exceed a hard bound the objective
+    /// states, so it is refused rather than ranked last.
+    ObjectiveBound,
 }
 
 impl PruneReason {
@@ -66,6 +69,7 @@ impl PruneReason {
         Self::Representation,
         Self::ScheduleLegality,
         Self::Emission,
+        Self::ObjectiveBound,
     ];
 
     /// Stable machine-readable diagnostic code.
@@ -86,6 +90,7 @@ impl PruneReason {
             Self::Representation => "MKC012_REPRESENTATION",
             Self::ScheduleLegality => "MKC013_SCHEDULE_LEGALITY",
             Self::Emission => "MKC014_EMISSION",
+            Self::ObjectiveBound => "MKC015_OBJECTIVE_BOUND",
         }
     }
 }

@@ -25,7 +25,7 @@ pub use records::{
 };
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 12;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 13;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -411,6 +411,7 @@ mod tests {
                 barriers: Vec::new(),
                 materializations: Vec::new(),
                 candidates_explored: 1,
+                pareto_frontier: 1,
                 search_budget: SearchBudget::new(1, 1, 0, 0, 1),
                 search_work: SearchWork {
                     candidates_explored: 1,
@@ -435,6 +436,7 @@ mod tests {
             provenance: Provenance {
                 source_graph: Digest([0; 32]),
                 request: Digest([0; 32]),
+                objective: crate::objective::CompileObjective::minimize_latency(),
                 compiler_version: env!("CARGO_PKG_VERSION").to_string(),
             },
         }
@@ -537,6 +539,30 @@ mod tests {
                 .contains("records 1 explored candidates"),
             "diagnostic must state both accounting owners: {error}"
         );
+    }
+
+    /// WHY: the recorded frontier is what tells a reader whether the objective's
+    /// tie breakers decided the winner or whether one plan dominated every
+    /// other. A frontier of zero states the selected plan was dominated by
+    /// something, and a frontier wider than the explored set states a choice the
+    /// search never had; both are plans this selector cannot have produced.
+    #[test]
+    fn selected_schedule_rejects_a_frontier_the_search_cannot_support() {
+        for frontier in [0, 2] {
+            let mut invalid = payload(Vec::new());
+            invalid.selected_plan.pareto_frontier = frontier;
+            let error = decode_payload(invalid)
+                .expect_err("a frontier the search cannot support must not decode");
+            assert!(
+                error
+                    .diagnostic
+                    .location
+                    .as_ref()
+                    .and_then(|location| location.path.as_deref())
+                    .is_some_and(|path| path == "artifact.body.selected_plan.pareto_frontier"),
+                "diagnostic must identify the recorded frontier: {error}"
+            );
+        }
     }
 
     /// WHY: measurement samples are charged per target compilation actually

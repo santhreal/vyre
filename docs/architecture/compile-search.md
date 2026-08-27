@@ -7,13 +7,15 @@ validated ProgramGraph
   -> schedule grammar derivations, bounded by SearchBudget
   -> constraint propagation over every derived candidate
   -> cost evaluation per admitted candidate
+  -> objective ordering over the legal Pareto frontier
   -> validated SelectedPlan with exact phase schedule and search certificate
   -> immutable Artifact
 ```
 
 `vyre-megakernel` owns this seam. It validates a typed `ProgramGraph` into a
 schedule-free `LogicalProgramGraph` before planning reads it. Immutable
-`ExternalFacts` and an explicit `SearchBudget` complete the input. The output
+`ExternalFacts`, a typed `CompileObjective` and an explicit `SearchBudget`
+complete the input. The output
 is one versioned immutable `Artifact` plus optional authenticated
 `TargetPayload` values in an `ArtifactEnvelope`. Device admission,
 materialization, submission, queues, residency and recovery consume that
@@ -141,7 +143,9 @@ crate would be correct for the device it was copied from and silently wrong for
 the next one, while a report computed from it is indistinguishable from a
 measured finding.
 
-The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 12`. Schema 12 records
+The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 13`. Schema 13 adds
+the objective the plan was selected under and the width of the legal Pareto
+frontier it was selected from. Schema 13 records
 the selected launch of every entry point: the entry dependency order, logical
 coverage, grid, workgroup, vector width, pipeline roles, ring slots, barrier
 phases, dynamic shared bytes, launch resource intent, and persistence, together
@@ -219,6 +223,7 @@ never scored. Each eliminated family records a stable reason.
 | `MKC012_REPRESENTATION` | the artifact cannot represent the derived organization |
 | `MKC013_SCHEDULE_LEGALITY` | a typed schedule precondition failed |
 | `MKC014_EMISSION` | the target compiler rejected the plan before measurement |
+| `MKC015_OBJECTIVE_BOUND` | an aggregated figure exceeds a hard bound the objective states |
 
 `PruneReason::ALL` is the variant space, and the certificate records one row per
 eliminated family with its count, so a plan that looks unfused says which
@@ -294,8 +299,8 @@ compiles and the baseline is still ranked.
 
 `explore` seeds the derivation with `CandidatePlan::baseline_for`, one group per
 node at its declared launch width and no specialization. Every production has to
-earn its place against that baseline on cost, and a cost tie is broken toward the
-shorter derivation, so an accepted transform is one that paid for itself. An
+earn its place against that baseline on the objective's metric vector, and a tie
+on every ordering metric is broken toward the shorter derivation, so an accepted transform is one that paid for itself. An
 exhausted budget degrades to the best proved candidate instead of to nothing.
 
 ## The budget bounds the search, not the answer
@@ -312,6 +317,100 @@ certificate additionally records the grammar version, the depth the expansion
 reached, one row per derived family with its admitted count, one row per
 eliminated family with its reason, and whether a bound stopped the search. That
 record is what reproduces a compile without re-running it.
+
+## What a compile optimizes is stated
+
+A ranking with no stated objective is a ranking against whichever scalar the
+cost model happened to total. Two callers then disagree about what optimal
+meant, and a cache cannot tell a latency artifact from a throughput one, because
+neither artifact states which it is. Every production compile therefore carries
+a `CompileObjective`, and it is a constructor argument rather than a default.
+
+The record states a primary ordered metric, up to four tie breakers, the
+workload arrangements it optimizes for with a permille weight each, whether
+those combine by weighted mean or worst case, the risk statistic a measured
+comparison reads, the horizon one-time device cost is amortized over, hard
+bounds per metric, and the retained-artifact portfolio policy.
+
+| Metric | Unit | Ranks a candidate |
+|---|---|---|
+| `Latency` | nanoseconds | yes |
+| `Throughput` | nanoseconds per launch | yes |
+| `ColdStart` | nanoseconds | yes |
+| `PeakMemory` | bytes | yes |
+| `Energy` | microjoules | yes |
+| `ArtifactBytes` | bytes | no |
+| `VariantCount` | artifacts | no |
+| `CompileWork` | work units | no |
+| `MeasurementWork` | measurements | no |
+
+Every metric is stated so lower is better, throughput included: it is
+steady-state nanoseconds per launch, which orders the same way as launches per
+second for one fixed graph and removes the need for a second comparison
+direction.
+
+A metric that only has a figure after emission, or after a whole portfolio is
+assembled, cannot rank a candidate: ranking would have to invent the figure.
+Those metrics are admissible as bounds, checked where the figure is real. The
+artifact byte ceiling is one of them, and it is the only place that ceiling
+lives; a request that states none is refused.
+
+A metric priced by a calibrated target fact is refused when the device reported
+none. `Throughput` and `ColdStart` need the persistent setup cost
+`DeviceFacts::with_launch_costs` supplies. `Energy` needs an energy rate no
+target in this tree reports, so an energy objective fails with the fact named
+rather than being ranked against a guess.
+
+Ranking keeps the legal Pareto frontier before it orders anything: a candidate
+no better than another on every ordering metric cannot win under that objective
+whatever it is later measured at, so it is dominated and never measured. The
+selected plan records the frontier width, so a reader can tell a selection the
+tie breakers had to decide from one the legal set decided on its own.
+
+A bound is a refusal rather than a preference. A candidate whose aggregated
+figure exceeds one is pruned with `MKC015_OBJECTIVE_BOUND`, and a compile whose
+whole legal set exceeds one fails with the bound it came nearest to meeting.
+
+| Code | Failure |
+|---|---|
+| `MKC029_INVALID_OBJECTIVE` | the record is internally inconsistent |
+| `MKC030_MISSING_CALIBRATED_FACT` | a stated metric needs a fact the device withheld |
+| `MKC031_OBJECTIVE_BOUND_VIOLATED` | every legal candidate exceeds a stated bound |
+| `MKC032_PORTFOLIO_COVERAGE_UNSATISFIED` | one artifact cannot satisfy the stated coverage policy |
+
+The whole record is `Copy` and serializable, and it participates in request,
+artifact, cache and measurement identity by value. Changing any field changes
+the request digest, so no compile can reuse a decision another objective made.
+
+## The retained artifact set is one decision
+
+The portfolio policy states how many artifacts a compile retains and which
+workload classes each has to serve. `CoveragePolicy::Single` retains one
+artifact for every stated class; `CoveragePolicy::EveryWorkloadClass` retains a
+set in which each class is served by some artifact, bounded by the policy's
+artifact ceiling, the `VariantCount` bound, and an aggregate byte ceiling.
+
+`compile` and `compile_measured` emit one artifact and refuse a policy one
+artifact cannot satisfy with `MKC032_PORTFOLIO_COVERAGE_UNSATISFIED`, naming
+`compile_portfolio`. `compile_portfolio` and `compile_portfolio_measured` return
+an `ArtifactPortfolio`: the retained artifacts plus the artifact index each
+stated class is served by.
+
+Selection is joint rather than per class. Optimizing each class alone maximizes
+the retained set, and every retained artifact costs compile work, bytes, and
+load time. A workload profile holds at most four classes, so every partition of
+the stated classes the policy admits is enumerated, each part is compiled once
+under the objective narrowed to that part with its weights restated to a
+thousand permille, and whole partitions are ordered by the objective read over
+every stated class. Ties go to the smaller set and then the smaller aggregate
+byte count, so two sets the objective cannot separate are separated by what they
+cost to keep. Each retained artifact records the narrowed objective it was
+selected under, so a runtime holding several can tell which arrangement each
+serves.
+
+Partitions are enumerated as restricted growth strings, so each set partition is
+enumerated once instead of once per relabelling of its parts, and the assignment
+one compile reports is canonical.
 
 ## The cost model is open
 

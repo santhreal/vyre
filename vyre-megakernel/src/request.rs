@@ -9,10 +9,10 @@ use vyre_foundation::validate::{validate_with_options, BackendCapabilities, Vali
 
 use crate::device_facts::{validate_device_support, DeviceFacts};
 use crate::error::{failure, CompileError, CompilerFailureKind};
-use crate::execution::CompileObjective;
 use crate::grid_sync;
 use crate::identity::Digest;
 use crate::measure::MeasurementRecord;
+use crate::objective::{CompileObjective, ObjectiveMetric};
 
 /// Explicit bounds for one whole-program schedule search.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -107,28 +107,31 @@ pub struct CompileRequest {
     pub(crate) device: DeviceFacts,
     pub(crate) objective: CompileObjective,
     pub(crate) search_budget: SearchBudget,
-    pub(crate) max_artifact_bytes: u64,
     representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
     recorded_measurement: Option<MeasurementRecord>,
 }
 
 impl CompileRequest {
     /// Construct a request. Call [`Self::validate`] before compilation.
+    ///
+    /// `objective` states what the compilation optimizes and every hard bound it
+    /// refuses to exceed, including the artifact byte ceiling. It is a
+    /// constructor argument rather than a default because a plan selected
+    /// without a stated objective cannot say what it was selected for.
     #[must_use]
     pub const fn new(
         graph: ProgramGraph,
         facts: ExternalFacts,
         device: DeviceFacts,
         search_budget: SearchBudget,
-        max_artifact_bytes: u64,
+        objective: CompileObjective,
     ) -> Self {
         Self {
             graph,
             facts,
-            objective: CompileObjective::MinimizeLatency,
+            objective,
             device,
             search_budget,
-            max_artifact_bytes,
             representative_inputs: BTreeMap::new(),
             recorded_measurement: None,
         }
@@ -158,23 +161,22 @@ impl CompileRequest {
         self
     }
 
-    /// Select the explicit compiler ranking objective.
-    #[must_use]
-    pub const fn with_objective(mut self, objective: CompileObjective) -> Self {
-        self.objective = objective;
-        self
-    }
-
     /// Validate topology, programs, device facts, external facts, and bounds.
     pub fn validate(self) -> Result<ValidatedCompileRequest, CompileError> {
-        if self.max_artifact_bytes == 0 {
+        if self
+            .objective
+            .bounds()
+            .limit(ObjectiveMetric::ArtifactBytes)
+            .is_none_or(|limit| limit == 0)
+        {
             return Err(failure(
                 CompilerFailureKind::ArtifactLimit,
-                "request.max_artifact_bytes",
-                "artifact byte limit must be greater than zero",
-                "supply a positive bounded artifact byte limit",
+                "request.objective.bounds.artifact_bytes",
+                "artifact byte limit must be stated and greater than zero",
+                "bound ObjectiveMetric::ArtifactBytes at the largest artifact the caller will retain",
             ));
         }
+        self.objective.validate(self.device)?;
         if self.search_budget.max_candidates == 0
             || self.search_budget.max_cpu_work == 0
             || self.search_budget.max_elapsed_ns == 0
@@ -235,7 +237,6 @@ impl CompileRequest {
             device: self.device,
             objective: self.objective,
             search_budget: self.search_budget,
-            max_artifact_bytes: self.max_artifact_bytes,
         })
     }
 }
@@ -273,7 +274,6 @@ pub struct ValidatedCompileRequest {
     pub(crate) device: DeviceFacts,
     pub(crate) objective: CompileObjective,
     pub(crate) search_budget: SearchBudget,
-    pub(crate) max_artifact_bytes: u64,
     representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
     recorded_measurement: Option<MeasurementRecord>,
 }
@@ -310,22 +310,48 @@ impl ValidatedCompileRequest {
         self.search_budget
     }
 
-    /// Return the explicit compiler ranking objective.
+    /// Borrow the stated compile objective.
     #[must_use]
-    pub const fn objective(&self) -> CompileObjective {
-        self.objective
+    pub const fn objective(&self) -> &CompileObjective {
+        &self.objective
     }
 
     /// Return the maximum accepted artifact byte length.
+    ///
+    /// This is the artifact-byte bound the objective states. Validation refuses
+    /// a request that states none, so one ceiling is stated in one place and
+    /// read here.
     #[must_use]
-    pub const fn max_artifact_bytes(&self) -> u64 {
-        self.max_artifact_bytes
+    pub fn max_artifact_bytes(&self) -> u64 {
+        self.objective
+            .bounds()
+            .limit(ObjectiveMetric::ArtifactBytes)
+            .unwrap_or(u64::MAX)
     }
 
     /// Return the live device facts the plan was selected against.
     #[must_use]
     pub const fn device(&self) -> DeviceFacts {
         self.device
+    }
+
+    /// The same validated request under a different stated objective.
+    ///
+    /// Portfolio selection compiles one part of a workload partition at a time,
+    /// and a part is this graph, these facts, and this device under an objective
+    /// narrowed to that part. The objective stays the request's own field rather
+    /// than a parameter threaded past it, so every compile reads the objective
+    /// from one place and records that one in the artifact.
+    pub(crate) fn restated(&self, objective: CompileObjective) -> Self {
+        Self {
+            graph: self.graph.clone(),
+            facts: self.facts.clone(),
+            device: self.device,
+            objective,
+            search_budget: self.search_budget,
+            representative_inputs: self.representative_inputs.clone(),
+            recorded_measurement: self.recorded_measurement.clone(),
+        }
     }
 }
 

@@ -16,8 +16,8 @@ use vyre_foundation::schedule::{
     ScheduleTransform, SynchronizationScope,
 };
 use vyre_megakernel::{
-    compile, CompileRequest, PruneReason, ScheduleProduction, SearchBudget,
-    SCHEDULE_GRAMMAR_VERSION,
+    compile, CompileObjective, CompileRequest, ObjectiveMetric, PruneReason, ScheduleProduction,
+    SearchBudget, SCHEDULE_GRAMMAR_VERSION,
 };
 
 #[path = "support/search_fixtures.rs"]
@@ -349,7 +349,7 @@ fn the_baseline_wins_when_no_production_pays() {
         facts(),
         bare_device(),
         budget(),
-        4_000_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 4_000_000),
     )
     .validate()
     .expect("request must validate");

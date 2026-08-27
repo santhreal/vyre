@@ -6,6 +6,7 @@ use crate::{
     derive,
     facts::{DataflowEdge, PlanningFacts},
     legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason},
+    objective::CompileObjective,
     DependencyEdge, DeviceFacts, SearchBudget, SearchWork,
 };
 
@@ -34,6 +35,7 @@ pub(crate) fn explore(
     dependencies: &[DependencyEdge],
     budget: SearchBudget,
     device: DeviceFacts,
+    objective: &CompileObjective,
 ) -> SearchResult {
     let graph = logical.graph();
     let mut rejected = Vec::new();
@@ -53,7 +55,7 @@ pub(crate) fn explore(
         }
     }
 
-    let derived = derive::derive(logical, facts, dependencies, budget, device);
+    let derived = derive::derive(logical, facts, dependencies, budget, device, objective);
     let cpu_work = cpu_work
         .saturating_add(derived.cpu_work)
         .min(budget.max_cpu_work);

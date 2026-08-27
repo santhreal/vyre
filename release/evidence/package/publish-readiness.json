@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:0dc7aa7d4bab193d1c9f05ecb71c19f40634009a:dirty=true:worktree=3167533ea776787a3791191265884cf03a1ab5d2d2d029a70bb249b6856ecd96",
+  "source_fingerprint": "git:fcead95f37263065a9b4007c01bf4f3add4f43cb:dirty=true:worktree=5b6f1ae8dbfb2d5349b4f539868776ce0e2ba9e1d945745b3fdb23d9618ff83d",
   "schema_version": 3,
   "release_train": {
     "vyre": "0.8.0",
@@ -759,9 +759,9 @@
       "package": "vyre-megakernel",
       "manifest": "vyre-megakernel/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 57,
-      "file_list_digest": "blake3:159bc2eb852d21e418e7a6df203aaabe2583ba4f542321e663fae589e4b23447",
-      "rust_source_count": 34,
+      "file_count": 67,
+      "file_list_digest": "blake3:8747c11d3d13f92eaa806ae73e466e64f209c0d16326f92ff2cb434c93ec8fc2",
+      "rust_source_count": 42,
       "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,

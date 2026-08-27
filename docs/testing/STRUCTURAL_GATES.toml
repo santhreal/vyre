@@ -517,3 +517,35 @@ Resolves every package selector in every workflow and script of this checkout
 against the manifests. A workflow step is text until CI runs it, and a selector
 that resolves to nothing fails there rather than here.
 """
+
+[[gate]]
+file = "vyre-megakernel/tests/compile_objective.rs"
+tests = ["every_declared_metric_is_listed_once_at_its_own_index"]
+reason = """
+Asserts that `ObjectiveMetric::ALL` lists every declared variant at its own
+declaration index. `ObjectiveBounds` and `MetricFigures` are arrays sized by that
+list and indexed by `ObjectiveMetric::index`, so a variant missing from it shrinks
+both arrays while the index keeps counting. The enum is `#[non_exhaustive]`, so no
+exhaustive match outside the crate can witness the variant set, and Rust has no
+reflection: the declaration is the only witness.
+"""
+
+[[gate]]
+file = "vyre-megakernel/tests/compile_objective.rs"
+tests = ["every_declared_calibrated_fact_is_listed_and_names_its_builder"]
+reason = """
+Asserts that every declared `RequiredFact` is listed in `RequiredFact::ALL` and is
+required by some metric. A fact absent from the list is a fact no refusal can name,
+and a fact no metric requires is a check that never runs; neither state is
+observable from a running program, because both are about which variants exist.
+"""
+
+[[gate]]
+file = "vyre-megakernel/tests/compile_objective.rs"
+tests = ["every_declared_policy_variant_is_listed"]
+reason = """
+Same closure for `WorkloadAggregation`, `RiskStatistic` and `CoveragePolicy`.
+Validation and evidence projection read each through its own `ALL`, so a variant
+missing from one of those lists is a policy no compile can be validated against
+and no artifact can record.
+"""

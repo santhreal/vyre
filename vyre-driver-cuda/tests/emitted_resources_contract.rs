@@ -17,7 +17,9 @@ mod harness;
 use harness::add_one_program;
 use vyre_driver_cuda::cuda_factory;
 use vyre_foundation::ir::ProgramGraph;
-use vyre_megakernel::{compile, CompileRequest, Digest, ExternalFacts, SearchBudget};
+use vyre_megakernel::{
+    compile, CompileObjective, CompileRequest, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
+};
 
 /// Registers a `main` entry point cannot allocate fewer than: the driver
 /// assigns at least the ones a store and an add need.
@@ -43,7 +45,7 @@ fn the_cuda_driver_reports_the_registers_it_allocated_for_every_entry_point() {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         facts,
         SearchBudget::new(128, 128, 0, 0, 128),
-        60_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 60_000),
     )
     .validate()
     .expect("the fixture compile request must validate");

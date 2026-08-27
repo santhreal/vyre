@@ -23,7 +23,8 @@ use std::path::{Path, PathBuf};
 
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_megakernel::{
-    Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, TargetPayload,
+    Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
+    ObjectiveMetric, SearchBudget, TargetPayload,
 };
 use xtask::gate::{Finding, GateCtx, GateError, Report};
 
@@ -150,7 +151,8 @@ fn compile_neutral(program: Program) -> Result<Artifact, String> {
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         DeviceFacts::unknown(),
         XTASK_SEARCH_BUDGET,
-        MAX_XTASK_ARTIFACT_BYTES,
+        CompileObjective::minimize_latency()
+            .with_bound(ObjectiveMetric::ArtifactBytes, MAX_XTASK_ARTIFACT_BYTES),
     )
     .validate()
     .map_err(|error| format!("Fix: compile request is invalid: {error}"))?;

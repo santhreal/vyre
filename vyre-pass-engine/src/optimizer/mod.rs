@@ -133,9 +133,8 @@ fn execute_retained_program(
         request_inputs,
         policy.external_facts().clone(),
         policy.target_facts(),
-        policy.objective(),
+        *policy.objective(),
         policy.budget(),
-        policy.max_artifact_bytes(),
     )?;
     let SemanticExecutionOutput { mut outputs, .. } = executor.execute(&request)?;
     let mut ordered = Vec::with_capacity(output_order.len());
