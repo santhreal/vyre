@@ -526,10 +526,79 @@ fn conform_manifest_disables_registry_link_default_features() {
     );
 }
 
-/// WHY: Derives the linked driver subset at run time from
-/// `vyre_registry_link::backend::DECLARED_SOURCES`. In portable (`not(feature = "gpu")`)
-/// builds, only the reference CPU driver may be linked; every other declared concrete
-/// GPU driver must be absent. In `gpu` builds, the expected GPU drivers must be present.
+/// Registry-link driver features and the driver source each one links, derived
+/// from `vyre-registry-link`'s own manifest.
+///
+/// A driver added to that crate appears here without an edit, which is what
+/// makes the decision record below go red instead of stale.
+fn registry_link_driver_features() -> std::collections::BTreeMap<String, String> {
+    let manifest: toml::Value =
+        toml::from_str(include_str!("../../../vyre-registry-link/Cargo.toml"))
+            .expect("vyre-registry-link/Cargo.toml must parse as valid TOML");
+    let features = manifest
+        .get("features")
+        .and_then(toml::Value::as_table)
+        .expect("vyre-registry-link must declare a features table");
+    let mut linked = std::collections::BTreeMap::new();
+    for (name, entries) in features {
+        let Some(entries) = entries.as_array() else {
+            continue;
+        };
+        for entry in entries.iter().filter_map(toml::Value::as_str) {
+            if let Some(dep) = entry.strip_prefix("dep:") {
+                if dep.starts_with("vyre-driver-") {
+                    linked.insert(name.clone(), dep.to_string());
+                }
+            }
+        }
+    }
+    linked
+}
+
+/// Registry-link features vyre-conform enables under the feature selection this
+/// binary was built with: the baseline dependency declaration always, and the
+/// `gpu` array when that feature is on.
+fn registry_link_features_enabled_by_conform() -> std::collections::BTreeSet<String> {
+    let manifest: toml::Value = toml::from_str(include_str!("../Cargo.toml"))
+        .expect("conform/vyre-conform/Cargo.toml must parse as valid TOML");
+    let mut enabled = std::collections::BTreeSet::new();
+    let baseline = manifest
+        .get("dependencies")
+        .and_then(|deps| deps.get("vyre-registry-link"))
+        .and_then(|dep| dep.get("features"))
+        .and_then(toml::Value::as_array)
+        .expect("vyre-registry-link features must be declared as an array");
+    enabled.extend(
+        baseline
+            .iter()
+            .filter_map(toml::Value::as_str)
+            .map(str::to_string),
+    );
+    if cfg!(feature = "gpu") {
+        let gpu = manifest
+            .get("features")
+            .and_then(|features| features.get("gpu"))
+            .and_then(toml::Value::as_array)
+            .expect("vyre-conform must declare a gpu feature array");
+        enabled.extend(
+            gpu.iter()
+                .filter_map(toml::Value::as_str)
+                .filter_map(|entry| entry.strip_prefix("vyre-registry-link/"))
+                .map(str::to_string),
+        );
+    }
+    enabled
+}
+
+/// WHY: Every registry-link driver feature vyre-conform enables must reach the
+/// process as a linked driver source, derived at run time from
+/// `vyre_registry_link::backend::linked_backend_source_names()`.
+///
+/// Only the positive direction is observable here. Cargo unifies
+/// `vyre-registry-link`'s features across a whole-workspace build, so another
+/// member enabling a driver puts that driver in this process too. A negative
+/// claim about linkage is therefore a claim about vyre-conform's manifest, and
+/// `conform_manifest_records_every_driver_feature_decision` reads it there.
 #[test]
 fn linked_backend_sources_honor_feature_boundary() {
     let sources = vyre_registry_link::backend::linked_backend_source_names();
@@ -538,38 +607,79 @@ fn linked_backend_sources_honor_feature_boundary() {
         "reference backend is always linked"
     );
 
-    if cfg!(feature = "gpu") {
+    let drivers = registry_link_driver_features();
+    let enabled = registry_link_features_enabled_by_conform();
+    for feature in &enabled {
+        let Some(source) = drivers.get(feature.as_str()) else {
+            continue;
+        };
         assert!(
-            sources.contains(&"vyre-driver-cuda"),
-            "vyre-conform with gpu feature must link cuda driver"
+            sources.contains(&source.as_str()),
+            "vyre-conform enables vyre-registry-link/{feature} but {source} is not linked"
         );
-        assert!(
-            sources.contains(&"vyre-driver-metal"),
-            "vyre-conform with gpu feature must link metal driver"
-        );
-        assert!(
-            sources.contains(&"vyre-driver-wgpu"),
-            "vyre-conform with gpu feature must link wgpu driver"
-        );
-        assert!(
-            !sources.contains(&"vyre-driver-spirv"),
-            "vyre-conform gpu feature does not link spirv driver"
-        );
-    } else {
-        for &declared in vyre_registry_link::backend::DECLARED_SOURCES {
-            if declared == "vyre-driver-reference" {
-                assert!(
-                    sources.contains(&declared),
-                    "reference backend {declared} must be linked in portable/no-default build"
-                );
-            } else {
-                assert!(
-                    !sources.contains(&declared),
-                    "vyre-conform without gpu feature must not link concrete driver {declared}"
-                );
-            }
-        }
     }
+}
+
+/// Registry-link driver features vyre-conform never enables, and why.
+///
+/// `spirv` is validated through `vyre-driver-spirv`'s own suite with
+/// `spirv-val`; conformance proving reaches the dialect through the backends
+/// its `gpu` feature links. A driver added to `vyre-registry-link` is in
+/// neither this record nor the enabled set, which turns the comparison below
+/// red until someone records the decision.
+const DRIVER_FEATURES_CONFORM_DOES_NOT_ENABLE: &[&str] = &["spirv"];
+
+/// WHY: The set of registry-link driver features vyre-conform declines is a
+/// manifest fact, and the only place it can be observed without a
+/// workspace-unified build changing the answer.
+#[test]
+fn conform_manifest_records_every_driver_feature_decision() {
+    let drivers = registry_link_driver_features();
+    assert!(
+        drivers.contains_key("spirv"),
+        "vyre-registry-link must still declare the spirv driver feature this record names"
+    );
+
+    let manifest: toml::Value = toml::from_str(include_str!("../Cargo.toml"))
+        .expect("conform/vyre-conform/Cargo.toml must parse as valid TOML");
+    let mut enabled: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+    let baseline = manifest
+        .get("dependencies")
+        .and_then(|deps| deps.get("vyre-registry-link"))
+        .and_then(|dep| dep.get("features"))
+        .and_then(toml::Value::as_array)
+        .expect("vyre-registry-link features must be declared as an array");
+    enabled.extend(baseline.iter().filter_map(toml::Value::as_str));
+    let features = manifest
+        .get("features")
+        .and_then(toml::Value::as_table)
+        .expect("vyre-conform must declare a features table");
+    for entries in features.values() {
+        let Some(entries) = entries.as_array() else {
+            continue;
+        };
+        enabled.extend(
+            entries
+                .iter()
+                .filter_map(toml::Value::as_str)
+                .filter_map(|entry| entry.strip_prefix("vyre-registry-link/")),
+        );
+    }
+
+    let declined: std::collections::BTreeSet<&str> = drivers
+        .keys()
+        .map(String::as_str)
+        .filter(|feature| !enabled.contains(feature))
+        .collect();
+    let recorded: std::collections::BTreeSet<&str> = DRIVER_FEATURES_CONFORM_DOES_NOT_ENABLE
+        .iter()
+        .copied()
+        .collect();
+    assert_eq!(
+        declined, recorded,
+        "vyre-conform's registry-link driver decisions changed. Fix: enable the feature in \
+         Cargo.toml, or record it in DRIVER_FEATURES_CONFORM_DOES_NOT_ENABLE with the reason."
+    );
 }
 
 /// WHY: Operations and reference backend must remain accessible and functional
