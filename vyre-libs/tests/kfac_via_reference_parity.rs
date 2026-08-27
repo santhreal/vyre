@@ -15,7 +15,7 @@
 //! slot. The faithful dispatcher consumes one input per input-consuming buffer in buffer order,
 //! matching the real backend, so kfac's already-correct 3-input consumer now runs.
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::solvers::kfac_autotune_step::kfac_autotune_step_via;
 
@@ -81,7 +81,7 @@ fn inverse_satisfies_a_times_ainv_is_identity_over_generated_blocks() {
 
         let inv = kfac_autotune_step_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &blocks,
             num_blocks,
             n as u32,
@@ -128,7 +128,7 @@ fn inverts_known_diagonal_and_dense_two_by_two_blocks() {
     ];
     let inv = kfac_autotune_step_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &two_diag,
         2,
         2,
@@ -139,14 +139,8 @@ fn inverts_known_diagonal_and_dense_two_by_two_blocks() {
 
     // Dense symmetric block [[4,3],[3,2]], det = -1 → inverse [[-2,3],[3,-4]].
     let dense = vec![4.0, 3.0, 3.0, 2.0];
-    let inv = kfac_autotune_step_via(
-        &dispatcher,
-        &semantic_execution_support::policy(),
-        &dense,
-        1,
-        2,
-    )
-    .unwrap();
+    let inv = kfac_autotune_step_via(&dispatcher, &bounded_compile_policy::policy(), &dense, 1, 2)
+        .unwrap();
     let residual = identity_residual(&dense, &inv, 2);
     assert!(
         residual < 1.0e-5,

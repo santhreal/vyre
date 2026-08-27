@@ -9,7 +9,7 @@
 //! given seed means. CPU reference paths only - no mock dispatchers.
 
 #![forbid(unsafe_code)]
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_libs::graph::dispatch::exploded::build_ifds_csr_via;
@@ -608,7 +608,7 @@ fn sweep_exploded_ifds_via_matches_cpu_oracle_matrix() {
         );
         let actual = build_ifds_csr_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             num_procs,
             blocks_per_proc,
             facts_per_proc,

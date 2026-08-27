@@ -33,7 +33,7 @@
 //! depth-1 circuits (the sweep) and genuine multi-level DAGs (`..evaluates_multilevel_dag_correctly`),
 //! all end to end through the circuit→conformal composite.
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::analysis::cost_model::predict_runtime_fixed_via;
 use vyre_libs::graph::sum_product_circuit::{KIND_LEAF, KIND_PRODUCT, KIND_SUM};
@@ -144,7 +144,7 @@ fn predict(
 ) -> (u32, u32) {
     predict_runtime_fixed_via(
         d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &c.kinds,
         &c.offsets,
         &c.counts,

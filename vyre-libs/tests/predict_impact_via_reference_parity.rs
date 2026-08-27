@@ -17,7 +17,7 @@
 //! faithful boundary (unlike the data-dependent indirect-scatter fixpoints, see
 //! `BUG-reference-eval-indirect-scatter-fixpoint-1round`).
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::reasoning::do_calculus_change_impact::{
     predict_impact_observation_form_via, predict_impact_via,
@@ -59,7 +59,7 @@ fn predict_impact_via_matches_reference_over_random_dags() {
         let mask = random_mask(&mut state, n);
         let n_u = n as u32;
 
-        let got = predict_impact_via(&d, &semantic_execution_support::policy(), &adj, &mask, n_u)
+        let got = predict_impact_via(&d, &bounded_compile_policy::policy(), &adj, &mask, n_u)
             .expect("predict_impact_via must dispatch surgery + closure + projection");
         let want = predict_impact(&adj, &mask, n_u);
         assert_eq!(
@@ -92,7 +92,7 @@ fn predict_impact_observation_form_via_matches_reference_over_random_dags() {
 
         let got = predict_impact_observation_form_via(
             &d,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &adj,
             &observation_mask,
             n_u,
@@ -123,8 +123,7 @@ fn predict_impact_via_hand_checked_chain() {
     adj[1 * 4 + 2] = 1;
     adj[2 * 4 + 3] = 1;
     let mask = [1u32, 0, 0, 0];
-    let got =
-        predict_impact_via(&d, &semantic_execution_support::policy(), &adj, &mask, n).unwrap();
+    let got = predict_impact_via(&d, &bounded_compile_policy::policy(), &adj, &mask, n).unwrap();
     let want = predict_impact(&adj, &mask, n);
     assert_eq!(got, want, "chain impact matches the reference");
     assert_eq!(
@@ -135,8 +134,7 @@ fn predict_impact_via_hand_checked_chain() {
 
     // Intervene on node 2 → only nodes 2 and 3 (its transitive downstream) are impacted.
     let mask = [0u32, 0, 1, 0];
-    let got =
-        predict_impact_via(&d, &semantic_execution_support::policy(), &adj, &mask, n).unwrap();
+    let got = predict_impact_via(&d, &bounded_compile_policy::policy(), &adj, &mask, n).unwrap();
     assert_eq!(got, predict_impact(&adj, &mask, n));
     assert_eq!(
         got,

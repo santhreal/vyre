@@ -15,7 +15,7 @@
 //! but the oracle mirrors the signed kernel exactly (see BACKLOG FIXED-amg-fixed-path-unsigned-mul)).
 //! That is exactly reproducible in u32, so the oracle here is BIT-EXACT (no tolerance).
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::solvers::sheaf_heterophilic_dispatch::diffuse_dispatch_stalks_fixed_via;
 
@@ -59,7 +59,7 @@ fn diffuse_step_via_matches_exact_fixed_point_oracle_over_generated_systems() {
 
         let got = diffuse_dispatch_stalks_fixed_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &stalks,
             &restriction,
             damping,
@@ -93,7 +93,7 @@ fn diffuse_step_via_matches_hand_checked_cases() {
     let restriction = vec![FIXED_ONE, FIXED_ONE, FIXED_ONE];
     let got = diffuse_dispatch_stalks_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &stalks,
         &restriction,
         0,
@@ -106,7 +106,7 @@ fn diffuse_step_via_matches_hand_checked_cases() {
     // damping = 1.0, restriction = 1.0 → delta = stalk, stalks_next = 0.
     let got = diffuse_dispatch_stalks_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &stalks,
         &restriction,
         FIXED_ONE,
@@ -123,7 +123,7 @@ fn diffuse_step_via_matches_hand_checked_cases() {
     // damping = 0.5, restriction = 1.0, stalk = 2.0 → delta = 0.5*1*2 = 1.0 → next = 1.0.
     let got = diffuse_dispatch_stalks_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[2 * FIXED_ONE],
         &[FIXED_ONE],
         FIXED_ONE / 2,

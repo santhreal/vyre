@@ -24,7 +24,7 @@
 //! `sort_regions_via` (region_sort_program: RO×3 + ReadWrite outs×3 = 6 input-consuming, passes 6,
 //! `outputs[0]=pids_out`) was audited CLEAN and is covered here as a durable guard.
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::encoding::matching_diagnostic_compaction::{
     bracket_pairs_via, dedup_region_survivor_flags_via, sort_regions_via,
@@ -78,7 +78,7 @@ fn bracket_pairs_via_matches_primitive_cpu_oracle_over_generated_streams() {
 
         let pairs = bracket_pairs_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &kinds,
             max_depth,
         )
@@ -113,13 +113,8 @@ fn bracket_pairs_via_matches_known_nested_pairs() {
         BRACKET_KIND_CLOSE,
         BRACKET_KIND_CLOSE,
     ];
-    let pairs = bracket_pairs_via(
-        &dispatcher,
-        &semantic_execution_support::policy(),
-        &kinds,
-        8,
-    )
-    .unwrap();
+    let pairs =
+        bracket_pairs_via(&dispatcher, &bounded_compile_policy::policy(), &kinds, 8).unwrap();
     assert_eq!(pairs, vec![5, 2, 1, 4, 3, 0]);
 }
 
@@ -138,7 +133,7 @@ fn sort_regions_via_matches_cpu_sort_over_generated_batches() {
             })
             .collect::<Vec<_>>();
 
-        let sorted = sort_regions_via(&dispatcher, &semantic_execution_support::policy(), &regions)
+        let sorted = sort_regions_via(&dispatcher, &bounded_compile_policy::policy(), &regions)
             .expect("sort_regions_via must dispatch the region-sort kernel");
         assert_eq!(
             sorted,
@@ -167,7 +162,7 @@ fn dedup_survivor_flags_via_marks_same_cluster_starts_as_cpu_over_generated_batc
 
         let flags = dedup_region_survivor_flags_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &regions,
         )
         .expect("dedup_region_survivor_flags_via must dispatch the region-dedup kernel");

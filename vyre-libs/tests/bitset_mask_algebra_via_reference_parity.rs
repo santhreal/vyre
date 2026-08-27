@@ -13,7 +13,7 @@
 //! bitwise arithmetic → BIT-EXACT (no tolerance), compared against the authoritative `reference_mask_*`
 //! CPU oracles.
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::encoding::bitset_mask_algebra::{
     mask_and_via, mask_clear_bit_via, mask_contains_via, mask_equal_via, mask_not_via, mask_or_via,
@@ -41,53 +41,29 @@ fn word_parallel_and_or_xor_not_via_match_cpu_ref() {
         let rhs: Vec<u32> = (0..words).map(|_| xorshift(&mut state)).collect();
 
         assert_eq!(
-            mask_and_via(
-                &dispatcher,
-                &semantic_execution_support::policy(),
-                &lhs,
-                &rhs
-            )
-            .unwrap(),
+            mask_and_via(&dispatcher, &bounded_compile_policy::policy(), &lhs, &rhs).unwrap(),
             reference_mask_and(&lhs, &rhs),
             "case {case}: AND; lhs={lhs:?} rhs={rhs:?}"
         );
         assert_eq!(
-            mask_or_via(
-                &dispatcher,
-                &semantic_execution_support::policy(),
-                &lhs,
-                &rhs
-            )
-            .unwrap(),
+            mask_or_via(&dispatcher, &bounded_compile_policy::policy(), &lhs, &rhs).unwrap(),
             reference_mask_or(&lhs, &rhs),
             "case {case}: OR"
         );
         assert_eq!(
-            mask_xor_via(
-                &dispatcher,
-                &semantic_execution_support::policy(),
-                &lhs,
-                &rhs
-            )
-            .unwrap(),
+            mask_xor_via(&dispatcher, &bounded_compile_policy::policy(), &lhs, &rhs).unwrap(),
             reference_mask_xor(&lhs, &rhs),
             "case {case}: XOR"
         );
         assert_eq!(
-            mask_not_via(&dispatcher, &semantic_execution_support::policy(), &lhs).unwrap(),
+            mask_not_via(&dispatcher, &bounded_compile_policy::policy(), &lhs).unwrap(),
             reference_mask_not(&lhs),
             "case {case}: NOT"
         );
         // Cross-check AND/OR/XOR against a fully independent inline computation too.
         let inline_and: Vec<u32> = lhs.iter().zip(&rhs).map(|(a, b)| a & b).collect();
         assert_eq!(
-            mask_and_via(
-                &dispatcher,
-                &semantic_execution_support::policy(),
-                &lhs,
-                &rhs
-            )
-            .unwrap(),
+            mask_and_via(&dispatcher, &bounded_compile_policy::policy(), &lhs, &rhs).unwrap(),
             inline_and,
             "case {case}: AND vs inline"
         );
@@ -112,24 +88,12 @@ fn binary_predicates_equal_subset_via_match_cpu_ref() {
         };
 
         assert_eq!(
-            mask_equal_via(
-                &dispatcher,
-                &semantic_execution_support::policy(),
-                &lhs,
-                &rhs
-            )
-            .unwrap(),
+            mask_equal_via(&dispatcher, &bounded_compile_policy::policy(), &lhs, &rhs).unwrap(),
             reference_mask_equal(&lhs, &rhs),
             "case {case}: EQUAL; lhs={lhs:?} rhs={rhs:?}"
         );
         assert_eq!(
-            mask_subset_of_via(
-                &dispatcher,
-                &semantic_execution_support::policy(),
-                &lhs,
-                &rhs
-            )
-            .unwrap(),
+            mask_subset_of_via(&dispatcher, &bounded_compile_policy::policy(), &lhs, &rhs).unwrap(),
             reference_mask_subset_of(&lhs, &rhs),
             "case {case}: SUBSET_OF"
         );
@@ -162,7 +126,7 @@ fn bit_queries_and_single_bit_rewrites_via_match_cpu_ref() {
         assert_eq!(
             mask_contains_via(
                 &dispatcher,
-                &semantic_execution_support::policy(),
+                &bounded_compile_policy::policy(),
                 &input,
                 bit_idx
             )
@@ -173,7 +137,7 @@ fn bit_queries_and_single_bit_rewrites_via_match_cpu_ref() {
         assert_eq!(
             mask_test_bit_via(
                 &dispatcher,
-                &semantic_execution_support::policy(),
+                &bounded_compile_policy::policy(),
                 &input,
                 bit_idx
             )
@@ -184,7 +148,7 @@ fn bit_queries_and_single_bit_rewrites_via_match_cpu_ref() {
         assert_eq!(
             mask_set_bit_via(
                 &dispatcher,
-                &semantic_execution_support::policy(),
+                &bounded_compile_policy::policy(),
                 &input,
                 bit_idx
             )
@@ -195,7 +159,7 @@ fn bit_queries_and_single_bit_rewrites_via_match_cpu_ref() {
         assert_eq!(
             mask_clear_bit_via(
                 &dispatcher,
-                &semantic_execution_support::policy(),
+                &bounded_compile_policy::policy(),
                 &input,
                 bit_idx
             )
@@ -206,7 +170,7 @@ fn bit_queries_and_single_bit_rewrites_via_match_cpu_ref() {
         // set then test must be present; clear then test must be absent (round-trip invariant).
         let set = mask_set_bit_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &input,
             bit_idx,
         )
@@ -217,7 +181,7 @@ fn bit_queries_and_single_bit_rewrites_via_match_cpu_ref() {
         );
         let cleared = mask_clear_bit_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &input,
             bit_idx,
         )
@@ -245,49 +209,49 @@ fn bitset_mask_via_hand_checked_cases() {
     let b = vec![0b1010u32, 0x0F0F_0F0F];
 
     assert_eq!(
-        mask_and_via(&d, &semantic_execution_support::policy(), &a, &b).unwrap(),
+        mask_and_via(&d, &bounded_compile_policy::policy(), &a, &b).unwrap(),
         vec![0b1000, 0x0F00_000F],
         "AND"
     );
     assert_eq!(
-        mask_or_via(&d, &semantic_execution_support::policy(), &a, &b).unwrap(),
+        mask_or_via(&d, &bounded_compile_policy::policy(), &a, &b).unwrap(),
         vec![0b1110, 0xFF0F_0FFF],
         "OR"
     );
     assert_eq!(
-        mask_xor_via(&d, &semantic_execution_support::policy(), &a, &b).unwrap(),
+        mask_xor_via(&d, &bounded_compile_policy::policy(), &a, &b).unwrap(),
         vec![0b0110, 0xF00F_0FF0],
         "XOR"
     );
     assert_eq!(
-        mask_not_via(&d, &semantic_execution_support::policy(), &a).unwrap(),
+        mask_not_via(&d, &bounded_compile_policy::policy(), &a).unwrap(),
         vec![!0b1100u32, !0xFF00_00FFu32],
         "NOT"
     );
 
     assert!(
-        mask_equal_via(&d, &semantic_execution_support::policy(), &a, &a).unwrap(),
+        mask_equal_via(&d, &bounded_compile_policy::policy(), &a, &a).unwrap(),
         "a == a"
     );
     assert!(
-        !mask_equal_via(&d, &semantic_execution_support::policy(), &a, &b).unwrap(),
+        !mask_equal_via(&d, &bounded_compile_policy::policy(), &a, &b).unwrap(),
         "a != b"
     );
 
     // bit 3 (value 0b1000) is set in a[0]=0b1100? 0b1100 has bits 2,3 → bit 3 set.
     assert!(
-        mask_test_bit_via(&d, &semantic_execution_support::policy(), &a, 3).unwrap(),
+        mask_test_bit_via(&d, &bounded_compile_policy::policy(), &a, 3).unwrap(),
         "bit 3 set in 0b1100"
     );
     assert!(
-        !mask_test_bit_via(&d, &semantic_execution_support::policy(), &a, 0).unwrap(),
+        !mask_test_bit_via(&d, &bounded_compile_policy::policy(), &a, 0).unwrap(),
         "bit 0 clear in 0b1100"
     );
 
     // set bit 0 in a → a[0] becomes 0b1101.
-    let set = mask_set_bit_via(&d, &semantic_execution_support::policy(), &a, 0).unwrap();
+    let set = mask_set_bit_via(&d, &bounded_compile_policy::policy(), &a, 0).unwrap();
     assert_eq!(set[0], 0b1101, "set_bit(0) turns on bit 0");
     // clear bit 2 in a → a[0] becomes 0b1000.
-    let cleared = mask_clear_bit_via(&d, &semantic_execution_support::policy(), &a, 2).unwrap();
+    let cleared = mask_clear_bit_via(&d, &bounded_compile_policy::policy(), &a, 2).unwrap();
     assert_eq!(cleared[0], 0b1000, "clear_bit(2) turns off bit 2");
 }

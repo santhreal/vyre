@@ -2,7 +2,7 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(feature = "graph-dispatch")]
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
@@ -61,7 +61,7 @@ fn sweep_graph_persistent_bfs_volume_oracle_matrix() {
         }
         bfs_expand_via_with_scratch_into(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             case.inputs(max_iterations),
             &case.frontier,
             &mut scratch,

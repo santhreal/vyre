@@ -14,7 +14,7 @@
 //! `fixed_mul_16_16_expr`), bit-exactly reproducible in u32, so this is a zero-tolerance oracle (the same
 //! exact-fixed-point route mz_project / natural_gradient use).
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::reasoning::string_diagram_ir_rewrite::compose_ir_arrows_fixed_via;
 
@@ -58,7 +58,7 @@ fn compose_via_matches_exact_fixed_matmul_over_generated_shapes() {
 
         let got = compose_ir_arrows_fixed_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &f,
             &g,
             a as u32,
@@ -108,7 +108,7 @@ fn compose_via_matches_signed_fixed_matmul_with_negative_arrow_weights() {
 
         let got = compose_ir_arrows_fixed_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &f,
             &g,
             a as u32,
@@ -154,7 +154,7 @@ fn compose_via_hand_checked_signed_composition() {
     let g = vec![to_fixed(1.0), to_fixed(0.0), to_fixed(-2.0), to_fixed(1.0)];
     let got = compose_ir_arrows_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &f,
         &g,
         2,
@@ -183,7 +183,7 @@ fn compose_via_matches_hand_checked_cases() {
     let m = vec![2 * FIXED_ONE, FIXED_ONE, 0, 3 * FIXED_ONE];
     let got = compose_ir_arrows_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &id,
         &m,
         2,
@@ -198,7 +198,7 @@ fn compose_via_matches_hand_checked_cases() {
     let g = vec![FIXED_ONE, FIXED_ONE / 2];
     let got = compose_ir_arrows_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &f,
         &g,
         1,

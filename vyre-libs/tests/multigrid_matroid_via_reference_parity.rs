@@ -21,7 +21,7 @@
 //! BACKLOG `FIXED-amg-fixed-path-unsigned-mul-negatives`). Every operation is exactly reproducible in
 //! u32, so the oracle here is BIT-EXACT (no tolerance) (the same exact-fixed-point route mz_project used).
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::solvers::multigrid_matroid_solver::matroid_solve_step_fixed_via;
 
@@ -95,7 +95,7 @@ fn matroid_step_via_matches_exact_fixed_point_oracle_over_generated_systems() {
 
         let got = matroid_solve_step_fixed_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &a,
             &b,
             &x_in,
@@ -144,7 +144,7 @@ fn matroid_step_via_matches_hand_checked_cases() {
     //   x_out = 1.0 + 1.0 = 2.0.  (Standard Jacobi: 1 + 1*(2 - 1*1)/1 = 2.)
     let got = matroid_solve_step_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[FIXED_ONE],
         &[2 * FIXED_ONE],
         &[FIXED_ONE],
@@ -161,7 +161,7 @@ fn matroid_step_via_matches_hand_checked_cases() {
     // omega = 0 → delta = 0 → x unchanged regardless of residual.
     let got = matroid_solve_step_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[3 * FIXED_ONE, FIXED_ONE / 4, FIXED_ONE / 4, 3 * FIXED_ONE],
         &[5 * FIXED_ONE, 7 * FIXED_ONE],
         &[FIXED_ONE, 2 * FIXED_ONE],
@@ -180,7 +180,7 @@ fn matroid_step_via_matches_hand_checked_cases() {
     //   x_out = 0 + 1.0 = 1.0.  Documents that a zero diagonal is treated as a unit scale, not a divide-by-zero.
     let got = matroid_solve_step_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[0],
         &[FIXED_ONE],
         &[0],
@@ -199,7 +199,7 @@ fn matroid_step_via_matches_hand_checked_cases() {
     //   delta = fixed_mul(1.0, 1.0) / 1 = 1.0; x_out = 0 + 1.0 = 1.0.
     let got = matroid_solve_step_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[FIXED_ONE / 2],
         &[FIXED_ONE],
         &[0],

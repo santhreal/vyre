@@ -22,7 +22,7 @@
 //!   `nat[t]  = Σ_j fixed_mul_16_16(M[t*n+j], prob[j])`   (SIGNED `((a as i32 as i64 * b as i32 as
 //!   i64) >> 16) as i32 as u32`, wrapping u32 add)
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::solvers::differentiable_autotune::natural_config_gradient_magnitude_pre_exp_fixed_via;
 
@@ -66,7 +66,7 @@ fn natural_config_gradient_via_matches_exact_composite_oracle() {
 
         let got = natural_config_gradient_magnitude_pre_exp_fixed_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &pre_exp,
             &m_inv_sqrt,
         )
@@ -119,7 +119,7 @@ fn natural_config_gradient_via_matches_signed_composite_with_negative_fisher_cou
 
         let got = natural_config_gradient_magnitude_pre_exp_fixed_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &pre_exp,
             &m_inv_sqrt,
         )
@@ -161,7 +161,7 @@ fn natural_config_gradient_via_hand_checked_negative_fisher_coupling() {
     let m = vec![to_fixed(1.0), to_fixed(-1.0), to_fixed(-1.0), to_fixed(1.0)];
     let got = natural_config_gradient_magnitude_pre_exp_fixed_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &pre_exp,
         &m,
     )
@@ -192,7 +192,7 @@ fn natural_config_gradient_via_hand_checked_identity_fisher() {
     }
     let got = natural_config_gradient_magnitude_pre_exp_fixed_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &pre_exp,
         &m,
     )
@@ -210,7 +210,7 @@ fn natural_config_gradient_via_hand_checked_identity_fisher() {
     }
     let got2 = natural_config_gradient_magnitude_pre_exp_fixed_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &pre_exp,
         &m2,
     )

@@ -14,7 +14,7 @@
 //! arithmetic, so the u32 oracle mirrors the IR bit-for-bit and any divergence is a real defect.
 #![forbid(unsafe_code)]
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::solvers::persistent_homology_loop_signature::region_loop_skeleton_fixed_via;
 
@@ -54,7 +54,7 @@ fn region_loop_skeleton_fixed_via_matches_exact_edge_mask() {
 
         let via = region_loop_skeleton_fixed_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &dist,
             epsilon,
             n,
@@ -105,7 +105,7 @@ fn region_loop_skeleton_fixed_via_is_upper_triangular_and_boundary_inclusive() {
     let epsilon = 2 * one;
     let via = region_loop_skeleton_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &dist,
         epsilon,
         3,

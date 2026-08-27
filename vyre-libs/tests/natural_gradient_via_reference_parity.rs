@@ -18,7 +18,7 @@
 //! arithmetic, any divergence is a real IR/dispatch defect, not a rounding artifact.
 #![forbid(unsafe_code)]
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::solvers::natural_gradient_autotuner::precondition_autotune_gradient_fixed_via;
 
@@ -46,7 +46,7 @@ fn precondition_autotune_gradient_fixed_via_matches_exact_fixed_point_matvec() {
 
         let via = precondition_autotune_gradient_fixed_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &m_inv_sqrt,
             &grad,
             n,
@@ -94,7 +94,7 @@ fn precondition_autotune_gradient_fixed_via_matches_signed_precondition_with_neg
 
         let via = precondition_autotune_gradient_fixed_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &m_inv_sqrt,
             &grad,
             n,
@@ -136,7 +136,7 @@ fn precondition_autotune_gradient_fixed_via_hand_checked_negative_precondition()
     let grad = vec![to_fixed(-3.0), to_fixed(4.0)];
     let via = precondition_autotune_gradient_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &m_inv_sqrt,
         &grad,
         2,
@@ -164,7 +164,7 @@ fn precondition_autotune_gradient_fixed_via_computes_a_known_precondition() {
     let grad = vec![3 * one, 4 * one];
     let via = precondition_autotune_gradient_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &m_inv_sqrt,
         &grad,
         2,

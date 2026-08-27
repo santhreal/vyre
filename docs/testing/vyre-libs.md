@@ -89,6 +89,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `blake3_kat` | `vyre-libs/tests/blake3_kat.rs` | None | `./cargo_full test -p vyre-libs --test blake3_kat` |
 | `test` | `blake3_program` | `vyre-libs/tests/blake3_program.rs` | None | `./cargo_full test -p vyre-libs --test blake3_program` |
 | `test` | `blake3_wrong_size` | `vyre-libs/tests/blake3_wrong_size.rs` | None | `./cargo_full test -p vyre-libs --test blake3_wrong_size` |
+| `test` | `bounded_compile_policy` | `vyre-libs/tests/bounded_compile_policy.rs` | None | `./cargo_full test -p vyre-libs --test bounded_compile_policy` |
 | `test` | `bracket_match_proptest` | `vyre-libs/tests/bracket_match_proptest.rs` | None | `./cargo_full test -p vyre-libs --test bracket_match_proptest` |
 | `test` | `buffer_name_cross_family` | `vyre-libs/tests/buffer_name_cross_family.rs` | None | `./cargo_full test -p vyre-libs --test buffer_name_cross_family` |
 | `test` | `cat_a_conform` | `vyre-libs/tests/cat_a_conform.rs` | None | `./cargo_full test -p vyre-libs --test cat_a_conform` |
@@ -354,7 +355,6 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `segment_reduce_ir_parity_proptest` | `vyre-libs/tests/segment_reduce_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test segment_reduce_ir_parity_proptest` |
 | `test` | `select_arm_range_catalog` | `vyre-libs/tests/select_arm_range_catalog.rs` | None | `./cargo_full test -p vyre-libs --test select_arm_range_catalog` |
 | `test` | `self_consumer_conform` | `vyre-libs/tests/self_consumer_conform.rs` | `encoding` | `./cargo_full test -p vyre-libs --test self_consumer_conform` |
-| `test` | `semantic_execution_support` | `vyre-libs/tests/semantic_execution_support.rs` | None | `./cargo_full test -p vyre-libs --test semantic_execution_support` |
 | `test` | `semiring_gemm_via_reference_parity` | `vyre-libs/tests/semiring_gemm_via_reference_parity.rs` | `analysis` | `./cargo_full test -p vyre-libs --test semiring_gemm_via_reference_parity` |
 | `test` | `semiring_gemm_wide_parity` | `vyre-libs/tests/semiring_gemm_wide_parity.rs` | None | `./cargo_full test -p vyre-libs --test semiring_gemm_wide_parity` |
 | `test` | `semiring_registry` | `vyre-libs/tests/semiring_registry.rs` | None | `./cargo_full test -p vyre-libs --test semiring_registry` |

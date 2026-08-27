@@ -14,7 +14,7 @@
 //! (a u32 left-shift that keeps the low 32 bits, then integer division). The oracle here replicates
 //! that bit-for-bit → BIT-EXACT (no tolerance).
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::solvers::differentiable_autotune::pick_config_pre_exp_fixed_via;
 
@@ -43,12 +43,9 @@ fn softmax_pick_config_via_matches_exact_fixed_point_oracle() {
             .map(|_| 1 + xorshift(&mut state) % FIXED_ONE)
             .collect();
 
-        let got = pick_config_pre_exp_fixed_via(
-            &dispatcher,
-            &semantic_execution_support::policy(),
-            &pre_exp,
-        )
-        .expect("pick_config_pre_exp_fixed_via must dispatch the softmax step");
+        let got =
+            pick_config_pre_exp_fixed_via(&dispatcher, &bounded_compile_policy::policy(), &pre_exp)
+                .expect("pick_config_pre_exp_fixed_via must dispatch the softmax step");
         let want = softmax_fixed(&pre_exp);
         assert_eq!(
             got, want,
@@ -75,7 +72,7 @@ fn softmax_pick_config_via_hand_checked_cases() {
     // Two equal pre-exp weights → each normalizes to 0.5 (== FIXED_ONE/2).
     let got = pick_config_pre_exp_fixed_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[FIXED_ONE / 2, FIXED_ONE / 2],
     )
     .unwrap();
@@ -88,9 +85,8 @@ fn softmax_pick_config_via_hand_checked_cases() {
 
     // A 3-way split 1:1:2 → normalized 0.25, 0.25, 0.5 of FIXED_ONE.
     let q = FIXED_ONE / 4;
-    let got =
-        pick_config_pre_exp_fixed_via(&d, &semantic_execution_support::policy(), &[q, q, 2 * q])
-            .unwrap();
+    let got = pick_config_pre_exp_fixed_via(&d, &bounded_compile_policy::policy(), &[q, q, 2 * q])
+        .unwrap();
     assert_eq!(
         got,
         softmax_fixed(&[q, q, 2 * q]),
@@ -104,7 +100,7 @@ fn softmax_pick_config_via_hand_checked_cases() {
 
     // Single candidate → normalizes to 1.0 exactly ((p<<16)/p == 1<<16), for p < FIXED_ONE.
     let got =
-        pick_config_pre_exp_fixed_via(&d, &semantic_execution_support::policy(), &[12345]).unwrap();
+        pick_config_pre_exp_fixed_via(&d, &bounded_compile_policy::policy(), &[12345]).unwrap();
     assert_eq!(
         got,
         vec![FIXED_ONE],

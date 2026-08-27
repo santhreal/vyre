@@ -32,7 +32,7 @@
 //!     exercises (and regression-locks) the signed multiply + signed divide fix.
 //! Every input value is a multiple of 0.5 or a power of two → exact in 16.16.
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::solvers::amg_pass_solver::{smooth_matroid_flow_fixed_via, DEFAULT_OMEGA};
 use vyre_reference::composition_witness::amg_v_cycle_witness;
@@ -169,7 +169,7 @@ fn smooth_matroid_flow_via_matches_reference_over_diagonal_dominant_systems() {
 
         let got_fixed = smooth_matroid_flow_fixed_via(
             &d,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &a_fx,
             &b_fx,
             &x_fx,
@@ -249,7 +249,7 @@ fn smooth_matroid_flow_via_hand_checked_two_level() {
 
     let got_fixed = smooth_matroid_flow_fixed_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &a_fx,
         &b_fx,
         &x_fx,
@@ -319,7 +319,7 @@ fn smooth_matroid_flow_via_matches_reference_with_negative_intermediates() {
 
     let got_fixed = smooth_matroid_flow_fixed_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &a_fx,
         &b_fx,
         &x_fx,
@@ -383,7 +383,7 @@ fn smooth_matroid_flow_via_matches_reference_with_negative_intermediates() {
 
         let got_fixed = smooth_matroid_flow_fixed_via(
             &d,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &a_fx,
             &b_fx,
             &x_fx,

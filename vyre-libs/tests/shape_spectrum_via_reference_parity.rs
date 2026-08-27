@@ -13,7 +13,7 @@
 //! `mp_edge_clip_cpu` (`v.min(edge)`) applied to the same magnitudes and re-encoded, so this suite
 //! asserts BOTH the direct u32 min oracle AND agreement with the importable `mp_edge_clip_cpu`.
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::scheduling::spectral_schedule::shape_spectrum_fixed_via;
 use vyre_reference::composition_witness::mp_edge_clip_witness as mp_edge_clip_cpu;
@@ -35,13 +35,9 @@ fn shape_spectrum_via_matches_u32_min_clip_bit_exact() {
             .collect();
         let mp_edge = 1 + xorshift(&mut state) % (8 * FIXED_ONE);
 
-        let got = shape_spectrum_fixed_via(
-            &d,
-            &semantic_execution_support::policy(),
-            &eigenvalues,
-            mp_edge,
-        )
-        .expect("shape_spectrum_fixed_via must execute the MP edge clip");
+        let got =
+            shape_spectrum_fixed_via(&d, &bounded_compile_policy::policy(), &eigenvalues, mp_edge)
+                .expect("shape_spectrum_fixed_via must execute the MP edge clip");
 
         // Direct u32 oracle = the exact kernel semantics.
         let want: Vec<u32> = eigenvalues.iter().map(|&e| e.min(mp_edge)).collect();
@@ -89,8 +85,7 @@ fn shape_spectrum_via_hand_checked_clip_boundary() {
     // Edge = 2.0 (16.16). Eigenvalues 1.0, 2.0, 3.5 → clip to 1.0, 2.0, 2.0.
     let edge = 2 * FIXED_ONE;
     let eig = [FIXED_ONE, 2 * FIXED_ONE, 7 * FIXED_ONE / 2];
-    let got =
-        shape_spectrum_fixed_via(&d, &semantic_execution_support::policy(), &eig, edge).unwrap();
+    let got = shape_spectrum_fixed_via(&d, &bounded_compile_policy::policy(), &eig, edge).unwrap();
     assert_eq!(
         got,
         vec![FIXED_ONE, 2 * FIXED_ONE, 2 * FIXED_ONE],
@@ -100,7 +95,7 @@ fn shape_spectrum_via_hand_checked_clip_boundary() {
     // All below the edge → identity.
     let got = shape_spectrum_fixed_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[FIXED_ONE / 2, FIXED_ONE],
         edge,
     )
@@ -114,7 +109,7 @@ fn shape_spectrum_via_hand_checked_clip_boundary() {
     // All above the edge → every value collapses to the edge.
     let got = shape_spectrum_fixed_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[3 * FIXED_ONE, 5 * FIXED_ONE],
         edge,
     )

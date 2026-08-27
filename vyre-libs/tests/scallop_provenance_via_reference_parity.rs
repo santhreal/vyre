@@ -15,7 +15,7 @@
 //! across iterations through reference_eval (so the full multi-iteration closure is validated here).
 //! Values are exact bitset unions → BIT-EXACT (no tolerance) vs `reference_provenance_closure`.
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::encoding::scallop_provenance::provenance_closure_via;
 use vyre_reference::composition_witness::scallop_join_fixpoint_witness;
@@ -48,7 +48,7 @@ fn provenance_closure_via_matches_cpu_ref_over_random_lineage_graphs() {
 
         let got = provenance_closure_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &state,
             &join_rules,
             n,
@@ -85,7 +85,7 @@ fn provenance_closure_via_hand_checked_transitive_chain() {
 
     let got = provenance_closure_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &state,
         &join_rules,
         n,

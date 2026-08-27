@@ -14,7 +14,7 @@
 //! output RW(1) = 2 IC. All decode outputs[0] = the sole writable buffer. Every op is exact integer
 //! arithmetic → BIT-EXACT (no tolerance).
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::reduce::reduction_metrics::{
     histogram_atomic_scatter_via, reduce_all_via, reduce_any_via, reduce_count_non_zero_via,
@@ -31,7 +31,7 @@ use vyre_test_support::fixed_point::xorshift32 as xorshift;
 #[test]
 fn scalar_reduces_via_match_independent_oracles() {
     let executor = ReferenceSemanticExecutor;
-    let policy = semantic_execution_support::policy();
+    let policy = bounded_compile_policy::policy();
     let mut state = 0x2E_D0_C0_01u32;
     let mut saw_all_true = 0u32;
     let mut saw_some_zero = 0u32;
@@ -104,7 +104,7 @@ fn scalar_reduces_via_match_independent_oracles() {
 #[test]
 fn segment_reduce_sum_via_matches_cpu_ref_over_random_csr_partitions() {
     let executor = ReferenceSemanticExecutor;
-    let policy = semantic_execution_support::policy();
+    let policy = bounded_compile_policy::policy();
     let mut state = 0x5E_60_00_01u32;
     let mut nonempty_and_empty = 0u32;
     for case in 0..300u32 {
@@ -143,7 +143,7 @@ fn segment_reduce_sum_via_matches_cpu_ref_over_random_csr_partitions() {
 #[test]
 fn histogram_via_matches_cpu_ref_over_random_bin_indices() {
     let executor = ReferenceSemanticExecutor;
-    let policy = semantic_execution_support::policy();
+    let policy = bounded_compile_policy::policy();
     let mut state = 0x41_57_00_01u32;
     let mut saw_multi_count_bin = 0u32;
     for case in 0..300u32 {
@@ -177,7 +177,7 @@ fn histogram_via_matches_cpu_ref_over_random_bin_indices() {
 #[test]
 fn reduction_via_hand_checked_cases() {
     let executor = ReferenceSemanticExecutor;
-    let policy = semantic_execution_support::policy();
+    let policy = bounded_compile_policy::policy();
 
     let v = vec![3, 1, 4, 1, 5, 9, 2, 6];
     assert_eq!(

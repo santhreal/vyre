@@ -16,7 +16,7 @@
 //! sinkhorn f32 suites do). Inputs are bounded (and M2L distances kept >= 1 so the reciprocal is
 //! well-conditioned) so rounding stays far below tolerance while a wrong kernel fails by orders.
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::solvers::fmm_polyhedral_compress::{
     aggregate_to_cells_via, evaluate_at_regions_via, translate_to_targets_via,
@@ -78,7 +78,7 @@ fn p2m_aggregate_via_matches_inline_f64_oracle() {
 
         let got = aggregate_to_cells_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &scores,
             &cell_assignment,
         )
@@ -117,7 +117,7 @@ fn m2l_translate_via_matches_inline_f64_oracle() {
 
         let got = translate_to_targets_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &moments,
             &distances,
         )
@@ -144,7 +144,7 @@ fn l2p_evaluate_via_matches_inline_f64_oracle() {
 
         let got = evaluate_at_regions_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &cell_local,
             &cell_assignment,
             n,

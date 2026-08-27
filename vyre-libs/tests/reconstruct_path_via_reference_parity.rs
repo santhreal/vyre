@@ -12,7 +12,7 @@
 //! returned length AND the full padded path buffer (no tolerance). The walk is bounded by `max_depth`, so
 //! even cyclic parent arrays terminate (both the GPU IR and `cpu_ref` bound-walk identically).
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::graph::dispatch::path_reconstruct::reconstruct_path_via;
 use vyre_reference::composition_witness::path_reconstruct_witness;
@@ -43,7 +43,7 @@ fn reconstruct_path_via_matches_cpu_ref_over_random_forests() {
         let mut got_scratch = Vec::new();
         let got_len = reconstruct_path_via(
             &d,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &parent,
             target,
             max_depth,
@@ -94,7 +94,7 @@ fn reconstruct_path_via_hand_checked_chain_and_root() {
     let mut scratch = Vec::new();
     let len = reconstruct_path_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &parent,
         3,
         8,
@@ -116,7 +116,7 @@ fn reconstruct_path_via_hand_checked_chain_and_root() {
     let mut scratch = Vec::new();
     let len = reconstruct_path_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &parent,
         3,
         2,
@@ -135,7 +135,7 @@ fn reconstruct_path_via_hand_checked_chain_and_root() {
     let mut scratch = Vec::new();
     let len = reconstruct_path_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &parent,
         1,
         4,

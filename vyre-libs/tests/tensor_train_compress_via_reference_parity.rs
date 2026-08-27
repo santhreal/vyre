@@ -9,7 +9,7 @@
 //! matches the input within an f32 tolerance, the basis-invariant correctness contract for a
 //! decomposition (a stub reconstructs to garbage).
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::solvers::tensor_train_compression::compress_cost_tensor_f32_via;
 
@@ -81,7 +81,7 @@ fn two_mode_full_rank_compression_reconstructs_the_matrix() {
             .collect();
         let compressed = compress_cost_tensor_f32_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &tensor,
             &dims,
             &ranks,
@@ -120,7 +120,7 @@ fn three_mode_rank1_tensor_compresses_and_reconstructs() {
     }
     let compressed = compress_cost_tensor_f32_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &tensor,
         &dims,
         &ranks,

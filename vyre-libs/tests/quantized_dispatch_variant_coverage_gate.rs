@@ -22,7 +22,7 @@
 //! `vyre_libs::solvers::quantized_dispatch` at run time, so an entry point
 //! added without a row here fails rather than going uncovered.
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Mutex;
@@ -164,8 +164,7 @@ fn entry_points() -> Vec<EntryPoint> {
             // Eight i32 lanes.
             output_bytes: 32,
             call: Box::new(|dispatcher| {
-                unpack_i4x8_via(dispatcher, &semantic_execution_support::policy(), &[0], 8)
-                    .map(drop)
+                unpack_i4x8_via(dispatcher, &bounded_compile_policy::policy(), &[0], 8).map(drop)
             }),
         },
         EntryPoint {
@@ -175,7 +174,7 @@ fn entry_points() -> Vec<EntryPoint> {
             call: Box::new(|dispatcher| {
                 i4x8_dot_f32_scaled_via(
                     dispatcher,
-                    &semantic_execution_support::policy(),
+                    &bounded_compile_policy::policy(),
                     &[0],
                     &[0],
                     0.5,
@@ -192,7 +191,7 @@ fn entry_points() -> Vec<EntryPoint> {
             call: Box::new(|dispatcher| {
                 i4x8_matvec_f32_scaled_via(
                     dispatcher,
-                    &semantic_execution_support::policy(),
+                    &bounded_compile_policy::policy(),
                     &[0],
                     &[0.0; 8],
                     &[0.5],
@@ -209,7 +208,7 @@ fn entry_points() -> Vec<EntryPoint> {
             call: Box::new(|dispatcher| {
                 i4x8_batched_matvec_f32_scaled_via(
                     dispatcher,
-                    &semantic_execution_support::policy(),
+                    &bounded_compile_policy::policy(),
                     &[0],
                     &[0.0; 16],
                     &[0.5],
@@ -227,7 +226,7 @@ fn entry_points() -> Vec<EntryPoint> {
             call: Box::new(|dispatcher| {
                 i4x8_batched_matmul_f32_scaled_via(
                     dispatcher,
-                    &semantic_execution_support::policy(),
+                    &bounded_compile_policy::policy(),
                     &[0],
                     &[0, 0],
                     &[0.5],
@@ -246,7 +245,7 @@ fn entry_points() -> Vec<EntryPoint> {
             call: Box::new(|dispatcher| {
                 i4x8_batched_matmul_top1_f32_scaled_via(
                     dispatcher,
-                    &semantic_execution_support::policy(),
+                    &bounded_compile_policy::policy(),
                     &[0],
                     &[0, 0],
                     &[0.5],

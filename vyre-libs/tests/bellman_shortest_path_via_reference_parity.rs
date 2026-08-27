@@ -24,7 +24,7 @@
 //! insensitive to the multi-round modeling gap. The oracle is `bellman_shortest_path::cpu_ref`, the
 //! authoritative CPU reference. Values are exact integers → BIT-EXACT (no tolerance).
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::solvers::bellman_tn_order::bellman_tn_order_via;
 use vyre_megakernel::SemanticExecutionError;
@@ -77,7 +77,7 @@ fn bellman_via_matches_cpu_ref_on_single_hop_star_graphs() {
         let (want, _iters) = cpu_ref(&src, &dst, &weight, &dist_init, n_nodes, 4);
         let got = bellman_tn_order_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &src,
             &dst,
             &weight,
@@ -123,7 +123,7 @@ fn bellman_via_rejects_out_of_range_endpoints() {
     // OOB source (7 >= 3).
     let err = bellman_tn_order_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[0, 7],
         &[1, 1],
         &[5, 1],
@@ -139,7 +139,7 @@ fn bellman_via_rejects_out_of_range_endpoints() {
     // OOB dest (9 >= 3).
     let err = bellman_tn_order_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[0, 0],
         &[1, 9],
         &[5, 2],
@@ -166,7 +166,7 @@ fn bellman_via_matches_hand_checked_single_hop_cases() {
     let dist_init = vec![0, INF, INF];
     let got = bellman_tn_order_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &src,
         &dst,
         &weight,
@@ -188,7 +188,7 @@ fn bellman_via_matches_hand_checked_single_hop_cases() {
     let dist_init = vec![0, INF];
     let got = bellman_tn_order_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &src,
         &dst,
         &weight,
@@ -211,7 +211,7 @@ fn bellman_via_matches_hand_checked_single_hop_cases() {
     let dist_init = vec![0, INF];
     let got = bellman_tn_order_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &src,
         &dst,
         &weight,
@@ -234,7 +234,7 @@ fn bellman_via_matches_hand_checked_single_hop_cases() {
     let dist_init = vec![0, INF, INF];
     let got = bellman_tn_order_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &src,
         &dst,
         &weight,

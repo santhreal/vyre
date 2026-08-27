@@ -18,7 +18,7 @@
 //! u32. The generated systems bound finite entries so every `a+b` stays well under u32::MAX, and inject
 //! `u32::MAX` (∞ / no-edge) to exercise the guarded branch and the `min` accumulate against ∞.
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::analysis::dataflow_fixpoint::{
     semiring_gemm_via_bool_or, semiring_gemm_via_lineage, semiring_gemm_via_min_plus,
@@ -60,7 +60,7 @@ fn bool_or_gemm_via_matches_cpu_reachability_matmul() {
 
         let got = semiring_gemm_via_bool_or(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &a,
             &b,
             m,
@@ -109,7 +109,7 @@ fn min_plus_gemm_via_matches_cpu_shortest_path_matmul() {
 
         let got = semiring_gemm_via_min_plus(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &a,
             &b,
             m,
@@ -160,7 +160,7 @@ fn lineage_gemm_via_matches_cpu_provenance_matmul() {
 
         let got = semiring_gemm_via_lineage(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &a,
             &b,
             m,
@@ -210,7 +210,7 @@ fn semiring_gemm_via_matches_hand_checked_cases() {
     // Boolean reachability: A = [[1,0],[0,1]] (identity), B = [[1,1],[0,1]] → A·B = B.
     let got = semiring_gemm_via_bool_or(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[1, 0, 0, 1],
         &[1, 1, 0, 1],
         2,
@@ -223,7 +223,7 @@ fn semiring_gemm_via_matches_hand_checked_cases() {
     // Boolean OR-of-ANDs: A = [[1,1]] (1x2), B = [[0],[1]] (2x1) → c[0,0] = (1&0)|(1&1) = 1.
     let got = semiring_gemm_via_bool_or(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[1, 1],
         &[0, 1],
         1,
@@ -236,7 +236,7 @@ fn semiring_gemm_via_matches_hand_checked_cases() {
     // Min-plus shortest path: A = [[1,4]] (1x2), B = [[2],[1]] (2x1) → min(1+2, 4+1) = min(3,5) = 3.
     let got = semiring_gemm_via_min_plus(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[1, 4],
         &[2, 1],
         1,
@@ -249,7 +249,7 @@ fn semiring_gemm_via_matches_hand_checked_cases() {
     // Min-plus with a no-edge (∞): A = [[∞,4]], B = [[2],[1]] → min(∞, 4+1) = 5 (∞+2 stays ∞).
     let got = semiring_gemm_via_min_plus(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[INF, 4],
         &[2, 1],
         1,
@@ -264,7 +264,7 @@ fn semiring_gemm_via_matches_hand_checked_cases() {
     // accumulate = 0b11 | 0 = 0b11.
     let got = semiring_gemm_via_lineage(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &[0b01, 0],
         &[0b10, 0b11],
         1,

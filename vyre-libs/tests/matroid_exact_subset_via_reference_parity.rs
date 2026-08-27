@@ -34,7 +34,7 @@
 //!      agree at EVERY `max_augmentations`; `via_multi_augmentation_matches_reference` locks the >1 case
 //!      and the main sweep exercises varying `max_augmentations` (1..4).
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::encoding::matroid_exact_megakernel::select_optimal_subset_via;
 use vyre_reference::composition_witness::matroid_select_optimal_subset_witness as reference_select_optimal_subset;
@@ -75,7 +75,7 @@ fn select_optimal_subset_via_matches_reference_over_random_exchange_graphs() {
 
         let got = select_optimal_subset_via(
             &d,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &exchange_adj,
             &sources,
             &sinks,
@@ -129,7 +129,7 @@ fn select_optimal_subset_via_hand_checked_empty_and_seeded() {
     let n = 3;
     let got = select_optimal_subset_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &vec![0; n * n],
         &[0, 0, 0],
         &[0, 0, 0],
@@ -152,7 +152,7 @@ fn select_optimal_subset_via_hand_checked_empty_and_seeded() {
     let seed = vec![1, 0, 1];
     let got = select_optimal_subset_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &vec![0; n * n],
         &[0, 0, 0],
         &[0, 0, 0],
@@ -188,7 +188,7 @@ fn via_multi_augmentation_matches_reference() {
 
     let got1 = select_optimal_subset_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &exchange_adj,
         &sources,
         &sinks,
@@ -216,7 +216,7 @@ fn via_multi_augmentation_matches_reference() {
     for budget in 2..=5u32 {
         let got = select_optimal_subset_via(
             &d,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &exchange_adj,
             &sources,
             &sinks,
@@ -256,7 +256,7 @@ fn via_multi_augmentation_matches_reference() {
     // Budget 1 toggles unconditionally (reference toggles once): [1,1,1] -> [0,1,0].
     let got_b1 = select_optimal_subset_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &adj3,
         &sources3,
         &sinks3,
@@ -275,7 +275,7 @@ fn via_multi_augmentation_matches_reference() {
     for budget in 2..=4u32 {
         let got = select_optimal_subset_via(
             &d,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &adj3,
             &sources3,
             &sinks3,
@@ -311,7 +311,7 @@ fn via_multi_augmentation_matches_reference() {
     for budget in 1..=4u32 {
         let got = select_optimal_subset_via(
             &d,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &adj2,
             &sources2,
             &sinks2,

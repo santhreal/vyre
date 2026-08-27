@@ -12,11 +12,11 @@
 //!
 //! BIT-EXACT (no tolerance): the via and the reference use the SAME `gaussian_weights`, and the kernel is
 //! raw u32 `wrapping_mul`/`wrapping_add` with clamped boundaries, the exact semantics of the importable
-//! `cpu_conv1d`. So `smooth_latency_trace_via(latency, &semantic_execution_support::policy(), radius, sigma)` must equal
+//! `cpu_conv1d`. So `smooth_latency_trace_via(latency, &bounded_compile_policy::policy(), radius, sigma)` must equal
 //! `cpu_conv1d(latency, gaussian_weights(radius, sigma), 1)` bit-for-bit; this pins that `conv1d_program`
 //! reproduces `cpu_conv1d` (mul/accumulate order AND the clamp-to-edge boundary handling).
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::math::conv1d::gaussian_weights;
 use vyre_libs::solvers::conv1d_latency_smoothing::smooth_latency_trace_via;
@@ -50,7 +50,7 @@ fn smooth_latency_trace_via_matches_cpu_conv1d_bit_exact() {
 
         let got = smooth_latency_trace_via(
             &d,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &latency,
             radius,
             sigma,
@@ -79,15 +79,14 @@ fn smooth_latency_trace_via_hand_checked_empty_and_edge_clamp() {
     let d = ReferenceSemanticExecutor;
 
     // Empty trace → empty output.
-    let got =
-        smooth_latency_trace_via(&d, &semantic_execution_support::policy(), &[], 1, 1.0).unwrap();
+    let got = smooth_latency_trace_via(&d, &bounded_compile_policy::policy(), &[], 1, 1.0).unwrap();
     assert!(got.is_empty(), "empty latency trace smooths to empty");
 
     // A short constant trace: convolving a constant with a normalized-ish kernel is dominated by the
     // kernel-weight sum; whatever the exact value, the GPU must equal cpu_conv1d exactly (edge clamp).
     let latency = vec![FIXED_ONE, FIXED_ONE, FIXED_ONE, FIXED_ONE, FIXED_ONE];
-    let got = smooth_latency_trace_via(&d, &semantic_execution_support::policy(), &latency, 2, 1.0)
-        .unwrap();
+    let got =
+        smooth_latency_trace_via(&d, &bounded_compile_policy::policy(), &latency, 2, 1.0).unwrap();
     let want = cpu_conv1d(&latency, &gaussian_weights(2, 1.0), 1);
     assert_eq!(
         got, want,

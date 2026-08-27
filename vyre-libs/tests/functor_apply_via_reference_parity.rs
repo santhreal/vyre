@@ -14,7 +14,7 @@
 //! last-wins tie-break and OOB-drop are actually exercised (not a vacuous injective identity).
 #![forbid(unsafe_code)]
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::reasoning::functorial_pass_composition::apply_pass_functor_via;
 use vyre_reference::composition_witness::functor_apply_witness as apply_pass_functor;
@@ -52,7 +52,7 @@ fn apply_pass_functor_via_matches_host_over_generated_mappings() {
 
         let via = apply_pass_functor_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &view_in,
             &column_mapping,
             target_n_cols,
@@ -85,7 +85,7 @@ fn apply_pass_functor_via_resolves_collision_to_highest_source_index() {
     let target_n_cols = 3;
     let via = apply_pass_functor_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &view_in,
         &column_mapping,
         target_n_cols,

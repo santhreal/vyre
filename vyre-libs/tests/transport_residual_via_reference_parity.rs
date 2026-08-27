@@ -18,7 +18,7 @@
 //! `got[i] as i32 == want_f32[i].round() as i32` bit-for-bit. INCLUDING the negative-coefficient recurrence
 //! `T_next = 2·(M·T_curr) − T_prev` that distinguishes transport from the positive-only fusion filter.
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::solvers::qsvt_matrix_function_fusion::transport_residual_fixed_via;
 use vyre_reference::composition_witness::chebyshev_filter_witness as chebyshev_filter_cpu;
@@ -57,7 +57,7 @@ fn transport_residual_via_matches_chebyshev_cpu_signed_bit_exact() {
 
         let got = transport_residual_fixed_via(
             &d,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &dispatch_cost,
             &weights,
             &coeffs,
@@ -105,7 +105,7 @@ fn transport_residual_via_hand_checked_negative_coefficient() {
     let coeffs = [(-1i32) as u32, 0, 0];
     let got = transport_residual_fixed_via(
         &d,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &dispatch_cost,
         &weights,
         &coeffs,

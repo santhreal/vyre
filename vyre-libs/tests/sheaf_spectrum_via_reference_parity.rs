@@ -10,7 +10,7 @@
 //! consumer's dispatch path.
 #![forbid(unsafe_code)]
 
-mod semantic_execution_support;
+mod bounded_compile_policy;
 
 use vyre_libs::solvers::sheaf_spectral_clustering::dominant_spectrum_fixed_via;
 
@@ -49,7 +49,7 @@ fn dominant_spectrum_fixed_via_matches_exact_closed_form() {
 
         let spectrum = dominant_spectrum_fixed_via(
             &dispatcher,
-            &semantic_execution_support::policy(),
+            &bounded_compile_policy::policy(),
             &restriction,
             &v_init,
             n,
@@ -89,7 +89,7 @@ fn dominant_spectrum_fixed_via_picks_the_max_diagonal() {
     let v_init = vec![8 * ONE_FP, 3 * ONE_FP, 5 * ONE_FP];
     let spectrum = dominant_spectrum_fixed_via(
         &dispatcher,
-        &semantic_execution_support::policy(),
+        &bounded_compile_policy::policy(),
         &restriction,
         &v_init,
         3,
