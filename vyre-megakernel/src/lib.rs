@@ -44,6 +44,9 @@ pub mod grid_sync;
 mod identity;
 /// Stable semantic legality decisions for whole-program fusion.
 pub mod legality;
+/// Versioned protocol budgeted device measurement runs under, and the evidence
+/// one measured selection retains.
+pub mod measure;
 mod normalize;
 mod request;
 mod request_identity;

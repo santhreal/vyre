@@ -37,6 +37,7 @@ pub struct DeviceFacts {
     barrier_ns: u64,
     grid_sync_ns: u64,
     subgroup_size: u32,
+    calibration_version: u16,
 }
 
 impl DeviceFacts {
@@ -105,7 +106,29 @@ impl DeviceFacts {
             barrier_ns: 0,
             grid_sync_ns: 0,
             subgroup_size,
+            calibration_version: 0,
         }
+    }
+
+    /// Record which version of the calibrated fact set these figures came from.
+    ///
+    /// Zero means uncalibrated: the throughput, latency and capacity figures are
+    /// whatever the backend reported without a calibration run behind them. A
+    /// recalibration that changes any priced figure advances this version, which
+    /// is what allows a later measurement session to replace a winner an earlier
+    /// session authenticated. Leaving it unchanged makes the two sessions
+    /// comparable, and the recorded winner then stands.
+    #[must_use]
+    pub const fn with_calibration_version(mut self, calibration_version: u16) -> Self {
+        self.calibration_version = calibration_version;
+        self
+    }
+
+    /// Version of the calibrated fact set behind these figures, zero when
+    /// uncalibrated.
+    #[must_use]
+    pub const fn calibration_version(&self) -> u16 {
+        self.calibration_version
     }
 
     /// Record whether the device can launch a cooperative grid.

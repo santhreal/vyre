@@ -200,6 +200,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   entry points must receive the graph as a bundle and must not declare three or
   more consecutive parameters of one type, and the wider slice-taking family
   must give each role a single name across the tree.
+- `DataType::SCALAR_LEAVES` and `DataType::QUANTIZED_STORAGE` publish the
+  variant tables that cast validation, wire round trips, and type sweeps
+  enumerate.
 - The neural library now executes a reusable dense gated-MLP ProgramGraph with
   learned RMSNorm, checkpoint-native output-major gate and up projections, F32
   SwiGLU math, output-major down projection, and residual addition. F16, BF16,
@@ -1448,6 +1451,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   The volume sweep runner had a three-crate list that left one tracked volume
   wave in no shard, and a shard index outside the shard count selected nothing
   and exited 0.
+- Budgeted device measurement runs one versioned protocol covering warmup,
+  rotated candidate interleaving, a trimmed-median estimator with uncertainty,
+  a stopping rule and an equivalence band, and the artifact retains every
+  candidate's raw samples, prediction error and reported device state.
 - User-facing crate READMEs, `docs/ARCHITECTURE.md`, `THESIS.md`,
   `CONTRIBUTING.md`, and the ownership/guide registries follow the workspace
   `README.md` charter. `vyre-libs` owns every composition, including
@@ -2775,6 +2782,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   compiler source. Its previous example did not compile against any released
   version: it called vyre::backend::select, which the facade does not export,
   and passed three arguments to a composition that takes six.
+- A recorded measurement winner is retained across compilations unless a
+  challenger clears the equivalence band or the protocol or calibrated device
+  fact-set version advances.
 - The async byte copy in `vyre-reference` has one owner,
   `vyre-reference/src/execution/async_transfer.rs`, and the copy itself goes
   through two new window methods on the reference buffer. Each of the two

@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use vyre_megakernel::measure::DeviceState;
 use vyre_megakernel::{
     Artifact, ArtifactValueId, Digest, EmittedResources, TargetPayload, TargetPayloadFormat,
     TargetProfile,
@@ -167,6 +168,16 @@ pub trait ArtifactMaterializer: Send + Sync {
             name: "artifact resident buffer free".to_string(),
             backend: self.device().identity().backend.to_string(),
         })
+    }
+
+    /// Clock, thermal and power state the backend reads for this device.
+    ///
+    /// Compile-time measurement retains this beside its samples, so a reader can
+    /// tell a slow candidate from a throttled device. A backend whose API exposes
+    /// none of it returns [`DeviceState::unreported`], and the measurement
+    /// session still records the drift it observes across its own rounds.
+    fn device_state(&self) -> DeviceState {
+        DeviceState::unreported()
     }
 
     /// Materialize authenticated immutable target bytes.

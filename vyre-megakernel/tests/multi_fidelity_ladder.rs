@@ -13,6 +13,7 @@
 
 use std::sync::Mutex;
 
+use vyre_megakernel::measure::{DeviceState, MeasurementProtocol, MeasurementRecord};
 use vyre_megakernel::{
     compile_measured, compile_selected_modules, Artifact, CompileRequest, DeviceFacts,
     EmittedResources, EmittedTargetModule, FinalistEvaluator, PlanMeasurement, PruneReason,
@@ -30,6 +31,13 @@ const LAUNCHES: u32 = 3;
 
 /// Finalists the fixture budget lets emission attempt.
 const FINALISTS: u32 = 4;
+
+/// Samples the fitted protocol counts per candidate under [`LAUNCHES`], which is
+/// the launch budget less the warmup the protocol spends first.
+fn counted_samples() -> u32 {
+    let protocol = MeasurementProtocol::V1.fitted(LAUNCHES);
+    protocol.max_rounds * protocol.repetitions_per_round
+}
 
 /// Which finalists the fixture target refuses to build.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -71,8 +79,17 @@ const REGISTER_CEILING: u32 = 255;
 ///
 /// More generated kernels measure faster, which is the opposite of how the
 /// launch-paying device ranks them, so a plan can only win here by being
-/// measured.
+/// measured. Each additional kernel is worth 20 percent of the base time, which
+/// clears the protocol's equivalence band by a wide margin: a fixture whose
+/// candidates differed by less than the band would prove that the band holds,
+/// not that measurement can overturn a ranking.
 fn device_time(groups: usize) -> u64 {
+    100_000 - 20_000 * groups as u64
+}
+
+/// Device time for a fixture whose plans are all within the protocol's
+/// equivalence band of one another: one percent apart, where the band is two.
+fn indistinguishable_device_time(groups: usize) -> u64 {
     100_000 - 1_000 * groups as u64
 }
 
@@ -152,6 +169,8 @@ struct LadderEvaluator {
     compiler: LadderCompiler,
     /// What the fixture device reports for the first plan it is asked about.
     reported: Reported,
+    /// Device time the fixture reports for a plan of `groups` kernels.
+    timing: fn(usize) -> u64,
     /// Generated-kernel counts whose emitted resources were read, in the order
     /// the compiler asked for them, which is its analytic ranking.
     inspected: Mutex<Vec<usize>>,
@@ -164,6 +183,7 @@ impl LadderEvaluator {
         Self {
             compiler: LadderCompiler::new(unbuildable),
             reported: Reported::Nothing,
+            timing: device_time,
             inspected: Mutex::new(Vec::new()),
             measured: Mutex::new(Vec::new()),
         }
@@ -173,6 +193,15 @@ impl LadderEvaluator {
     fn reporting(reported: Reported) -> Self {
         Self {
             reported,
+            ..Self::new(Unbuildable::None)
+        }
+    }
+
+    /// An evaluator whose device times every plan within the protocol's
+    /// equivalence band of every other.
+    fn indistinguishable() -> Self {
+        Self {
+            timing: indistinguishable_device_time,
             ..Self::new(Unbuildable::None)
         }
     }
@@ -245,6 +274,12 @@ impl FinalistEvaluator for LadderEvaluator {
         Ok(vec![record; payload.entries().len()])
     }
 
+    /// The fixture device exposes no management interface, which is the case the
+    /// protocol has to cover with observed drift alone.
+    fn device_state(&self) -> DeviceState {
+        DeviceState::unreported()
+    }
+
     fn measure(
         &self,
         artifact: &Artifact,
@@ -260,7 +295,7 @@ impl FinalistEvaluator for LadderEvaluator {
             .lock()
             .expect("fixture state is not poisoned")
             .push(groups);
-        Ok(device_time(groups))
+        Ok((self.timing)(groups))
     }
 }
 
@@ -345,13 +380,10 @@ fn an_unbuildable_finalist_is_eliminated_and_the_ladder_continues() {
     );
     assert!(
         matches!(
-            plan.measurement,
-            PlanMeasurement::Measured {
-                launches: LAUNCHES,
-                ..
-            }
+            &plan.measurement,
+            PlanMeasurement::Measured(evidence) if evidence.winning_launches() == counted_samples()
         ),
-        "a measured selection must record its launches, got {:?}",
+        "a measured selection must record the samples the protocol counted, got {:?}",
         plan.measurement
     );
     assert!(
@@ -414,18 +446,87 @@ fn device_measurement_selects_a_finalist_the_ranking_placed_behind() {
         fastest,
         "the winner must be the finalist with the lowest median device time"
     );
+    let PlanMeasurement::Measured(evidence) = &plan.measurement else {
+        panic!(
+            "a timed device must record measured evidence: {:?}",
+            plan.measurement
+        );
+    };
+    assert_eq!(evidence.winning_launches(), counted_samples());
+    assert_eq!(evidence.winning_estimate_ns(), device_time(fastest));
     assert_eq!(
-        plan.measurement,
-        PlanMeasurement::Measured {
-            launches: LAUNCHES,
-            median_ns: device_time(fastest),
-        }
+        evidence.protocol,
+        MeasurementProtocol::V1.fitted(LAUNCHES),
+        "the recorded protocol must be the one the launch budget affords"
     );
+    assert_eq!(
+        evidence.candidates.len(),
+        FINALISTS as usize,
+        "every finalist that emitted must retain its samples"
+    );
+    for candidate in &evidence.candidates {
+        assert_eq!(
+            candidate.samples.len(),
+            counted_samples() as usize,
+            "every measured candidate retains exactly the counted samples"
+        );
+    }
     assert_ne!(
         measured.first().copied(),
         Some(fastest),
         "the first-ranked finalist already being fastest would prove nothing \
          about measurement deciding: measured {measured:?}"
+    );
+}
+
+/// WHY: the same search on the same device has to select the same artifact
+/// twice. When the finalists measure within the protocol's equivalence band of
+/// each other, the difference is the device, so the selection stays with the
+/// canonical lower-risk finalist the analytic ranking put first. Without the
+/// band, whichever candidate the noise favoured that minute would win and the
+/// artifact would stop being reproducible.
+#[test]
+fn finalists_inside_the_equivalence_band_keep_the_canonical_selection() {
+    let evaluator = LadderEvaluator::indistinguishable();
+    let artifact = measured_compile(timed_device(), budget(LAUNCHES), &evaluator)
+        .expect("every finalist builds, so one must win");
+    let plan = artifact.selected_plan();
+    let measured = evaluator.measured();
+    let ranked_first = *measured
+        .first()
+        .expect("the ladder must measure at least one finalist");
+    let fastest = *measured
+        .iter()
+        .max()
+        .expect("the ladder must measure at least one finalist");
+
+    assert_ne!(
+        ranked_first, fastest,
+        "the fixture must offer a faster finalist, or the band is untested: measured {measured:?}"
+    );
+    assert_eq!(
+        plan.fusion.len(),
+        ranked_first,
+        "a measured difference inside the band must not move the selection"
+    );
+    let PlanMeasurement::Measured(evidence) = &plan.measurement else {
+        panic!(
+            "a timed device must record measured evidence: {:?}",
+            plan.measurement
+        );
+    };
+    assert_eq!(
+        evidence.winning_estimate_ns(),
+        indistinguishable_device_time(ranked_first),
+        "the retained estimate must be the winner's own measured time"
+    );
+    assert!(
+        evidence
+            .candidates
+            .iter()
+            .any(|candidate| candidate.estimate.estimate_ns
+                == indistinguishable_device_time(fastest)),
+        "the faster finalist the band declined must still retain its samples"
     );
 }
 
@@ -544,6 +645,87 @@ fn a_finalist_over_the_register_ceiling_is_eliminated_before_measurement() {
         u32::try_from(measured.len()).expect("measurement count fits u32"),
         "only the finalists that survived emission may be measured"
     );
+}
+
+/// WHY: an authenticated winner is what makes a compilation reproducible across
+/// sessions on one device. A re-run under the same protocol and the same priced
+/// fact set must return the recorded winner even when this session's samples
+/// favour a rival inside the equivalence band, and a recalibrated fact set must
+/// be the one thing that sets that winner aside, because the figures the ranking
+/// paid with changed. Without the fact-set version the two cases are
+/// indistinguishable and a recalibration silently never takes effect.
+#[test]
+fn a_recorded_winner_stands_until_the_priced_fact_set_is_recalibrated() {
+    const CALIBRATION: u16 = 4;
+
+    let evaluator = LadderEvaluator::indistinguishable();
+    let device = timed_device().with_calibration_version(CALIBRATION);
+    let first = measured_compile(device, budget(LAUNCHES), &evaluator)
+        .expect("every finalist builds, so one must win");
+    let PlanMeasurement::Measured(evidence) = &first.selected_plan().measurement else {
+        panic!("a timed device must record measured evidence");
+    };
+    assert_eq!(
+        evidence.environment.facts_calibration_version, CALIBRATION,
+        "the record must state which fact set priced the ranking"
+    );
+
+    // Authenticate a candidate this session did not select, so retaining it is
+    // observable. Every finalist here is inside the band, so no rival can be
+    // measured decisively faster.
+    let mut recorded = evidence.clone();
+    let canonical = evidence
+        .winner()
+        .expect("a record names its winner")
+        .identity;
+    let alternative = evidence
+        .candidates
+        .iter()
+        .position(|candidate| candidate.identity != canonical)
+        .expect("the fixture must measure more than one finalist");
+    recorded.winner = u32::try_from(alternative).expect("candidate index fits u32");
+    let authenticated = evidence.candidates[alternative].identity;
+
+    let unchanged = measured_recompile(device, &evaluator, recorded.clone())
+        .expect("a re-run must still compile");
+    assert_eq!(
+        measured_winner(&unchanged),
+        authenticated,
+        "an unchanged protocol and fact set must return the authenticated winner"
+    );
+
+    let recalibrated_device = timed_device().with_calibration_version(CALIBRATION + 1);
+    let recalibrated = measured_recompile(recalibrated_device, &evaluator, recorded)
+        .expect("a recalibrated fact set must still compile");
+    assert_eq!(
+        measured_winner(&recalibrated),
+        canonical,
+        "a recalibrated fact set must let this session's own selection stand"
+    );
+}
+
+/// One measured compilation that carries `recorded` as the authenticated winner.
+fn measured_recompile(
+    device: DeviceFacts,
+    evaluator: &LadderEvaluator,
+    recorded: MeasurementRecord,
+) -> Result<Artifact, vyre_megakernel::CompileError> {
+    let request = CompileRequest::new(joined_graph(), facts(), device, budget(LAUNCHES), 4_000_000)
+        .with_recorded_measurement(recorded)
+        .validate()
+        .expect("request must validate");
+    compile_measured(&request, evaluator)
+}
+
+/// Identity of the candidate a measured artifact selected.
+fn measured_winner(artifact: &Artifact) -> vyre_megakernel::Digest {
+    let PlanMeasurement::Measured(evidence) = &artifact.selected_plan().measurement else {
+        panic!("a timed device must record measured evidence");
+    };
+    evidence
+        .winner()
+        .expect("a record names its winner")
+        .identity
 }
 
 /// The distinct generated-kernel counts in `order`, ascending.

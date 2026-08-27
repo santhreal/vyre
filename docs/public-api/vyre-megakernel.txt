@@ -28,6 +28,12 @@ impl vyre_megakernel::ValidatedCompileRequest
 impl vyre_megakernel::WorkspacePlan
 impl vyre_megakernel::cost::CostBreakdown
 impl vyre_megakernel::legality::FusionRejectionReason
+impl vyre_megakernel::measure::CandidateMeasurement
+impl vyre_megakernel::measure::DeviceState
+impl vyre_megakernel::measure::MeasurementEnvironment
+impl vyre_megakernel::measure::MeasurementProtocol
+impl vyre_megakernel::measure::MeasurementRecord
+impl vyre_megakernel::measure::SampleEstimate
 impl<'a> vyre_megakernel::SemanticExecutionRequest<'a>
 pub const fn vyre_megakernel::Artifact::abi(&self) -> &vyre_megakernel::ArtifactAbi
 pub const fn vyre_megakernel::Artifact::digest(&self) -> vyre_megakernel::Digest
@@ -43,6 +49,7 @@ pub const fn vyre_megakernel::DeviceFacts::architectural_registers_per_invocatio
 pub const fn vyre_megakernel::DeviceFacts::barrier_ns(&self) -> u64
 pub const fn vyre_megakernel::DeviceFacts::cache_capacity_bytes(&self) -> u64
 pub const fn vyre_megakernel::DeviceFacts::calibrated_materialization_throughput_bytes_per_ns(&self) -> u64
+pub const fn vyre_megakernel::DeviceFacts::calibration_version(&self) -> u16
 pub const fn vyre_megakernel::DeviceFacts::capabilities(&self) -> vyre_foundation::validate::options::BackendCapabilities
 pub const fn vyre_megakernel::DeviceFacts::compute_throughput_ops_per_ns(&self) -> u64
 pub const fn vyre_megakernel::DeviceFacts::compute_units(&self) -> u32
@@ -65,6 +72,7 @@ pub const fn vyre_megakernel::DeviceFacts::unknown() -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_architectural_register_limit(self, registers: u32) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_bandwidth_facts(self, peak_bandwidth_bytes_per_ns: u64, calibrated_materialization_throughput_bytes_per_ns: u64) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_cache_capacity(self, bytes: u64) -> Self
+pub const fn vyre_megakernel::DeviceFacts::with_calibration_version(self, calibration_version: u16) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_compute_throughput(self, compute_ops_per_ns: u64, tensor_ops_per_ns: u64) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_compute_units(self, compute_units: u32) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_concurrent_queues(self, concurrent_queues: u32) -> Self
@@ -109,9 +117,17 @@ pub const fn vyre_megakernel::ValidatedCompileRequest::facts(&self) -> &vyre_meg
 pub const fn vyre_megakernel::ValidatedCompileRequest::graph(&self) -> &vyre_foundation::ir_inner::model::program_graph::ProgramGraph
 pub const fn vyre_megakernel::ValidatedCompileRequest::max_artifact_bytes(&self) -> u64
 pub const fn vyre_megakernel::ValidatedCompileRequest::objective(&self) -> vyre_megakernel::CompileObjective
+pub const fn vyre_megakernel::ValidatedCompileRequest::recorded_measurement(&self) -> core::option::Option<&vyre_megakernel::measure::MeasurementRecord>
 pub const fn vyre_megakernel::ValidatedCompileRequest::representative_inputs(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::vec::Vec<u8>>
 pub const fn vyre_megakernel::ValidatedCompileRequest::search_budget(&self) -> vyre_megakernel::SearchBudget
 pub const fn vyre_megakernel::legality::FusionRejectionReason::code(self) -> &'static str
+pub const fn vyre_megakernel::measure::DeviceState::is_unreported(&self) -> bool
+pub const fn vyre_megakernel::measure::DeviceState::unreported() -> Self
+pub const fn vyre_megakernel::measure::MeasurementProtocol::launches_per_candidate(&self) -> u32
+pub const fn vyre_megakernel::measure::MeasurementProtocol::rounds_exhausted(&self, rounds: u32) -> bool
+pub const fn vyre_megakernel::measure::MeasurementProtocol::rounds_sufficient(&self, rounds: u32) -> bool
+pub const fn vyre_megakernel::measure::SampleEstimate::is_settled(&self, protocol: &vyre_megakernel::measure::MeasurementProtocol) -> bool
+pub const fn vyre_megakernel::measure::SampleEstimate::relative_uncertainty_permille(&self) -> u32
 pub const vyre_megakernel::ARTIFACT_ENVELOPE_SCHEMA_VERSION: u16
 pub const vyre_megakernel::ARTIFACT_SCHEMA_VERSION: u16
 pub const vyre_megakernel::PruneReason::ALL: &'static [Self]
@@ -121,6 +137,8 @@ pub const vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16
 pub const vyre_megakernel::TARGET_PAYLOAD_SCHEMA_VERSION: u16
 pub const vyre_megakernel::WORKSPACE_REGION_ALIGNMENT: u64
 pub const vyre_megakernel::cost::TERMS: &[vyre_megakernel::cost::CostTerm]
+pub const vyre_megakernel::measure::MEASUREMENT_PROTOCOL_VERSION: u16
+pub const vyre_megakernel::measure::MeasurementProtocol::V1: Self
 pub enum vyre_megakernel::AbiAccess
 pub enum vyre_megakernel::CompileObjective
 pub enum vyre_megakernel::DependencyEndpoint
@@ -139,6 +157,8 @@ pub enum vyre_megakernel::TargetResourceMemory
 pub enum vyre_megakernel::cost::CostTermRole
 pub enum vyre_megakernel::cost::CostUnit
 pub enum vyre_megakernel::legality::FusionDecision
+pub enum vyre_megakernel::measure::ReplacementVerdict
+pub enum vyre_megakernel::measure::ThrottleState
 pub fn vyre_megakernel::Artifact::barriers(&self) -> &[vyre_megakernel::BarrierRecord]
 pub fn vyre_megakernel::Artifact::canonical_value_by_name(&self) -> core::result::Result<alloc::collections::btree::map::BTreeMap<&str, vyre_megakernel::ArtifactValueId>, vyre_megakernel::ResourceNameCollision>
 pub fn vyre_megakernel::Artifact::dependencies(&self) -> &[vyre_megakernel::DependencyEdge]
@@ -158,10 +178,12 @@ pub fn vyre_megakernel::ArtifactEnvelope::require_target_payload_index(&self, re
 pub fn vyre_megakernel::ArtifactEnvelope::target_payloads(&self) -> &[vyre_megakernel::TargetPayload]
 pub fn vyre_megakernel::ArtifactEnvelope::to_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::CompileRequest::validate(self) -> core::result::Result<vyre_megakernel::ValidatedCompileRequest, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::CompileRequest::with_recorded_measurement(self, recorded_measurement: vyre_megakernel::measure::MeasurementRecord) -> Self
 pub fn vyre_megakernel::CompileRequest::with_representative_inputs(self, representative_inputs: alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::vec::Vec<u8>>) -> Self
 pub fn vyre_megakernel::ExecutionTopology::default() -> Self
 pub fn vyre_megakernel::ExternalFacts::new(configuration_digest: vyre_megakernel::Digest, symbolic_bindings: alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>) -> Self
 pub fn vyre_megakernel::ExternalFacts::with_expected_launch_batch(self, expected_launch_batch: u32) -> Self
+pub fn vyre_megakernel::FinalistEvaluator::device_state(&self) -> vyre_megakernel::measure::DeviceState
 pub fn vyre_megakernel::FinalistEvaluator::measure(&self, artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::TargetPayload) -> core::result::Result<u64, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::FinalistEvaluator::resources(&self, artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::TargetPayload) -> core::result::Result<alloc::vec::Vec<vyre_megakernel::EmittedResources>, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::FinalistEvaluator::target_compiler(&self) -> &dyn vyre_megakernel::TargetCompiler
@@ -204,12 +226,25 @@ pub fn vyre_megakernel::cost::CostBreakdown::term(field: &str) -> core::option::
 pub fn vyre_megakernel::execute_single_program(executor: &dyn vyre_megakernel::SemanticExecutor, node_name: &str, program: vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], policy: &vyre_megakernel::SemanticExecutionPolicy) -> core::result::Result<vyre_megakernel::SingleProgramExecutionOutput, vyre_megakernel::SemanticExecutionError>
 pub fn vyre_megakernel::grid_sync::requires_grid_sync(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> bool
 pub fn vyre_megakernel::legality::analyze_fusion_pair(graph: &vyre_foundation::ir_inner::model::program_graph::ProgramGraph, from: vyre_megakernel::ArtifactNodeId, to: vyre_megakernel::ArtifactNodeId, value: vyre_megakernel::ArtifactValueId) -> vyre_megakernel::legality::FusionDecision
+pub fn vyre_megakernel::measure::CandidateMeasurement::prediction_error_permille(&self) -> i32
+pub fn vyre_megakernel::measure::MeasurementEnvironment::drift_permille(&self) -> i32
+pub fn vyre_megakernel::measure::MeasurementProtocol::fitted(&self, launch_budget: u32) -> Self
+pub fn vyre_megakernel::measure::MeasurementProtocol::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::measure::MeasurementRecord::candidate(&self, identity: vyre_megakernel::Digest) -> core::option::Option<&vyre_megakernel::measure::CandidateMeasurement>
+pub fn vyre_megakernel::measure::MeasurementRecord::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::measure::MeasurementRecord::verdict_against(&self, incumbent: &Self) -> vyre_megakernel::measure::ReplacementVerdict
+pub fn vyre_megakernel::measure::MeasurementRecord::winner(&self) -> core::option::Option<&vyre_megakernel::measure::CandidateMeasurement>
+pub fn vyre_megakernel::measure::MeasurementRecord::winning_estimate_ns(&self) -> u64
+pub fn vyre_megakernel::measure::MeasurementRecord::winning_launches(&self) -> u32
+pub fn vyre_megakernel::measure::SampleEstimate::from_samples(samples: &[u64], protocol: &vyre_megakernel::measure::MeasurementProtocol) -> core::option::Option<Self>
+pub fn vyre_megakernel::measure::improves(incumbent: &vyre_megakernel::measure::SampleEstimate, challenger: &vyre_megakernel::measure::SampleEstimate, protocol: &vyre_megakernel::measure::MeasurementProtocol) -> bool
 pub fn vyre_megakernel::writable_graph_value_buffers(node: &vyre_foundation::ir_inner::model::program_graph::ProgramGraphNode) -> alloc::vec::Vec<(vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::string::String)>
 pub fn vyre_megakernel::writable_graph_values(node: &vyre_foundation::ir_inner::model::program_graph::ProgramGraphNode) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program_graph::GraphValueId>
 pub mod vyre_megakernel
 pub mod vyre_megakernel::cost
 pub mod vyre_megakernel::grid_sync
 pub mod vyre_megakernel::legality
+pub mod vyre_megakernel::measure
 pub struct vyre_megakernel::Artifact
 pub struct vyre_megakernel::ArtifactAbi
 pub struct vyre_megakernel::ArtifactEnvelope
@@ -264,6 +299,12 @@ pub struct vyre_megakernel::WorkspacePlan
 pub struct vyre_megakernel::WorkspaceRegion
 pub struct vyre_megakernel::cost::CostBreakdown
 pub struct vyre_megakernel::cost::CostTerm
+pub struct vyre_megakernel::measure::CandidateMeasurement
+pub struct vyre_megakernel::measure::DeviceState
+pub struct vyre_megakernel::measure::MeasurementEnvironment
+pub struct vyre_megakernel::measure::MeasurementProtocol
+pub struct vyre_megakernel::measure::MeasurementRecord
+pub struct vyre_megakernel::measure::SampleEstimate
 pub trait vyre_megakernel::FinalistEvaluator
 pub trait vyre_megakernel::SemanticExecutor: core::marker::Send + core::marker::Sync
 pub trait vyre_megakernel::TargetCompiler: core::marker::Send + core::marker::Sync
@@ -357,9 +398,7 @@ pub vyre_megakernel::MaterializationRecord::value: vyre_megakernel::ArtifactValu
 pub vyre_megakernel::NodeRecord::id: vyre_megakernel::ArtifactNodeId
 pub vyre_megakernel::NodeRecord::name: alloc::string::String
 pub vyre_megakernel::NodeRecord::program: alloc::vec::Vec<u8>
-pub vyre_megakernel::PlanMeasurement::Measured
-pub vyre_megakernel::PlanMeasurement::Measured::launches: u32
-pub vyre_megakernel::PlanMeasurement::Measured::median_ns: u64
+pub vyre_megakernel::PlanMeasurement::Measured(vyre_megakernel::measure::MeasurementRecord)
 pub vyre_megakernel::PlanMeasurement::Unbudgeted
 pub vyre_megakernel::PlanMeasurement::UntimedDevice
 pub vyre_megakernel::Provenance::compiler_version: alloc::string::String
@@ -555,3 +594,41 @@ pub vyre_megakernel::legality::FusionRejectionReason::NotProducerConsumer
 pub vyre_megakernel::legality::FusionRejectionReason::SynchronizationBoundary
 pub vyre_megakernel::legality::FusionRejectionReason::UnknownGraphMember
 pub vyre_megakernel::legality::FusionRejectionReason::WorkgroupMismatch
+pub vyre_megakernel::measure::CandidateMeasurement::analytic_rank: u32
+pub vyre_megakernel::measure::CandidateMeasurement::estimate: vyre_megakernel::measure::SampleEstimate
+pub vyre_megakernel::measure::CandidateMeasurement::identity: vyre_megakernel::Digest
+pub vyre_megakernel::measure::CandidateMeasurement::predicted_ns: u64
+pub vyre_megakernel::measure::CandidateMeasurement::samples: alloc::vec::Vec<u64>
+pub vyre_megakernel::measure::DeviceState::graphics_clock_khz: u32
+pub vyre_megakernel::measure::DeviceState::memory_clock_khz: u32
+pub vyre_megakernel::measure::DeviceState::power_draw_milliwatts: u32
+pub vyre_megakernel::measure::DeviceState::temperature_millicelsius: i32
+pub vyre_megakernel::measure::DeviceState::throttle: vyre_megakernel::measure::ThrottleState
+pub vyre_megakernel::measure::MeasurementEnvironment::facts_calibration_version: u16
+pub vyre_megakernel::measure::MeasurementEnvironment::first_round_ns: u64
+pub vyre_megakernel::measure::MeasurementEnvironment::last_round_ns: u64
+pub vyre_megakernel::measure::MeasurementEnvironment::state: vyre_megakernel::measure::DeviceState
+pub vyre_megakernel::measure::MeasurementEnvironment::warmup_launches: u32
+pub vyre_megakernel::measure::MeasurementProtocol::equivalence_permille: u16
+pub vyre_megakernel::measure::MeasurementProtocol::max_rounds: u32
+pub vyre_megakernel::measure::MeasurementProtocol::min_rounds: u32
+pub vyre_megakernel::measure::MeasurementProtocol::repetitions_per_round: u32
+pub vyre_megakernel::measure::MeasurementProtocol::trim_permille: u16
+pub vyre_megakernel::measure::MeasurementProtocol::uncertainty_target_permille: u16
+pub vyre_megakernel::measure::MeasurementProtocol::version: u16
+pub vyre_megakernel::measure::MeasurementProtocol::warmup_launches: u32
+pub vyre_megakernel::measure::MeasurementRecord::candidates: alloc::vec::Vec<vyre_megakernel::measure::CandidateMeasurement>
+pub vyre_megakernel::measure::MeasurementRecord::environment: vyre_megakernel::measure::MeasurementEnvironment
+pub vyre_megakernel::measure::MeasurementRecord::protocol: vyre_megakernel::measure::MeasurementProtocol
+pub vyre_megakernel::measure::MeasurementRecord::rounds: u32
+pub vyre_megakernel::measure::MeasurementRecord::winner: u32
+pub vyre_megakernel::measure::ReplacementVerdict::Equivalent
+pub vyre_megakernel::measure::ReplacementVerdict::Incomparable
+pub vyre_megakernel::measure::ReplacementVerdict::Replaces
+pub vyre_megakernel::measure::SampleEstimate::estimate_ns: u64
+pub vyre_megakernel::measure::SampleEstimate::kept: u32
+pub vyre_megakernel::measure::SampleEstimate::trimmed: u32
+pub vyre_megakernel::measure::SampleEstimate::uncertainty_ns: u64
+pub vyre_megakernel::measure::ThrottleState::Clear
+pub vyre_megakernel::measure::ThrottleState::Throttled
+pub vyre_megakernel::measure::ThrottleState::Unreported

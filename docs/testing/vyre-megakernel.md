@@ -29,6 +29,7 @@ This crate declares no Cargo features.
 | `test` | `algebraic_equivalence` | `vyre-megakernel/tests/algebraic_equivalence.rs` | None | `./cargo_full test -p vyre-megakernel --test algebraic_equivalence` |
 | `test` | `artifact_contract` | `vyre-megakernel/tests/artifact_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test artifact_contract` |
 | `test` | `candidate_budget_and_dependency_endpoints` | `vyre-megakernel/tests/candidate_budget_and_dependency_endpoints.rs` | None | `./cargo_full test -p vyre-megakernel --test candidate_budget_and_dependency_endpoints` |
+| `test` | `measurement_protocol` | `vyre-megakernel/tests/measurement_protocol.rs` | None | `./cargo_full test -p vyre-megakernel --test measurement_protocol` |
 | `test` | `multi_fidelity_ladder` | `vyre-megakernel/tests/multi_fidelity_ladder.rs` | None | `./cargo_full test -p vyre-megakernel --test multi_fidelity_ladder` |
 | `test` | `schedule_grammar_contract` | `vyre-megakernel/tests/schedule_grammar_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test schedule_grammar_contract` |
 | `test` | `selected_geometry_authority` | `vyre-megakernel/tests/selected_geometry_authority.rs` | None | `./cargo_full test -p vyre-megakernel --test selected_geometry_authority` |

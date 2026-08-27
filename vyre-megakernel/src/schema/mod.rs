@@ -25,7 +25,7 @@ pub use records::{
 };
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 11;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 12;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -390,6 +390,10 @@ mod tests {
     use super::*;
     use crate::cost::CostBreakdown;
     use crate::identity::{ArtifactNodeId, FusionGroupId};
+    use crate::measure::{
+        CandidateMeasurement, DeviceState, MeasurementEnvironment, MeasurementProtocol,
+        MeasurementRecord, SampleEstimate,
+    };
     use crate::request::{SearchBudget, SearchWork};
     use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform, SelectedSchedule};
 
@@ -557,32 +561,82 @@ mod tests {
         );
     }
 
-    /// WHY: a measured schedule with no launch or no elapsed device time is not
-    /// measurement evidence and must not deserialize as one.
+    /// WHY: a measured schedule whose evidence does not authenticate its own
+    /// winner is not measurement evidence and must not deserialize as one. The
+    /// artifact path has to reject it, not only the record constructor, because
+    /// decoded bytes never went through that constructor.
     #[test]
-    fn selected_schedule_rejects_zero_measurement_evidence() {
-        for measurement in [
-            PlanMeasurement::Measured {
-                launches: 0,
-                median_ns: 1,
-            },
-            PlanMeasurement::Measured {
-                launches: 1,
-                median_ns: 0,
-            },
+    fn selected_schedule_rejects_measured_evidence_that_authenticates_nothing() {
+        for (measurement, expected) in [
+            (
+                measured_evidence(|record| record.candidates.clear()),
+                "retains no candidate samples",
+            ),
+            (
+                measured_evidence(|record| record.winner = 7),
+                "names none of the",
+            ),
+            (
+                measured_evidence(|record| record.rounds = 0),
+                "round(s) under a protocol ending after",
+            ),
+            (
+                measured_evidence(|record| record.candidates[0].estimate.estimate_ns = 0),
+                "zero device time",
+            ),
+            (
+                measured_evidence(|record| record.candidates[0].samples.push(9)),
+                "but its estimate covers",
+            ),
+            (
+                measured_evidence(|record| record.protocol.version = 0),
+                "records no protocol version",
+            ),
         ] {
             let mut invalid = payload(Vec::new());
+            invalid.selected_plan.search_budget = SearchBudget::new(1, 1, 1, 1, 1);
+            invalid.selected_plan.search_work.target_compilations = 1;
+            invalid.selected_plan.search_work.measurements = 1;
             invalid.selected_plan.measurement = measurement;
-            let error =
-                decode_payload(invalid).expect_err("zero measurement evidence must not decode");
+            let error = decode_payload(invalid)
+                .expect_err("evidence that authenticates nothing must not decode");
             assert!(
-                error
-                    .diagnostic
-                    .message
-                    .contains("zero launch count or device time"),
-                "diagnostic must identify invalid measurement evidence: {error}"
+                error.diagnostic.message.contains(expected),
+                "diagnostic must identify invalid measurement evidence, wanted `{expected}`: {error}"
             );
         }
+    }
+
+    /// One measured record that decodes, with `mutate` applied to break exactly
+    /// one of the rules the record has to satisfy.
+    fn measured_evidence(mutate: impl FnOnce(&mut MeasurementRecord)) -> PlanMeasurement {
+        let protocol = MeasurementProtocol::V1.fitted(1);
+        let mut record = MeasurementRecord {
+            protocol,
+            environment: MeasurementEnvironment {
+                warmup_launches: protocol.warmup_launches,
+                facts_calibration_version: 3,
+                first_round_ns: 128,
+                last_round_ns: 128,
+                state: DeviceState::unreported(),
+            },
+            rounds: 1,
+            candidates: vec![CandidateMeasurement {
+                identity: Digest([0; 32]),
+                analytic_rank: 0,
+                predicted_ns: 100,
+                samples: vec![128],
+                estimate: SampleEstimate {
+                    estimate_ns: 128,
+                    uncertainty_ns: 0,
+                    kept: 1,
+                    trimmed: 0,
+                },
+            }],
+            winner: 0,
+        };
+        mutate(&mut record);
+        PlanMeasurement::Measured(record)
     }
 
     /// WHY: unbudgeted and untimed plans cannot authenticate device samples

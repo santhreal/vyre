@@ -9,6 +9,10 @@ use crate::error::{failure, overflow, serialization_failure, CompileError, Compi
 use crate::grammar::ScheduleProduction;
 use crate::identity::domain_digest;
 use crate::identity::{ArtifactNodeId, DependencyEdge, Digest};
+use crate::measure::{
+    self, CandidateMeasurement, MeasurementEnvironment, MeasurementProtocol, MeasurementRecord,
+    ReplacementVerdict, SampleEstimate,
+};
 use crate::request::{SearchWork, ValidatedCompileRequest};
 use crate::request_identity::{RequestIdentity, REQUEST_DIGEST_DOMAIN, SOURCE_DIGEST_DOMAIN};
 use crate::resource_records::{build_abi, build_resources};
@@ -319,15 +323,33 @@ pub trait FinalistEvaluator {
 
     /// Launch `payload` once and return the device time of that launch in
     /// nanoseconds. The time must come from the device, not the host clock.
+    ///
+    /// The launch must be complete before this returns. The protocol counts one
+    /// sample per call and compares samples across candidates, so a call that
+    /// returned while the device was still running would attribute one
+    /// candidate's work to whichever candidate the round measured next.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the payload cannot be launched or timed on this
+    /// device.
     fn measure(
         &self,
         artifact: &Artifact,
         payload: &TargetPayload,
     ) -> Result<u64, TargetCompileError>;
+
+    /// Clock, thermal and power state the device reports as the session starts.
+    ///
+    /// Retained beside the samples so a reader can tell a slow candidate from a
+    /// throttled device. A backend whose API reports none of it returns
+    /// [`DeviceState::unreported`](crate::measure::DeviceState::unreported), and
+    /// the drift the session observes across its own rounds still holds.
+    fn device_state(&self) -> measure::DeviceState;
 }
 
 /// Compile with the ranked finalists emitted for the target and timed on the
-/// device, selecting the plan with the lowest median device time.
+/// device under the versioned measurement protocol.
 ///
 /// Evaluation is a ladder of rising fidelity and rising cost. The symbolic bound
 /// eliminates a candidate no descendant can bring under the incumbent, the
@@ -336,16 +358,26 @@ pub trait FinalistEvaluator {
 /// emitted. The top `max_target_compilations` ranked plans are emitted; a plan
 /// the target compiler rejects is eliminated with
 /// [`PruneReason::Emission`](crate::PruneReason::Emission) and the ladder
-/// continues, so one unemittable plan no longer ends the compilation. Each
-/// survivor is launched `max_measurements` times and the winner is the lowest
-/// median. [`SearchWork::target_compilations`] and [`SearchWork::measurements`]
-/// carry the counts actually spent, and the recorded [`PlanMeasurement`] states
-/// whether a measurement decided the plan at all: a zero measurement budget
-/// records [`PlanMeasurement::Unbudgeted`] and a device with no launch
-/// timestamps records [`PlanMeasurement::UntimedDevice`], neither of which is
-/// reported as a measured selection. A compilation where no finalist emitted
-/// fails with the last emission error rather than returning a plan the target
-/// cannot build.
+/// continues, so one unemittable plan no longer ends the compilation.
+///
+/// Measurement runs [`MeasurementProtocol::V1`] fitted to `max_measurements`,
+/// which bounds the launches one candidate receives including its warmup. Every
+/// candidate is sampled in every round, in an order rotated per round, and
+/// sampling ends when every estimate settles inside the protocol's uncertainty
+/// target or the rounds run out. The winner is the lowest trimmed-median
+/// estimate, and a later candidate takes the selection from an earlier one only
+/// by clearing the equivalence band, so a re-run of the same search on the same
+/// device selects the same artifact. Passing the previous artifact's evidence to
+/// [`CompileRequest::with_recorded_measurement`](crate::CompileRequest::with_recorded_measurement)
+/// extends that guarantee across compilations.
+///
+/// [`SearchWork::target_compilations`] and [`SearchWork::measurements`] carry the
+/// counts actually spent, and the recorded [`PlanMeasurement`] states whether a
+/// measurement decided the plan at all: a zero measurement budget records
+/// [`PlanMeasurement::Unbudgeted`] and a device with no launch timestamps records
+/// [`PlanMeasurement::UntimedDevice`], neither of which is reported as a measured
+/// selection. A compilation where no finalist emitted fails with the last
+/// emission error rather than returning a plan the target cannot build.
 pub fn compile_measured(
     request: &ValidatedCompileRequest,
     evaluator: &dyn FinalistEvaluator,
@@ -441,48 +473,89 @@ pub fn compile_measured(
     // the order a caller can reproduce from the certificate.
     reranked.sort_unstable();
     certificate.canonicalize();
-    let order: Vec<usize> = reranked
+    let mut session: Vec<Sampling> = reranked
         .into_iter()
-        .map(|(_, _, position)| position)
+        .map(|(predicted_ns, index, position)| Sampling {
+            index,
+            position,
+            predicted_ns,
+            samples: Vec::new(),
+        })
         .collect();
 
-    let mut winner: Option<(usize, u64, u32)> = None;
-    for position in order {
-        let (index, provisional, payload) = &emitted[position];
+    let protocol = MeasurementProtocol::V1.fitted(budget.max_measurements);
+    // Warmup is charged against the budget like any counted launch. Its samples
+    // are discarded: a first launch measures module load and cold allocation,
+    // which is not what distinguishes two schedules.
+    for entry in &session {
         if spent(started) >= budget.max_elapsed_ns {
             break;
         }
-        let mut samples = Vec::with_capacity(budget.max_measurements as usize);
-        for _ in 0..budget.max_measurements {
-            let sample = evaluator
+        let (_, provisional, payload) = &emitted[entry.position];
+        for _ in 0..protocol.warmup_launches {
+            evaluator
                 .measure(provisional, payload)
-                .map_err(|error| finalist_failure(*index, &error))?;
-            samples.push(sample);
+                .map_err(|error| finalist_failure(entry.index, &error))?;
             work.measurements = work.measurements.saturating_add(1);
         }
-        samples.sort_unstable();
-        let launches = u32::try_from(samples.len()).unwrap_or(u32::MAX);
-        let Some(median) = samples.get(samples.len() / 2).copied() else {
-            continue;
-        };
-        if winner.is_none_or(|(_, best, _)| median < best) {
-            winner = Some((*index, median, launches));
+    }
+
+    let mut rounds = 0_u32;
+    let mut first_round_ns = 0_u64;
+    let mut last_round_ns = 0_u64;
+    while !protocol.rounds_exhausted(rounds) && !session.is_empty() {
+        if spent(started) >= budget.max_elapsed_ns {
+            break;
+        }
+        let mut round = Vec::with_capacity(session.len());
+        // Rotate the visit order every round. Measuring the same candidate first
+        // every time charges it for whatever the device does at the start of a
+        // round, which is how a ranking becomes an artefact of position.
+        for offset in 0..session.len() {
+            let slot = (rounds as usize + offset) % session.len();
+            let entry = &mut session[slot];
+            let (_, provisional, payload) = &emitted[entry.position];
+            for _ in 0..protocol.repetitions_per_round {
+                let sample = evaluator
+                    .measure(provisional, payload)
+                    .map_err(|error| finalist_failure(entry.index, &error))?;
+                entry.samples.push(sample);
+                round.push(sample);
+                work.measurements = work.measurements.saturating_add(1);
+            }
+        }
+        rounds = rounds.saturating_add(1);
+        round.sort_unstable();
+        last_round_ns = round.get(round.len() / 2).copied().unwrap_or(0);
+        if rounds == 1 {
+            first_round_ns = last_round_ns;
+        }
+        if protocol.rounds_sufficient(rounds)
+            && session.iter().all(|entry| settled(entry, &protocol))
+        {
+            break;
         }
     }
     work.elapsed_ns = work.elapsed_ns.saturating_add(spent(started));
-    match winner {
-        Some((index, median_ns, launches)) => assemble(
-            request,
-            &context,
-            &context.ranked[index],
-            &certificate,
-            work,
-            PlanMeasurement::Measured {
-                launches,
-                median_ns,
-            },
-        ),
-        None => match rejection {
+
+    let mut ranked_indices = Vec::with_capacity(session.len());
+    let mut candidates = Vec::with_capacity(session.len());
+    for entry in &session {
+        let Some(estimate) = SampleEstimate::from_samples(&entry.samples, &protocol) else {
+            continue;
+        };
+        let (_, provisional, _) = &emitted[entry.position];
+        ranked_indices.push(entry.index);
+        candidates.push(CandidateMeasurement {
+            identity: provisional.digest(),
+            analytic_rank: u32::try_from(entry.index).unwrap_or(u32::MAX),
+            predicted_ns: entry.predicted_ns,
+            samples: entry.samples.clone(),
+            estimate,
+        });
+    }
+    if candidates.is_empty() {
+        return match rejection {
             Some(error) => Err(error),
             None => assemble(
                 request,
@@ -492,8 +565,71 @@ pub fn compile_measured(
                 work,
                 PlanMeasurement::Unbudgeted,
             ),
-        },
+        };
     }
+
+    // Candidates are in reported-cost order, so the first is the canonical
+    // lower-risk finalist. A later one takes the selection only by clearing the
+    // equivalence band, which is what makes two runs of the same search on the
+    // same device select the same artifact.
+    let mut winner = 0_usize;
+    for (slot, candidate) in candidates.iter().enumerate().skip(1) {
+        if measure::improves(&candidates[winner].estimate, &candidate.estimate, &protocol) {
+            winner = slot;
+        }
+    }
+    let mut record = MeasurementRecord {
+        protocol,
+        environment: MeasurementEnvironment {
+            warmup_launches: protocol.warmup_launches,
+            facts_calibration_version: request.device().calibration_version(),
+            first_round_ns,
+            last_round_ns,
+            state: evaluator.device_state(),
+        },
+        rounds,
+        candidates,
+        winner: u32::try_from(winner).unwrap_or(u32::MAX),
+    };
+    if let Some(incumbent) = request.recorded_measurement() {
+        if record.verdict_against(incumbent) == ReplacementVerdict::Equivalent {
+            if let Some(authenticated) = incumbent.winner().and_then(|authenticated| {
+                record
+                    .candidates
+                    .iter()
+                    .position(|candidate| candidate.identity == authenticated.identity)
+            }) {
+                record.winner = u32::try_from(authenticated).unwrap_or(u32::MAX);
+                winner = authenticated;
+            }
+        }
+    }
+    assemble(
+        request,
+        &context,
+        &context.ranked[ranked_indices[winner]],
+        &certificate,
+        work,
+        PlanMeasurement::Measured(record),
+    )
+}
+
+/// One finalist and every counted sample taken against it.
+struct Sampling {
+    /// Position in the analytic ranking.
+    index: usize,
+    /// Position in the emitted finalist list.
+    position: usize,
+    /// Analytic cost the reported-resource ranking predicted, in nanoseconds.
+    predicted_ns: u64,
+    /// Counted device times in measurement order.
+    samples: Vec<u64>,
+}
+
+/// Whether this candidate's samples are precise enough to stop sampling it.
+fn settled(entry: &Sampling, protocol: &MeasurementProtocol) -> bool {
+    SampleEstimate::from_samples(&entry.samples, protocol)
+        .is_some_and(|estimate| estimate.is_settled(protocol))
 }
 
 /// Nanoseconds the measured path has spent since it started.

@@ -12,6 +12,7 @@ use crate::error::{failure, CompileError, CompilerFailureKind};
 use crate::execution::CompileObjective;
 use crate::grid_sync;
 use crate::identity::Digest;
+use crate::measure::MeasurementRecord;
 
 /// Explicit bounds for one whole-program schedule search.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -108,6 +109,7 @@ pub struct CompileRequest {
     pub(crate) search_budget: SearchBudget,
     pub(crate) max_artifact_bytes: u64,
     representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
+    recorded_measurement: Option<MeasurementRecord>,
 }
 
 impl CompileRequest {
@@ -128,6 +130,7 @@ impl CompileRequest {
             search_budget,
             max_artifact_bytes,
             representative_inputs: BTreeMap::new(),
+            recorded_measurement: None,
         }
     }
 
@@ -138,6 +141,20 @@ impl CompileRequest {
         representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
     ) -> Self {
         self.representative_inputs = representative_inputs;
+        self
+    }
+
+    /// Supply the measurement evidence an already authenticated artifact
+    /// carries, so this compilation cannot replace its winner on measurement
+    /// noise.
+    ///
+    /// A caller recompiling the same graph on the same device passes the record
+    /// the previous artifact recorded. The measured path then keeps that winner
+    /// unless a challenger clears the protocol's equivalence band, which is what
+    /// makes a re-run reproduce the artifact it re-ran.
+    #[must_use]
+    pub fn with_recorded_measurement(mut self, recorded_measurement: MeasurementRecord) -> Self {
+        self.recorded_measurement = Some(recorded_measurement);
         self
     }
 
@@ -207,10 +224,14 @@ impl CompileRequest {
             &self.representative_inputs,
             &self.facts.symbolic_bindings,
         )?;
+        if let Some(recorded) = &self.recorded_measurement {
+            recorded.validate()?;
+        }
         Ok(ValidatedCompileRequest {
             graph,
             facts: self.facts,
             representative_inputs: self.representative_inputs,
+            recorded_measurement: self.recorded_measurement,
             device: self.device,
             objective: self.objective,
             search_budget: self.search_budget,
@@ -254,6 +275,7 @@ pub struct ValidatedCompileRequest {
     pub(crate) search_budget: SearchBudget,
     pub(crate) max_artifact_bytes: u64,
     representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
+    recorded_measurement: Option<MeasurementRecord>,
 }
 
 impl ValidatedCompileRequest {
@@ -273,6 +295,13 @@ impl ValidatedCompileRequest {
     #[must_use]
     pub const fn representative_inputs(&self) -> &BTreeMap<GraphValueId, Vec<u8>> {
         &self.representative_inputs
+    }
+
+    /// Borrow the measurement evidence an already authenticated artifact
+    /// recorded for this graph and device, when the caller supplied one.
+    #[must_use]
+    pub const fn recorded_measurement(&self) -> Option<&MeasurementRecord> {
+        self.recorded_measurement.as_ref()
     }
 
     /// Return the explicit bounded-search policy.

@@ -28,6 +28,10 @@ pub(crate) mod backend;
 pub mod codegen;
 /// CUDA device capability probing.
 pub(crate) mod device;
+/// Live CUDA clock, thermal and power state for measurement provenance.
+pub(crate) mod device_state;
+#[cfg(test)]
+mod device_state_tests;
 /// CUDA upload planning for GPU e-graph device images.
 pub(crate) mod egraph_device_image;
 /// CUDA launch-wave planning for resident e-graph device images.

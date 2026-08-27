@@ -4,6 +4,7 @@ use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource,
 };
 use vyre_foundation::ir::GraphValueId;
+use vyre_megakernel::measure::DeviceState;
 use vyre_megakernel::{
     AbiAccess, Artifact, ArtifactValueId, EmittedResources, FinalistEvaluator, ResourceAbiRecord,
     ResourceRecord, TargetCompileError, TargetCompiler, TargetPayload,
@@ -127,6 +128,10 @@ impl FinalistEvaluator for DeviceFinalists<'_> {
             .materialize(artifact, payload)
             .and_then(|instance| instance.emitted_resources())
             .map_err(measurement_failure)
+    }
+
+    fn device_state(&self) -> DeviceState {
+        self.materializer.device_state()
     }
 
     fn measure(

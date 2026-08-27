@@ -335,10 +335,60 @@ a launch the hardware cannot run, not a price. A backend whose API reports none
 of it returns default records, which leaves every finalist ranked on the
 estimate.
 
-Each surviving plan is launched `max_measurements` times and the lowest median
-device time wins, which can select a plan the analytic model ranked behind
-another. A compilation where no ranked plan emitted fails with the rejection
-instead of returning a plan the target cannot build.
+## Measurement runs one versioned protocol
+
+A device time is noisy. The same entry point launched twice returns two numbers,
+and the difference is queue occupancy, clock state and cache state rather than a
+property of the program. `MeasurementProtocol` version 1 states every rule the
+comparison depends on, and the artifact records the protocol beside the samples
+taken under it.
+
+| Rule | Version 1 | Why it is stated |
+|---|---|---|
+| warmup launches | 2 | module load and first-touch allocation are not the schedule |
+| repetitions per round | 1 | one sample per candidate per round |
+| rounds | 3 to 64 | samples spread across the session make drift visible |
+| trim | 200 permille, slow end only | device noise is one-sided |
+| estimator | trimmed median | one stalled launch cannot move it |
+| uncertainty | median absolute deviation scaled to sigma | states how far apart two estimates must be |
+| stopping rule | every estimate inside 30 permille | spends launches until a comparison is possible, no longer |
+| equivalence band | 20 permille of the incumbent | a smaller difference is the device |
+
+`max_measurements` bounds the launches one candidate receives, warmup included,
+and the protocol is fitted to that budget before the session starts: rounds
+shrink before repetitions do. Every candidate is sampled in every round, and the
+visit order rotates by one position per round, so no candidate is always charged
+for whatever the device does at the start of a round.
+
+The winner is the lowest trimmed-median estimate. A later candidate takes the
+selection from an earlier one only by clearing the equivalence band and the
+combined uncertainty of both estimates, so a candidate the analytic ranking put
+first keeps the selection when the measured difference is not evidence. This is
+what makes two runs of the same search on the same device select the same
+artifact. Passing the previous artifact's record to
+`CompileRequest::with_recorded_measurement` extends that across compilations: an
+authenticated winner is kept unless a challenger clears the band.
+
+Two figures decide whether an earlier record has authority over a later session:
+the protocol version and the calibrated fact-set version the ranking priced
+with, which `DeviceFacts::with_calibration_version` records and the measurement
+record carries. When both match, the earlier winner stands and only the band can
+move it. When either differs, the two sessions are incomparable and the later one
+selects freely, because the rules or the priced figures changed. A recalibration
+that leaves the version at its previous value therefore never takes effect on a
+recorded selection.
+
+The record retains every candidate's raw samples in measurement order, its
+identity, its analytic rank, the cost the model predicted for it, and the
+estimate its samples reduce to. Prediction error is the signed difference between
+the predicted and measured figures in permille; it recalibrates versioned fact
+sets and never changes a selection. Beside the samples the record retains what
+the device was doing: the clock, thermal and power state the backend reported,
+and the drift the session observed between its first and last counted round,
+which is available on a backend that reports no state at all.
+
+A compilation where no ranked plan emitted fails with the rejection instead of
+returning a plan the target cannot build.
 
 ## Unmeasured is recorded as unmeasured
 

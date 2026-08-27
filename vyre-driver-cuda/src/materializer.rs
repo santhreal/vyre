@@ -24,6 +24,10 @@ pub(crate) struct CudaMaterializer {
 impl ArtifactMaterializer for CudaMaterializer {
     vyre_driver::materializer_passthrough!(resident);
 
+    fn device_state(&self) -> vyre_megakernel::measure::DeviceState {
+        crate::device_state::device_state(self.backend.caps.ordinal)
+    }
+
     fn materialize(
         &self,
         artifact: &Artifact,

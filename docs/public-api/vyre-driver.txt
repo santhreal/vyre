@@ -403,6 +403,7 @@ pub fn vyre_driver::ArtifactInstance::payload(&self) -> vyre_megakernel::identit
 pub fn vyre_driver::ArtifactInstance::submit(&self, bindings: vyre_driver::BindingSet) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::Submission>, vyre_driver::BackendError>
 pub fn vyre_driver::ArtifactMaterializer::allocate_resident(&self, _byte_len: usize) -> core::result::Result<vyre_driver::Resource, vyre_driver::BackendError>
 pub fn vyre_driver::ArtifactMaterializer::device(&self) -> &dyn vyre_driver::Device
+pub fn vyre_driver::ArtifactMaterializer::device_state(&self) -> vyre_megakernel::measure::DeviceState
 pub fn vyre_driver::ArtifactMaterializer::free_resident(&self, _resource: vyre_driver::Resource) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::ArtifactMaterializer::materialize(&self, artifact: &vyre_megakernel::schema::Artifact, payload: &vyre_megakernel::envelope::TargetPayload) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::ArtifactInstance>, vyre_driver::BackendError>
 pub fn vyre_driver::ArtifactMaterializer::upload_resident(&self, _resource: &vyre_driver::Resource, _bytes: &[u8]) -> core::result::Result<(), vyre_driver::BackendError>

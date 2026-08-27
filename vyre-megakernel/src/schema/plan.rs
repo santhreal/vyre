@@ -8,6 +8,7 @@ use crate::certificate::SearchCertificate;
 use crate::cost;
 use crate::error::{failure, CompileError, CompilerFailureKind};
 use crate::grammar::{DerivationStep, ScheduleProduction, SCHEDULE_GRAMMAR_VERSION};
+use crate::measure::{MeasurementRecord, MEASUREMENT_PROTOCOL_VERSION};
 use crate::request::{SearchBudget, SearchWork};
 
 use super::records::{BarrierRecord, FusionRecord, FusionRejection, MaterializationRecord};
@@ -35,7 +36,7 @@ pub enum ExecutionMode {
 }
 
 /// Whether a device measurement selected the plan, and what it measured.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PlanMeasurement {
     /// The search budget allowed no measurement, so the plan is the analytic
@@ -44,13 +45,10 @@ pub enum PlanMeasurement {
     /// The device reports no launch timestamp, so nothing measured on it would
     /// be a device time.
     UntimedDevice,
-    /// Selected by lowest median device time across measured finalists.
-    Measured {
-        /// Timestamped launches performed against the winning finalist.
-        launches: u32,
-        /// Median device time of those launches in nanoseconds.
-        median_ns: u64,
-    },
+    /// Selected by the lowest measured device-time estimate across the
+    /// finalists, under the versioned measurement protocol whose evidence this
+    /// carries.
+    Measured(MeasurementRecord),
 }
 
 /// Immutable compiler-selected whole-program plan.
@@ -245,19 +243,14 @@ impl SelectedPlan {
                 ));
             }
         }
-        match self.measurement {
-            PlanMeasurement::Measured {
-                launches,
-                median_ns,
-            } => {
-                if launches == 0 || median_ns == 0 {
-                    return Err(invalid(
-                        "measurement",
-                        "measured selection contains a zero launch count or device time"
-                            .to_string(),
-                        "record positive measured launches and device nanoseconds",
-                    ));
-                }
+        match &self.measurement {
+            PlanMeasurement::Measured(evidence) => {
+                evidence.validate()?;
+                // `MeasurementRecord::validate` already refused a winner with no
+                // kept sample or a zero estimate, so what is left here is the
+                // cross-record agreement it cannot see: the plan's own sample
+                // accounting and the protocol this compiler measures under.
+                let launches = evidence.winning_launches();
                 if launches > self.search_work.measurements {
                     return Err(invalid(
                         "measurement.launches",
@@ -266,6 +259,16 @@ impl SelectedPlan {
                             self.search_work.measurements
                         ),
                         "derive winning launch count from the recorded search samples",
+                    ));
+                }
+                if evidence.protocol.version != MEASUREMENT_PROTOCOL_VERSION {
+                    return Err(invalid(
+                        "measurement.protocol.version",
+                        format!(
+                            "samples were measured under protocol {} but this compiler measures under {MEASUREMENT_PROTOCOL_VERSION}",
+                            evidence.protocol.version
+                        ),
+                        "re-measure the finalists under the current protocol",
                     ));
                 }
             }
