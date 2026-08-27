@@ -419,18 +419,7 @@ mod tests {
                 })?
                 .program;
             let inputs = canonical_inputs(request)?;
-            let op_id = program
-                .entry
-                .iter()
-                .find_map(|node| match node {
-                    vyre_foundation::ir::Node::Region { generator, .. } => Some(generator.as_str()),
-                    _ => None,
-                })
-                .ok_or_else(|| {
-                    SemanticExecutionError::InvalidRequest(
-                        "Fix: reduction primitive should expose a region generator.".to_string(),
-                    )
-                })?;
+            let op_id = crate::test_parity_oracles::region_operation_id(program)?;
             let values = crate::dispatch_buffers::read_u32s(required_input(&inputs, 0, op_id)?);
             let ordered = match op_id {
                 crate::reduce::sum::OP_ID => {

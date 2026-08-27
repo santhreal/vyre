@@ -413,16 +413,7 @@ mod tests {
             let program = &request.logical().graph().nodes()[0].program;
             let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
-                let op_id = program
-                    .entry
-                    .iter()
-                    .find_map(|node| match node {
-                        vyre_foundation::ir::Node::Region { generator, .. } => {
-                            Some(generator.as_str())
-                        }
-                        _ => None,
-                    })
-                    .expect("Fix: matching primitive should expose a region generator");
+                let op_id = crate::test_parity_oracles::region_operation_id(program)?;
                 match op_id {
                     crate::pattern::BRACKET_MATCH_OP_ID => {
                         // Two input-consuming buffers: kinds ReadOnly(0), stack plain-ReadWrite(1).

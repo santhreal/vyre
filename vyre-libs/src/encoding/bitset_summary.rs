@@ -315,11 +315,8 @@ mod tests {
             let program = &request.logical().graph().nodes()[0].program;
             let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
             let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
-                let op_id = program.entry.iter().find_map(|node| match node {
-                    vyre_foundation::ir::Node::Region { generator, .. } => Some(generator.as_str()),
-                    _ => None,
-                });
-                if op_id == Some(crate::reduce::count::OP_ID) {
+                let op_id = crate::test_parity_oracles::region_operation_id(program)?;
+                if op_id == crate::reduce::count::OP_ID {
                     assert_eq!(inputs.len(), 2);
                     let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
                     assert_eq!(inputs[1].len(), std::mem::size_of::<u32>());
@@ -328,7 +325,7 @@ mod tests {
                 }
                 assert_eq!(inputs.len(), 1);
                 let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
-                if op_id == Some(SATURATION_RATIO_OP_ID) {
+                if op_id == SATURATION_RATIO_OP_ID {
                     let total: u32 = input.iter().map(|word| word.count_ones()).sum();
                     let capacity = (input.len() * 32) as f32;
                     let ratio = (total as f32) / capacity;

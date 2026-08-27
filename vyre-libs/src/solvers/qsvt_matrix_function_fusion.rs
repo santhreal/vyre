@@ -319,13 +319,7 @@ mod tests {
                 assert_eq!(coeffs, vec![1, 0]);
                 Ok(vec![u32_slice_to_le_bytes(&weights)])
             };
-            let ordered = compute_ordered();
-            let mut ordered = ordered?;
-            let output_count = request.logical().graph().nodes()[0].outputs.len();
-            if ordered.len() < output_count {
-                ordered.resize(output_count, Vec::new());
-            }
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -469,13 +463,7 @@ mod tests {
                 let scratch = vec![0u8; weights.len() * 2 * 4];
                 Ok(vec![u32_slice_to_le_bytes(&weights), scratch])
             };
-            let ordered = compute_ordered();
-            let mut ordered = ordered?;
-            let output_count = request.logical().graph().nodes()[0].outputs.len();
-            if ordered.len() < output_count {
-                ordered.resize(output_count, Vec::new());
-            }
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 

@@ -191,14 +191,8 @@ mod tests {
         ];
 
         for (program, expected) in cases {
-            let actual = program
-                .entry
-                .iter()
-                .find_map(|node| match node {
-                    vyre_foundation::ir::Node::Region { generator, .. } => Some(generator.as_str()),
-                    _ => None,
-                })
-                .expect("Fix: primitive program should have a region generator");
+            let actual = crate::test_parity_oracles::region_operation_id(&program)
+                .expect("Fix: build a primitive program that carries a region generator");
             assert_eq!(actual, expected);
         }
     }

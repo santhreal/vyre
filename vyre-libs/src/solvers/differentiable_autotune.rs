@@ -346,13 +346,7 @@ mod tests {
                     }
                 }
             };
-            let ordered = compute_ordered();
-            let mut ordered = ordered?;
-            let output_count = request.logical().graph().nodes()[0].outputs.len();
-            if ordered.len() < output_count {
-                ordered.resize(output_count, Vec::new());
-            }
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 

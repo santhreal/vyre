@@ -417,13 +417,7 @@ mod tests {
                     max_r.to_le_bytes().to_vec(),
                 ])
             };
-            let ordered = compute_ordered();
-            let mut ordered = ordered?;
-            let output_count = request.logical().graph().nodes()[0].outputs.len();
-            if ordered.len() < output_count {
-                ordered.resize(output_count, Vec::new());
-            }
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -442,13 +436,7 @@ mod tests {
                     u32_slice_to_le_bytes(&[1]),
                 ])
             };
-            let ordered = compute_ordered();
-            let mut ordered = ordered?;
-            let output_count = request.logical().graph().nodes()[0].outputs.len();
-            if ordered.len() < output_count {
-                ordered.resize(output_count, Vec::new());
-            }
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -463,13 +451,7 @@ mod tests {
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![u32_slice_to_le_bytes(&[1]), vec![1, 0, 0, 0, 2]])
             };
-            let ordered = compute_ordered();
-            let mut ordered = ordered?;
-            let output_count = request.logical().graph().nodes()[0].outputs.len();
-            if ordered.len() < output_count {
-                ordered.resize(output_count, Vec::new());
-            }
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 

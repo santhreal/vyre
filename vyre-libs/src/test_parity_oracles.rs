@@ -13,6 +13,46 @@ use vyre_megakernel::{
     SemanticExecutionRequest, SemanticExecutor,
 };
 
+/// Project `ordered` after padding it to the node's declared output count.
+///
+/// A parity oracle computes only the outputs the arm it took produces, and the
+/// request declares how many the node has. Fifteen solver oracles each padded
+/// and projected in their own copy of the same epilogue, so a change to how a
+/// short result is padded reached one of them and not the rest.
+pub(crate) fn semantic_output_padded(
+    request: &SemanticExecutionRequest<'_>,
+    mut ordered: Vec<Vec<u8>>,
+) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+    let output_count = request.logical().graph().nodes()[0].outputs.len();
+    if ordered.len() < output_count {
+        ordered.resize(output_count, Vec::new());
+    }
+    semantic_output(request, ordered)
+}
+
+/// The operation id of the single region generator `program` dispatches.
+///
+/// Every parity oracle in this crate dispatches on it. Five copies of the walk
+/// disagreed about what a program carrying no region is: two panicked, one
+/// reported `None` and fell through to another operation's arm, and one returned
+/// an invalid-request error. A program with no region generator is a request no
+/// oracle can serve, so it is one error here.
+pub(crate) fn region_operation_id(program: &Program) -> Result<&str, SemanticExecutionError> {
+    program
+        .entry()
+        .iter()
+        .find_map(|node| match node {
+            vyre_foundation::ir::Node::Region { generator, .. } => Some(generator.as_str()),
+            _ => None,
+        })
+        .ok_or_else(|| {
+            SemanticExecutionError::InvalidRequest(
+                "Fix: dispatch a primitive program whose entry carries a region generator."
+                    .to_string(),
+            )
+        })
+}
+
 pub(crate) fn policy() -> SemanticExecutionPolicy {
     vyre_test_support::semantic_requests::unknown_policy(
         Digest([3; 32]),
