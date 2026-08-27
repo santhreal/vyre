@@ -463,6 +463,7 @@ pub fn vyre_lower::pattern_audit::PatternAudit::write_short(&self, out: &mut dyn
 pub fn vyre_lower::pattern_audit::PatternAudit::write_target_tag(&self, out: &mut dyn core::fmt::Write) -> core::fmt::Result
 pub fn vyre_lower::pattern_audit::display_kernel_id(kernel_id: &str) -> &str
 pub fn vyre_lower::program_stability_corpus::cases() -> alloc::vec::Vec<vyre_lower::program_stability_corpus::StabilityCase>
+pub fn vyre_lower::registered_level_stage() -> vyre_spec::ir_level::IrLevel
 pub fn vyre_lower::required_subgroup_capabilities(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::SubgroupCapabilities
 pub fn vyre_lower::rewrites::LoweringRewriteRule::contract(self) -> vyre_lower::rewrites::RewriteApplicabilityContract
 pub fn vyre_lower::rewrites::LoweringRewriteRule::id(self) -> &'static str

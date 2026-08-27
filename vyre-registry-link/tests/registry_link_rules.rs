@@ -243,6 +243,46 @@ fn every_crate_that_submits_a_backend_registration_is_declared_here() {
     );
 }
 
+/// A crate declares that it owns an IR level's subject by submitting a level
+/// stage. Every such crate has to be declared here, because this owner is what
+/// references it.
+#[test]
+fn every_crate_that_submits_a_level_stage_is_declared_here() {
+    let submitters = members_submitting("LevelStageRegistration");
+    let mut declared: Vec<String> = vyre_registry_link::level::DECLARED_SOURCES
+        .iter()
+        .map(|name| (*name).to_string())
+        .collect();
+    declared.sort();
+    assert_eq!(
+        declared, submitters,
+        "Fix: every workspace member submitting a `LevelStageRegistration` must be declared in `vyre_registry_link::level::DECLARED_SOURCES`, so its stage reaches whatever binary reads the level registry"
+    );
+}
+
+/// Every declared level source is linked by the default feature set, and every
+/// level it declares reached the registry.
+#[test]
+fn every_declared_level_source_reaches_the_registry() {
+    let stages = vyre_registry_link::level::live_level_stages();
+    let linked: Vec<&str> = vyre_registry_link::level::linked_level_stage_sources()
+        .iter()
+        .map(|source| source.crate_name)
+        .collect();
+    let mut declared: Vec<&str> = vyre_registry_link::level::DECLARED_SOURCES.to_vec();
+    declared.sort_unstable();
+    let mut linked_sorted = linked;
+    linked_sorted.sort_unstable();
+    assert_eq!(
+        declared, linked_sorted,
+        "Fix: each entry in the level `DECLARED_SOURCES` must appear in the linked source list"
+    );
+    assert!(
+        !stages.is_empty(),
+        "Fix: the level registry is empty, so no level has a verifier"
+    );
+}
+
 /// The default feature set links every declared driver, so these rules judge the
 /// whole set rather than a feature-narrow slice.
 #[test]

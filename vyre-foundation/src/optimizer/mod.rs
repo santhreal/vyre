@@ -100,6 +100,8 @@ pub mod hot_path_hints;
 /// Alternatives derived from the laws a combine declares, through a bounded
 /// e-graph expansion over an expression mirror.
 pub mod law_saturation;
+/// The verifier, canonical form, and analyses each IR level owns.
+pub mod level_contract;
 /// One pass pipeline per IR level, derived from the level each pass's rewrite
 /// contract declares.
 pub mod level_pipeline;

@@ -238,6 +238,7 @@ pub fn vyre_megakernel::measure::MeasurementRecord::winning_estimate_ns(&self) -
 pub fn vyre_megakernel::measure::MeasurementRecord::winning_launches(&self) -> u32
 pub fn vyre_megakernel::measure::SampleEstimate::from_samples(samples: &[u64], protocol: &vyre_megakernel::measure::MeasurementProtocol) -> core::option::Option<Self>
 pub fn vyre_megakernel::measure::improves(incumbent: &vyre_megakernel::measure::SampleEstimate, challenger: &vyre_megakernel::measure::SampleEstimate, protocol: &vyre_megakernel::measure::MeasurementProtocol) -> bool
+pub fn vyre_megakernel::registered_level_stage() -> vyre_spec::ir_level::IrLevel
 pub fn vyre_megakernel::writable_graph_value_buffers(node: &vyre_foundation::ir_inner::model::program_graph::ProgramGraphNode) -> alloc::vec::Vec<(vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::string::String)>
 pub fn vyre_megakernel::writable_graph_values(node: &vyre_foundation::ir_inner::model::program_graph::ProgramGraphNode) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program_graph::GraphValueId>
 pub mod vyre_megakernel
@@ -271,6 +272,7 @@ pub struct vyre_megakernel::GeometryRecord
 pub struct vyre_megakernel::LaunchResourceIntent
 pub struct vyre_megakernel::MaterializationRecord
 pub struct vyre_megakernel::NodeRecord
+pub struct vyre_megakernel::PayloadAttachment
 pub struct vyre_megakernel::Provenance
 pub struct vyre_megakernel::PrunedFamily
 pub struct vyre_megakernel::ResourceAbiRecord
@@ -398,6 +400,8 @@ pub vyre_megakernel::MaterializationRecord::value: vyre_megakernel::ArtifactValu
 pub vyre_megakernel::NodeRecord::id: vyre_megakernel::ArtifactNodeId
 pub vyre_megakernel::NodeRecord::name: alloc::string::String
 pub vyre_megakernel::NodeRecord::program: alloc::vec::Vec<u8>
+pub vyre_megakernel::PayloadAttachment::neutral: vyre_megakernel::Digest
+pub vyre_megakernel::PayloadAttachment::payload: vyre_megakernel::TargetPayload
 pub vyre_megakernel::PlanMeasurement::Measured(vyre_megakernel::measure::MeasurementRecord)
 pub vyre_megakernel::PlanMeasurement::Unbudgeted
 pub vyre_megakernel::PlanMeasurement::UntimedDevice

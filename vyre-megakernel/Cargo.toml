@@ -16,6 +16,10 @@ categories = ["compilers", "data-structures"]
 [dependencies]
 vyre-foundation.workspace = true
 vyre-lower.workspace = true
+vyre-spec.workspace = true
+# The target-payload level stage registers itself into the level registry
+# vyre-foundation owns.
+inventory.workspace = true
 blake3.workspace = true
 serde.workspace = true
 serde_json.workspace = true

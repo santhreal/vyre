@@ -27,6 +27,10 @@ test-fixtures = []
 
 [dependencies]
 vyre-foundation = { workspace = true }
+vyre-spec = { workspace = true }
+# The physical-kernel level stage registers itself into the level registry
+# vyre-foundation owns.
+inventory = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 rustc-hash = { workspace = true }

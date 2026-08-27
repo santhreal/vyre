@@ -28,5 +28,7 @@
 //! registry.
 
 pub mod backend;
+/// The level-stage registry, with every crate that owns a level's subject linked.
+pub mod level;
 #[cfg(feature = "operations")]
 pub mod operation;

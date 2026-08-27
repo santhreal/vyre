@@ -44,6 +44,7 @@ pub mod grid_sync;
 mod identity;
 /// Stable semantic legality decisions for whole-program fusion.
 pub mod legality;
+mod level_stage;
 /// Versioned protocol budgeted device measurement runs under, and the evidence
 /// one measured selection retains.
 pub mod measure;
@@ -77,6 +78,7 @@ pub use identity::{
     ArtifactNodeId, ArtifactValueId, DependencyEdge, DependencyEndpoint, DependencyKind, Digest,
     FusionGroupId,
 };
+pub use level_stage::{registered_level_stage, PayloadAttachment};
 pub use request::{
     CompileRequest, ExternalFacts, SearchBudget, SearchWork, ValidatedCompileRequest,
 };

@@ -166,6 +166,7 @@ impl inventory::Collect for vyre_foundation::extension::OpaqueExprResolver
 impl inventory::Collect for vyre_foundation::extension::OpaqueNodeResolver
 impl inventory::Collect for vyre_foundation::operation::OperationRegistration
 impl inventory::Collect for vyre_foundation::optimizer::ProgramPassRegistration
+impl inventory::Collect for vyre_foundation::optimizer::level_contract::LevelStageRegistration
 impl inventory::Collect for vyre_foundation::optimizer::rewrite_contract::RewriteContractRegistration
 impl serde_core::ser::Serialize for vyre_foundation::operation::TargetId
 impl vyre_foundation::GeometryRequirements
@@ -293,6 +294,7 @@ impl vyre_foundation::optimizer::fact_cache::UseFacts
 impl vyre_foundation::optimizer::hot_path_hints::HotPathHints
 impl vyre_foundation::optimizer::hot_path_hints::RegionRecord
 impl vyre_foundation::optimizer::law_saturation::ExprMirror
+impl vyre_foundation::optimizer::level_contract::LevelVerdict
 impl vyre_foundation::optimizer::level_pipeline::LevelPipeline
 impl vyre_foundation::optimizer::megakernel::scratch_reuse::ScratchReusePlan
 impl vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntry
@@ -496,6 +498,7 @@ pub const fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError::valu
 pub const fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError::context(&self) -> &'static str
 pub const fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError::row(&self) -> usize
 pub const fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError::value(&self) -> u32
+pub const fn vyre_foundation::optimizer::level_contract::LevelVerdict::is_verified(&self) -> bool
 pub const fn vyre_foundation::optimizer::program_soa::kind_bit(kind: vyre_foundation::optimizer::program_soa::NodeKind) -> u32
 pub const fn vyre_foundation::optimizer::program_soa::kind_mask(kind: vyre_foundation::optimizer::program_soa::NodeKind) -> u32
 pub const fn vyre_foundation::optimizer::rewrite_contract::BoundedExpansion::admits(self, before: usize, after: usize) -> bool
@@ -684,6 +687,7 @@ pub enum vyre_foundation::optimizer::law_saturation::DerivedRewriteKind
 pub enum vyre_foundation::optimizer::law_saturation::ExprLang
 pub enum vyre_foundation::optimizer::law_saturation::LawDerivation
 pub enum vyre_foundation::optimizer::law_saturation::LawSaturationStop
+pub enum vyre_foundation::optimizer::level_contract::LevelVerdict
 pub enum vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntryKind
 pub enum vyre_foundation::optimizer::passes::algebraic::precision_hint::PrecisionHint
 pub enum vyre_foundation::optimizer::passes::algebraic::precision_hint::TranscendentalOp
@@ -1550,6 +1554,17 @@ pub fn vyre_foundation::optimizer::law_saturation::derive_alternatives(expr: &vy
 pub fn vyre_foundation::optimizer::law_saturation::derived_rewrites(exact: bool) -> alloc::vec::Vec<vyre_foundation::optimizer::law_saturation::DerivedRewrite>
 pub fn vyre_foundation::optimizer::law_saturation::law_derivation(law: &vyre_spec::algebraic_law::AlgebraicLaw) -> vyre_foundation::optimizer::law_saturation::LawDerivation
 pub fn vyre_foundation::optimizer::law_saturation::saturate_laws(mirror: &mut vyre_foundation::optimizer::law_saturation::ExprMirror, rewrites: &[vyre_foundation::optimizer::law_saturation::DerivedRewrite], iteration_budget: usize, class_budget: usize) -> core::result::Result<vyre_foundation::optimizer::law_saturation::LawSaturationReport, vyre_foundation::optimizer::eqsat::EGraphError>
+pub fn vyre_foundation::optimizer::level_contract::LevelStage::analyses(&self) -> &'static [vyre_foundation::optimizer::level_contract::LevelAnalysis]
+pub fn vyre_foundation::optimizer::level_contract::LevelStage::is_canonical(&self, subject: &dyn core::any::Any) -> vyre_foundation::optimizer::level_contract::LevelVerdict
+pub fn vyre_foundation::optimizer::level_contract::LevelStage::level(&self) -> vyre_spec::ir_level::IrLevel
+pub fn vyre_foundation::optimizer::level_contract::LevelStage::subject(&self) -> &'static str
+pub fn vyre_foundation::optimizer::level_contract::LevelStage::verify(&self, subject: &dyn core::any::Any) -> vyre_foundation::optimizer::level_contract::LevelVerdict
+pub fn vyre_foundation::optimizer::level_contract::LevelVerdict::rejected(reason: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::optimizer::level_contract::analysis_owners() -> alloc::vec::Vec<(&'static str, vyre_spec::ir_level::IrLevel)>
+pub fn vyre_foundation::optimizer::level_contract::registered_level_stages() -> alloc::vec::Vec<&'static (dyn vyre_foundation::optimizer::level_contract::LevelStage + core::marker::Sync)>
+pub fn vyre_foundation::optimizer::level_contract::stage_for_level(level: vyre_spec::ir_level::IrLevel) -> core::option::Option<&'static (dyn vyre_foundation::optimizer::level_contract::LevelStage + core::marker::Sync)>
+pub fn vyre_foundation::optimizer::level_contract::stages_registered_here() -> &'static [vyre_spec::ir_level::IrLevel]
+pub fn vyre_foundation::optimizer::level_contract::verify_at_level(level: vyre_spec::ir_level::IrLevel, subject: &dyn core::any::Any) -> core::option::Option<vyre_foundation::optimizer::level_contract::LevelVerdict>
 pub fn vyre_foundation::optimizer::level_pipeline::LevelPipeline::is_empty(&self) -> bool
 pub fn vyre_foundation::optimizer::level_pipeline::LevelPipeline::level(&self) -> vyre_spec::ir_level::IrLevel
 pub fn vyre_foundation::optimizer::level_pipeline::LevelPipeline::passes(&self) -> &[&'static str]
@@ -2634,6 +2649,7 @@ pub mod vyre_foundation::optimizer::expr_arena_analysis
 pub mod vyre_foundation::optimizer::fact_cache
 pub mod vyre_foundation::optimizer::hot_path_hints
 pub mod vyre_foundation::optimizer::law_saturation
+pub mod vyre_foundation::optimizer::level_contract
 pub mod vyre_foundation::optimizer::level_pipeline
 pub mod vyre_foundation::optimizer::megakernel
 pub mod vyre_foundation::optimizer::megakernel::matroid_subset
@@ -2877,6 +2893,9 @@ pub struct vyre_foundation::optimizer::law_saturation::ExprMirror
 pub struct vyre_foundation::optimizer::law_saturation::LawAlternatives
 pub struct vyre_foundation::optimizer::law_saturation::LawSaturationBudget
 pub struct vyre_foundation::optimizer::law_saturation::LawSaturationReport
+pub struct vyre_foundation::optimizer::level_contract::GraphComposition
+pub struct vyre_foundation::optimizer::level_contract::LevelAnalysis
+pub struct vyre_foundation::optimizer::level_contract::LevelStageRegistration
 pub struct vyre_foundation::optimizer::level_pipeline::LevelInversion
 pub struct vyre_foundation::optimizer::level_pipeline::LevelPipeline
 pub struct vyre_foundation::optimizer::megakernel::scratch_reuse::ScratchReusePlan
@@ -3000,6 +3019,7 @@ pub trait vyre_foundation::optimizer::eqsat::ENodeLang: core::clone::Clone + cor
 pub trait vyre_foundation::optimizer::eqsat::Family<L: vyre_foundation::optimizer::eqsat::ENodeLang>
 pub trait vyre_foundation::optimizer::eqsat::Rule<L: vyre_foundation::optimizer::eqsat::ENodeLang>
 pub trait vyre_foundation::optimizer::eqsat_toml::OpIdNode
+pub trait vyre_foundation::optimizer::level_contract::LevelStage: core::marker::Send + core::marker::Sync
 pub trait vyre_foundation::serial::wire_round_trip::WireRoundTrip: core::marker::Sized
 pub trait vyre_foundation::transform::rewrite_walk::NodeRewrite
 pub trait vyre_foundation::validate::BackendValidationCapabilities
@@ -4291,6 +4311,15 @@ pub vyre_foundation::optimizer::law_saturation::LawSaturationStop::FixedPoint
 pub vyre_foundation::optimizer::law_saturation::LawSaturationStop::IterationBudget
 pub vyre_foundation::optimizer::law_saturation::LawSaturationStop::NoRewrites
 pub vyre_foundation::optimizer::law_saturation::LawSaturationStop::ZeroBudget
+pub vyre_foundation::optimizer::level_contract::GraphComposition::graph: vyre_foundation::ir::ProgramGraph
+pub vyre_foundation::optimizer::level_contract::GraphComposition::provenance: vyre_foundation::ir::ProgramGraphIdentityContext
+pub vyre_foundation::optimizer::level_contract::LevelAnalysis::invalidated_by_rewrite: bool
+pub vyre_foundation::optimizer::level_contract::LevelAnalysis::name: &'static str
+pub vyre_foundation::optimizer::level_contract::LevelStageRegistration::stage: &'static (dyn vyre_foundation::optimizer::level_contract::LevelStage + core::marker::Sync)
+pub vyre_foundation::optimizer::level_contract::LevelVerdict::Rejected(alloc::vec::Vec<alloc::string::String>)
+pub vyre_foundation::optimizer::level_contract::LevelVerdict::Verified
+pub vyre_foundation::optimizer::level_contract::LevelVerdict::WrongSubject
+pub vyre_foundation::optimizer::level_contract::LevelVerdict::WrongSubject::expected: &'static str
 pub vyre_foundation::optimizer::level_pipeline::LevelInversion::earlier: &'static str
 pub vyre_foundation::optimizer::level_pipeline::LevelInversion::earlier_level: vyre_spec::ir_level::IrLevel
 pub vyre_foundation::optimizer::level_pipeline::LevelInversion::later: &'static str

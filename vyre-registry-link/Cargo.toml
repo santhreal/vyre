@@ -21,6 +21,12 @@ workspace = true
 [dependencies]
 vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
+# The level-stage registry has one source per level, and a source whose
+# object file is dropped leaves its level with no verifier. These two own
+# the physical-kernel and target-payload levels.
+vyre-lower = { workspace = true }
+vyre-megakernel = { workspace = true }
+vyre-spec = { workspace = true }
 vyre-driver-cuda = { workspace = true, optional = true }
 vyre-driver-metal = { workspace = true, optional = true }
 vyre-driver-reference = { workspace = true, optional = true }
@@ -49,6 +55,9 @@ toml = { workspace = true }
 # path names whichever checkout built the binary, and every checkout here shares
 # one target directory.
 structure-gate = { path = "../structure-gate" }
+# The level-stage closure reads the `IrLevel` variants from `vyre-spec` source
+# and resolves that source through the shared monorepo helpers.
+vyre-test-support = { workspace = true }
 
 [features]
 # The default is every registry and every declared driver, so this crate's own

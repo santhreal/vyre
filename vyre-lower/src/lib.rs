@@ -36,6 +36,7 @@ pub mod descriptor_builder;
 pub mod emit_adversarial_corpus;
 pub(crate) mod equivalence;
 pub(crate) mod error;
+mod level_stage;
 pub(crate) mod lower;
 pub(crate) mod op_facts;
 pub mod operand_class;
@@ -246,6 +247,7 @@ pub use descriptor::{
 pub use descriptor::{KernelOpsIter, Name};
 pub use equivalence::{check_effects, BindingEffects, EffectSignature, EquivalenceError};
 pub use error::LowerError;
+pub use level_stage::registered_level_stage;
 /// Re-exported so a caller building a `KernelDescriptor` by hand through
 /// `descriptor_builder` can place a Shared or Scratch binding in the range
 /// `verify` accepts. A shared slot below this value is rejected with
