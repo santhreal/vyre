@@ -1,8 +1,9 @@
 //! Target-boundary bank-conflict mitigation strategy selection.
 //!
-//! Reuses neutral access facts from [`super::analyze`] to select padding,
-//! XOR swizzling, or no rewrite inside concrete emitters using real bank count,
-//! bank width, subgroup shape, instruction width, and all access phases.
+//! Reuses neutral access facts from [`super::analyze`] to rank padding, XOR
+//! swizzling, and no rewrite against a bank geometry the caller states: bank
+//! count, bank width, subgroup shape, instruction width, and every access
+//! phase. The caller owns the choice and applies it; this evaluates candidates.
 //!
 //! A candidate is rejected when a transformation merely moves an unacceptable
 //! conflict to another phase. Universal zero conflicts is not promised.

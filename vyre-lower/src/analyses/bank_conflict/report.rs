@@ -78,7 +78,7 @@ pub struct BankAccessSite {
 pub struct BankConflictReport {
     /// Stable kernel identifier.
     pub kernel_id: String,
-    /// Number of shared-memory banks assumed by the analysis.
+    /// Number of shared-memory banks the caller stated.
     pub bank_count: u32,
     /// Classified shared-memory access sites.
     pub sites: Vec<BankAccessSite>,
