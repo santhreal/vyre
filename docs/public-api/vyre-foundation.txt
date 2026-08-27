@@ -275,7 +275,7 @@ impl vyre_foundation::optimizer::cost::CostCertificate
 impl vyre_foundation::optimizer::effect_lattice::AtomicOrdering
 impl vyre_foundation::optimizer::effect_lattice::EffectLevel
 impl vyre_foundation::optimizer::effect_lattice::SyncScope
-impl vyre_foundation::optimizer::eqsat::ENodeLang for vyre_foundation::optimizer::law_saturation::expr_lang::ExprLang
+impl vyre_foundation::optimizer::eqsat::ENodeLang for vyre_foundation::optimizer::law_saturation::ExprLang
 impl vyre_foundation::optimizer::eqsat::SaturationReport
 impl vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImage
 impl vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceLayout
@@ -292,7 +292,7 @@ impl vyre_foundation::optimizer::fact_cache::FactCache
 impl vyre_foundation::optimizer::fact_cache::UseFacts
 impl vyre_foundation::optimizer::hot_path_hints::HotPathHints
 impl vyre_foundation::optimizer::hot_path_hints::RegionRecord
-impl vyre_foundation::optimizer::law_saturation::expr_lang::ExprMirror
+impl vyre_foundation::optimizer::law_saturation::ExprMirror
 impl vyre_foundation::optimizer::level_pipeline::LevelPipeline
 impl vyre_foundation::optimizer::megakernel::scratch_reuse::ScratchReusePlan
 impl vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntry
@@ -684,10 +684,6 @@ pub enum vyre_foundation::optimizer::law_saturation::DerivedRewriteKind
 pub enum vyre_foundation::optimizer::law_saturation::ExprLang
 pub enum vyre_foundation::optimizer::law_saturation::LawDerivation
 pub enum vyre_foundation::optimizer::law_saturation::LawSaturationStop
-pub enum vyre_foundation::optimizer::law_saturation::apply::LawSaturationStop
-pub enum vyre_foundation::optimizer::law_saturation::expr_lang::ExprLang
-pub enum vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind
-pub enum vyre_foundation::optimizer::law_saturation::law_rule::LawDerivation
 pub enum vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntryKind
 pub enum vyre_foundation::optimizer::passes::algebraic::precision_hint::PrecisionHint
 pub enum vyre_foundation::optimizer::passes::algebraic::precision_hint::TranscendentalOp
@@ -1540,23 +1536,20 @@ pub fn vyre_foundation::optimizer::hot_path_hints::HotPathHints::with_capacity(c
 pub fn vyre_foundation::optimizer::hot_path_hints::HotPathHints::with_hot_threshold_ns(self, threshold_ns: u64) -> Self
 pub fn vyre_foundation::optimizer::hot_path_hints::RegionRecord::mean_bytes(&self) -> u64
 pub fn vyre_foundation::optimizer::hot_path_hints::RegionRecord::mean_kernel_ns(&self) -> u64
+pub fn vyre_foundation::optimizer::law_saturation::ExprLang::children(&self) -> vyre_foundation::optimizer::eqsat::EChildren
+pub fn vyre_foundation::optimizer::law_saturation::ExprLang::with_children(&self, children: &[vyre_foundation::optimizer::eqsat::EClassId]) -> Self
+pub fn vyre_foundation::optimizer::law_saturation::ExprMirror::egraph(&self) -> &vyre_foundation::optimizer::eqsat::EGraph<vyre_foundation::optimizer::law_saturation::ExprLang>
+pub fn vyre_foundation::optimizer::law_saturation::ExprMirror::egraph_mut(&mut self) -> &mut vyre_foundation::optimizer::eqsat::EGraph<vyre_foundation::optimizer::law_saturation::ExprLang>
+pub fn vyre_foundation::optimizer::law_saturation::ExprMirror::extract(&self, depth_budget: usize) -> core::result::Result<core::option::Option<vyre_foundation::ir::Expr>, vyre_foundation::optimizer::eqsat::EGraphError>
+pub fn vyre_foundation::optimizer::law_saturation::ExprMirror::holds_equivalent(&mut self, expr: &vyre_foundation::ir::Expr) -> core::result::Result<bool, vyre_foundation::optimizer::eqsat::EGraphError>
+pub fn vyre_foundation::optimizer::law_saturation::ExprMirror::literal_u32(&self, class: vyre_foundation::optimizer::eqsat::EClassId) -> core::option::Option<u32>
+pub fn vyre_foundation::optimizer::law_saturation::ExprMirror::of(expr: &vyre_foundation::ir::Expr) -> core::result::Result<Self, vyre_foundation::optimizer::eqsat::EGraphError>
+pub fn vyre_foundation::optimizer::law_saturation::ExprMirror::root(&self) -> vyre_foundation::optimizer::eqsat::EClassId
 pub fn vyre_foundation::optimizer::law_saturation::LawSaturationBudget::default() -> Self
-pub fn vyre_foundation::optimizer::law_saturation::apply::saturate_laws(mirror: &mut vyre_foundation::optimizer::law_saturation::expr_lang::ExprMirror, rewrites: &[vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewrite], iteration_budget: usize, class_budget: usize) -> core::result::Result<vyre_foundation::optimizer::law_saturation::apply::LawSaturationReport, vyre_foundation::optimizer::eqsat::EGraphError>
 pub fn vyre_foundation::optimizer::law_saturation::derive_alternatives(expr: &vyre_foundation::ir::Expr, exact: bool, budget: vyre_foundation::optimizer::law_saturation::LawSaturationBudget) -> core::result::Result<vyre_foundation::optimizer::law_saturation::LawAlternatives, vyre_foundation::optimizer::eqsat::EGraphError>
-pub fn vyre_foundation::optimizer::law_saturation::derived_rewrites(exact: bool) -> alloc::vec::Vec<vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewrite>
-pub fn vyre_foundation::optimizer::law_saturation::expr_lang::ExprLang::children(&self) -> vyre_foundation::optimizer::eqsat::EChildren
-pub fn vyre_foundation::optimizer::law_saturation::expr_lang::ExprLang::with_children(&self, children: &[vyre_foundation::optimizer::eqsat::EClassId]) -> Self
-pub fn vyre_foundation::optimizer::law_saturation::expr_lang::ExprMirror::egraph(&self) -> &vyre_foundation::optimizer::eqsat::EGraph<vyre_foundation::optimizer::law_saturation::expr_lang::ExprLang>
-pub fn vyre_foundation::optimizer::law_saturation::expr_lang::ExprMirror::egraph_mut(&mut self) -> &mut vyre_foundation::optimizer::eqsat::EGraph<vyre_foundation::optimizer::law_saturation::expr_lang::ExprLang>
-pub fn vyre_foundation::optimizer::law_saturation::expr_lang::ExprMirror::extract(&self, depth_budget: usize) -> core::result::Result<core::option::Option<vyre_foundation::ir::Expr>, vyre_foundation::optimizer::eqsat::EGraphError>
-pub fn vyre_foundation::optimizer::law_saturation::expr_lang::ExprMirror::holds_equivalent(&mut self, expr: &vyre_foundation::ir::Expr) -> core::result::Result<bool, vyre_foundation::optimizer::eqsat::EGraphError>
-pub fn vyre_foundation::optimizer::law_saturation::expr_lang::ExprMirror::literal_u32(&self, class: vyre_foundation::optimizer::eqsat::EClassId) -> core::option::Option<u32>
-pub fn vyre_foundation::optimizer::law_saturation::expr_lang::ExprMirror::of(expr: &vyre_foundation::ir::Expr) -> core::result::Result<Self, vyre_foundation::optimizer::eqsat::EGraphError>
-pub fn vyre_foundation::optimizer::law_saturation::expr_lang::ExprMirror::root(&self) -> vyre_foundation::optimizer::eqsat::EClassId
-pub fn vyre_foundation::optimizer::law_saturation::law_derivation(law: &vyre_spec::algebraic_law::AlgebraicLaw) -> vyre_foundation::optimizer::law_saturation::law_rule::LawDerivation
-pub fn vyre_foundation::optimizer::law_saturation::law_rule::derived_rewrites(exact: bool) -> alloc::vec::Vec<vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewrite>
-pub fn vyre_foundation::optimizer::law_saturation::law_rule::law_derivation(law: &vyre_spec::algebraic_law::AlgebraicLaw) -> vyre_foundation::optimizer::law_saturation::law_rule::LawDerivation
-pub fn vyre_foundation::optimizer::law_saturation::saturate_laws(mirror: &mut vyre_foundation::optimizer::law_saturation::expr_lang::ExprMirror, rewrites: &[vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewrite], iteration_budget: usize, class_budget: usize) -> core::result::Result<vyre_foundation::optimizer::law_saturation::apply::LawSaturationReport, vyre_foundation::optimizer::eqsat::EGraphError>
+pub fn vyre_foundation::optimizer::law_saturation::derived_rewrites(exact: bool) -> alloc::vec::Vec<vyre_foundation::optimizer::law_saturation::DerivedRewrite>
+pub fn vyre_foundation::optimizer::law_saturation::law_derivation(law: &vyre_spec::algebraic_law::AlgebraicLaw) -> vyre_foundation::optimizer::law_saturation::LawDerivation
+pub fn vyre_foundation::optimizer::law_saturation::saturate_laws(mirror: &mut vyre_foundation::optimizer::law_saturation::ExprMirror, rewrites: &[vyre_foundation::optimizer::law_saturation::DerivedRewrite], iteration_budget: usize, class_budget: usize) -> core::result::Result<vyre_foundation::optimizer::law_saturation::LawSaturationReport, vyre_foundation::optimizer::eqsat::EGraphError>
 pub fn vyre_foundation::optimizer::level_pipeline::LevelPipeline::is_empty(&self) -> bool
 pub fn vyre_foundation::optimizer::level_pipeline::LevelPipeline::level(&self) -> vyre_spec::ir_level::IrLevel
 pub fn vyre_foundation::optimizer::level_pipeline::LevelPipeline::passes(&self) -> &[&'static str]
@@ -2641,9 +2634,6 @@ pub mod vyre_foundation::optimizer::expr_arena_analysis
 pub mod vyre_foundation::optimizer::fact_cache
 pub mod vyre_foundation::optimizer::hot_path_hints
 pub mod vyre_foundation::optimizer::law_saturation
-pub mod vyre_foundation::optimizer::law_saturation::apply
-pub mod vyre_foundation::optimizer::law_saturation::expr_lang
-pub mod vyre_foundation::optimizer::law_saturation::law_rule
 pub mod vyre_foundation::optimizer::level_pipeline
 pub mod vyre_foundation::optimizer::megakernel
 pub mod vyre_foundation::optimizer::megakernel::matroid_subset
@@ -2887,9 +2877,6 @@ pub struct vyre_foundation::optimizer::law_saturation::ExprMirror
 pub struct vyre_foundation::optimizer::law_saturation::LawAlternatives
 pub struct vyre_foundation::optimizer::law_saturation::LawSaturationBudget
 pub struct vyre_foundation::optimizer::law_saturation::LawSaturationReport
-pub struct vyre_foundation::optimizer::law_saturation::apply::LawSaturationReport
-pub struct vyre_foundation::optimizer::law_saturation::expr_lang::ExprMirror
-pub struct vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewrite
 pub struct vyre_foundation::optimizer::level_pipeline::LevelInversion
 pub struct vyre_foundation::optimizer::level_pipeline::LevelPipeline
 pub struct vyre_foundation::optimizer::megakernel::scratch_reuse::ScratchReusePlan
@@ -3030,7 +3017,7 @@ pub type vyre_foundation::ir::OpId = alloc::sync::Arc<str>
 pub type vyre_foundation::lower::ProgramEffects::Output = vyre_foundation::lower::ProgramEffects
 pub type vyre_foundation::operation::OperationFixtures = fn() -> alloc::vec::Vec<alloc::vec::Vec<alloc::vec::Vec<u8>>>
 pub type vyre_foundation::optimizer::eqsat::EChildren = smallvec::SmallVec<[vyre_foundation::optimizer::eqsat::EClassId; 4]>
-pub type vyre_foundation::optimizer::law_saturation::law_rule::DerivedKinds = smallvec::SmallVec<[vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind; 2]>
+pub type vyre_foundation::optimizer::law_saturation::DerivedKinds = smallvec::SmallVec<[vyre_foundation::optimizer::law_saturation::DerivedRewriteKind; 2]>
 pub type vyre_foundation::serial::wire_round_trip::WireRoundTrip::DecodeError: core::fmt::Debug
 pub type vyre_foundation::serial::wire_round_trip::WireRoundTrip::EncodeError: core::fmt::Debug
 pub type vyre_foundation::transform::autodiff::PullbackMap = rustc_hash::FxHashMap<usize, vyre_foundation::ir::Expr>
@@ -4258,7 +4245,7 @@ pub vyre_foundation::optimizer::hot_path_hints::RegionRecord::bytes_total: u64
 pub vyre_foundation::optimizer::hot_path_hints::RegionRecord::dispatch_count: u64
 pub vyre_foundation::optimizer::hot_path_hints::RegionRecord::kernel_ns_max: u64
 pub vyre_foundation::optimizer::hot_path_hints::RegionRecord::kernel_ns_total: u64
-pub vyre_foundation::optimizer::law_saturation::DerivedRewrite::kind: vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind
+pub vyre_foundation::optimizer::law_saturation::DerivedRewrite::kind: vyre_foundation::optimizer::law_saturation::DerivedRewriteKind
 pub vyre_foundation::optimizer::law_saturation::DerivedRewrite::law: vyre_spec::region_law::RegionLawFamily
 pub vyre_foundation::optimizer::law_saturation::DerivedRewrite::law_id: &'static str
 pub vyre_foundation::optimizer::law_saturation::DerivedRewrite::name: &'static str
@@ -4282,11 +4269,11 @@ pub vyre_foundation::optimizer::law_saturation::ExprLang::Bin::op: vyre_spec::bi
 pub vyre_foundation::optimizer::law_saturation::ExprLang::Bin::right: vyre_foundation::optimizer::eqsat::EClassId
 pub vyre_foundation::optimizer::law_saturation::ExprLang::Leaf(usize)
 pub vyre_foundation::optimizer::law_saturation::LawAlternatives::best: core::option::Option<vyre_foundation::ir::Expr>
-pub vyre_foundation::optimizer::law_saturation::LawAlternatives::mirror: vyre_foundation::optimizer::law_saturation::expr_lang::ExprMirror
-pub vyre_foundation::optimizer::law_saturation::LawAlternatives::report: vyre_foundation::optimizer::law_saturation::apply::LawSaturationReport
+pub vyre_foundation::optimizer::law_saturation::LawAlternatives::mirror: vyre_foundation::optimizer::law_saturation::ExprMirror
+pub vyre_foundation::optimizer::law_saturation::LawAlternatives::report: vyre_foundation::optimizer::law_saturation::LawSaturationReport
 pub vyre_foundation::optimizer::law_saturation::LawDerivation::CompanionOperator(&'static str)
 pub vyre_foundation::optimizer::law_saturation::LawDerivation::Predicate(&'static str)
-pub vyre_foundation::optimizer::law_saturation::LawDerivation::Region(vyre_foundation::optimizer::law_saturation::law_rule::DerivedKinds)
+pub vyre_foundation::optimizer::law_saturation::LawDerivation::Region(vyre_foundation::optimizer::law_saturation::DerivedKinds)
 pub vyre_foundation::optimizer::law_saturation::LawDerivation::Unrecorded
 pub vyre_foundation::optimizer::law_saturation::LawSaturationBudget::classes: usize
 pub vyre_foundation::optimizer::law_saturation::LawSaturationBudget::extraction_depth: usize
@@ -4298,52 +4285,12 @@ pub vyre_foundation::optimizer::law_saturation::LawSaturationReport::class_count
 pub vyre_foundation::optimizer::law_saturation::LawSaturationReport::iters_used: usize
 pub vyre_foundation::optimizer::law_saturation::LawSaturationReport::rebuild_unions: usize
 pub vyre_foundation::optimizer::law_saturation::LawSaturationReport::rewrite_count: usize
-pub vyre_foundation::optimizer::law_saturation::LawSaturationReport::stop_reason: vyre_foundation::optimizer::law_saturation::apply::LawSaturationStop
+pub vyre_foundation::optimizer::law_saturation::LawSaturationReport::stop_reason: vyre_foundation::optimizer::law_saturation::LawSaturationStop
 pub vyre_foundation::optimizer::law_saturation::LawSaturationStop::ExpansionBudget
 pub vyre_foundation::optimizer::law_saturation::LawSaturationStop::FixedPoint
 pub vyre_foundation::optimizer::law_saturation::LawSaturationStop::IterationBudget
 pub vyre_foundation::optimizer::law_saturation::LawSaturationStop::NoRewrites
 pub vyre_foundation::optimizer::law_saturation::LawSaturationStop::ZeroBudget
-pub vyre_foundation::optimizer::law_saturation::apply::LawSaturationReport::applied_equivalences: usize
-pub vyre_foundation::optimizer::law_saturation::apply::LawSaturationReport::budget: usize
-pub vyre_foundation::optimizer::law_saturation::apply::LawSaturationReport::class_count_after: usize
-pub vyre_foundation::optimizer::law_saturation::apply::LawSaturationReport::class_count_before: usize
-pub vyre_foundation::optimizer::law_saturation::apply::LawSaturationReport::iters_used: usize
-pub vyre_foundation::optimizer::law_saturation::apply::LawSaturationReport::rebuild_unions: usize
-pub vyre_foundation::optimizer::law_saturation::apply::LawSaturationReport::rewrite_count: usize
-pub vyre_foundation::optimizer::law_saturation::apply::LawSaturationReport::stop_reason: vyre_foundation::optimizer::law_saturation::apply::LawSaturationStop
-pub vyre_foundation::optimizer::law_saturation::apply::LawSaturationStop::ExpansionBudget
-pub vyre_foundation::optimizer::law_saturation::apply::LawSaturationStop::FixedPoint
-pub vyre_foundation::optimizer::law_saturation::apply::LawSaturationStop::IterationBudget
-pub vyre_foundation::optimizer::law_saturation::apply::LawSaturationStop::NoRewrites
-pub vyre_foundation::optimizer::law_saturation::apply::LawSaturationStop::ZeroBudget
-pub vyre_foundation::optimizer::law_saturation::expr_lang::ExprLang::Bin
-pub vyre_foundation::optimizer::law_saturation::expr_lang::ExprLang::Bin::left: vyre_foundation::optimizer::eqsat::EClassId
-pub vyre_foundation::optimizer::law_saturation::expr_lang::ExprLang::Bin::op: vyre_spec::bin_op::BinOp
-pub vyre_foundation::optimizer::law_saturation::expr_lang::ExprLang::Bin::right: vyre_foundation::optimizer::eqsat::EClassId
-pub vyre_foundation::optimizer::law_saturation::expr_lang::ExprLang::Leaf(usize)
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewrite::kind: vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewrite::law: vyre_spec::region_law::RegionLawFamily
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewrite::law_id: &'static str
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewrite::name: &'static str
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewrite::op: vyre_spec::bin_op::BinOp
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewrite::witness: vyre_foundation::optimizer::rewrite_contract::RewriteWitness
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind::Commute
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind::Idempotent
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind::LeftAbsorbing
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind::LeftAbsorbing::element: u32
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind::LeftIdentity
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind::LeftIdentity::element: u32
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind::ReassociateLeft
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind::ReassociateRight
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind::RightAbsorbing
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind::RightAbsorbing::element: u32
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind::RightIdentity
-pub vyre_foundation::optimizer::law_saturation::law_rule::DerivedRewriteKind::RightIdentity::element: u32
-pub vyre_foundation::optimizer::law_saturation::law_rule::LawDerivation::CompanionOperator(&'static str)
-pub vyre_foundation::optimizer::law_saturation::law_rule::LawDerivation::Predicate(&'static str)
-pub vyre_foundation::optimizer::law_saturation::law_rule::LawDerivation::Region(vyre_foundation::optimizer::law_saturation::law_rule::DerivedKinds)
-pub vyre_foundation::optimizer::law_saturation::law_rule::LawDerivation::Unrecorded
 pub vyre_foundation::optimizer::level_pipeline::LevelInversion::earlier: &'static str
 pub vyre_foundation::optimizer::level_pipeline::LevelInversion::earlier_level: vyre_spec::ir_level::IrLevel
 pub vyre_foundation::optimizer::level_pipeline::LevelInversion::later: &'static str

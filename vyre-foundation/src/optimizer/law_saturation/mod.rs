@@ -25,17 +25,20 @@
 //!
 //! The mirror decomposes binary operators and interns everything else as an
 //! opaque leaf, so a law about a unary operator or about a companion operator
-//! named by op id derives nothing. [`law_rule::law_derivation`] records that
-//! refusal per law, and the closure suite holds it to the declared law set.
+//! named by op id derives nothing.
+//! [`law_derivation`](crate::optimizer::law_saturation::law_derivation) records
+//! that refusal per law, and the closure suite holds it to the declared law
+//! set.
 
-pub mod apply;
-pub mod expr_lang;
-pub mod law_rule;
+mod apply;
+mod expr_lang;
+mod law_rule;
 
 pub use apply::{saturate_laws, LawSaturationReport, LawSaturationStop};
 pub use expr_lang::{ExprLang, ExprMirror};
 pub use law_rule::{
-    derived_rewrites, law_derivation, DerivedRewrite, DerivedRewriteKind, LawDerivation,
+    derived_rewrites, law_derivation, DerivedKinds, DerivedRewrite, DerivedRewriteKind,
+    LawDerivation,
 };
 
 use crate::ir::Expr;

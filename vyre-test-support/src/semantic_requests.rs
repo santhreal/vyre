@@ -88,7 +88,8 @@ pub fn add_program() -> Program {
 
 /// The add program as a graph named `name`.
 pub fn add_graph(name: &str) -> ProgramGraph {
-    ProgramGraph::from_program(name, add_program()).expect("valid graph")
+    ProgramGraph::from_program(name, add_program())
+        .expect("valid graph. Fix: keep add_program() a single-node program a graph admits.")
 }
 
 /// Bindings for both graph inputs of the add graph's only node.
@@ -143,7 +144,10 @@ pub fn validated_unknown_request(
         max_artifact_bytes,
     )
     .validate()
-    .expect("a valid graph under a nonzero artifact ceiling is admitted")
+    .expect(
+        "a valid graph under a nonzero artifact ceiling is admitted. Fix: pass a graph \
+         add_graph() built, or state a nonzero ceiling.",
+    )
 }
 
 /// An admitted output carrying `outputs` under distinct artifact and payload identities.
@@ -167,14 +171,19 @@ pub fn assert_executes_add(
     name: &str,
 ) {
     let graph = add_graph(name);
-    let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new()).expect("logical graph");
+    let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
+        .expect("logical graph. Fix: bind every external value the graph reads, or none.");
     let lhs = LHS.to_le_bytes();
     let rhs = RHS.to_le_bytes();
     let inputs = add_bindings(&graph, lhs.as_slice(), rhs.as_slice());
 
-    let request = request(&logical, inputs, target_facts, DEVICE_BUDGET, 60_000)
-        .expect("complete graph bindings form a valid semantic request");
-    let output = executor.execute(&request).expect("semantic execution");
+    let request = request(&logical, inputs, target_facts, DEVICE_BUDGET, 60_000).expect(
+        "complete graph bindings form a valid semantic request. Fix: bind every graph input \
+         add_bindings() names.",
+    );
+    let output = executor
+        .execute(&request)
+        .expect("semantic execution. Fix: admit a validated request under the stated budget.");
 
     assert_ne!(output.artifact, Digest([0; 32]));
     assert_ne!(output.payload, Digest([0; 32]));
@@ -194,13 +203,16 @@ pub fn assert_refuses_zero_artifact_limit(
     name: &str,
 ) {
     let graph = add_graph(name);
-    let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new()).expect("logical graph");
+    let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
+        .expect("logical graph. Fix: bind every external value the graph reads, or none.");
     let lhs = LHS.to_le_bytes();
     let rhs = RHS.to_le_bytes();
     let inputs = add_bindings(&graph, lhs.as_slice(), rhs.as_slice());
 
-    let request = request(&logical, inputs, target_facts, DEVICE_BUDGET, 0)
-        .expect("complete graph bindings form a valid semantic request");
+    let request = request(&logical, inputs, target_facts, DEVICE_BUDGET, 0).expect(
+        "complete graph bindings form a valid semantic request. Fix: bind every graph input \
+         add_bindings() names.",
+    );
     let error = executor
         .execute(&request)
         .expect_err("zero artifact byte ceiling must fail");

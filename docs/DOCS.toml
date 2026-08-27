@@ -153,7 +153,7 @@ kind = "architecture"
 section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
-covers = ["vyre-megakernel/src/search.rs", "vyre-megakernel/src/cost.rs", "vyre-megakernel/src/select.rs", "vyre-megakernel/src/legality.rs", "vyre-megakernel/src/candidate.rs"]
+covers = ["vyre-megakernel/src/search.rs", "vyre-megakernel/src/cost/mod.rs", "vyre-megakernel/src/select.rs", "vyre-megakernel/src/legality.rs", "vyre-megakernel/src/candidate.rs"]
 nav = true
 
 [[page]]

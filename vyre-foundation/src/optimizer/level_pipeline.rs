@@ -11,10 +11,10 @@
 //! set have no set of passes to be the verifier of.
 //!
 //! This module partitions the scheduled order by the level each pass's
-//! [`RewriteContract`](super::rewrite_contract::RewriteContract) declares. The
-//! partition is derived, never listed: a pass appears in the pipeline of the
-//! level its contract names, and a pass with no contract appears in none, which
-//! is what `pass_invariants` reports.
+//! [`RewriteContract`](crate::optimizer::rewrite_contract::RewriteContract)
+//! declares. The partition is derived, never listed: a pass appears in the
+//! pipeline of the level its contract names, and a pass with no contract
+//! appears in none, which is what `pass_invariants` reports.
 
 use vyre_spec::IrLevel;
 

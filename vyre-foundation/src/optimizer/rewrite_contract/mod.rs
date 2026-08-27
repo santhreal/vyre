@@ -13,7 +13,9 @@
 //! a new pass turns the suite red until its contract is recorded.
 
 use std::fmt;
+use std::sync::LazyLock;
 
+use rustc_hash::FxHashMap;
 use vyre_spec::IrLevel;
 
 /// Program property a rewrite requires before it may fire.
@@ -266,6 +268,32 @@ inventory::collect!(RewriteContractRegistration);
 /// Every declared rewrite contract, shipped and externally registered.
 #[must_use]
 pub fn registered_rewrite_contracts() -> Vec<&'static RewriteContract> {
+    frozen_contracts().0.clone()
+}
+
+/// Contract declared for `pass`, if one is declared.
+#[must_use]
+pub fn contract_for_pass(pass: &str) -> Option<&'static RewriteContract> {
+    frozen_contracts().1.get(pass).copied()
+}
+
+/// The registry read once: pass-ordered contracts, and the same rows by pass.
+fn frozen_contracts() -> &'static (
+    Vec<&'static RewriteContract>,
+    FxHashMap<&'static str, &'static RewriteContract>,
+) {
+    static FROZEN: LazyLock<(
+        Vec<&'static RewriteContract>,
+        FxHashMap<&'static str, &'static RewriteContract>,
+    )> = LazyLock::new(build_contract_index);
+    &FROZEN
+}
+
+/// Read the registry and index it by pass name.
+fn build_contract_index() -> (
+    Vec<&'static RewriteContract>,
+    FxHashMap<&'static str, &'static RewriteContract>,
+) {
     let mut contracts: Vec<&'static RewriteContract> = shipped::SHIPPED_CONTRACTS
         .iter()
         .chain(
@@ -275,13 +303,9 @@ pub fn registered_rewrite_contracts() -> Vec<&'static RewriteContract> {
         )
         .collect();
     contracts.sort_unstable_by_key(|contract| contract.pass);
-    contracts
-}
-
-/// Contract declared for `pass`, if one is declared.
-#[must_use]
-pub fn contract_for_pass(pass: &str) -> Option<&'static RewriteContract> {
-    registered_rewrite_contracts()
-        .into_iter()
-        .find(|contract| contract.pass == pass)
+    let by_pass = contracts
+        .iter()
+        .map(|contract| (contract.pass, *contract))
+        .collect();
+    (contracts, by_pass)
 }

@@ -439,7 +439,7 @@ impl LowerCtx {
                 })?;
                 let mut operands = Vec::with_capacity(words.iter().sum::<u32>() as usize);
                 for (word_count, value) in words.into_iter().zip([a_id, b_id, acc_id]) {
-                    operands.extend(std::iter::repeat(value).take(word_count as usize));
+                    operands.extend(std::iter::repeat_n(value, word_count as usize));
                 }
                 body.ops.push(KernelOp {
                     kind: KernelOpKind::MatrixMma(Box::new(spec)),

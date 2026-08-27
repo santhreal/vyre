@@ -198,13 +198,17 @@ pub fn node_construct_laws(construct: &str) -> Option<&'static ConstructLaws> {
 /// for every expression the IR can hold.
 #[must_use]
 pub fn laws_of(expr: &Expr) -> &'static ConstructLaws {
-    expr_construct_laws(expr_variant_name(expr))
-        .expect("every declared expression variant has a construct-law row")
+    expr_construct_laws(expr_variant_name(expr)).expect(
+        "every declared expression variant has a construct-law row. Fix: record laws or \
+             deliberate opacity for the new variant in EXPR_CONSTRUCT_LAWS.",
+    )
 }
 
 /// Laws `node` exposes.
 #[must_use]
 pub fn laws_of_node(node: &Node) -> &'static ConstructLaws {
-    node_construct_laws(node_variant_name(node))
-        .expect("every declared statement variant has a construct-law row")
+    node_construct_laws(node_variant_name(node)).expect(
+        "every declared statement variant has a construct-law row. Fix: record laws or \
+             deliberate opacity for the new variant in NODE_CONSTRUCT_LAWS.",
+    )
 }
