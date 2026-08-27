@@ -42,7 +42,25 @@ pub(crate) fn semantic_execution_backends(
 }
 
 fn supports_semantic_execution(backend: &vyre_driver::BackendRegistration) -> bool {
-    !backend.reference_oracle && backend.target_compiler.is_some() && backend.materializer.is_some()
+    admits_semantic_execution(
+        backend.reference_oracle,
+        backend.target_compiler.is_some(),
+        backend.materializer.is_some(),
+    )
+}
+
+/// A backend admits semantic execution when it registers both facets and is
+/// not the conformance oracle.
+///
+/// The oracle is excluded whatever facets it registers. Proving it would
+/// compare `vyre-reference` against itself, which certifies nothing, so the
+/// exclusion cannot depend on the oracle happening to lack a facet today.
+const fn admits_semantic_execution(
+    reference_oracle: bool,
+    has_target_compiler: bool,
+    has_materializer: bool,
+) -> bool {
+    !reference_oracle && has_target_compiler && has_materializer
 }
 
 pub(crate) fn select_backends(
@@ -57,15 +75,94 @@ pub(crate) fn select_backends(
         .copied()
         .filter(|backend| backend.id == filter)
         .collect::<Vec<_>>();
-    if selected.is_empty() {
-        let known = all_backends
-            .iter()
-            .map(|backend| backend.id)
-            .collect::<Vec<_>>()
-            .join(", ");
+    if !selected.is_empty() {
+        return Ok(selected);
+    }
+    let known = all_backends
+        .iter()
+        .map(|backend| backend.id)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let fix =
+        format!("Fix: pass `--backend all` or one semantic-execution-capable backend id: {known}.");
+    let registrations = live_backend_registry()
+        .map_err(|error| format!("backend registry startup failed: {error}"))?;
+    let Some(registration) = registrations
+        .iter()
+        .find(|registration| registration.id == filter)
+    else {
+        return Err(format!("unknown backend `{filter}`. {fix}"));
+    };
+    if registration.reference_oracle {
         return Err(format!(
-            "unknown or non-semantic backend `{filter}`. Fix: pass `--backend all` or one semantic-execution-capable backend id: {known}."
+            "the selected backend set only contains reference dispatch backends: `{filter}` is the \
+             reference oracle, so proving against it would certify the reference executor against \
+             itself. {fix}"
         ));
     }
-    Ok(selected)
+    Err(format!(
+        "backend `{filter}` registers no semantic execution facets, so it cannot execute a program \
+         against vyre-reference. {fix}"
+    ))
+}
+
+// Inline: covers the crate-private admission rule, which no integration test
+// can reach and whose variant space no registered backend covers.
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// WHY: the refusal message a caller sees proves only which branch printed
+    /// it. The class is every combination of the three facts the rule reads, and
+    /// the one that matters is a reference oracle that registers both facets:
+    /// today no registered oracle does, so a dropped flag check would leave
+    /// every message-level test green while making the oracle certifiable.
+    #[test]
+    fn only_a_non_oracle_with_both_facets_admits_semantic_execution() {
+        for reference_oracle in [false, true] {
+            for has_target_compiler in [false, true] {
+                for has_materializer in [false, true] {
+                    let admitted = admits_semantic_execution(
+                        reference_oracle,
+                        has_target_compiler,
+                        has_materializer,
+                    );
+                    let expected = !reference_oracle && has_target_compiler && has_materializer;
+                    assert_eq!(
+                        admitted, expected,
+                        "oracle={reference_oracle} compiler={has_target_compiler} \
+                         materializer={has_materializer}"
+                    );
+                    if reference_oracle {
+                        assert!(
+                            !admitted,
+                            "a reference oracle with compiler={has_target_compiler} and \
+                             materializer={has_materializer} must never be admitted"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// WHY: the case above proves the rule, not that the tree has an oracle for
+    /// it to exclude. Without a registered oracle the exclusion is unreachable
+    /// and every proof of it is vacuous.
+    #[test]
+    fn the_registry_carries_a_reference_oracle_for_the_rule_to_exclude() {
+        let registrations = live_backend_registry().expect("Fix: backend registry must start");
+        assert!(
+            registrations
+                .iter()
+                .any(|registration| registration.reference_oracle),
+            "Fix: a reference oracle must be registered, or the exclusion proves nothing"
+        );
+        for backend in semantic_execution_backends().expect("Fix: selection must resolve") {
+            assert!(
+                !backend.reference_oracle,
+                "backend `{}` is a reference oracle and must not be selectable for a proof",
+                backend.id
+            );
+        }
+    }
 }

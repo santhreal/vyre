@@ -59,15 +59,11 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
                 .to_string(),
         );
     }
-    let backends = select_backends(&all_backends, &options.backend_filter)?;
-    if !backends.iter().any(|backend| !backend.reference_oracle) {
-        return Err(
-            "prove refused to emit the certificate: the selected backend set only contains reference dispatch backends. \
-             Fix: build with `--features gpu` so certificate generation proves at least one real GPU backend \
-             against vyre-reference instead of certifying the reference executor against itself."
-                .to_string(),
-        );
-    }
+    // Every reference oracle is filtered out of `all_backends`, so a reference
+    // backend cannot reach the proof: selection is where that is decided and
+    // where the refusal is worded.
+    let backends = select_backends(&all_backends, &options.backend_filter)
+        .map_err(|reason| format!("prove refused to emit the certificate: {reason}"))?;
     let all_entries = unified_entries();
     let entries = select_entries(&all_entries, &options.ops_filter, options.shard)?;
     let selected_op_count = entries.len();
