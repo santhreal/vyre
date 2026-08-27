@@ -24,23 +24,22 @@
 //! 6. Anything else                        → Unknown.
 
 use super::report::{BankAccessSite, BankConflictKind, BankConflictReport};
-use super::DEFAULT_BANK_COUNT;
 use crate::analyses::constant_u32_operand;
 use crate::analyses::gcd_u32;
 use crate::analyses::structured_walk::walk_accesses;
 use crate::analyses::ProducerMap;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, MemoryClass};
+use std::num::NonZeroU32;
 use vyre_foundation::ir::BinOp;
 
-/// Run bank-conflict analysis using the default 32-bank layout.
+/// Run bank-conflict analysis for a stated shared-memory bank count.
+///
+/// The bank count is a device fact and has no neutral value, so a caller
+/// passes the count the target reported. A caller with no reported count runs
+/// no bank analysis rather than assuming a layout.
 #[must_use]
-pub fn analyze(desc: &KernelDescriptor) -> BankConflictReport {
-    analyze_with_bank_count(desc, DEFAULT_BANK_COUNT)
-}
-
-/// Run bank-conflict analysis with an explicit bank count.
-#[must_use]
-pub fn analyze_with_bank_count(desc: &KernelDescriptor, bank_count: u32) -> BankConflictReport {
+pub fn analyze(desc: &KernelDescriptor, banks: NonZeroU32) -> BankConflictReport {
+    let bank_count = banks.get();
     let mut sites = Vec::new();
     walk_accesses(
         &desc.body,
@@ -179,6 +178,17 @@ fn classify_mul(
 // Inline: covers the crate-private `analyze` and `gcd_u32`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
+    /// Bank count the fixtures state. The analysis has no default, so every
+    /// case below names the layout it classifies against.
+    const BANKS: NonZeroU32 = match NonZeroU32::new(32) {
+        Some(banks) => banks,
+        None => unreachable!(),
+    };
+
+    fn banks(count: u32) -> NonZeroU32 {
+        NonZeroU32::new(count).expect("a stated bank count is nonzero")
+    }
+
     use super::*;
     use crate::descriptor_builder::{
         binop, body, descriptor, effect, for_loop, global_ro, if_then, lit, op, shared_rw,
@@ -219,7 +229,7 @@ mod tests {
     }
 
     fn conflict_of(stride: u32) -> BankConflictKind {
-        analyze(&strided_load(stride)).sites[0].conflict
+        analyze(&strided_load(stride), BANKS).sites[0].conflict
     }
 
     // Positive truth (no conflict detected)
@@ -232,7 +242,7 @@ mod tests {
                 .op(tid([], 0))
                 .op(op(KernelOpKind::LoadShared, [0, 0], 1)),
         );
-        let r = analyze(&kk);
+        let r = analyze(&kk, BANKS);
         assert_eq!(r.sites.len(), 1);
         assert_eq!(r.sites[0].conflict, BankConflictKind::NoConflict);
     }
@@ -245,7 +255,7 @@ mod tests {
                 .op(tid([1], 0))
                 .op(op(KernelOpKind::LoadShared, [0, 0], 1)),
         );
-        let r = analyze(&kk);
+        let r = analyze(&kk, BANKS);
         assert_eq!(r.sites.len(), 1);
         assert_eq!(r.sites[0].conflict, BankConflictKind::Unknown);
     }
@@ -261,7 +271,7 @@ mod tests {
                 .op(op(KernelOpKind::LoadShared, [0, 2], 3))
                 .literal(LiteralValue::U32(99)),
         );
-        let r = analyze(&kk);
+        let r = analyze(&kk, BANKS);
         assert_eq!(r.sites[0].conflict, BankConflictKind::NoConflict);
     }
 
@@ -274,7 +284,7 @@ mod tests {
                 .op(op(KernelOpKind::LoadShared, [0, 0], 1))
                 .literal(LiteralValue::U32(0)),
         );
-        let r = analyze(&kk);
+        let r = analyze(&kk, BANKS);
         assert_eq!(r.sites[0].conflict, BankConflictKind::BroadcastSafe);
     }
 
@@ -293,7 +303,7 @@ mod tests {
     #[test]
     fn conflict_stride_32_is_32_way_critical() {
         // The classic shared-mem matmul column-major worst case.
-        let r = analyze(&strided_load(32));
+        let r = analyze(&strided_load(32), BANKS);
         assert_eq!(
             r.sites[0].conflict,
             BankConflictKind::Conflict { way_count: 32 }
@@ -331,7 +341,7 @@ mod tests {
                 .op(tid([], 0))
                 .op(op(KernelOpKind::LoadGlobal, [0, 0], 1)),
         );
-        let r = analyze(&kk);
+        let r = analyze(&kk, BANKS);
         assert!(r.sites.is_empty());
     }
 
@@ -346,7 +356,7 @@ mod tests {
                 .op(tid([], 0))
                 .op(op(KernelOpKind::LoadShared, [0, 0], 1)),
         );
-        let r = analyze(&kk);
+        let r = analyze(&kk, BANKS);
         assert!(r.sites.is_empty());
     }
 
@@ -370,7 +380,7 @@ mod tests {
                 )
                 .literal(LiteralValue::U32(0)),
         );
-        let r = analyze(&kk);
+        let r = analyze(&kk, BANKS);
         // gcd(8, 32) == 8 → 8-way conflict.
         assert_eq!(r.sites.len(), 1);
         assert_eq!(
@@ -389,7 +399,7 @@ mod tests {
                 2,
             )),
         );
-        let r = analyze(&kk);
+        let r = analyze(&kk, BANKS);
         assert_eq!(r.sites[0].conflict, BankConflictKind::Unknown);
     }
 
@@ -399,7 +409,7 @@ mod tests {
             vec![shared_binding(0)],
             body().op(effect(KernelOpKind::LoadShared, [])),
         );
-        let r = analyze(&kk);
+        let r = analyze(&kk, BANKS);
         assert!(r.sites.is_empty());
     }
 
@@ -410,9 +420,9 @@ mod tests {
         // Stride 3 is coprime with 32 banks but shares a factor of 3 with
         // 6, so the bank count decides the classification.
         let kk = strided_load(3);
-        let r32 = analyze_with_bank_count(&kk, 32);
+        let r32 = analyze(&kk, banks(32));
         assert_eq!(r32.sites[0].conflict, BankConflictKind::NoConflict);
-        let r6 = analyze_with_bank_count(&kk, 6);
+        let r6 = analyze(&kk, banks(6));
         assert_eq!(
             r6.sites[0].conflict,
             BankConflictKind::Conflict { way_count: 3 }
@@ -441,7 +451,7 @@ mod tests {
                 )
                 .literal(LiteralValue::U32(4)),
         );
-        let r = analyze(&kk);
+        let r = analyze(&kk, BANKS);
         assert_eq!(
             r.sites
                 .iter()

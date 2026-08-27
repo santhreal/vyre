@@ -5,7 +5,7 @@ use crate::descriptor::{BindingVisibility, MemoryClass};
 use crate::error::LowerError;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, MemoryKind, Program};
 
-pub(super) fn memory_class(buffer: &BufferDecl) -> Result<MemoryClass, LowerError> {
+pub(crate) fn memory_class(buffer: &BufferDecl) -> Result<MemoryClass, LowerError> {
     match (buffer.kind, &buffer.access) {
         (MemoryKind::Persistent, _) => Err(LowerError::UnsupportedConstruct(format!(
             "Persistent memory buffer `{}` cannot be lowered as a direct GPU binding. Fix: stage Persistent data through the host transfer path using AsyncLoad/AsyncStore into Global/Readonly memory before concrete GPU emission.",

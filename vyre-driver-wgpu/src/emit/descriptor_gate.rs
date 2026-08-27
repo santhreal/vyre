@@ -13,7 +13,10 @@ pub(crate) fn validate_and_analyze(
         ))
     })?;
     let descriptor = lowered.into_descriptor();
-    let neutral = vyre_lower::audit(&descriptor);
+    // The portable adapter reports no shared-memory bank geometry here, so the
+    // neutral audit runs without a bank-conflict section rather than against an
+    // assumed layout.
+    let neutral = vyre_lower::audit(&descriptor, &vyre_lower::analyses::AnalysisFacts::none());
     let concrete = vyre_emit_naga::patterns::audit(&descriptor);
     tracing::trace!(
         target: "vyre_driver_wgpu::descriptor",

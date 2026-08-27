@@ -7,6 +7,15 @@ use vyre_lower::descriptor_builder::{
     binop, body, descriptor, fixed_global_ro, lit, load_global, op, shared_rw,
 };
 use vyre_lower::{KernelOpKind, LiteralValue};
+/// Bank count a case states; the analysis holds no default for it.
+fn banks(count: u32) -> std::num::NonZeroU32 {
+    std::num::NonZeroU32::new(count).expect("a stated bank count is nonzero")
+}
+/// Per-workgroup shared capacity a case states; the analysis holds no default.
+const SHARED_BYTES: std::num::NonZeroU32 = match std::num::NonZeroU32::new(48 * 1024) {
+    Some(bytes) => bytes,
+    None => unreachable!(),
+};
 #[test]
 fn a13_coalesce_corpus_classifies_unit_stride_strided_and_broadcast() {
     let desc = descriptor("a13_coalesce_fixture")
@@ -56,7 +65,7 @@ fn a14_shared_mem_promote_corpus_finds_reused_global_tile() {
         )
         .build();
 
-    let plan = analyze_shared_mem_promote(&desc);
+    let plan = analyze_shared_mem_promote(&desc, SHARED_BYTES);
     assert_eq!(plan.candidates.len(), 1);
     let candidate = &plan.candidates[0];
     assert_eq!(candidate.binding_slot, 0);
@@ -80,7 +89,7 @@ fn a15_bank_conflict_corpus_detects_full_warp_serialization() {
         )
         .build();
 
-    let report = analyze_bank_conflict(&desc);
+    let report = analyze_bank_conflict(&desc, banks(32));
     assert_eq!(report.sites.len(), 1);
     assert_eq!(
         report.sites[0].conflict,

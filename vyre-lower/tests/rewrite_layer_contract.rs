@@ -2,8 +2,10 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use core::num::NonZeroU32;
 use serde::Deserialize;
 use vyre_foundation::ir::{BinOp, DataType};
+use vyre_lower::analyses::AnalysisFacts;
 use vyre_lower::descriptor_builder::{
     body, descriptor, effect, fixed_global_ro, global_rw, lit, op,
 };
@@ -227,7 +229,10 @@ fn const_buffer_promotion_rewrite_transforms_eligible_bindings_and_loads() {
         },
     };
 
-    let rewritten = rewrite_const_buffer_promote(&desc);
+    let rewritten = rewrite_const_buffer_promote(
+        &desc,
+        NonZeroU32::new(64 * 1024).expect("positive capacity"),
+    );
 
     // Slot 0 was eligible and promoted.
     assert_eq!(
@@ -842,8 +847,10 @@ fn apply_lowering_rewrites_pipeline_is_idempotent_and_verifies() {
         ]))
         .build();
 
-    let pass1 = apply_lowering_rewrites(&desc);
-    let pass2 = apply_lowering_rewrites(&pass1);
+    let facts = AnalysisFacts::none()
+        .with_constant_buffer_bytes(NonZeroU32::new(64 * 1024).expect("positive capacity"));
+    let pass1 = apply_lowering_rewrites(&desc, &facts);
+    let pass2 = apply_lowering_rewrites(&pass1, &facts);
 
     assert_eq!(pass1, pass2);
     assert_eq!(pass1.bindings.slots[0].memory_class, MemoryClass::Constant);

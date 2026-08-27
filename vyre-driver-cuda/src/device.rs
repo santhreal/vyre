@@ -6,6 +6,11 @@ use cudarc::driver::{result, sys::CUdevice_attribute, CudaContext};
 
 use crate::backend::staging_reserve::reserved_vec;
 
+/// Shared-memory banks per multiprocessor on every device this driver targets.
+pub(crate) const SHARED_MEMORY_BANK_COUNT: u32 = 32;
+/// Width of one shared-memory bank in bytes.
+pub(crate) const SHARED_MEMORY_BANK_WIDTH_BYTES: u32 = 4;
+
 fn format_cuda_context_init_error(ordinal: usize, error: impl fmt::Display) -> String {
     format!(
         "CUDA context init failed for ordinal {ordinal}: {error}. Fix: choose a visible `nvidia-smi -L` ordinal and ensure no exclusive-process compute mode blocks context creation. If the error is CUDA_ERROR_OUT_OF_MEMORY, treat it as live VRAM pressure during context creation: run `nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv`, free or move the processes holding VRAM, then rerun the CUDA-required validation; do not skip GPU tests or continue on a CPU path."
@@ -772,8 +777,8 @@ impl CudaDeviceCaps {
             ideal_unroll_depth: 0,
             ideal_vector_pack_bits: 0,
             ideal_workgroup_tile: [0, 0, 0],
-            shared_memory_bank_count: 32,
-            shared_memory_bank_width_bytes: 4,
+            shared_memory_bank_count: SHARED_MEMORY_BANK_COUNT,
+            shared_memory_bank_width_bytes: SHARED_MEMORY_BANK_WIDTH_BYTES,
         };
         vyre_driver::DeviceSignatureTable::builtins().map_or(profile, |table| {
             table.apply_generation_to_profile(self.native_sm(), profile)

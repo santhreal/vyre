@@ -661,7 +661,8 @@ mod tests {
                 literals: vec![vyre_lower::LiteralValue::U32(7)],
             },
         };
-        let lower_report = vyre_lower::full_report(&desc);
+        let lower_report =
+            vyre_lower::full_report(&desc, &vyre_lower::analyses::AnalysisFacts::none());
         let artifact =
             lower_full_report_artifact(&lower_report).expect("Fix: serialize lower full report");
 

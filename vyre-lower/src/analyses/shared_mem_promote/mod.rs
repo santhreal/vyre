@@ -37,8 +37,3 @@ pub(crate) mod plan;
 
 pub use analysis::analyze;
 pub use plan::{PromotionCandidate, PromotionPlan};
-
-/// Default per-workgroup shared-memory budget, in bytes. Callers with
-/// tighter backend limits should pass their real budget into the
-/// analysis entry point.
-pub const DEFAULT_SHARED_BUDGET_BYTES: u32 = 48 * 1024;

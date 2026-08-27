@@ -13,27 +13,22 @@
 //!    multi-element-per-thread access patterns.
 //! 4. Compute total tile bytes; flag whether it fits in the budget.
 //!
-//! Budget defaults to `DEFAULT_SHARED_BUDGET_BYTES`. Caller can pass
-//! a smaller budget via `analyze_with_budget` for substrate-specific
-//! limits.
+//! The per-workgroup budget is a device fact the caller states. There is no
+//! default: a capacity guessed here would be right for one device and wrong
+//! for the next.
 
 use super::plan::{PromotionCandidate, PromotionPlan};
-use super::DEFAULT_SHARED_BUDGET_BYTES;
 use crate::analyses::load_counts::count_global_loads_by_slot;
 use crate::{KernelBody, KernelDescriptor};
+use core::num::NonZeroU32;
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::DataType;
 
-/// Run promotion analysis with the default 48 KiB budget.
+/// Run promotion analysis against the per-workgroup shared-memory capacity
+/// the target reported.
 #[must_use]
-pub fn analyze(desc: &KernelDescriptor) -> PromotionPlan {
-    analyze_with_budget(desc, DEFAULT_SHARED_BUDGET_BYTES)
-}
-
-/// Run promotion analysis with an explicit per-workgroup
-/// shared-memory budget (in bytes).
-#[must_use]
-pub(crate) fn analyze_with_budget(desc: &KernelDescriptor, budget_bytes: u32) -> PromotionPlan {
+pub fn analyze(desc: &KernelDescriptor, budget: NonZeroU32) -> PromotionPlan {
+    let budget_bytes = budget.get();
     let access_counts = access_counts(&desc.body);
 
     let workgroup_size = desc.dispatch.workgroup_size[0].max(1);
@@ -143,11 +138,25 @@ mod tests {
             .build()
     }
 
+    /// A plan against a stated 48 KiB workgroup capacity, the value most
+    /// cases here do not vary.
+    fn plan(desc: &KernelDescriptor) -> PromotionPlan {
+        sized_plan(desc, 48 * 1024)
+    }
+
+    /// A plan against an explicitly stated workgroup capacity.
+    fn sized_plan(desc: &KernelDescriptor, budget_bytes: u32) -> PromotionPlan {
+        analyze(
+            desc,
+            NonZeroU32::new(budget_bytes).expect("positive budget"),
+        )
+    }
+
     // Positive truth (candidate detected)
 
     #[test]
     fn positive_buffer_read_twice_is_candidate() {
-        let p = analyze(&reads(64, DataType::F32, 2));
+        let p = plan(&reads(64, DataType::F32, 2));
         assert_eq!(p.candidates.len(), 1);
         assert_eq!(p.candidates[0].binding_slot, 0);
         assert_eq!(p.candidates[0].access_count, 2);
@@ -158,7 +167,7 @@ mod tests {
 
     #[test]
     fn positive_two_buffers_each_read_multiple_times_both_candidates() {
-        let p = analyze(&kernel(
+        let p = plan(&kernel(
             32,
             vec![binding(0, DataType::F32), binding(1, DataType::U32)],
             body()
@@ -178,7 +187,7 @@ mod tests {
 
     #[test]
     fn positive_speedup_grows_with_access_count() {
-        let p = analyze(&reads(32, DataType::F32, 5));
+        let p = plan(&reads(32, DataType::F32, 5));
         // 5 + (5 - 1) * 2 = 13
         assert!((p.candidates[0].estimated_speedup_factor - 13.0).abs() < 1e-5);
     }
@@ -187,13 +196,13 @@ mod tests {
 
     #[test]
     fn negative_buffer_read_only_once_not_a_candidate() {
-        let p = analyze(&reads(64, DataType::F32, 1));
+        let p = plan(&reads(64, DataType::F32, 1));
         assert!(p.candidates.is_empty());
     }
 
     #[test]
     fn negative_store_only_buffer_not_a_candidate() {
-        let p = analyze(&kernel(
+        let p = plan(&kernel(
             64,
             vec![binding(0, DataType::F32)],
             body()
@@ -207,7 +216,7 @@ mod tests {
 
     #[test]
     fn negative_no_global_accesses_yields_empty_plan() {
-        let p = analyze(&kernel(
+        let p = plan(&kernel(
             64,
             vec![binding(0, DataType::F32)],
             body()
@@ -234,7 +243,7 @@ mod tests {
 
     #[test]
     fn adversarial_load_inside_if_body_counted() {
-        let p = analyze(&nested_reads(
+        let p = plan(&nested_reads(
             32,
             body()
                 .op(lit(0, 0))
@@ -248,7 +257,7 @@ mod tests {
 
     #[test]
     fn adversarial_load_inside_loop_body_counted() {
-        let p = analyze(&nested_reads(
+        let p = plan(&nested_reads(
             16,
             body()
                 .op(lit(0, 0))
@@ -265,7 +274,7 @@ mod tests {
     fn adversarial_zero_workgroup_size_clamped_to_one() {
         // Defensive: workgroup_size_x = 0 should not crash and not
         // produce zero-byte tile sizes.
-        let p = analyze(&reads(0, DataType::F32, 2));
+        let p = plan(&reads(0, DataType::F32, 2));
         assert_eq!(p.candidates.len(), 1);
         assert_eq!(p.candidates[0].distinct_indices_per_workgroup, 1);
         assert_eq!(p.candidates[0].tile_bytes, 4);
@@ -273,7 +282,7 @@ mod tests {
 
     #[test]
     fn adversarial_load_with_no_operands_skipped_safely() {
-        let p = analyze(&kernel(
+        let p = plan(&kernel(
             32,
             vec![binding(0, DataType::F32)],
             body().op(effect(KernelOpKind::LoadGlobal, [])),
@@ -286,14 +295,14 @@ mod tests {
 
     #[test]
     fn fits_in_budget_when_sum_below_limit() {
-        let p = analyze_with_budget(&reads(32, DataType::F32, 2), 4096);
+        let p = sized_plan(&reads(32, DataType::F32, 2), 4096);
         assert!(p.fits_in_budget());
     }
 
     #[test]
     fn does_not_fit_when_sum_exceeds_budget() {
         // 8 bpe * 1024 wg = 8192
-        let p = analyze_with_budget(&reads(1024, DataType::F64, 2), 4096);
+        let p = sized_plan(&reads(1024, DataType::F64, 2), 4096);
         assert!(!p.fits_in_budget());
     }
 
@@ -323,7 +332,7 @@ mod tests {
 
     #[test]
     fn report_kernel_id_echoes_descriptor_id() {
-        let p = analyze(&kernel(32, vec![], body()));
+        let p = plan(&kernel(32, vec![], body()));
         assert_eq!(p.kernel_id, "k");
     }
 }

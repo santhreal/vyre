@@ -12,27 +12,19 @@ use crate::analyses::gcd_u32;
 use serde::{Deserialize, Serialize};
 
 /// Physical and execution geometry for target shared-memory banks.
+///
+/// Every field is a device fact. A caller states all four from what the target
+/// reported; this crate has no value to fall back on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TargetBankGeometry {
-    /// Number of shared-memory banks (typically 32 on modern GPUs).
+    /// Number of shared-memory banks.
     pub bank_count: u32,
-    /// Width of each bank in bytes (typically 4 bytes = 32 bits).
+    /// Width of each bank in bytes.
     pub bank_width_bytes: u32,
-    /// Subgroup (execution wave) size in lanes (e.g. 32 or 64 lanes).
+    /// Subgroup (execution wave) size in lanes.
     pub subgroup_lanes: u32,
-    /// Native instruction access width in bytes (e.g. 4 for f32/u32, 8 for f64/v2, 16 for v4).
+    /// Native instruction access width in bytes.
     pub instruction_word_bytes: u32,
-}
-
-impl Default for TargetBankGeometry {
-    fn default() -> Self {
-        Self {
-            bank_count: 32,
-            bank_width_bytes: 4,
-            subgroup_lanes: 32,
-            instruction_word_bytes: 4,
-        }
-    }
 }
 
 /// Access phase within a kernel's execution lifecycle.

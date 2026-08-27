@@ -14,9 +14,7 @@ mod registry;
 mod vector_memory;
 
 pub use canonicalize::canonicalize_for_emit;
-pub use const_buffer_promote::{
-    rewrite_const_buffer_promote, rewrite_const_buffer_promote_with_budget,
-};
+pub use const_buffer_promote::rewrite_const_buffer_promote;
 pub use dead_op::rewrite_dead_ops;
 pub use registry::{
     all_registered_contracts, classify_rule, lowering_owned_rules, LoweringRewriteRule,
@@ -24,17 +22,22 @@ pub use registry::{
 };
 pub use vector_memory::{rewrite_vector_memory, rewrite_vector_memory_with_alias_facts};
 
+use crate::analyses::AnalysisFacts;
 use crate::KernelDescriptor;
 
 /// Apply all verified profitable lowering-owned structural rewrites in canonical sequence.
 ///
-/// 1. Promotes qualified read-only global buffers to constant memory.
+/// 1. Promotes qualified read-only global buffers to constant memory, when the
+///    caller stated a constant capacity.
 /// 2. Canonicalizes verified adjacent global load and store chains into vec2/vec4 vector memory transactions.
 /// 3. Eliminates unreferenced dead pure operations.
 /// 4. Orders pure same-body SSA producers before consumers.
 #[must_use]
-pub fn apply_lowering_rewrites(desc: &KernelDescriptor) -> KernelDescriptor {
-    let with_const = rewrite_const_buffer_promote(desc);
+pub fn apply_lowering_rewrites(desc: &KernelDescriptor, facts: &AnalysisFacts) -> KernelDescriptor {
+    let with_const = match facts.constant_buffer_bytes() {
+        Some(budget) => rewrite_const_buffer_promote(desc, budget),
+        None => desc.clone(),
+    };
     let with_vec = rewrite_vector_memory(&with_const);
     let with_dce = rewrite_dead_ops(&with_vec);
     canonicalize_for_emit(&with_dce)
@@ -70,7 +73,10 @@ mod tests {
             ]))
             .build();
 
-        let result = apply_lowering_rewrites(&desc);
+        let facts = AnalysisFacts::none().with_constant_buffer_bytes(
+            core::num::NonZeroU32::new(64 * 1024).expect("positive capacity"),
+        );
+        let result = apply_lowering_rewrites(&desc, &facts);
 
         // Constant promotion: slot 0 should be Constant, loads should be LoadConstant.
         assert_eq!(result.bindings.slots[0].memory_class, MemoryClass::Constant);

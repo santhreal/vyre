@@ -120,6 +120,27 @@ region it names states no size, no class and no lifetime. Bank permutation,
 vector width and the transfer mechanism that fills a region belong to the
 target, which chooses them under these offsets.
 
+The lowering boundary also compares what the program states against what the
+lowered kernel performs. Each side states its effect on caller-visible storage
+per binding name: reads, writes, and read-modify-writes. A write the program
+performs and the kernel does not, a write the kernel performs and the program
+does not, a read-modify-write only one side performs, and a read of storage no
+expression reads are all rejected before the kernel leaves the boundary. A read
+the program performs may disappear, because a value nothing consumes is
+eliminable. Workgroup-scoped and invocation-private storage is outside the
+comparison: lowering creates it, so no semantic buffer names it. The diagnostic
+sidecar is excluded by name for the same reason.
+
+Every capacity a neutral analysis reads arrives as a stated device fact.
+`AnalysisFacts` carries the shared-memory bank count, the per-workgroup shared
+capacity, and the constant capacity a target reported, and holds no default for
+any of them. An analysis whose capacity is unstated does not run: the audit
+returns that section absent, the constant promotion leaves the binding in global
+memory, and no recommendation is produced. A default recorded in the neutral
+crate would be correct for the device it was copied from and silently wrong for
+the next one, while a report computed from it is indistinguishable from a
+measured finding.
+
 The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 12`. Schema 12 records
 the selected launch of every entry point: the entry dependency order, logical
 coverage, grid, workgroup, vector width, pipeline roles, ring slots, barrier

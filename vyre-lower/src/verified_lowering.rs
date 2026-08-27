@@ -311,6 +311,19 @@ fn lower_prepared_physical(
                 ))
             })?;
     }
+    let stated = crate::equivalence::EffectSignature::from_program(&program);
+    let performed = crate::equivalence::EffectSignature::from_descriptor(&descriptor);
+    crate::equivalence::check_effects(&stated, &performed, &[crate::TRAP_SIDECAR_NAME]).map_err(
+        |errors| {
+            let mut message =
+                String::from("the lowered kernel does not perform the effects its program states:");
+            for error in &errors {
+                message.push_str("\n  - ");
+                message.push_str(&error.to_string());
+            }
+            PhysicalLoweringError::new(message)
+        },
+    )?;
     Ok(PhysicalLowering {
         program,
         kernel: PhysicalKernel {

@@ -34,6 +34,7 @@ pub(crate) mod descriptor;
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod descriptor_builder;
 pub mod emit_adversarial_corpus;
+pub(crate) mod equivalence;
 pub(crate) mod error;
 pub(crate) mod lower;
 pub(crate) mod op_facts;
@@ -89,15 +90,19 @@ impl VerifyFailure {
 }
 
 /// Run every read-only descriptor analysis and verification in one call.
+///
+/// `facts` carries the device capacities the target reported, passed through
+/// to [`audit`]. A caller with none passes [`analyses::AnalysisFacts::none`]
+/// and the report carries no section that would need one.
 #[must_use]
-pub fn full_report(desc: &KernelDescriptor) -> FullReport {
+pub fn full_report(desc: &KernelDescriptor, facts: &analyses::AnalysisFacts) -> FullReport {
     let verify = verify::verify(desc);
     let fix_text = build_full_report_fix_text(&verify);
     FullReport {
         descriptor_id: desc.id.clone(),
         summary: desc.summary(),
         histogram: analyses::op_histogram::analyze(desc),
-        perf: audit::audit(desc),
+        perf: audit::audit(desc, facts),
         verify,
         fix_text,
     }
@@ -239,6 +244,7 @@ pub use descriptor::{
     STORAGE_LAYOUT_VERSION, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
 pub use descriptor::{KernelOpsIter, Name};
+pub use equivalence::{check_effects, BindingEffects, EffectSignature, EquivalenceError};
 pub use error::LowerError;
 /// Re-exported so a caller building a `KernelDescriptor` by hand through
 /// `descriptor_builder` can place a Shared or Scratch binding in the range

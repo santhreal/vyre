@@ -24,19 +24,16 @@
 //! shared-mem allocations or swizzle indices to break conflict
 //! patterns.
 //!
-//! Caller can override the default bank count via
-//! `analyze_with_bank_count`.
+//! The bank count is a device fact the caller states; `analyze` takes it and
+//! this crate holds no default for it.
 
 pub(crate) mod analysis;
 pub(crate) mod report;
 pub(crate) mod strategy;
 
-pub use analysis::{analyze, analyze_with_bank_count};
+pub use analysis::analyze;
 pub use report::{BankAccessSite, BankConflictKind, BankConflictReport, ConflictSeverity};
 pub use strategy::{
     evaluate_mitigation_candidate, select_bank_conflict_strategy, AccessPhase, AccessPhaseProfile,
     BankConflictMitigation, MitigationEvaluation, PhaseConflictReport, TargetBankGeometry,
 };
-/// Default bank count. This is a reasonable pessimistic default for
-/// discrete GPU substrates.
-pub const DEFAULT_BANK_COUNT: u32 = 32;

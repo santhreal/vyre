@@ -152,8 +152,9 @@ mod tests {
             )
             .build();
 
-        let shared = crate::analyses::analyze_shared_mem_promote(&desc);
-        let constant = crate::analyses::analyze_const_buffer_promote(&desc);
+        let budget = core::num::NonZeroU32::new(48 * 1024).expect("positive budget");
+        let shared = crate::analyses::analyze_shared_mem_promote(&desc, budget);
+        let constant = crate::analyses::analyze_const_buffer_promote(&desc, budget);
         assert_eq!(
             (
                 shared.candidates[0].access_count,

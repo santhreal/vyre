@@ -9,7 +9,7 @@
 mod body_assembly;
 mod carrier_names;
 mod context;
-mod descriptor_metadata;
+pub(crate) mod descriptor_metadata;
 mod expr_lowering;
 mod loop_site;
 mod node_lowering;

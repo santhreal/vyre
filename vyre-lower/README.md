@@ -97,21 +97,28 @@ same-body producers. Semantic optimization remains in `vyre-foundation`.
 11 substrate-neutral analyses in `vyre_lower::analyses`:
 
 - `coalesce`: memory-access coalescence per warp/workgroup.
-- `shared_mem_promote`: global → shared-memory tile candidates.
-- `bank_conflict`: shared-memory bank conflict detection.
+- `shared_mem_promote`: global → shared-memory tile candidates against a
+  per-workgroup capacity the caller states.
+- `bank_conflict`: shared-memory bank conflict detection for a bank count the
+  caller states.
 - `vec_pack`: adjacent-load vectorization candidates (companion
   to `vyre_emit_naga::patterns::vec_pack`).
 - `workgroup_uniform`: values uniform across a workgroup.
 - `texture_promote`: read-mostly buffer → texture candidates.
 - `layout_aos_to_soa`: AoS-to-SoA layout transform candidates.
-- `const_buffer_promote`: uniform-buffer promotion candidates.
+- `const_buffer_promote`: uniform-buffer promotion candidates against a
+  constant capacity the caller states.
 - `dead_op`: result-producing ops with no users (a less efficient
   cousin of `def_use::dead_by_no_use`).
 - `common_subexpr`: equivalence groups for CSE.
 - `def_use`: full def-use chains with per-body `UseSite`s.
 
-Each analysis returns a serializable report. Run `audit::audit(desc)` for a
-unified read-only `PerfAuditReport` with prioritized recommendations.
+Each analysis returns a serializable report. Run `audit::audit(desc, facts)`
+for a unified read-only `PerfAuditReport` with prioritized recommendations.
+`facts` is an `AnalysisFacts` carrying the capacities the target reported: bank
+count, per-workgroup shared bytes, constant bytes. The crate holds no default
+for any of them, and a capacity the caller leaves unstated produces a report
+with that section absent instead of one computed from an assumed limit.
 Emitter-specific `patterns::audit` functions report concrete target-strategy
 opportunities without mutating the descriptor.
 

@@ -9,8 +9,8 @@
 //! expose their own audit entry points and the host can compose them.
 
 use crate::analyses::{
-    bank_conflict, coalesce, shared_mem_promote, BankConflictReport, CoalescenceReport,
-    PromotionPlan,
+    bank_conflict, coalesce, shared_mem_promote, AnalysisFacts, BankConflictReport,
+    CoalescenceReport, PromotionPlan,
 };
 use crate::KernelDescriptor;
 use serde::{Deserialize, Serialize};
@@ -22,10 +22,12 @@ pub struct PerfAuditReport {
     pub kernel_id: String,
     /// Global-memory coalescence analysis.
     pub coalesce: CoalescenceReport,
-    /// Shared-memory promotion analysis.
-    pub shared_mem: PromotionPlan,
-    /// Shared-memory bank-conflict analysis.
-    pub bank_conflict: BankConflictReport,
+    /// Shared-memory promotion analysis, absent when the caller stated no
+    /// per-workgroup shared-memory capacity for the target.
+    pub shared_mem: Option<PromotionPlan>,
+    /// Shared-memory bank-conflict analysis, absent when the caller stated no
+    /// bank count for the target.
+    pub bank_conflict: Option<BankConflictReport>,
     /// Single aggregate score: sum of `1 - throughput_factor` across
     /// every coalesce site + critical bank-conflict count weight +
     /// number of unrealized promotion candidates. Higher = worse.
@@ -126,25 +128,44 @@ pub enum RecommendationCategory {
 #[must_use]
 pub fn audit_with_histogram(
     desc: &KernelDescriptor,
+    facts: &AnalysisFacts,
 ) -> (PerfAuditReport, crate::analyses::OpHistogram) {
-    (audit(desc), crate::analyses::op_histogram::analyze(desc))
+    (
+        audit(desc, facts),
+        crate::analyses::op_histogram::analyze(desc),
+    )
 }
 
-/// Run every substrate-neutral analysis and return the unified report.
+/// Run every substrate-neutral analysis the stated facts support and return
+/// the unified report.
+///
+/// `facts` carries the device capacities the target reported. An analysis
+/// whose capacity is absent is skipped and its section of the report is
+/// absent, rather than computed from an assumed limit.
 #[must_use]
-pub fn audit(desc: &KernelDescriptor) -> PerfAuditReport {
+pub fn audit(desc: &KernelDescriptor, facts: &AnalysisFacts) -> PerfAuditReport {
     let coalesce_report = coalesce::analyze(desc);
-    let shared_mem_report = shared_mem_promote::analyze(desc);
-    let bank_conflict_report = bank_conflict::analyze(desc);
+    let shared_mem_report = facts
+        .shared_memory_bytes()
+        .map(|budget| shared_mem_promote::analyze(desc, budget));
+    let bank_conflict_report = facts
+        .shared_memory_banks()
+        .map(|banks| bank_conflict::analyze(desc, banks));
 
     let mut waste_score = coalesce_report.waste_score();
-    waste_score += shared_mem_report.candidates.len() as f32 * 5.0;
-    waste_score += bank_conflict_report.critical_count() as f32 * 8.0;
-    waste_score += (bank_conflict_report.problematic_count()
-        - bank_conflict_report.critical_count()) as f32
-        * 2.0;
+    if let Some(report) = &shared_mem_report {
+        waste_score += report.candidates.len() as f32 * 5.0;
+    }
+    if let Some(report) = &bank_conflict_report {
+        waste_score += report.critical_count() as f32 * 8.0;
+        waste_score += (report.problematic_count() - report.critical_count()) as f32 * 2.0;
+    }
 
-    let recommendations = recommend(&coalesce_report, &shared_mem_report, &bank_conflict_report);
+    let recommendations = recommend(
+        &coalesce_report,
+        shared_mem_report.as_ref(),
+        bank_conflict_report.as_ref(),
+    );
 
     PerfAuditReport {
         kernel_id: desc.id.clone(),
@@ -158,14 +179,16 @@ pub fn audit(desc: &KernelDescriptor) -> PerfAuditReport {
 
 fn recommend(
     coalesce: &CoalescenceReport,
-    shared_mem: &PromotionPlan,
-    bank_conflict: &BankConflictReport,
+    shared_mem: Option<&PromotionPlan>,
+    bank_conflict: Option<&BankConflictReport>,
 ) -> Vec<Recommendation> {
     // Upper bound: every coalesce site, every shared-mem candidate,
     // and every bank-conflict site can produce at most one recommendation.
     // Pre-size to the sum so the three sequential pushes never resize.
     let mut out = Vec::with_capacity(
-        coalesce.sites.len() + shared_mem.candidates.len() + bank_conflict.sites.len(),
+        coalesce.sites.len()
+            + shared_mem.map_or(0, |plan| plan.candidates.len())
+            + bank_conflict.map_or(0, |report| report.sites.len()),
     );
 
     for site in &coalesce.sites {
@@ -183,7 +206,7 @@ fn recommend(
         }
     }
 
-    for cand in &shared_mem.candidates {
+    for cand in shared_mem.into_iter().flat_map(|plan| &plan.candidates) {
         out.push(Recommendation {
             category: RecommendationCategory::SharedMemPromote,
             priority: priority_for_speedup(cand.estimated_speedup_factor),
@@ -195,7 +218,7 @@ fn recommend(
         });
     }
 
-    for site in &bank_conflict.sites {
+    for site in bank_conflict.into_iter().flat_map(|report| &report.sites) {
         use crate::analyses::bank_conflict::ConflictSeverity;
         if let crate::analyses::bank_conflict::BankConflictKind::Conflict { way_count } =
             site.conflict
@@ -251,6 +274,7 @@ mod tests {
         binop, body, descriptor, global_ro, lit, load_global, op, shared_rw,
     };
     use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
+    use core::num::NonZeroU32;
     use vyre_foundation::ir::{BinOp, DataType};
 
     /// A 64-thread kernel with no bindings and no ops.
@@ -260,6 +284,13 @@ mod tests {
 
     fn empty_kernel() -> KernelDescriptor {
         empty_kernel_named("empty")
+    }
+
+    /// The capacities the fixtures state: 32 banks and 48 KiB per workgroup.
+    fn facts() -> AnalysisFacts {
+        AnalysisFacts::none()
+            .with_shared_memory_banks(NonZeroU32::new(32).expect("positive bank count"))
+            .with_shared_memory_bytes(NonZeroU32::new(48 * 1024).expect("positive capacity"))
     }
 
     /// A kernel over a single read-only `f32` global named `buf`.
@@ -272,14 +303,14 @@ mod tests {
     }
 
     fn empty_report_with_recs(recs: Vec<Recommendation>) -> PerfAuditReport {
-        let mut r = audit(&empty_kernel_named("k"));
+        let mut r = audit(&empty_kernel_named("k"), &facts());
         r.recommendations = recs;
         r
     }
 
     #[test]
     fn empty_kernel_has_zero_waste_and_no_recommendations() {
-        let r = audit(&empty_kernel());
+        let r = audit(&empty_kernel(), &facts());
         assert_eq!(r.kernel_id, "empty");
         assert!((r.waste_score - 0.0).abs() < 1e-6);
         assert!(r.recommendations.is_empty());
@@ -295,7 +326,7 @@ mod tests {
                 .op(op(KernelOpKind::LocalInvocationId, [], 0))
                 .op(load_global(0, 0, 1)),
         );
-        let r = audit(&kk);
+        let r = audit(&kk, &facts());
         assert!((r.waste_score - 0.0).abs() < 1e-6);
         assert!(r.recommendations.is_empty());
     }
@@ -313,7 +344,7 @@ mod tests {
                 .op(load_global(0, 2, 3))
                 .literal(LiteralValue::U32(4)),
         );
-        let r = audit(&kk);
+        let r = audit(&kk, &facts());
         assert!(r.waste_score > 0.0);
         assert_eq!(r.recommendations.len(), 1);
         assert_eq!(
@@ -335,7 +366,7 @@ mod tests {
                 .op(load_global(0, 0, 2))
                 .literal(LiteralValue::U32(0)),
         );
-        let r = audit(&kk);
+        let r = audit(&kk, &facts());
         assert!(
             r.recommendations
                 .iter()
@@ -368,7 +399,7 @@ mod tests {
                     .literals([LiteralValue::U32(4), LiteralValue::U32(32)]),
             )
             .build();
-        let r = audit(&kk);
+        let r = audit(&kk, &facts());
         assert!(r.recommendations.len() >= 2);
         // Critical bank conflict (priority 0) must come before strided
         // global load (priority 1).
@@ -384,7 +415,7 @@ mod tests {
 
     #[test]
     fn report_kernel_id_echoes_descriptor_id() {
-        let r = audit(&empty_kernel());
+        let r = audit(&empty_kernel(), &facts());
         assert_eq!(r.kernel_id, "empty");
     }
 
@@ -401,7 +432,7 @@ mod tests {
 
     #[test]
     fn format_short_clean_kernel_says_clean() {
-        let r = audit(&empty_kernel_named("named"));
+        let r = audit(&empty_kernel_named("named"), &facts());
         let s = r.format_short();
         assert!(s.contains("named:"));
         assert!(s.contains("clean") || s.contains("recommendations"));
@@ -409,13 +440,13 @@ mod tests {
 
     #[test]
     fn format_short_unnamed_uses_unnamed_label() {
-        let r = audit(&empty_kernel_named(""));
+        let r = audit(&empty_kernel_named(""), &facts());
         assert!(r.format_short().contains("<unnamed>"));
     }
 
     #[test]
     fn is_clean_on_empty_kernel() {
-        assert!(audit(&empty_kernel_named("k")).is_clean());
+        assert!(audit(&empty_kernel_named("k"), &facts()).is_clean());
     }
 
     #[test]
@@ -484,7 +515,7 @@ mod tests {
                     .literal(LiteralValue::U32(7)),
             )
             .build();
-        let (report, hist) = audit_with_histogram(&desc);
+        let (report, hist) = audit_with_histogram(&desc, &facts());
         assert_eq!(report.kernel_id, "k");
         assert_eq!(hist.literal, 2);
         assert_eq!(hist.total(), 2);

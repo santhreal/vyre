@@ -8,24 +8,18 @@
 
 use rustc_hash::FxHashSet;
 
-use crate::analyses::const_buffer_promote::{
-    analyze_with_budget, DEFAULT_CONST_BUFFER_BUDGET_BYTES,
-};
+use crate::analyses::const_buffer_promote::analyze;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, MemoryClass};
+use core::num::NonZeroU32;
 
-/// Apply constant buffer promotion using the default budget (64 KiB).
+/// Apply constant buffer promotion against the constant capacity the target
+/// reported.
 #[must_use]
-pub fn rewrite_const_buffer_promote(descriptor: &KernelDescriptor) -> KernelDescriptor {
-    rewrite_const_buffer_promote_with_budget(descriptor, DEFAULT_CONST_BUFFER_BUDGET_BYTES)
-}
-
-/// Apply constant buffer promotion using an explicit byte budget.
-#[must_use]
-pub fn rewrite_const_buffer_promote_with_budget(
+pub fn rewrite_const_buffer_promote(
     descriptor: &KernelDescriptor,
-    budget_bytes: u32,
+    budget: NonZeroU32,
 ) -> KernelDescriptor {
-    let plan = analyze_with_budget(descriptor, budget_bytes);
+    let plan = analyze(descriptor, budget);
     if plan.candidates.is_empty() {
         return descriptor.clone();
     }
@@ -99,6 +93,14 @@ mod tests {
         }
     }
 
+    /// Promotion against a stated 64 KiB constant capacity.
+    fn promote(descriptor: &KernelDescriptor) -> KernelDescriptor {
+        rewrite_const_buffer_promote(
+            descriptor,
+            NonZeroU32::new(64 * 1024).expect("positive budget"),
+        )
+    }
+
     #[test]
     fn eligible_readonly_buffer_with_multiple_loads_is_promoted() {
         let slot = BindingSlot {
@@ -111,7 +113,7 @@ mod tests {
         };
 
         let desc = test_descriptor_with_loads(vec![slot], vec![0, 0, 0]);
-        let rewritten = rewrite_const_buffer_promote(&desc);
+        let rewritten = promote(&desc);
 
         assert_eq!(
             rewritten.bindings.slots[0].memory_class,
@@ -135,7 +137,7 @@ mod tests {
         };
 
         let desc = test_descriptor_with_loads(vec![slot], vec![0]);
-        let rewritten = rewrite_const_buffer_promote(&desc);
+        let rewritten = promote(&desc);
 
         assert_eq!(
             rewritten.bindings.slots[0].memory_class,
@@ -156,7 +158,7 @@ mod tests {
         };
 
         let desc = test_descriptor_with_loads(vec![slot], vec![0, 0]);
-        let rewritten = rewrite_const_buffer_promote(&desc);
+        let rewritten = promote(&desc);
 
         assert_eq!(
             rewritten.bindings.slots[0].memory_class,
@@ -177,7 +179,7 @@ mod tests {
         };
 
         let desc = test_descriptor_with_loads(vec![slot], vec![0, 0]);
-        let rewritten = rewrite_const_buffer_promote(&desc);
+        let rewritten = promote(&desc);
 
         assert_eq!(
             rewritten.bindings.slots[0].memory_class,

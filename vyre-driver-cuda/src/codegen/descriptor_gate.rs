@@ -9,7 +9,11 @@ pub(crate) fn validate_and_analyze(
 ) -> Result<vyre_lower::KernelDescriptor, String> {
     let descriptor = lower_for_cuda_emit(program)?;
     if crate::instrumentation::cuda_descriptor_audit_enabled() {
-        let neutral = vyre_lower::audit(&descriptor);
+        let mut facts = vyre_lower::analyses::AnalysisFacts::none();
+        if let Some(banks) = std::num::NonZeroU32::new(crate::device::SHARED_MEMORY_BANK_COUNT) {
+            facts = facts.with_shared_memory_banks(banks);
+        }
+        let neutral = vyre_lower::audit(&descriptor, &facts);
         let concrete = vyre_emit_ptx::patterns::audit(&descriptor, compute_capability(target_sm));
         tracing::trace!(
             target: "vyre_driver_cuda::descriptor",

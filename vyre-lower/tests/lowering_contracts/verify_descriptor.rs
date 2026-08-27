@@ -1,5 +1,6 @@
 //! Descriptor verification entry-point contracts.
 
+use vyre_lower::analyses::AnalysisFacts;
 use vyre_lower::descriptor_builder::{body, descriptor, lit};
 use vyre_lower::*;
 
@@ -39,7 +40,7 @@ fn full_report_runs_read_only_analyses() {
             literals: vec![LiteralValue::U32(7)],
         },
     };
-    let report = full_report(&desc);
+    let report = full_report(&desc, &AnalysisFacts::none());
     assert_eq!(report.descriptor_id, "fr");
     assert!(report.summary.contains("fr:"));
     assert_eq!(report.histogram.literal, 2);
@@ -65,7 +66,7 @@ fn full_report_serializes_to_json() {
             literals: vec![LiteralValue::U32(7)],
         },
     };
-    let report = full_report(&desc);
+    let report = full_report(&desc, &AnalysisFacts::none());
     assert_eq!(report.descriptor_id, "fr");
     let json = serde_json::to_string(&report).expect("Fix: serialize");
     assert!(json.contains("\"descriptor_id\""));
@@ -91,7 +92,7 @@ fn full_report_format_long_includes_all_sections() {
             literals: vec![LiteralValue::U32(7)],
         },
     };
-    let r = full_report(&desc);
+    let r = full_report(&desc, &AnalysisFacts::none());
     let long = r.format_long();
     assert!(long.contains("Kernel:"));
     assert!(long.contains("descriptor id: fr"));
@@ -104,7 +105,7 @@ fn full_report_format_long_includes_all_sections() {
 #[test]
 fn full_report_records_verify_fix_text_for_bad_descriptor() {
     let desc = descriptor("bad").dispatch(0, 1, 1).body(body()).build();
-    let report = full_report(&desc);
+    let report = full_report(&desc, &AnalysisFacts::none());
     assert_eq!(report.descriptor_id, "bad");
     assert_eq!(report.verify_status(), "FAIL");
     assert!(

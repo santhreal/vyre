@@ -11,17 +11,20 @@ use vyre_lower::analyses::{
     BankConflictMitigation, ConflictSeverity, TargetBankGeometry,
 };
 
-#[test]
-fn default_target_geometry_has_32_banks() {
-    let geom = TargetBankGeometry::default();
-    assert_eq!(geom.bank_count, 32);
-    assert_eq!(geom.bank_width_bytes, 4);
-    assert_eq!(geom.subgroup_lanes, 32);
+/// Bank geometry a case states. Every field is a device fact, so a case names
+/// all four rather than inheriting them.
+fn stated_geometry() -> TargetBankGeometry {
+    TargetBankGeometry {
+        bank_count: 32,
+        bank_width_bytes: 4,
+        subgroup_lanes: 32,
+        instruction_word_bytes: 4,
+    }
 }
 
 #[test]
 fn padding_mitigates_power_of_two_column_stride_conflicts() {
-    let geom = TargetBankGeometry::default();
+    let geom = stated_geometry();
     let phases = vec![AccessPhaseProfile {
         phase: AccessPhase::ComputeRead,
         stride_elements: 32, // Stride 32 on 32 banks causes critical 32-way conflict
@@ -53,7 +56,7 @@ fn padding_mitigates_power_of_two_column_stride_conflicts() {
 
 #[test]
 fn xor_swizzling_reduces_conflict_penalty() {
-    let geom = TargetBankGeometry::default();
+    let geom = stated_geometry();
     let phases = vec![AccessPhaseProfile {
         phase: AccessPhase::ComputeRead,
         stride_elements: 16, // Stride 16 causes 16-way critical conflict
@@ -76,7 +79,7 @@ fn xor_swizzling_reduces_conflict_penalty() {
 
 #[test]
 fn strategy_selection_rejects_candidate_moving_conflict_to_another_phase() {
-    let geom = TargetBankGeometry::default();
+    let geom = stated_geometry();
     // Phase 1 is clean at stride 1; Phase 2 has conflict at stride 32
     // If a rewrite at +1 padding fixes Phase 2 (32 -> 33) but messes up Phase 1 into a severe conflict,
     // it must be rejected.
@@ -102,7 +105,7 @@ fn strategy_selection_rejects_candidate_moving_conflict_to_another_phase() {
 
 #[test]
 fn strategy_does_not_promise_universal_zero_conflicts() {
-    let geom = TargetBankGeometry::default();
+    let geom = stated_geometry();
     // Multiple concurrent phases with mutually conflicting stride constraints:
     // Any padding (+1, +2, +4) pushes at least one phase into a bank conflict.
     let phases = vec![

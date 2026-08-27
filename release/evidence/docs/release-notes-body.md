@@ -341,6 +341,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   variant and asserts each read set reports it. The variant set comes from
   `NODE_VARIANT_NAMES` through the shared IR fixtures, so a new variant is red
   before any of the three questions is asked.
+- Neutral lowering compares the per-binding read, write and read-modify-write
+  effects a program states against the lowered kernel descriptor and rejects a
+  kernel that lost a store, invented one, or changed a read-modify-write into a
+  plain access.
 - Two suites close the classes above from the tree at run time. The Naga
   scanner's gate plants an atomic and a store in every body slot of every
   body-carrying `Node` variant and asserts the walk reaches both, and
@@ -402,6 +406,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre-runtime` at 735 and `vyre-driver-cuda` at 642. A crate with no row is a
   finding, so a newly published crate is red rather than unjudged, and
   `--write` lowers a recorded number to what it measured and never raises one.
+- Neutral lowering states a physical storage layout: one region per
+  workgroup-scoped and invocation-private binding with its byte span,
+  alignment, live op range and pool offset, so regions with disjoint lifetimes
+  share bytes and a pool above the selected schedule's bound is rejected before
+  a target sees the kernel.
 - `vyre-foundation` has a criterion benchmark over the whole optimizer pass
   pipeline: the eight release corpus families, wide kernels at 16 and 64
   buffers, and a 4x8 loop nest. The pipeline had per-pass timing inside the
@@ -727,6 +736,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   cross-scope CSE hoist moved into vyre_pass_engine::optimizer::cse_via_encoded
   beside the canonical ids it consumes. The pass engine keeps only the passes
   it dispatches as vyre Programs.
+- Neutral kernel analyses take shared-memory bank count, per-workgroup shared
+  capacity, and constant capacity as stated device facts, and a capacity the
+  caller leaves unstated yields no report section and no promotion instead of
+  one computed from an assumed limit.
 - Every authored page row in docs/DOCS.toml carries a covers list naming the
   source paths the page states the content of. docs/lego-block-rule.md also
   records both anonymous generator prefixes: it named only anonymous:: while
@@ -771,6 +784,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - xtask gates --write-baseline records a measured finding count only when it is
   at or below the pin already recorded, and fails naming every gate that
   reports more, so a run can no longer legalize a red gate.
+- The launch-domain analysis proves the predicated-tail form, so a program that
+  binds its bounds test to a local and branches on a value selected to zero
+  outside it launches over the domain its guards admit rather than the widest
+  declared buffer.
 - reduce::workgroup_scan owns the Blelloch sweep, BlockScanPass and their lane
   addressing, which reduce::workgroup_tree carried alongside the sum/max/min
   folds until the file passed the thousand-line cap. A scan leaves every lane
@@ -3320,12 +3337,19 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   with a `path` attribute pointing into `src/bin/`, which compiled the same
   layout rules twice and put a shared module in the directory reserved for
   binary roots. Both binaries now use `xtask::rule_tree`.
+- An asynchronous transfer states its visibility, stage ring slot and
+  memory-proxy fence, so a wait completes one slot and leaves the rest of the
+  ring in flight instead of draining every committed transfer.
 - Compilation now crosses validated whole-program graph, versioned logical
   domains, selected schedule, physical kernel, and authenticated target payload
   stages; logical regions include positive typed extents, layouts, reduction
   axes, aliases, effects, dependencies, and bounded parallel, sequential,
   reduction, or retained-state semantics, while unresolved runtime extents fail
   before search.
+- A descriptor matrix multiply-accumulate states tile extents and one typed
+  fragment per operand, so operand arity and result span are derived from the
+  declaration and a target rejects a form it has no instruction for instead of
+  receiving a single hardcoded shape.
 - The C11 typedef annotation path now composes registered row phases instead of
   inlining them: c11_identifier_row_hash,
   c11_identifier_row_hash_packed_haystack,
@@ -4166,6 +4190,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   that `ErrorCode::CooperativeResidencyExceeded` documents. Refusing the split
   still means what it meant, that a backend will not emulate a barrier its
   device does not have.
+- A quantized, graph, or solver dispatch readback failure reports its
+  byte-count and buffer-count contract once instead of behind two copies of the
+  semantic execution prefix.
 - The Granlund-Montgomery magic-number helper checked its domain with a debug
   assertion, so a release build handed 0, 1, or a power of two computed a magic
   number that emits a division returning wrong results. The check now holds in
@@ -5189,6 +5216,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   long as those directories had their current names. The rows now name
   `/vyre-spec/`, `/vyre-reference/`, `/conform/`, `/xtask-evidence/` and
   `/release/evidence/`.
+- Descriptor verification rejects an operation that addresses a binding slot
+  the layout does not declare, instead of passing the unresolvable slot to a
+  backend.
 - The operation placement reader reports a source file it could not read or
   that exceeds the read cap, so the registrations that file holds are no longer
   silently missing from the schema.
@@ -5258,6 +5288,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the program declared unwritable (V134), which the target compilers would have
   lowered to stores through a read-only binding and which loop-invariant
   hoisting was already assuming could not happen.
+- The guarded logical span counts an atomic read-modify-write in an operand
+  expression as an effect, so a program whose every write is an atomic OR no
+  longer reports that it affects no index.
 - Runtime barrier elision now takes child descent from the foundation rewrite
   walk and buffer-effect descent from visit::child_bodies instead of two
   hand-written matches ending in a catch-all, so a Node variant added with a

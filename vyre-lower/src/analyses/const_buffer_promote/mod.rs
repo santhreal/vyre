@@ -11,7 +11,7 @@
 //! - `memory_class == Global` and `visibility == ReadOnly`
 //! - `element_count.is_some()` (fixed size  -  constant buffers have a
 //!   compile-time size limit, typically 64 KiB)
-//! - Total bytes ≤ const-buffer budget (default 64 KiB)
+//! - Total bytes ≤ the constant capacity the caller stated
 //! - Multiple loads against the binding (single-load doesn't repay
 //!   the cache-line preload)
 //!
@@ -20,6 +20,7 @@
 
 use super::load_counts::count_global_loads_by_slot;
 use crate::{BindingSlot, BindingVisibility, KernelDescriptor, MemoryClass};
+use core::num::NonZeroU32;
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -59,19 +60,12 @@ impl ConstBufferPlan {
     }
 }
 
-/// Default const-buffer budget: 64 KiB. Callers with tighter backend
-/// limits should pass their real budget into the analysis entry point.
-pub const DEFAULT_CONST_BUFFER_BUDGET_BYTES: u32 = 64 * 1024;
-
-/// Analyze constant-buffer candidates using the default budget.
+/// Analyze constant-buffer candidates against the constant capacity the
+/// target reported. There is no default capacity: one stored here would be a
+/// device fact recorded in a neutral crate.
 #[must_use]
-pub fn analyze(desc: &KernelDescriptor) -> ConstBufferPlan {
-    analyze_with_budget(desc, DEFAULT_CONST_BUFFER_BUDGET_BYTES)
-}
-
-/// Analyze constant-buffer candidates using an explicit byte budget.
-#[must_use]
-pub fn analyze_with_budget(desc: &KernelDescriptor, budget_bytes: u32) -> ConstBufferPlan {
+pub fn analyze(desc: &KernelDescriptor, budget: NonZeroU32) -> ConstBufferPlan {
+    let budget_bytes = budget.get();
     // Eligible bindings.
     let eligible: FxHashMap<u32, &BindingSlot> = desc
         .bindings
@@ -148,16 +142,30 @@ mod tests {
         fixtures::kernel(binding, load_count)
     }
 
+    /// A plan against a stated 64 KiB constant capacity, the value most cases
+    /// here do not vary.
+    fn plan(desc: &KernelDescriptor) -> ConstBufferPlan {
+        sized_plan(desc, 64 * 1024)
+    }
+
+    /// A plan against an explicitly stated constant capacity.
+    fn sized_plan(desc: &KernelDescriptor, budget_bytes: u32) -> ConstBufferPlan {
+        analyze(
+            desc,
+            NonZeroU32::new(budget_bytes).expect("positive budget"),
+        )
+    }
+
     #[test]
     fn empty_kernel_no_candidates() {
-        let p = analyze(&descriptor("k").dispatch(64, 1, 1).build());
+        let p = plan(&descriptor("k").dispatch(64, 1, 1).build());
         assert!(p.candidates.is_empty());
         assert!(p.fits_in_budget());
     }
 
     #[test]
     fn fixed_size_ro_with_two_loads_is_candidate() {
-        let p = analyze(&loads_kernel(2, ro_global_with_size(0, 16, DataType::F32)));
+        let p = plan(&loads_kernel(2, ro_global_with_size(0, 16, DataType::F32)));
         assert_eq!(p.candidates.len(), 1);
         assert_eq!(p.candidates[0].bytes, 64); // 16 * 4
         assert_eq!(p.candidates[0].load_count, 2);
@@ -167,7 +175,7 @@ mod tests {
     fn runtime_sized_binding_not_candidate() {
         let mut binding = ro_global_with_size(0, 16, DataType::F32);
         binding.element_count = None;
-        let p = analyze(&loads_kernel(2, binding));
+        let p = plan(&loads_kernel(2, binding));
         assert!(p.candidates.is_empty());
     }
 
@@ -175,20 +183,20 @@ mod tests {
     fn read_write_binding_not_candidate() {
         let mut binding = ro_global_with_size(0, 16, DataType::F32);
         binding.visibility = BindingVisibility::ReadWrite;
-        let p = analyze(&loads_kernel(2, binding));
+        let p = plan(&loads_kernel(2, binding));
         assert!(p.candidates.is_empty());
     }
 
     #[test]
     fn single_load_not_candidate() {
-        let p = analyze(&loads_kernel(1, ro_global_with_size(0, 16, DataType::F32)));
+        let p = plan(&loads_kernel(1, ro_global_with_size(0, 16, DataType::F32)));
         assert!(p.candidates.is_empty());
     }
 
     #[test]
     fn over_budget_binding_not_candidate() {
         // 1M elements * 4 bytes = 4 MiB >> 64 KiB budget.
-        let p = analyze(&loads_kernel(
+        let p = plan(&loads_kernel(
             2,
             ro_global_with_size(0, 1_000_000, DataType::F32),
         ));
@@ -197,7 +205,7 @@ mod tests {
 
     #[test]
     fn speedup_capped_at_8x() {
-        let p = analyze(&loads_kernel(
+        let p = plan(&loads_kernel(
             100,
             ro_global_with_size(0, 16, DataType::F32),
         ));
@@ -208,15 +216,10 @@ mod tests {
 
     #[test]
     fn custom_budget_changes_eligibility() {
-        let p = analyze_with_budget(
+        let p = sized_plan(
             &loads_kernel(2, ro_global_with_size(0, 16, DataType::F32)),
             32, // 32 byte budget  -  64-byte binding doesn't fit
         );
         assert!(p.candidates.is_empty());
-    }
-
-    #[test]
-    fn default_budget_is_64_kib() {
-        assert_eq!(DEFAULT_CONST_BUFFER_BUDGET_BYTES, 65536);
     }
 }
