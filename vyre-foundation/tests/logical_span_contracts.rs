@@ -89,6 +89,32 @@ fn every_accepted_guard_form_states_its_exact_bound() {
             ),
             8,
         ),
+        (
+            "chunk * lanes + index < 8",
+            Expr::lt(
+                Expr::add(Expr::mul(Expr::var("chunk"), Expr::u32(64)), index()),
+                Expr::u32(8),
+            ),
+            8,
+        ),
+        (
+            "index + chunk * lanes <= 8",
+            Expr::le(
+                Expr::add(index(), Expr::mul(Expr::var("chunk"), Expr::u32(64))),
+                Expr::u32(8),
+            ),
+            9,
+        ),
+        (
+            "8 > chunk + index",
+            Expr::gt(Expr::u32(8), Expr::add(Expr::var("chunk"), index())),
+            8,
+        ),
+        (
+            "8 >= chunk + index",
+            Expr::ge(Expr::u32(8), Expr::add(Expr::var("chunk"), index())),
+            9,
+        ),
     ];
 
     for (form, cond, bound) in cases {
@@ -120,6 +146,36 @@ fn no_unproven_guard_form_narrows_the_launch() {
         ("axis 1 < 8", Expr::lt(Expr::logical_index(1), Expr::u32(8))),
         ("index < n", Expr::lt(index(), Expr::Var("n".into()))),
         ("index <= u32::MAX", Expr::le(index(), Expr::u32(u32::MAX))),
+        (
+            "chunk * index < 8",
+            Expr::lt(Expr::mul(Expr::var("chunk"), index()), Expr::u32(8)),
+        ),
+        (
+            "chunk - index < 8",
+            Expr::lt(Expr::sub(Expr::var("chunk"), index()), Expr::u32(8)),
+        ),
+        (
+            "chunk + axis 1 < 8",
+            Expr::lt(
+                Expr::add(Expr::var("chunk"), Expr::logical_index(1)),
+                Expr::u32(8),
+            ),
+        ),
+        (
+            "chunk + index < n",
+            Expr::lt(
+                Expr::add(Expr::var("chunk"), index()),
+                Expr::Var("n".into()),
+            ),
+        ),
+        (
+            "chunk + index > 8",
+            Expr::gt(Expr::add(Expr::var("chunk"), index()), Expr::u32(8)),
+        ),
+        (
+            "chunk + index <= u32::MAX",
+            Expr::le(Expr::add(Expr::var("chunk"), index()), Expr::u32(u32::MAX)),
+        ),
     ];
 
     for (form, cond) in cases {
@@ -237,6 +293,55 @@ fn a_proven_index_local_carries_the_guard_and_a_rebound_one_does_not() {
         )],
     );
     assert_eq!(guarded_logical_span(&nested), Some(8));
+}
+
+/// WHY: a chunked walk owns more cells than the launch has lanes, so it binds
+/// `chunk * lanes + index` to a local and guards that local against the cell
+/// count. The bound reaches the index through an addition, and an analysis that
+/// recognizes only the bare index reports the walk unbounded, which dispatches
+/// one lane per declared word instead of one per cell. A local carrying no
+/// index still bounds nothing.
+#[test]
+fn a_chunked_cell_local_carries_its_guard_to_the_effect() {
+    let buffers = || vec![BufferDecl::output("out", 0, DataType::U32).with_count(RESOURCE_SPAN)];
+    let cell = || Expr::add(Expr::mul(Expr::var("chunk"), Expr::u32(64)), index());
+    let walk = |bind: Node| {
+        Program::wrapped(
+            buffers(),
+            [64, 1, 1],
+            vec![Node::loop_for(
+                "chunk",
+                Expr::u32(0),
+                Expr::u32(4),
+                vec![
+                    bind,
+                    Node::if_then(
+                        Expr::lt(Expr::var("cell"), Expr::u32(200)),
+                        vec![Node::store(
+                            "out",
+                            Expr::mul(Expr::var("cell"), Expr::u32(8)),
+                            Expr::u32(1),
+                        )],
+                    ),
+                ],
+            )],
+        )
+    };
+
+    let chunked = walk(Node::let_bind("cell", cell()));
+    assert_eq!(
+        guarded_logical_span(&chunked),
+        Some(200),
+        "Fix: a guard on `chunk * lanes + index` bounds axis-0 logical index."
+    );
+    assert_eq!(admitted_logical_span(&chunked, RESOURCE_SPAN), 200);
+
+    let indexless = walk(Node::let_bind("cell", Expr::var("chunk")));
+    assert_eq!(
+        guarded_logical_span(&indexless),
+        None,
+        "Fix: a local carrying no logical index bounds nothing."
+    );
 }
 
 /// WHY: the else arm runs where the guard is false, so the guard's bound does

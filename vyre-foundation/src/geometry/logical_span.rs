@@ -101,15 +101,17 @@ pub fn admitted_logical_span(program: &Program, resource_span: u32) -> u32 {
 /// A guard is not always written against the index expression. The production
 /// form binds the predicate to a local, selects a value that is zero outside
 /// it, and branches on that value being nonzero, so the bound reaches the
-/// effect through two locals rather than through the branch condition. Three
+/// effect through two locals rather than through the branch condition. Four
 /// sets carry that chain: locals equal to axis-0 logical index, locals holding
-/// a predicate that bounds the index, and locals whose value is zero once the
-/// index passes a bound.
+/// a predicate that bounds the index, locals whose value is zero once the index
+/// passes a bound, and locals holding a sum with the index as an addend, which
+/// is the cell a chunked walk owns.
 #[derive(Clone, Default)]
 struct Facts {
     index: HashSet<Ident>,
     guards: HashMap<Ident, u32>,
     zeroed: HashMap<Ident, u32>,
+    index_sums: HashSet<Ident>,
 }
 
 impl Facts {
@@ -118,6 +120,7 @@ impl Facts {
         self.index.remove(name);
         self.guards.remove(name);
         self.zeroed.remove(name);
+        self.index_sums.remove(name);
     }
 
     /// Record what `value` proves about the local it is bound to.
@@ -125,6 +128,7 @@ impl Facts {
         let index = is_axis_zero_index(value, &self.index);
         let guard = axis_zero_upper_bound(value, self);
         let zeroed = zero_outside_bound(value, self);
+        let index_sum = sum_contains_axis_zero_index(value, self);
         self.forget(name);
         if index {
             self.index.insert(name.clone());
@@ -132,6 +136,8 @@ impl Facts {
             self.guards.insert(name.clone(), limit);
         } else if let Some(limit) = zeroed {
             self.zeroed.insert(name.clone(), limit);
+        } else if index_sum {
+            self.index_sums.insert(name.clone());
         }
     }
 }
@@ -305,6 +311,32 @@ fn is_axis_zero_index(expr: &Expr, names: &HashSet<Ident>) -> bool {
     }
 }
 
+/// Whether `expr` is a sum carrying axis-0 logical index as one addend.
+///
+/// A chunked walk guards `chunk * lanes + index` against the element count, so
+/// the bound reaches the index through an addition rather than standing against
+/// the index itself. Every addend is a `u32` and so at least zero: the index is
+/// at most the sum, and a bound on the sum bounds the index. The exception is a
+/// sum that wraps, which needs an addend within the bound of the `u32` ceiling,
+/// and no admitted launch geometry reaches that, since the widest span this
+/// analysis returns is the resource span of a declared buffer.
+fn sum_contains_axis_zero_index(expr: &Expr, facts: &Facts) -> bool {
+    if is_axis_zero_index(expr, &facts.index) {
+        return true;
+    }
+    match expr {
+        Expr::Var(name) => facts.index_sums.contains(name),
+        Expr::BinOp {
+            op: BinOp::Add,
+            left,
+            right,
+        } => {
+            sum_contains_axis_zero_index(left, facts) || sum_contains_axis_zero_index(right, facts)
+        }
+        _ => false,
+    }
+}
+
 /// Bound past which `expr` evaluates to zero for every axis-0 logical index.
 ///
 /// A predicated tail is written as `select(index < k, value, 0)`, so the value
@@ -357,6 +389,9 @@ fn zero_outside_bound(expr: &Expr, facts: &Facts) -> Option<u32> {
 /// keeps the wider one. A local holding a predicate carries that predicate's
 /// bound, and a test that a zeroed value is nonzero carries the bound past
 /// which the value is zero.
+///
+/// A comparison against a sum carrying the index as an addend bounds the index
+/// too, which is the form a chunked walk takes.
 fn axis_zero_upper_bound(cond: &Expr, facts: &Facts) -> Option<u32> {
     if let Expr::Var(name) = cond {
         return facts.guards.get(name).copied();
@@ -372,6 +407,14 @@ fn axis_zero_upper_bound(cond: &Expr, facts: &Facts) -> Option<u32> {
         BinOp::Ge if is_axis_zero_index(right, names) => literal_u32(left)?.checked_add(1),
         BinOp::Eq if is_axis_zero_index(left, names) => literal_u32(right)?.checked_add(1),
         BinOp::Eq if is_axis_zero_index(right, names) => literal_u32(left)?.checked_add(1),
+        BinOp::Lt if sum_contains_axis_zero_index(left, facts) => literal_u32(right),
+        BinOp::Le if sum_contains_axis_zero_index(left, facts) => {
+            literal_u32(right)?.checked_add(1)
+        }
+        BinOp::Gt if sum_contains_axis_zero_index(right, facts) => literal_u32(left),
+        BinOp::Ge if sum_contains_axis_zero_index(right, facts) => {
+            literal_u32(left)?.checked_add(1)
+        }
         BinOp::Ne if literal_u32(right) == Some(0) => zero_outside_bound(left, facts),
         BinOp::Ne if literal_u32(left) == Some(0) => zero_outside_bound(right, facts),
         BinOp::Gt if literal_u32(right) == Some(0) => zero_outside_bound(left, facts),

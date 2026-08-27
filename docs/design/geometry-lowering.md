@@ -114,6 +114,12 @@ index, and `None` when an effect escapes every such guard, because an unbounded
 effect leaves high lanes observable. A program with no effect returns `Some(0)`:
 the launch minimum belongs to whoever sizes the launch.
 
+Four guard shapes prove that bound: the index itself, a local proven equal to
+it, a predicate bound to a local, and a comparison against a sum carrying the
+index as an addend. The last is the chunked form, where one invocation handles
+several cells and the guard reads `chunk * lanes + index`; every addend is a
+`u32`, so a bound on the sum is a bound on the index.
+
 `admitted_logical_span` narrows a resource-derived span to that guarded domain.
 A resource span takes the widest declared buffer, which a scatter makes far
 larger than the domain its guard admits. The result is at least one.
