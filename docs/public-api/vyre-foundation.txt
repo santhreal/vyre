@@ -95,6 +95,7 @@ impl core::default::Default for vyre_foundation::optimizer::AdapterCaps
 impl core::default::Default for vyre_foundation::optimizer::PassScheduler
 impl core::default::Default for vyre_foundation::optimizer::hot_path_hints::HotPathHints
 impl core::default::Default for vyre_foundation::optimizer::law_saturation::LawSaturationBudget
+impl core::default::Default for vyre_foundation::optimizer::region_law::RegionDerivationBudget
 impl core::default::Default for vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget
 impl core::error::Error for vyre_foundation::GeometryConstraintConflict
 impl core::error::Error for vyre_foundation::GeometryLoweringError
@@ -343,6 +344,7 @@ impl vyre_foundation::optimizer::passes::sync::barrier_coalesce::BarrierCoalesce
 impl vyre_foundation::optimizer::program_shape_facts::BufferShapeFacts
 impl vyre_foundation::optimizer::program_shape_facts::ProgramShapeFacts
 impl vyre_foundation::optimizer::program_soa::ProgramFacts
+impl vyre_foundation::optimizer::region_law::RegionDerivation
 impl vyre_foundation::optimizer::rewrite_contract::BoundedExpansion
 impl vyre_foundation::optimizer::rewrite_contract::RewriteContract
 impl vyre_foundation::optimizer::rewrite_contract::RewriteWitness
@@ -598,6 +600,7 @@ pub const vyre_foundation::optimizer::eqsat_toml::EQSAT_TOML_SCHEMA_VERSION: u32
 pub const vyre_foundation::optimizer::passes::cleanup::region_inline_engine::DEFAULT_INLINE_THRESHOLD: usize
 pub const vyre_foundation::optimizer::passes::loops::loop_strip_mine::DEFAULT_STRIP_MINE_TILE: u32
 pub const vyre_foundation::optimizer::program_shape_facts::ANALYSIS_KEY: &str
+pub const vyre_foundation::optimizer::region_law::REGION_LAWS: &[vyre_foundation::optimizer::region_law::RegionLaw]
 pub const vyre_foundation::program_caps::RequiredCapabilities::NONE: Self
 pub const vyre_foundation::schedule::SCHEDULE_IR_VERSION: u16
 pub const vyre_foundation::serial::text::MAX_TEXT_WIRE_BYTES: usize
@@ -692,6 +695,7 @@ pub enum vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntryKind
 pub enum vyre_foundation::optimizer::passes::algebraic::precision_hint::PrecisionHint
 pub enum vyre_foundation::optimizer::passes::algebraic::precision_hint::TranscendentalOp
 pub enum vyre_foundation::optimizer::program_soa::BufferRefKind
+pub enum vyre_foundation::optimizer::region_law::RegionDerivationStop
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofDomain
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofSort
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofStatus
@@ -2256,6 +2260,13 @@ pub fn vyre_foundation::optimizer::program_soa::ProgramFacts::regions_by_generat
 pub fn vyre_foundation::optimizer::program_soa::ProgramFacts::try_build(program: &vyre_foundation::ir::Program) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_foundation::optimizer::program_soa::ProgramFacts::var_read_sites_of(&self, name: &str) -> &[vyre_foundation::optimizer::program_soa::NodeIndex]
 pub fn vyre_foundation::optimizer::program_soa::ProgramFacts::var_reads(&self) -> &[(vyre_foundation::optimizer::program_soa::NodeIndex, vyre_foundation::ir::Ident)]
+pub fn vyre_foundation::optimizer::region_law::RegionDerivation::cited_laws(&self) -> alloc::vec::Vec<&'static str>
+pub fn vyre_foundation::optimizer::region_law::RegionDerivation::composed(&self) -> alloc::vec::Vec<&vyre_foundation::optimizer::region_law::DerivedRegion>
+pub fn vyre_foundation::optimizer::region_law::RegionDerivationBudget::default() -> Self
+pub fn vyre_foundation::optimizer::region_law::derive_region_alternatives(program: &vyre_foundation::ir::Program, grants: &[vyre_foundation::optimizer::rewrite_contract::NumericalContract], budget: vyre_foundation::optimizer::region_law::RegionDerivationBudget) -> core::result::Result<vyre_foundation::optimizer::region_law::RegionDerivation, vyre_foundation::optimizer::OptimizerError>
+pub fn vyre_foundation::optimizer::region_law::law_numerical_contract(law: &vyre_foundation::optimizer::region_law::RegionLaw) -> core::option::Option<vyre_foundation::optimizer::rewrite_contract::NumericalContract>
+pub fn vyre_foundation::optimizer::region_law::laws_for_family(family: vyre_spec::region_law::RegionLawFamily) -> alloc::vec::Vec<&'static vyre_foundation::optimizer::region_law::RegionLaw>
+pub fn vyre_foundation::optimizer::region_law::region_law(name: &str) -> core::option::Option<&'static vyre_foundation::optimizer::region_law::RegionLaw>
 pub fn vyre_foundation::optimizer::registered_pass_metadata_for_profile(profile: vyre_foundation::optimizer::OptimizerProfile) -> core::result::Result<alloc::vec::Vec<vyre_foundation::optimizer::PassMetadata>, vyre_foundation::optimizer::OptimizerError>
 pub fn vyre_foundation::optimizer::registered_pass_registrations() -> core::result::Result<alloc::sync::Arc<[&'static vyre_foundation::optimizer::ProgramPassRegistration]>, vyre_foundation::optimizer::OptimizerError>
 pub fn vyre_foundation::optimizer::registered_passes() -> core::result::Result<alloc::vec::Vec<vyre_foundation::optimizer::ProgramPassKind>, vyre_foundation::optimizer::OptimizerError>
@@ -2713,6 +2724,7 @@ pub mod vyre_foundation::optimizer::passes::sync
 pub mod vyre_foundation::optimizer::passes::sync::barrier_coalesce
 pub mod vyre_foundation::optimizer::program_shape_facts
 pub mod vyre_foundation::optimizer::program_soa
+pub mod vyre_foundation::optimizer::region_law
 pub mod vyre_foundation::optimizer::rewrite_contract
 pub mod vyre_foundation::optimizer::rewrite_proof
 pub mod vyre_foundation::optimizer::rewrite_proof_registry
@@ -2949,6 +2961,10 @@ pub struct vyre_foundation::optimizer::program_shape_facts::ProgramShapeFacts
 pub struct vyre_foundation::optimizer::program_soa::NodeIndex(pub u32)
 pub struct vyre_foundation::optimizer::program_soa::ProgramFacts
 pub struct vyre_foundation::optimizer::program_soa::RegionMeta
+pub struct vyre_foundation::optimizer::region_law::DerivedRegion
+pub struct vyre_foundation::optimizer::region_law::RegionDerivation
+pub struct vyre_foundation::optimizer::region_law::RegionDerivationBudget
+pub struct vyre_foundation::optimizer::region_law::RegionLaw
 pub struct vyre_foundation::optimizer::rewrite_contract::RewriteContract
 pub struct vyre_foundation::optimizer::rewrite_contract::RewriteContractRegistration
 pub struct vyre_foundation::optimizer::rewrite_proof::ProofEvidenceRecord
@@ -4419,6 +4435,19 @@ pub vyre_foundation::optimizer::program_soa::NodeKind::Trap
 pub vyre_foundation::optimizer::program_soa::RegionMeta::generator: vyre_foundation::ir::Ident
 pub vyre_foundation::optimizer::program_soa::RegionMeta::node: vyre_foundation::optimizer::program_soa::NodeIndex
 pub vyre_foundation::optimizer::program_soa::RegionMeta::source_region: core::option::Option<vyre_foundation::ir::Ident>
+pub vyre_foundation::optimizer::region_law::DerivedRegion::chain: alloc::vec::Vec<&'static str>
+pub vyre_foundation::optimizer::region_law::DerivedRegion::program: vyre_foundation::ir::Program
+pub vyre_foundation::optimizer::region_law::RegionDerivation::alternatives: alloc::vec::Vec<vyre_foundation::optimizer::region_law::DerivedRegion>
+pub vyre_foundation::optimizer::region_law::RegionDerivation::stop: vyre_foundation::optimizer::region_law::RegionDerivationStop
+pub vyre_foundation::optimizer::region_law::RegionDerivationBudget::max_alternatives: usize
+pub vyre_foundation::optimizer::region_law::RegionDerivationBudget::max_depth: usize
+pub vyre_foundation::optimizer::region_law::RegionDerivationStop::AlternativeLimit
+pub vyre_foundation::optimizer::region_law::RegionDerivationStop::DepthReached
+pub vyre_foundation::optimizer::region_law::RegionDerivationStop::Saturated
+pub vyre_foundation::optimizer::region_law::RegionLaw::family: vyre_spec::region_law::RegionLawFamily
+pub vyre_foundation::optimizer::region_law::RegionLaw::name: &'static str
+pub vyre_foundation::optimizer::region_law::RegionLaw::realized_by: &'static str
+pub vyre_foundation::optimizer::region_law::RegionLaw::statement: &'static str
 pub vyre_foundation::optimizer::rewrite_contract::BoundedExpansion::NodeBudget(u32)
 pub vyre_foundation::optimizer::rewrite_contract::BoundedExpansion::NodeFactor(u32)
 pub vyre_foundation::optimizer::rewrite_contract::BoundedExpansion::NonGrowing

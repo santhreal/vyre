@@ -135,6 +135,9 @@ pub(crate) mod planar_batch;
 /// lookup or O(K) over the answer instead of paying a fresh tree
 /// walk per query.
 pub mod program_soa;
+/// Region alternatives derived from the declarative law families whose subject
+/// is a region rather than a value.
+pub mod region_law;
 pub(crate) mod rewrite;
 /// Declared level, preconditions, effects, numerical contract, proof witness,
 /// profitability, and expansion bound of every registered rewriting pass.
