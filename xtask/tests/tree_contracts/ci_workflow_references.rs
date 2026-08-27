@@ -164,10 +164,11 @@ fn references(workflow: &str, command: &str) -> Vec<Reference> {
             continue;
         }
 
-        let is_cargo_run = tokens
+        let is_cargo = tokens
             .iter()
-            .any(|t| *t == "cargo" || *t == "cargo_full" || *t == "./cargo_full")
-            && tokens.contains(&"run");
+            .any(|t| matches!(*t, "cargo" | "cargo_full" | "./cargo_full"));
+
+        let is_cargo_run = is_cargo && tokens.contains(&"run");
 
         let addresses_dispatcher = tokens.windows(2).any(|pair| {
             (matches!(pair[0], "-p" | "--package") && SUBCOMMAND_PACKAGES.contains(&pair[1]))
@@ -193,15 +194,16 @@ fn references(workflow: &str, command: &str) -> Vec<Reference> {
         for (index, token) in tokens.iter().enumerate() {
             let next = tokens.get(index + 1).copied().unwrap_or_default();
             match *token {
-                "-p" | "--package" => push(Kind::Package, next),
-                "--test" => push(Kind::Test, next),
-                "--bin" => push(Kind::Bin, next),
+                "-p" | "--package" if is_cargo => push(Kind::Package, next),
+                "--test" if is_cargo => push(Kind::Test, next),
+                "--bin" if is_cargo => push(Kind::Bin, next),
                 _ => {
-                    if let Some(name) = token.strip_prefix("--test=") {
+                    if let Some(name) = token.strip_prefix("--test=").filter(|_| is_cargo) {
                         push(Kind::Test, name);
-                    } else if let Some(name) = token.strip_prefix("--bin=") {
+                    } else if let Some(name) = token.strip_prefix("--bin=").filter(|_| is_cargo) {
                         push(Kind::Bin, name);
-                    } else if let Some(name) = token.strip_prefix("--package=") {
+                    } else if let Some(name) = token.strip_prefix("--package=").filter(|_| is_cargo)
+                    {
                         push(Kind::Package, name);
                     } else if token.starts_with("scripts/") {
                         push(Kind::Script, token);
@@ -300,6 +302,31 @@ fn packages_named(references: &[Reference]) -> Vec<String> {
         .filter(|reference| reference.kind == Kind::Package)
         .map(|reference| reference.name.clone())
         .collect()
+}
+
+/// WHY: `-p` is a cargo package selector and also `mkdir`'s parents flag, and
+/// `cp -p` preserves mode. Reading every `-p` as a package reported
+/// `target/criterion` as a package no member declares, which is a finding about
+/// a shell command the gate does not describe. The class is every selector
+/// flag: a `find -name x` would have failed the same way as `--test x`.
+#[test]
+fn a_selector_flag_outside_cargo_names_nothing() {
+    assert_eq!(
+        references("bench.yml", "mkdir -p target/criterion"),
+        Vec::new()
+    );
+    assert_eq!(
+        references(
+            "bench.yml",
+            "cp -a baseline/target/criterion/. target/criterion/"
+        ),
+        Vec::new()
+    );
+    assert_eq!(references("ci.yml", "find . -name vyre-libs"), Vec::new());
+
+    let cargo = references("ci.yml", "cargo test -p vyre-libs");
+    assert_eq!(cargo.len(), 1, "a cargo package selector is still read");
+    assert_eq!(cargo[0].name, "vyre-libs");
 }
 
 /// WHY: a step that loops over packages spells the selector `-p "$package"`,
