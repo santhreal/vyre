@@ -488,9 +488,20 @@ mod tests {
             WAVES,
         );
 
+        // A composed library program carries logical identity and logical
+        // barriers. Schedule lowering owns their physical form, and emission
+        // rejects a program that never crossed it.
+        let (scheduled, lowered) =
+            vyre_foundation::transform::schedule_lowering::lower_logical_schedule(program);
+        assert!(
+            lowered,
+            "Fix: the persistent fixpoint composition must carry logical markers for schedule \
+             lowering to replace, or this test no longer exercises the emitted barrier count."
+        );
+
         let mut config = vyre_driver::DispatchConfig::default();
         config.cooperative = true;
-        let ptx = crate::codegen::program_to_ptx_for_sm(&program, &config, 90)
+        let ptx = crate::codegen::program_to_ptx_for_sm(&scheduled, &config, 90)
             .expect("Fix: the four-wave persistent fixpoint program must emit PTX.");
 
         let barriers = ptx.matches(GRID_BARRIER_PTX_MARKER).count();
