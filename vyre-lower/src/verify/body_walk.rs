@@ -65,6 +65,7 @@ pub(super) fn verify_body(
     body: &KernelBody,
     path: &mut Vec<usize>,
     inherited_results: &FxHashSet<u32>,
+    declared_slots: &FxHashSet<u32>,
     errors: &mut Vec<VerifyError>,
 ) {
     use rustc_hash::FxHashSet;
@@ -165,6 +166,18 @@ pub(super) fn verify_body(
                         });
                     }
                 }
+                OperandClass::BindingSlot => {
+                    if !declared_slots.contains(&val) {
+                        errors.push(VerifyError {
+                            body_path: path.clone(),
+                            op_index: i,
+                            kind: VerifyErrorKind::UndeclaredBindingSlot {
+                                operand_pos: pos,
+                                slot: val,
+                            },
+                        });
+                    }
+                }
                 OperandClass::Other => {}
             }
         }
@@ -183,6 +196,50 @@ pub(super) fn verify_body(
             });
         }
 
+        // A matrix multiply-accumulate states its own arity through its
+        // declared fragments, so it is checked exactly rather than by a
+        // minimum: an operand list of a different length means the op and its
+        // specification state different fragments.
+        if let KernelOpKind::MatrixMma(spec) = &op.kind {
+            match spec.operand_count() {
+                Err(reason) => errors.push(VerifyError {
+                    body_path: path.clone(),
+                    op_index: i,
+                    kind: VerifyErrorKind::MatrixFragmentUnstatable { reason },
+                }),
+                Ok(expected) if expected as usize != op.operands.len() => {
+                    errors.push(VerifyError {
+                        body_path: path.clone(),
+                        op_index: i,
+                        kind: VerifyErrorKind::MatrixOperandCountMismatch {
+                            expected,
+                            got: op.operands.len(),
+                        },
+                    });
+                }
+                Ok(_) => {}
+            }
+        }
+
+        // An asynchronous transfer states its own ring slot, visibility and
+        // fence. A declaration that pairs nothing, addresses a slot outside
+        // its ring, or fences narrower than the visibility it claims cannot
+        // be carried by any target, whichever mechanism the target picks.
+        let declaration = match &op.kind {
+            KernelOpKind::AsyncLoad(transaction) | KernelOpKind::AsyncStore(transaction) => {
+                Some(transaction.validate())
+            }
+            KernelOpKind::AsyncWait(wait) => Some(wait.validate()),
+            _ => None,
+        };
+        if let Some(Err(reason)) = declaration {
+            errors.push(VerifyError {
+                body_path: path.clone(),
+                op_index: i,
+                kind: VerifyErrorKind::AsyncTransactionUnstatable { reason },
+            });
+        }
+
         for r in op.result_ids() {
             produced_so_far.insert(r);
         }
@@ -196,7 +253,7 @@ pub(super) fn verify_body(
     // Recurse.
     for (idx, child) in body.child_bodies.iter().enumerate() {
         path.push(idx);
-        verify_body(child, path, &child_scopes[idx], errors);
+        verify_body(child, path, &child_scopes[idx], declared_slots, errors);
         path.pop();
     }
 }
@@ -230,7 +287,7 @@ fn min_operand_count(kind: &KernelOpKind) -> usize {
         BinOpKind(_) => 2,
         UnOpKind(_) | Cast { .. } => 1,
         Fma => 3,
-        MatrixMma { .. } => 10,
+        MatrixMma(spec) => spec.operand_count().unwrap_or(0) as usize,
         Select => 3,
         Atomic { .. } => 2,
         SubgroupBallot | SubgroupShuffle | SubgroupBroadcast | SubgroupReduce { .. } => 1,
@@ -241,8 +298,8 @@ fn min_operand_count(kind: &KernelOpKind) -> usize {
         Region { .. } => 1,
         Return => 0,
         Barrier { .. } => 0,
-        AsyncLoad { .. } | AsyncStore { .. } => 2,
-        AsyncWait { .. } => 0,
+        AsyncLoad(_) | AsyncStore(_) => 4,
+        AsyncWait(_) => 0,
         Trap { .. } => 1,
         Resume { .. } => 0,
         IndirectDispatch { .. } => 0,
@@ -251,4 +308,77 @@ fn min_operand_count(kind: &KernelOpKind) -> usize {
         LoopCarrier { .. } => 0,
         LoopCarrierInit { .. } | LoopCarrierEnd { .. } => 1,
     }
+}
+
+/// Check that every wait completes a transfer this descriptor issues.
+///
+/// Pairing is descriptor-wide: an issue inside a loop body is waited on by an
+/// op of the enclosing body, so a per-body walk cannot see both ends. A wait
+/// that pairs with nothing leaves a target draining an unrelated transfer, and
+/// a wait whose ring slot no issue filled completes a slot that was never
+/// occupied.
+pub(super) fn verify_async_pairing(body: &KernelBody, errors: &mut Vec<VerifyError>) {
+    use crate::descriptor::StageSlot;
+    use crate::Name;
+    use rustc_hash::FxHashMap;
+
+    let mut issued: FxHashMap<&Name, Vec<Option<StageSlot>>> = FxHashMap::default();
+    collect_issues(body, &mut issued);
+
+    fn collect_issues<'a>(
+        body: &'a KernelBody,
+        issued: &mut FxHashMap<&'a Name, Vec<Option<StageSlot>>>,
+    ) {
+        for op in &body.ops {
+            if let KernelOpKind::AsyncLoad(transaction) | KernelOpKind::AsyncStore(transaction) =
+                &op.kind
+            {
+                issued
+                    .entry(transaction.tag())
+                    .or_default()
+                    .push(transaction.stage());
+            }
+        }
+        for child in &body.child_bodies {
+            collect_issues(child, issued);
+        }
+    }
+
+    fn walk(
+        body: &KernelBody,
+        path: &mut Vec<usize>,
+        issued: &FxHashMap<&Name, Vec<Option<StageSlot>>>,
+        errors: &mut Vec<VerifyError>,
+    ) {
+        for (op_index, op) in body.ops.iter().enumerate() {
+            let KernelOpKind::AsyncWait(wait) = &op.kind else {
+                continue;
+            };
+            let transaction = wait.transaction();
+            let tag = transaction.tag();
+            let kind = match issued.get(tag) {
+                None => VerifyErrorKind::AsyncWaitUnmatched {
+                    tag: tag.to_string(),
+                },
+                Some(stages) if !stages.contains(&transaction.stage()) => {
+                    VerifyErrorKind::AsyncStageDisagreement {
+                        tag: tag.to_string(),
+                    }
+                }
+                Some(_) => continue,
+            };
+            errors.push(VerifyError {
+                body_path: path.clone(),
+                op_index,
+                kind,
+            });
+        }
+        for (child_index, child) in body.child_bodies.iter().enumerate() {
+            path.push(child_index);
+            walk(child, path, issued, errors);
+            path.pop();
+        }
+    }
+
+    walk(body, &mut Vec::new(), &issued, errors);
 }

@@ -10,6 +10,13 @@ use super::body_assembly::{empty_body_for_nodes, push_child};
 use super::carrier_names::collect_carrier_names;
 use super::{LowerCtx, MAX_NESTING_DEPTH};
 
+/// Invocations one matrix fragment is distributed across.
+///
+/// A tile-matmul node states a distribution so the operand words are derived
+/// rather than assumed. A target whose subgroups are narrower or wider rejects
+/// the op instead of reinterpreting the fragment.
+const FRAGMENT_LANES: u16 = 32;
+
 impl LowerCtx {
     pub(super) fn lower_nodes(
         &mut self,
@@ -334,9 +341,7 @@ impl LowerCtx {
                 tag,
             } => self.lower_async_copy(
                 body,
-                KernelOpKind::AsyncLoad {
-                    tag: tag.shared_text(),
-                },
+                KernelOpKind::async_load(tag.shared_text()),
                 source,
                 destination,
                 offset,
@@ -350,9 +355,7 @@ impl LowerCtx {
                 tag,
             } => self.lower_async_copy(
                 body,
-                KernelOpKind::AsyncStore {
-                    tag: tag.shared_text(),
-                },
+                KernelOpKind::async_store(tag.shared_text()),
                 source,
                 destination,
                 offset,
@@ -360,9 +363,7 @@ impl LowerCtx {
             ),
             Node::AsyncWait { tag } => {
                 body.ops.push(KernelOp {
-                    kind: KernelOpKind::AsyncWait {
-                        tag: tag.shared_text(),
-                    },
+                    kind: KernelOpKind::async_wait(tag.shared_text()),
                     operands: Vec::new(),
                     result: None,
                 });
@@ -413,16 +414,36 @@ impl LowerCtx {
                 let a_id = self.scope.get(a).unwrap_or(0);
                 let b_id = self.scope.get(b).unwrap_or(0);
                 let result_id = self.alloc_value()?;
+                let spec = crate::MatrixMmaSpec {
+                    tile: crate::MatrixTileShape { m: 16, n: 8, k: 16 },
+                    left: crate::FragmentValue::in_registers(
+                        crate::MatrixMmaElement::F16,
+                        crate::MatrixMmaLayout::RowMajor,
+                        FRAGMENT_LANES,
+                    ),
+                    right: crate::FragmentValue::in_registers(
+                        crate::MatrixMmaElement::F16,
+                        crate::MatrixMmaLayout::ColMajor,
+                        FRAGMENT_LANES,
+                    ),
+                    accumulator: crate::FragmentValue::in_registers(
+                        crate::MatrixMmaElement::F32,
+                        crate::MatrixMmaLayout::RowMajor,
+                        FRAGMENT_LANES,
+                    ),
+                };
+                let words = spec.operand_words().map_err(|reason| {
+                    LowerError::UnsupportedConstruct(format!(
+                        "tile matmul declares fragments that cannot be carried: {reason}. Fix: state a tile that distributes across its lanes in whole 32-bit words."
+                    ))
+                })?;
+                let mut operands = Vec::with_capacity(words.iter().sum::<u32>() as usize);
+                for (word_count, value) in words.into_iter().zip([a_id, b_id, acc_id]) {
+                    operands.extend(std::iter::repeat(value).take(word_count as usize));
+                }
                 body.ops.push(KernelOp {
-                    kind: KernelOpKind::MatrixMma {
-                        shape: crate::MatrixMmaShape::M16N8K16,
-                        a_layout: crate::MatrixMmaLayout::RowMajor,
-                        b_layout: crate::MatrixMmaLayout::ColMajor,
-                        a_type: crate::MatrixMmaElement::F16,
-                        b_type: crate::MatrixMmaElement::F16,
-                        accum_type: crate::MatrixMmaElement::F32,
-                    },
-                    operands: vec![a_id, a_id, a_id, a_id, b_id, b_id, acc_id, acc_id, acc_id, acc_id],
+                    kind: KernelOpKind::MatrixMma(Box::new(spec)),
+                    operands,
                     result: Some(result_id),
                 });
                 self.scope.bind(acc.clone(), result_id);

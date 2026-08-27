@@ -79,6 +79,47 @@ the projection against the artifact's recorded geometry for the same node and
 refuses a disagreement, so the recorded launch and the compiled module cannot
 drift apart.
 
+A matrix multiply-accumulate states a tile extent triple and one typed fragment
+per operand: element type, tile orientation, the invocations the fragment is
+distributed across, and the access map of the staging storage when the fragment
+is not register-resident. Operand arity and result span are derived from those
+facts, so the verifier checks the operand list against the declaration instead of
+against a literal, and a tile no target has an instruction for is statable,
+verifiable and rejected at emission rather than unstatable. Instruction
+selection belongs to the target: a backend compares the declared form against
+the native forms it emits, and rejects the rest instead of reinterpreting them.
+
+An asynchronous transfer states the scope its result becomes readable at, the
+slot of the bounded stage ring it occupies, and the fence an ordinary read needs
+after it lands. The ring slot is assigned at the lowering boundary from the
+selected pipeline depth, and its wait takes the slot of the transfer it
+completes, so a wait states how much of the ring may stay in flight instead of
+meaning that everything issued has landed. The verifier rejects a wait that
+pairs with no transfer, a wait whose slot no transfer filled, a slot outside its
+own ring, and a fence narrower than the stated visibility. The transfer
+mechanism and the wait form belong to the target: a backend selects a bulk or
+scalar transfer and the fence instruction, and rejects a transaction it has no
+form for, including a wait its native form completes out of order and a fence
+wider than its dialect places.
+
+The physical storage layout states what one workgroup allocates.
+`STORAGE_LAYOUT_VERSION = 1` covers one region per workgroup-scoped and
+invocation-private binding, each carrying its byte span, its alignment, the op
+span it is live across, and the offset a deterministic first-fit plan gave it.
+Two regions share bytes only when their lifetimes are disjoint, a region touched
+inside a loop or a branch is live across the whole enclosing construct, and a
+declared region nothing reads is live for the whole kernel. The layout also
+states the peak simultaneously live result ids one invocation holds and the peak
+register-resident matrix fragment width, which are physical counts over lowered
+SSA and not the semantic pressure estimate the whole-program cost model reads.
+A workgroup pool larger than the selected schedule's shared bound, or a register
+count above its register bound, is rejected at the lowering boundary; a bound of
+zero is an unstated bound and is not enforced. An op that addresses a slot the
+binding layout does not declare is rejected by the neutral verifier, because the
+region it names states no size, no class and no lifetime. Bank permutation,
+vector width and the transfer mechanism that fills a region belong to the
+target, which chooses them under these offsets.
+
 The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 12`. Schema 12 records
 the selected launch of every entry point: the entry dependency order, logical
 coverage, grid, workgroup, vector width, pipeline roles, ring slots, barrier

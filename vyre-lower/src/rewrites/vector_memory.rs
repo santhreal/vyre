@@ -283,9 +283,9 @@ fn is_scheduling_fence(kind: &KernelOpKind) -> bool {
     matches!(
         kind,
         KernelOpKind::Barrier { .. }
-            | KernelOpKind::AsyncWait { .. }
-            | KernelOpKind::AsyncLoad { .. }
-            | KernelOpKind::AsyncStore { .. }
+            | KernelOpKind::AsyncWait(_)
+            | KernelOpKind::AsyncLoad(_)
+            | KernelOpKind::AsyncStore(_)
             | KernelOpKind::Trap { .. }
             | KernelOpKind::Resume { .. }
             | KernelOpKind::Return

@@ -20,7 +20,7 @@
 //! loop stays one load and one store per word.
 
 use naga::{BinaryOperator, Block, Expression, Span, Statement};
-use vyre_lower::KernelOp;
+use vyre_lower::{AsyncWaitSpec, KernelOp, MemoryProxyFence};
 
 use super::BodyBuilder;
 use crate::EmitError;
@@ -181,6 +181,31 @@ impl BodyBuilder<'_> {
             },
             Span::UNDEFINED,
         );
+        Ok(())
+    }
+
+    /// Complete a transfer this backend performed as a scalar synchronous copy.
+    ///
+    /// The copy loop leaves nothing in flight, so the ring slot and the
+    /// in-flight allowance are satisfied on arrival and the wait carries only
+    /// the fence. This shader dialect fences at workgroup scope in both address
+    /// spaces and has no wider form, so a transfer the descriptor states is
+    /// read from outside the workgroup is rejected.
+    pub(super) fn emit_async_wait(
+        &mut self,
+        op: &KernelOp,
+        wait: &AsyncWaitSpec,
+    ) -> Result<(), EmitError> {
+        let barrier = match wait.fence() {
+            MemoryProxyFence::None => return Ok(()),
+            MemoryProxyFence::Workgroup => naga::Barrier::STORAGE | naga::Barrier::WORK_GROUP,
+            MemoryProxyFence::Device => {
+                return Err(EmitError::UnsupportedOp(op.clone()));
+            }
+        };
+        self.function
+            .body
+            .push(Statement::Barrier(barrier), Span::UNDEFINED);
         Ok(())
     }
 

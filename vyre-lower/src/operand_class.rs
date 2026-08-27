@@ -2,10 +2,10 @@
 //!
 //! A `KernelOp` operand list is a flat `Vec<u32>`, but a position can be an
 //! SSA result reference, an index into the body's literal pool, an index into
-//! its child-body table, or a plain number such as a binding slot or an axis.
-//! This module is the one owner of that table. Every analysis, rewrite,
-//! verifier, and emitter that must tell those apart asks here instead of
-//! re-deriving per-kind skip offsets, because two copies drift and a copy
+//! its child-body table, a declared binding slot, or a plain number such as an
+//! axis or a width. This module is the one owner of that table. Every analysis,
+//! rewrite, verifier, and emitter that must tell those apart asks here instead
+//! of re-deriving per-kind skip offsets, because two copies drift and a copy
 //! that treats metadata as an SSA value miscompiles in silence.
 
 use crate::KernelOpKind;
@@ -19,7 +19,14 @@ pub enum OperandClass {
     ChildBodyIdx,
     /// Index into the current body's literal pool.
     LiteralPoolIdx,
-    /// Binding-slot literal, opaque tag, etc.  -  not validated structurally.
+    /// Declared binding slot the op addresses storage through.
+    ///
+    /// Separate from [`OperandClass::Other`] because a slot resolves against
+    /// the descriptor's binding layout: the verifier rejects an op addressing a
+    /// slot nothing declares, and the storage planner reads the same positions
+    /// to derive how long each region is live.
+    BindingSlot,
+    /// Opaque tag, axis, width, etc.  -  not validated structurally.
     Other,
 }
 
@@ -37,17 +44,23 @@ pub fn classify_operand(kind: &KernelOpKind, pos: usize) -> OperandClass {
         LocalInvocationId | GlobalInvocationId | WorkgroupId => OperandClass::Other,
         SubgroupLocalId | SubgroupSize => OperandClass::Other,
         LoopIndex { .. } => OperandClass::Other,
-        BufferLength => OperandClass::Other,
+        BufferLength => {
+            if pos == 0 {
+                OperandClass::BindingSlot
+            } else {
+                OperandClass::Other
+            }
+        }
         LoadGlobal | LoadShared | LoadConstant | VectorLoadGlobal { .. } => {
             if pos == 0 {
-                OperandClass::Other
+                OperandClass::BindingSlot
             } else {
                 OperandClass::ResultRef
             }
         }
         StoreGlobal | StoreShared | VectorStoreGlobal { .. } => {
             if pos == 0 {
-                OperandClass::Other
+                OperandClass::BindingSlot
             } else {
                 OperandClass::ResultRef
             }
@@ -59,12 +72,12 @@ pub fn classify_operand(kind: &KernelOpKind, pos: usize) -> OperandClass {
                 OperandClass::Other
             }
         }
-        Copy | BinOpKind(_) | UnOpKind(_) | Fma | MatrixMma { .. } | Select | Cast { .. } => {
+        Copy | BinOpKind(_) | UnOpKind(_) | Fma | MatrixMma(_) | Select | Cast { .. } => {
             OperandClass::ResultRef
         }
         Atomic { .. } => {
             if pos == 0 {
-                OperandClass::Other
+                OperandClass::BindingSlot
             } else {
                 OperandClass::ResultRef
             }
@@ -116,14 +129,14 @@ pub fn classify_operand(kind: &KernelOpKind, pos: usize) -> OperandClass {
             }
         }
         Return | Barrier { .. } => OperandClass::Other,
-        AsyncLoad { .. } | AsyncStore { .. } => {
+        AsyncLoad(_) | AsyncStore(_) => {
             if pos < 2 {
-                OperandClass::Other
+                OperandClass::BindingSlot
             } else {
                 OperandClass::ResultRef
             }
         }
-        AsyncWait { .. } => OperandClass::Other,
+        AsyncWait(_) => OperandClass::Other,
         Trap { .. } => {
             if pos == 0 {
                 OperandClass::ResultRef

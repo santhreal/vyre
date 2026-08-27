@@ -454,8 +454,9 @@ impl BodyCtx<'_> {
                 }
                 self.bind_result(op, dst)?;
             }
-            AsyncLoad { tag } => {
+            AsyncLoad(transaction) => {
                 // Operands: [src_binding, dst_binding, offset_op_id, size_op_id]
+                let tag = transaction.tag();
                 let src_slot = *op.operands.first().ok_or_else(|| {
                     EmitError::InvalidDescriptor("AsyncLoad missing src slot".into())
                 })?;
@@ -484,7 +485,8 @@ impl BodyCtx<'_> {
                     )?;
                 }
             }
-            AsyncStore { tag } => {
+            AsyncStore(transaction) => {
+                let tag = transaction.tag();
                 let src_slot = *op.operands.first().ok_or_else(|| {
                     EmitError::InvalidDescriptor("AsyncStore missing src slot".into())
                 })?;
@@ -510,12 +512,12 @@ impl BodyCtx<'_> {
                     AsyncCopyDirection::Store,
                 )?;
             }
-            AsyncWait { tag } => {
+            AsyncWait(wait) => {
+                let transaction = wait.transaction();
+                let tag = transaction.tag();
                 let _ = writeln!(self.text, "    // async_wait tag={tag}");
-                if !self.emit_cp_async_wait_for_tag(tag) {
-                    let _ = writeln!(self.text, "    membar.cta;");
-                    let _ = writeln!(self.text, "    bar.sync 0;");
-                }
+                self.emit_native_wait(op, tag, transaction.in_flight_allowed())?;
+                self.emit_proxy_fence(wait.fence(), transaction.visibility());
             }
             SubgroupBallot => {
                 let cond_id = *op.operands.first().ok_or_else(|| {
@@ -616,23 +618,8 @@ impl BodyCtx<'_> {
                 );
                 self.bind_result(op, dst)?;
             }
-            MatrixMma {
-                shape,
-                a_layout,
-                b_layout,
-                a_type,
-                b_type,
-                accum_type,
-            } => {
-                let outputs = self.emit_matrix_mma(
-                    op,
-                    *shape,
-                    *a_layout,
-                    *b_layout,
-                    *a_type,
-                    *b_type,
-                    *accum_type,
-                )?;
+            MatrixMma(spec) => {
+                let outputs = self.emit_matrix_mma(op, spec)?;
                 self.bind_consecutive_results(op, &outputs)?;
             }
             Trap { tag } => {

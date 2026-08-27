@@ -274,7 +274,10 @@ mod tests {
     ///
     /// `program` is the blake3 fingerprint of the canonical wire program.
     /// A deliberate IR-schema or program migration updates this pin only after
-    /// the case's semantic contract is proved against the same fixture.
+    /// the case's semantic contract is proved against the same fixture. The
+    /// current values follow the schedule-free IR migration, which changed the
+    /// wire encoding of every program without changing what one computes;
+    /// `every_micro_case_still_computes_its_cpu_reference` is that proof.
     ///
     /// `fixture` is blake3 over every fixture buffer, length-prefixed. No
     /// pre-collapse run exposed the fixture bytes, so this column is a forward
@@ -283,37 +286,37 @@ mod tests {
     const PINNED_WORKLOADS: &[PinnedWorkload] = &[
         PinnedWorkload {
             id: "foundation.attention.64",
-            program: "4bb410db53b85420765d63c15249762ea9cf79ba153820423e43ff5c88e71579",
+            program: "e74b62c7df6e0c106c288cdbdd7a115b4d4352347c031e19973ac15d64c6f60a",
             fixture: "ede5e815a089bbdd231d17a57bbe1cdf59c097be49479838f9a0a64f8f81f183",
         },
         PinnedWorkload {
             id: "foundation.dfa_match.256k",
-            program: "f8ca079d44eb6d76653592ea00ce804d29280afda9f765c2fe2b742d4218f0c6",
+            program: "1f150d6e1babe9f2ec20ae6c82e73faac334b49c5c2d7946964adb805d446743",
             fixture: "0a747a3ac1a8d7831a36f7120a33ece13c9d34dfecda5493bc98ef825c05a435",
         },
         PinnedWorkload {
             id: "foundation.gather.u32.1m",
-            program: "5981d9747958156ebcddeff90b2c42c5c75b3d1254f07f7224ee538880cb7ce2",
+            program: "c1b2842543071d6da85efcb3c2befadd4abe43e281c0cda747d32352a9857139",
             fixture: "556f2bccabd62d6d434e97f155a78b1a5dbca9a4e1a8ab9993dc7a19d2aa1217",
         },
         PinnedWorkload {
             id: "foundation.histogram.u32_256.1m",
-            program: "0850ea4e7fc544831614e83b9f1eafb9f2cb607ffb5c9254bc56972c76f23634",
+            program: "ce3c54e711b3e15e9c78baf6bbf5c76cb31414d6785a17be7b55545e9354a739",
             fixture: "b09c20e4f186708fcb827e0949aac9c60a49340870ee3eb25f8404d56cec641b",
         },
         PinnedWorkload {
             id: "foundation.matmul.256",
-            program: "cd3fddca15b38f5c2e83fe9f2407bb0551344841e45525cd0244453c1efddac2",
+            program: "4eb86c14c9c66b99f96520b33316017e44e27c1f0bf4ee3c005a5cd6b2031b85",
             fixture: "9d8d7b3b1340fb8ebe3f170166045fa644674ffea70713121e35c58af9453831",
         },
         PinnedWorkload {
             id: "foundation.stencil3.u32.1m",
-            program: "ff478d9f4dd2073f00401c89727d2f3fdbf910d14d0bed1e0a4277970827d0ea",
+            program: "d90ff3c85a6a925b7ec99239563a0e3e2dfce5afc14dfaaf0a138719a332f4e0",
             fixture: "183866c61def7900b8ad927a5fb4d5b9847ac4274951dacb9334afb64fddb29e",
         },
         PinnedWorkload {
             id: "foundation.transpose.512",
-            program: "54e503db9feec0ff93b6d61a86a83be44dd8e62cd145db9f79a7beb1ff18c0fa",
+            program: "45c155fdccdfea94b2188b7db9c9d42484eff25e0c73f4093f47f505b798a11f",
             fixture: "a9d0dfc6e815cbbae4077e4d2d200c67452c8db5d0e3f950bfc786dc1c459e0c",
         },
     ];
@@ -331,6 +334,7 @@ mod tests {
     /// recorded workload identity fails here instead of shipping unpinned.
     #[test]
     fn every_micro_case_keeps_its_pinned_workload() {
+        let mut drifted = Vec::new();
         for case in MICRO_CASES {
             let pinned = PINNED_WORKLOADS
                 .iter()
@@ -342,16 +346,58 @@ mod tests {
                     )
                 });
 
+            let program = case.program_fingerprint_hex();
+            if program != pinned.program {
+                drifted.push(format!(
+                    "{}: program pinned {} but builds {program}",
+                    case.id, pinned.program
+                ));
+            }
+            let fixture = case.fixture_digest_hex();
+            if fixture != pinned.fixture {
+                drifted.push(format!(
+                    "{}: fixture pinned {} but builds {fixture}",
+                    case.id, pinned.fixture
+                ));
+            }
+        }
+        assert!(
+            drifted.is_empty(),
+            "Fix: {} micro case(s) no longer build the workload their recorded evidence was measured against: {}",
+            drifted.len(),
+            drifted.join("; ")
+        );
+    }
+
+    /// A pinned program fingerprint moves only when the case still computes its
+    /// own CPU reference, so the pin cannot be refreshed to whatever the tree
+    /// happens to encode.
+    ///
+    /// Reference evaluation is the parity oracle, so this proves the semantic
+    /// contract of every registered case without a device, derived from
+    /// `MICRO_CASES` rather than a list, so a new case is proved too. It does
+    /// not prove device parity: a backend that mislowers the same program is
+    /// caught by the dispatch comparison in `verify`, not here.
+    #[test]
+    fn every_micro_case_still_computes_its_cpu_reference() {
+        for case in MICRO_CASES {
+            let inputs = (case.fixture)();
+            let values = inputs
+                .iter()
+                .cloned()
+                .map(vyre_reference::value::Value::from)
+                .collect::<Vec<_>>();
+            let outputs = vyre_reference::reference_eval(&(case.program)(), &values)
+                .unwrap_or_else(|error| {
+                    panic!("Fix: `{}` must reference-evaluate: {error}", case.id)
+                })
+                .into_iter()
+                .map(|value| value.to_bytes())
+                .collect::<Vec<_>>();
             assert_eq!(
-                case.program_fingerprint_hex(),
-                pinned.program,
-                "Fix: micro case `{}` no longer builds the program its recorded evidence was measured against.",
-                case.id
-            );
-            assert_eq!(
-                case.fixture_digest_hex(),
-                pinned.fixture,
-                "Fix: micro case `{}` changed its fixture bytes.",
+                outputs,
+                (case.reference)(&inputs),
+                "Fix: `{}` must compute its CPU reference byte for byte",
                 case.id
             );
         }

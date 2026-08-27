@@ -40,10 +40,12 @@ pub(super) struct BodyCtx<'a> {
     /// Read-only global bindings with enough spatial reuse to route loads
     /// through CUDA's non-coherent/read-only cache path (`ld.global.nc`).
     pub(super) read_only_cache_slots: FxHashSet<u32>,
-    /// Tags whose native cp.async groups have been committed but not yet
-    /// waited. Keeping the wait at AsyncWait, instead of immediately after
-    /// AsyncLoad, lets independent compute overlap with global-to-shared DMA.
-    pub(super) pending_cp_async_tags: FxHashSet<Name>,
+    /// Transfers whose native asynchronous groups are committed and not yet
+    /// waited, oldest first. Keeping the wait at the wait op, instead of
+    /// immediately after the issue, lets independent compute overlap with the
+    /// transfer, and the order is what decides whether a wait is expressible:
+    /// the native form completes groups oldest first.
+    pub(super) pending_transfers: Vec<Name>,
     /// Active structured-loop induction values keyed by loop variable.
     pub(super) loop_indices: FxHashMap<Name, Reg>,
     /// Per source-level loop-carrier name: the PTX register that

@@ -8,7 +8,8 @@ use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
 use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, SlotCount};
 use vyre_lower::{
-    BindingSlot, BindingVisibility, KernelDescriptor, KernelOpKind, LiteralValue, MemoryClass,
+    AsyncTransaction, AsyncWaitSpec, BindingSlot, BindingVisibility, KernelDescriptor,
+    KernelOpKind, LiteralValue, MemoryClass, MemoryProxyFence, TransactionScope,
 };
 
 fn empty_desc() -> KernelDescriptor {
@@ -44,7 +45,7 @@ fn async_copy_desc(kind: KernelOpKind) -> KernelDescriptor {
                     lit(0, 0),
                     lit(1, 1),
                     effect(kind, [0, 1, 0, 1]),
-                    effect(KernelOpKind::AsyncWait { tag: "copy".into() }, []),
+                    effect(KernelOpKind::async_wait("copy".into()), []),
                 ])
                 .literals([LiteralValue::U32(0), LiteralValue::U32(16)]),
         )

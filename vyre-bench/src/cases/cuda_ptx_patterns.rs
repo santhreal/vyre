@@ -9,9 +9,9 @@ use std::time::Instant;
 use vyre_emit_ptx::{patterns, ComputeCapability};
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape,
-    MemoryClass,
+    BindingLayout, BindingSlot, BindingVisibility, Dispatch, FragmentValue, KernelBody,
+    KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout,
+    MatrixMmaSpec, MatrixTileShape, MemoryClass,
 };
 
 /// Release benchmark case for CUDA/PTX fast-path pattern coverage.
@@ -597,11 +597,11 @@ fn async_copy_emit_kernel() -> KernelDescriptor {
                 op(KernelOpKind::Literal, vec![0], Some(0)),
                 op(KernelOpKind::Literal, vec![1], Some(1)),
                 op(
-                    KernelOpKind::AsyncLoad { tag: "tile".into() },
+                    KernelOpKind::async_load("tile".into()),
                     vec![0, 1, 0, 1],
                     None,
                 ),
-                op(KernelOpKind::AsyncWait { tag: "tile".into() }, vec![], None),
+                op(KernelOpKind::async_wait("tile".into()), vec![], None),
             ],
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(0), LiteralValue::U32(256)],
@@ -643,14 +643,20 @@ fn matrix_mma_emit_kernel() -> KernelDescriptor {
         ops.push(op(KernelOpKind::Literal, vec![id], Some(id)));
     }
     ops.push(op(
-        KernelOpKind::MatrixMma {
-            shape: MatrixMmaShape::M16N8K16,
-            a_layout: MatrixMmaLayout::RowMajor,
-            b_layout: MatrixMmaLayout::ColMajor,
-            a_type: MatrixMmaElement::F16,
-            b_type: MatrixMmaElement::F16,
-            accum_type: MatrixMmaElement::F32,
-        },
+        KernelOpKind::MatrixMma(Box::new(MatrixMmaSpec {
+            tile: MatrixTileShape { m: 16, n: 8, k: 16 },
+            left: FragmentValue::in_registers(MatrixMmaElement::F16, MatrixMmaLayout::RowMajor, 32),
+            right: FragmentValue::in_registers(
+                MatrixMmaElement::F16,
+                MatrixMmaLayout::ColMajor,
+                32,
+            ),
+            accumulator: FragmentValue::in_registers(
+                MatrixMmaElement::F32,
+                MatrixMmaLayout::RowMajor,
+                32,
+            ),
+        })),
         (0..10).collect(),
         Some(10),
     ));

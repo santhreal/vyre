@@ -212,8 +212,8 @@ fn has_side_effects_true_for_async_and_indirect_dispatch_ops() {
     // were omitted from the side-effecting set before the exhaustive-match
     // change, which would have let a "drop pure descriptor" caller drop one.
     for kind in [
-        KernelOpKind::AsyncLoad { tag: "t".into() },
-        KernelOpKind::AsyncWait { tag: "t".into() },
+        KernelOpKind::async_load("t".into()),
+        KernelOpKind::async_wait("t".into()),
         KernelOpKind::IndirectDispatch { count_offset: 0 },
     ] {
         let d = build(vec![effect(kind.clone(), [0])], vec![]);
@@ -423,18 +423,8 @@ fn async_load_wait_carry_tag() {
         ops: vec![
             lit(0, 0),
             lit(1, 1),
-            effect(
-                KernelOpKind::AsyncLoad {
-                    tag: "chunk-0".into(),
-                },
-                [0, 1, 0, 1],
-            ),
-            effect(
-                KernelOpKind::AsyncWait {
-                    tag: "chunk-0".into(),
-                },
-                [],
-            ),
+            effect(KernelOpKind::async_load("chunk-0".into()), [0, 1, 0, 1]),
+            effect(KernelOpKind::async_wait("chunk-0".into()), []),
         ],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(0), LiteralValue::U32(16)],

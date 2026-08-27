@@ -204,9 +204,9 @@ impl KernelDescriptor {
                     | LoopCarrierInit { .. }
                     | LoopCarrierEnd { .. }
                     | Atomic { .. }
-                    | AsyncLoad { .. }
-                    | AsyncStore { .. }
-                    | AsyncWait { .. }
+                    | AsyncLoad(_)
+                    | AsyncStore(_)
+                    | AsyncWait(_)
                     | Barrier { .. }
                     | Trap { .. }
                     | Resume { .. }
@@ -242,7 +242,7 @@ impl KernelDescriptor {
                     | BinOpKind(_)
                     | UnOpKind(_)
                     | Fma
-                    | MatrixMma { .. }
+                    | MatrixMma(_)
                     | Select
                     | Cast { .. }
                     | SubgroupBallot

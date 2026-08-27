@@ -341,18 +341,18 @@ impl BodyCtx<'_> {
         self.bind_result(op, reg)
     }
 
-    /// Close the kernel: drain any cp.async group the descriptor never
+    /// Close the kernel: complete any native transfer the descriptor never
     /// waited on, then land the single exit label and `ret`.
     pub(super) fn finish_with_return(&mut self) {
-        if !self.pending_cp_async_tags.is_empty() {
+        if !self.pending_transfers.is_empty() {
             let _ = writeln!(
                 self.text,
-                "    // implicit cp.async drain for descriptors missing AsyncWait"
+                "    // implicit transfer completion for descriptors missing a wait"
             );
             let _ = writeln!(self.text, "    cp.async.wait_group 0;");
             let _ = writeln!(self.text, "    membar.cta;");
             let _ = writeln!(self.text, "    bar.sync 0;");
-            self.pending_cp_async_tags.clear();
+            self.pending_transfers.clear();
         }
         self.text.push_str("$L_exit:\n");
         self.text.push_str("    ret;\n");

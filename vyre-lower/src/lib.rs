@@ -226,14 +226,17 @@ pub use verify::format_verify_errors;
 pub use verify::{verify, VerifyError, VerifyErrorKind, VerifyResult};
 
 pub use descriptor::{
-    descriptor_trap_tags, scan_construct_intent_mapping, BarrierPhase, BindingLayout, BindingSlot,
-    BindingVisibility, DescriptorIntent, DescriptorIntentError, DescriptorIntentEvidence,
-    DescriptorIntentKind, DescriptorIntentSet, DescriptorIntentStrategy, DescriptorTrapTag,
-    Dispatch, IntentAnnotatedDescriptor, KernelBody, KernelDescriptor, KernelOp, KernelOpKind,
-    LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape, MemoryClass, OpaqueExprData,
-    OpaqueNodeData, PhysicalSchedule, ScanConstructIntentClass, ScanConstructIntentMapping,
+    descriptor_trap_tags, scan_construct_intent_mapping, AsyncTransaction, AsyncTransactionError,
+    AsyncWaitSpec, BarrierPhase, BindingLayout, BindingSlot, BindingVisibility, DescriptorIntent,
+    DescriptorIntentError, DescriptorIntentEvidence, DescriptorIntentKind, DescriptorIntentSet,
+    DescriptorIntentStrategy, DescriptorTrapTag, Dispatch, FragmentOperand, FragmentValue,
+    IntentAnnotatedDescriptor, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
+    MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixSpecError, MatrixTileShape,
+    MemoryClass, MemoryProxyFence, OpaqueExprData, OpaqueNodeData, PhysicalSchedule,
+    ScanConstructIntentClass, ScanConstructIntentMapping, StageSlot, StorageLayout,
+    StorageLayoutError, StorageLifetime, StorageRegion, TensorAccessMap, TransactionScope,
     DESCRIPTOR_INTENT_SCHEMA_VERSION, PHYSICAL_SCHEDULE_VERSION, SCAN_CONSTRUCT_INTENT_MAPPINGS,
-    TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
+    STORAGE_LAYOUT_VERSION, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
 pub use descriptor::{KernelOpsIter, Name};
 pub use error::LowerError;

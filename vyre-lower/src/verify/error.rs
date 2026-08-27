@@ -58,6 +58,14 @@ pub enum VerifyErrorKind {
         /// Number of available literals.
         pool_size: usize,
     },
+    /// An operation addresses storage through a slot the binding layout does
+    /// not declare.
+    UndeclaredBindingSlot {
+        /// Operand position containing the slot.
+        operand_pos: usize,
+        /// Slot no binding declares.
+        slot: u32,
+    },
     /// A structured operation indexes beyond the child-body table.
     ChildBodyIndexOutOfRange {
         /// Operand position containing the body index.
@@ -123,5 +131,41 @@ pub enum VerifyErrorKind {
     WorkgroupBindingInHostRange {
         /// Workgroup binding slot in the host-visible range.
         slot: u32,
+    },
+    /// A matrix multiply-accumulate declares a fragment set no target can
+    /// carry, so neither its operand arity nor its result span is defined.
+    MatrixFragmentUnstatable {
+        /// Which declared fact is not carryable.
+        reason: crate::MatrixSpecError,
+    },
+    /// A matrix multiply-accumulate provides an operand count its declared
+    /// fragments do not account for. The fragments state exactly how many
+    /// words each operand contributes, so a different count means one
+    /// authority disagrees with the other.
+    MatrixOperandCountMismatch {
+        /// Operand count the declared fragments require.
+        expected: u32,
+        /// Operand count the op provides.
+        got: usize,
+    },
+    /// An asynchronous transfer or wait declares facts no target can carry:
+    /// an unpairable tag, a slot outside its own ring, or a fence narrower
+    /// than the visibility it claims.
+    AsyncTransactionUnstatable {
+        /// Which declared fact is not carryable.
+        reason: crate::AsyncTransactionError,
+    },
+    /// A wait names a transfer this descriptor never issues. Nothing completes
+    /// it, so a target either drains an unrelated transfer or emits a fence
+    /// that orders nothing.
+    AsyncWaitUnmatched {
+        /// Tag the wait names.
+        tag: String,
+    },
+    /// A wait and every issue sharing its tag disagree about the ring slot the
+    /// transfer occupies, so the wait completes a slot no transfer filled.
+    AsyncStageDisagreement {
+        /// Tag both sides name.
+        tag: String,
     },
 }

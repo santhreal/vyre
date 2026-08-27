@@ -38,15 +38,20 @@ use vyre_foundation::schedule::{
     AxisMapping, PipelineRoleGroup, ScheduleResourceBounds, SynchronizationScope,
 };
 
+mod async_transaction;
 mod binding_layout;
 mod intent;
 mod kernel;
 mod kernel_op;
 mod physical_schedule;
+mod storage_layout;
+mod tensor_access;
 // Inline: supplies descriptor fixtures to the crate-private `descriptor` tests that stay inline.
 #[cfg(test)]
 pub(crate) mod test_descriptors;
 
+pub(crate) use async_transaction::stage_transactions;
+pub use async_transaction::AsyncTransactionError;
 pub use binding_layout::{
     descriptor_trap_tags, DescriptorTrapTag, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
@@ -54,6 +59,9 @@ pub use intent::{
     scan_construct_intent_mapping, DESCRIPTOR_INTENT_SCHEMA_VERSION, SCAN_CONSTRUCT_INTENT_MAPPINGS,
 };
 pub use physical_schedule::PHYSICAL_SCHEDULE_VERSION;
+pub use storage_layout::{
+    StorageLayout, StorageLayoutError, StorageLifetime, StorageRegion, STORAGE_LAYOUT_VERSION,
+};
 
 /// One synchronization boundary the selected schedule placed on a phase.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -276,15 +284,18 @@ mod literal_f32 {
 /// lowering can preserve names for diagnostics.
 pub type Name = Arc<str>;
 
-/// Matrix multiply-accumulate tile shape for descriptor-level MMA ops.
+/// Matrix multiply-accumulate tile extents, in elements.
 ///
-/// These are mathematical fragment shapes, not backend instruction names.
-/// Emitters map supported shapes to their native substrate and reject shapes
-/// they cannot lower.
+/// These are mathematical extents, not backend instruction names. A target
+/// lowers the extents it has a native form for and rejects the rest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum MatrixMmaShape {
-    /// 16 rows × 8 columns × 16 reduction lanes.
-    M16N8K16,
+pub struct MatrixTileShape {
+    /// Rows of the accumulator tile.
+    pub m: u16,
+    /// Columns of the accumulator tile.
+    pub n: u16,
+    /// Reduction extent shared by both input tiles.
+    pub k: u16,
 }
 
 /// Element type used by a matrix MMA fragment.
@@ -307,6 +318,168 @@ pub enum MatrixMmaLayout {
     RowMajor,
     /// Column-major fragment layout.
     ColMajor,
+}
+
+/// Which operand of the multiply-accumulate a fragment carries.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum FragmentOperand {
+    /// Left input tile, `m` by `k`.
+    Left,
+    /// Right input tile, `k` by `n`.
+    Right,
+    /// Accumulator tile, `m` by `n`.
+    Accumulator,
+}
+
+/// Typed access map for the storage a fragment tile is staged through.
+///
+/// The map states the addressing the tile requires. It never states how a
+/// target satisfies it: bank permutation, vector width and transfer mechanism
+/// are backend choices made under this map.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TensorAccessMap {
+    /// Storage the tile is addressed in.
+    pub storage: MemoryClass,
+    /// Element stride between consecutive rows of the tile, in elements.
+    ///
+    /// Zero states the rows are packed at the tile's own column extent.
+    pub row_stride: u32,
+    /// Guaranteed alignment of the tile base, in elements.
+    pub alignment: u16,
+}
+
+/// One matrix operand of a multiply-accumulate, distributed across a
+/// subgroup.
+///
+/// The fragment declares the facts a target needs to place it: element type,
+/// tile orientation, how many invocations hold it, and the access map of the
+/// storage it is staged through when it is not already register-resident.
+/// Operand arity and result span are derived from these facts rather than
+/// pinned to one native form.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct FragmentValue {
+    /// Element type of the fragment's elements.
+    pub element: MatrixMmaElement,
+    /// Orientation of the tile the fragment holds.
+    pub layout: MatrixMmaLayout,
+    /// Invocations the fragment is distributed across.
+    pub lanes: u16,
+    /// Access map of the staging storage, or `None` when the fragment is
+    /// register-resident.
+    pub access: Option<TensorAccessMap>,
+}
+
+/// Complete typed specification of one matrix multiply-accumulate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct MatrixMmaSpec {
+    /// Accumulator and reduction extents.
+    pub tile: MatrixTileShape,
+    /// Left input fragment.
+    pub left: FragmentValue,
+    /// Right input fragment.
+    pub right: FragmentValue,
+    /// Accumulator fragment, which is also the result fragment.
+    pub accumulator: FragmentValue,
+}
+
+/// Why a matrix specification cannot be carried to a target.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MatrixSpecError {
+    /// A tile extent is zero.
+    ZeroExtent,
+    /// A fragment is distributed across zero invocations.
+    ZeroLanes,
+    /// The fragment's element count is not divisible by its lane count.
+    UnevenDistribution {
+        /// Which operand the fragment carries.
+        operand: FragmentOperand,
+        /// Elements the tile holds.
+        elements: u32,
+        /// Invocations the fragment is distributed across.
+        lanes: u16,
+    },
+    /// The per-lane element count does not fill whole 32-bit operand words.
+    PartialWord {
+        /// Which operand the fragment carries.
+        operand: FragmentOperand,
+        /// Bits each invocation holds for this fragment.
+        bits_per_lane: u32,
+    },
+    /// A staged tile declares a row stride narrower than the tile itself.
+    ShortRowStride {
+        /// Which operand the fragment carries.
+        operand: FragmentOperand,
+        /// Declared stride in elements.
+        stride: u32,
+        /// Columns the tile occupies.
+        columns: u16,
+    },
+    /// A staged tile declares zero base alignment.
+    ZeroAlignment {
+        /// Which operand the fragment carries.
+        operand: FragmentOperand,
+    },
+}
+
+/// Widest set of invocations that observes a completed transfer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TransactionScope {
+    /// Only the issuing invocation reads the destination.
+    Invocation,
+    /// The issuing subgroup reads the destination.
+    Subgroup,
+    /// Every invocation of the workgroup reads the destination.
+    Workgroup,
+    /// Invocations outside the workgroup read the destination.
+    Device,
+}
+
+/// Fence a generic-proxy read needs after an asynchronous transfer lands.
+///
+/// An asynchronous transfer reaches memory through a proxy of its own, so the
+/// write is not ordered against an ordinary read by completion alone. The
+/// descriptor states which fence restores that order; the instruction that
+/// carries it is a backend choice.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MemoryProxyFence {
+    /// The issuing invocation is the only reader, so completion orders it.
+    None,
+    /// Order the transfer against workgroup-scoped reads.
+    Workgroup,
+    /// Order the transfer against reads from outside the workgroup.
+    Device,
+}
+
+/// One slot of a bounded stage ring.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct StageSlot {
+    /// Zero-based slot this transfer occupies.
+    pub slot: u16,
+    /// Depth of the ring the slot belongs to.
+    pub ring_slots: u16,
+}
+
+/// One asynchronous data-movement transaction.
+///
+/// A backend chooses the transfer mechanism, bulk or scalar, and the wait form
+/// under these facts. Nothing here names an instruction or a device.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AsyncTransaction {
+    /// Identity pairing the transfer with its wait.
+    pub tag: Name,
+    /// Scope the completed transfer becomes readable at.
+    pub visibility: TransactionScope,
+    /// Ring slot the transfer occupies when a schedule staged it.
+    pub stage: Option<StageSlot>,
+}
+
+/// A wait for one asynchronous transaction and the fence that follows it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AsyncWaitSpec {
+    /// Transaction this wait completes.
+    pub transaction: AsyncTransaction,
+    /// Fence a subsequent generic-proxy read needs.
+    pub fence: MemoryProxyFence,
 }
 
 /// One lowered op in the kernel body. Operands are referenced by
@@ -459,26 +632,13 @@ pub enum KernelOpKind {
     Fma,
     /// Matrix multiply-accumulate fragment op.
     ///
-    /// Operand contract for `M16N8K16/F16/F16/F32`:
-    /// `[a0,a1,a2,a3, b0,b1, c0,c1,c2,c3]`, where `a*` and `b*` are
-    /// packed 16-bit fragment words and `c*` are f32 accumulators. `result`
-    /// is the first of four consecutive result ids (`result..result+4`).
-    /// This keeps the descriptor SSA-shaped without adding backend-specific
-    /// register-fragment objects to the neutral IR.
-    MatrixMma {
-        /// Matrix tile shape.
-        shape: MatrixMmaShape,
-        /// Left fragment layout.
-        a_layout: MatrixMmaLayout,
-        /// Right fragment layout.
-        b_layout: MatrixMmaLayout,
-        /// Left fragment element type.
-        a_type: MatrixMmaElement,
-        /// Right fragment element type.
-        b_type: MatrixMmaElement,
-        /// Accumulator element type.
-        accum_type: MatrixMmaElement,
-    },
+    /// The specification states the tile extents and one typed fragment per
+    /// operand. Operands are the fragment's 32-bit words in operand order
+    /// (left, then right, then accumulator), and `result` is the first of the
+    /// accumulator fragment's words. Both counts are derived from the
+    /// specification by `MatrixMmaSpec::operand_words`, so a tile the
+    /// descriptor can state is a tile the verifier can check.
+    MatrixMma(Box<MatrixMmaSpec>),
     /// Conditional select: `if cond { true_val } else { false_val }`.
     /// Operands: [cond_id, true_val_id, false_val_id].
     Select,
@@ -550,24 +710,17 @@ pub enum KernelOpKind {
     },
 
     // ---------- Async ----------
-    /// `cp.async`-style global-to-shared copy. Operands:
+    /// Asynchronous global-to-shared transfer. Operands:
     /// [src_binding, dst_binding, offset_op_id, size_op_id].
-    /// `tag` ties the load to a matching `AsyncWait`.
-    AsyncLoad {
-        /// Identifier shared with the matching wait.
-        tag: Name,
-    },
-    /// Mirror of AsyncLoad for shared-to-global. Operands:
+    /// The transaction pairs the transfer with its wait and states the ring
+    /// slot and visibility a target must honor. Boxed to keep the common-case
+    /// op small.
+    AsyncLoad(Box<AsyncTransaction>),
+    /// Mirror of `AsyncLoad` for shared-to-global. Operands:
     /// [src_binding, dst_binding, offset_op_id, size_op_id].
-    AsyncStore {
-        /// Identifier shared with the matching wait.
-        tag: Name,
-    },
-    /// Wait on a previously-issued AsyncLoad/Store. Operands: empty.
-    AsyncWait {
-        /// Identifier of the asynchronous operation to await.
-        tag: Name,
-    },
+    AsyncStore(Box<AsyncTransaction>),
+    /// Wait for one previously-issued transfer. Operands: empty.
+    AsyncWait(Box<AsyncWaitSpec>),
 
     // ---------- Effect handlers ----------
     /// Trap into a host-side effect handler. Operands: `address_op_id`.

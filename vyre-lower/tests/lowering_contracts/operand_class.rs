@@ -21,7 +21,7 @@ fn operand_classifier_separates_indices_from_result_ids() {
         1,
     ));
     assert!(operand_is_result_reference(
-        &KernelOpKind::AsyncStore { tag: "copy".into() },
+        &KernelOpKind::async_store("copy".into()),
         2,
     ));
     assert!(!operand_is_result_reference(

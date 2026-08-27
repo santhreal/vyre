@@ -160,7 +160,7 @@ fn bump(kind: &KernelOpKind, h: &mut OpHistogram) {
         | BinOpKind(_)
         | UnOpKind(_)
         | Fma
-        | MatrixMma { .. }
+        | MatrixMma(_)
         | Select
         | Cast { .. }
         | ExtractLane { .. } => h.arithmetic += 1,
@@ -174,8 +174,8 @@ fn bump(kind: &KernelOpKind, h: &mut OpHistogram) {
         | LoopCarrierInit { .. }
         | LoopCarrierEnd { .. }
         | Atomic { .. }
-        | AsyncLoad { .. }
-        | AsyncStore { .. } => h.memory += 1,
+        | AsyncLoad(_)
+        | AsyncStore(_) => h.memory += 1,
         StructuredIfThen
         | StructuredIfThenElse
         | StructuredForLoop { .. }
@@ -196,11 +196,9 @@ fn bump(kind: &KernelOpKind, h: &mut OpHistogram) {
         | LoopIndex { .. }
         | LoopCarrier { .. }
         | BufferLength => h.builtin += 1,
-        Call { .. }
-        | OpaqueExpr(..)
-        | OpaqueNode(..)
-        | AsyncWait { .. }
-        | IndirectDispatch { .. } => h.other += 1,
+        Call { .. } | OpaqueExpr(..) | OpaqueNode(..) | AsyncWait(_) | IndirectDispatch { .. } => {
+            h.other += 1
+        }
     }
 }
 

@@ -420,7 +420,7 @@ impl BodyCtx<'_> {
                 let binding = self.binding_for_slot(binding_slot).ok()?;
                 PtxType::from_dtype(&binding.element_type).ok()
             }
-            KernelOpKind::MatrixMma { .. } => Some(PtxType::F32),
+            KernelOpKind::MatrixMma(_) => Some(PtxType::F32),
             _ => None,
         }
     }

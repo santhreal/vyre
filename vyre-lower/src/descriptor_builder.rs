@@ -38,8 +38,9 @@ use vyre_foundation::ir::{BinOp, DataType};
 
 use crate::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, EmissionTargetCapabilities,
-    KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement,
-    MatrixMmaLayout, MatrixMmaShape, MemoryClass, SubgroupCapabilities, WorkgroupLimits,
+    FragmentValue, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
+    MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixTileShape, MemoryClass,
+    SubgroupCapabilities, WorkgroupLimits,
 };
 
 /// An op that produces `result`.
@@ -53,20 +54,22 @@ pub fn op(kind: KernelOpKind, operands: impl Into<Vec<u32>>, result: u32) -> Ker
 }
 
 /// The `m16n8k16` MMA op kind every emitter fixture uses: row-major A,
-/// column-major B, f16 inputs accumulating in f32.
+/// column-major B, f16 inputs accumulating in f32 across a 32-lane subgroup.
 ///
-/// Six coupled fields that only mean anything together, so one copy states
-/// them for every backend that has to build the same op.
+/// Coupled facts that only mean anything together, so one copy states them
+/// for every backend that has to build the same op.
 #[must_use]
 pub fn mma_f16_m16n8k16() -> KernelOpKind {
-    KernelOpKind::MatrixMma {
-        shape: MatrixMmaShape::M16N8K16,
-        a_layout: MatrixMmaLayout::RowMajor,
-        b_layout: MatrixMmaLayout::ColMajor,
-        a_type: MatrixMmaElement::F16,
-        b_type: MatrixMmaElement::F16,
-        accum_type: MatrixMmaElement::F32,
-    }
+    KernelOpKind::MatrixMma(Box::new(MatrixMmaSpec {
+        tile: MatrixTileShape { m: 16, n: 8, k: 16 },
+        left: FragmentValue::in_registers(MatrixMmaElement::F16, MatrixMmaLayout::RowMajor, 32),
+        right: FragmentValue::in_registers(MatrixMmaElement::F16, MatrixMmaLayout::ColMajor, 32),
+        accumulator: FragmentValue::in_registers(
+            MatrixMmaElement::F32,
+            MatrixMmaLayout::RowMajor,
+            32,
+        ),
+    }))
 }
 
 /// An op that produces no value.

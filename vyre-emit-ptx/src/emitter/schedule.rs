@@ -24,9 +24,9 @@ pub(crate) fn is_scheduling_fence(op: &KernelOp) -> bool {
             | KernelOpKind::StructuredIfThen
             | KernelOpKind::StructuredIfThenElse
             | KernelOpKind::StructuredForLoop { .. }
-            | KernelOpKind::AsyncLoad { .. }
-            | KernelOpKind::AsyncStore { .. }
-            | KernelOpKind::AsyncWait { .. }
+            | KernelOpKind::AsyncLoad(_)
+            | KernelOpKind::AsyncStore(_)
+            | KernelOpKind::AsyncWait(_)
             | KernelOpKind::Trap { .. }
     )
 }
@@ -41,7 +41,7 @@ pub(crate) fn is_schedulable_pure_op(op: &KernelOp) -> bool {
             | KernelOpKind::BinOpKind(_)
             | KernelOpKind::UnOpKind(_)
             | KernelOpKind::Fma
-            | KernelOpKind::MatrixMma { .. }
+            | KernelOpKind::MatrixMma(_)
             | KernelOpKind::Cast { .. }
             | KernelOpKind::Select
             | KernelOpKind::BufferLength

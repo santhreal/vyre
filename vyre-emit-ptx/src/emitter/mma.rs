@@ -1,42 +1,38 @@
 use std::fmt::Write as _;
 
-use vyre_lower::{KernelOp, MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape};
+use vyre_lower::{
+    FragmentOperand, KernelOp, MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixTileShape,
+};
 
 use super::BodyCtx;
 use crate::reg::{PtxType, Reg};
 use crate::EmitError;
 
+/// The one tile this target has a native multiply-accumulate for.
+const NATIVE_TILE: MatrixTileShape = MatrixTileShape { m: 16, n: 8, k: 16 };
+
+/// Invocations the native form distributes a fragment across.
+const NATIVE_LANES: u16 = 32;
+
 impl BodyCtx<'_> {
     pub(super) fn emit_matrix_mma(
         &mut self,
         op: &KernelOp,
-        shape: MatrixMmaShape,
-        a_layout: MatrixMmaLayout,
-        b_layout: MatrixMmaLayout,
-        a_type: MatrixMmaElement,
-        b_type: MatrixMmaElement,
-        accum_type: MatrixMmaElement,
-    ) -> Result<[Reg; 4], EmitError> {
-        if op.operands.len() < 10 {
+        spec: &MatrixMmaSpec,
+    ) -> Result<Vec<Reg>, EmitError> {
+        let words = spec.operand_words().map_err(|reason| {
+            EmitError::InvalidDescriptor(format!(
+                "MatrixMma declares fragments that cannot be carried: {reason}. Fix: state a tile that distributes across its lanes in whole 32-bit words."
+            ))
+        })?;
+        let required = words.iter().sum::<u32>() as usize;
+        if op.operands.len() != required {
             return Err(EmitError::InvalidDescriptor(format!(
-                "MatrixMma requires 10 operands but got {}. Fix: pass four A fragment regs, two B fragment regs, and four accumulator regs.",
+                "MatrixMma declares {required} operand words but the op provides {}. Fix: pass the left, right and accumulator fragment words the specification derives.",
                 op.operands.len()
             )));
         }
-        if shape != MatrixMmaShape::M16N8K16
-            || a_layout != MatrixMmaLayout::RowMajor
-            || b_layout != MatrixMmaLayout::ColMajor
-            || a_type != MatrixMmaElement::F16
-            || b_type != MatrixMmaElement::F16
-            || accum_type != MatrixMmaElement::F32
-        {
-            return Err(EmitError::UnsupportedOp(KernelOp {
-                kind: op.kind.clone(),
-                operands: op.operands.clone(),
-                result: op.result,
-            }));
-        }
-        if !self.options.target.supports_wmma_f16() {
+        if !self.supports_native_form(spec) {
             return Err(EmitError::UnsupportedOp(KernelOp {
                 kind: op.kind.clone(),
                 operands: op.operands.clone(),
@@ -44,22 +40,15 @@ impl BodyCtx<'_> {
             }));
         }
 
-        let a = [
-            self.lookup_operand(op.operands[0])?,
-            self.lookup_operand(op.operands[1])?,
-            self.lookup_operand(op.operands[2])?,
-            self.lookup_operand(op.operands[3])?,
-        ];
-        let b = [
-            self.lookup_operand(op.operands[4])?,
-            self.lookup_operand(op.operands[5])?,
-        ];
-        let c = [
-            self.lookup_operand(op.operands[6])?,
-            self.lookup_operand(op.operands[7])?,
-            self.lookup_operand(op.operands[8])?,
-            self.lookup_operand(op.operands[9])?,
-        ];
+        let mut cursor = 0usize;
+        let mut fragments: [Vec<Reg>; 3] = [Vec::new(), Vec::new(), Vec::new()];
+        for (slot, word_count) in words.into_iter().enumerate() {
+            for _ in 0..word_count {
+                fragments[slot].push(self.lookup_operand(op.operands[cursor])?);
+                cursor += 1;
+            }
+        }
+        let [a, b, c] = fragments;
         for reg in a.iter().chain(b.iter()) {
             if reg.0 != PtxType::U32 {
                 return Err(EmitError::InvalidDescriptor(format!(
@@ -75,30 +64,54 @@ impl BodyCtx<'_> {
             }
         }
 
-        let d = [
-            self.alloc(PtxType::F32),
-            self.alloc(PtxType::F32),
-            self.alloc(PtxType::F32),
-            self.alloc(PtxType::F32),
-        ];
+        let d: Vec<Reg> = (0..c.len()).map(|_| self.alloc(PtxType::F32)).collect();
         let _ = writeln!(
             self.text,
-            "    mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32    {{{}, {}, {}, {}}}, {{{}, {}, {}, {}}}, {{{}, {}}}, {{{}, {}, {}, {}}};",
-            d[0],
-            d[1],
-            d[2],
-            d[3],
-            a[0],
-            a[1],
-            a[2],
-            a[3],
-            b[0],
-            b[1],
-            c[0],
-            c[1],
-            c[2],
-            c[3],
+            "    mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32    {{{}}}, {{{}}}, {{{}}}, {{{}}};",
+            join(&d),
+            join(&a),
+            join(&b),
+            join(&c),
         );
         Ok(d)
     }
+
+    /// Whether the declared facts equal the one native form this target emits.
+    ///
+    /// Instruction selection belongs to the target: nothing outside this module
+    /// states which tile, orientation or element types the substrate has an
+    /// instruction for, and a declaration outside that set is rejected rather
+    /// than reinterpreted.
+    fn supports_native_form(&self, spec: &MatrixMmaSpec) -> bool {
+        let lanes_match = [
+            FragmentOperand::Left,
+            FragmentOperand::Right,
+            FragmentOperand::Accumulator,
+        ]
+        .into_iter()
+        .all(|operand| {
+            let fragment = spec.fragment(operand);
+            fragment.lanes == NATIVE_LANES && fragment.is_register_resident()
+        });
+
+        lanes_match
+            && spec.tile == NATIVE_TILE
+            && spec.left.layout == MatrixMmaLayout::RowMajor
+            && spec.right.layout == MatrixMmaLayout::ColMajor
+            && spec.left.element == MatrixMmaElement::F16
+            && spec.right.element == MatrixMmaElement::F16
+            && spec.accumulator.element == MatrixMmaElement::F32
+            && self.options.target.supports_wmma_f16()
+    }
+}
+
+fn join(regs: &[Reg]) -> String {
+    let mut text = String::new();
+    for (index, reg) in regs.iter().enumerate() {
+        if index > 0 {
+            text.push_str(", ");
+        }
+        let _ = write!(text, "{reg}");
+    }
+    text
 }

@@ -57,7 +57,7 @@ impl<'a> BodyCtx<'a> {
                 Default::default(),
             ),
             read_only_cache_slots,
-            pending_cp_async_tags: FxHashSet::with_capacity_and_hasher(4, Default::default()),
+            pending_transfers: Vec::with_capacity(4),
             loop_indices: FxHashMap::with_capacity_and_hasher(8, Default::default()),
             named_carriers: FxHashMap::with_capacity_and_hasher(16, Default::default()),
             named_carrier_result_ids: FxHashMap::with_capacity_and_hasher(16, Default::default()),

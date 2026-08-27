@@ -22,8 +22,11 @@
 use std::fmt::Write as _;
 
 use vyre_foundation::ir::DataType;
+use vyre_lower::KernelOp;
 use vyre_lower::MemoryClass;
+use vyre_lower::MemoryProxyFence;
 use vyre_lower::Name;
+use vyre_lower::TransactionScope;
 
 use super::memory::AsyncCopyDirection;
 use super::BodyCtx;
@@ -595,17 +598,60 @@ impl BodyCtx<'_> {
         let _ = writeln!(self.text, "{done_label}:");
         let _ = writeln!(self.text, "    cp.async.commit_group;");
         let _ = writeln!(self.text, "{skip_label}:");
-        self.pending_cp_async_tags.insert(tag.clone());
+        self.pending_transfers.push(tag.clone());
         Ok(true)
     }
 
-    pub(super) fn emit_cp_async_wait_for_tag(&mut self, tag: &str) -> bool {
-        if !self.pending_cp_async_tags.remove(tag) {
-            return false;
+    /// Complete one native transfer, leaving the transfers the descriptor
+    /// still admits in flight.
+    ///
+    /// The native form completes committed groups oldest first, so a wait that
+    /// completes a transfer while an older one is still in flight has no
+    /// native spelling: draining the older one instead would discard the
+    /// overlap the descriptor's ring states, so the op is rejected. `false`
+    /// means this tag has no native group pending, which is the synchronous
+    /// transfer path.
+    pub(super) fn emit_native_wait(
+        &mut self,
+        op: &KernelOp,
+        tag: &Name,
+        in_flight_allowed: u16,
+    ) -> Result<bool, EmitError> {
+        let Some(position) = self.pending_transfers.iter().position(|name| name == tag) else {
+            return Ok(false);
+        };
+        if position != 0 {
+            return Err(EmitError::UnsupportedOp(KernelOp {
+                kind: op.kind.clone(),
+                operands: op.operands.clone(),
+                result: op.result,
+            }));
         }
-        let _ = writeln!(self.text, "    cp.async.wait_group 0;");
-        let _ = writeln!(self.text, "    membar.cta;");
-        let _ = writeln!(self.text, "    bar.sync 0;");
-        true
+        let pending = self.pending_transfers.len();
+        let keep = usize::from(in_flight_allowed).min(pending - 1);
+        let _ = writeln!(self.text, "    cp.async.wait_group {keep};");
+        self.pending_transfers.drain(..pending - keep);
+        Ok(true)
+    }
+
+    /// Order a completed transfer against ordinary reads at the scope the
+    /// descriptor states.
+    pub(super) fn emit_proxy_fence(
+        &mut self,
+        fence: MemoryProxyFence,
+        visibility: TransactionScope,
+    ) {
+        match fence {
+            MemoryProxyFence::None => {}
+            MemoryProxyFence::Workgroup => {
+                let _ = writeln!(self.text, "    membar.cta;");
+            }
+            MemoryProxyFence::Device => {
+                let _ = writeln!(self.text, "    membar.gl;");
+            }
+        }
+        if visibility.covers(TransactionScope::Workgroup) {
+            let _ = writeln!(self.text, "    bar.sync 0;");
+        }
     }
 }

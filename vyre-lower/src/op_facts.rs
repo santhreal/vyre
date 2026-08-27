@@ -47,9 +47,9 @@ pub fn facts_for(kind: &KernelOpKind) -> OpFacts {
         | KernelOpKind::LoopCarrierEnd { .. }
         | KernelOpKind::Atomic { .. }
         | KernelOpKind::Barrier { .. }
-        | KernelOpKind::AsyncLoad { .. }
-        | KernelOpKind::AsyncStore { .. }
-        | KernelOpKind::AsyncWait { .. }
+        | KernelOpKind::AsyncLoad(_)
+        | KernelOpKind::AsyncStore(_)
+        | KernelOpKind::AsyncWait(_)
         | KernelOpKind::Trap { .. }
         | KernelOpKind::Resume { .. }
         | KernelOpKind::IndirectDispatch { .. }
@@ -78,7 +78,7 @@ pub fn facts_for(kind: &KernelOpKind) -> OpFacts {
         | KernelOpKind::BinOpKind(_)
         | KernelOpKind::UnOpKind(_)
         | KernelOpKind::Fma
-        | KernelOpKind::MatrixMma { .. }
+        | KernelOpKind::MatrixMma(_)
         | KernelOpKind::Select
         | KernelOpKind::Cast { .. }
         | KernelOpKind::SubgroupBallot
@@ -142,9 +142,9 @@ mod tests {
             op: AtomicOp::Add,
             ordering: MemoryOrdering::SeqCst,
         }));
-        assert!(!kernel_op_kind_is_dce_pure(&KernelOpKind::AsyncLoad {
-            tag: "copy".into(),
-        }));
+        assert!(!kernel_op_kind_is_dce_pure(&KernelOpKind::async_load(
+            "copy".into()
+        )));
         assert!(!kernel_op_kind_is_dce_pure(&KernelOpKind::Barrier {
             ordering: MemoryOrdering::SeqCst,
         }));

@@ -6,7 +6,7 @@
 //! unresolved calls, lower to a `KernelDescriptor`, canonicalize representation
 //! order, and verify.
 
-use crate::descriptor::{KernelDescriptor, PhysicalSchedule};
+use crate::descriptor::{KernelDescriptor, PhysicalSchedule, StorageLayout};
 use crate::lower::lower;
 use crate::{verify_descriptor, VerifyFailure};
 use std::fmt;
@@ -23,6 +23,7 @@ use vyre_foundation::{
 pub struct PhysicalKernel {
     descriptor: KernelDescriptor,
     schedule: Option<PhysicalSchedule>,
+    storage: StorageLayout,
 }
 
 impl PhysicalKernel {
@@ -40,6 +41,16 @@ impl PhysicalKernel {
     #[must_use]
     pub const fn schedule(&self) -> Option<&PhysicalSchedule> {
         self.schedule.as_ref()
+    }
+
+    /// Borrow the lifetime-overlaid storage plan for this kernel.
+    ///
+    /// A target allocates the stated pools and addresses each region at its
+    /// stated offset. Nothing downstream re-derives a byte total from the
+    /// binding list.
+    #[must_use]
+    pub const fn storage(&self) -> &StorageLayout {
+        &self.storage
     }
 
     /// Consume the physical stage and return its verified descriptor.
@@ -69,6 +80,12 @@ impl PhysicalLowering {
     #[must_use]
     pub const fn schedule(&self) -> Option<&PhysicalSchedule> {
         self.kernel.schedule()
+    }
+
+    /// Borrow the lifetime-overlaid storage plan for this kernel.
+    #[must_use]
+    pub const fn storage(&self) -> &StorageLayout {
+        self.kernel.storage()
     }
 
     /// Consume the lowering result and return its verified descriptor.
@@ -244,11 +261,15 @@ fn lower_prepared_physical(
     program: Program,
     schedule: Option<PhysicalSchedule>,
 ) -> Result<PhysicalLowering, PhysicalLoweringError> {
-    let descriptor = lower(&program).map_err(|error| {
+    let mut descriptor = lower(&program).map_err(|error| {
         PhysicalLoweringError::new(format!(
             "KernelDescriptor lowering failed after semantic Program optimization: {error}. Fix: add the missing neutral descriptor mapping before any concrete backend emits this Program."
         ))
     })?;
+    if let Some(projected) = &schedule {
+        let ring_slots = u16::try_from(projected.ring_slots).unwrap_or(u16::MAX);
+        crate::descriptor::stage_transactions(&mut descriptor.body, ring_slots);
+    }
     let descriptor = verify_descriptor(&descriptor).map_err(|failure| {
         let (stage, fix) = match failure {
             VerifyFailure::Input(_) => (
@@ -273,11 +294,29 @@ fn lower_prepared_physical(
             )));
         }
     }
+    let storage = StorageLayout::plan(&descriptor).map_err(|error| {
+        PhysicalLoweringError::new(format!(
+            "physical storage cannot be planned for this kernel: {error}"
+        ))
+    })?;
+    if let Some(projected) = &schedule {
+        storage
+            .validate(
+                projected.resources.shared_bytes,
+                projected.resources.registers_per_invocation,
+            )
+            .map_err(|error| {
+                PhysicalLoweringError::new(format!(
+                    "physical storage exceeds what the selected schedule reserved: {error}"
+                ))
+            })?;
+    }
     Ok(PhysicalLowering {
         program,
         kernel: PhysicalKernel {
             descriptor,
             schedule,
+            storage,
         },
     })
 }

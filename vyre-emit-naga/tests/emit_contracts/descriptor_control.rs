@@ -1203,7 +1203,7 @@ fn cast_i32_to_vec2_zero_fills_lane_one() {
 
 #[test]
 fn descriptor_async_load_emits_bounded_copy_loop() {
-    let desc = async_copy_desc(KernelOpKind::AsyncLoad { tag: "load".into() });
+    let desc = async_copy_desc(KernelOpKind::async_load("load".into()));
     let module = emit(&desc).expect("descriptor AsyncLoad must lower to a bounded copy loop");
     assert!(
         block_has_loop(&module.entry_points[0].function.body),
@@ -1222,9 +1222,7 @@ fn descriptor_async_load_emits_bounded_copy_loop() {
 
 #[test]
 fn descriptor_async_store_emits_bounded_copy_loop() {
-    let desc = async_copy_desc(KernelOpKind::AsyncStore {
-        tag: "store".into(),
-    });
+    let desc = async_copy_desc(KernelOpKind::async_store("store".into()));
     let module = emit(&desc).expect("descriptor AsyncStore must lower to a bounded copy loop");
     assert!(
         block_has_loop(&module.entry_points[0].function.body),
@@ -1245,12 +1243,53 @@ fn descriptor_async_store_emits_bounded_copy_loop() {
 fn descriptor_async_wait_emits_workgroup_barrier() {
     let desc = descriptor("async_wait")
         .dispatch(64, 1, 1)
-        .body(body().op(effect(KernelOpKind::AsyncWait { tag: "t".into() }, [])))
+        .body(body().op(effect(KernelOpKind::async_wait("t".into()), [])))
         .build();
     let module = emit(&desc).expect("descriptor AsyncWait must emit workgroup barrier");
     assert!(
         block_has_barrier(&module.entry_points[0].function.body),
         "descriptor AsyncWait must emit workgroup barrier"
+    );
+}
+
+/// WHY: this dialect has one execution-and-memory barrier and it orders the
+/// workgroup, so a transfer the descriptor states is read from outside the
+/// workgroup has no form here. Emitting the workgroup barrier anyway would
+/// publish a module that satisfies a fence it never placed, which is the
+/// silent-fallback class this rejection closes; a transfer nobody outside the
+/// issuing invocation reads needs no barrier at all.
+#[test]
+fn a_fence_wider_than_this_dialect_is_rejected() {
+    let device = descriptor("device_fence_wait")
+        .dispatch(64, 1, 1)
+        .body(body().op(effect(
+            KernelOpKind::AsyncWait(Box::new(AsyncWaitSpec::new(AsyncTransaction::unstaged(
+                "t".into(),
+                TransactionScope::Device,
+            )))),
+            [],
+        )))
+        .build();
+    let error = emit(&device).expect_err("a device-scope fence must be rejected");
+    assert!(
+        matches!(error, EmitError::UnsupportedOp(_)),
+        "Fix: report the wait as unsupported instead of emitting a workgroup barrier; got {error:?}"
+    );
+
+    let private = descriptor("private_wait")
+        .dispatch(64, 1, 1)
+        .body(body().op(effect(
+            KernelOpKind::AsyncWait(Box::new(AsyncWaitSpec::fenced(
+                AsyncTransaction::unstaged("t".into(), TransactionScope::Invocation),
+                MemoryProxyFence::None,
+            ))),
+            [],
+        )))
+        .build();
+    let module = emit(&private).expect("a transfer with no fence must emit");
+    assert!(
+        !block_has_barrier(&module.entry_points[0].function.body),
+        "Fix: a transfer only its issuing invocation reads needs no barrier"
     );
 }
 #[test]

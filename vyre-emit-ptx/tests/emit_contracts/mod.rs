@@ -9,8 +9,10 @@ use vyre_lower::descriptor_builder::{
     body, descriptor, effect, global_ro, global_wo, lit, mma_f16_m16n8k16, op, SlotCount,
 };
 use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MemoryClass,
+    AsyncTransaction, AsyncWaitSpec, BindingLayout, BindingSlot, BindingVisibility, Dispatch,
+    FragmentValue, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
+    MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixTileShape, MemoryClass,
+    MemoryProxyFence, StageSlot, TensorAccessMap, TransactionScope,
 };
 
 fn one_store_kernel() -> KernelDescriptor {

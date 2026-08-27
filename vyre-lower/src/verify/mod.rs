@@ -33,7 +33,7 @@
 mod body_walk;
 mod error;
 
-use body_walk::{verify_body, verify_result_ids_unique_descriptor_wide};
+use body_walk::{verify_async_pairing, verify_body, verify_result_ids_unique_descriptor_wide};
 pub use error::{format_verify_errors, VerifyError, VerifyErrorKind, VerifyResult};
 
 use crate::KernelDescriptor;
@@ -87,9 +87,11 @@ pub fn verify(desc: &KernelDescriptor) -> VerifyResult {
         &desc.body,
         &mut Vec::new(),
         &FxHashSet::default(),
+        &seen_slots,
         &mut errors,
     );
     verify_result_ids_unique_descriptor_wide(&desc.body, &mut errors);
+    verify_async_pairing(&desc.body, &mut errors);
     if errors.is_empty() {
         Ok(())
     } else {

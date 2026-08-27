@@ -109,18 +109,51 @@ const NEUTRAL_LAYERS: &[(&str, bool)] = &[
 /// one of these has crossed it whatever the intermediate was.
 const BACKEND_APIS: &[&str] = &["ash", "cudarc", "metal", "naga", "wgpu"];
 
-/// Concrete backend, vendor and dialect names. A crate in a substrate-neutral
-/// layer names the neutral concept instead: primary text, primary binary,
-/// secondary text, native module, backend, target, device, artifact.
+/// Concrete backend, vendor, dialect and instruction names. A crate in a
+/// substrate-neutral layer names the neutral concept instead: primary text,
+/// primary binary, secondary text, native module, backend, target, device,
+/// artifact, workgroup barrier, asynchronous transfer, matrix multiply.
 ///
 /// Matched case-insensitively and only where the hit is a whole word, so
 /// `cudarc` is not `CUDA` and `hash` is not `ash`. Every spelling of a workspace
 /// member name is masked out first, because a crate that must name
 /// `vyre-driver-wgpu` is naming a package rather than describing its own work in
 /// one substrate's words.
+///
+/// An instruction mnemonic is the same drift one step later: a neutral crate
+/// that explains its barrier as `bar.sync` has written a rule meant for every
+/// backend in one dialect's instruction set, and the next reader implements the
+/// mnemonic rather than the ordering it stood for.
 const BACKEND_WORDS: &[&str] = &[
-    "cubin", "CUDA", "cudarc", "GLSL", "HLSL", "Metal", "MSL", "naga", "NVIDIA", "NVRTC", "NVVM",
-    "OpenCL", "PTX", "ptxas", "SPIR-V", "SPIRV", "Vulkan", "WGPU", "WGSL",
+    "bar.sync",
+    "cp.async",
+    "cubin",
+    "CUDA",
+    "cudarc",
+    "GLSL",
+    "HLSL",
+    "ldmatrix",
+    "membar",
+    "Metal",
+    "mma.sync",
+    "MSL",
+    "naga",
+    "NVIDIA",
+    "NVRTC",
+    "NVVM",
+    "OpenCL",
+    "PTX",
+    "ptxas",
+    "shfl.sync",
+    "SPIR-V",
+    "SPIRV",
+    "stmatrix",
+    "syncthreads",
+    "threadgroup_barrier",
+    "Vulkan",
+    "wgmma",
+    "WGPU",
+    "WGSL",
 ];
 
 /// Substrate-neutral layers whose crates may still name a concrete backend, and
@@ -1259,6 +1292,40 @@ mod tests {
             assert!(
                 words_in(line).is_empty(),
                 "Fix: a vendor's letters inside an unrelated name are not vocabulary: {line}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_instruction_mnemonic_is_vocabulary_and_the_ordering_it_stands_for_is_not() {
+        for (line, expected) in [
+            (
+                "// a bar.sync carries a workgroup-scope fence",
+                "`bar.sync`",
+            ),
+            ("// staged through cp.async", "`cp.async`"),
+            ("// one mma.sync per tile", "`mma.sync`"),
+            ("// drained with membar", "`membar`"),
+            ("// __syncthreads() before the read", "`syncthreads`"),
+            (
+                "// a threadgroup_barrier orders it",
+                "`threadgroup_barrier`",
+            ),
+        ] {
+            assert!(
+                words_in(line).contains(&expected.to_string()),
+                "Fix: an instruction mnemonic in a neutral crate is vocabulary: {line}"
+            );
+        }
+        for line in [
+            "// a workgroup barrier carries a workgroup-scope fence",
+            "// staged through an asynchronous transfer",
+            "// one matrix multiply-accumulate per tile",
+            "let sync = bars.len();",
+        ] {
+            assert!(
+                words_in(line).is_empty(),
+                "Fix: the neutral concept an instruction implements is not vocabulary: {line}"
             );
         }
     }

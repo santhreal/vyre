@@ -473,13 +473,11 @@ impl BodyBuilder<'_> {
             ),
             OpDispatchRoute::AsyncLoad => self.emit_async_load(op),
             OpDispatchRoute::AsyncStore => self.emit_async_store(op),
-            OpDispatchRoute::AsyncWait => {
-                self.function.body.push(
-                    Statement::Barrier(naga::Barrier::STORAGE | naga::Barrier::WORK_GROUP),
-                    Span::UNDEFINED,
-                );
-                Ok(())
-            }
+            OpDispatchRoute::AsyncWait => with_route_kind!(
+                op,
+                route,
+                KernelOpKind::AsyncWait(wait) => self.emit_async_wait(op, wait)
+            ),
             OpDispatchRoute::Trap => with_route_kind!(
                 op,
                 route,

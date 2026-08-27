@@ -133,7 +133,8 @@ pub struct ResourceBounds {
 pub struct RetainedFallbacks {
     /// Standard unswizzled baseline candidate retained.
     pub unswizzled_candidate_retained: bool,
-    /// Synchronous copy candidate retained (fallback from cp.async failure).
+    /// Synchronous copy candidate retained (fallback from an
+    /// unavailable asynchronous transfer mechanism).
     pub synchronous_candidate_retained: bool,
     /// Unfused baseline candidate retained (fallback from complex fusion).
     pub unfused_candidate_retained: bool,

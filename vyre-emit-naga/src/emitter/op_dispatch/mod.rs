@@ -123,9 +123,9 @@ pub(super) fn classify_op_dispatch_route(kind: &KernelOpKind) -> OpDispatchRoute
             OpDispatchRoute::StructuredBlock
         }
         KernelOpKind::StructuredForLoop { .. } => OpDispatchRoute::StructuredForLoop,
-        KernelOpKind::AsyncLoad { .. } => OpDispatchRoute::AsyncLoad,
-        KernelOpKind::AsyncStore { .. } => OpDispatchRoute::AsyncStore,
-        KernelOpKind::AsyncWait { .. } => OpDispatchRoute::AsyncWait,
+        KernelOpKind::AsyncLoad(_) => OpDispatchRoute::AsyncLoad,
+        KernelOpKind::AsyncStore(_) => OpDispatchRoute::AsyncStore,
+        KernelOpKind::AsyncWait(_) => OpDispatchRoute::AsyncWait,
         KernelOpKind::Trap { .. } => OpDispatchRoute::Trap,
         KernelOpKind::Resume { .. } => OpDispatchRoute::Resume,
         KernelOpKind::Barrier { .. } => OpDispatchRoute::Barrier,
@@ -136,7 +136,7 @@ pub(super) fn classify_op_dispatch_route(kind: &KernelOpKind) -> OpDispatchRoute
         KernelOpKind::SubgroupBroadcast => OpDispatchRoute::SubgroupBroadcast,
         KernelOpKind::Atomic { .. } => OpDispatchRoute::Atomic,
         KernelOpKind::IndirectDispatch { .. } => OpDispatchRoute::IndirectDispatch,
-        KernelOpKind::MatrixMma { .. } => OpDispatchRoute::MatrixMma,
+        KernelOpKind::MatrixMma(_) => OpDispatchRoute::MatrixMma,
         KernelOpKind::Call { .. } => OpDispatchRoute::Call,
         KernelOpKind::OpaqueExpr(_) => OpDispatchRoute::OpaqueExpr,
         KernelOpKind::OpaqueNode(_) => OpDispatchRoute::OpaqueNode,

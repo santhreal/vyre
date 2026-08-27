@@ -45,10 +45,15 @@ impl std::hash::Hash for KernelOp {
 
 impl KernelOp {
     /// Number of result ids this op defines.
+    ///
+    /// A matrix multiply-accumulate defines its accumulator fragment's words,
+    /// derived from the declared tile and fragments. A specification that
+    /// states no carryable fragment defines no ids and is rejected by
+    /// `verify` before any target reads it.
     #[must_use]
     pub fn result_id_count(&self) -> u32 {
-        match self.kind {
-            KernelOpKind::MatrixMma { .. } => 4,
+        match &self.kind {
+            KernelOpKind::MatrixMma(spec) => spec.result_count().unwrap_or(0),
             _ => u32::from(self.result.is_some()),
         }
     }
@@ -56,7 +61,7 @@ impl KernelOp {
     /// Every result id produced by this op.
     ///
     /// Most descriptor ops produce zero or one id. Matrix MMA produces a
-    /// compact four-id accumulator tuple starting at `result`.
+    /// consecutive accumulator tuple starting at `result`.
     pub fn result_ids(&self) -> impl Iterator<Item = u32> + '_ {
         let base = self.result;
         (0..self.result_id_count())
@@ -72,21 +77,7 @@ impl std::hash::Hash for KernelOpKind {
         match self {
             Self::BinOpKind(op) => op.hash(state),
             Self::UnOpKind(op) => op.hash(state),
-            Self::MatrixMma {
-                shape,
-                a_layout,
-                b_layout,
-                a_type,
-                b_type,
-                accum_type,
-            } => {
-                shape.hash(state);
-                a_layout.hash(state);
-                b_layout.hash(state);
-                a_type.hash(state);
-                b_type.hash(state);
-                accum_type.hash(state);
-            }
+            Self::MatrixMma(spec) => spec.hash(state),
             Self::Cast { target } => target.hash(state),
             Self::Atomic { op, ordering } => {
                 op.hash(state);
@@ -96,11 +87,11 @@ impl std::hash::Hash for KernelOpKind {
             Self::LoopIndex { loop_var } => loop_var.hash(state),
             Self::Barrier { ordering } => ordering.hash(state),
             Self::Region { generator } => generator.hash(state),
-            Self::AsyncLoad { tag }
-            | Self::AsyncStore { tag }
-            | Self::AsyncWait { tag }
-            | Self::Trap { tag }
-            | Self::Resume { tag } => tag.hash(state),
+            Self::AsyncLoad(transaction) | Self::AsyncStore(transaction) => {
+                transaction.hash(state);
+            }
+            Self::AsyncWait(wait) => wait.hash(state),
+            Self::Trap { tag } | Self::Resume { tag } => tag.hash(state),
             Self::LoopCarrierInit { name }
             | Self::LoopCarrier { name }
             | Self::LoopCarrierEnd { name } => name.hash(state),
