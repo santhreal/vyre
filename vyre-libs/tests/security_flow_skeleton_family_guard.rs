@@ -280,143 +280,153 @@ fn pinned_cases() -> Vec<(&'static str, Program)> {
 
 /// Pinned canonical IR fingerprints across the security flow-skeleton family.
 ///
-/// Pinned post-merge against canonical wire hash updates (commits `811a42dabd`
-/// and `16f1af5c07`), where `Program::canonical_wire_bytes` introduced
-/// borrow-preserving canonicalization and transparent block-splicing across all
-/// statement depths, normalizing nested block and traversal region structures.
+/// A fingerprint is a hash of canonical wire bytes, so every one of these moves
+/// when the wire encoding of a construct these programs contain changes. Wire
+/// revision 8 re-encoded the synchronization variants this family uses, which
+/// moved all of them at once. `PINNED_WIRE_FORMAT_VERSION` is asserted before
+/// any digest is compared, so the next revision reports itself instead of
+/// arriving as an unexplained table of mismatched hashes.
+const PINNED_WIRE_FORMAT_VERSION: u16 = 8;
+
 const PINS: &[(&str, &str)] = &[
     (
         "flows_to/1n0e/fin-fout",
-        "f2ccb970d416a0733fac5b2bb85d6eaa0a833e69e6a32127efa746225114f950",
+        "a9157bdd8b8bcd47d16d40000d24bc0447a9f302c2496a98a832481a67c341a5",
     ),
     (
         "flows_to/4n3e/fin-fout",
-        "0f81118e6062c8adf5602b1b90ba3b06a30ef723a6486eefadc2ed9aca9b7ab0",
+        "91ac3174011e31e031d49b1bbae58af0671e8c474a575bd69a37b865c2fda04d",
     ),
     (
         "flows_to/32n31e/fin-fout",
-        "69c54585ad6a7eea580d04e47fdb9708264a083be4791747c87decc05e17ae10",
+        "186196fda33f85acac2904ce51518a963adef9069c38f07393236a4b10818624",
     ),
     (
         "flows_to/33n32e/fin-fout",
-        "e1ae43e164e6278a6b08de620a6733d32e2baca1f84919102e38ab3c4f71a346",
+        "28fdba298355590047cc6418b3e219a40c6c65bb17ded223b6b7f226fb08816f",
     ),
     (
         "flows_to/1024n4096e/renamed",
-        "be5ff6ca49530b540a689067a8779628d313c1e9105e4117ae13509a4892478c",
+        "22859bffe1a46338f524e352c18c705eeb8e781c2a82fdf6d4227de79e7772f2",
     ),
     (
         "flows_to_alias_only/1n0e/fin-fout",
-        "6d2a32672c4b12f82047503ccf2a29cc64e3d1a9e275bbf8ea016c121ba6e3a3",
+        "d01f683c755870dda5fdc7509046e83de7a02c8044228e539317ff7553dc26a4",
     ),
     (
         "flows_to_alias_only/4n3e/fin-fout",
-        "f0e9b8214b7ec82795643fba9f0edf5b6718cc7fdab083ec491000bb1344eed1",
+        "6d7ccca0c4c6c36ae7368644be18596ee1b6a05ca72a4b55bb7a1358ac815563",
     ),
     (
         "flows_to_alias_only/33n32e/renamed",
-        "ae878d74e17e8204b3174328f7a9f6ecc35347a971c33016f2febfa31a69265f",
+        "e01a88e545b51a1a2989cfb143438d031da99c7f92759fd5b99b1db7c12d8380",
     ),
     (
         "taint_flow/1n0e/fin-fout",
-        "70c43d105b6dbfc40c6f0a52b409719627df49ebe491d8a7888b3b003eee28a0",
+        "4e4a2e6124045ee212e01d618282c8cab7a5d801311f36d2542b817cee46a10c",
     ),
     (
         "taint_flow/4n3e/fin-fout",
-        "81306eb5024343361c4b99f729f398eaeb75fb24bf22c7835a0616a29552fe63",
+        "c3c92a83c191390fa8e80ba2f9a6882562fc052f6ede4a01d3111e756185931f",
     ),
     (
         "taint_flow/32n31e/fin-fout",
-        "0cbb00305c0ff25bfe651d163e09d27464ba9b1a6c1d5fedb09064fbe98be3bd",
+        "4b5660c07f063ee6ef222abe5051dacb0633cdb3351443c4f1058d5e217746ab",
     ),
     (
         "taint_flow/33n32e/fin-fout",
-        "b2461579c26ca079af48cb3fcf5cee8fd173c9a66163ee863869c6763bd7e8a6",
+        "8103e30827e82fe9a09a77273069ce975222ff9a70a269b59676ae95ff514a8c",
     ),
     (
         "taint_flow/1024n4096e/renamed",
-        "4bdd9fa1f6d3da9e5c2080e81d421c9e26d35c0acacc8ea49cf358b67a818605",
+        "5e1d425ea358539c8592c80e1b164c071860cdc98027de10601e8a92c405c4ae",
     ),
     (
         "bounded_by_comparison/1n0e/fin-fout",
-        "eedc3bbffff952a8191b1769e1457cdfb539eac2e47eec2135265b1ac6b93106",
+        "2d8a7b84c694b542c20a505687aa5f0a5415bd4b53e3b7387955443c8ab39c22",
     ),
     (
         "bounded_by_comparison/4n4e/fin-fout",
-        "a3ab09b7563dfdab4acafda471a2eb1f042c2e5810214a2fb87a921b282492d8",
+        "1f94ef30b861eb9571bc6132d8a7fadf486faad4c0085ea31658242c10864849",
     ),
     (
         "bounded_by_comparison/32n31e/fin-fout",
-        "0a65c05f39e28690633c52830d7ff4e9f6ae0aad68b165e72ee0af7186213df1",
+        "4b9773270d9a0b986a922c42ba3e2b2b146531ff65a08763edcb03462fb2ca2d",
     ),
     (
         "bounded_by_comparison/33n32e/fin-fout",
-        "b2443ed84f319e559c720788085b21295815ed9f21f15859efdee618a6312185",
+        "a85167f2b35dcde03f595852516c8c9cd792187c7cd1f622507d636bb7ea41b7",
     ),
     (
         "bounded_by_comparison/1024n4096e/renamed",
-        "4a43c69f0079cdebb4e037e9ebfd2b16a3f2c978d826ccedd00ddd189b2d284c",
+        "11b6037fb19eea0b20505ae4a87dc6b92960435b628d5e3b5d39c0f78fdf96fa",
     ),
     (
         "dominance_predecessors/1n0e/fin-fout",
-        "b8dda9adde26f773c6e6f01a12798916eb16e4e71c9883bb2c76bb9969e7f295",
+        "f22c962aa40efb8e9e37f9bfff50925c6e1d9a6a151a3d6b40b5efb8752c567d",
     ),
     (
         "dominance_predecessors/4n4e/fin-fout",
-        "6d8395ae7fd85113355bf034ffe5f3b2111101b7c30450c10e539c8c92028a8a",
+        "a1b4761e86d1456692b32bd4d6a2115f539c8728760c768ffd6f551efd9e0a57",
     ),
     (
         "dominance_predecessors/32n31e/fin-fout",
-        "dac792ffa9f1736e48dc0ae8c523077deeb2661ec4930a79fdf849be685c88f3",
+        "a537ed7602c4df8433a195f121767bddcc8eb7d7ee76a10a423a3a34a01f671d",
     ),
     (
         "dominance_predecessors/33n32e/fin-fout",
-        "3c71f322c03592497780c1b5cf09459b8d01cdc666f2ca4d669a3f2f42341004",
+        "92a2edb14f0bbc863860aacb3749089bd78426437d9b14514f9d76a7535153d9",
     ),
     (
         "dominance_predecessors/1024n4096e/renamed",
-        "40055c8ff73b3ba07db6d2a5050b83e950121d37be564a64edad582d7e59378c",
+        "66a6511eaf79440c3c22e87d6d669c0e61644ff88778f65705ba8527d6158886",
     ),
     (
         "flows_to_to_sink/1n0e",
-        "5b3cef28e2d89c08414c5a84f3a1681734e5d216d5d7ad808d2e4a2daf0f8283",
+        "1fafcc20c2d1ab8820e5beee6890ab1ce357801c5ed520d243043b87317566a3",
     ),
     (
         "flows_to_to_sink/4n3e",
-        "d95a648a54b985e3c4cd245c73e84f45ec278a5391493b787c344a24c9ae8ca9",
+        "b35638d2159645b48930542c4114a6625d0a9df688e9a8e780809fcc2dc73e61",
     ),
     (
         "flows_to_to_sink/33n32e/renamed",
-        "eeccd28c95914074d9a5904ff15cb8601369e9f60dc7e07d884d7e411ebe278f",
+        "1519e349fdfd8824892a257cd88aed68c5039dcd041f9236360d302919f1a86d",
     ),
     (
         "taint_pollution/1n0e",
-        "da9abb7e4d90c379fbdd1d3ec927e15ccaae433a05d5e991b55dd5548a66182e",
+        "7be14dfb744fb304a5283a565677779889affe79172bfb11dc35a8afab0adaf2",
     ),
     (
         "taint_pollution/4n3e",
-        "312fd35b1b15d8fd6c1edb8d591907383ab464001fce660e3858aa45209b769d",
+        "5f7cf8d1829ec7871ed633666032e6076d2e34a7411cffe7688abd053fe2a8e1",
     ),
     (
         "taint_pollution/33n32e/renamed",
-        "2fd977b49abd339183c2b55fe680703b3ae91eb0f79fe6b35bbc2107c7bf4347",
+        "5a569a46c164da214e1d53a80a921b06b647da7e3c2371b9f5c65e2ae714c60b",
     ),
     (
         "flows_to_with_sanitizer/1n0e",
-        "9d3bcb68a903c62ca15918604bb7477457a734ca002624995b2a11785dbbbecb",
+        "91a0b80a9e1570916fdd463db9a97b1a955870df9a6e328ff7564d6aba7985a0",
     ),
     (
         "flows_to_with_sanitizer/4n3e",
-        "348af72d975ef8a9ed31cea296660a746acd3588394a42928cd3bf6272bbcf64",
+        "de1d88aec0cd812124591ad3eb5dbe9a03183cc99017e73eb221ca365f510b22",
     ),
     (
         "flows_to_with_sanitizer/33n32e/renamed",
-        "f4101950d89d6d67f8ebc79b8f8768c4ef45a046df08f8a300e95f640285bf02",
+        "d5e78f1b8039317cc90ea31c24d0def6fda666e46449f134af62c03f1f9755c8",
     ),
 ];
 
 #[test]
 fn security_flow_family_entry_point_fingerprints_are_pinned() {
+    assert_eq!(
+        vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION,
+        PINNED_WIRE_FORMAT_VERSION,
+        "Fix: the wire encoding moved, so every fingerprint below is stale. Re-pin the table against revision {} and record what the revision changed.",
+        vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION
+    );
     let cases = pinned_cases();
     assert_eq!(
         cases.len(),
