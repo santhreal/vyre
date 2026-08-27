@@ -6,7 +6,7 @@
 //! unresolved calls, lower to a `KernelDescriptor`, canonicalize representation
 //! order, and verify.
 
-use crate::descriptor::KernelDescriptor;
+use crate::descriptor::{KernelDescriptor, PhysicalSchedule};
 use crate::lower::lower;
 use crate::{verify_descriptor, VerifyFailure};
 use std::fmt;
@@ -22,6 +22,7 @@ use vyre_foundation::{
 #[derive(Debug, Clone)]
 pub struct PhysicalKernel {
     descriptor: KernelDescriptor,
+    schedule: Option<PhysicalSchedule>,
 }
 
 impl PhysicalKernel {
@@ -29,6 +30,16 @@ impl PhysicalKernel {
     #[must_use]
     pub const fn descriptor(&self) -> &KernelDescriptor {
         &self.descriptor
+    }
+
+    /// Borrow the frozen schedule facts this kernel was lowered under.
+    ///
+    /// Absent for a program lowered without a selected schedule. A target that
+    /// needs a frozen fact rejects the kernel when it is absent rather than
+    /// choosing a value the schedule never selected.
+    #[must_use]
+    pub const fn schedule(&self) -> Option<&PhysicalSchedule> {
+        self.schedule.as_ref()
     }
 
     /// Consume the physical stage and return its verified descriptor.
@@ -54,6 +65,12 @@ impl PhysicalLowering {
         self.kernel.descriptor()
     }
 
+    /// Borrow the frozen schedule facts this kernel was lowered under.
+    #[must_use]
+    pub const fn schedule(&self) -> Option<&PhysicalSchedule> {
+        self.kernel.schedule()
+    }
+
     /// Consume the lowering result and return its verified descriptor.
     #[must_use]
     pub fn into_descriptor(self) -> KernelDescriptor {
@@ -68,7 +85,7 @@ pub struct PhysicalLoweringError {
 }
 
 impl PhysicalLoweringError {
-    fn new(message: impl Into<String>) -> Self {
+    pub(crate) fn new(message: impl Into<String>) -> Self {
         let message = message.into();
         debug_assert!(message.contains("Fix:"));
         Self { message }
@@ -196,8 +213,13 @@ pub fn lower_scheduled(
     let (mut scheduled, _) =
         vyre_foundation::transform::schedule_lowering::lower_logical_schedule(expanded);
     scheduled.set_workgroup_size(selected.workgroup);
+    let projected = PhysicalSchedule::project(schedule, phase).map_err(|error| {
+        PhysicalLoweringError::new(format!(
+            "selected schedule projection failed before physical lowering: {error}"
+        ))
+    })?;
     let prepared = prepare_expanded_physical_program(scheduled)?;
-    lower_prepared_physical(prepared)
+    lower_prepared_physical(prepared, Some(projected))
 }
 
 /// Construct verified physical kernel IR from a physical [`Program`].
@@ -215,10 +237,13 @@ pub fn lower_scheduled(
 /// optimization, call resolution, descriptor lowering, canonicalization, or
 /// verification fails.
 pub fn lower_physical(program: &Program) -> Result<PhysicalLowering, PhysicalLoweringError> {
-    lower_prepared_physical(prepare_physical_program(program)?)
+    lower_prepared_physical(prepare_physical_program(program)?, None)
 }
 
-fn lower_prepared_physical(program: Program) -> Result<PhysicalLowering, PhysicalLoweringError> {
+fn lower_prepared_physical(
+    program: Program,
+    schedule: Option<PhysicalSchedule>,
+) -> Result<PhysicalLowering, PhysicalLoweringError> {
     let descriptor = lower(&program).map_err(|error| {
         PhysicalLoweringError::new(format!(
             "KernelDescriptor lowering failed after semantic Program optimization: {error}. Fix: add the missing neutral descriptor mapping before any concrete backend emits this Program."
@@ -240,9 +265,20 @@ fn lower_prepared_physical(program: Program) -> Result<PhysicalLowering, Physica
             format_verify_failure(&failure)
         ))
     })?;
+    if let Some(projected) = &schedule {
+        if projected.workgroup != descriptor.dispatch.workgroup_size {
+            return Err(PhysicalLoweringError::new(format!(
+                "lowered dispatch {:?} is not the workgroup {:?} the selected schedule froze. Fix: keep schedule lowering the only writer of dispatch geometry.",
+                descriptor.dispatch.workgroup_size, projected.workgroup
+            )));
+        }
+    }
     Ok(PhysicalLowering {
         program,
-        kernel: PhysicalKernel { descriptor },
+        kernel: PhysicalKernel {
+            descriptor,
+            schedule,
+        },
     })
 }
 

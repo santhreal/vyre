@@ -226,14 +226,14 @@ pub use verify::format_verify_errors;
 pub use verify::{verify, VerifyError, VerifyErrorKind, VerifyResult};
 
 pub use descriptor::{
-    descriptor_trap_tags, scan_construct_intent_mapping, BindingLayout, BindingSlot,
+    descriptor_trap_tags, scan_construct_intent_mapping, BarrierPhase, BindingLayout, BindingSlot,
     BindingVisibility, DescriptorIntent, DescriptorIntentError, DescriptorIntentEvidence,
     DescriptorIntentKind, DescriptorIntentSet, DescriptorIntentStrategy, DescriptorTrapTag,
     Dispatch, IntentAnnotatedDescriptor, KernelBody, KernelDescriptor, KernelOp, KernelOpKind,
     LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape, MemoryClass, OpaqueExprData,
-    OpaqueNodeData, ScanConstructIntentClass, ScanConstructIntentMapping,
-    DESCRIPTOR_INTENT_SCHEMA_VERSION, SCAN_CONSTRUCT_INTENT_MAPPINGS, TRAP_SIDECAR_NAME,
-    TRAP_SIDECAR_WORDS,
+    OpaqueNodeData, PhysicalSchedule, ScanConstructIntentClass, ScanConstructIntentMapping,
+    DESCRIPTOR_INTENT_SCHEMA_VERSION, PHYSICAL_SCHEDULE_VERSION, SCAN_CONSTRUCT_INTENT_MAPPINGS,
+    TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
 pub use descriptor::{KernelOpsIter, Name};
 pub use error::LowerError;

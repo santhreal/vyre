@@ -67,7 +67,19 @@ constructs a `PhysicalKernel`.
 physical invocation, workgroup, local, and barrier IR before descriptor
 construction. `lower_physical` rejects any unresolved logical marker.
 
-The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 11`. Schema 11 records
+`PHYSICAL_SCHEDULE_VERSION = 1` authenticates the projection the same call
+attaches to the verified kernel. A target reads the frozen phase, logical
+coverage, workgroup, vector width, axis mapping levels, pipeline role groups,
+ring slots, synchronization boundaries with their alternating parity, persistent
+queue capacity and checked resource ceiling from it, rather than inferring any of
+them from the op stream. `lower_physical` attaches no projection, so a program
+lowered without a selected schedule states no frozen fact instead of stating a
+default one, and a target that needs one rejects the kernel. Emission compares
+the projection against the artifact's recorded geometry for the same node and
+refuses a disagreement, so the recorded launch and the compiled module cannot
+drift apart.
+
+The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 12`. Schema 12 records
 the selected launch of every entry point: the entry dependency order, logical
 coverage, grid, workgroup, vector width, pipeline roles, ring slots, barrier
 phases, dynamic shared bytes, launch resource intent, and persistence, together

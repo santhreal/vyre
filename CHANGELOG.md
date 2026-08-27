@@ -385,6 +385,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   is recorded as the VYRE magic tag at schema version 6 reading versions 4
   through 6, and the validation catalog is recorded as 96 rules across eight
   phases.
+- Neutral lowering projects the selected schedule phase into a versioned record
+  of frozen execution facts that every target reads, and emission refuses an
+  entry point whose recorded geometry disagrees with it.
 - The crate-structure gate now fails when a src/ module file sits beside a
   directory of its own name, and when a module or binary name states no
   contract (common, core, helpers, misc, types, utils, or an _ext suffix). It

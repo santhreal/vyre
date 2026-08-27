@@ -34,11 +34,15 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, SubgroupReduceOp, UnOp};
+use vyre_foundation::schedule::{
+    AxisMapping, PipelineRoleGroup, ScheduleResourceBounds, SynchronizationScope,
+};
 
 mod binding_layout;
 mod intent;
 mod kernel;
 mod kernel_op;
+mod physical_schedule;
 // Inline: supplies descriptor fixtures to the crate-private `descriptor` tests that stay inline.
 #[cfg(test)]
 pub(crate) mod test_descriptors;
@@ -49,6 +53,54 @@ pub use binding_layout::{
 pub use intent::{
     scan_construct_intent_mapping, DESCRIPTOR_INTENT_SCHEMA_VERSION, SCAN_CONSTRUCT_INTENT_MAPPINGS,
 };
+pub use physical_schedule::PHYSICAL_SCHEDULE_VERSION;
+
+/// One synchronization boundary the selected schedule placed on a phase.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BarrierPhase {
+    /// Zero-based position of this boundary among the phase's boundaries.
+    pub index: u32,
+    /// Scope the boundary synchronizes.
+    pub scope: SynchronizationScope,
+}
+
+/// Every execution fact the selected schedule froze for one phase.
+///
+/// A target reads this instead of inferring geometry, role assignment or
+/// resource ceilings from the op stream. Nothing here is a suggestion: a
+/// backend that cannot honor a field rejects the kernel rather than
+/// substituting its own value.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PhysicalSchedule {
+    /// Projection schema version.
+    pub version: u16,
+    /// Schedule schema version this was projected from.
+    pub schedule_version: u16,
+    /// Identity of the logical algorithm the schedule transforms.
+    pub logical_identity: [u8; 32],
+    /// Projected phase.
+    pub phase: u32,
+    /// Exact logical coverage selected for the phase.
+    pub logical_coverage: [u64; 3],
+    /// Exact workgroup shape selected for the phase.
+    pub workgroup: [u32; 3],
+    /// Selected vector width.
+    pub vector_width: u32,
+    /// Selected axis mappings, in schedule order.
+    pub mappings: Vec<AxisMapping>,
+    /// Role groups the phase participates in, empty when it is not pipelined.
+    pub roles: Vec<PipelineRoleGroup>,
+    /// Ring slots of the pipeline the phase participates in, zero when it is
+    /// not pipelined.
+    pub ring_slots: u32,
+    /// Synchronization boundaries placed on the phase, in schedule order.
+    pub barriers: Vec<BarrierPhase>,
+    /// Persistent queue capacity selected for the phase, zero when it is not
+    /// persistent.
+    pub queue_capacity: u32,
+    /// Checked resource ceiling of the phase.
+    pub resources: ScheduleResourceBounds,
+}
 
 /// Where a binding's storage lives.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

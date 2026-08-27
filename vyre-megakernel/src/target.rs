@@ -4,12 +4,13 @@ use thiserror::Error;
 use vyre_foundation::{
     execution_plan::fusion::merge_programs_shared, ir::Program, schedule::SchedulePhase,
 };
-use vyre_lower::{KernelDescriptor, MemoryClass};
+use vyre_lower::{KernelDescriptor, MemoryClass, PhysicalSchedule};
 
 use crate::{
     Artifact, ArtifactAbi, ArtifactEnvelope, ArtifactNodeId, CompileError, FusionGroupId,
-    FusionRecord, ResourceLifetime, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
-    TargetProfile, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    FusionRecord, GeometryRecord, ResourceLifetime, TargetEntryPoint, TargetPayload,
+    TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
+    TargetResourceMemory,
 };
 
 /// One compiler-selected group decoded into verified semantic modules.
@@ -365,6 +366,13 @@ pub fn compile_selected_modules(
                     node.0
                 ))
             })?;
+        let frozen = selected.physical.schedule().ok_or_else(|| {
+            TargetCompileError::Emission(format!(
+                "fusion group {} emitted without the frozen schedule facts. Fix: lower every emitted module through lower_scheduled.",
+                selected.group.0
+            ))
+        })?;
+        geometry_matches_frozen_schedule(geometry, frozen, node)?;
         let entry_point = emitted.entry_point;
         entries.push(TargetEntryPoint {
             name: entry_point.clone(),
@@ -392,6 +400,87 @@ pub fn compile_selected_modules(
     }
     let bytes = TargetModuleBundle::new(images).to_bytes()?;
     TargetPayload::new(artifact, format, profile, entries, bytes).map_err(Into::into)
+}
+
+/// Refuse an entry point whose recorded geometry is not the schedule the
+/// emitted module was lowered under.
+///
+/// The artifact record and the lowering projection state the same selected
+/// facts. Two statements of one fact drift, and the drift is invisible: the
+/// runtime launches the recorded shape while the module was compiled for the
+/// projected one. Checking them here makes emission the seam where a
+/// disagreement stops.
+fn geometry_matches_frozen_schedule(
+    geometry: &GeometryRecord,
+    frozen: &PhysicalSchedule,
+    node: ArtifactNodeId,
+) -> Result<(), TargetCompileError> {
+    let disagreement = |field: &str, recorded: String, projected: String| {
+        TargetCompileError::InvalidArtifact(format!(
+            "node {} records {field} {recorded} but was lowered under {projected}. Fix: project artifact geometry and physical lowering from the same selected phase.",
+            node.0
+        ))
+    };
+    if geometry.phase.0 != frozen.phase {
+        return Err(disagreement(
+            "schedule phase",
+            geometry.phase.0.to_string(),
+            frozen.phase.to_string(),
+        ));
+    }
+    if geometry.logical_coverage != frozen.logical_coverage {
+        return Err(disagreement(
+            "logical coverage",
+            format!("{:?}", geometry.logical_coverage),
+            format!("{:?}", frozen.logical_coverage),
+        ));
+    }
+    if geometry.workgroup_size != frozen.workgroup {
+        return Err(disagreement(
+            "workgroup",
+            format!("{:?}", geometry.workgroup_size),
+            format!("{:?}", frozen.workgroup),
+        ));
+    }
+    if geometry.vector_width != frozen.vector_width {
+        return Err(disagreement(
+            "vector width",
+            geometry.vector_width.to_string(),
+            frozen.vector_width.to_string(),
+        ));
+    }
+    if geometry.ring_slots != frozen.ring_slots || geometry.roles != frozen.roles {
+        return Err(disagreement(
+            "pipeline",
+            format!(
+                "{} slots across {} roles",
+                geometry.ring_slots,
+                geometry.roles.len()
+            ),
+            format!(
+                "{} slots across {} roles",
+                frozen.ring_slots,
+                frozen.roles.len()
+            ),
+        ));
+    }
+    if geometry.barrier_phases.len() != frozen.barriers.len() {
+        return Err(disagreement(
+            "barrier boundaries",
+            geometry.barrier_phases.len().to_string(),
+            frozen.barriers.len().to_string(),
+        ));
+    }
+    for (recorded, projected) in geometry.barrier_phases.iter().zip(&frozen.barriers) {
+        if recorded.scope != projected.scope {
+            return Err(disagreement(
+                "barrier scope",
+                format!("{:?}", recorded.scope),
+                format!("{:?}", projected.scope),
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Projects verified descriptor bindings onto the selected artifact resources.
