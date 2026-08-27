@@ -1,12 +1,17 @@
 //! Test: async ops.
 use super::*;
 use vyre_lower::descriptor_builder::{
-    body, descriptor, effect, global_ro, global_rw, lit, op, shared_rw, SlotCount,
+    body, descriptor, effect, global_ro, global_rw, lit, op, shared_rw, wait_only, SlotCount,
 };
 
-#[test]
-fn async_load_emits_bounded_sync_copy() {
-    let kernel = descriptor("async_load")
+/// One transfer from a global source into a shared destination, tagged `tag`.
+///
+/// Three cases below assert a different emitted form for the same declaration:
+/// the synchronous copy an older target gets, the native transfer a newer one
+/// gets, and the overlap the deferred wait leaves. A copy of the declaration in
+/// each is how one of them starts asserting a different program.
+fn global_to_shared_load(id: &str, tag: &str) -> KernelDescriptor {
+    descriptor(id)
         .slots([
             global_ro(0, DataType::U32, "src"),
             shared_rw(1, DataType::U32, 64, "dst"),
@@ -17,11 +22,16 @@ fn async_load_emits_bounded_sync_copy() {
                 .ops([
                     lit(0, 0),
                     lit(1, 1),
-                    effect(KernelOpKind::async_load("tile0".into()), [0, 1, 0, 1]),
+                    effect(KernelOpKind::async_load(tag.into()), [0, 1, 0, 1]),
                 ])
                 .literals([LiteralValue::U32(0), LiteralValue::U32(16)]),
         )
-        .build();
+        .build()
+}
+
+#[test]
+fn async_load_emits_bounded_sync_copy() {
+    let kernel = global_to_shared_load("async_load", "tile0");
     let s = emit_with_target(&kernel, ComputeCapability::SM_70).unwrap();
     assert!(s.contains("// async_load tag=tile0"));
     assert!(s.contains(".shared .align 4 .b8 shared_buf_1[256];"));
@@ -36,22 +46,7 @@ fn async_load_emits_bounded_sync_copy() {
 
 #[test]
 fn async_load_uses_cp_async_on_sm_80() {
-    let kernel = descriptor("k")
-        .slots([
-            global_ro(0, DataType::U32, "src"),
-            shared_rw(1, DataType::U32, 64, "dst"),
-        ])
-        .dispatch(64, 1, 1)
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    effect(KernelOpKind::async_load("t".into()), [0, 1, 0, 1]),
-                ])
-                .literals([LiteralValue::U32(0), LiteralValue::U32(16)]),
-        )
-        .build();
+    let kernel = global_to_shared_load("k", "t");
     let s = emit_with_target(&kernel, ComputeCapability::SM_80).unwrap();
     assert!(s.contains("// cp.async_load tag=t"));
     assert!(s.contains("cp.async.ca.shared.global"));
@@ -250,32 +245,26 @@ fn a_wait_that_skips_an_older_transfer_is_rejected() {
 /// over-synchronizes the first case or under-synchronizes the last.
 #[test]
 fn the_stated_fence_selects_the_emitted_form() {
-    let private = descriptor("private_wait")
-        .dispatch(64, 1, 1)
-        .body(body().op(effect(
-            KernelOpKind::AsyncWait(Box::new(AsyncWaitSpec::fenced(
-                AsyncTransaction::unstaged("t".into(), TransactionScope::Invocation),
-                MemoryProxyFence::None,
-            ))),
-            [],
-        )))
-        .build();
+    let private = wait_only(
+        "private_wait",
+        AsyncWaitSpec::fenced(
+            AsyncTransaction::unstaged("t".into(), TransactionScope::Invocation),
+            MemoryProxyFence::None,
+        ),
+    );
     let s = emit_with_target(&private, ComputeCapability::SM_80).unwrap();
     assert!(
         !s.contains("membar") && !s.contains("bar.sync"),
         "Fix: a transfer only its issuing invocation reads needs no fence:\n{s}"
     );
 
-    let device = descriptor("device_wait")
-        .dispatch(64, 1, 1)
-        .body(body().op(effect(
-            KernelOpKind::AsyncWait(Box::new(AsyncWaitSpec::new(AsyncTransaction::unstaged(
-                "t".into(),
-                TransactionScope::Device,
-            )))),
-            [],
-        )))
-        .build();
+    let device = wait_only(
+        "device_wait",
+        AsyncWaitSpec::new(AsyncTransaction::unstaged(
+            "t".into(),
+            TransactionScope::Device,
+        )),
+    );
     let s = emit_with_target(&device, ComputeCapability::SM_80).unwrap();
     assert!(
         s.contains("membar.gl"),

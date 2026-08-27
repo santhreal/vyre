@@ -5,10 +5,7 @@
 
 use vyre_runtime::resident_work_queue::{protocol, ResidentWorkQueue};
 
-fn write_word(bytes: &mut [u8], word_idx: usize, value: u32) {
-    let off = word_idx * 4;
-    bytes[off..off + 4].copy_from_slice(&value.to_le_bytes());
-}
+use vyre_test_support::le_words::write_word;
 
 #[test]
 fn strict_control_readers_reject_misaligned_buffers() {

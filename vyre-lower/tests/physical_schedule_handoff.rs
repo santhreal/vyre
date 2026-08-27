@@ -16,8 +16,8 @@ use std::collections::BTreeSet;
 
 use vyre_foundation::ir::Program;
 use vyre_foundation::schedule::{
-    MappingLevel, PipelineRole, PipelineRoleGroup, ScheduleAxis, SchedulePhaseId,
-    ScheduleTransform, SelectedSchedule, SynchronizationScope, SCHEDULE_IR_VERSION,
+    MappingLevel, PipelineRole, SchedulePhaseId, SelectedSchedule, SynchronizationScope,
+    SCHEDULE_IR_VERSION,
 };
 use vyre_lower::{lower_physical, lower_scheduled, PhysicalSchedule, PHYSICAL_SCHEDULE_VERSION};
 
@@ -25,65 +25,7 @@ use vyre_lower::{lower_physical, lower_scheduled, PhysicalSchedule, PHYSICAL_SCH
 /// exact shape, a mapped axis, a pipeline it produces into, two synchronization
 /// boundaries and a persistent queue.
 fn rich_schedule() -> SelectedSchedule {
-    let mut schedule = SelectedSchedule::synthetic(2);
-    // The synthetic baseline carries no axes, and only an axis the phase
-    // declares can be mapped.
-    let axis = ScheduleAxis {
-        region: 0,
-        axis: 0,
-        extent: 64,
-    };
-    schedule.source_phases[0].axes.push(axis);
-    schedule.phases[0].axes.push(axis);
-    schedule
-        .apply(ScheduleTransform::SetWorkgroup {
-            phase: SchedulePhaseId(0),
-            shape: [32, 2, 1],
-        })
-        .expect("an exact workgroup shape is legal");
-    schedule
-        .apply(ScheduleTransform::Map {
-            phase: SchedulePhaseId(0),
-            axis,
-            level: MappingLevel::Subgroup,
-        })
-        .expect("mapping an axis of the phase is legal");
-    schedule
-        .apply(ScheduleTransform::Pipeline {
-            producer: SchedulePhaseId(0),
-            consumer: SchedulePhaseId(1),
-            ring_slots: 3,
-            roles: vec![
-                PipelineRoleGroup {
-                    role: PipelineRole::Producer,
-                    workers: 1,
-                },
-                PipelineRoleGroup {
-                    role: PipelineRole::Consumer,
-                    workers: 2,
-                },
-            ],
-        })
-        .expect("a bounded pipeline between two phases is legal");
-    schedule
-        .apply(ScheduleTransform::Synchronize {
-            phases: vec![SchedulePhaseId(0), SchedulePhaseId(1)],
-            scope: SynchronizationScope::Workgroup,
-        })
-        .expect("a workgroup synchronization boundary is legal");
-    schedule
-        .apply(ScheduleTransform::Synchronize {
-            phases: vec![SchedulePhaseId(0)],
-            scope: SynchronizationScope::Device,
-        })
-        .expect("a device synchronization boundary is legal");
-    schedule
-        .apply(ScheduleTransform::PersistentQueue {
-            phase: SchedulePhaseId(0),
-            capacity: 128,
-        })
-        .expect("a bounded persistent queue is legal");
-    schedule
+    vyre_test_support::selected_schedules::richly_transformed_two_phase()
 }
 
 /// WHY: the projection is the whole handoff, so a fact it drops is a fact a

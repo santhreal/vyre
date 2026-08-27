@@ -1,7 +1,8 @@
 //! Test: descriptor control.
 use super::*;
 use vyre_lower::descriptor_builder::{
-    body, descriptor, effect, global_ro, global_rw, lit, op, slot, SlotCount,
+    binop_over_loads, body, cast_over_load, counted_loop_head, descriptor, effect, global_ro,
+    global_rw, lit, op, slot, wait_only, SlotCount,
 };
 
 /// Build `literal -> Cast(target)` so the emitted module's 64-bit backing
@@ -42,24 +43,7 @@ fn high_word_of_only_vec2_compose(module: &naga::Module) -> naga::Expression {
 /// a `U64` out buffer. Used to prove the 64-bit carry gate fires for arithmetic
 /// and admits the carry-free bitwise ops.
 fn u64_binop_desc(binop: BinOp) -> KernelDescriptor {
-    descriptor("u64_binop")
-        .slots([
-            global_ro(0, DataType::U64, "src").with_count(4),
-            global_rw(1, DataType::U64, "out").with_count(4),
-        ])
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
-                    lit(1, 2),
-                    op(KernelOpKind::LoadGlobal, [0, 2], 3),
-                    op(KernelOpKind::BinOpKind(binop), [1, 3], 4),
-                    effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
-                ])
-                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
-        )
-        .build()
+    binop_over_loads("u64_binop", DataType::U64, binop)
 }
 
 #[test]
@@ -92,17 +76,13 @@ fn u64_carry_sensitive_binops_fail_closed_not_silently_componentwise() {
 
 #[test]
 fn u64_bitwise_binops_emit_valid_componentwise_wgsl() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // BitAnd/BitOr/BitXor carry NO information between words, so componentwise
     // vec2<u32> is the correct lowering, these must emit and validate, and the
     // stored result keeps the vec2<u32> 64-bit backing.
-    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
     for binop in [BinOp::BitAnd, BinOp::BitOr, BinOp::BitXor] {
         let module =
             emit(&u64_binop_desc(binop)).unwrap_or_else(|e| panic!("{binop:?}: emit failed: {e}"));
-        validator
-            .validate(&module)
-            .unwrap_or_else(|e| panic!("{binop:?} on u64: INVALID WGSL: {e:?}"));
+        assert_valid_wgsl(&module, "{binop:?} on u64");
         // Validation passing already proves type-correctness; additionally pin
         // that the 64-bit value was NOT collapsed to one word, the out buffer
         // must remain array<vec2<u32>> and a Binary of this operator must exist.
@@ -149,47 +129,13 @@ fn u64_bitwise_binops_emit_valid_componentwise_wgsl() {
 /// to a u32 out. Both operands are runtime loads so no constant fold short-
 /// circuits the divide.
 fn u32_div_desc(binop: BinOp) -> KernelDescriptor {
-    descriptor("u32_div")
-        .slots([
-            global_ro(0, DataType::U32, "src").with_count(4),
-            global_rw(1, DataType::U32, "out").with_count(4),
-        ])
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
-                    lit(1, 2),
-                    op(KernelOpKind::LoadGlobal, [0, 2], 3),
-                    op(KernelOpKind::BinOpKind(binop), [1, 3], 4),
-                    effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
-                ])
-                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
-        )
-        .build()
+    binop_over_loads("u32_div", DataType::U32, binop)
 }
 
 /// Signed (I32) twin of `u32_div_desc`: loads two i32 values and applies `binop`,
 /// storing into an i32 buffer. Used to exercise the signed div/mod emit path.
 fn i32_div_desc(binop: BinOp) -> KernelDescriptor {
-    descriptor("i32_div")
-        .slots([
-            global_ro(0, DataType::I32, "src").with_count(4),
-            global_rw(1, DataType::I32, "out").with_count(4),
-        ])
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
-                    lit(1, 2),
-                    op(KernelOpKind::LoadGlobal, [0, 2], 3),
-                    op(KernelOpKind::BinOpKind(binop), [1, 3], 4),
-                    effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
-                ])
-                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
-        )
-        .build()
+    binop_over_loads("i32_div", DataType::I32, binop)
 }
 
 /// naga's `BinaryOperator::Modulo` lowers to an UNSIGNED remainder on the SPIR-V
@@ -199,11 +145,8 @@ fn i32_div_desc(binop: BinOp) -> KernelDescriptor {
 /// as `a - (a / b) * b` and must NOT emit a `Modulo` for signed operands.
 #[test]
 fn signed_modulo_emits_division_identity_not_modulo_and_validates() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     let module = emit(&i32_div_desc(BinOp::Mod)).expect("i32 Mod must emit");
-    Validator::new(ValidationFlags::all(), Capabilities::all())
-        .validate(&module)
-        .unwrap_or_else(|e| panic!("signed mod identity: INVALID WGSL: {e:?}"));
+    assert_valid_wgsl(&module, "signed mod identity");
     let arena = &module
         .entry_points
         .first()
@@ -231,11 +174,8 @@ fn signed_modulo_emits_division_identity_not_modulo_and_validates() {
 /// signedness-correct) (the signed-mod workaround must not perturb Div).
 #[test]
 fn signed_division_still_emits_single_divide() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     let module = emit(&i32_div_desc(BinOp::Div)).expect("i32 Div must emit");
-    Validator::new(ValidationFlags::all(), Capabilities::all())
-        .validate(&module)
-        .unwrap_or_else(|e| panic!("signed div: INVALID WGSL: {e:?}"));
+    assert_valid_wgsl(&module, "signed div");
     let arena = &module
         .entry_points
         .first()
@@ -262,35 +202,17 @@ fn signed_division_still_emits_single_divide() {
 
 /// Load a U64 (vec2<u32>), cast to `target`, store to an `out_elem` buffer.
 fn u64_narrow_cast_desc(target: DataType, out_elem: DataType) -> KernelDescriptor {
-    descriptor("u64_narrow")
-        .slots([
-            global_ro(0, DataType::U64, "src").with_count(4),
-            global_rw(1, out_elem, "out").with_count(4),
-        ])
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
-                    op(KernelOpKind::Cast { target }, [1], 2),
-                    effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
-                ])
-                .literal(LiteralValue::U32(0)),
-        )
-        .build()
+    cast_over_load("u64_narrow", DataType::U64, target, out_elem)
 }
 
 #[test]
 fn u64_to_u32_narrowing_cast_extracts_low_word_and_validates() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // Regression: a plain `As` on the vec2<u32> backing produced InvalidStoreTypes
     // (invalid WGSL). The fix takes the low word (lane 0), truncation matching
     // PTX cvt.u32.u64 and the reference's low-word narrowing.
     let module =
         emit(&u64_narrow_cast_desc(DataType::U32, DataType::U32)).expect("u64->u32 cast must emit");
-    Validator::new(ValidationFlags::all(), Capabilities::all())
-        .validate(&module)
-        .unwrap_or_else(|e| panic!("u64->u32 cast: INVALID WGSL: {e:?}"));
+    assert_valid_wgsl(&module, "u64->u32 cast");
     let entry = module.entry_points.first().expect("entry point");
     let has_low_lane = entry
         .function
@@ -305,39 +227,20 @@ fn u64_to_u32_narrowing_cast_extracts_low_word_and_validates() {
 
 #[test]
 fn u64_to_i32_narrowing_cast_validates() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     let module =
         emit(&u64_narrow_cast_desc(DataType::I32, DataType::I32)).expect("u64->i32 cast must emit");
-    Validator::new(ValidationFlags::all(), Capabilities::all())
-        .validate(&module)
-        .unwrap_or_else(|e| panic!("u64->i32 cast: INVALID WGSL: {e:?}"));
+    assert_valid_wgsl(&module, "u64->i32 cast");
 }
 
 /// Load an `F32` element, `Cast(target)` it to a 32-bit integer, store. Used to
 /// prove the Float->{U32,I32} cast emits the explicit Rust-saturating guard
 /// (NaN->0, overflow->INT_MAX) instead of naga's bare clamp-to-representable-f32.
 fn f32_to_int_cast_desc(target: DataType, out_elem: DataType) -> KernelDescriptor {
-    descriptor("f32_to_int")
-        .slots([
-            global_ro(0, DataType::F32, "src").with_count(4),
-            global_rw(1, out_elem, "out").with_count(4),
-        ])
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
-                    op(KernelOpKind::Cast { target }, [1], 2),
-                    effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
-                ])
-                .literal(LiteralValue::U32(0)),
-        )
-        .build()
+    cast_over_load("f32_to_int", DataType::F32, target, out_elem)
 }
 
 #[test]
 fn f32_to_u32_cast_emits_saturating_guard_and_validates() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // The reference oracle (Rust saturating `as`) maps overflow/+inf -> u32::MAX
     // and NaN -> 0, but naga's bare `As` lowers to FClamp(x, min_repr, max_repr)
     // + ConvertFToU, which pins overflow to the largest *f32-representable* value
@@ -345,9 +248,7 @@ fn f32_to_u32_cast_emits_saturating_guard_and_validates() {
     // rewrites it to `select((x==x), select((x>=2^32), u32::MAX, As(x)), 0u)`.
     let module =
         emit(&f32_to_int_cast_desc(DataType::U32, DataType::U32)).expect("f32->u32 cast must emit");
-    Validator::new(ValidationFlags::all(), Capabilities::all())
-        .validate(&module)
-        .unwrap_or_else(|e| panic!("f32->u32 saturating cast: INVALID WGSL: {e:?}"));
+    assert_valid_wgsl(&module, "f32->u32 saturating cast");
     let arena = &module
         .entry_points
         .first()
@@ -388,12 +289,9 @@ fn f32_to_u32_cast_emits_saturating_guard_and_validates() {
 
 #[test]
 fn f32_to_i32_cast_emits_saturating_guard_and_validates() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     let module =
         emit(&f32_to_int_cast_desc(DataType::I32, DataType::I32)).expect("f32->i32 cast must emit");
-    Validator::new(ValidationFlags::all(), Capabilities::all())
-        .validate(&module)
-        .unwrap_or_else(|e| panic!("f32->i32 saturating cast: INVALID WGSL: {e:?}"));
+    assert_valid_wgsl(&module, "f32->i32 saturating cast");
     let arena = &module
         .entry_points
         .first()
@@ -467,14 +365,11 @@ fn f32_to_u32_i32_bool_casts_still_emit() {
 
 #[test]
 fn u64_to_f32_cast_reconstructs_full_value_and_validates() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // u64->f32 must use BOTH words (low | high<<32) then convert, not just the
     // low word (so a ShiftLeft (the high<<32) and a float As must be present).
     let module =
         emit(&u64_narrow_cast_desc(DataType::F32, DataType::F32)).expect("u64->f32 cast must emit");
-    Validator::new(ValidationFlags::all(), Capabilities::all())
-        .validate(&module)
-        .unwrap_or_else(|e| panic!("u64->f32 cast: INVALID WGSL: {e:?}"));
+    assert_valid_wgsl(&module, "u64->f32 cast");
     let entry = module.entry_points.first().expect("entry point");
     let arena = &entry.function.expressions;
     let has_high_shift = arena.iter().any(|(_, e)| {
@@ -503,13 +398,10 @@ fn u64_to_f32_cast_reconstructs_full_value_and_validates() {
 
 #[test]
 fn u64_to_bool_cast_uses_both_words_and_validates() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // u64 truthiness must consider both words: (low | high) != 0.
     let module = emit(&u64_narrow_cast_desc(DataType::Bool, DataType::U32))
         .expect("u64->bool cast must emit");
-    Validator::new(ValidationFlags::all(), Capabilities::all())
-        .validate(&module)
-        .unwrap_or_else(|e| panic!("u64->bool cast: INVALID WGSL: {e:?}"));
+    assert_valid_wgsl(&module, "u64->bool cast");
     let entry = module.entry_points.first().expect("entry point");
     let has_ne_zero = entry.function.expressions.iter().any(|(_, e)| {
         matches!(
@@ -536,7 +428,6 @@ fn u64_to_bool_cast_uses_both_words_and_validates() {
 /// visible as a full word (not masked again by a byte-element store).
 #[test]
 fn unsigned_narrowing_cast_masks_to_width_and_validates() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     for (target, mask) in [(DataType::U8, 0xFFu32), (DataType::U16, 0xFFFFu32)] {
         let module = emit(&wide_cast_desc(
             DataType::U32,
@@ -544,9 +435,7 @@ fn unsigned_narrowing_cast_masks_to_width_and_validates() {
             DataType::U32,
         ))
         .unwrap_or_else(|e| panic!("u32->{target:?} cast must emit: {e}"));
-        Validator::new(ValidationFlags::all(), Capabilities::all())
-            .validate(&module)
-            .unwrap_or_else(|e| panic!("u32->{target:?} narrowing cast: INVALID WGSL: {e:?}"));
+        assert_valid_wgsl(&module, "u32->{target:?} narrowing cast");
         let arena = &module
             .entry_points
             .first()
@@ -576,7 +465,6 @@ fn unsigned_narrowing_cast_masks_to_width_and_validates() {
 /// i16). Stores into an I32 out buffer to surface the sign-extended value.
 #[test]
 fn signed_narrowing_cast_sign_extends_and_validates() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     for (target, shift) in [(DataType::I8, 24u32), (DataType::I16, 16u32)] {
         let module = emit(&wide_cast_desc(
             DataType::U32,
@@ -584,9 +472,7 @@ fn signed_narrowing_cast_sign_extends_and_validates() {
             DataType::I32,
         ))
         .unwrap_or_else(|e| panic!("u32->{target:?} cast must emit: {e}"));
-        Validator::new(ValidationFlags::all(), Capabilities::all())
-            .validate(&module)
-            .unwrap_or_else(|e| panic!("u32->{target:?} narrowing cast: INVALID WGSL: {e:?}"));
+        assert_valid_wgsl(&module, "u32->{target:?} narrowing cast");
         let arena = &module
             .entry_points
             .first()
@@ -619,31 +505,14 @@ fn signed_narrowing_cast_sign_extends_and_validates() {
 }
 
 fn wide_cast_desc(src_elem: DataType, target: DataType, out_elem: DataType) -> KernelDescriptor {
-    descriptor("wide_cast")
-        .slots([
-            global_ro(0, src_elem, "src").with_count(4),
-            global_rw(1, out_elem, "out").with_count(4),
-        ])
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
-                    op(KernelOpKind::Cast { target }, [1], 2),
-                    effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
-                ])
-                .literal(LiteralValue::U32(0)),
-        )
-        .build()
+    cast_over_load("wide_cast", src_elem, target, out_elem)
 }
 
 #[test]
 fn vec4_source_casts_emit_valid_wgsl() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // Vec4U32 is backed by vec4<u32>; like the vec2 case, a plain `As` over the
     // whole vector produced invalid WGSL. Every Vec4U32-source cast must now
     // lower via lane extraction and validate.
-    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
     for (target, out) in [
         (DataType::U32, DataType::U32),
         (DataType::I32, DataType::I32),
@@ -654,19 +523,15 @@ fn vec4_source_casts_emit_valid_wgsl() {
         let label = format!("Vec4U32->{target:?}");
         let module = emit(&wide_cast_desc(DataType::Vec4U32, target, out))
             .unwrap_or_else(|e| panic!("{label}: emit failed: {e}"));
-        validator
-            .validate(&module)
-            .unwrap_or_else(|e| panic!("{label}: INVALID WGSL: {e:?}"));
+        assert_valid_wgsl(&module, "{label}");
     }
 }
 
 #[test]
 fn wide_source_to_wide_target_casts_emit_valid_wgsl() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // Previously even U64->U64 identity and Vec2U32->Vec2U32 emitted invalid
     // WGSL because the widening path assumed a scalar source. Lane-compose makes
     // wide->wide casts valid.
-    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
     for (src, target, out) in [
         (DataType::U64, DataType::U64, DataType::U64),
         (DataType::Vec2U32, DataType::Vec2U32, DataType::U64),
@@ -676,9 +541,7 @@ fn wide_source_to_wide_target_casts_emit_valid_wgsl() {
         let label = format!("{src:?}->{target:?}");
         let module = emit(&wide_cast_desc(src, target, out))
             .unwrap_or_else(|e| panic!("{label}: emit failed: {e}"));
-        validator
-            .validate(&module)
-            .unwrap_or_else(|e| panic!("{label}: INVALID WGSL: {e:?}"));
+        assert_valid_wgsl(&module, "{label}");
     }
 }
 
@@ -728,14 +591,11 @@ fn u64_cross_word_unary_ops_fail_closed_not_silently_per_word() {
 
 #[test]
 fn u64_bitwise_not_emits_valid_componentwise_wgsl() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // ~x on a 64-bit value IS correct componentwise (flip every bit of both
     // words), so BitNot is the one unary the gate admits: it must emit, validate,
     // and keep the vec2<u32> backing.
     let module = emit(&u64_unop_desc(UnOp::BitNot)).expect("u64 BitNot must emit");
-    Validator::new(ValidationFlags::all(), Capabilities::all())
-        .validate(&module)
-        .unwrap_or_else(|e| panic!("u64 BitNot: INVALID WGSL: {e:?}"));
+    assert_valid_wgsl(&module, "u64 BitNot");
     assert!(
         entry_has_unary(&module, naga::UnaryOperator::BitwiseNot),
         "u64 BitNot must emit a componentwise BitwiseNot over the vec2<u32> backing"
@@ -773,16 +633,13 @@ fn u32_const_shift_desc(binop: BinOp, amount: u32) -> KernelDescriptor {
 
 #[test]
 fn variable_shift_amount_is_masked_to_bit_width() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // A runtime shift amount must be masked to `& 31` so the wgpu/spirv/metal
     // path matches PTX and the reference oracle for amounts >= 32 (bare naga
     // shift leaves them undefined). Prove the mask is emitted and validates.
     for binop in [BinOp::Shl, BinOp::Shr] {
         let module = emit(&u32_variable_shift_desc(binop))
             .unwrap_or_else(|e| panic!("{binop:?}: emit failed: {e}"));
-        Validator::new(ValidationFlags::all(), Capabilities::all())
-            .validate(&module)
-            .unwrap_or_else(|e| panic!("{binop:?} variable shift: INVALID WGSL: {e:?}"));
+        assert_valid_wgsl(&module, "{binop:?} variable shift");
         let entry = module.entry_points.first().expect("entry point");
         let arena = &entry.function.expressions;
         let expected_shift = if matches!(binop, BinOp::Shl) {
@@ -845,15 +702,12 @@ fn constant_in_range_shift_amount_skips_the_mask() {
 
 #[test]
 fn unsigned_div_by_zero_is_guarded_to_oracle_max() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // The wgpu/naga backend must produce the vyre-reference oracle contract
     // (u32 x/0 -> u32::MAX), not naga's bare divisor-override-to-1 result (x/0
     // -> x). Prove the guard is wired: a Select gated on `divisor == 0` whose
     // accept arm is the u32::MAX sentinel, plus the module validates.
     let module = emit(&u32_div_desc(BinOp::Div)).expect("u32 Div must emit");
-    Validator::new(ValidationFlags::all(), Capabilities::all())
-        .validate(&module)
-        .unwrap_or_else(|e| panic!("guarded u32 Div: INVALID WGSL: {e:?}"));
+    assert_valid_wgsl(&module, "guarded u32 Div");
     let entry = module.entry_points.first().expect("entry point");
     let arena = &entry.function.expressions;
     let has_max_sentinel = arena.iter().any(
@@ -892,13 +746,10 @@ fn unsigned_div_by_zero_is_guarded_to_oracle_max() {
 
 #[test]
 fn unsigned_mod_by_zero_is_guarded_and_valid() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // u32 x % 0 -> 0 (oracle contract). The guard wraps the Modulo in a Select
     // gated on `divisor == 0`; module must validate and contain both.
     let module = emit(&u32_div_desc(BinOp::Mod)).expect("u32 Mod must emit");
-    Validator::new(ValidationFlags::all(), Capabilities::all())
-        .validate(&module)
-        .unwrap_or_else(|e| panic!("guarded u32 Mod: INVALID WGSL: {e:?}"));
+    assert_valid_wgsl(&module, "guarded u32 Mod");
     let entry = module.entry_points.first().expect("entry point");
     let arena = &entry.function.expressions;
     let has_modulo = arena.iter().any(|(_, e)| {
@@ -932,10 +783,8 @@ fn unsigned_mod_by_zero_is_guarded_and_valid() {
 
 #[test]
 fn comparisons_on_signed_buffer_load_emit_valid_wgsl() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // Comparisons of an i32 buffer load against a u32 literal must also resolve
     // (naga rejects `Less(i32, u32)`); the result is bool, stored to a u32 out.
-    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
     for binop in [
         BinOp::Lt,
         BinOp::Gt,
@@ -962,20 +811,16 @@ fn comparisons_on_signed_buffer_load_emit_valid_wgsl() {
             )
             .build();
         let module = emit(&desc).unwrap_or_else(|e| panic!("{binop:?}: emit failed: {e}"));
-        validator
-            .validate(&module)
-            .unwrap_or_else(|e| panic!("{binop:?} on a signed buffer load: INVALID WGSL: {e:?}"));
+        assert_valid_wgsl(&module, "{binop:?} on a signed buffer load");
     }
 }
 
 #[test]
 fn bitops_on_signed_buffer_load_emit_valid_wgsl() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // Systematic sweep of the mixed-i32/u32 class: a value loaded from a SIGNED
     // (i32) buffer (whose kind doesn't resolve through Load(Access)) combined
     // with a u32 literal. naga requires matching operand kinds; if `unify` can't
     // resolve the load it emits e.g. `And(i32, u32)` and the module is invalid.
-    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
     let ops = [
         BinOp::BitAnd,
         BinOp::BitOr,
@@ -1005,15 +850,12 @@ fn bitops_on_signed_buffer_load_emit_valid_wgsl() {
             )
             .build();
         let module = emit(&desc).unwrap_or_else(|e| panic!("{binop:?}: emit failed: {e}"));
-        validator
-            .validate(&module)
-            .unwrap_or_else(|e| panic!("{binop:?} on a signed buffer load: INVALID WGSL: {e:?}"));
+        assert_valid_wgsl(&module, "{binop:?} on a signed buffer load");
     }
 }
 
 #[test]
 fn unpack_on_signed_buffer_load_emits_valid_wgsl() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // `Unpack8Low` lowers to `(v >> shift) & mask` with a u32 mask. When the
     // source `v` is a load from a SIGNED (i32) buffer, the value is Sint and its
     // `scalar_kind` does not resolve through the `Load(Access)` chain, so
@@ -1036,14 +878,14 @@ fn unpack_on_signed_buffer_load_emits_valid_wgsl() {
         )
         .build();
     let module = emit(&desc).expect("unpack-on-signed-load must emit");
-    Validator::new(ValidationFlags::all(), Capabilities::all())
-        .validate(&module)
-        .expect("unpack on a signed buffer load must produce valid WGSL");
+    assert_valid_wgsl(
+        &module,
+        "unpack on a signed buffer load must produce valid WGSL",
+    );
 }
 
 #[test]
 fn signed_i32_arithmetic_shift_right_emits_valid_wgsl() {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
     // `i32 >> n` is an ARITHMETIC shift (sign-preserving). validate's IR allows
     // it. naga makes `>>` arithmetic when the LEFT operand is Sint, but WGSL
     // requires the shift AMOUNT (right operand) to be u32. The probe: emit a
@@ -1075,10 +917,10 @@ fn signed_i32_arithmetic_shift_right_emits_valid_wgsl() {
         )
         .build();
     let module = emit(&desc).expect("i32 >> 1 must emit");
-    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
-    validator
-        .validate(&module)
-        .expect("signed arithmetic shift-right must produce valid WGSL (shift amount stays u32)");
+    assert_valid_wgsl(
+        &module,
+        "signed arithmetic shift-right must produce valid WGSL (shift amount stays u32)",
+    );
 
     // Pin the semantics, not just validity: the shift must be ARITHMETIC, its
     // value operand stays Sint (that is what makes naga emit a sign-preserving
@@ -1260,32 +1102,26 @@ fn descriptor_async_wait_emits_workgroup_barrier() {
 /// issuing invocation reads needs no barrier at all.
 #[test]
 fn a_fence_wider_than_this_dialect_is_rejected() {
-    let device = descriptor("device_fence_wait")
-        .dispatch(64, 1, 1)
-        .body(body().op(effect(
-            KernelOpKind::AsyncWait(Box::new(AsyncWaitSpec::new(AsyncTransaction::unstaged(
-                "t".into(),
-                TransactionScope::Device,
-            )))),
-            [],
-        )))
-        .build();
+    let device = wait_only(
+        "device_fence_wait",
+        AsyncWaitSpec::new(AsyncTransaction::unstaged(
+            "t".into(),
+            TransactionScope::Device,
+        )),
+    );
     let error = emit(&device).expect_err("a device-scope fence must be rejected");
     assert!(
         matches!(error, EmitError::UnsupportedOp(_)),
         "Fix: report the wait as unsupported instead of emitting a workgroup barrier; got {error:?}"
     );
 
-    let private = descriptor("private_wait")
-        .dispatch(64, 1, 1)
-        .body(body().op(effect(
-            KernelOpKind::AsyncWait(Box::new(AsyncWaitSpec::fenced(
-                AsyncTransaction::unstaged("t".into(), TransactionScope::Invocation),
-                MemoryProxyFence::None,
-            ))),
-            [],
-        )))
-        .build();
+    let private = wait_only(
+        "private_wait",
+        AsyncWaitSpec::fenced(
+            AsyncTransaction::unstaged("t".into(), TransactionScope::Invocation),
+            MemoryProxyFence::None,
+        ),
+    );
     let module = emit(&private).expect("a transfer with no fence must emit");
     assert!(
         !block_has_barrier(&module.entry_points[0].function.body),
@@ -1355,16 +1191,7 @@ fn descriptor_structured_for_loop_emits_naga_loop() {
         .dispatch(64, 1, 1)
         .body(
             body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    effect(
-                        KernelOpKind::StructuredForLoop {
-                            loop_var: "i".into(),
-                        },
-                        [0, 1, 0],
-                    ),
-                ])
+                .ops(counted_loop_head("i"))
                 .children([body().ops([
                     op(
                         KernelOpKind::LoopIndex {

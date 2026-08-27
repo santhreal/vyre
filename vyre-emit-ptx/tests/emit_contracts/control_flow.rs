@@ -1,7 +1,7 @@
 //! Test: control flow.
 use super::*;
 use vyre_lower::descriptor_builder::{
-    body, descriptor, effect, global_rw, lit, KernelDescriptorBuilder, SlotCount,
+    body, counted_loop_head, descriptor, effect, global_rw, lit, KernelDescriptorBuilder, SlotCount,
 };
 
 /// 64-thread kernel writing into one read-write `out` slot of `count` u32s.
@@ -321,16 +321,7 @@ fn structured_for_loop_emits_head_label_setp_and_jump_back() {
         .dispatch(64, 1, 1)
         .body(
             body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    effect(
-                        KernelOpKind::StructuredForLoop {
-                            loop_var: "i".into(),
-                        },
-                        [0, 1, 0],
-                    ),
-                ])
+                .ops(counted_loop_head("i"))
                 .child(empty_child_body())
                 .literals([LiteralValue::U32(0), LiteralValue::U32(64)]),
         )

@@ -295,26 +295,6 @@ mod tests {
     }
 
     #[test]
-    fn lowering_owned_rules_are_verified_and_preserve_semantics() {
-        let owned = lowering_owned_rules();
-        assert_eq!(
-            owned,
-            vec![
-                LoweringRewriteRule::RepresentationCanonicalize,
-                LoweringRewriteRule::ConstBufferPromote,
-                LoweringRewriteRule::DeadOpElimination,
-                LoweringRewriteRule::VectorLoadFusion,
-            ]
-        );
-        for rule in owned {
-            let contract = rule.contract();
-            assert!(contract.preserves_program_semantics);
-            assert_eq!(contract.target_structure, "KernelDescriptor");
-            assert!(rule.is_lowering_owned());
-        }
-    }
-
-    #[test]
     fn vector_load_fusion_is_lowering_owned() {
         let contract = LoweringRewriteRule::VectorLoadFusion.contract();
         assert_eq!(contract.ownership, RewriteOwnership::LoweringOwned);

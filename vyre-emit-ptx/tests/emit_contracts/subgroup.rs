@@ -1,6 +1,6 @@
 //! Test: subgroup.
 use super::*;
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
+use vyre_lower::descriptor_builder::{body, counted_loop_head, descriptor, global_rw, lit, op};
 
 /// Single-seed subgroup reduction kernel: one literal reduced across the
 /// subgroup by `reduce_op`.
@@ -206,16 +206,7 @@ fn for_loop_var_name_appears_in_comment() {
         .dispatch(64, 1, 1)
         .body(
             body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    effect(
-                        KernelOpKind::StructuredForLoop {
-                            loop_var: "row_idx".into(),
-                        },
-                        [0, 1, 0],
-                    ),
-                ])
+                .ops(counted_loop_head("row_idx"))
                 .child(empty_child_body())
                 .literals([LiteralValue::U32(0), LiteralValue::U32(16)]),
         )

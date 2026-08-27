@@ -1,5 +1,6 @@
 //! Shared test helpers for classic-AC program conformance tests.
 
+use crate::pattern::classic_ac::{classic_ac_bounded_ranges_scan, classic_ac_compile};
 use crate::pattern::CompiledDfa;
 use vyre_foundation::ir::Program;
 use vyre_primitives::wire::pack_u32_slice;
@@ -131,4 +132,32 @@ pub(crate) fn evaluate_and_assert_ranges_matches(
     let mut expected_sorted = expected.to_vec();
     expected_sorted.sort_unstable();
     assert_eq!(decoded, expected_sorted);
+}
+
+/// Assert a bounded-ranges PREFILTER program reproduces the host scan oracle.
+///
+/// Every prefilter width binds the same prefix (`ac_ranges_inputs` plus a zeroed
+/// match counter) and then its own mask words, so the width supplies two
+/// closures and nothing else: `build` for the program under test and
+/// `prefilter_words` for the bindings past the counter, in declaration order. A
+/// width that assembles that prefix itself can bind the counter and its masks in
+/// the wrong order and still agree with a copy of the same mistake.
+pub(crate) fn assert_ranges_prefilter_matches_oracle(
+    patterns: &[&[u8]],
+    haystack: &[u8],
+    build: impl FnOnce(&CompiledDfa, u32) -> Program,
+    prefilter_words: impl FnOnce(&CompiledDfa, &[&[u8]]) -> Vec<Vec<u32>>,
+) {
+    let ac = classic_ac_compile(patterns);
+    let lengths = pattern_lengths(patterns);
+    let expected = classic_ac_bounded_ranges_scan(&ac, &lengths, haystack);
+    let program = build(&ac.dfa, patterns.len() as u32);
+    let mut inputs = ac_ranges_inputs(&ac.dfa, haystack, &lengths);
+    inputs.push(u32_input(&[0]));
+    inputs.extend(
+        prefilter_words(&ac.dfa, patterns)
+            .iter()
+            .map(|words| u32_input(words)),
+    );
+    evaluate_and_assert_ranges_matches(&program, &inputs, &expected);
 }

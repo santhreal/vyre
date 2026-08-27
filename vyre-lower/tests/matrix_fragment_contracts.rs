@@ -11,10 +11,11 @@
 //! declared form. That is the target's own rejection, checked in the emitter
 //! crates.
 
+use vyre_lower::descriptor_builder::{self as descriptor_builder, body, lit, op};
 use vyre_lower::{
-    verify, BindingLayout, Dispatch, FragmentOperand, FragmentValue, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec,
-    MatrixSpecError, MatrixTileShape, MemoryClass, TensorAccessMap, VerifyErrorKind,
+    verify, FragmentOperand, FragmentValue, KernelDescriptor, KernelOpKind, LiteralValue,
+    MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixSpecError, MatrixTileShape,
+    MemoryClass, TensorAccessMap, VerifyErrorKind,
 };
 
 const LANES: u16 = 32;
@@ -47,27 +48,17 @@ fn descriptor(spec: MatrixMmaSpec, operand_count: u32) -> KernelDescriptor {
     let mut literals = Vec::new();
     for id in 0..operand_count {
         literals.push(LiteralValue::U32(id));
-        ops.push(KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![id],
-            result: Some(id),
-        });
+        ops.push(lit(id, id));
     }
-    ops.push(KernelOp {
-        kind: KernelOpKind::MatrixMma(Box::new(spec)),
-        operands: (0..operand_count).collect(),
-        result: Some(operand_count),
-    });
-    KernelDescriptor {
-        id: "matrix_fragment".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(LANES.into(), 1, 1),
-        body: KernelBody {
-            ops,
-            child_bodies: vec![],
-            literals,
-        },
-    }
+    ops.push(op(
+        KernelOpKind::MatrixMma(Box::new(spec)),
+        (0..operand_count).collect::<Vec<u32>>(),
+        operand_count,
+    ));
+    descriptor_builder::descriptor("matrix_fragment")
+        .dispatch(LANES.into(), 1, 1)
+        .body(body().ops(ops).literals(literals))
+        .build()
 }
 
 #[test]
@@ -304,22 +295,22 @@ fn the_verifier_rejects_a_declaration_with_no_defined_arity() {
 #[test]
 fn result_ids_span_the_accumulator_fragment() {
     let wide = spec(MatrixTileShape { m: 32, n: 8, k: 16 });
-    let op = KernelOp {
-        kind: KernelOpKind::MatrixMma(Box::new(wide)),
-        operands: (0..18).collect(),
-        result: Some(100),
-    };
-    assert_eq!(op.result_id_count(), 8);
+    let mma = op(
+        KernelOpKind::MatrixMma(Box::new(wide)),
+        (0..18).collect::<Vec<u32>>(),
+        100,
+    );
+    assert_eq!(mma.result_id_count(), 8);
     assert_eq!(
-        op.result_ids().collect::<Vec<_>>(),
+        mma.result_ids().collect::<Vec<_>>(),
         (100..108).collect::<Vec<_>>()
     );
 
     let native = spec(MatrixTileShape { m: 16, n: 8, k: 16 });
-    let op = KernelOp {
-        kind: KernelOpKind::MatrixMma(Box::new(native)),
-        operands: (0..10).collect(),
-        result: Some(0),
-    };
-    assert_eq!(op.result_id_count(), 4);
+    let mma = op(
+        KernelOpKind::MatrixMma(Box::new(native)),
+        (0..10).collect::<Vec<u32>>(),
+        0,
+    );
+    assert_eq!(mma.result_id_count(), 4);
 }

@@ -37,10 +37,10 @@
 use vyre_foundation::ir::{BinOp, DataType};
 
 use crate::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, EmissionTargetCapabilities,
-    FragmentValue, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
-    MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixTileShape, MemoryClass,
-    SubgroupCapabilities, WorkgroupLimits,
+    AsyncWaitSpec, BindingLayout, BindingSlot, BindingVisibility, Dispatch,
+    EmissionTargetCapabilities, FragmentValue, KernelBody, KernelDescriptor, KernelOp,
+    KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixTileShape,
+    MemoryClass, SubgroupCapabilities, WorkgroupLimits,
 };
 
 /// An op that produces `result`.
@@ -163,6 +163,28 @@ pub fn for_loop(loop_var: &str, lo: u32, hi: u32, loop_body: u32) -> KernelOp {
     )
 }
 
+/// The ops a counted loop head is: two literal bounds and the loop over child
+/// body 0.
+///
+/// The bounds are literal-pool entries 0 and 1, so a caller states the extent
+/// in its literal list and the loop body as its first child.
+#[must_use]
+pub fn counted_loop_head(loop_var: &str) -> [KernelOp; 3] {
+    [lit(0, 0), lit(1, 1), for_loop(loop_var, 0, 1, 0)]
+}
+
+/// A 64-wide dispatch whose only op is one asynchronous wait.
+///
+/// Whether a wait is emittable is the target's answer, so every backend states
+/// the same declaration and asserts its own outcome.
+#[must_use]
+pub fn wait_only(id: &str, wait: AsyncWaitSpec) -> KernelDescriptor {
+    descriptor(id)
+        .dispatch(64, 1, 1)
+        .body(body().op(effect(KernelOpKind::AsyncWait(Box::new(wait)), [])))
+        .build()
+}
+
 /// A binding slot with every field named.
 #[must_use]
 pub fn slot(
@@ -251,6 +273,65 @@ impl SlotCount for BindingSlot {
         self.element_count = Some(count);
         self
     }
+}
+
+/// Two loaded operands of `elem` combined by `binop`, stored to `elem`.
+///
+/// Slot 0 is a read-only source of four elements, slot 1 a read-write output;
+/// both operands are runtime loads, so no constant fold reaches the operator.
+/// Every backend asserting how it emits a binary operator over loaded operands
+/// needs this exact program, which is why it has one owner: a per-backend copy
+/// that drifted would compare two different declarations.
+#[must_use]
+pub fn binop_over_loads(id: &str, elem: DataType, binop: BinOp) -> KernelDescriptor {
+    descriptor(id)
+        .slots([
+            global_ro(0, elem.clone(), "src").with_count(4),
+            global_rw(1, elem, "out").with_count(4),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    lit(1, 2),
+                    op(KernelOpKind::LoadGlobal, [0, 2], 3),
+                    op(KernelOpKind::BinOpKind(binop), [1, 3], 4),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+        )
+        .build()
+}
+
+/// One loaded `src` element cast to `target`, stored into an `out` buffer.
+///
+/// Slot 0 is a read-only source of four elements and slot 1 a read-write
+/// output, so the cast reads a runtime value rather than a literal a backend
+/// could fold.
+#[must_use]
+pub fn cast_over_load(
+    id: &str,
+    src: DataType,
+    target: DataType,
+    out: DataType,
+) -> KernelDescriptor {
+    descriptor(id)
+        .slots([
+            global_ro(0, src, "src").with_count(4),
+            global_rw(1, out, "out").with_count(4),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    op(KernelOpKind::Cast { target }, [1], 2),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
+                ])
+                .literals([LiteralValue::U32(0)]),
+        )
+        .build()
 }
 
 /// Accumulates one [`KernelBody`].

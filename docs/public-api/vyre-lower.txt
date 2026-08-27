@@ -412,7 +412,10 @@ pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::slots(self, slot
 pub fn vyre_lower::descriptor_builder::SlotCount::with_count(self, count: u32) -> Self
 pub fn vyre_lower::descriptor_builder::all_subgroup_capabilities() -> vyre_lower::SubgroupCapabilities
 pub fn vyre_lower::descriptor_builder::binop(kind: vyre_spec::bin_op::BinOp, lhs: u32, rhs: u32, result: u32) -> vyre_lower::KernelOp
+pub fn vyre_lower::descriptor_builder::binop_over_loads(id: &str, elem: vyre_spec::data_type::DataType, binop: vyre_spec::bin_op::BinOp) -> vyre_lower::KernelDescriptor
 pub fn vyre_lower::descriptor_builder::body() -> vyre_lower::descriptor_builder::KernelBodyBuilder
+pub fn vyre_lower::descriptor_builder::cast_over_load(id: &str, src: vyre_spec::data_type::DataType, target: vyre_spec::data_type::DataType, out: vyre_spec::data_type::DataType) -> vyre_lower::KernelDescriptor
+pub fn vyre_lower::descriptor_builder::counted_loop_head(loop_var: &str) -> [vyre_lower::KernelOp; 3]
 pub fn vyre_lower::descriptor_builder::descriptor(id: &str) -> vyre_lower::descriptor_builder::KernelDescriptorBuilder
 pub fn vyre_lower::descriptor_builder::effect(kind: vyre_lower::KernelOpKind, operands: impl core::convert::Into<alloc::vec::Vec<u32>>) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::emission_target(workgroup: vyre_lower::WorkgroupLimits, subgroup: vyre_lower::SubgroupCapabilities) -> vyre_lower::EmissionTargetCapabilities
@@ -435,6 +438,7 @@ pub fn vyre_lower::descriptor_builder::store_global(slot: u32, index: u32, value
 pub fn vyre_lower::descriptor_builder::target_without_subgroups() -> vyre_lower::EmissionTargetCapabilities
 pub fn vyre_lower::descriptor_builder::vector_load_global(slot: u32, index: u32, width: u8, result: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::vector_store_global(slot: u32, index: u32, width: u8, values: &[u32]) -> vyre_lower::KernelOp
+pub fn vyre_lower::descriptor_builder::wait_only(id: &str, wait: vyre_lower::AsyncWaitSpec) -> vyre_lower::KernelDescriptor
 pub fn vyre_lower::descriptor_builder::workgroup_limits(max_size: [u32; 3], max_invocations: u32) -> vyre_lower::WorkgroupLimits
 pub fn vyre_lower::descriptor_trap_tags(body: &vyre_lower::KernelBody) -> core::result::Result<alloc::vec::Vec<vyre_lower::DescriptorTrapTag>, vyre_lower::LowerError>
 pub fn vyre_lower::emit_adversarial_corpus::case_by_id(id: &str) -> core::option::Option<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>

@@ -12,6 +12,20 @@ use vyre_lower::{
     KernelOpKind, LiteralValue, MemoryClass, MemoryProxyFence, TransactionScope,
 };
 
+/// Hold `module` to naga's own validator, naming `what` when it is rejected.
+///
+/// A module that emits and does not validate is invalid WGSL, so a case
+/// asserting a lowered shape asserts validity first. One owner exists because
+/// each copy also named the capability set it validated under, and a copy that
+/// named a narrower set would admit a module the shipped path rejects.
+fn assert_valid_wgsl(module: &naga::Module, what: &str) {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+
+    Validator::new(ValidationFlags::all(), Capabilities::all())
+        .validate(module)
+        .unwrap_or_else(|error| panic!("{what}: INVALID WGSL: {error:?}"));
+}
+
 fn empty_desc() -> KernelDescriptor {
     descriptor("empty").build()
 }

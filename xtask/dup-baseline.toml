@@ -113,13 +113,13 @@ total_lines = 770
 
 [[crate]]
 name = "vyre-emit-naga"
-duplicate_lines = 121
-total_lines = 9078
+duplicate_lines = 108
+total_lines = 9540
 
 [[crate]]
 name = "vyre-emit-ptx"
-duplicate_lines = 69
-total_lines = 11943
+duplicate_lines = 48
+total_lines = 12617
 
 [[crate]]
 name = "vyre-emit-spirv"
@@ -128,13 +128,13 @@ total_lines = 1127
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 2312
-total_lines = 109223
+duplicate_lines = 2228
+total_lines = 112484
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 5455
-total_lines = 208336
+duplicate_lines = 5447
+total_lines = 208315
 
 [[crate]]
 name = "vyre-lints"
@@ -143,8 +143,8 @@ total_lines = 3438
 
 [[crate]]
 name = "vyre-lower"
-duplicate_lines = 69
-total_lines = 16981
+duplicate_lines = 53
+total_lines = 20564
 
 [[crate]]
 name = "vyre-macros"
@@ -168,8 +168,8 @@ total_lines = 30891
 
 [[crate]]
 name = "vyre-runtime"
-duplicate_lines = 162
-total_lines = 32937
+duplicate_lines = 139
+total_lines = 32917
 
 [[crate]]
 name = "vyre-pass-engine"

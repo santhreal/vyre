@@ -30,42 +30,19 @@ use std::collections::BTreeSet;
 use vyre_spec::{AtomicOp, BinOp, DataType, TernaryOp, UnOp};
 
 /// Every builtin `BinOp`, in wire-tag order.
+///
+/// The member set is `vyre_test_support::bin_op_variants`, which holds its
+/// fixtures to the `BinOp` declaration in `vyre-spec` at run time. A second
+/// list here is how one table gains an operator the other does not know
+/// about, so this one keeps only the builtins and orders them by wire tag.
 pub(crate) fn builtin_bin_ops() -> Vec<BinOp> {
-    vec![
-        BinOp::Add,
-        BinOp::Sub,
-        BinOp::Mul,
-        BinOp::Div,
-        BinOp::Mod,
-        BinOp::BitAnd,
-        BinOp::BitOr,
-        BinOp::BitXor,
-        BinOp::Shl,
-        BinOp::Shr,
-        BinOp::Eq,
-        BinOp::Ne,
-        BinOp::Lt,
-        BinOp::Gt,
-        BinOp::Le,
-        BinOp::Ge,
-        BinOp::And,
-        BinOp::Or,
-        BinOp::AbsDiff,
-        BinOp::Min,
-        BinOp::Max,
-        BinOp::SaturatingAdd,
-        BinOp::SaturatingSub,
-        BinOp::SaturatingMul,
-        BinOp::Shuffle,
-        BinOp::Ballot,
-        BinOp::WaveReduce,
-        BinOp::WaveBroadcast,
-        BinOp::WrappingAdd,
-        BinOp::WrappingSub,
-        BinOp::RotateLeft,
-        BinOp::RotateRight,
-        BinOp::MulHigh,
-    ]
+    let mut builtins: Vec<(u8, BinOp)> =
+        vyre_test_support::bin_op_variants::bin_op_variant_samples()
+            .into_iter()
+            .filter_map(|op| op.builtin_wire_tag().map(|tag| (tag, op)))
+            .collect();
+    builtins.sort_unstable_by_key(|(tag, _)| *tag);
+    builtins.into_iter().map(|(_, op)| op).collect()
 }
 
 /// Every builtin `UnOp`, in wire-tag order.

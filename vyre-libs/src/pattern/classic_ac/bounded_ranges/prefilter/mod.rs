@@ -449,34 +449,28 @@ pub fn try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
 mod tests {
     use super::*;
     use crate::pattern::classic_ac::test_dispatch_and_decode::{
-        ac_ranges_inputs, assert_infallible_matches_try, evaluate_and_assert_ranges_matches,
-        pattern_lengths, u32_input,
+        assert_infallible_matches_try, assert_ranges_prefilter_matches_oracle,
     };
     use crate::pattern::classic_ac::{
-        classic_ac_bounded_ranges_scan, classic_ac_candidate_end_byte_mask_words,
-        classic_ac_compile,
+        classic_ac_candidate_end_byte_mask_words, classic_ac_compile,
     };
 
     #[test]
     fn bounded_ranges_prefilter_reference_eval_matches_reference_oracle() {
         let patterns: [&[u8]; 5] = [b"a", b"bc", b"abcd", b"BEGIN", b"token"];
-        let haystack = b"zabcd BEGIN token abcdbc";
-        let ac = classic_ac_compile(&patterns);
-        let lengths = pattern_lengths(&patterns);
-        let mut expected = classic_ac_bounded_ranges_scan(&ac, &lengths, haystack);
-        expected.sort_unstable();
-        let program = build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
-            &ac.dfa,
-            patterns.len() as u32,
-            128,
-            false,
+        assert_ranges_prefilter_matches_oracle(
+            &patterns,
+            b"zabcd BEGIN token abcdbc",
+            |dfa, pattern_count| {
+                build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
+                    dfa,
+                    pattern_count,
+                    128,
+                    false,
+                )
+            },
+            |dfa, _| vec![classic_ac_candidate_end_byte_mask_words(dfa).to_vec()],
         );
-        let mut inputs = ac_ranges_inputs(&ac.dfa, haystack, &lengths);
-        inputs.push(u32_input(&[0]));
-        inputs.push(u32_input(&classic_ac_candidate_end_byte_mask_words(
-            &ac.dfa,
-        )));
-        evaluate_and_assert_ranges_matches(&program, &inputs, &expected);
     }
 
     /// Behavioral regression guard: the infallible prefilter builder must wire the

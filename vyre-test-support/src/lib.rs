@@ -177,6 +177,7 @@ pub mod graph_values;
 pub mod ir_regions;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_variants;
+pub mod le_words;
 #[cfg(feature = "ir-fixtures")]
 pub mod logical_markers;
 #[cfg(feature = "ir-fixtures")]
@@ -189,6 +190,8 @@ pub mod pass_programs;
 #[cfg(feature = "ir-fixtures")]
 pub mod registry_nets;
 pub mod replay_capsule;
+#[cfg(feature = "ir-fixtures")]
+pub mod selected_schedules;
 #[cfg(feature = "semantic-requests")]
 pub mod semantic_requests;
 #[cfg(feature = "ir-fixtures")]

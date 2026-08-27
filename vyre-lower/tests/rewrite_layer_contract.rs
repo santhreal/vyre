@@ -119,6 +119,10 @@ fn lowering_owned_rewrites_preserve_program_semantics() {
         let contract = rule.contract();
         assert_eq!(contract.ownership, RewriteOwnership::LoweringOwned);
         assert!(
+            rule.is_lowering_owned(),
+            "the predicate and the recorded ownership of {rule:?} must agree"
+        );
+        assert!(
             contract.preserves_program_semantics,
             "lowering rewrite {:?} must preserve Program semantics",
             rule

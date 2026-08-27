@@ -13,10 +13,8 @@
 //! rejection, checked in the emitter crates.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
-use vyre_foundation::schedule::{
-    MappingLevel, PipelineRole, PipelineRoleGroup, ScheduleAxis, SchedulePhaseId,
-    ScheduleTransform, SelectedSchedule, SynchronizationScope,
-};
+use vyre_foundation::schedule::{SchedulePhaseId, SelectedSchedule};
+use vyre_lower::descriptor_builder::{effect, lit};
 use vyre_lower::{
     lower_physical, lower_scheduled, verify, AsyncTransaction, AsyncTransactionError,
     AsyncWaitSpec, BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody,
@@ -77,51 +75,7 @@ fn three_transfers() -> Program {
 
 /// A two-phase schedule whose first phase runs as a three-slot pipeline.
 fn pipelined_schedule() -> SelectedSchedule {
-    let mut schedule = SelectedSchedule::synthetic(2);
-    let axis = ScheduleAxis {
-        region: 0,
-        axis: 0,
-        extent: 64,
-    };
-    schedule.source_phases[0].axes.push(axis);
-    schedule.phases[0].axes.push(axis);
-    schedule
-        .apply(ScheduleTransform::SetWorkgroup {
-            phase: SchedulePhaseId(0),
-            shape: [32, 2, 1],
-        })
-        .expect("an exact workgroup shape is legal");
-    schedule
-        .apply(ScheduleTransform::Map {
-            phase: SchedulePhaseId(0),
-            axis,
-            level: MappingLevel::Subgroup,
-        })
-        .expect("mapping an axis of the phase is legal");
-    schedule
-        .apply(ScheduleTransform::Pipeline {
-            producer: SchedulePhaseId(0),
-            consumer: SchedulePhaseId(1),
-            ring_slots: 3,
-            roles: vec![
-                PipelineRoleGroup {
-                    role: PipelineRole::Producer,
-                    workers: 1,
-                },
-                PipelineRoleGroup {
-                    role: PipelineRole::Consumer,
-                    workers: 2,
-                },
-            ],
-        })
-        .expect("a bounded pipeline between two phases is legal");
-    schedule
-        .apply(ScheduleTransform::Synchronize {
-            phases: vec![SchedulePhaseId(0), SchedulePhaseId(1)],
-            scope: SynchronizationScope::Workgroup,
-        })
-        .expect("a workgroup synchronization boundary is legal");
-    schedule
+    vyre_test_support::selected_schedules::mapped_pipelined_two_phase()
 }
 
 /// A descriptor whose body is exactly the ops given, over the two global
@@ -157,29 +111,9 @@ fn binding(slot: u32, visibility: BindingVisibility, name: &str) -> BindingSlot 
 
 /// Two literal words followed by one transfer and, optionally, its wait.
 fn transfer_ops(issue: KernelOpKind, wait_kind: Option<KernelOpKind>) -> Vec<KernelOp> {
-    let mut ops = vec![
-        KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(0),
-        },
-        KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![1],
-            result: Some(1),
-        },
-        KernelOp {
-            kind: issue,
-            operands: vec![0, 1, 0, 1],
-            result: None,
-        },
-    ];
+    let mut ops = vec![lit(0, 0), lit(1, 1), effect(issue, [0, 1, 0, 1])];
     if let Some(kind) = wait_kind {
-        ops.push(KernelOp {
-            kind,
-            operands: Vec::new(),
-            result: None,
-        });
+        ops.push(effect(kind, []));
     }
     ops
 }
