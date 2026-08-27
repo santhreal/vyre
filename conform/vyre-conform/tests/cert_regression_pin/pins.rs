@@ -56,40 +56,52 @@ pub(crate) const VERIFYING_KEY_HEX: &str =
 // reference output words held across the change, which is what says the framing
 // moved and the semantics did not.
 
+// Every bundle moved once more, hash and signature together, with every wire
+// length unchanged: `WIRE_FORMAT_VERSION` went from 7 to 8 for the schedule-free
+// logical identity and synchronization variants. The version is a fixed-width
+// little-endian `u16` in the header, so a bump rewrites two header bytes and no
+// body bytes, which is exactly the shape of a drift with constant lengths. The
+// pinned reference output words held, and `PINNED_WIRE_FORMAT_VERSION` below now
+// states the schema these digests were taken under so the next bump reports
+// itself instead of five opaque digests.
+
+/// Wire schema version the pinned digests below were taken under.
+pub(crate) const PINNED_WIRE_FORMAT_VERSION: u16 = 8;
+
 // --- trivial const ---
 pub(crate) const TRIVIAL_CONST_BUNDLE_BLAKE3: &str =
-    "7c043d3f71b03daf29c4ee3e3881aa3ecac18a0dbdcbd404a85c7433fdc0afed";
+    "630f514ac2a978eefec3988c432ae4944544fcd35c20307f5217ba7af07c01df";
 pub(crate) const TRIVIAL_CONST_WIRE_LEN: usize = 208;
 pub(crate) const TRIVIAL_CONST_SIG_HEX: &str =
-    "41333198b0e00fc84852610bcb2485763fe7ea633231e352a1eaca8adc26ad284f36b32f69016e3f5b9a3eba2051f4c7d2df650bf9a44098decfa0711793ea03";
+    "87964bae569dd9ccda99e53c4f020d398ce97c3725a40952f5c6f876f806af0729758522998c18cbf3ccc0b50a283d7e07ce0781c7ad20af462d41eba58d370c";
 
 // --- 1-op add ---
 pub(crate) const ONE_OP_ADD_BUNDLE_BLAKE3: &str =
-    "571f0039b16d178740a1e20eb3daa054621d4511801a01d7d20eb070413d1fd0";
+    "f939b667b6b9916dc0a3cf20fd6dc7be636d85dac3c77473d1e660392d0f1af9";
 pub(crate) const ONE_OP_ADD_WIRE_LEN: usize = 215;
 pub(crate) const ONE_OP_ADD_SIG_HEX: &str =
-    "e659957783b637506819989d8a2e00e673f684b30db3bf036aaf86cec2b980926c4ec65695c919ff64816d018c26f4bc65dd825222ef813faef5b65dda278301";
+    "ac34ef91b691aab5e61e1b0eaf115b776ccaa31e800fbe11a04d9753e611c7bce23dbbfc8326f54c89363b406a2ce37a70a2f013cc517275162538e0f8353208";
 
 // --- loop-add ---
 pub(crate) const LOOP_ADD_BUNDLE_BLAKE3: &str =
-    "8fe6a8a71838ef9edbf772f676cd28f48a313d144c25a4373f8ad220f3a30dfb";
+    "3ec9a54beac0e9f2e4e687aa6acee458e790e1d58f543eb2f892befb943ee15f";
 pub(crate) const LOOP_ADD_WIRE_LEN: usize = 268;
 pub(crate) const LOOP_ADD_SIG_HEX: &str =
-    "e15732a2c60737978bd89223921751504cc2d0b67288dcd44cd9431f677882ca535d1a456f3afe9b8f1797be73fe5641c718e664c585a936a7485dc3def21c02";
+    "09d76d3bff98b1b9c39dceb66b377f893e3603be71f98cd95d28a10306588225c072b991eed194cf1da330d78d91eed37fdd3fb178ba29f201129502538e1c04";
 
 // --- composed nested ---
 pub(crate) const COMPOSED_NESTED_BUNDLE_BLAKE3: &str =
-    "d411a26526ab5eb50f70c3ff94ca9761fbfdfc0cd1a0430030a52b0bf0893d49";
+    "6f5dbe12dd9769635341998d67ab6d2e4b69afd6d5a9ee61aae97faaa2abfa69";
 pub(crate) const COMPOSED_NESTED_WIRE_LEN: usize = 200;
 pub(crate) const COMPOSED_NESTED_SIG_HEX: &str =
-    "5d045ba6b76c30cb4cecf46dee0bad808ff130a072c990ba7d9e1f1b1a7c22143a050fdfe88ff47533d9028be2ba2220bb926c7239df7a833bdc69a3726fe708";
+    "d4bb1b68e57862d06e6427c919230e468c8b25c6c04bc1022bc37d6320c3144514690e1467e0a119be5d6ce2ba66d96b9a42abcfce78f6df3baab12b30a18208";
 
 // --- region-chain with intrinsic + dialect op ---
 pub(crate) const REGION_CHAIN_BUNDLE_BLAKE3: &str =
-    "c36b7bee0f307bc97b9b42b3e0da4a3a80aeb2f843880a41a9acf9a993c23827";
+    "82793e2e1147d9050a94cbe3001f7cb80ab18643c1c3c0860af9f1535649e8b7";
 pub(crate) const REGION_CHAIN_WIRE_LEN: usize = 325;
 pub(crate) const REGION_CHAIN_SIG_HEX: &str =
-    "f44960073a844f264a728336712dcf13924f9ef50786a952dccfd2e6f3f2f905a1a3a31e3161b886ba6e430298697ecd8401efea69d8f82556049b566149f903";
+    "85799ff11863311c0486e7cd82c3f4c3e19495a588b2a11f2f4e7728cfb51d9d0d84bfc83df5840d42863e2fbaaa04303e2c5d9ede283d6ace0b35cedfa1a701";
 // ---------------------------------------------------------------------------
 // Sign a bundle cert with the deterministic key.
 // ---------------------------------------------------------------------------

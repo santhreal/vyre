@@ -30,8 +30,9 @@ use pins::{
     deterministic_signing_key, sign_bundle_cert, COMPOSED_NESTED_BUNDLE_BLAKE3,
     COMPOSED_NESTED_SIG_HEX, COMPOSED_NESTED_WIRE_LEN, LOOP_ADD_BUNDLE_BLAKE3, LOOP_ADD_SIG_HEX,
     LOOP_ADD_WIRE_LEN, ONE_OP_ADD_BUNDLE_BLAKE3, ONE_OP_ADD_SIG_HEX, ONE_OP_ADD_WIRE_LEN,
-    REGION_CHAIN_BUNDLE_BLAKE3, REGION_CHAIN_SIG_HEX, REGION_CHAIN_WIRE_LEN,
-    TRIVIAL_CONST_BUNDLE_BLAKE3, TRIVIAL_CONST_SIG_HEX, TRIVIAL_CONST_WIRE_LEN, VERIFYING_KEY_HEX,
+    PINNED_WIRE_FORMAT_VERSION, REGION_CHAIN_BUNDLE_BLAKE3, REGION_CHAIN_SIG_HEX,
+    REGION_CHAIN_WIRE_LEN, TRIVIAL_CONST_BUNDLE_BLAKE3, TRIVIAL_CONST_SIG_HEX,
+    TRIVIAL_CONST_WIRE_LEN, VERIFYING_KEY_HEX,
 };
 
 /// Assert the reference output stream for `corpus`'s single case is exactly
@@ -88,6 +89,20 @@ fn cert_regression_pin_all_five_bundles() {
     // and failing on the first case hid the other four: updating the pins then
     // took five full runs instead of one.
     let mut drifts: Vec<String> = Vec::new();
+
+    // A schema version bump rewrites the two header bytes of every payload and
+    // no body bytes, so it moves all five digests and signatures while every
+    // wire length holds. Reporting the version first makes that case name
+    // itself instead of arriving as five opaque digest drifts.
+    let encoder_version = vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION;
+    if encoder_version != PINNED_WIRE_FORMAT_VERSION {
+        drifts.push(format!(
+            "wire schema version drift. actual={encoder_version} \
+             expected={PINNED_WIRE_FORMAT_VERSION}. Fix: regenerate every pinned digest and \
+             signature below for schema {encoder_version} and set PINNED_WIRE_FORMAT_VERSION to \
+             {encoder_version}."
+        ));
+    }
 
     #[allow(clippy::type_complexity)]
     let cases: Vec<(
@@ -157,6 +172,15 @@ fn cert_regression_pin_all_five_bundles() {
             .unwrap_or_else(|e| panic!("{name}: to_wire() failed: {e}"));
         let computed_hash = blake3::hash(&wire_bytes).to_hex().to_string();
         let computed_len = wire_bytes.len();
+
+        // The header carries the schema as a little-endian u16 right after the
+        // four magic bytes. A payload stamped with any other version is read by
+        // a different decoder path than the one these digests were taken under.
+        let stamped_version = u16::from_le_bytes([wire_bytes[4], wire_bytes[5]]);
+        assert_eq!(
+            stamped_version, PINNED_WIRE_FORMAT_VERSION,
+            "{name}: payload header advertises schema {stamped_version}, pinned {PINNED_WIRE_FORMAT_VERSION}"
+        );
 
         if computed_hash != pinned_hash {
             drifts.push(format!(
