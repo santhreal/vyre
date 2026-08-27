@@ -35,8 +35,11 @@ pub struct LevelStageSource {
     pub levels: Vec<IrLevel>,
 }
 
-/// Calling each crate's own accessor is what links it. A constant naming the
-/// level would inline at the use site and link nothing.
+/// Each level is read from a real function in the crate that owns it, so the
+/// reference survives inlining and the floor below is a claim about a crate
+/// this binary demonstrably called into. A selection that also links a driver
+/// pulls the lowering and megakernel objects in anyway, so the accessor is the
+/// reference the minimal selection has and never the only one.
 static SOURCES: LazyLock<Vec<LevelStageSource>> = LazyLock::new(|| {
     vec![
         LevelStageSource {

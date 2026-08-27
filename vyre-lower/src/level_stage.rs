@@ -75,9 +75,9 @@ inventory::submit! {
 
 /// The level this crate registers a stage for.
 ///
-/// A real function rather than a constant: a reader links this crate by calling
-/// it, and a constant would inline at the call site and link nothing, leaving
-/// the physical-kernel level with no registered stage in that binary.
+/// A real function rather than a constant, so the reference in a reader survives
+/// inlining and names this crate rather than a value copied out of it. The
+/// linkage owner reads it to state which level this crate must have registered.
 #[must_use]
 pub fn registered_level_stage() -> IrLevel {
     PhysicalKernelStage.level()
