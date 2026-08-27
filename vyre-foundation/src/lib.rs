@@ -22,8 +22,7 @@ pub mod operation;
 pub mod schedule;
 pub use geometry::{
     admitted_logical_span, guarded_logical_span, launch_covers_full_input_span, CooperativeWidth,
-    ElementPolicy, GeometryConstraintConflict, GeometryLoweringError, GeometryRequirements,
-    GeometryStrategy, LaunchGeometry, Uniformity,
+    ElementPolicy, GeometryConstraintConflict, GeometryRequirements, LaunchGeometry, Uniformity,
 };
 
 pub mod ir {

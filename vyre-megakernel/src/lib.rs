@@ -16,6 +16,8 @@
 //! [`ProgramGraph`]: vyre_foundation::ir::ProgramGraph
 
 mod artifact;
+/// The unscheduled baseline every candidate derivation starts from.
+pub mod baseline;
 mod candidate;
 mod certificate;
 mod compile;
@@ -60,6 +62,7 @@ mod select;
 /// Target compiler facets over compiler-selected modules and canonical ABI.
 pub(crate) mod target;
 
+pub use baseline::baseline_schedule;
 pub use candidate::{ExecutionTopology, ResidentPartitionMode};
 pub use certificate::{DerivedFamily, PruneReason, PrunedFamily, SearchCertificate};
 pub use compile::{compile, compile_measured, EmittedResources, FinalistEvaluator};

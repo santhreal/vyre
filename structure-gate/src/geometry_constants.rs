@@ -3,8 +3,8 @@
 //! lanes, invocation counts, tile sizes, elements-per-invocation constants,
 //! or stage counts).
 //!
-//! Geometry is a target lowering decision produced by a backend's
-//! `GeometryStrategy` from `GeometryRequirements`, not a constant in library
+//! Geometry is selected by `vyre-megakernel` from `GeometryRequirements` and
+//! the widths a target profile admits, not declared as a constant in library
 //! operations.
 
 use std::path::Path;
@@ -72,8 +72,8 @@ pub fn geometry_constant_failures(root: &Path) -> Vec<String> {
                 if is_ident_defined_on_line(trimmed, banned) {
                     failures.push(format!(
                         "{file}:{} declares banned geometry constant `{banned}`; \
-                         operations must declare `GeometryRequirements` and lower through `GeometryStrategy` \
-                         rather than hardcoding execution geometry",
+                         operations declare `GeometryRequirements` and let `vyre-megakernel` select \
+                         the geometry rather than hardcoding it",
                         line_idx + 1
                     ));
                 }

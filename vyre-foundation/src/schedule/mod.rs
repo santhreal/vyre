@@ -16,8 +16,6 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::logical::{LogicalExtent, LogicalProgramGraph};
-
 /// Current backend-neutral schedule schema and identity version.
 ///
 /// Version 2 rewrites the axis nest for tiling and splitting, so a tiled phase
@@ -476,110 +474,6 @@ pub struct SelectedSchedule {
 }
 
 impl SelectedSchedule {
-    /// Construct the unfused, unmapped schedule for a validated logical graph.
-    #[must_use]
-    pub fn from_logical(logical: &LogicalProgramGraph<'_>) -> Self {
-        let logical_identity = *blake3::hash(logical.semantic_wire()).as_bytes();
-        let phases = logical
-            .regions()
-            .iter()
-            .enumerate()
-            .map(|(index, region)| {
-                let axes = region
-                    .extents
-                    .iter()
-                    .enumerate()
-                    .map(|(axis, extent)| ScheduleAxis {
-                        region: region.node.0,
-                        axis: u32::try_from(axis).unwrap_or(u32::MAX),
-                        extent: match extent {
-                            LogicalExtent::Static(value)
-                            | LogicalExtent::GraphValue { bound: value, .. } => *value,
-                        },
-                    })
-                    .collect();
-                SchedulePhase {
-                    id: SchedulePhaseId(u32::try_from(index).unwrap_or(u32::MAX)),
-                    source_regions: vec![region.node.0],
-                    axes,
-                    grid: [region.max_points, 1, 1],
-                    workgroup: [1, 1, 1],
-                    vector_width: 1,
-                    mappings: Vec::new(),
-                    predecessors: region
-                        .dependencies
-                        .iter()
-                        .map(|dependency| SchedulePhaseId(dependency.predecessor.0))
-                        .collect(),
-                    resources: ScheduleResourceBounds {
-                        logical_points: region.max_points,
-                        ..ScheduleResourceBounds::default()
-                    },
-                }
-            })
-            .collect::<Vec<_>>();
-        let resources = phases
-            .iter()
-            .fold(ScheduleResourceBounds::default(), |total, phase| {
-                ScheduleResourceBounds {
-                    logical_points: total
-                        .logical_points
-                        .saturating_add(phase.resources.logical_points),
-                    ..total
-                }
-            });
-        Self {
-            version: SCHEDULE_IR_VERSION,
-            logical_identity,
-            source_phases: phases.clone(),
-            source_resources: resources,
-            phases,
-            transforms: Vec::new(),
-            resources,
-        }
-    }
-
-    /// Construct a synthetic baseline used by bounded planner unit fixtures.
-    #[must_use]
-    pub fn synthetic(region_count: usize) -> Self {
-        let phases = (0..region_count)
-            .map(|index| {
-                let region = u32::try_from(index).unwrap_or(u32::MAX);
-                SchedulePhase {
-                    id: SchedulePhaseId(region),
-                    source_regions: vec![region],
-                    axes: Vec::new(),
-                    grid: [1, 1, 1],
-                    workgroup: [1, 1, 1],
-                    vector_width: 1,
-                    mappings: Vec::new(),
-                    predecessors: Vec::new(),
-                    resources: ScheduleResourceBounds {
-                        logical_points: 1,
-                        ..ScheduleResourceBounds::default()
-                    },
-                }
-            })
-            .collect::<Vec<_>>();
-        let mut source = Vec::with_capacity(8);
-        source.extend_from_slice(&(region_count as u64).to_le_bytes());
-        Self {
-            version: SCHEDULE_IR_VERSION,
-            logical_identity: *blake3::hash(&source).as_bytes(),
-            source_phases: phases.clone(),
-            source_resources: ScheduleResourceBounds {
-                logical_points: region_count as u64,
-                ..ScheduleResourceBounds::default()
-            },
-            phases,
-            transforms: Vec::new(),
-            resources: ScheduleResourceBounds {
-                logical_points: region_count as u64,
-                ..ScheduleResourceBounds::default()
-            },
-        }
-    }
-
     /// Canonical schedule identity bytes.
     pub fn canonical_wire(&self) -> Result<Vec<u8>, ScheduleLegalityError> {
         serde_json::to_vec(self).map_err(|error| ScheduleLegalityError::Identity(error.to_string()))

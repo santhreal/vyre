@@ -2,7 +2,7 @@
 
 use vyre_foundation::execution_plan::{
     plan, plan_with_options, AutotuneStrategy, ConformanceStrength, DispatchStrategy,
-    FusionStrategy, InnovationTrack, LayoutStrategy, PlanError, PolicyRoute, ProvenanceStrategy,
+    FusionStrategy, InnovationTrack, LayoutStrategy, PlanError, ProvenanceStrategy,
     ReadbackStrategy, SchedulingPolicy,
 };
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -97,17 +97,19 @@ fn strategy_marks_large_program_for_persistent_runtime_and_autotune() {
     assert_eq!(plan.strategy.autotune, AutotuneStrategy::MeasureVariants);
 }
 
+/// WHY: the shared policy answers legality and ring arithmetic, and nothing
+/// it answers depends on a node count. It used to route on one: three
+/// predicates ignored their argument and answered the same value for every
+/// program, which read as a decision and was a constant. Selecting a schedule
+/// is `vyre-megakernel`'s.
 #[test]
-fn shared_policy_owns_strategy_and_route_boundaries() {
+fn the_shared_policy_answers_legality_and_ring_arithmetic() {
     let policy = SchedulingPolicy::standard();
-    assert!(policy.use_persistent_runtime(64));
-    assert!(policy.use_persistent_runtime(65));
-    assert!(!policy.recommend_autotune(64));
-    assert!(policy.recommend_autotune(65));
-    // `route` took a `static_bytes` argument that only ever fed a host-executing
-    // route whose predicate ignored it. Both remaining answers are device routes.
-    assert_eq!(policy.route(64), PolicyRoute::PersistentMegakernel);
-    assert_eq!(policy.route(1025), PolicyRoute::PersistentMegakernel);
+    let multiplier = policy.fused_over_dispatch_multiplier();
+    assert!(policy.allow_fused_threads(100 * multiplier, 100));
+    assert!(!policy.allow_fused_threads(100 * multiplier + 1, 100));
+    assert_eq!(policy.worker_workgroup_size(512, 256), 256);
+    assert_eq!(policy.padded_slot_count(65, 64), 128);
 }
 
 #[test]

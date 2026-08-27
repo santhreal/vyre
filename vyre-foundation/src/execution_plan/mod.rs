@@ -12,7 +12,7 @@ pub(crate) mod memory_budget;
 mod policy;
 mod strategy;
 pub use memory_budget::{DeviceMemoryBudget, MemoryBudgetReport};
-pub use policy::{PolicyRoute, SchedulingPolicy};
+pub use policy::SchedulingPolicy;
 pub use strategy::{
     AutotuneStrategy, ConformanceStrength, DispatchStrategy, FusionStrategy, LayoutStrategy,
     ProvenanceStrategy, ReadbackStrategy, StrategyPlan,
@@ -205,7 +205,7 @@ pub fn plan_with_options_for_adapter(
     let program_fingerprint = canonical_program_fingerprint(program)?;
     let provenance = provenance_plan(program, &fusion);
     let accuracy = accuracy_plan(&required_capabilities, &provenance);
-    let autotune = autotune_plan(program, &required_capabilities, &fusion, adapter_caps);
+    let autotune = autotune_plan(program, adapter_caps);
 
     let strategy = StrategyPlan::from_parts(&fusion, &memory, &provenance, &accuracy, &autotune);
     let tracks = track_decisions(&fusion, &memory, &provenance, &accuracy, &autotune);
@@ -390,52 +390,21 @@ fn accuracy_plan(caps: &RequiredCapabilities, _provenance: &ProvenancePlan) -> A
     }
 }
 
-fn autotune_plan(
-    program: &Program,
-    _caps: &RequiredCapabilities,
-    _fusion: &FusionPlan,
-    adapter_caps: &AdapterCaps,
-) -> AutotunePlan {
-    let node_count = program.stats().node_count;
-    let policy = SchedulingPolicy::standard();
-    let problem_size = infer_static_problem_size(program);
-    let recommended_workgroup_size = [
-        policy.select_workgroup_x(
-            program.parallel_region_size()[0],
-            problem_size,
-            adapter_caps,
-        ),
-        1,
-        1,
-    ];
-    let recommended_tile =
-        policy.select_workgroup_tile(program.parallel_region_size(), problem_size, adapter_caps);
-    let recommended_vector_pack_bits = policy.select_vector_pack_bits(32, adapter_caps);
-    let recommended_unroll_depth = policy.select_unroll_depth(None, adapter_caps);
-    let profile_driven = adapter_caps.ideal_unroll_depth > 0
+/// Report whether the target declares shapes worth measuring.
+///
+/// The plan states a fact and never a shape. It used to publish a recommended
+/// workgroup, tile, vector width and unroll depth, ranked here against the
+/// adapter, which was a second answer to a question `vyre-megakernel` already
+/// owns and which nothing on the compile path realized.
+fn autotune_plan(program: &Program, adapter_caps: &AdapterCaps) -> AutotunePlan {
+    let profile_declares_shapes = adapter_caps.ideal_unroll_depth > 0
         || adapter_caps.ideal_vector_pack_bits > 0
         || !adapter_caps.ideal_workgroup_tile.contains(&0);
-    let large_program = policy.recommend_autotune(node_count);
     AutotunePlan {
-        // Only flag autotuning as recommended when there's a real
-        // signal: a large enough program OR a device profile that
-        // declares preferred shapes. The previous
-        // `recommended_workgroup_size != parallel_region_size` check
-        // fired spuriously for tiny declared shapes (e.g. [1, 1, 1])
-        // because the policy's min_workgroup_x floor is 32  -  the
-        // selector always returns a different number, so every small
-        // program got marked autotune-recommended even when it has no
-        // measurement variants worth exploring.
-        recommended: large_program || profile_driven,
+        recommended: profile_declares_shapes,
         parallel_region_size: program.parallel_region_size(),
-        recommended_workgroup_size,
-        recommended_tile,
-        recommended_vector_pack_bits,
-        recommended_unroll_depth,
-        reason: if profile_driven {
+        reason: if profile_declares_shapes {
             "device profile"
-        } else if large_program {
-            "large program"
         } else {
             "none"
         },
@@ -466,8 +435,8 @@ fn track_decisions(
         ),
         track_decision(
             InnovationTrack::PersistentExecution,
-            SchedulingPolicy::standard().use_persistent_runtime(fusion.node_count),
-            "persistent",
+            true,
+            "every production compile emits a megakernel artifact",
         ),
         track_decision(
             InnovationTrack::DifferentialAccuracy,
@@ -580,14 +549,6 @@ pub struct AutotunePlan {
     pub recommended: bool,
     /// Declared parallel region size.
     pub parallel_region_size: [u32; 3],
-    /// Adapter/profile-selected workgroup size.
-    pub recommended_workgroup_size: [u32; 3],
-    /// Adapter/profile-selected tile shape for tiled lowering.
-    pub recommended_tile: [u32; 3],
-    /// Adapter/profile-selected vector pack width in bits.
-    pub recommended_vector_pack_bits: u32,
-    /// Adapter/profile-selected unroll depth.
-    pub recommended_unroll_depth: u32,
     /// Stable reason for the recommendation.
     pub reason: &'static str,
 }
@@ -702,39 +663,59 @@ mod tests {
         ));
     }
 
+    /// WHY: the plan reports whether the target declares shapes worth
+    /// measuring and states no shape of its own. Before this, it also published
+    /// a recommended workgroup and tile ranked against the adapter here, and
+    /// flagged any program above a node-count threshold as worth measuring on a
+    /// target that declares nothing. A shape ranked outside
+    /// `vyre-megakernel` is a second cost model, and a threshold nobody
+    /// measured is not a fact.
     #[test]
-    fn device_profile_changes_autotune_recommendations() {
-        let p = Program::wrapped(
+    fn the_plan_reports_the_measurement_fact_and_no_shape() {
+        let small = Program::wrapped(
             vec![BufferDecl::output("out", 0, DataType::U32).with_count(4096)],
-            [1, 1, 1],
+            [64, 1, 1],
             vec![Node::store("out", Expr::gid_x(), Expr::u32(1))],
         );
-        let compact = AdapterCaps {
+        let mut wide_entry = Vec::new();
+        for _ in 0..256 {
+            wide_entry.push(Node::store("out", Expr::gid_x(), Expr::u32(1)));
+        }
+        let large = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(4096)],
+            [64, 1, 1],
+            wide_entry,
+        );
+        let bare = AdapterCaps {
             max_workgroup_size: [256, 256, 64],
             max_invocations_per_workgroup: 256,
             subgroup_size: 32,
-            ideal_unroll_depth: 4,
-            ideal_vector_pack_bits: 64,
-            ideal_workgroup_tile: [8, 8, 1],
             ..AdapterCaps::conservative()
         };
-        let wide = AdapterCaps {
+        let declaring = AdapterCaps {
             ideal_unroll_depth: 8,
             ideal_vector_pack_bits: 128,
             ideal_workgroup_tile: [16, 16, 1],
-            ..compact
+            ..bare
         };
 
-        let compact_plan = plan_for_adapter(&p, &compact).unwrap();
-        let wide_plan = plan_for_adapter(&p, &wide).unwrap();
+        for program in [&small, &large] {
+            let plan = plan_for_adapter(program, &bare).unwrap();
+            assert!(
+                !plan.autotune.recommended,
+                "a target that declares no shape gives nothing to measure, whatever the \
+                 program's node count"
+            );
+            assert_eq!(plan.autotune.reason, "none");
+            assert_eq!(
+                plan.autotune.parallel_region_size,
+                program.parallel_region_size(),
+                "the plan carries the declared region and never restates it"
+            );
+        }
 
-        assert_eq!(compact_plan.autotune.recommended_workgroup_size, [64, 1, 1]);
-        assert_eq!(wide_plan.autotune.recommended_workgroup_size, [256, 1, 1]);
-        assert_eq!(compact_plan.autotune.recommended_tile, [8, 8, 1]);
-        assert_eq!(wide_plan.autotune.recommended_tile, [16, 16, 1]);
-        assert_eq!(compact_plan.autotune.recommended_vector_pack_bits, 64);
-        assert_eq!(wide_plan.autotune.recommended_vector_pack_bits, 128);
-        assert_eq!(compact_plan.autotune.recommended_unroll_depth, 4);
-        assert_eq!(wide_plan.autotune.recommended_unroll_depth, 8);
+        let declared_plan = plan_for_adapter(&small, &declaring).unwrap();
+        assert!(declared_plan.autotune.recommended);
+        assert_eq!(declared_plan.autotune.reason, "device profile");
     }
 }

@@ -8,8 +8,8 @@ use std::sync::Arc;
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryOrdering, Node, Program};
 use vyre_foundation::{
-    CooperativeWidth, ElementPolicy, GeometryConstraintConflict, GeometryLoweringError,
-    GeometryRequirements, LaunchGeometry, Uniformity,
+    CooperativeWidth, ElementPolicy, GeometryConstraintConflict, GeometryRequirements,
+    LaunchGeometry, Uniformity,
 };
 #[test]
 fn geometry_requirements_defaults_are_agnostic() {
@@ -276,31 +276,4 @@ fn program_applies_launch_geometry() {
     program.set_launch_geometry(&geo);
     assert_eq!(program.workgroup_size(), [512, 1, 1]);
     assert_eq!(program.buffers().len(), 1);
-}
-
-#[test]
-fn geometry_lowering_errors_format_descriptively() {
-    let err1 = GeometryLoweringError::UnsatisfiableRequirements("test conflict".into());
-    assert!(err1.to_string().contains("test conflict"));
-
-    let err2 = GeometryLoweringError::ExceedsWorkgroupLimits {
-        requested: 1024,
-        max: 256,
-    };
-    assert!(err2.to_string().contains("1024"));
-    assert!(err2.to_string().contains("256"));
-
-    let err3 = GeometryLoweringError::ExceedsSharedMemoryLimits {
-        requested: 65536,
-        max: 32768,
-    };
-    assert!(err3.to_string().contains("65536"));
-    assert!(err3.to_string().contains("32768"));
-
-    let err4 = GeometryLoweringError::UnsupportedCooperativeWidth {
-        requested: 512,
-        admitted: 256,
-    };
-    assert!(err4.to_string().contains("512"));
-    assert!(err4.to_string().contains("256"));
 }

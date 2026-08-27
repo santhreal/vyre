@@ -41,10 +41,6 @@ fn plan(node_count: usize, static_bytes: u64) -> ExecutionPlan {
         autotune: AutotunePlan {
             recommended: false,
             parallel_region_size: [1, 1, 1],
-            recommended_workgroup_size: [1, 1, 1],
-            recommended_tile: [1, 1, 1],
-            recommended_vector_pack_bits: 32,
-            recommended_unroll_depth: 1,
             reason: "test fixture",
         },
         strategy: StrategyPlan {
@@ -60,17 +56,22 @@ fn plan(node_count: usize, static_bytes: u64) -> ExecutionPlan {
     }
 }
 
+/// WHY: there is one route, and the explanation says why rather than reporting
+/// what a second policy suggested. The policy used to ask a foundation
+/// predicate that ignored its argument, then record whether it had to "promote"
+/// the answer it was always going to give.
 #[test]
-fn standard_policy_explains_persistent_megakernel_override() {
+fn every_plan_routes_to_the_megakernel_artifact() {
     let policy = StandardPolicy;
-    let explanation = policy.route_with_explanation(&plan(1, 1));
-
-    assert_eq!(explanation.policy, "standard-megakernel-first");
-    assert_eq!(explanation.decision, RoutingDecision::PersistentMegakernel);
-    assert!(
-        explanation.reason.contains("persistent megakernel"),
-        "Fix: routing explanation must expose why persistent execution was selected: {explanation:?}"
-    );
+    for (node_count, static_bytes) in [(0, 0), (1, 1), (64, 1 << 10), (usize::MAX, u64::MAX)] {
+        let explanation = policy.route_with_explanation(&plan(node_count, static_bytes));
+        assert_eq!(explanation.policy, "standard-megakernel-first");
+        assert_eq!(explanation.decision, RoutingDecision::PersistentMegakernel);
+        assert!(
+            explanation.reason.contains("megakernel artifact"),
+            "Fix: the explanation must name what makes the route the only one: {explanation:?}"
+        );
+    }
 }
 
 #[test]

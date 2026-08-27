@@ -300,7 +300,7 @@ fn wgpu_launch_feedback(
     let limits = wgpu_launch_limits(&pipeline.device_queue.0);
     let element_count = u32::try_from(pipeline.output_word_count).map_err(|source| {
         vyre_driver::BackendError::new(format!(
-            "WGPU launch feedback output word count {} cannot fit u32: {source}. Fix: split the dispatch before timed natural-gradient measurement.",
+            "WGPU launch feedback output word count {} cannot fit u32: {source}. Fix: split the dispatch before recording a timed launch measurement.",
             pipeline.output_word_count
         ))
     })?;

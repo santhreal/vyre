@@ -253,7 +253,7 @@ mod tests {
             &std::collections::BTreeMap::new(),
         )
         .expect("Fix: softmax must have a valid logical domain.");
-        let schedule = vyre_foundation::schedule::SelectedSchedule::from_logical(&logical);
+        let schedule = vyre_megakernel::baseline_schedule(&logical);
         let descriptor = vyre_lower::lower_scheduled(&program, &schedule, schedule.phases[0].id)
             .map(|lowered| lowered.into_descriptor())
             .expect("Fix: the softmax program must lower through a selected schedule.");

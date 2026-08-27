@@ -24,7 +24,6 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
-use vyre_foundation::schedule::SelectedSchedule;
 use vyre_foundation::transform::grid_sync_split::contains_grid_sync;
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
@@ -76,7 +75,7 @@ fn emit_wgsl(program: &Program) -> Result<naga::Module, String> {
         .map_err(|error| format!("{error:?}"))?;
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .map_err(|error| format!("{error:?}"))?;
-    let schedule = SelectedSchedule::from_logical(&logical);
+    let schedule = vyre_megakernel::baseline_schedule(&logical);
     let phase = schedule
         .phases
         .first()

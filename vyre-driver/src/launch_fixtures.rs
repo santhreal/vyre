@@ -1,7 +1,7 @@
-//! Launch-geometry limits for launch preparation and tuning tests.
+//! Launch-geometry limits for launch preparation and measurement tests.
 //!
-//! A launch test is about what preparation, validation, or natural-gradient
-//! tuning does with a program, not about a backend ceiling, so it states limits
+//! A launch test is about what preparation, validation, or measurement does
+//! with a program, not about a backend ceiling, so it states limits
 //! wide enough that no per-axis or per-block ceiling binds and varies only the
 //! backend name and the per-compute-unit thread budget. Those two are the
 //! arguments here; a test that means to hit a ceiling states its own limits.

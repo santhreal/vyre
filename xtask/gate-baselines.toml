@@ -440,6 +440,10 @@ name = "repo-hygiene"
 findings = 0
 
 [[gate]]
+name = "schedule-ownership"
+findings = 0
+
+[[gate]]
 name = "script-ledger"
 findings = 0
 

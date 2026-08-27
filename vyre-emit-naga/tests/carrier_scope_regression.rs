@@ -402,7 +402,6 @@ fn dump_python312_lexer_naga() {
     use std::collections::BTreeMap;
     use vyre_foundation::ir::ProgramGraph;
     use vyre_foundation::logical::LogicalProgramGraph;
-    use vyre_foundation::schedule::SelectedSchedule;
     use vyre_libs::parsing::python::lex::python312_lexer;
     let prog = python312_lexer(
         "haystack",
@@ -416,7 +415,7 @@ fn dump_python312_lexer_naga() {
         .expect("python312_lexer must form a valid program graph");
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .expect("python312_lexer must have a valid logical domain");
-    let schedule = SelectedSchedule::from_logical(&logical);
+    let schedule = vyre_test_support::selected_schedules::baseline(&logical);
     let phase = schedule.phases[0].id;
     let lk = vyre_lower::lower_scheduled(&prog, &schedule, phase)
         .expect("python312_lexer selected schedule must lower");

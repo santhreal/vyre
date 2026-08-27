@@ -1272,6 +1272,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "crate::gates::repo_hygiene::tests::a_double_extension_archive_is_still_an_artifact",
     },
     GateDescriptor {
+        name: "schedule-ownership",
+        help: "Enforce schedule-ownership contracts",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "production sources outside the compiler boundary",
+        artifacts: &[],
+        prerequisites: &[],
+        proof: "crate::gates::schedule_ownership::tests::a_construction_with_no_received_decision_is_a_finding",
+    },
+    GateDescriptor {
         name: "script-ledger",
         help: "Enforce script-ledger contracts",
         package: "xtask",

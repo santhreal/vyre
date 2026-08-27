@@ -7,7 +7,6 @@ use vyre_libs::pattern::classic_ac::{
 
 use vyre_foundation::ir::ProgramGraph;
 use vyre_foundation::logical::LogicalProgramGraph;
-use vyre_foundation::schedule::SelectedSchedule;
 
 #[test]
 fn ac_count_suffix3_prefilter_naga_validates() {
@@ -32,7 +31,7 @@ fn ac_count_suffix3_prefilter_naga_validates() {
         .expect("suffix3 AC count must form a valid graph");
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .expect("suffix3 AC count must have a valid logical domain");
-    let schedule = SelectedSchedule::from_logical(&logical);
+    let schedule = vyre_megakernel::baseline_schedule(&logical);
     let phase = schedule.phases[0].id;
     let lowered = vyre_lower::lower_scheduled(&program, &schedule, phase)
         .expect("suffix3 AC count must lower through a selected schedule");

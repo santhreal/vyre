@@ -163,8 +163,6 @@ pub mod trace_jit_policy;
 pub mod transfer_accounting;
 /// Device-side trap record layout shared by every backend that reports one.
 pub mod trap_record;
-/// Backend-neutral autotuner framework.
-pub mod tuner;
 /// Shared validation caches and launch-geometry contracts.
 pub mod validation;
 
@@ -199,14 +197,14 @@ pub mod grid_sync;
 pub(crate) mod launch;
 /// The complete launch one dispatch runs, re-exported as `LaunchDirective`.
 mod launch_directive;
+/// Measured launch facts, and realization of the geometry an artifact recorded.
+pub(crate) mod launch_facts;
 /// Canonical launch-geometry limits shared by the launch preparation, validation,
-/// and natural-gradient tuning tests.
+/// and launch fact tests.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod launch_fixtures;
 /// Backend-neutral adjacent-stage launch fusion planning.
 pub mod launch_fusion;
-/// Natural-gradient launch tuning, caching, and workgroup resolution.
-pub(crate) mod launch_natural;
 /// Backend-neutral megakernel wave barrier planning.
 pub mod megakernel_barrier;
 /// Backend-neutral persistent megakernel execution planning.
@@ -276,11 +274,11 @@ pub use dispatch_shape::{
     dispatch_configs_share_launch_shape,
 };
 pub use fixpoint_iterations::{resolve_fixpoint_iterations, resolve_fixpoint_iterations_usize};
-pub use launch::{program_vsa_fingerprint, program_vsa_fingerprint_words, LaunchPlan};
 pub use launch::{
-    record_launch_measurement, resolve_launch_workgroup, resolve_launch_workgroup_for_geometry,
-    resolve_launch_workgroup_for_mode, LaunchGeometry,
+    launch_width_measurements, record_launch_measurement, resolve_launch_workgroup,
+    resolve_launch_workgroup_for_geometry, LaunchGeometry,
 };
+pub use launch::{program_vsa_fingerprint, program_vsa_fingerprint_words, LaunchPlan};
 pub use launch_directive::LaunchDirective;
 pub use peer_transfer::{
     PeerAccessCapability, PeerLinkKind, PeerTopology, PeerTransferAccounting, PeerTransferError,

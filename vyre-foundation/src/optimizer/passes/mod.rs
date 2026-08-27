@@ -14,7 +14,6 @@
 //! - `cleanup/`  -  `empty_block_collapse`, `region_inline`,
 //!   `if_constant_branch_eliminate`, `noop_assign_eliminate`,
 //!   `region_promote_singleton_block`, `buffer_decl_sort`
-//! - `specialization/` (Phase 4G)  -  autotune
 //!
 //! Backend-specific lowering strategy code belongs in the concrete driver
 //! crates. Foundation passes are math- and IR-structural rewrites that any
@@ -30,7 +29,6 @@ pub(crate) mod driver;
 pub mod fusion_cse;
 pub mod loops;
 pub mod memory;
-pub mod specialization;
 pub mod sync;
 
 /// What a caller has already proved about the point an expression is moving to.

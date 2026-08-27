@@ -172,7 +172,6 @@ mod tests {
 
     fn record(workgroup: u32) -> AutotuneRecord {
         AutotuneRecord {
-            workgroup_size: [workgroup, 1, 1],
             unroll: 1,
             tile: [0, 0, 0],
             recorded_at: "2026-05-02".to_string(),

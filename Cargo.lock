@@ -3925,6 +3925,7 @@ dependencies = [
 name = "vyre-test-support"
 version = "0.8.0"
 dependencies = [
+ "blake3",
  "inventory",
  "serde",
  "serde_json",

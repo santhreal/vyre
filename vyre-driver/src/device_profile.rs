@@ -7,10 +7,7 @@
 
 use vyre_foundation::optimizer::AdapterCaps;
 use vyre_foundation::validate;
-use vyre_foundation::{
-    CooperativeWidth, ElementPolicy, GeometryRequirements, GeometryStrategy, LaunchGeometry,
-    Uniformity,
-};
+use vyre_foundation::{CooperativeWidth, ElementPolicy, GeometryRequirements, Uniformity};
 
 /// Quality class for backend timing data exposed through [`DeviceProfile`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -378,12 +375,15 @@ impl From<DeviceProfile> for validate::BackendCapabilities {
     }
 }
 
-impl GeometryStrategy for DeviceProfile {
-    fn rank_geometries(
-        &self,
-        requirements: &GeometryRequirements,
-        problem_elements: u32,
-    ) -> Vec<LaunchGeometry> {
+impl DeviceProfile {
+    /// Every workgroup width this profile admits for `requirements`, ascending.
+    ///
+    /// A width in the list is legal on this device, not preferred. Ordering
+    /// candidates is `vyre-megakernel`'s decision under the compile objective,
+    /// so a preference order returned here would be a second cost model. An
+    /// empty list states that no width satisfies the requirements.
+    #[must_use]
+    pub fn admissible_workgroup_widths(&self, requirements: &GeometryRequirements) -> Vec<u32> {
         if requirements.min_shared_bytes > 0 && !self.has_shared_memory {
             return Vec::new();
         }
@@ -429,96 +429,53 @@ impl GeometryStrategy for DeviceProfile {
             .max_invocations_per_workgroup
             .min(self.max_workgroup_size[0])
             .max(1);
-        let warp_floor = if self.subgroup_size > 0 {
+        let subgroup_floor = if self.subgroup_size > 0 {
             self.subgroup_size.min(max_x).max(1)
         } else {
             1
         };
 
-        let allowed_widths: Vec<u32> = match requirements.cooperative_width {
+        match requirements.cooperative_width {
             CooperativeWidth::Exactly(exact) => {
-                if exact <= max_x && exact > 0 {
-                    vec![exact]
+                if exact == 0 || exact > max_x {
+                    Vec::new()
                 } else {
-                    return Vec::new();
+                    vec![exact]
                 }
             }
-            CooperativeWidth::AtLeast(min_w) => {
-                if min_w > max_x {
+            CooperativeWidth::AtLeast(minimum) => {
+                if minimum > max_x {
                     return Vec::new();
                 }
-                let mut widths = Vec::new();
-                let mut w = min_w.max(1).next_power_of_two();
-                while w <= max_x {
-                    widths.push(w);
-                    match w.checked_mul(2) {
-                        Some(next) if next > w => w = next,
-                        _ => break,
-                    }
-                }
-                widths
+                powers_of_two_through(minimum.max(1).next_power_of_two(), max_x)
             }
             CooperativeWidth::Agnostic => {
-                let mut widths = Vec::new();
-                let start = warp_floor.next_power_of_two();
-                let mut w = 1_u32;
-                while w <= max_x {
-                    if w >= start || w == 1 {
-                        widths.push(w);
-                    }
-                    match w.checked_mul(2) {
-                        Some(next) if next > w => w = next,
-                        _ => break,
-                    }
-                }
-                if widths.is_empty() {
-                    widths.push(max_x);
-                }
+                // A single invocation is admitted whatever the subgroup size: a
+                // one-lane launch performs no cooperative operation.
+                let mut widths = vec![1];
+                widths.extend(powers_of_two_through(
+                    subgroup_floor.next_power_of_two(),
+                    max_x,
+                ));
+                widths.dedup();
                 widths
             }
-        };
-
-        let epi = match requirements.per_invocation_elements {
-            ElementPolicy::Scalar => 1,
-            ElementPolicy::Multiple(factor) => factor.max(1),
-            ElementPolicy::Any => 1,
-        };
-
-        let mut candidates: Vec<LaunchGeometry> = allowed_widths
-            .into_iter()
-            .map(|w| {
-                let elements_per_wg = (w as u64).saturating_mul(epi as u64).max(1);
-                let grid_x = if problem_elements == 0 {
-                    1
-                } else {
-                    ((problem_elements as u64).div_ceil(elements_per_wg) as u32).max(1)
-                };
-                LaunchGeometry {
-                    workgroup: [w, 1, 1],
-                    grid: [grid_x, 1, 1],
-                    elements_per_invocation: epi,
-                    pipeline_stages: 1,
-                    shared_bytes: requirements.min_shared_bytes,
-                }
-            })
-            .collect();
-
-        candidates.sort_by(|a, b| {
-            let width_a = a.workgroup[0];
-            let width_b = b.workgroup[0];
-            if problem_elements >= 1024 {
-                width_b.cmp(&width_a)
-            } else if problem_elements > 0 {
-                let cover_a = (width_a * a.elements_per_invocation).abs_diff(problem_elements);
-                let cover_b = (width_b * b.elements_per_invocation).abs_diff(problem_elements);
-                cover_a.cmp(&cover_b).then_with(|| width_b.cmp(&width_a))
-            } else {
-                width_b.cmp(&width_a)
-            }
-        });
-
-        candidates
+        }
     }
+}
+
+/// Ascending powers of two from `first` through `last` inclusive.
+fn powers_of_two_through(first: u32, last: u32) -> Vec<u32> {
+    let mut widths = Vec::new();
+    let mut width = first;
+    while width <= last {
+        widths.push(width);
+        match width.checked_mul(2) {
+            Some(next) if next > width => width = next,
+            _ => break,
+        }
+    }
+    widths
 }
 
 // Inline: `vyre_driver::device_profile` is `pub(crate)`, so no integration test can reach what this

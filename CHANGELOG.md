@@ -548,6 +548,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the frozen surface no longer carries, fails. Adding a scalar literal, adding
   an evaluator, or widening the interpreter's operation table turns the suite
   red until a row records the decision.
+- A `schedule-ownership` gate derives the schedule decision roster from the
+  selected plan's own fields and the registered crate layers, and reports any
+  crate outside the compiler boundary that builds a decision, writes geometry
+  the artifact froze, or maps a device capability record to a launch shape.
 - `vyre-primitives` gates three duplication classes it has reintroduced after
   previous cleanups, each deriving its member set from source at run time so a
   new member is red on its first run rather than absent from a hand-maintained
@@ -1003,6 +1007,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `--write` authority, and the complete sweep rejects unowned workspace
   mutations. README generation has one owner: `crate-readmes` refreshes both
   crate-contract and CLI-contract sections.
+- The persistent autotune store holds the unroll and tile a measured variant
+  was compiled at, no longer persists a launch width no artifact authorized,
+  and rejects a file written under a different schema instead of serving it as
+  current evidence.
 - Batched dispatch readback has one owner and one allocation for its rows.
   `vyre_driver::BatchOutputs` stores every dispatch's output row end to end in
   a single buffer and hands rows out borrowed, replacing the
@@ -1690,6 +1698,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   list, and `write_json` now creates the parent directory itself rather than
   each caller doing it first. Help text, blocker text and exit codes are
   unchanged.
+- The execution plan reports whether a target declares shapes worth measuring
+  and no longer publishes a recommended workgroup, tile, vector width or unroll
+  depth ranked against the adapter.
 - An expected expression-shape row is stated as one call. It was an eight-field
   tuple written across ten lines, so a precedence ladder read as three hundred
   lines of columns and two suites expecting the same row for the same operator
@@ -2057,6 +2068,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   and one published-slot claim body, so the node reservation bound, the
   slot-base binding order and the IO polling block are decided in a single
   place. Emitted IR and reservation error text are unchanged.
+- `vyre-megakernel` is the only crate that selects a schedule: the foundation
+  scheduling policy no longer ranks workgroup widths or tiles against adapter
+  capabilities, and what remains of it answers launch legality and
+  resident-ring arithmetic.
 - The megakernel wave-policy corpora in `vyre-driver` are read from
   `megakernel_fixtures` by every test that drives them. The barrier planner
   suite rebuilt the two-wave cycle and the four-wave chain inline next to the
@@ -3007,6 +3022,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The duplication baseline pins for vyre-driver and vyre-runtime now record the
   measured tree: 1463 to 1112 and 520 to 412 duplicated lines. The vyre-lower
   total line count is corrected to the measured value.
+- Standard routing states that every production compile emits a megakernel
+  artifact instead of consulting a foundation predicate that ignored its node
+  count and always answered the same route.
 - One table drives the scalar storage-graph sweep and one table drives the dual
   scalar evaluator sweep, replacing four per-width harnesses that restated the
   corpus construction, the strided draw, the case loop and the diagnostic
@@ -3694,6 +3712,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   matched, or returned; the ring stores its state as a `u8` and compares
   against the `SLOT_*` codes. The codes are the single naming and are private
   to the ring.
+- The `autotune` optimizer pass is gone, along with the bounds guard it emitted
+  to cover the tail it created, because rewriting a program's declared
+  workgroup width from adapter capabilities selected a schedule outside the one
+  owner.
 - The C frontend has moved to a project of its own. `vyre-libs/src/parsing/c`
   and everything that existed only to build, test, benchmark or document it are
   gone: 675 files, 30 registered operations, the `c-parser` feature and every
@@ -3803,6 +3825,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   The backend-extension gate now derives the roster from the vyre-emit-*
   workspace members and requires each one to consume emit_adversarial_corpus,
   and fails when the roster is empty.
+- The `GeometryStrategy` trait and `GeometryLoweringError` are removed from
+  `vyre-foundation`, and
+  `vyre_driver::DeviceProfile::admissible_workgroup_widths` reports the
+  workgroup widths a profile admits as an ascending legality fact instead of a
+  ranked candidate list.
 - vyre-grammar-gen is deleted. It generated the host-side C11 lexer DFA and
   LR(1) tables for the C frontend that is leaving vyre, and its src carried CPU
   implementations of C preprocessing and lexing, which no crate outside

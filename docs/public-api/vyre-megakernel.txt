@@ -135,7 +135,7 @@ pub const fn vyre_megakernel::MetricSequence::empty() -> Self
 pub const fn vyre_megakernel::MetricSequence::is_empty(&self) -> bool
 pub const fn vyre_megakernel::MetricSequence::is_full(&self) -> bool
 pub const fn vyre_megakernel::MetricSequence::len(&self) -> usize
-pub const fn vyre_megakernel::MetricSequence::pushed(self, metric: vyre_megakernel::ObjectiveMetric) -> Self
+pub const fn vyre_megakernel::MetricSequence::pushed(self, item: vyre_megakernel::ObjectiveMetric) -> Self
 pub const fn vyre_megakernel::ObjectiveBounds::limit(&self, metric: vyre_megakernel::ObjectiveMetric) -> core::option::Option<u64>
 pub const fn vyre_megakernel::ObjectiveBounds::unbounded() -> Self
 pub const fn vyre_megakernel::ObjectiveBounds::with_bound(self, metric: vyre_megakernel::ObjectiveMetric, limit: u64) -> Self
@@ -197,7 +197,7 @@ pub const fn vyre_megakernel::WorkloadProfile::is_empty(&self) -> bool
 pub const fn vyre_megakernel::WorkloadProfile::is_full(&self) -> bool
 pub const fn vyre_megakernel::WorkloadProfile::len(&self) -> usize
 pub const fn vyre_megakernel::WorkloadProfile::of(first: vyre_megakernel::WorkloadClass) -> Self
-pub const fn vyre_megakernel::WorkloadProfile::pushed(self, class: vyre_megakernel::WorkloadClass) -> Self
+pub const fn vyre_megakernel::WorkloadProfile::pushed(self, item: vyre_megakernel::WorkloadClass) -> Self
 pub const fn vyre_megakernel::WorkloadProfile::single() -> Self
 pub const fn vyre_megakernel::WorkloadProfile::with_aggregation(self, aggregation: vyre_megakernel::WorkloadAggregation) -> Self
 pub const fn vyre_megakernel::legality::FusionRejectionReason::code(self) -> &'static str
@@ -330,6 +330,8 @@ pub fn vyre_megakernel::WorkloadProfile::default() -> Self
 pub fn vyre_megakernel::WorkloadProfile::weight_permille(&self) -> u32
 pub fn vyre_megakernel::WorkspacePlan::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::attach_target(artifact: vyre_megakernel::Artifact, compiler: &dyn vyre_megakernel::TargetCompiler) -> core::result::Result<vyre_megakernel::ArtifactEnvelope, vyre_megakernel::TargetCompileError>
+pub fn vyre_megakernel::baseline::baseline_schedule(logical: &vyre_foundation::logical::LogicalProgramGraph<'_>) -> vyre_foundation::schedule::SelectedSchedule
+pub fn vyre_megakernel::baseline_schedule(logical: &vyre_foundation::logical::LogicalProgramGraph<'_>) -> vyre_foundation::schedule::SelectedSchedule
 pub fn vyre_megakernel::compile(request: &vyre_megakernel::ValidatedCompileRequest) -> core::result::Result<vyre_megakernel::Artifact, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::compile_measured(request: &vyre_megakernel::ValidatedCompileRequest, evaluator: &dyn vyre_megakernel::FinalistEvaluator) -> core::result::Result<vyre_megakernel::Artifact, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::compile_portfolio(request: &vyre_megakernel::ValidatedCompileRequest) -> core::result::Result<vyre_megakernel::ArtifactPortfolio, vyre_megakernel::CompileError>
@@ -355,6 +357,7 @@ pub fn vyre_megakernel::registered_level_stage() -> vyre_spec::ir_level::IrLevel
 pub fn vyre_megakernel::writable_graph_value_buffers(node: &vyre_foundation::ir_inner::model::program_graph::ProgramGraphNode) -> alloc::vec::Vec<(vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::string::String)>
 pub fn vyre_megakernel::writable_graph_values(node: &vyre_foundation::ir_inner::model::program_graph::ProgramGraphNode) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program_graph::GraphValueId>
 pub mod vyre_megakernel
+pub mod vyre_megakernel::baseline
 pub mod vyre_megakernel::cost
 pub mod vyre_megakernel::grid_sync
 pub mod vyre_megakernel::legality

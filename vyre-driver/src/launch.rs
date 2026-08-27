@@ -7,11 +7,10 @@ use crate::program_walks::{
     dispatch_element_count_for_program, infer_dispatch_grid_for_count,
     try_dispatch_param_words_into,
 };
-use crate::tuner::Mode;
 use crate::validation::{validate_launch_geometry, LaunchGeometryLimits};
 use crate::{BackendError, DispatchConfig};
 
-pub use crate::launch_natural::*;
+pub use crate::launch_facts::*;
 
 /// Fully prepared launch metadata shared by concrete drivers.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -74,19 +73,7 @@ impl LaunchPlan {
         config: &DispatchConfig,
         limits: LaunchGeometryLimits,
     ) -> Result<(), BackendError> {
-        self.prepare_into_for_mode(program, bindings, config, limits, Mode::from_env())
-    }
-
-    pub(crate) fn prepare_into_for_mode(
-        &mut self,
-        program: &Program,
-        bindings: &[Binding],
-        config: &DispatchConfig,
-        limits: LaunchGeometryLimits,
-        mode: Mode,
-    ) -> Result<(), BackendError> {
-        let workgroup =
-            effective_launch_workgroup_for_mode(program, bindings, config, limits, mode);
+        let workgroup = effective_launch_workgroup(program, bindings, config, limits);
         validate_launch_geometry(workgroup, [1, 1, 1], limits)?;
         let element_count = launch_element_count(program, bindings, workgroup, config, limits)?;
         let grid = match config.launch_grid() {
@@ -166,15 +153,14 @@ fn launch_element_count(
         })
 }
 
-pub(crate) fn effective_launch_workgroup_for_mode(
+pub(crate) fn effective_launch_workgroup(
     program: &Program,
     bindings: &[Binding],
     config: &DispatchConfig,
     limits: LaunchGeometryLimits,
-    mode: Mode,
 ) -> [u32; 3] {
     let element_count = dispatch_element_count_for_program(program, bindings);
-    resolve_launch_workgroup_for_mode(program, config, limits, element_count, mode)
+    resolve_launch_workgroup(program, config, limits, element_count)
 }
 
 /// Where a launch's workgroup shape comes from.
@@ -182,11 +168,11 @@ pub(crate) fn effective_launch_workgroup_for_mode(
 /// A program compiled through the whole-program compiler carries a geometry the
 /// compiler searched for and recorded in the artifact, and the emitted module
 /// declares that shape. Launching such a module at another width runs a kernel
-/// nobody compiled, so the recorded geometry is authoritative and the launch
-/// tuner never sees the launch.
+/// nobody compiled, so the recorded geometry is authoritative. An untracked
+/// launch runs the width its program declares; no width is chosen here.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LaunchGeometry {
-    /// No compiled artifact governs this launch, so the tuner may choose a width.
+    /// No compiled artifact governs this launch, so it runs the declared width.
     Untracked,
     /// The artifact recorded this workgroup for the node being launched.
     Compiled([u32; 3]),

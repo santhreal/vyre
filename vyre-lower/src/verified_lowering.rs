@@ -363,7 +363,7 @@ mod tests {
         BufferAccess, BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Ident, MemoryOrdering,
         Node,
     };
-    use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform, SelectedSchedule};
+    use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform};
     use vyre_test_support::logical_markers::{census, logical_marker_sum, MarkerCensus};
 
     #[test]
@@ -395,7 +395,7 @@ mod tests {
     #[test]
     fn lower_scheduled_freezes_the_selected_phase_shape_before_physical_lowering() {
         let program = Program::wrapped(Vec::new(), [64, 1, 1], Vec::new());
-        let mut schedule = SelectedSchedule::synthetic(1);
+        let mut schedule = vyre_test_support::selected_schedules::synthetic(1);
         schedule
             .apply(ScheduleTransform::SetWorkgroup {
                 phase: SchedulePhaseId(0),
@@ -424,7 +424,7 @@ mod tests {
                 Node::logical_barrier(MemoryOrdering::Acquire),
             ],
         );
-        let schedule = SelectedSchedule::synthetic(1);
+        let schedule = vyre_test_support::selected_schedules::synthetic(1);
 
         let lowered = lower_scheduled(&program, &schedule, SchedulePhaseId(0)).unwrap();
 

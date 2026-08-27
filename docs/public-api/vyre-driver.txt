@@ -9,11 +9,8 @@
 #[non_exhaustive] pub enum vyre_driver::SubgroupOp
 #[non_exhaustive] pub enum vyre_driver::Target
 #[non_exhaustive] pub enum vyre_driver::fusion::FusionDecision
-#[non_exhaustive] pub enum vyre_driver::tuner::Mode
-#[non_exhaustive] pub enum vyre_driver::tuner::NaturalGradientTuningError
 #[non_exhaustive] pub struct vyre_driver::DispatchConfig
 #[repr(C)] pub struct vyre_driver::persistent::PersistentWorkItem
-impl core::convert::AsRef<str> for vyre_driver::tuner::TunerProgramKey
 impl core::convert::From<alloc::vec::Vec<u8>> for vyre_driver::Resource
 impl core::convert::From<vyre_driver::DeviceProfile> for vyre_foundation::optimizer::ctx::AdapterCaps
 impl core::convert::From<vyre_driver::DeviceProfile> for vyre_foundation::validate::options::BackendCapabilities
@@ -29,8 +26,6 @@ impl core::default::Default for vyre_driver::Resource
 impl core::default::Default for vyre_driver::arm_independence::ArmBindingSummary
 impl core::default::Default for vyre_driver::fusion::FusionCaps
 impl core::default::Default for vyre_driver::shape_prediction::ShapeHistory
-impl core::default::Default for vyre_driver::tuner::DefaultPolicy
-impl core::default::Default for vyre_driver::tuner::NaturalGradientPolicy
 impl core::default::Default for vyre_driver::validation::ValidationCache
 impl core::error::Error for vyre_driver::MigrationError
 impl core::error::Error for vyre_driver::ResidentGraphReuseTelemetryError
@@ -48,7 +43,6 @@ impl core::error::Error for vyre_driver::megakernel_frontier::MegakernelFrontier
 impl core::error::Error for vyre_driver::multi_query_execution::MultiQueryExecutionError
 impl core::error::Error for vyre_driver::persistent::QueueFull
 impl core::error::Error for vyre_driver::result_compaction::ResultCompactionError
-impl core::error::Error for vyre_driver::tuner::NaturalGradientTuningError
 impl core::fmt::Debug for vyre_driver::validation::ValidationCache
 impl core::fmt::Display for vyre_driver::MigrationError
 impl core::fmt::Display for vyre_driver::ResidentGraphReuseTelemetryError
@@ -68,7 +62,6 @@ impl core::fmt::Display for vyre_driver::megakernel_frontier::MegakernelFrontier
 impl core::fmt::Display for vyre_driver::multi_query_execution::MultiQueryExecutionError
 impl core::fmt::Display for vyre_driver::persistent::QueueFull
 impl core::fmt::Display for vyre_driver::result_compaction::ResultCompactionError
-impl core::fmt::Display for vyre_driver::tuner::NaturalGradientTuningError
 impl core::iter::traits::collect::FromIterator<u32> for vyre_driver::arm_independence::BindingSlotSet
 impl inventory::Collect for vyre_driver::AotLauncherEmitter
 impl inventory::Collect for vyre_driver::BackendCapability
@@ -179,17 +172,9 @@ impl vyre_driver::shape_prediction::ShapeHistory
 impl vyre_driver::target_dialect::TargetDialect
 impl vyre_driver::transfer_accounting::TransferAccountingPolicy
 impl vyre_driver::trap_record::TrapRecord
-impl vyre_driver::tuner::DefaultPolicy
-impl vyre_driver::tuner::Mode
-impl vyre_driver::tuner::NaturalGradientPolicy
-impl vyre_driver::tuner::StaticProgramShape
-impl vyre_driver::tuner::Tuner
-impl vyre_driver::tuner::TunerCache
-impl vyre_driver::tuner::TunerProgramKey
 impl vyre_driver::validation::LaunchGeometryLimits
 impl vyre_driver::validation::ProgramValidationCaps
 impl vyre_driver::validation::ValidationCache
-impl vyre_foundation::geometry::GeometryStrategy for vyre_driver::DeviceProfile
 impl<'a> vyre_driver::ExtractionDevice<'a>
 impl<'a> vyre_driver::PeerTransferPlanner<'a>
 impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::Target
@@ -264,9 +249,6 @@ pub const fn vyre_driver::param_inlining::ParamInliningPolicy::small_inline_defa
 pub const fn vyre_driver::reservation_policy::ReservationPolicy::new(context: &'static str, fix: &'static str) -> Self
 pub const fn vyre_driver::target_dialect::TargetDialect::admissible_invocations_per_workgroup(&self, adapter: u32) -> u32
 pub const fn vyre_driver::transfer_accounting::TransferAccountingPolicy::new(domain: &'static str, fix_action: &'static str) -> Self
-pub const fn vyre_driver::tuner::Mode::production_default() -> Self
-pub const fn vyre_driver::tuner::Tuner::default_workgroup_size() -> [u32; 3]
-pub const fn vyre_driver::tuner::Tuner::mode(&self) -> vyre_driver::tuner::Mode
 pub const vyre_driver::COUNTER_TAIL_BYTES: usize
 pub const vyre_driver::CURRENT_PIPELINE_CACHE_KEY_VERSION: u32
 pub const vyre_driver::DEFAULT_1D_WORKGROUP_SIZE: [u32; 3]
@@ -320,8 +302,6 @@ pub const vyre_driver::trace_jit_policy::TRACE_JIT_HOT_SHAPE_THRESHOLD: u32
 pub const vyre_driver::trace_jit_policy::TRACE_JIT_MIN_CONFIDENCE_BPS: u32
 pub const vyre_driver::trap_record::TRAP_RECORD_BYTES: usize
 pub const vyre_driver::trap_record::UNKNOWN_TRAP_TAG: &str
-pub const vyre_driver::tuner::Q16_ONE: u32
-pub const vyre_driver::tuner::WORKGROUP_CANDIDATES: &[u32]
 pub const vyre_driver::validation::DEFAULT_VALIDATION_HASH_ENTRIES: usize
 pub const vyre_driver::validation::DEFAULT_VALIDATION_VSA_ENTRIES: usize
 pub const vyre_driver::validation::DEFAULT_VALIDATION_VSA_SHARDS: usize
@@ -471,10 +451,10 @@ pub fn vyre_driver::DeviceBuffer::as_any_mut(&mut self) -> &mut dyn core::any::A
 pub fn vyre_driver::DeviceBuffer::backend_id(&self) -> &'static str
 pub fn vyre_driver::DeviceBuffer::byte_len(&self) -> usize
 pub fn vyre_driver::DeviceBuffer::debug_label(&self) -> core::option::Option<&str>
+pub fn vyre_driver::DeviceProfile::admissible_workgroup_widths(&self, requirements: &vyre_foundation::geometry::GeometryRequirements) -> alloc::vec::Vec<u32>
 pub fn vyre_driver::DeviceProfile::compile_facts(self) -> vyre_megakernel::device_facts::DeviceFacts
 pub fn vyre_driver::DeviceProfile::default() -> Self
 pub fn vyre_driver::DeviceProfile::from_backend<B: vyre_driver::VyreBackend + ?core::marker::Sized>(backend: &B) -> Self
-pub fn vyre_driver::DeviceProfile::rank_geometries(&self, requirements: &vyre_foundation::geometry::GeometryRequirements, problem_elements: u32) -> alloc::vec::Vec<vyre_foundation::geometry::LaunchGeometry>
 pub fn vyre_driver::DeviceSignature::apply_to_profile(&self, profile: vyre_driver::DeviceProfile) -> vyre_driver::DeviceProfile
 pub fn vyre_driver::DeviceSignature::from_toml_str(source: &str) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_driver::DeviceSignature::matches_architecture_generation(&self, generation: u32) -> bool
@@ -849,6 +829,7 @@ pub fn vyre_driver::launch_fusion::LaunchFusionScratch::new() -> Self
 pub fn vyre_driver::launch_fusion::LaunchFusionScratch::try_with_capacity(stage_count: usize) -> core::result::Result<Self, vyre_driver::launch_fusion::LaunchFusionError>
 pub fn vyre_driver::launch_fusion::plan_launch_fusion(stages: &[vyre_driver::launch_fusion::LaunchFusionStage], max_group_bytes: u64) -> core::result::Result<vyre_driver::launch_fusion::LaunchFusionPlan, vyre_driver::launch_fusion::LaunchFusionError>
 pub fn vyre_driver::launch_fusion::plan_launch_fusion_with_scratch(stages: &[vyre_driver::launch_fusion::LaunchFusionStage], max_group_bytes: u64, scratch: &mut vyre_driver::launch_fusion::LaunchFusionScratch) -> core::result::Result<vyre_driver::launch_fusion::LaunchFusionPlan, vyre_driver::launch_fusion::LaunchFusionError>
+pub fn vyre_driver::launch_width_measurements(program: &vyre_foundation::ir_inner::model::program::definition::Program, limits: vyre_driver::validation::LaunchGeometryLimits, element_count: u32) -> alloc::collections::btree::map::BTreeMap<[u32; 3], u64>
 pub fn vyre_driver::lowering::LowerableOp::lower_binary(&self, ctx: &mut (), program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::lowering::LowerableOp::lower_expression(&self, ctx: &mut dyn vyre_driver::lowering::TargetGenCtx, program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::lowering::TargetGenCtx::register_expression(&mut self, format: &str) -> core::result::Result<(), ()>
@@ -1113,8 +1094,7 @@ pub fn vyre_driver::resident_transfer_fusion::push_resident_upload_copy<'a>(copi
 pub fn vyre_driver::resolve_fixpoint_iterations(config: &vyre_driver::DispatchConfig, backend: &str) -> core::result::Result<u32, vyre_driver::BackendError>
 pub fn vyre_driver::resolve_fixpoint_iterations_usize(config: &vyre_driver::DispatchConfig, backend: &str) -> core::result::Result<usize, vyre_driver::BackendError>
 pub fn vyre_driver::resolve_launch_workgroup(program: &vyre_foundation::ir_inner::model::program::definition::Program, config: &vyre_driver::DispatchConfig, limits: vyre_driver::validation::LaunchGeometryLimits, element_count: u32) -> [u32; 3]
-pub fn vyre_driver::resolve_launch_workgroup_for_geometry(program: &vyre_foundation::ir_inner::model::program::definition::Program, config: &vyre_driver::DispatchConfig, limits: vyre_driver::validation::LaunchGeometryLimits, element_count: u32, mode: vyre_driver::tuner::Mode, geometry: vyre_driver::LaunchGeometry) -> [u32; 3]
-pub fn vyre_driver::resolve_launch_workgroup_for_mode(program: &vyre_foundation::ir_inner::model::program::definition::Program, config: &vyre_driver::DispatchConfig, limits: vyre_driver::validation::LaunchGeometryLimits, element_count: u32, mode: vyre_driver::tuner::Mode) -> [u32; 3]
+pub fn vyre_driver::resolve_launch_workgroup_for_geometry(program: &vyre_foundation::ir_inner::model::program::definition::Program, config: &vyre_driver::DispatchConfig, limits: vyre_driver::validation::LaunchGeometryLimits, element_count: u32, geometry: vyre_driver::LaunchGeometry) -> [u32; 3]
 pub fn vyre_driver::result_compaction::ResultCompactionError::arithmetic_overflow(field: &'static str) -> Self
 pub fn vyre_driver::result_compaction::ResultCompactionError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver::result_compaction::ResultCompactionScratch::id_capacity(&self) -> usize
@@ -1167,36 +1147,6 @@ pub fn vyre_driver::try_dispatch_param_words_into(bindings: &[vyre_driver::Bindi
 pub fn vyre_driver::try_normalized_program_cache_digest(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<[u8; 32], alloc::string::String>
 pub fn vyre_driver::try_reduction_offsets(subgroup_size: u32) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
 pub fn vyre_driver::try_reduction_offsets_into(subgroup_size: u32, offsets: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
-pub fn vyre_driver::tuner::BackendTimer::measure_candidate_ns(&mut self, program: &vyre_foundation::ir_inner::model::program::definition::Program, workgroup_size: [u32; 3]) -> core::result::Result<u64, Self::Error>
-pub fn vyre_driver::tuner::DefaultPolicy::default() -> Self
-pub fn vyre_driver::tuner::DefaultPolicy::suggest_resize(&self, feedback: &vyre_driver::tuner::TunerFeedback) -> core::option::Option<u32>
-pub fn vyre_driver::tuner::Mode::from_env() -> Self
-pub fn vyre_driver::tuner::NaturalGradientPolicy::default() -> Self
-pub fn vyre_driver::tuner::NaturalGradientPolicy::suggest(&self, measurements: &[vyre_driver::tuner::TuningMeasurement], fisher_inv_sqrt_q16: &[u32]) -> core::result::Result<vyre_driver::tuner::NaturalGradientTuningStep, vyre_driver::tuner::NaturalGradientTuningError>
-pub fn vyre_driver::tuner::NaturalGradientTuningError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_driver::tuner::StaticProgramShape::new(program: &vyre_foundation::ir_inner::model::program::definition::Program, workgroup_count: core::option::Option<[u32; 3]>, output_bytes: u64) -> Self
-pub fn vyre_driver::tuner::Tuner::best_of<T: vyre_driver::tuner::BackendTimer>(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, candidates: impl core::iter::traits::collect::IntoIterator<Item = [u32; 3]>, timer: &mut T) -> core::result::Result<core::option::Option<vyre_driver::tuner::TuningMeasurement>, <T as vyre_driver::tuner::BackendTimer>::Error>
-pub fn vyre_driver::tuner::Tuner::best_of_natural_gradient<T: vyre_driver::tuner::BackendTimer>(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, candidates: impl core::iter::traits::collect::IntoIterator<Item = [u32; 3]>, timer: &mut T, fisher_inv_sqrt_q16: &[u32], policy: vyre_driver::tuner::NaturalGradientPolicy) -> core::result::Result<core::result::Result<vyre_driver::tuner::NaturalGradientTuningStep, vyre_driver::tuner::NaturalGradientTuningError>, <T as vyre_driver::tuner::BackendTimer>::Error>
-pub fn vyre_driver::tuner::Tuner::cache_path_for_adapter(adapter_fp: &str) -> std::path::PathBuf
-pub fn vyre_driver::tuner::Tuner::candidates_for(&self, max_invocations: u32) -> alloc::vec::Vec<u32>
-pub fn vyre_driver::tuner::Tuner::natural_gradient_step(&self, measurements: &[vyre_driver::tuner::TuningMeasurement], fisher_inv_sqrt_q16: &[u32], policy: vyre_driver::tuner::NaturalGradientPolicy) -> core::result::Result<vyre_driver::tuner::NaturalGradientTuningStep, vyre_driver::tuner::NaturalGradientTuningError>
-pub fn vyre_driver::tuner::Tuner::new(adapter_fp: &str, mode: vyre_driver::tuner::Mode) -> Self
-pub fn vyre_driver::tuner::Tuner::persist(&self) -> core::result::Result<(), alloc::string::String>
-pub fn vyre_driver::tuner::Tuner::record_decision(&mut self, program_fp: impl core::convert::Into<alloc::string::String>, size: [u32; 3])
-pub fn vyre_driver::tuner::Tuner::record_key_decision(&mut self, key: vyre_driver::tuner::TunerProgramKey, size: [u32; 3])
-pub fn vyre_driver::tuner::Tuner::resolve(&self, program_fp: &str) -> [u32; 3]
-pub fn vyre_driver::tuner::Tuner::resolve_key(&self, key: &vyre_driver::tuner::TunerProgramKey) -> [u32; 3]
-pub fn vyre_driver::tuner::TunerCache::get(&self, program_fp: &str) -> core::option::Option<[u32; 3]>
-pub fn vyre_driver::tuner::TunerCache::get_key(&self, key: &vyre_driver::tuner::TunerProgramKey) -> core::option::Option<[u32; 3]>
-pub fn vyre_driver::tuner::TunerCache::load(path: &std::path::Path) -> core::result::Result<Self, alloc::string::String>
-pub fn vyre_driver::tuner::TunerCache::save(&self, path: &std::path::Path) -> core::result::Result<(), alloc::string::String>
-pub fn vyre_driver::tuner::TunerCache::set(&mut self, program_fp: impl core::convert::Into<alloc::string::String>, size: [u32; 3])
-pub fn vyre_driver::tuner::TunerCache::set_key(&mut self, key: vyre_driver::tuner::TunerProgramKey, size: [u32; 3])
-pub fn vyre_driver::tuner::TunerProgramKey::as_ref(&self) -> &str
-pub fn vyre_driver::tuner::TunerProgramKey::as_str(&self) -> &str
-pub fn vyre_driver::tuner::TunerProgramKey::from_program(program: &vyre_foundation::ir_inner::model::program::definition::Program, shape: vyre_driver::tuner::StaticProgramShape) -> Self
-pub fn vyre_driver::tuner::identity_fisher_q16(candidate_count: usize) -> alloc::vec::Vec<u32>
-pub fn vyre_driver::tuner::identity_fisher_q16_into(candidate_count: usize, out: &mut alloc::vec::Vec<u32>)
 pub fn vyre_driver::update_dispatch_policy_cache_hash(hasher: &mut blake3::Hasher, config: &vyre_driver::DispatchConfig)
 pub fn vyre_driver::validate_buffer_ownership<'a>(self_backend_id: &str, buffers: impl core::iter::traits::collect::IntoIterator<Item = &'a dyn vyre_driver::DeviceBuffer>) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::validate_intrinsic_lowering(operation_id: &'static str) -> core::result::Result<vyre_foundation::operation::SemanticOperation, vyre_driver::IntrinsicRegistrationError>
@@ -1283,7 +1233,6 @@ pub mod vyre_driver::target_dialect
 pub mod vyre_driver::trace_jit_policy
 pub mod vyre_driver::transfer_accounting
 pub mod vyre_driver::trap_record
-pub mod vyre_driver::tuner
 pub mod vyre_driver::validation
 pub struct vyre_driver::AdaptiveSpeculator
 pub struct vyre_driver::AotLauncherEmitter
@@ -1455,15 +1404,6 @@ pub struct vyre_driver::target_dialect::TargetDialect
 pub struct vyre_driver::trace_jit_policy::TraceJitInputs
 pub struct vyre_driver::transfer_accounting::TransferAccountingPolicy
 pub struct vyre_driver::trap_record::TrapRecord
-pub struct vyre_driver::tuner::DefaultPolicy
-pub struct vyre_driver::tuner::NaturalGradientPolicy
-pub struct vyre_driver::tuner::NaturalGradientTuningStep
-pub struct vyre_driver::tuner::StaticProgramShape
-pub struct vyre_driver::tuner::Tuner
-pub struct vyre_driver::tuner::TunerCache
-pub struct vyre_driver::tuner::TunerFeedback
-pub struct vyre_driver::tuner::TunerProgramKey(_)
-pub struct vyre_driver::tuner::TuningMeasurement
 pub struct vyre_driver::validation::LaunchGeometryLimits
 pub struct vyre_driver::validation::ProgramValidationCaps
 pub struct vyre_driver::validation::ValidationCache
@@ -1487,7 +1427,6 @@ pub trait vyre_driver::materialize::ResidentInstance: vyre_driver::materialize::
 pub trait vyre_driver::megakernel_execution::MegakernelExecutionPlanner
 pub trait vyre_driver::observability::BackendObservabilityProvider
 pub trait vyre_driver::strategy::LoweringStrategy: core::marker::Send + core::marker::Sync + core::fmt::Debug
-pub trait vyre_driver::tuner::BackendTimer
 pub type vyre_driver::OutputBuffers = alloc::vec::Vec<alloc::vec::Vec<u8>>
 pub type vyre_driver::input_identity::ExactInputKey = [u8; 32]
 pub type vyre_driver::materialize::MaterializedInstance::Module: vyre_driver::materialize::ExecutableModule
@@ -1495,7 +1434,6 @@ pub type vyre_driver::parity_harness::ParityDispatch<'a> = &'a dyn core::ops::fu
 pub type vyre_driver::reservation_policy::StagingReservationFailureAdapter<E> = fn(&'static str, usize, alloc::string::String) -> E
 pub type vyre_driver::shape_prediction::ShapeFingerprint = [u32; 8]
 pub type vyre_driver::target_dialect::EmitSelected = fn(&vyre_megakernel::target::SelectedLowering, &vyre_megakernel::envelope::TargetProfile) -> core::result::Result<vyre_driver::target_dialect::EmittedDialectModule, vyre_megakernel::target::TargetCompileError>
-pub type vyre_driver::tuner::BackendTimer::Error
 pub use vyre_driver::AotTargetId
 pub use vyre_driver::Diagnostic
 pub use vyre_driver::DiagnosticCause
@@ -1962,7 +1900,6 @@ pub vyre_driver::autotune_store::AutotuneKey::key_hex: alloc::string::String
 pub vyre_driver::autotune_store::AutotuneRecord::recorded_at: alloc::string::String
 pub vyre_driver::autotune_store::AutotuneRecord::tile: [u32; 3]
 pub vyre_driver::autotune_store::AutotuneRecord::unroll: u32
-pub vyre_driver::autotune_store::AutotuneRecord::workgroup_size: [u32; 3]
 pub vyre_driver::benchmark_pass_selection::BenchmarkPassCandidate::expected_speedup_bps: u32
 pub vyre_driver::benchmark_pass_selection::BenchmarkPassCandidate::mandatory_when_profitable: bool
 pub vyre_driver::benchmark_pass_selection::BenchmarkPassCandidate::min_avoided_readback_bytes: u64
@@ -2557,35 +2494,6 @@ pub vyre_driver::trace_jit_policy::TraceJitInputs::speculative_spec_cost_ns: u64
 pub vyre_driver::trap_record::TrapRecord::address: u32
 pub vyre_driver::trap_record::TrapRecord::lane: u32
 pub vyre_driver::trap_record::TrapRecord::tag_code: u32
-pub vyre_driver::tuner::DefaultPolicy::adapter_max_workgroup_size_x: u32
-pub vyre_driver::tuner::DefaultPolicy::idle_shrink_us: u64
-pub vyre_driver::tuner::DefaultPolicy::minimum_workgroup_size_x: u32
-pub vyre_driver::tuner::DefaultPolicy::saturation_threshold_per_us: f64
-pub vyre_driver::tuner::Mode::NaturalGradient
-pub vyre_driver::tuner::Mode::OffUseDefault
-pub vyre_driver::tuner::Mode::On
-pub vyre_driver::tuner::NaturalGradientPolicy::temperature_ns: u64
-pub vyre_driver::tuner::NaturalGradientTuningError::EmptyMeasurements
-pub vyre_driver::tuner::NaturalGradientTuningError::FisherMatrixShape
-pub vyre_driver::tuner::NaturalGradientTuningError::FisherMatrixShape::cells: usize
-pub vyre_driver::tuner::NaturalGradientTuningError::FisherMatrixShape::measurements: usize
-pub vyre_driver::tuner::NaturalGradientTuningError::ZeroTemperature
-pub vyre_driver::tuner::NaturalGradientTuningStep::best_measured_elapsed_ns: u64
-pub vyre_driver::tuner::NaturalGradientTuningStep::best_measured_workgroup_size: [u32; 3]
-pub vyre_driver::tuner::NaturalGradientTuningStep::natural_gradient_q16: alloc::vec::Vec<u32>
-pub vyre_driver::tuner::NaturalGradientTuningStep::policy_weights_q16: alloc::vec::Vec<u32>
-pub vyre_driver::tuner::NaturalGradientTuningStep::selected_workgroup_size: [u32; 3]
-pub vyre_driver::tuner::StaticProgramShape::output_bytes: u64
-pub vyre_driver::tuner::StaticProgramShape::workgroup_count: core::option::Option<[u32; 3]>
-pub vyre_driver::tuner::StaticProgramShape::workgroup_size: [u32; 3]
-pub vyre_driver::tuner::TunerCache::entries: alloc::collections::btree::map::BTreeMap<alloc::string::String, [u32; 3]>
-pub vyre_driver::tuner::TunerFeedback::idle_us: u64
-pub vyre_driver::tuner::TunerFeedback::observed_throughput_per_us: f64
-pub vyre_driver::tuner::TunerFeedback::observed_workgroup_size_x: u32
-pub vyre_driver::tuner::TunerFeedback::per_opcode_counts: alloc::vec::Vec<(u32, u32)>
-pub vyre_driver::tuner::TunerFeedback::wall_time_us: u64
-pub vyre_driver::tuner::TuningMeasurement::elapsed_ns: u64
-pub vyre_driver::tuner::TuningMeasurement::workgroup_size: [u32; 3]
 pub vyre_driver::validation::LaunchGeometryLimits::backend: &'static str
 pub vyre_driver::validation::LaunchGeometryLimits::max_block_dim: [u32; 3]
 pub vyre_driver::validation::LaunchGeometryLimits::max_grid_dim: [u32; 3]

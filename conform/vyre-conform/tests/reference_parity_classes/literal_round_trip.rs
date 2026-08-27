@@ -32,7 +32,7 @@ fn image_for(operation_id: &str, program: &Program) -> Result<TargetModuleImage,
         .map_err(|error| format!("invalid program graph: {error}"))?;
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .map_err(|error| format!("invalid logical domain: {error}"))?;
-    let schedule = SelectedSchedule::from_logical(&logical);
+    let schedule = vyre_megakernel::baseline_schedule(&logical);
     let phase = schedule
         .phases
         .first()

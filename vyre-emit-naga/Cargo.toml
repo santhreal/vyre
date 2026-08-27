@@ -40,7 +40,7 @@ vyre-foundation.workspace = true
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
 # `ir-fixtures` carries the per-Node-variant fixture set the atomic-scanner
 # descent gate derives its variant space from at run time.
-vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
+vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 # integration tests/benches assert against these crates' public APIs.
 # `python-parser` is required by
 # carrier_scope_regression::dump_python312_lexer_naga, which builds the real

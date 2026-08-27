@@ -46,8 +46,12 @@ fn selected_schedule_legalizes_markers_introduced_by_call_expansion() {
             Expr::call(LOGICAL_EXPANSION_OP_ID, Vec::new()),
         )],
     );
-    let lowered = lower_scheduled(&caller, &SelectedSchedule::synthetic(1), SchedulePhaseId(0))
-        .expect("selected-schedule lowering must legalize expanded composition bodies");
+    let lowered = lower_scheduled(
+        &caller,
+        &vyre_test_support::selected_schedules::synthetic(1),
+        SchedulePhaseId(0),
+    )
+    .expect("selected-schedule lowering must legalize expanded composition bodies");
 
     let markers = census(lowered.program.entry());
 
@@ -124,7 +128,7 @@ fn library_fixtures_are_canonical_semantic_registrations() {
                 continue;
             }
         };
-        let schedule = SelectedSchedule::from_logical(&logical);
+        let schedule = vyre_megakernel::baseline_schedule(&logical);
         let Some(phase) = schedule.phases.first().map(|phase| phase.id) else {
             domain_failures.push(format!("{}: selected schedule has no phase", entry.id));
             continue;

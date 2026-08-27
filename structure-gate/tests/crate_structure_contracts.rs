@@ -310,7 +310,8 @@ fn no_file_repeats_the_directory_holding_it() {
 }
 
 /// Operations in `vyre-libs` and `vyre-primitives` declare `GeometryRequirements`
-/// and lower through `GeometryStrategy`, never declaring hardcoded geometry constants.
+/// and leave geometry to `vyre-megakernel`, never declaring hardcoded geometry
+/// constants.
 #[test]
 fn no_operation_declares_hardcoded_geometry_constants() {
     let failures = geometry_constant_failures(&workspace_root());

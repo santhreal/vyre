@@ -204,7 +204,7 @@ fn logical_stage_reports_a_non_canonical_program() {
 fn schedule_stage_rejects_a_schedule_of_another_version() {
     let stage = stage_for_level(IrLevel::Schedule).expect("Fix: the schedule stage must exist");
 
-    let good = SelectedSchedule::synthetic(2);
+    let good = vyre_test_support::selected_schedules::synthetic(2);
     assert_eq!(
         stage.verify(&good),
         LevelVerdict::Verified,
@@ -238,7 +238,7 @@ fn each_stage_refuses_another_levels_subject() {
         stage_for_level(IrLevel::Schedule).expect("Fix: the schedule stage must exist");
 
     let program = copy_program();
-    let schedule = SelectedSchedule::synthetic(1);
+    let schedule = vyre_test_support::selected_schedules::synthetic(1);
 
     assert_eq!(
         graph_stage.verify(&program),

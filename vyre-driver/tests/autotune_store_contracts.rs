@@ -18,7 +18,6 @@ fn sample_spec(spec_hash: u64) -> SpecCacheKey {
 
 fn sample_record(unroll: u32) -> AutotuneRecord {
     AutotuneRecord {
-        workgroup_size: [128, 1, 1],
         unroll,
         tile: [16, 16, 1],
         recorded_at: "2026-05-02".to_string(),
@@ -73,6 +72,44 @@ fn save_then_load_round_trips_through_toml() {
     let loaded = AutotuneStore::load(&path).unwrap();
     assert_eq!(loaded.len(), 1);
     assert_eq!(loaded.get(&key), Some(&sample_record(4)));
+}
+
+/// WHY: a persisted shape outlives the build that wrote it. `load` used to
+/// accept every `schema` value it read, including one written before a field
+/// changed meaning, so a stale file was served as current evidence. Rejecting
+/// it names the file and the corrective action; the next measured race writes a
+/// current one.
+#[test]
+fn a_store_written_under_another_schema_is_rejected_rather_than_served() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join("autotune.toml");
+    let mut store = AutotuneStore::default();
+    store.put(
+        AutotuneKey::new(&sample_spec(9), "adapter-x"),
+        sample_record(2),
+    );
+    store.save_if_dirty(&path).unwrap();
+    let current = std::fs::read_to_string(&path).unwrap();
+    assert!(
+        current.contains("schema = 2"),
+        "the writer must state the schema it wrote: {current}"
+    );
+
+    for stale in ["schema = 1", "schema = 3"] {
+        std::fs::write(&path, current.replace("schema = 2", stale)).unwrap();
+        let error = AutotuneStore::load(&path)
+            .expect_err("a store from another schema must not load as current evidence");
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        let message = error.to_string();
+        assert!(
+            message.contains("Fix:") && message.contains("autotune.toml"),
+            "the refusal must name the file and the corrective action: {message}"
+        );
+    }
+
+    std::fs::write(&path, current.replace("schema = 2\n", "")).unwrap();
+    AutotuneStore::load(&path)
+        .expect_err("a file that declares no schema is not this schema either");
 }
 
 #[test]

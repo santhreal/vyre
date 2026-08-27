@@ -21,7 +21,7 @@ default = []
 # into the dev graph of whichever crate enables it, and most consumers of this
 # crate only want the source-text closure enumerator or the flat element list.
 # The fixtures build inline shapes with smallvec, so it joins the graph too.
-ir-fixtures = ["dep:vyre-foundation", "dep:smallvec", "dep:vyre-reference"]
+ir-fixtures = ["dep:vyre-foundation", "dep:smallvec", "dep:vyre-reference", "dep:blake3"]
 # The semantic execution seam: the graph, bindings, and request every backend
 # contract shares. Separate from `ir-fixtures` because it needs the compiler
 # boundary crate, which the IR fixtures do not.
@@ -41,6 +41,9 @@ vyre-megakernel = { workspace = true, optional = true }
 # discriminants. vyre-spec itself depends on serde and smallvec and nothing
 # else, so the cost of carrying it unconditionally is nil.
 vyre-spec = { workspace = true }
+# The synthetic schedule fixture keeps the identity bytes the compiler hashes,
+# so a fixture and a compiled schedule of the same size stay one value.
+blake3 = { workspace = true, optional = true }
 smallvec = { workspace = true, optional = true }
 vyre-reference = { workspace = true, optional = true }
 serde = { workspace = true }

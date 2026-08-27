@@ -305,7 +305,6 @@ mod tests {
         let (graph, root) = specialized_toy_graph();
         let profile = DeviceProfile::conservative("native");
         let record = AutotuneRecord {
-            workgroup_size: [128, 1, 1],
             unroll: 4,
             tile: [0, 0, 0],
             recorded_at: String::new(),

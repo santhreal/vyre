@@ -891,7 +891,7 @@ pub fn vyre_runtime::routing::RoutingPolicy::route(&self, plan: &vyre_foundation
 pub fn vyre_runtime::routing::RoutingPolicy::route_with_explanation(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingExplanation
 pub fn vyre_runtime::routing::standard_policy::StandardPolicy::name(&self) -> &'static str
 pub fn vyre_runtime::routing::standard_policy::StandardPolicy::route(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingDecision
-pub fn vyre_runtime::routing::standard_policy::StandardPolicy::route_with_explanation(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingExplanation
+pub fn vyre_runtime::routing::standard_policy::StandardPolicy::route_with_explanation(&self, _plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingExplanation
 pub fn vyre_runtime::safetensors_transfer::DeviceTransferCapabilities::default() -> Self
 pub fn vyre_runtime::safetensors_transfer::TransferLifecycleEngine::cancel_transfer(&mut self, tensor_name: &str)
 pub fn vyre_runtime::safetensors_transfer::TransferLifecycleEngine::complete_transfer(&mut self, tensor_name: &str, completion_event: u64, actual_digest: [u8; 32]) -> core::result::Result<(), vyre_runtime::safetensors_transfer::TransferError>

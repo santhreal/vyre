@@ -113,7 +113,7 @@ pub struct ProgramShapeFacts {
 }
 
 // Thread-local fingerprint-keyed cache so consumers that call derive
-// directly (e.g. `Autotune::transform`) reuse the previous result on the
+// directly reuse the previous result on the
 // same program instead of re-walking every BufferDecl. The
 // FactCache caches own a separate `Arc<ProgramShapeFacts>` for
 // shape+use bundles; this slot serves direct `derive()` callers.
@@ -133,8 +133,8 @@ impl ProgramShapeFacts {
     /// derived facts for the same program fingerprint via a thread-local
     /// slot. Use when the caller needs `ProgramShapeFacts` by value but
     /// is on the optimizer hot path where the same program may be queried
-    /// multiple times in quick succession (e.g. autotune followed by
-    /// shape-aware vectorization on the same fingerprint).
+    /// multiple times in quick succession (e.g. vectorization run twice on
+    /// the same fingerprint).
     #[must_use]
     pub fn derive_cached(program: &Program) -> Self {
         let fp = program.fingerprint();

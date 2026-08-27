@@ -1,4 +1,3 @@
-use vyre_driver::tuner::Mode;
 use vyre_driver::validation::LaunchGeometryLimits;
 use vyre_driver::{resolve_launch_workgroup_for_geometry, LaunchGeometry};
 use vyre_driver::{BackendError, DispatchConfig};
@@ -10,20 +9,13 @@ pub(super) fn wgpu_effective_dispatch_config(
     device: &wgpu::Device,
     geometry: LaunchGeometry,
 ) -> Result<DispatchConfig, BackendError> {
-    wgpu_effective_dispatch_config_for_limits(
-        program,
-        config,
-        wgpu_launch_limits(device),
-        Mode::from_env(),
-        geometry,
-    )
+    wgpu_effective_dispatch_config_for_limits(program, config, wgpu_launch_limits(device), geometry)
 }
 
 pub(crate) fn wgpu_effective_dispatch_config_for_limits(
     program: &Program,
     config: &DispatchConfig,
     limits: LaunchGeometryLimits,
-    mode: Mode,
     geometry: LaunchGeometry,
 ) -> Result<DispatchConfig, BackendError> {
     let mut effective = config.clone();
@@ -33,14 +25,8 @@ pub(crate) fn wgpu_effective_dispatch_config_for_limits(
         return Ok(effective);
     }
     let element_count = wgpu_launch_element_count_for_tuning(program)?;
-    let selected = resolve_launch_workgroup_for_geometry(
-        program,
-        &effective,
-        limits,
-        element_count,
-        mode,
-        geometry,
-    );
+    let selected =
+        resolve_launch_workgroup_for_geometry(program, &effective, limits, element_count, geometry);
     if selected != program.workgroup_size() {
         effective.workgroup_override = Some(selected);
     } else {
@@ -60,7 +46,7 @@ fn wgpu_launch_element_count_for_tuning(program: &Program) -> Result<u32, Backen
         .unwrap_or_default();
     u32::try_from(word_count).map_err(|error| {
         BackendError::new(format!(
-            "wgpu natural-gradient launch tuning cannot represent {word_count} output word(s) as u32: {error}. Fix: split the dispatch or provide an explicit workgroup/grid override."
+            "wgpu launch preparation cannot represent {word_count} output word(s) as u32: {error}. Fix: split the dispatch or provide an explicit workgroup/grid override."
         ))
     })
 }

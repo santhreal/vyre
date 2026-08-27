@@ -166,30 +166,26 @@ fn launch_limits(backend: &CudaBackend) -> LaunchGeometryLimits {
 /// workgroup rather than the declared one.
 ///
 /// This distinction is not pedantry, it is the whole bound. A program declaring
-/// `[256, 1, 1]` does NOT necessarily launch 256 wide: `Mode::production_default()`
-/// is `NaturalGradient`, so with `VYRE_AUTOTUNER` unset the tuner may pick a
-/// cold-start workgroup, and for these fixtures it picks `[1024, 1, 1]`. The
-/// residency bound is computed on that effective width, and 1024 is the worst case
-/// on this device: `max_threads_per_sm / workgroup` is integer division, 1536/1024
-/// is 1, so one block per SM fits and 512 of every SM's 1536 thread slots go
-/// unused. The ceiling is therefore 170 blocks of 1024 (174,080 lanes) for a
-/// tunable program by default, and 1020 blocks of 256 (261,120 lanes) when the
-/// declared width survives.
+/// `[256, 1, 1]` does not necessarily launch 256 wide: a launch whose inferred
+/// grid exceeds the per-axis ceiling is widened into it, and the residency bound
+/// is computed on the width that results. Wider is the worse case on this
+/// device, because `max_threads_per_sm / workgroup` is integer division: at 1024
+/// on a 1536-slot SM one block fits and 512 slots of every SM go unused, giving
+/// 170 blocks of 1024 (174,080 lanes), while a surviving 256 gives 1020 blocks
+/// (261,120 lanes).
 ///
 /// Per PROGRAM, not per device, and that is the second half of the lesson.
-/// `is_natural_gradient_launch_tunable` rejects a program that sets
-/// `non_composable_with_self`, uses `LocalId`/`WorkgroupId`, or wants workgroup
-/// scratch, so two programs on one device can have different effective widths and
-/// therefore different ceilings. Resolving the width once and reusing it across
-/// fixtures would reintroduce the same class of wrong answer in the other
-/// direction: `parsing::c`'s statement-structure kernel is exempt this way and
-/// keeps its declared 256, so its ceiling is 261,120 lanes while this fixture's is
-/// 174,080.
+/// Widening applies only where the launch width is free, so a program that sets
+/// `non_composable_with_self`, reads `LocalId`/`WorkgroupId`, or holds workgroup
+/// scratch keeps its declared width and two programs on one device can have
+/// different effective widths and therefore different ceilings. Resolving the
+/// width once and reusing it across fixtures would reintroduce the same class of
+/// wrong answer in the other direction.
 ///
 /// A test that computed the bound from the DECLARED workgroup would assert the
-/// wrong boundary, silently pass whenever both configurations agree on the verdict,
-/// and fail confusingly when they do not. That happened: the boundary test caught
-/// it by reporting `fits=false` at 681 blocks of 256 instead of 1021.
+/// wrong boundary, silently pass whenever both widths agree on the verdict, and
+/// fail confusingly when they do not. That happened: the boundary test caught it
+/// by reporting `fits=false` at 681 blocks of 256 instead of 1021.
 fn cooperative_lane_ceiling(backend: &CudaBackend, program: &Program) -> Option<u32> {
     let declared_lanes = program
         .buffers()

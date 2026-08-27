@@ -395,7 +395,7 @@ mod tests {
         MeasurementRecord, SampleEstimate,
     };
     use crate::request::{SearchBudget, SearchWork};
-    use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform, SelectedSchedule};
+    use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform};
 
     fn payload(resources: Vec<ResourceRecord>) -> ArtifactPayload {
         ArtifactPayload {
@@ -404,7 +404,7 @@ mod tests {
             dependencies: Vec::new(),
             selected_plan: SelectedPlan {
                 topology: crate::ExecutionTopology::Sequential,
-                schedule: SelectedSchedule::synthetic(1),
+                schedule: vyre_test_support::selected_schedules::synthetic(1),
                 derivation: Vec::new(),
                 certificate: crate::SearchCertificate::new(crate::SCHEDULE_GRAMMAR_VERSION),
                 fusion: Vec::new(),

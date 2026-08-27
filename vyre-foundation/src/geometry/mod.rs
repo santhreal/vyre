@@ -1,9 +1,10 @@
 //! Target-neutral launch geometry and requirement definitions.
 //!
 //! Substrate-neutral operations declare the execution constraints their
-//! algorithm requires through [`GeometryRequirements`]. Backends lower those
-//! requirements against authenticated target hardware profiles into a
-//! concrete [`LaunchGeometry`] using the [`GeometryStrategy`] trait.
+//! algorithm requires through [`GeometryRequirements`]. A backend reports which
+//! widths its authenticated profile admits, and `vyre-megakernel` builds and
+//! orders the concrete [`LaunchGeometry`] candidates under the compile
+//! objective.
 //!
 //! This module contains no device names, no instruction names, and no concrete
 //! device limits.
@@ -493,90 +494,5 @@ impl LaunchGeometry {
             && self.grid[2] > 0
             && self.elements_per_invocation > 0
             && self.pipeline_stages > 0
-    }
-}
-
-/// Errors occurring during geometry requirement satisfaction and lowering.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum GeometryLoweringError {
-    /// Requirements could not be satisfied on the target profile.
-    UnsatisfiableRequirements(String),
-    /// Requested workgroup invocations exceed target limits.
-    ExceedsWorkgroupLimits {
-        /// Requested invocation count.
-        requested: u32,
-        /// Maximum invocations admitted by target.
-        max: u32,
-    },
-    /// Requested shared memory bytes exceed target limits.
-    ExceedsSharedMemoryLimits {
-        /// Requested shared memory bytes.
-        requested: u32,
-        /// Maximum shared memory bytes admitted by target.
-        max: u32,
-    },
-    /// Requested cooperative width is unsupported by target architecture.
-    UnsupportedCooperativeWidth {
-        /// Requested cooperative width.
-        requested: u32,
-        /// Admitted width by target.
-        admitted: u32,
-    },
-}
-
-impl std::fmt::Display for GeometryLoweringError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnsatisfiableRequirements(msg) => {
-                write!(f, "unsatisfiable geometry requirements: {msg}")
-            }
-            Self::ExceedsWorkgroupLimits { requested, max } => {
-                write!(
-                    f,
-                    "requested workgroup size {requested} exceeds target maximum {max}"
-                )
-            }
-            Self::ExceedsSharedMemoryLimits { requested, max } => {
-                write!(
-                    f,
-                    "requested shared memory {requested} bytes exceeds target maximum {max}"
-                )
-            }
-            Self::UnsupportedCooperativeWidth {
-                requested,
-                admitted,
-            } => {
-                write!(f, "requested cooperative width {requested} is not admitted by target (max {admitted})")
-            }
-        }
-    }
-}
-
-impl std::error::Error for GeometryLoweringError {}
-
-/// Target lowering strategy for selecting concrete execution geometries.
-pub trait GeometryStrategy: Send + Sync {
-    /// Return candidate launch geometries ranked in preference order (highest ranked first).
-    fn rank_geometries(
-        &self,
-        requirements: &GeometryRequirements,
-        problem_elements: u32,
-    ) -> Vec<LaunchGeometry>;
-
-    /// Lower a single best launch geometry, or an error if requirements cannot be met.
-    fn lower_geometry(
-        &self,
-        requirements: &GeometryRequirements,
-        problem_elements: u32,
-    ) -> Result<LaunchGeometry, GeometryLoweringError> {
-        self.rank_geometries(requirements, problem_elements)
-            .into_iter()
-            .next()
-            .ok_or_else(|| {
-                GeometryLoweringError::UnsatisfiableRequirements(
-                    "no admitting geometry candidate found for requirements on this target"
-                        .to_string(),
-                )
-            })
     }
 }

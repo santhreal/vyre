@@ -383,14 +383,15 @@ mod tests {
         let _findings = audit_registered_passes();
     }
 
-    /// Passes that legitimately add nodes/instructions in exchange for a
-    /// runtime safety guarantee  -  `autotune` adds bounds-check guards
-    /// around dispatched indices to avoid out-of-range writes when the
-    /// problem size doesn't divide evenly into the workgroup. The added
-    /// branches are NOT a contract violation; they're the pass's contract.
-    /// Other intentional-non-monotone passes belong in this list with
-    /// the same justification line.
-    const COST_INCREASE_EXEMPT: &[&str] = &["autotune"];
+    /// Passes that add nodes or instructions in exchange for a runtime safety
+    /// guarantee.
+    ///
+    /// A pass belongs here with the guarantee it buys named on the same line.
+    /// The list is empty: the one entry was `autotune`, which widened a
+    /// dispatch from adapter limits and emitted a bounds guard to cover the
+    /// tail it created. Selecting a launch width belongs to `vyre-megakernel`,
+    /// so both the widening and the guard it needed are gone.
+    const COST_INCREASE_EXEMPT: &[&str] = &[];
 
     #[test]
     fn audit_finds_zero_cost_monotone_violations_on_built_ins() {

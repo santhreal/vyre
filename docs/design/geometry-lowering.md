@@ -63,9 +63,9 @@ rejects a conflicting declaration.
 
 ### What a backend decides
 
-A `LaunchGeometry` is produced by the backend's lowering strategy from three
-inputs: the operation's requirements, the authenticated target profile, and the
-program's declared element count.
+A `LaunchGeometry` is built by `vyre-megakernel` from three inputs: the
+operation's requirements, the widths the authenticated target profile admits,
+and the program's declared element count.
 
 ```
 LaunchGeometry {
@@ -77,25 +77,34 @@ LaunchGeometry {
 }
 ```
 
-The decision is a function of the profile, so the same program on two devices
-lowers to two geometries and neither is a portable compromise. A geometry that
-the profile does not admit is a compiler defect, not a runtime refusal, and the
-strategy is the only place that can produce one.
+Admissibility is a function of the profile, so the same program on two devices
+admits two width sets and neither is a portable compromise. A backend states
+which widths are legal and never places them in preference order: a second
+order is a second cost model.
 
 ### Where the code lives
 
-`vyre-foundation` owns `GeometryRequirements`, `LaunchGeometry`, and a neutral
-`GeometryStrategy` trait. It contains no device names, no instruction names, and
-no numbers taken from a device.
+`vyre-foundation` defines `GeometryRequirements` and `LaunchGeometry`. It
+contains no device names, no instruction names, and no numbers taken from a
+device, and it selects nothing.
 
-Each concrete backend crate implements the trait and owns its numbers: maximum
+Each concrete backend crate reports its own numbers as facts: maximum
 invocations per workgroup, shared memory per workgroup, register file per
 invocation, subgroup size, asynchronous copy depth, and whatever dual-issue or
-matrix-instruction constraint the target has. A shared crate never learns a
-concrete limit, and a backend never raises a profile limit to admit a geometry.
+matrix-instruction constraint the target has.
+`vyre_driver::DeviceProfile::admissible_workgroup_widths` returns every
+workgroup width the profile admits for one requirement set, ascending, and an
+empty list when no width satisfies it. A shared crate never learns a concrete
+limit, and a backend never raises a profile limit to admit a geometry.
 
-`vyre-libs` and `vyre-primitives` stop declaring geometry and declare
-requirements instead.
+`vyre-megakernel` is the single schedule-selection owner. It receives admitted
+widths as facts, builds the candidate geometries, and orders them under the
+compile objective. The `schedule-ownership` gate rejects a second route.
+
+`vyre-libs` and `vyre-primitives` declare requirements. A cooperative block
+whose width is load-bearing for the algorithm is a semantic width, declared
+through the one target-neutral portable extent rather than a crate-local
+constant.
 
 Every operation registration selects an explicitly unconstrained constructor or
 records stronger requirements with `with_geometry_requirements`. The registry
@@ -133,15 +142,14 @@ leaves the rest of the input unreduced.
 
 ### Search
 
-Geometry becomes a ranked dimension. The lowering strategy returns candidate
-geometries in preference order rather than one answer, and the existing plan
-search compiles and measures the top candidates. Ranking is by the strategy's
-own model of the target, so the search explores a real space and the measurement
-picks the winner rather than confirming the only option.
+Geometry is a ranked dimension in `vyre-megakernel`. Candidates are built from
+the widths the profile admits and ordered by the compile objective; measurement
+decides between the leading candidates when the search budget allows it. A
+backend contributes legality and measurement, never an order.
 
-A candidate that measures slower than the preference order predicted is
-recorded, because a strategy whose ranking never disagrees with the device is a
-strategy nobody has validated.
+A candidate that measures slower than the objective predicted is recorded,
+because a cost model whose ranking never disagrees with the device is a cost
+model nobody has validated.
 
 ## Migration
 
@@ -151,30 +159,30 @@ a converted operation must produce byte-identical reference output, and its
 emitted kernel must stay byte-exact on each backend within the documented window
 for its element type.
 
-`PORTABLE_WORKGROUP_INVOCATIONS` disappears at the end of this work. It exists
-because there was nowhere else to make the decision. A portable floor is the
-right answer only while the compiler cannot choose, and after this change it
-would be a second owner of a decision that has one.
+`vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS` is the one target-neutral
+extent an operation may read when its cooperative block width is semantics. A
+crate-local geometry constant is rejected by a gate; a second portable floor
+would be a second definition of a width that has one.
 
 ## Acceptance criteria
 
-- `GeometryRequirements`, `LaunchGeometry` and the `GeometryStrategy` trait
-  exist in `vyre-foundation` with no concrete device number in any of them.
-- Each backend crate implements the trait from its authenticated profile, and
+- `GeometryRequirements` and `LaunchGeometry` exist in `vyre-foundation` with no
+  concrete device number in either of them and no selection API beside them.
+- Each backend crate reports admitted widths from its authenticated profile, and
   the numbers appear only there.
 - No operation in `vyre-libs` or `vyre-primitives` names an invocation count, a
   tile size, an elements-per-invocation constant, or a stage count. A gate
   refuses one, proved red by reintroducing a workgroup constant into an
   operation.
-- The strategy returns ranked candidates and the plan search measures more than
-  one, demonstrated by a recorded search whose winner is not the first ranked
-  candidate for at least one operation.
+- `vyre-megakernel` orders the admitted candidates and the plan search measures
+  more than one, demonstrated by a recorded search whose winner is not the first
+  ranked candidate for at least one operation.
 - `multi_block_prefix_scan` runs at the width its target admits: 1024 where the
   profile allows it, 256 where it does not, from one program with no constant on
   either side. The measured dispatch time at both widths is recorded, and if the
   wider block is not faster the ranking says so rather than the source.
-- `PORTABLE_WORKGROUP_INVOCATIONS` is deleted, with every caller converted in
-  the same change.
+- No operation defines a crate-local geometry constant, and the single portable
+  extent has exactly one definition.
 - Reference parity is unchanged for every converted operation, and every
   backend's emitted-kernel golden that moves is regenerated by this change with
   the reason stated.

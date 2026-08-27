@@ -11,9 +11,68 @@
 //! present a state the search could not select.
 
 use vyre_foundation::schedule::{
-    MappingLevel, PipelineRole, PipelineRoleGroup, ScheduleAxis, SchedulePhaseId,
-    ScheduleTransform, SelectedSchedule, SynchronizationScope,
+    MappingLevel, PipelineRole, PipelineRoleGroup, ScheduleAxis, SchedulePhase, SchedulePhaseId,
+    ScheduleResourceBounds, ScheduleTransform, SelectedSchedule, SynchronizationScope,
+    SCHEDULE_IR_VERSION,
 };
+
+/// The baseline schedule selection derives for a validated logical graph.
+///
+/// A suite that lowers a real program needs the phases, extents and order that
+/// program states, which only the compiler's own baseline carries. Delegating
+/// keeps one definition of that shape instead of a harness copy that drifts.
+#[cfg(feature = "semantic-requests")]
+#[must_use]
+pub fn baseline(logical: &vyre_foundation::logical::LogicalProgramGraph<'_>) -> SelectedSchedule {
+    vyre_megakernel::baseline_schedule(logical)
+}
+
+/// A phase per region, one thread wide, with no axes and no dependencies.
+///
+/// A planner fixture needs a schedule of a stated size and nothing else: the
+/// regions it phases have no extents to map and no order to keep. Selection
+/// derives its own baseline from a validated logical graph, so this shape is a
+/// harness input and never reaches a compile.
+#[must_use]
+pub fn synthetic(region_count: usize) -> SelectedSchedule {
+    let phases = (0..region_count)
+        .map(|index| {
+            let region = u32::try_from(index).unwrap_or(u32::MAX);
+            SchedulePhase {
+                id: SchedulePhaseId(region),
+                source_regions: vec![region],
+                axes: Vec::new(),
+                grid: [1, 1, 1],
+                workgroup: [1, 1, 1],
+                vector_width: 1,
+                mappings: Vec::new(),
+                predecessors: Vec::new(),
+                resources: ScheduleResourceBounds {
+                    logical_points: 1,
+                    ..ScheduleResourceBounds::default()
+                },
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut source = Vec::with_capacity(8);
+    source.extend_from_slice(&(region_count as u64).to_le_bytes());
+    let points = region_count as u64;
+    SelectedSchedule {
+        version: SCHEDULE_IR_VERSION,
+        logical_identity: *blake3::hash(&source).as_bytes(),
+        source_phases: phases.clone(),
+        source_resources: ScheduleResourceBounds {
+            logical_points: points,
+            ..ScheduleResourceBounds::default()
+        },
+        phases,
+        transforms: Vec::new(),
+        resources: ScheduleResourceBounds {
+            logical_points: points,
+            ..ScheduleResourceBounds::default()
+        },
+    }
+}
 
 /// A two-phase schedule whose first phase runs as a three-slot pipeline.
 ///
@@ -27,7 +86,7 @@ use vyre_foundation::schedule::{
 /// is a changed contract rather than a broken fixture.
 #[must_use]
 pub fn mapped_pipelined_two_phase() -> SelectedSchedule {
-    let mut schedule = SelectedSchedule::synthetic(2);
+    let mut schedule = synthetic(2);
     // The synthetic baseline carries no axes, and only an axis the phase
     // declares can be mapped.
     let axis = ScheduleAxis {

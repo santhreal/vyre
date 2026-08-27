@@ -503,18 +503,6 @@ pub(super) const SHIPPED_CONTRACTS: &[RewriteContract] = &[
         NonGrowing,
     ),
     contract(
-        "autotune",
-        Schedule,
-        &[],
-        &[],
-        BitExact,
-        Structural(
-            "the pass selects among schedule alternatives the target admits and changes no statement's value",
-        ),
-        &[RaisesOccupancy],
-        NodeFactor(2),
-    ),
-    contract(
         "barrier_coalesce",
         Schedule,
         &[],

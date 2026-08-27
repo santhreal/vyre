@@ -571,7 +571,6 @@ mod tests {
 
     fn tune(unroll: u32) -> AutotuneRecord {
         AutotuneRecord {
-            workgroup_size: [64, 1, 1],
             unroll,
             tile: [0, 0, 0],
             recorded_at: String::new(),

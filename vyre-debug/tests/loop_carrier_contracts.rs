@@ -4,7 +4,6 @@ use vyre_debug::fixtures::loop_carry_smoke;
 use vyre_debug::{carrier_summary, find_uncarriered_assigns};
 use vyre_foundation::ir::{Expr, Node, Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
-use vyre_foundation::schedule::SelectedSchedule;
 
 #[path = "program_fixtures/mod.rs"]
 mod program_fixtures;
@@ -14,7 +13,7 @@ fn lower_library_program(program: &Program) -> vyre_lower::KernelDescriptor {
         .expect("library fixture must form a valid graph");
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .expect("library fixture must have a valid logical domain");
-    let schedule = SelectedSchedule::from_logical(&logical);
+    let schedule = vyre_megakernel::baseline_schedule(&logical);
     let phase = schedule.phases[0].id;
     vyre_lower::lower_scheduled(program, &schedule, phase)
         .expect("library fixture must lower through its selected schedule")

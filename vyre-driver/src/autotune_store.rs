@@ -1,24 +1,25 @@
-//! Persistent autotuning record store.
+//! Persistent measured-variant store.
 //!
-//! The in-process [`crate::tuner`] and the
-//! `vyre-foundation` autotune pass already pick a workgroup, unroll
-//! depth, and tile shape per program/adapter pair. Without persistence
-//! that decision is recomputed every cold start. This module gives
-//! every backend a small TOML-backed dictionary keyed by
-//! `(SpecCacheKey hash, adapter_id)` so a record from yesterday's run
-//! survives today's process boot.
+//! A variant race times two specialization variants against each other, and
+//! this module keeps the winning variant's measured shape facts in a small
+//! TOML-backed dictionary keyed by `(SpecCacheKey hash, adapter_id)` so
+//! evidence from yesterday's run survives today's process boot.
+//!
+//! A record is evidence, never a launch decision. `vyre-megakernel` selects
+//! every schedule and the artifact states the geometry it authorized, so the
+//! launch width lives in the `SpecCacheKey` the variant was compiled under and
+//! not in a record that would outlive that artifact.
 //!
 //! ## Format
 //!
 //! On disk the store is one TOML file:
 //!
 //! ```toml
-//! schema = 1
+//! schema = 2
 //!
 //! [[record]]
 //! key = "0123456789abcdef0123456789abcdef"   # 32-hex of (key.spec_hash ^ key.shader_hash, adapter_id)
 //! adapter = "portable-adapter-0"
-//! workgroup_size = [128, 1, 1]
 //! unroll = 4
 //! tile = [16, 16, 1]
 //! recorded_at = "2026-05-02"
@@ -44,16 +45,13 @@ use crate::specialization::SpecCacheKey;
 
 const MAX_AUTOTUNE_STORE_BYTES: u64 = 4 * 1024 * 1024;
 
-/// One cached autotune decision. The fields mirror what the
-/// `Autotune` pass picks per dispatch shape.
+/// Measured shape facts of one specialization variant.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AutotuneRecord {
-    /// Workgroup launch dimensions selected by the tuner.
-    pub workgroup_size: [u32; 3],
-    /// Loop-unroll depth the tuner chose for the inner kernel body.
+    /// Loop-unroll depth the measured variant was compiled at.
     pub unroll: u32,
-    /// Output-tile shape the tuner chose, or `[0, 0, 0]` when the
-    /// kernel is not tile-shaped.
+    /// Output-tile shape the measured variant was compiled at, or
+    /// `[0, 0, 0]` when the kernel is not tile-shaped.
     pub tile: [u32; 3],
     /// When the record was first written, in `YYYY-MM-DD`. Optional  -
     /// older TOML files may omit it.
@@ -119,6 +117,18 @@ impl AutotuneStore {
         let bytes = read_autotune_store_bounded(path)?;
         let parsed: PersistentStore = toml::from_str(&bytes)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        if parsed.schema != SCHEMA_VERSION {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!(
+                    "autotune store at {} declares schema {} and this build reads schema \
+                     {SCHEMA_VERSION}. Fix: delete the file and let the next measured race \
+                     rewrite it.",
+                    path.display(),
+                    parsed.schema
+                ),
+            ));
+        }
         let mut store = Self::default();
         for entry in parsed.record {
             let key = AutotuneKey {
@@ -129,7 +139,6 @@ impl AutotuneStore {
             store.records.insert(
                 key,
                 AutotuneRecord {
-                    workgroup_size: entry.workgroup_size,
                     unroll: entry.unroll,
                     tile: entry.tile,
                     recorded_at: entry.recorded_at,
@@ -193,7 +202,6 @@ impl AutotuneStore {
             entries.push(PersistentEntry {
                 key: key.key_hex.clone(),
                 adapter: key.adapter_id.clone(),
-                workgroup_size: record.workgroup_size,
                 unroll: record.unroll,
                 tile: record.tile,
                 recorded_at: record.recorded_at.clone(),
@@ -263,7 +271,7 @@ fn read_autotune_store_bounded(path: &Path) -> std::io::Result<String> {
     Ok(text)
 }
 
-const SCHEMA_VERSION: u32 = 1;
+const SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PersistentStore {
@@ -277,7 +285,6 @@ struct PersistentStore {
 struct PersistentEntry {
     key: String,
     adapter: String,
-    workgroup_size: [u32; 3],
     unroll: u32,
     tile: [u32; 3],
     #[serde(default)]

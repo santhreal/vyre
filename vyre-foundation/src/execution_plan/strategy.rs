@@ -1,4 +1,4 @@
-use super::{AccuracyPlan, AutotunePlan, FusionPlan, MemoryPlan, ProvenancePlan, SchedulingPolicy};
+use super::{AccuracyPlan, AutotunePlan, FusionPlan, MemoryPlan, ProvenancePlan};
 
 /// Strategy for whole-program fusion.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -116,18 +116,16 @@ impl StrategyPlan {
         accuracy: &AccuracyPlan,
         autotune: &AutotunePlan,
     ) -> Self {
-        let policy = SchedulingPolicy::standard();
         Self {
             fusion: if fusion.batch_fusion_candidate {
                 FusionStrategy::Candidate
             } else {
                 FusionStrategy::Isolated
             },
-            dispatch: if policy.use_persistent_runtime(fusion.node_count) {
-                DispatchStrategy::PersistentRuntime
-            } else {
-                DispatchStrategy::CompiledPipeline
-            },
+            // Every production compile emits a megakernel artifact and the
+            // artifact's schedule states the mode, so the plan reports the
+            // dispatch it will be executed under rather than picking one.
+            dispatch: DispatchStrategy::PersistentRuntime,
             conformance: if accuracy.exhaustive_conformance_required {
                 ConformanceStrength::Exhaustive
             } else {
@@ -206,10 +204,6 @@ mod tests {
         AutotunePlan {
             recommended: false,
             parallel_region_size: [1, 1, 1],
-            recommended_workgroup_size: [1, 1, 1],
-            recommended_tile: [1, 1, 1],
-            recommended_vector_pack_bits: 32,
-            recommended_unroll_depth: 1,
             reason: "none",
         }
     }

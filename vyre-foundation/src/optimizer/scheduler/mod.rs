@@ -43,8 +43,8 @@ pub struct PassScheduler {
     /// which states "no adapter was supplied" at the place that decided it.
     /// The passes themselves must not choose: a pass that picks a profile
     /// inside its own `transform` compiles for a device nobody named, which
-    /// is what `decode_scan_fuse` and `autotune` did for every program that
-    /// ever went through the standard pipeline.
+    /// is what `decode_scan_fuse` did for every program that ever went through
+    /// the standard pipeline.
     adapter: AdapterCaps,
     invalidation_adjacency_cache: OnceLock<Vec<u32>>,
     invalidation_closure_cache: OnceLock<FxHashMap<&'static str, FxHashSet<&'static str>>>,

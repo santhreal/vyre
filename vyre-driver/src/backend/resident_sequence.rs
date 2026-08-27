@@ -128,16 +128,6 @@ where
     Ok(())
 }
 
-impl vyre_foundation::GeometryStrategy for dyn VyreBackend {
-    fn rank_geometries(
-        &self,
-        requirements: &vyre_foundation::GeometryRequirements,
-        problem_elements: u32,
-    ) -> Vec<vyre_foundation::LaunchGeometry> {
-        self.device_profile()
-            .rank_geometries(requirements, problem_elements)
-    }
-}
 /// The launch configuration one resident step is dispatched with.
 ///
 /// A step carries one whole launch or none; nothing else from the caller's

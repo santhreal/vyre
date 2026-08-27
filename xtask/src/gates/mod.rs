@@ -78,6 +78,7 @@ pub mod public_api;
 pub mod public_api_paths;
 pub mod repo_hygiene;
 pub mod scan;
+pub mod schedule_ownership;
 pub mod script_ledger;
 pub mod shader_source;
 pub mod source_reachability;
@@ -188,6 +189,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("public-api-paths", &public_api_paths::PublicApiPaths),
     ("repo-hygiene", &repo_hygiene::RepoHygiene),
     ("single-backlog", &repo_hygiene::SingleBacklog),
+    ("schedule-ownership", &schedule_ownership::ScheduleOwnership),
     ("script-ledger", &script_ledger::ScriptLedger),
     ("shader-source", &shader_source::ShaderSource),
     (

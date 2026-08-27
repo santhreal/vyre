@@ -71,14 +71,15 @@ pub(crate) struct CandidatePlan {
 }
 
 impl CandidatePlan {
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn baseline(node_count: usize) -> Self {
-        Self::baseline_with_schedule(SelectedSchedule::synthetic(node_count))
+        Self::baseline_with_schedule(vyre_test_support::selected_schedules::synthetic(node_count))
     }
 
     #[must_use]
     pub(crate) fn baseline_for(logical: &LogicalProgramGraph<'_>) -> Self {
-        Self::baseline_with_schedule(SelectedSchedule::from_logical(logical))
+        Self::baseline_with_schedule(crate::baseline::baseline_schedule(logical))
     }
 
     fn baseline_with_schedule(schedule: SelectedSchedule) -> Self {
@@ -96,8 +97,30 @@ impl CandidatePlan {
         }
     }
 
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn from_edges(node_count: usize, edges: &[DataflowEdge]) -> Self {
+        let (node_groups, fused_edges) = Self::groups_from_edges(node_count, edges);
+        let (schedule, schedule_error) = schedule_for_groups(
+            vyre_test_support::selected_schedules::synthetic(node_count),
+            &node_groups,
+        );
+        Self {
+            node_groups,
+            fused_edges,
+            derivation: Vec::new(),
+            workgroup_width: None,
+            topology: ExecutionTopology::Sequential,
+            schedule,
+            schedule_error,
+        }
+    }
+
+    /// Group nodes that one fused edge set joins, and the edges in stable order.
+    fn groups_from_edges(
+        node_count: usize,
+        edges: &[DataflowEdge],
+    ) -> (Vec<u32>, Vec<DataflowEdge>) {
         let mut parent: Vec<usize> = (0..node_count).collect();
         for edge in edges {
             let from = edge.from.0 as usize;
@@ -130,8 +153,18 @@ impl CandidatePlan {
         let mut fused_edges = edges.to_vec();
         fused_edges.sort_by_key(|edge| (edge.from, edge.to, edge.value));
         fused_edges.dedup();
+        (node_groups, fused_edges)
+    }
+
+    #[must_use]
+    pub(crate) fn from_edges_for(
+        logical: &LogicalProgramGraph<'_>,
+        edges: &[DataflowEdge],
+    ) -> Self {
+        let (node_groups, fused_edges) =
+            Self::groups_from_edges(logical.graph().nodes().len(), edges);
         let (schedule, schedule_error) =
-            schedule_for_groups(SelectedSchedule::synthetic(node_count), &node_groups);
+            schedule_for_groups(crate::baseline::baseline_schedule(logical), &node_groups);
         Self {
             node_groups,
             fused_edges,
@@ -141,21 +174,6 @@ impl CandidatePlan {
             schedule,
             schedule_error,
         }
-    }
-
-    #[must_use]
-    pub(crate) fn from_edges_for(
-        logical: &LogicalProgramGraph<'_>,
-        edges: &[DataflowEdge],
-    ) -> Self {
-        let mut candidate = Self::from_edges(logical.graph().nodes().len(), edges);
-        let (schedule, schedule_error) = schedule_for_groups(
-            SelectedSchedule::from_logical(logical),
-            &candidate.node_groups,
-        );
-        candidate.schedule = schedule;
-        candidate.schedule_error = schedule_error;
-        candidate
     }
 
     /// Same grouping launched at `width` instead of the declared widths.

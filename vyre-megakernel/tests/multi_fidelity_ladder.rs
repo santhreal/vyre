@@ -15,10 +15,9 @@ use std::sync::Mutex;
 
 use vyre_megakernel::measure::{DeviceState, MeasurementProtocol, MeasurementRecord};
 use vyre_megakernel::{
-    compile_measured, compile_selected_modules, Artifact, CompileObjective, CompileRequest,
-    DeviceFacts, EmittedResources, EmittedTargetModule, FinalistEvaluator, ObjectiveMetric,
-    PlanMeasurement, PruneReason, SearchBudget, TargetCompileError, TargetCompiler, TargetPayload,
-    TargetPayloadFormat, TargetProfile,
+    compile_measured, compile_selected_modules, Artifact, DeviceFacts, EmittedResources,
+    EmittedTargetModule, FinalistEvaluator, PlanMeasurement, PruneReason, SearchBudget,
+    TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat, TargetProfile,
 };
 
 #[path = "support/search_fixtures.rs"]

@@ -251,7 +251,6 @@ fn registered_passes_includes_builtins() {
         .expect("Fix: registered_passes should succeed; restore this invariant before continuing.");
     assert!(passes.len() >= 19, "at least 19 builtin passes");
     let names: Vec<_> = passes.iter().map(|p| p.metadata().name).collect();
-    assert!(names.contains(&"autotune"));
     assert!(names.contains(&"buffer_decl_sort"));
     assert!(names.contains(&"canonicalize"));
     assert!(names.contains(&"const_fold"));

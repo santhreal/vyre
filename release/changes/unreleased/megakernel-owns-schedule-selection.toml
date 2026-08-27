@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-megakernel` is the only crate that selects a schedule: the foundation scheduling policy no longer ranks workgroup widths or tiles against adapter capabilities, and what remains of it answers launch legality and resident-ring arithmetic."

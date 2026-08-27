@@ -245,15 +245,14 @@ fn speculation_sample(
         speculative_dispatch_ns,
         conservative_compile_ns: 0,
         speculative_compile_ns,
-        conservative_record: autotune_record(64),
-        speculative_record: autotune_record(128),
+        conservative_record: autotune_record(1),
+        speculative_record: autotune_record(4),
     }
 }
 
-fn autotune_record(workgroup: u32) -> AutotuneRecord {
+fn autotune_record(unroll: u32) -> AutotuneRecord {
     AutotuneRecord {
-        workgroup_size: [workgroup, 1, 1],
-        unroll: 1,
+        unroll,
         tile: [0, 0, 0],
         recorded_at: "2026-05-05".to_string(),
     }

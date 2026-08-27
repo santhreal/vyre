@@ -3,7 +3,6 @@ use std::hash::BuildHasherDefault;
 #[cfg(feature = "device-tests")]
 use std::sync::Arc;
 
-use vyre_driver::tuner::Mode;
 use vyre_driver::validation::LaunchGeometryLimits;
 #[cfg(feature = "device-tests")]
 use vyre_driver::BackendError;
@@ -309,8 +308,13 @@ mod layout_config_contracts {
         assert_eq!(layouts[0].layout.copy_size, 8);
     }
 
+    /// WHY: no driver picks a block width. An untracked launch runs at the
+    /// width its program declares, and the only reason the dispatch carries an
+    /// override is a grid the target refuses. A width chosen here would be a
+    /// second cost model and would launch a shape the WGSL module never
+    /// declared.
     #[test]
-    fn wgpu_compile_config_receives_natural_gradient_workgroup_before_lowering() {
+    fn wgpu_compile_config_keeps_the_declared_workgroup_when_the_grid_fits() {
         let program = Program::wrapped(
             vec![BufferDecl::output("out", 0, DataType::U32).with_count(4096)],
             [32, 1, 1],
@@ -328,20 +332,52 @@ mod layout_config_contracts {
             &program,
             &DispatchConfig::default(),
             limits,
-            Mode::NaturalGradient,
             LaunchGeometry::Untracked,
         )
-        .expect("Fix: WGPU natural-gradient config derivation must be pure and valid");
+        .expect("Fix: WGPU launch config derivation must be pure and valid");
+
+        assert_eq!(
+            effective.workgroup_override, None,
+            "Fix: a legal declared width is launched as declared; report the device limit as a fact and let vyre-megakernel select a width."
+        );
+    }
+
+    /// WHY: widening is legality arithmetic, not ranking. A launch whose
+    /// inferred grid exceeds the per-axis ceiling cannot run at all, so the
+    /// width rises to the smallest power of two that clears the ceiling and no
+    /// further.
+    #[test]
+    fn wgpu_compile_config_widens_only_into_the_grid_ceiling() {
+        let program = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(4096)],
+            [32, 1, 1],
+            vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
+        );
+        let limits = LaunchGeometryLimits {
+            backend: "wgpu-test",
+            max_threads_per_block: 1024,
+            max_block_dim: [1024, 1024, 64],
+            max_grid_dim: [64, 64, 64],
+            max_threads_per_sm: 0,
+        };
+
+        let effective = wgpu_effective_dispatch_config_for_limits(
+            &program,
+            &DispatchConfig::default(),
+            limits,
+            LaunchGeometry::Untracked,
+        )
+        .expect("Fix: WGPU launch config derivation must be pure and valid");
 
         assert_eq!(
             effective.workgroup_override,
-            Some([1024, 1, 1]),
-            "Fix: WGPU lowering config must include the natural-gradient workgroup so WGSL @workgroup_size and dispatch metadata agree. WebGPU reports no per-compute-unit thread budget (max_threads_per_sm 0), so residency-aware cold start is inert here and this width is unchanged by it."
+            Some([64, 1, 1]),
+            "Fix: 4096 lanes in blocks of 32 ask for 128 workgroups against a ceiling of 64, so the width clears the ceiling at 64."
         );
     }
 
     #[test]
-    fn wgpu_natural_gradient_compile_config_preserves_semantic_safety_gates() {
+    fn wgpu_compile_config_preserves_semantic_safety_gates() {
         let program = Program::wrapped(
             vec![
                 BufferDecl::output("out", 0, DataType::U32).with_count(4096),
@@ -364,7 +400,6 @@ mod layout_config_contracts {
             &program,
             &explicit,
             limits,
-            Mode::NaturalGradient,
             LaunchGeometry::Untracked,
         )
         .expect("Fix: explicit WGPU workgroup override must stay valid");
@@ -374,7 +409,6 @@ mod layout_config_contracts {
             &program,
             &DispatchConfig::default(),
             limits,
-            Mode::NaturalGradient,
             LaunchGeometry::Untracked,
         )
         .expect("Fix: shared-memory WGPU config should remain valid without autotuning");
@@ -411,7 +445,6 @@ mod layout_config_contracts {
                 &program,
                 &config,
                 limits,
-                Mode::NaturalGradient,
                 LaunchGeometry::Compiled([64, 1, 1]),
             )
             .expect("Fix: a recorded compiled geometry must resolve without error");

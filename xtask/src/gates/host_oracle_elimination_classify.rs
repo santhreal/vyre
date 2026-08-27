@@ -315,7 +315,7 @@ pub(super) fn is_dispatch_sizing_or_validator(sig: &syn::Signature) -> bool {
         || fn_name == "split_ifds_rule_triples_into"
         || fn_name == "split_ifds_rule_quads_into"
         || fn_name == "canonicalize_csr_within_rows_in_place"
-        || fn_name == "rank_geometries"
+        || fn_name == "admissible_workgroup_widths"
         || fn_name == "dispatch_resident_timed"
         || fn_name == "should_split_grid_sync"
         || fn_name == "contains_grid_sync"

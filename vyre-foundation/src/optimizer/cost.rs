@@ -126,12 +126,20 @@ impl CostCertificate {
     }
 
     /// Compute a device-aware estimate from this certificate.
+    ///
+    /// The tile is an input: this projects the cost of a shape someone else
+    /// selected. It used to rank a tile against the adapter here, which made
+    /// every cost query a second selector answering a question
+    /// `vyre-megakernel` owns.
     #[must_use]
-    pub fn estimate_for_adapter(&self, caps: &AdapterCaps) -> DeviceCostEstimate {
+    pub fn estimate_for_adapter(
+        &self,
+        caps: &AdapterCaps,
+        workgroup_tile: [u32; 3],
+    ) -> DeviceCostEstimate {
         let policy = crate::execution_plan::SchedulingPolicy::standard();
         let vector_pack_bits = policy.select_vector_pack_bits(32, caps);
         let unroll_depth = policy.select_unroll_depth(None, caps);
-        let workgroup_tile = policy.select_workgroup_tile([1, 1, 1], None, caps);
         let vector_divisor = u64::from((vector_pack_bits / 32).max(1));
         let unroll_divisor = u64::from(unroll_depth.max(1));
         let tile_lanes = u64::from(
@@ -157,10 +165,10 @@ impl CostCertificate {
         }
     }
 
-    /// Compute a device-aware estimate for `program`.
+    /// Compute a device-aware estimate for `program` at its declared shape.
     #[must_use]
     pub fn for_program_on_adapter(program: &Program, caps: &AdapterCaps) -> DeviceCostEstimate {
-        Self::for_program(program).estimate_for_adapter(caps)
+        Self::for_program(program).estimate_for_adapter(caps, program.parallel_region_size())
     }
 
     /// Returns `true` when `self` is cost-monotone-down relative to `other`:

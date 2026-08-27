@@ -4,7 +4,7 @@
 //! idempotent) is the load-bearing pre-lowering normalization. Wrapping
 //! it as a `ProgramPass` puts it on the same scheduler / invalidates / requires
 //! substrate as ``const_fold`` / `fusion` / `dead_buffer_elim` /
-//! `normalize_atomics` / ``strength_reduce`` / `autotune` / `spec_driven`.
+//! `normalize_atomics` / ``strength_reduce`` / `spec_driven`.
 //! The free [`canonicalize_engine::run`] / [`canonicalize_engine::run_borrowed`]
 //! entry points stay available for hot paths (e.g. pipeline fingerprinting)
 //! that need the canonical form without running the full pass scheduler.
