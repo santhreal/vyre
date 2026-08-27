@@ -24,6 +24,20 @@ const TEMPORARY_ROOTS: &[&str] = &["temp_dir", "tempdir", "TempDir", "tempfile"]
 /// Markers for a function that writes the tree it later reads.
 const TREE_WRITERS: &[&str] = &["fs::write", "create_dir_all"];
 
+/// Calls that inspect source text without a string method.
+///
+/// Handing the text to a parser is the same inspection as searching it: the
+/// parsers here exist for no other purpose, and a test that reads a `.rs` file
+/// and passes it to one used to escape classification entirely because it never
+/// called `contains` itself.
+const SOURCE_TEXT_PARSERS: &[&str] = &[
+    "braced_body(",
+    "top_level_variant_names(",
+    "declared_level_variants(",
+    "parse_file(",
+    "parse_str(",
+];
+
 /// Whether `tokens` reads Rust source out of a root the checkout resolved.
 ///
 /// A resolver and a Rust path anywhere in one function is not enough. A test
@@ -292,6 +306,7 @@ impl SourceInspectionFunctionCollector {
             ".ends_with(",
         ]
         .iter()
+        .chain(SOURCE_TEXT_PARSERS.iter())
         .any(|needle| tokens.contains(needle));
         if !is_test && facts.calls_read_to_string && facts.mentions_rust_path {
             facts.reads_rust_source = true;

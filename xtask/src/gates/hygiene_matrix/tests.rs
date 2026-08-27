@@ -443,6 +443,33 @@ fn source_inspection_test_scanner_is_syntax_aware_and_fail_closed() {
     assert!(findings.is_empty());
 }
 
+/// WHY: text inspection was detected only through five string methods, so a
+/// test that read a `.rs` file and handed the text to a parser was classified as
+/// inspecting nothing. Three declared rows in `STRUCTURAL_GATES.toml` were
+/// reported stale on that account while the tests they name still read source.
+/// Delegating the parse is the same inspection as searching the text.
+#[test]
+fn source_inspection_is_detected_when_the_parse_is_delegated() {
+    let delegated = r#"
+            #[test]
+            fn every_declared_variant_is_listed() {
+                let source = std::fs::read_to_string(root().join("objective/metric.rs")).unwrap();
+                let body = vyre_test_support::braced_body(&source, DECLARATION).unwrap();
+                assert_eq!(vyre_test_support::top_level_variant_names(body).len(), 9);
+            }
+        "#;
+    let mut findings = Vec::new();
+    scan_source_inspection_tests(
+        Path::new("driver/tests/objective.rs"),
+        delegated,
+        &mut findings,
+    );
+    assert_eq!(findings.len(), 1, "a delegated parse is source inspection");
+    assert!(findings[0]
+        .text
+        .contains("every_declared_variant_is_listed"));
+}
+
 /// WHY: the rule condemns a test that reads this checkout's source instead of
 /// asserting behavior. A test that WRITES a source tree in a temporary
 /// directory and runs the analyzer over it is asserting behavior, and the
