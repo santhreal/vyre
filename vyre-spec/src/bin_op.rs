@@ -45,6 +45,27 @@ pub enum BinOpResult {
     Extension,
 }
 
+/// What swapping an operator's operands does to its result.
+///
+/// Operand order is asked about by the canonical wire form, the canonicalize
+/// pass, and common-subexpression keying, and each one used to carry its own
+/// operator list. The three lists disagreed: the wire form normalized `min(b, a)`
+/// while the pass and the subexpression key did not, and a new operator landed in
+/// none of them. [`BinOp::operand_swap`] is the one exhaustive answer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
+pub enum OperandSwap {
+    /// Swapping changes the result. The operator is ordered.
+    Ordered,
+    /// Swapping preserves the computed value, and may change the bits some
+    /// element type produces: floating-point `Add` and `Mul` carry the NaN
+    /// payload of whichever operand arrived first, and `Min` and `Max` apply the
+    /// NaN rule of the device they lower to.
+    ValuePreserving,
+    /// Swapping preserves the exact bits for every element type the operator
+    /// accepts.
+    BitPreserving,
+}
+
 /// Binary operation kind in the frozen data contract.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
 #[non_exhaustive]
@@ -241,5 +262,65 @@ impl BinOp {
     #[must_use]
     pub const fn takes_numeric_operands(self) -> bool {
         matches!(self.result_class(), BinOpResult::Numeric) || matches!(self, Self::AbsDiff)
+    }
+
+    /// What swapping this operator's operands does to its result.
+    ///
+    /// Exhaustive with no catch-all arm, for the reason
+    /// [`Self::result_class`] states: `BinOp` is `#[non_exhaustive]`, so a
+    /// consumer outside this crate cannot write the match, and every consumer
+    /// that wrote its own operator list ended up disagreeing with the others.
+    /// Adding a variant is a compile error here instead.
+    #[must_use]
+    pub const fn operand_swap(self) -> OperandSwap {
+        match self {
+            // Integer and boolean operators whose swap is exact.
+            Self::WrappingAdd
+            | Self::SaturatingAdd
+            | Self::SaturatingMul
+            | Self::BitAnd
+            | Self::BitOr
+            | Self::BitXor
+            | Self::Eq
+            | Self::Ne
+            | Self::And
+            | Self::Or
+            | Self::AbsDiff
+            | Self::MulHigh => OperandSwap::BitPreserving,
+            // Same value on every input, different bits on some float input.
+            Self::Add | Self::Mul | Self::Min | Self::Max => OperandSwap::ValuePreserving,
+            Self::Sub
+            | Self::Div
+            | Self::Mod
+            | Self::WrappingSub
+            | Self::SaturatingSub
+            | Self::Shl
+            | Self::Shr
+            | Self::Lt
+            | Self::Gt
+            | Self::Le
+            | Self::Ge
+            | Self::RotateLeft
+            | Self::RotateRight
+            | Self::Shuffle
+            | Self::Ballot
+            | Self::WaveReduce
+            | Self::WaveBroadcast => OperandSwap::Ordered,
+            // An extension declares its own semantics, so no law is derived.
+            Self::Opaque(_) => OperandSwap::Ordered,
+        }
+    }
+
+    /// True when swapping the operands preserves the computed value.
+    #[must_use]
+    pub const fn commutes(self) -> bool {
+        !matches!(self.operand_swap(), OperandSwap::Ordered)
+    }
+
+    /// True when swapping the operands preserves the exact bits for every
+    /// element type the operator accepts.
+    #[must_use]
+    pub const fn commutes_bit_exactly(self) -> bool {
+        matches!(self.operand_swap(), OperandSwap::BitPreserving)
     }
 }

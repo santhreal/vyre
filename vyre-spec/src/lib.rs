@@ -90,6 +90,9 @@ mod invariant_category;
 /// Catalog of invariants every registered op is checked against.
 /// Specification element.
 mod invariants;
+/// Compiler level a declaration owns.
+/// Specification element.
+mod ir_level;
 /// Known-answer test vector type  -  deterministic input/output pairs.
 /// Specification element.
 mod kat_vector;
@@ -123,6 +126,9 @@ mod pg_node_kind;
 /// Python lexer token ids shared by the GPU lexer program and its host matchers.
 /// Specification element.
 pub mod python_token;
+/// Declarative law families a rewrite may cite.
+/// Specification element.
+mod region_law;
 /// Canonical semiring selector for dataflow and algebraic kernels.
 mod semiring;
 /// Soundness markers and precision contracts for cross-engine analysis data.
@@ -161,7 +167,7 @@ pub use atomic_op::AtomicOp;
 /// See [`bin_op::BinOp`].
 /// Specification element.
 pub use bin_op::BinOp;
-pub use bin_op::{BinOpResult, OpIntensity};
+pub use bin_op::{BinOpResult, OpIntensity, OperandSwap};
 /// See [`buffer_access::BufferAccess`].
 /// Specification element.
 pub use buffer_access::BufferAccess;
@@ -213,6 +219,9 @@ pub use invariant_category::InvariantCategory;
 /// See [`invariants::invariants`].
 /// Specification element.
 pub use invariants::{empty_test_family, invariants};
+/// See [`ir_level::IrLevel`].
+/// Specification element.
+pub use ir_level::IrLevel;
 /// See [`kat_vector::KatVector`].
 /// Specification element.
 pub use kat_vector::KatVector;
@@ -252,6 +261,9 @@ pub use op_signature::SignatureParam;
 /// See [`pg_node_kind::PgNodeKind`].
 /// Specification element.
 pub use pg_node_kind::PgNodeKind;
+/// See [`region_law::RegionLawFamily`].
+/// Specification element.
+pub use region_law::RegionLawFamily;
 /// See [`semiring::Semiring`].
 pub use semiring::Semiring;
 /// See [`subgroup_reduce_op::SubgroupReduceOp`].
