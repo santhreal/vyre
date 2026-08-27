@@ -113,27 +113,41 @@ pub struct LevelInversion {
 /// ordered.
 pub fn level_inversions() -> Result<Vec<LevelInversion>, OptimizerError> {
     let order = derive_registered_pass_order()?;
+    let levelled: Vec<(&'static str, IrLevel)> = order
+        .nodes()
+        .iter()
+        .filter_map(|node| level_of_pass(node.name).map(|level| (node.name, level)))
+        .collect();
+    Ok(inversions_in_order(&levelled))
+}
+
+/// Every place `order` runs a level before a level that precedes it.
+///
+/// `order` is a run order paired with the level each pass declares. The scan
+/// carries the deepest level reached so far, so a pass shallower than anything
+/// already run is reported against the deepest pass that preceded it rather
+/// than against its immediate neighbour: the constructs it must not have read
+/// were introduced by that pass.
+#[must_use]
+pub fn inversions_in_order(order: &[(&'static str, IrLevel)]) -> Vec<LevelInversion> {
     let mut inversions = Vec::new();
     let mut deepest: Option<(&'static str, IrLevel)> = None;
-    for node in order.nodes() {
-        let Some(level) = level_of_pass(node.name) else {
-            continue;
-        };
+    for &(pass, level) in order {
         match deepest {
             Some((earlier, earlier_level)) if level < earlier_level => {
                 inversions.push(LevelInversion {
                     earlier,
                     earlier_level,
-                    later: node.name,
+                    later: pass,
                     later_level: level,
                 });
             }
             Some((_, earlier_level)) if level > earlier_level => {
-                deepest = Some((node.name, level));
+                deepest = Some((pass, level));
             }
             Some(_) => {}
-            None => deepest = Some((node.name, level)),
+            None => deepest = Some((pass, level)),
         }
     }
-    Ok(inversions)
+    inversions
 }

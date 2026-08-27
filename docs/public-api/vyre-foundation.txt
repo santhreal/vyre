@@ -1560,6 +1560,7 @@ pub fn vyre_foundation::optimizer::law_saturation::saturate_laws(mirror: &mut vy
 pub fn vyre_foundation::optimizer::level_pipeline::LevelPipeline::is_empty(&self) -> bool
 pub fn vyre_foundation::optimizer::level_pipeline::LevelPipeline::level(&self) -> vyre_spec::ir_level::IrLevel
 pub fn vyre_foundation::optimizer::level_pipeline::LevelPipeline::passes(&self) -> &[&'static str]
+pub fn vyre_foundation::optimizer::level_pipeline::inversions_in_order(order: &[(&'static str, vyre_spec::ir_level::IrLevel)]) -> alloc::vec::Vec<vyre_foundation::optimizer::level_pipeline::LevelInversion>
 pub fn vyre_foundation::optimizer::level_pipeline::level_inversions() -> core::result::Result<alloc::vec::Vec<vyre_foundation::optimizer::level_pipeline::LevelInversion>, vyre_foundation::optimizer::OptimizerError>
 pub fn vyre_foundation::optimizer::level_pipeline::level_of_pass(pass: &str) -> core::option::Option<vyre_spec::ir_level::IrLevel>
 pub fn vyre_foundation::optimizer::level_pipeline::level_pipelines() -> core::result::Result<alloc::vec::Vec<vyre_foundation::optimizer::level_pipeline::LevelPipeline>, vyre_foundation::optimizer::OptimizerError>

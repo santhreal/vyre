@@ -180,3 +180,48 @@ fn the_scheduled_order_runs_levels_in_order() {
          that orders it before the deeper pass: {inversions:?}"
     );
 }
+
+/// The inversion scan reports a shallower level against the deepest pass that
+/// preceded it.
+///
+/// The live registry is in order, so every assertion about the scan itself is
+/// made against a synthetic order. Without these cases the scan could report
+/// nothing at all and the suite would still pass.
+#[test]
+fn the_inversion_scan_reads_an_arbitrary_order() {
+    use vyre_foundation::optimizer::level_pipeline::inversions_in_order;
+    use vyre_spec::IrLevel::{Logical, PhysicalKernel, Schedule, WholeGraph};
+
+    assert_eq!(
+        inversions_in_order(&[("a", WholeGraph), ("b", Logical), ("c", Schedule)]),
+        Vec::new(),
+        "Fix: a deepening order holds no inversion"
+    );
+
+    let one = inversions_in_order(&[("a", Logical), ("b", Schedule), ("c", Logical)]);
+    assert_eq!(
+        one.len(),
+        1,
+        "Fix: the scan missed a logical pass after a schedule pass: {one:?}"
+    );
+    assert_eq!(one[0].earlier, "b");
+    assert_eq!(one[0].earlier_level, Schedule);
+    assert_eq!(one[0].later, "c");
+    assert_eq!(one[0].later_level, Logical);
+
+    let both = inversions_in_order(&[
+        ("a", Logical),
+        ("b", PhysicalKernel),
+        ("c", Logical),
+        ("d", Schedule),
+    ]);
+    assert_eq!(
+        both.len(),
+        2,
+        "Fix: every pass after the deepest one is reported, not only the first: {both:?}"
+    );
+    assert!(
+        both.iter().all(|inversion| inversion.earlier == "b"),
+        "Fix: an inversion is reported against the deepest pass that preceded it: {both:?}"
+    );
+}

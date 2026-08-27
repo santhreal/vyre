@@ -220,3 +220,47 @@ where
         }
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{level_ranks, schedule_pass_metadata_indices};
+    use crate::optimizer::PassMetadata;
+
+    /// A pass with no declared contract ranks after every level.
+    ///
+    /// Nothing states the level such a pass rewrites, so placing it among the
+    /// levels would order it against a claim nobody made. Every registered pass
+    /// declares a contract, which is why this is stated here rather than
+    /// observed through the registry: `pass_invariants` reports the missing
+    /// contract, and this fixes what the order does until it is declared.
+    #[test]
+    fn a_pass_with_no_contract_ranks_after_every_level() {
+        let levels = vyre_spec::IrLevel::all().len();
+        let unknown = PassMetadata::new("topo_test_pass_with_no_contract", &[], &[]);
+        let declared = PassMetadata::new("canonicalize", &[], &[]);
+        let ranks = level_ranks(&[unknown, declared]);
+        assert_eq!(ranks[0], levels);
+        assert!(
+            ranks[1] < levels,
+            "the canonicalize pass declares a level, so its rank is one of them"
+        );
+    }
+
+    /// A ready pass at an earlier level is scheduled before a deeper one
+    /// whatever the names say.
+    #[test]
+    fn the_tie_break_prefers_the_earlier_level() {
+        // `atomic_minimize` declares the schedule level and sorts first by name;
+        // `canonicalize` declares the logical level and sorts second.
+        let order = schedule_pass_metadata_indices(&[
+            PassMetadata::new("atomic_minimize", &[], &[]),
+            PassMetadata::new("canonicalize", &[], &[]),
+        ])
+        .expect("two independent passes schedule");
+        assert_eq!(
+            order,
+            vec![1, 0],
+            "the logical pass runs first because its level precedes the schedule level"
+        );
+    }
+}
