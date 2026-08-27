@@ -41,10 +41,13 @@ const REBUILDS_WHEN_UNCHANGED: &[&str] = &[];
 /// Passes whose change report on the inert fixture is a real change.
 ///
 /// The fixture is inert to the *statement tree*, not to buffer and geometry
-/// facts, and these three read those: `region_inline` removes the wrapper
-/// `Program::wrapped` created, `autotune` adjusts dispatch dimensions and
-/// workgroup bounds, and `vectorization` promotes layout hints from buffer
-/// shape facts.
+/// facts, and these two read those: `region_inline` removes the wrapper
+/// `Program::wrapped` created, and `vectorization` promotes layout hints from
+/// buffer shape facts.
+///
+/// `autotune` was a third until it was deleted: it rewrote dispatch dimensions
+/// and workgroup bounds, which is schedule selection, and selection has one
+/// owner.
 ///
 /// `dead_buffer_elim` was a fourth until the observable-output assertion below
 /// caught what it was changing: it rooted liveness in `is_output()` rather than
@@ -55,7 +58,7 @@ const REBUILDS_WHEN_UNCHANGED: &[&str] = &[];
 /// report against the value it returned, and holds every one of them to the
 /// fixture's observable output. The list records which passes are expected to
 /// have work here, so one quietly going inert is visible too.
-const CHANGES_AN_INERT_PROGRAM: &[&str] = &["autotune", "region_inline", "vectorization"];
+const CHANGES_AN_INERT_PROGRAM: &[&str] = &["region_inline", "vectorization"];
 
 /// A program no structural pass has anything to do with: one region, one store
 /// of a literal to a distinct buffer, no control flow, no dead binding, no

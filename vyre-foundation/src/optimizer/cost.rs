@@ -416,19 +416,26 @@ mod tests {
         );
     }
 
+    /// WHY: a projection reads device facts for vector width and unroll depth
+    /// and reads the tile from the program that declared it. A tile taken from
+    /// the adapter would make the estimate choose a shape, and choosing shapes
+    /// is one owner's job.
     #[test]
     fn device_profile_fields_change_cost_projection() {
-        let program = Program::wrapped(
+        let buffers = || {
             vec![
                 BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32)
                     .with_count(4096),
-            ],
-            [1, 1, 1],
+            ]
+        };
+        let body = || {
             vec![
                 Node::let_bind("x", Expr::load("buf", Expr::gid_x())),
                 Node::store("buf", Expr::gid_x(), Expr::var("x")),
-            ],
-        );
+            ]
+        };
+        let scalar_region = Program::wrapped(buffers(), [1, 1, 1], body());
+        let tiled_region = Program::wrapped(buffers(), [8, 4, 1], body());
         let compact = AdapterCaps {
             max_workgroup_size: [256, 256, 64],
             max_invocations_per_workgroup: 256,
@@ -444,18 +451,29 @@ mod tests {
             ..compact
         };
 
-        let compact_cost = CostCertificate::for_program_on_adapter(&program, &compact);
-        let wide_cost = CostCertificate::for_program_on_adapter(&program, &wide);
+        let compact_cost = CostCertificate::for_program_on_adapter(&scalar_region, &compact);
+        let wide_cost = CostCertificate::for_program_on_adapter(&scalar_region, &wide);
 
         assert_eq!(compact_cost.vector_pack_bits, 64);
         assert_eq!(wide_cost.vector_pack_bits, 128);
         assert_eq!(compact_cost.unroll_depth, 4);
         assert_eq!(wide_cost.unroll_depth, 8);
-        assert_eq!(compact_cost.workgroup_tile, [8, 8, 1]);
-        assert_eq!(wide_cost.workgroup_tile, [16, 16, 1]);
         assert!(
             wide_cost.score < compact_cost.score,
-            "Fix: wider profile vector/unroll/tile facts must lower the projected device cost"
+            "Fix: wider profile vector and unroll facts must lower the projected device cost"
         );
+
+        for caps in [&compact, &wide] {
+            assert_eq!(
+                CostCertificate::for_program_on_adapter(&scalar_region, caps).workgroup_tile,
+                [1, 1, 1],
+                "Fix: the projected tile is the region the program declares, never the adapter's ideal tile"
+            );
+            assert_eq!(
+                CostCertificate::for_program_on_adapter(&tiled_region, caps).workgroup_tile,
+                [8, 4, 1],
+                "Fix: the projected tile is the region the program declares, never the adapter's ideal tile"
+            );
+        }
     }
 }

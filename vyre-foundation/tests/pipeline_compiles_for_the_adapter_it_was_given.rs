@@ -28,19 +28,33 @@ fn roomy_adapter() -> AdapterCaps {
     }
 }
 
-/// A handoff buffer larger than the conservative budget and inside the roomy
-/// one, so promotion is legal on exactly one of the two profiles.
+/// Two handoff buffers: one inside the conservative budget, one outside it and
+/// inside the roomy one. The small buffer is what makes the pass analyze as
+/// runnable at all, since analysis judges opportunity against the conservative
+/// profile; the large buffer is promoted on exactly one of the two profiles, so
+/// the two pipelines can only agree if the adapter never reached the pass.
 fn handoff_kernel() -> Program {
     Program::wrapped(
         vec![
-            BufferDecl::storage("handoff", 0, BufferAccess::ReadWrite, DataType::U32)
+            BufferDecl::storage("small_handoff", 0, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(512),
+            BufferDecl::storage("wide_handoff", 1, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(8_192),
-            BufferDecl::output("out", 1, DataType::U32).with_count(8_192),
+            BufferDecl::output("out", 2, DataType::U32).with_count(8_192),
         ],
         [64, 1, 1],
         vec![
-            Node::store("handoff", Expr::gid_x(), Expr::u32(1)),
-            Node::store("out", Expr::gid_x(), Expr::load("handoff", Expr::gid_x())),
+            Node::store("small_handoff", Expr::gid_x(), Expr::u32(1)),
+            Node::store(
+                "wide_handoff",
+                Expr::gid_x(),
+                Expr::load("small_handoff", Expr::gid_x()),
+            ),
+            Node::store(
+                "out",
+                Expr::gid_x(),
+                Expr::load("wide_handoff", Expr::gid_x()),
+            ),
         ],
     )
 }

@@ -1,11 +1,12 @@
 //! Execution-planning contract tests.
 
 use vyre_foundation::execution_plan::{
-    plan, plan_with_options, AutotuneStrategy, ConformanceStrength, DispatchStrategy,
-    FusionStrategy, InnovationTrack, LayoutStrategy, PlanError, ProvenanceStrategy,
-    ReadbackStrategy, SchedulingPolicy,
+    plan, plan_for_adapter, plan_with_options, AutotuneStrategy, ConformanceStrength,
+    DispatchStrategy, FusionStrategy, InnovationTrack, LayoutStrategy, PlanError,
+    ProvenanceStrategy, ReadbackStrategy, SchedulingPolicy,
 };
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::optimizer::AdapterCaps;
 use vyre_foundation::validate::{BackendCapabilities, ValidationOptions};
 
 fn ranged_output_program() -> Program {
@@ -82,19 +83,54 @@ fn strategy_encodes_all_seven_tracks_for_small_trimmed_program() {
     );
 }
 
+/// WHY: measuring variants is a fact about the target, not about program size.
+/// The plan used to report `MeasureVariants` once a program passed a node count
+/// nobody measured, which is a threshold masquerading as a fact.
 #[test]
-fn strategy_marks_large_program_for_persistent_runtime_and_autotune() {
-    let body: Vec<Node> = (0..65)
+fn measuring_variants_is_a_target_fact_and_not_a_node_count() {
+    let large_body: Vec<Node> = (0..65)
         .map(|idx| Node::store("out", Expr::u32(idx), Expr::u32(idx)))
         .collect();
-    let program = Program::wrapped(
+    let large = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(128)],
         [128, 1, 1],
-        body,
+        large_body,
     );
-    let plan = plan(&program).expect("large static program must plan");
-    assert_eq!(plan.strategy.dispatch, DispatchStrategy::PersistentRuntime);
-    assert_eq!(plan.strategy.autotune, AutotuneStrategy::MeasureVariants);
+    let small = ranged_output_program();
+
+    let bare = AdapterCaps {
+        ideal_unroll_depth: 0,
+        ideal_vector_pack_bits: 0,
+        ideal_workgroup_tile: [0, 0, 0],
+        ..AdapterCaps::conservative()
+    };
+    let declares_shapes = AdapterCaps {
+        ideal_unroll_depth: 4,
+        ideal_vector_pack_bits: 128,
+        ideal_workgroup_tile: [16, 16, 1],
+        ..AdapterCaps::conservative()
+    };
+
+    for program in [&large, &small] {
+        let bare_plan = plan_for_adapter(program, &bare).expect("static program must plan");
+        assert_eq!(
+            bare_plan.strategy.autotune,
+            AutotuneStrategy::DeclaredShape,
+            "a target that declares no shape has nothing to measure, whatever the node count"
+        );
+        assert_eq!(
+            bare_plan.strategy.dispatch,
+            DispatchStrategy::PersistentRuntime
+        );
+
+        let measured =
+            plan_for_adapter(program, &declares_shapes).expect("static program must plan");
+        assert_eq!(
+            measured.strategy.autotune,
+            AutotuneStrategy::MeasureVariants,
+            "a target that declares shapes states there is something to measure"
+        );
+    }
 }
 
 /// WHY: the shared policy answers legality and ring arithmetic, and nothing
