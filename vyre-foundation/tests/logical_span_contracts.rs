@@ -81,6 +81,14 @@ fn every_accepted_guard_form_states_its_exact_bound() {
             ),
             8,
         ),
+        (
+            "index < 8 || index < 4",
+            Expr::or(
+                Expr::lt(index(), Expr::u32(8)),
+                Expr::lt(index(), Expr::u32(4)),
+            ),
+            8,
+        ),
     ];
 
     for (form, cond, bound) in cases {
@@ -109,13 +117,6 @@ fn no_unproven_guard_form_narrows_the_launch() {
         ("index >= 8", Expr::ge(index(), Expr::u32(8))),
         ("8 < index", Expr::lt(Expr::u32(8), index())),
         ("8 <= index", Expr::le(Expr::u32(8), index())),
-        (
-            "index < 8 || index < 4",
-            Expr::or(
-                Expr::lt(index(), Expr::u32(8)),
-                Expr::lt(index(), Expr::u32(4)),
-            ),
-        ),
         ("axis 1 < 8", Expr::lt(Expr::logical_index(1), Expr::u32(8))),
         ("index < n", Expr::lt(index(), Expr::Var("n".into()))),
         ("index <= u32::MAX", Expr::le(index(), Expr::u32(u32::MAX))),
@@ -256,6 +257,105 @@ fn a_guards_bound_does_not_reach_its_else_arm() {
     assert_eq!(
         admitted_logical_span(&program, RESOURCE_SPAN),
         RESOURCE_SPAN
+    );
+}
+
+/// WHY: the predicated-tail form is how a built program guards a scan: the
+/// comparison is bound to a local, a value is selected to zero outside it, and
+/// the effect runs where that value is nonzero. The bound reaches the effect
+/// through two locals, so an analysis that only reads branch conditions reports
+/// the program unbounded and keeps a dispatch sized from the widest buffer.
+/// Masking a zeroed value keeps it zeroed; a select whose other arm is nonzero
+/// proves nothing, and neither does a rebound predicate.
+#[test]
+fn a_predicated_tail_carries_its_bound_through_the_selected_value() {
+    let buffers = || vec![BufferDecl::output("out", 0, DataType::U32).with_count(RESOURCE_SPAN)];
+    let store = || Node::store("out", index(), Expr::u32(1));
+    let predicate = || Node::let_bind("in_bounds", Expr::lt(index(), Expr::u32(8)));
+    let active = |value: Expr| Node::let_bind("active", value);
+    let run_when_active = || {
+        Node::if_then(
+            Expr::ne(Expr::Var("active".into()), Expr::u32(0)),
+            vec![store()],
+        )
+    };
+    let program = |entry: Vec<Node>| Program::wrapped(buffers(), [256, 1, 1], entry);
+
+    let selected = program(vec![
+        predicate(),
+        active(Expr::select(
+            Expr::Var("in_bounds".into()),
+            Expr::u32(1),
+            Expr::u32(0),
+        )),
+        run_when_active(),
+    ]);
+    assert_eq!(
+        guarded_logical_span(&selected),
+        Some(8),
+        "Fix: a value selected to zero outside the guard carries the guard's bound."
+    );
+    assert_eq!(admitted_logical_span(&selected, RESOURCE_SPAN), 8);
+
+    let masked = program(vec![
+        predicate(),
+        Node::let_bind(
+            "selected",
+            Expr::select(Expr::Var("in_bounds".into()), Expr::u32(3), Expr::u32(0)),
+        ),
+        active(Expr::bitand(Expr::Var("selected".into()), Expr::u32(0xF))),
+        run_when_active(),
+    ]);
+    assert_eq!(
+        guarded_logical_span(&masked),
+        Some(8),
+        "Fix: masking a zeroed value leaves it zero outside the same bound."
+    );
+
+    let nonzero_tail = program(vec![
+        predicate(),
+        active(Expr::select(
+            Expr::Var("in_bounds".into()),
+            Expr::u32(1),
+            Expr::u32(1),
+        )),
+        run_when_active(),
+    ]);
+    assert_eq!(
+        guarded_logical_span(&nonzero_tail),
+        None,
+        "Fix: a select whose other arm is nonzero runs the effect at every lane."
+    );
+
+    let rebound_predicate = program(vec![
+        predicate(),
+        Node::assign("in_bounds", Expr::u32(1)),
+        active(Expr::select(
+            Expr::Var("in_bounds".into()),
+            Expr::u32(1),
+            Expr::u32(0),
+        )),
+        run_when_active(),
+    ]);
+    assert_eq!(
+        guarded_logical_span(&rebound_predicate),
+        None,
+        "Fix: a rebound predicate carries no bound."
+    );
+
+    let dynamic_predicate = program(vec![
+        Node::let_bind("in_bounds", Expr::lt(index(), Expr::Var("n".into()))),
+        active(Expr::select(
+            Expr::Var("in_bounds".into()),
+            Expr::u32(1),
+            Expr::u32(0),
+        )),
+        run_when_active(),
+    ]);
+    assert_eq!(
+        guarded_logical_span(&dynamic_predicate),
+        None,
+        "Fix: a predicate against a runtime extent states no constant bound."
     );
 }
 
