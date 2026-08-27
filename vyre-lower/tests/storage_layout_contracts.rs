@@ -117,11 +117,7 @@ fn regions_touched_inside_one_loop_body_stay_live_across_the_whole_loop() {
                 .op(lit(1, 1))
                 .op(for_loop("i", 0, 1, 0))
                 .op(load_shared(A, 0, 2))
-                .child(
-                    body()
-                        .op(load_shared(B, 0, 10))
-                        .op(load_shared(C, 0, 11)),
-                )
+                .child(body().op(load_shared(B, 0, 10)).op(load_shared(C, 0, 11)))
                 .literal(LiteralValue::U32(0))
                 .literal(LiteralValue::U32(8)),
         )
@@ -312,11 +308,7 @@ fn a_value_nothing_reads_holds_a_register_only_where_it_is_written() {
 fn a_matrix_fragment_states_the_register_words_one_invocation_holds() {
     let fragment = |element| FragmentValue::in_registers(element, MatrixMmaLayout::RowMajor, 32);
     let spec = MatrixMmaSpec {
-        tile: MatrixTileShape {
-            m: 16,
-            n: 8,
-            k: 16,
-        },
+        tile: MatrixTileShape { m: 16, n: 8, k: 16 },
         left: fragment(MatrixMmaElement::F16),
         right: fragment(MatrixMmaElement::F16),
         accumulator: fragment(MatrixMmaElement::F32),

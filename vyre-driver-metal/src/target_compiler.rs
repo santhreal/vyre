@@ -32,10 +32,7 @@ fn emit_metal_module(
             "Metal target artifact serialization failed: {error}"
         ))
     })?;
-    Ok(EmittedDialectModule {
-        entry_point,
-        bytes,
-    })
+    Ok(EmittedDialectModule { entry_point, bytes })
 }
 
 pub(crate) fn target_profile() -> Result<TargetProfile, BackendError> {
