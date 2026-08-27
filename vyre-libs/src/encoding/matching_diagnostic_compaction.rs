@@ -412,7 +412,7 @@ mod tests {
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let program = &request.logical().graph().nodes()[0].program;
             let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 let op_id = program
                     .entry
                     .iter()
@@ -487,7 +487,8 @@ mod tests {
                     }
                     other => panic!("unexpected matching primitive op id {other}"),
                 }
-            })()?;
+            };
+            let ordered = compute_ordered()?;
             crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }

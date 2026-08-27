@@ -15,15 +15,15 @@ Own every inventory registry link anchor, report which sources a build links, an
 ### Boundaries
 
 The `registry-link` owner maintains this `registry-link` crate at `vyre-registry-link`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-primitives`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-registry-link/tests/registry_link_rules.rs`:
+Run the checked-in behavior from `vyre-registry-link/tests/level_stage_closure.rs`:
 
 ```console
-./cargo_full test -p vyre-registry-link --test registry_link_rules
+./cargo_full test -p vyre-registry-link --test level_stage_closure
 ```
 
 ### Features

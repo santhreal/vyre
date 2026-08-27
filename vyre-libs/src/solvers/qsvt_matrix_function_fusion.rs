@@ -309,7 +309,7 @@ mod tests {
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 // chebyshev_filter: 3 RO (cost/weights/coeffs) + plain-RW output(3)+scratch(4) = 5.
                 assert_eq!(inputs.len(), 5);
                 let matrix = crate::dispatch_buffers::read_u32s(&inputs[0]);
@@ -318,7 +318,8 @@ mod tests {
                 assert_eq!(matrix, vec![1, 0, 0, 1]);
                 assert_eq!(coeffs, vec![1, 0]);
                 Ok(vec![u32_slice_to_le_bytes(&weights)])
-            })();
+            };
+            let ordered = compute_ordered();
             let mut ordered = ordered?;
             let output_count = request.logical().graph().nodes()[0].outputs.len();
             if ordered.len() < output_count {
@@ -463,11 +464,12 @@ mod tests {
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 let weights = crate::dispatch_buffers::read_u32s(&inputs[1]);
                 let scratch = vec![0u8; weights.len() * 2 * 4];
                 Ok(vec![u32_slice_to_le_bytes(&weights), scratch])
-            })();
+            };
+            let ordered = compute_ordered();
             let mut ordered = ordered?;
             let output_count = request.logical().graph().nodes()[0].outputs.len();
             if ordered.len() < output_count {
@@ -485,8 +487,8 @@ mod tests {
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> { Ok(Vec::new()) })();
-            crate::test_parity_oracles::semantic_output(request, ordered?)
+            let ordered: Vec<Vec<u8>> = Vec::new();
+            crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -498,9 +500,7 @@ mod tests {
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-            let ordered =
-                (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> { Ok(vec![vec![1, 2, 3]]) })();
-            let mut ordered = ordered?;
+            let mut ordered: Vec<Vec<u8>> = vec![vec![1, 2, 3]];
             let output_count = request.logical().graph().nodes()[0].outputs.len();
             if ordered.len() < output_count {
                 ordered.resize(output_count, Vec::new());

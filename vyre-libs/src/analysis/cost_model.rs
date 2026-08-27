@@ -411,7 +411,7 @@ mod tests {
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 match inputs.len() {
                     8 => dispatch_sum_product(&inputs),
                     2 => dispatch_conformal(&inputs),
@@ -419,7 +419,8 @@ mod tests {
                         "Fix: cost-model test dispatcher expected 8 or 2 buffers, got {other}."
                     ))),
                 }
-            })()?;
+            };
+            let ordered = compute_ordered()?;
             crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }

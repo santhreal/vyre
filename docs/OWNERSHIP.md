@@ -344,11 +344,12 @@ Consume validated selected schedule phases and semantic programs, then own the s
 - Path: `vyre-lower`
 - Owner: `lowering`
 - Layer: `lowering`
-- Internal production dependencies: `vyre-foundation`
+- Internal production dependencies: `vyre-foundation`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR plus validated backend-neutral selected schedule phases | `public` | `foundation-ir` |
+| `vyre-spec` | the declared IR level a lowering stage registers itself for | `public` | `specification` |
 
 ### `vyre-macros`
 
@@ -366,12 +367,13 @@ Construct foundation-owned selected schedules through bounded whole-ProgramGraph
 - Path: `vyre-megakernel`
 - Owner: `megakernel-compiler`
 - Layer: `compiler-boundary`
-- Internal production dependencies: `vyre-foundation`, `vyre-lower`
+- Internal production dependencies: `vyre-foundation`, `vyre-lower`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed graph, logical-domain, neutral schedule IR and validation, diagnostics, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-lower` | single verified selected-module representation lowering | `private` | `lowering` |
+| `vyre-spec` | the declared IR level the target-payload stage registers itself for | `public` | `specification` |
 
 ### `vyre-pass-engine`
 
@@ -424,7 +426,7 @@ Own every inventory registry link anchor, report which sources a build links, an
 - Path: `vyre-registry-link`
 - Owner: `registry-link`
 - Layer: `registry-link`
-- Internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-primitives`
+- Internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -436,7 +438,10 @@ Own every inventory registry link anchor, report which sources a build links, an
 | `vyre-driver-wgpu` | portable backend registration | `private` | `portable-driver` |
 | `vyre-foundation` | operation registry contracts | `private` | `foundation-ir` |
 | `vyre-libs` | product operation registrations | `private` | `product-libraries` |
+| `vyre-lower` | the physical-kernel level-stage registry source | `public` | `lowering` |
+| `vyre-megakernel` | the target-payload level-stage registry source | `public` | `megakernel-compiler` |
 | `vyre-primitives` | primitive operation registrations | `private` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 
 ### `vyre-runtime`
 

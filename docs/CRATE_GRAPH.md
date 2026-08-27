@@ -138,8 +138,10 @@ graph TD
   C18 --> C24
   C18 --> C29
   C20 --> C17
+  C20 --> C29
   C22 --> C17
   C22 --> C20
+  C22 --> C29
   C23 --> C17
   C23 --> C18
   C23 --> C22
@@ -156,7 +158,10 @@ graph TD
   C26 --> C12
   C26 --> C17
   C26 --> C18
+  C26 --> C20
+  C26 --> C22
   C26 --> C24
+  C26 --> C29
   C27 --> C7
   C27 --> C17
   C27 --> C18
@@ -282,8 +287,10 @@ graph TD
 | `vyre-libs` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
 | `vyre-libs` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-lower` | `vyre-foundation` | typed IR plus validated backend-neutral selected schedule phases | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
+| `vyre-lower` | `vyre-spec` | the declared IR level a lowering stage registers itself for | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-megakernel` | `vyre-foundation` | typed graph, logical-domain, neutral schedule IR and validation, diagnostics, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-megakernel` | `vyre-lower` | single verified selected-module representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
+| `vyre-megakernel` | `vyre-spec` | the declared IR level the target-payload stage registers itself for | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-pass-engine` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-pass-engine` | `vyre-libs` | product operation builders | None | `always` | `normal` | `false` | `false` | `private` | `product-libraries` |
 | `vyre-pass-engine` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
@@ -300,7 +307,10 @@ graph TD
 | `vyre-registry-link` | `vyre-driver-wgpu` | portable backend registration | None | `always` | `normal` | `true` | `true` | `private` | `portable-driver` |
 | `vyre-registry-link` | `vyre-foundation` | operation registry contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `vyre-registry-link` | `vyre-libs` | product operation registrations | `full` | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
+| `vyre-registry-link` | `vyre-lower` | the physical-kernel level-stage registry source | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
+| `vyre-registry-link` | `vyre-megakernel` | the target-payload level-stage registry source | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
 | `vyre-registry-link` | `vyre-primitives` | primitive operation registrations | `hardware` | `always` | `normal` | `true` | `false` | `private` | `primitive-library` |
+| `vyre-registry-link` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-runtime` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
 | `vyre-runtime` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-runtime` | `vyre-libs` | composition trees the megakernel planner plans against | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |

@@ -523,7 +523,7 @@ mod tests {
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 11);
                 let b = crate::dispatch_buffers::read_u32s(&inputs[1]);
                 let x = crate::dispatch_buffers::read_u32s(&inputs[2]);
@@ -537,7 +537,8 @@ mod tests {
                     .map(|(&current, &rhs)| current.max(rhs))
                     .collect();
                 Ok(vec![u32_slice_to_le_bytes(&out)])
-            })();
+            };
+            let ordered = compute_ordered();
             let mut ordered = ordered?;
             let output_count = request.logical().graph().nodes()[0].outputs.len();
             if ordered.len() < output_count {

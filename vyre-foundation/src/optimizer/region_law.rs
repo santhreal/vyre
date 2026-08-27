@@ -1,6 +1,6 @@
 //! Region alternatives derived from the declarative law families.
 //!
-//! [`law_saturation`](super::law_saturation) derives value-level alternatives
+//! [`law_saturation`](crate::optimizer::law_saturation) derives value-level alternatives
 //! for the algebraic family: it reads the laws a combine declares and runs them
 //! over an expression mirror. Four families state equalities that no expression
 //! mirror can express, because their subject is a region rather than a value:
@@ -17,7 +17,8 @@
 //!
 //! # What is derived
 //!
-//! [`derive_region_alternatives`] composes law rows to a bounded fixed point.
+//! [`derive_region_alternatives`](crate::optimizer::region_law::derive_region_alternatives)
+//! composes law rows to a bounded fixed point.
 //! Each step applies one row's rewrite to a program and keeps the result when
 //! it differs, so a two-law alternative is the composition of two declared
 //! laws and no code names the shape it produces. The chain of law names is

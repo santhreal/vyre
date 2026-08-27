@@ -42,14 +42,14 @@ pub fn mapped_pipelined_two_phase() -> SelectedSchedule {
             phase: SchedulePhaseId(0),
             shape: [32, 2, 1],
         })
-        .expect("an exact workgroup shape is legal");
+        .expect("Fix: restate the workgroup shape so it divides the phase extents");
     schedule
         .apply(ScheduleTransform::Map {
             phase: SchedulePhaseId(0),
             axis,
             level: MappingLevel::Subgroup,
         })
-        .expect("mapping an axis of the phase is legal");
+        .expect("Fix: map an axis this phase declares, at a level the schedule admits");
     schedule
         .apply(ScheduleTransform::Pipeline {
             producer: SchedulePhaseId(0),
@@ -66,13 +66,13 @@ pub fn mapped_pipelined_two_phase() -> SelectedSchedule {
                 },
             ],
         })
-        .expect("a bounded pipeline between two phases is legal");
+        .expect("Fix: state ring slots and role workers a two-phase pipeline admits");
     schedule
         .apply(ScheduleTransform::Synchronize {
             phases: vec![SchedulePhaseId(0), SchedulePhaseId(1)],
             scope: SynchronizationScope::Workgroup,
         })
-        .expect("a workgroup synchronization boundary is legal");
+        .expect("Fix: synchronize phases that share the workgroup scope");
     schedule
 }
 
@@ -92,12 +92,12 @@ pub fn richly_transformed_two_phase() -> SelectedSchedule {
             phases: vec![SchedulePhaseId(0)],
             scope: SynchronizationScope::Device,
         })
-        .expect("a device synchronization boundary is legal");
+        .expect("Fix: synchronize a phase the device scope reaches");
     schedule
         .apply(ScheduleTransform::PersistentQueue {
             phase: SchedulePhaseId(0),
             capacity: 128,
         })
-        .expect("a bounded persistent queue is legal");
+        .expect("Fix: state a persistent queue capacity the phase admits");
     schedule
 }

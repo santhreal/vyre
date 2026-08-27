@@ -170,14 +170,15 @@ mod tests {
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 3);
                 assert_eq!(inputs[0].len(), inputs[1].len());
                 assert_eq!(inputs[2].len(), inputs[1].len());
                 let blocks_in = crate::dispatch_buffers::read_f32s(&inputs[1]);
                 let out = reference_kfac_block_inverse(&blocks_in, 1, 2);
                 Ok(vec![f32_slice_to_le_bytes(&out)])
-            })();
+            };
+            let ordered = compute_ordered();
             let mut ordered = ordered?;
             let output_count = request.logical().graph().nodes()[0].outputs.len();
             if ordered.len() < output_count {

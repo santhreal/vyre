@@ -38,6 +38,7 @@ The crate lives at `vyre-lower`. The `lowering` owner maintains its
 | `test` | `async_transaction_contracts` | `vyre-lower/tests/async_transaction_contracts.rs` | None | `./cargo_full test -p vyre-lower --test async_transaction_contracts` |
 | `test` | `bank_conflict_strategy_contracts` | `vyre-lower/tests/bank_conflict_strategy_contracts.rs` | None | `./cargo_full test -p vyre-lower --test bank_conflict_strategy_contracts` |
 | `test` | `device_fact_boundary` | `vyre-lower/tests/device_fact_boundary.rs` | None | `./cargo_full test -p vyre-lower --test device_fact_boundary` |
+| `test` | `level_stage_verdict` | `vyre-lower/tests/level_stage_verdict.rs` | None | `./cargo_full test -p vyre-lower --test level_stage_verdict` |
 | `test` | `lower_visibility_contract` | `vyre-lower/tests/lower_visibility_contract.rs` | None | `./cargo_full test -p vyre-lower --test lower_visibility_contract` |
 | `test` | `lowering_contracts` | `vyre-lower/tests/lowering_contracts/mod.rs` | None | `./cargo_full test -p vyre-lower --test lowering_contracts` |
 | `test` | `lowering_equivalence` | `vyre-lower/tests/lowering_equivalence.rs` | None | `./cargo_full test -p vyre-lower --test lowering_equivalence` |

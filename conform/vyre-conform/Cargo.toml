@@ -107,7 +107,9 @@ vyre-runtime = { workspace = true }
 vyre-spec = { workspace = true }
 
 [dev-dependencies]
-vyre-test-support.workspace = true
+# `ir-fixtures` for the one owner of the single-element copy node every bundle
+# fixture here builds.
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # The bundle round-trip contract judges the descriptor a lowering produced, so it
 # needs the lowering that owns `LiteralValue` and its encoding.
 vyre-lower.workspace = true

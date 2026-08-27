@@ -635,9 +635,10 @@ mod tests {
             ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError>
             {
                 let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-                let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                     panic!("invalid zero-region inputs must fail before dispatch");
-                })();
+                };
+                let ordered = compute_ordered();
                 let mut ordered = ordered?;
                 let output_count = request.logical().graph().nodes()[0].outputs.len();
                 if ordered.len() < output_count {
@@ -823,7 +824,7 @@ mod tests {
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 let call = self.calls.fetch_add(1, Ordering::Relaxed);
                 match call {
                     0 => dispatch_p2m(&inputs),
@@ -833,7 +834,8 @@ mod tests {
                         "Fix: FMM test dispatcher received unexpected dispatch #{other}."
                     ))),
                 }
-            })();
+            };
+            let ordered = compute_ordered();
             let mut ordered = ordered?;
             let output_count = request.logical().graph().nodes()[0].outputs.len();
             if ordered.len() < output_count {

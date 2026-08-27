@@ -1,6 +1,6 @@
 //! The verifier, canonical form, and analyses one IR level owns.
 //!
-//! [`level_pipelines`](super::level_pipeline::level_pipelines) states which
+//! [`level_pipelines`](crate::optimizer::level_pipeline::level_pipelines) states which
 //! passes act at each level. A pipeline alone leaves three questions open: what
 //! rejects a subject the level's passes must never see, what form the level's
 //! passes converge to, and which derived facts are the level's to hold. Every
@@ -11,9 +11,10 @@
 //! A stage states all three for one level. The subject is erased because the
 //! levels below the logical one are owned by crates that depend on this one:
 //! they register through `inventory`, the path
-//! [`RewriteContractRegistration`](super::rewrite_contract::RewriteContractRegistration)
+//! [`RewriteContractRegistration`](crate::optimizer::rewrite_contract::RewriteContractRegistration)
 //! already uses. A stage that cannot recognize its own subject reports
-//! [`LevelVerdict::WrongSubject`] rather than verifying it, so an erased
+//! [`LevelVerdict::WrongSubject`](crate::optimizer::level_contract::LevelVerdict::WrongSubject)
+//! rather than verifying it, so an erased
 //! argument of the wrong type is a refusal and never a pass.
 
 use std::any::Any;

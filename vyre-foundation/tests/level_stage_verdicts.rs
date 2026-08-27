@@ -23,6 +23,7 @@ use vyre_foundation::ir::{
 use vyre_foundation::optimizer::level_contract::{stage_for_level, GraphComposition, LevelVerdict};
 use vyre_foundation::schedule::SelectedSchedule;
 use vyre_spec::IrLevel;
+use vyre_test_support::pass_programs::element_copy;
 
 fn value_contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
     ValueContract {
@@ -40,11 +41,7 @@ fn copy_program() -> Program {
             BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::F32),
         ],
         [1, 1, 1],
-        vec![Node::store(
-            "output",
-            Expr::u32(0),
-            Expr::load("input", Expr::u32(0)),
-        )],
+        vec![element_copy("output", 0, "input", 0)],
     )
 }
 
@@ -151,11 +148,7 @@ fn logical_stage_rejects_a_program_the_validator_rejects() {
             DataType::F32,
         )],
         [1, 1, 1],
-        vec![Node::store(
-            "absent",
-            Expr::u32(0),
-            Expr::load("input", Expr::u32(0)),
-        )],
+        vec![element_copy("absent", 0, "input", 0)],
     );
     let verdict = stage.verify(&bad);
     assert!(

@@ -23,6 +23,20 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+/// One element copied from `input[in_index]` to `output[out_index]`.
+///
+/// One owner because every fixture that needs "a program that does something
+/// observable and nothing else" writes this node, and two spellings of it
+/// produce two different wire hashes for what a reader reads as one shape.
+#[must_use]
+pub fn element_copy(output: &str, out_index: u32, input: &str, in_index: u32) -> Node {
+    Node::store(
+        output,
+        Expr::u32(out_index),
+        Expr::load(input, Expr::u32(in_index)),
+    )
+}
+
 /// A program that copies one element from `input` to `output`.
 #[must_use]
 pub fn copy_program(input: &str, output: &str) -> Program {

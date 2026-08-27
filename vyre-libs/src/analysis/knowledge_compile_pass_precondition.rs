@@ -481,7 +481,7 @@ mod tests {
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 7);
                 let node_kinds = crate::dispatch_buffers::read_u32s(&inputs[0]);
                 let node_var = crate::dispatch_buffers::read_u32s(&inputs[1]);
@@ -508,7 +508,8 @@ mod tests {
                     }
                 }
                 Ok(vec![u32_slice_to_le_bytes(&out)])
-            })()?;
+            };
+            let ordered = compute_ordered()?;
             crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }

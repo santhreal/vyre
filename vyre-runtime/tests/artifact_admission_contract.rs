@@ -584,7 +584,7 @@ impl ArtifactMaterializer for TestMaterializer {
             .filter(|resource| resource.lifetime == vyre_megakernel::ResourceLifetime::Retained)
             .map(|resource| resource.value)
             .collect();
-        Ok(FixtureInstance::new(
+        Ok(FixtureInstance::submitting(
             artifact,
             payload,
             self.device.identity(),
@@ -712,7 +712,7 @@ impl ArtifactMaterializer for RecordingMaterializer {
         artifact: &Artifact,
         payload: &TargetPayload,
     ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-        Ok(FixtureInstance::new(
+        Ok(FixtureInstance::submitting(
             artifact,
             payload,
             self.device.identity(),

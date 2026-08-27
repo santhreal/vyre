@@ -162,7 +162,7 @@ Consume validated selected schedule phases and semantic programs, then own the s
 ### Boundaries
 
 The `lowering` owner maintains this `lowering` crate at `vyre-lower`.
-Its allowed internal production dependencies are: `vyre-foundation`.
+Its allowed internal production dependencies are: `vyre-foundation`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

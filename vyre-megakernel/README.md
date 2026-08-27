@@ -32,7 +32,7 @@ Construct foundation-owned selected schedules through bounded whole-ProgramGraph
 ### Boundaries
 
 The `megakernel-compiler` owner maintains this `compiler-boundary` crate at `vyre-megakernel`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-lower`.
+Its allowed internal production dependencies are: `vyre-foundation`, `vyre-lower`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

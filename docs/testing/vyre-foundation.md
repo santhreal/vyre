@@ -90,6 +90,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `ir_variant_shape_owner_closure` | `vyre-foundation/tests/ir_variant_shape_owner_closure.rs` | None | `./cargo_full test -p vyre-foundation --test ir_variant_shape_owner_closure` |
 | `test` | `law_derived_region_alternatives` | `vyre-foundation/tests/law_derived_region_alternatives.rs` | None | `./cargo_full test -p vyre-foundation --test law_derived_region_alternatives` |
 | `test` | `level_pipeline_partition` | `vyre-foundation/tests/level_pipeline_partition.rs` | None | `./cargo_full test -p vyre-foundation --test level_pipeline_partition` |
+| `test` | `level_stage_verdicts` | `vyre-foundation/tests/level_stage_verdicts.rs` | None | `./cargo_full test -p vyre-foundation --test level_stage_verdicts` |
 | `test` | `licm_hoist_scope_safety` | `vyre-foundation/tests/licm_hoist_scope_safety.rs` | None | `./cargo_full test -p vyre-foundation --test licm_hoist_scope_safety` |
 | `test` | `licm_speculation_bounds` | `vyre-foundation/tests/licm_speculation_bounds.rs` | None | `./cargo_full test -p vyre-foundation --test licm_speculation_bounds` |
 | `test` | `linear_type_validation` | `vyre-foundation/tests/linear_type_validation.rs` | None | `./cargo_full test -p vyre-foundation --test linear_type_validation` |
@@ -147,6 +148,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `region_chain_adversarial` | `vyre-foundation/tests/region_chain_adversarial.rs` | None | `./cargo_full test -p vyre-foundation --test region_chain_adversarial` |
 | `test` | `region_inline_invalidates` | `vyre-foundation/tests/region_inline_invalidates.rs` | None | `./cargo_full test -p vyre-foundation --test region_inline_invalidates` |
 | `test` | `region_inline_scope` | `vyre-foundation/tests/region_inline_scope.rs` | None | `./cargo_full test -p vyre-foundation --test region_inline_scope` |
+| `test` | `region_law_derivation` | `vyre-foundation/tests/region_law_derivation.rs` | None | `./cargo_full test -p vyre-foundation --test region_law_derivation` |
 | `test` | `registry_closure` | `vyre-foundation/tests/registry_closure.rs` | None | `./cargo_full test -p vyre-foundation --test registry_closure` |
 | `test` | `resource_exhaustion_adversarial` | `vyre-foundation/tests/resource_exhaustion_adversarial.rs` | None | `./cargo_full test -p vyre-foundation --test resource_exhaustion_adversarial` |
 | `test` | `rewrite_contract_closure` | `vyre-foundation/tests/rewrite_contract_closure.rs` | None | `./cargo_full test -p vyre-foundation --test rewrite_contract_closure` |

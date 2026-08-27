@@ -32,7 +32,7 @@ impl FixtureInstance {
     /// `submit` receives the artifact digest this instance reports, so a
     /// fixture completion names the same artifact the bindings were validated
     /// against without capturing it separately.
-    pub(crate) fn new(
+    pub(crate) fn submitting(
         artifact: &Artifact,
         payload: &TargetPayload,
         device: &DeviceIdentity,
@@ -52,7 +52,7 @@ impl FixtureInstance {
         payload: &TargetPayload,
         device: &DeviceIdentity,
     ) -> Box<dyn ArtifactInstance> {
-        Self::new(artifact, payload, device, |artifact, _| {
+        Self::submitting(artifact, payload, device, |artifact, _| {
             Ok(completion(artifact))
         })
     }

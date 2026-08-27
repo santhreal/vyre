@@ -28,18 +28,7 @@ use vyre_foundation::optimizer::level_pipeline::{
     level_inversions, level_of_pass, level_pipelines,
 };
 use vyre_foundation::optimizer::registered_pass_registrations;
-
-/// The `IrLevel` variant names `vyre-spec` declares, read from source.
-fn declared_level_variants() -> BTreeSet<String> {
-    let path = vyre_test_support::monorepo::vyre_crate_directory("vyre-spec")
-        .join("src")
-        .join("ir_level.rs");
-    let source = std::fs::read_to_string(&path)
-        .unwrap_or_else(|err| panic!("Fix: cannot read {path:?} to derive the level set: {err}"));
-    let body = vyre_test_support::braced_body(&source, "pub enum IrLevel {")
-        .unwrap_or_else(|| panic!("Fix: {path:?} no longer declares `pub enum IrLevel`"));
-    vyre_test_support::top_level_variant_names(body)
-}
+use vyre_test_support::declared_level_variants;
 
 fn registered_pass_names() -> BTreeSet<&'static str> {
     registered_pass_registrations()

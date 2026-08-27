@@ -639,11 +639,13 @@ name = "vyre-lower"
 version = "0.8.0"
 dependencies = [
  "imbl",
+ "inventory",
  "rustc-hash",
  "serde",
  "smallvec",
  "thiserror",
  "vyre-foundation",
+ "vyre-spec",
 ]
 
 [[package]]
@@ -660,11 +662,13 @@ name = "vyre-megakernel"
 version = "0.8.0"
 dependencies = [
  "blake3",
+ "inventory",
  "serde",
  "serde_json",
  "thiserror",
  "vyre-foundation",
  "vyre-lower",
+ "vyre-spec",
 ]
 
 [[package]]

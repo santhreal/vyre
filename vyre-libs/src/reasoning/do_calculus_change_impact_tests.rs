@@ -81,9 +81,10 @@ fn zero_node_validation_precedes_scratch_mutation() {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 panic!("invalid zero-node inputs must fail before dispatch");
-            })()?;
+            };
+            let ordered = compute_ordered()?;
             crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
@@ -465,7 +466,7 @@ impl SemanticExecutor for InterventionDispatcher {
         request: &vyre_megakernel::SemanticExecutionRequest<'_>,
     ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
         let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-        let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+        let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
             assert_mock_dispatch_contract(&inputs, 3);
             let adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
             let mask = crate::dispatch_buffers::read_u32s(&inputs[1]);
@@ -479,7 +480,8 @@ impl SemanticExecutor for InterventionDispatcher {
                 }
             }
             Ok(vec![u32_slice_to_le_bytes(&out)])
-        })()?;
+        };
+        let ordered = compute_ordered()?;
         crate::test_parity_oracles::semantic_output(request, ordered)
     }
 }
@@ -519,7 +521,7 @@ impl SemanticExecutor for Rule2Dispatcher {
         request: &vyre_megakernel::SemanticExecutionRequest<'_>,
     ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
         let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-        let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+        let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
             assert_mock_dispatch_contract(&inputs, 3);
             let adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
             let mask = crate::dispatch_buffers::read_u32s(&inputs[1]);
@@ -541,7 +543,8 @@ impl SemanticExecutor for Rule2Dispatcher {
                 }
             }
             Ok(vec![u32_slice_to_le_bytes(&out)])
-        })()?;
+        };
+        let ordered = compute_ordered()?;
         crate::test_parity_oracles::semantic_output(request, ordered)
     }
 }
@@ -632,12 +635,13 @@ fn intervention_delete_incoming_via_rejects_extra_outputs() {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![
                     u32_slice_to_le_bytes(&[0, 2, 0, 4]),
                     u32_slice_to_le_bytes(&[0, 0]),
                 ])
-            })()?;
+            };
+            let ordered = compute_ordered()?;
             crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
@@ -673,12 +677,13 @@ fn rule2_reverse_incoming_via_rejects_extra_outputs() {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![
                     u32_slice_to_le_bytes(&[0, 1, 1, 0]),
                     u32_slice_to_le_bytes(&[0]),
                 ])
-            })()?;
+            };
+            let ordered = compute_ordered()?;
             crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
@@ -701,9 +706,10 @@ fn rule3_subgraph_via_handles_zero_nodes() {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 panic!("dispatch should not be invoked for n=0");
-            })()?;
+            };
+            let ordered = compute_ordered()?;
             crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
@@ -727,13 +733,14 @@ fn rule3_subgraph_via_derives_shape_from_inputs_not_gpu_scalar() {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![
                     u32_slice_to_le_bytes(&[0, 1, 0, 0]),
                     u32_slice_to_le_bytes(&[0, 1]),
                     u32_slice_to_le_bytes(&[999]),
                 ])
-            })()?;
+            };
+            let ordered = compute_ordered()?;
             crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
@@ -794,14 +801,15 @@ fn rule3_subgraph_via_rejects_extra_outputs() {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![
                     u32_slice_to_le_bytes(&[0, 1, 0, 0]),
                     u32_slice_to_le_bytes(&[0, 1]),
                     u32_slice_to_le_bytes(&[0]),
                     u32_slice_to_le_bytes(&[0]),
                 ])
-            })()?;
+            };
+            let ordered = compute_ordered()?;
             crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }
@@ -824,9 +832,10 @@ fn project_impacted_lineage_entries_handles_empty_lineage() {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 panic!("empty lineage cells must not dispatch");
-            })()?;
+            };
+            let ordered = compute_ordered()?;
             crate::test_parity_oracles::semantic_output(request, ordered)
         }
     }

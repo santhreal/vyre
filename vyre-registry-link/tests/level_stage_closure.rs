@@ -26,22 +26,11 @@ use std::collections::{BTreeMap, BTreeSet};
 use vyre_foundation::optimizer::level_contract::{analysis_owners, stage_for_level, LevelVerdict};
 use vyre_registry_link::level::live_level_stages;
 use vyre_spec::IrLevel;
+use vyre_test_support::declared_level_variants;
 
 /// A type no stage owns, so every stage must refuse it.
 #[derive(Debug)]
 struct ForeignSubject;
-
-/// The `IrLevel` variant names `vyre-spec` declares, read from source.
-fn declared_level_variants() -> BTreeSet<String> {
-    let path = vyre_test_support::monorepo::vyre_crate_directory("vyre-spec")
-        .join("src")
-        .join("ir_level.rs");
-    let source = std::fs::read_to_string(&path)
-        .unwrap_or_else(|err| panic!("Fix: cannot read {path:?} to derive the level set: {err}"));
-    let body = vyre_test_support::braced_body(&source, "pub enum IrLevel {")
-        .unwrap_or_else(|| panic!("Fix: {path:?} no longer declares `pub enum IrLevel`"));
-    vyre_test_support::top_level_variant_names(body)
-}
 
 /// Adding an IR level turns this suite red until it has a stage.
 #[test]

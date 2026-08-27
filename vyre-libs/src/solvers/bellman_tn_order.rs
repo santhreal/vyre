@@ -311,7 +311,7 @@ mod tests {
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-            let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+            let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 6);
                 let dist = crate::dispatch_buffers::read_u32s(&inputs[0]);
                 let next_dist = crate::dispatch_buffers::read_u32s(&inputs[1]);
@@ -336,7 +336,8 @@ mod tests {
                     10,
                 );
                 Ok(vec![u32_slice_to_le_bytes(&out)])
-            })();
+            };
+            let ordered = compute_ordered();
             let mut ordered = ordered?;
             let output_count = request.logical().graph().nodes()[0].outputs.len();
             if ordered.len() < output_count {
@@ -397,13 +398,14 @@ mod tests {
             ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError>
             {
                 let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
-                let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+                let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                     self.changed_words.store(
                         crate::dispatch_buffers::read_u32s(&inputs[2]).len(),
                         Ordering::Relaxed,
                     );
                     Ok(vec![u32_slice_to_le_bytes(&vec![0_u32; self.n_nodes])])
-                })();
+                };
+                let ordered = compute_ordered();
                 let mut ordered = ordered?;
                 let output_count = request.logical().graph().nodes()[0].outputs.len();
                 if ordered.len() < output_count {

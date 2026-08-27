@@ -309,6 +309,27 @@ pub fn top_level_variant_names(body: &str) -> BTreeSet<String> {
     names
 }
 
+/// Every `IrLevel` variant declared in `vyre-spec`, read from source.
+///
+/// One owner because a level-closure test in one crate and a pipeline-partition
+/// test in another ask the same question of the same enum, and two readers can
+/// disagree about the member set the compiler actually has.
+///
+/// # Panics
+/// Panics when `vyre-spec/src/ir_level.rs` is unreadable or no longer declares
+/// `pub enum IrLevel`, because either one makes the derived set silently short.
+#[must_use]
+pub fn declared_level_variants() -> BTreeSet<String> {
+    let path = monorepo::vyre_crate_directory("vyre-spec")
+        .join("src")
+        .join("ir_level.rs");
+    let source = std::fs::read_to_string(&path)
+        .unwrap_or_else(|err| panic!("Fix: cannot read {path:?} to derive the level set: {err}"));
+    let body = braced_body(&source, "pub enum IrLevel {")
+        .unwrap_or_else(|| panic!("Fix: {path:?} no longer declares `pub enum IrLevel`"));
+    top_level_variant_names(body)
+}
+
 /// Assert the registry-closure contract for the crate rooted at `crate_dir`.
 ///
 /// Resolve `crate_dir` from the working directory, with

@@ -11,66 +11,30 @@
 //! emitter-ready canonicalization rewrites is not canonical, and one it leaves
 //! alone is.
 
-use vyre_foundation::ir::DataType;
+use vyre_foundation::ir::{BinOp, DataType};
 use vyre_foundation::optimizer::level_contract::{stage_for_level, LevelVerdict};
-use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MemoryClass,
+use vyre_lower::descriptor_builder::{
+    body, descriptor, global_rw, lit, op, store_global, SlotCount,
 };
+use vyre_lower::{KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
 use vyre_spec::IrLevel;
 
-fn bindings() -> BindingLayout {
-    BindingLayout {
-        slots: vec![BindingSlot {
-            slot: 0,
-            element_type: DataType::U32,
-            element_count: Some(64),
-            memory_class: MemoryClass::Global,
-            visibility: BindingVisibility::ReadWrite,
-            name: "out".into(),
-        }],
-    }
-}
-
-fn literal(pool_idx: u32, result: u32) -> KernelOp {
-    KernelOp {
-        kind: KernelOpKind::Literal,
-        operands: vec![pool_idx],
-        result: Some(result),
-    }
-}
-
 fn invocation_id(result: u32) -> KernelOp {
-    KernelOp {
-        kind: KernelOpKind::GlobalInvocationId,
-        operands: vec![0],
-        result: Some(result),
-    }
+    op(KernelOpKind::GlobalInvocationId, [0], result)
 }
 
-fn store(index: u32, value: u32) -> KernelOp {
-    KernelOp {
-        kind: KernelOpKind::StoreGlobal,
-        operands: vec![0, index, value],
-        result: None,
-    }
-}
-
-fn descriptor(body: KernelBody) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "level-stage-verdict".into(),
-        bindings: bindings(),
-        dispatch: Dispatch::new(64, 1, 1),
-        body,
-    }
+/// One 64-element read-write output over a 64-invocation dispatch, carrying
+/// `ops` over a one-entry literal pool.
+fn kernel(ops: [KernelOp; 3]) -> KernelDescriptor {
+    descriptor("level-stage-verdict")
+        .slot(global_rw(0, DataType::U32, "out").with_count(64))
+        .dispatch(64, 1, 1)
+        .body(body().literals([LiteralValue::U32(1)]).ops(ops))
+        .build()
 }
 
 fn verified_descriptor() -> KernelDescriptor {
-    descriptor(KernelBody {
-        ops: vec![literal(0, 0), invocation_id(1), store(1, 0)],
-        child_bodies: vec![],
-        literals: vec![LiteralValue::U32(1)],
-    })
+    kernel([lit(0, 0), invocation_id(1), store_global(0, 1, 0)])
 }
 
 /// A verified descriptor passes; one assigning a result identifier twice does not.
@@ -86,11 +50,7 @@ fn physical_kernel_stage_rejects_a_descriptor_the_verifier_rejects() {
         "Fix: a descriptor the verifier accepts must verify at the physical-kernel level"
     );
 
-    let bad = descriptor(KernelBody {
-        ops: vec![literal(0, 0), invocation_id(0), store(0, 0)],
-        child_bodies: vec![],
-        literals: vec![LiteralValue::U32(1)],
-    });
+    let bad = kernel([lit(0, 0), invocation_id(0), store_global(0, 0, 0)]);
     let verdict = stage.verify(&bad);
     assert!(
         matches!(verdict, LevelVerdict::Rejected(_)),
@@ -112,19 +72,14 @@ fn physical_kernel_stage_reports_a_non_canonical_descriptor() {
         "Fix: the canonicalized descriptor must be reported canonical"
     );
 
-    let out_of_order = vyre_lower::descriptor_builder::descriptor("emit-order")
+    let out_of_order = descriptor("out-of-order")
         .dispatch(1, 1, 1)
         .body(
-            vyre_lower::descriptor_builder::body()
-                .literals([LiteralValue::U32(1), LiteralValue::U32(2)])
+            body()
+                .literals([LiteralValue::U32(4), LiteralValue::U32(7)])
                 .ops([
-                    vyre_lower::descriptor_builder::lit(0, 0),
-                    vyre_lower::descriptor_builder::op(
-                        KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
-                        [0, 2],
-                        3,
-                    ),
-                    vyre_lower::descriptor_builder::lit(1, 2),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [1, 2], 3),
+                    lit(1, 2),
                 ]),
         )
         .build();
@@ -141,7 +96,7 @@ fn physical_kernel_stage_refuses_another_levels_subject() {
     let stage = stage_for_level(IrLevel::PhysicalKernel)
         .expect("Fix: the physical-kernel stage must exist");
     assert_eq!(
-        stage.verify(&bindings()),
+        stage.verify(&global_rw(0, DataType::U32, "out")),
         LevelVerdict::WrongSubject {
             expected: "KernelDescriptor"
         }

@@ -29,6 +29,17 @@ default_features = true
 boundary = "private"
 seam = "lowering"
 
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "the declared IR level the target-payload stage registers itself for"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
 [[crate]]
 package = "structure-gate"
 path = "structure-gate"
@@ -582,6 +593,39 @@ optional = false
 default_features = true
 boundary = "private"
 seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-lower"
+purpose = "the physical-kernel level-stage registry source"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "lowering"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the target-payload level-stage registry source"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
 
 [[crate.dependency]]
 package = "vyre-driver-cuda"
@@ -1567,6 +1611,17 @@ optional = false
 default_features = true
 boundary = "public"
 seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "the declared IR level a lowering stage registers itself for"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
 
 [[crate]]
 package = "vyre-emit-naga"

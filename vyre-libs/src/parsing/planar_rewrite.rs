@@ -236,7 +236,7 @@ inventory::submit! {
             cands[5] = 1;
             // `chosen` is read-write storage, so the reference takes one seeded
             // Value for it exactly as a device takes one bound buffer.
-            vec![vec![to_bytes(&cands), to_bytes(&vec![0u32; 16])]]
+            vec![vec![to_bytes(&cands), to_bytes(&[0u32; 16])]]
         }),
         Some(|| {
             vec![vec![EXPECTED_PLANAR_REWRITE_BYTES.to_vec()]]

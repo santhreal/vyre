@@ -1,9 +1,10 @@
 //! `bundle_cert` contracts over the public `vyre_conform` surface.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre::ir::{BufferAccess, BufferDecl, DataType, Program};
 use vyre_conform::{issue_bundle_cert, verify_bundle_against_reference, BundleCertError};
 use vyre_conform_spec::ConformanceCase;
 use vyre_primitives::wire::pack_u32_slice as bytes_u32;
+use vyre_test_support::pass_programs::element_copy;
 
 /// Smallest non-trivial Program we can dispatch on the reference:
 /// copy the first element of a read-only u32 buffer into a
@@ -14,7 +15,7 @@ fn copy_first_program() -> Program {
         BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(4);
     let out_buf =
         BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1);
-    let copy_node = Node::store("output", Expr::u32(0), Expr::load("input", Expr::u32(0)));
+    let copy_node = element_copy("output", 0, "input", 0);
     Program::wrapped(vec![in_buf, out_buf], [1, 1, 1], vec![copy_node])
 }
 
@@ -25,11 +26,7 @@ fn output_first_copy_program() -> Program {
             BufferDecl::storage("input", 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::store(
-            "output",
-            Expr::u32(0),
-            Expr::load("input", Expr::u32(0)),
-        )],
+        vec![element_copy("output", 0, "input", 0)],
     )
 }
 
@@ -114,11 +111,7 @@ fn changing_program_changes_bundle_hash() {
                     .with_count(1),
             ],
             [1, 1, 1],
-            vec![Node::store(
-                "output",
-                Expr::u32(0),
-                Expr::load("input", Expr::u32(1)),
-            )],
+            vec![element_copy("output", 0, "input", 1)],
         )
     };
     let cert_a = issue_bundle_cert(&prog_a, &sample_corpus(), "t", "s", "p").unwrap();
@@ -198,11 +191,7 @@ fn verify_catches_bundle_drift() {
             BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32).with_count(2),
         ],
         [1, 1, 1],
-        vec![Node::store(
-            "output",
-            Expr::u32(1),
-            Expr::load("input", Expr::u32(0)),
-        )],
+        vec![element_copy("output", 1, "input", 0)],
     );
     let err = verify_bundle_against_reference(&cert, &drifted, &corpus)
         .expect_err("bundle drift must reject");

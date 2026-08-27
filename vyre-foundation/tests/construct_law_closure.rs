@@ -159,13 +159,12 @@ fn a_value_resolves_to_the_row_of_the_variant_it_holds() {
 
 #[test]
 fn a_reduction_construct_cites_the_reduction_family() {
-    for construct in ["SubgroupReduce"] {
-        let entry = expr_construct_laws(construct).expect("declared expression construct");
-        assert!(
-            entry.admits(RegionLawFamily::Reduction),
-            "Fix: {construct} combines lane values, so a reduction law applies to it."
-        );
-    }
+    let subgroup_reduce =
+        expr_construct_laws("SubgroupReduce").expect("declared expression construct");
+    assert!(
+        subgroup_reduce.admits(RegionLawFamily::Reduction),
+        "Fix: SubgroupReduce combines lane values, so a reduction law applies to it."
+    );
     for construct in ["AllReduce", "ReduceScatter", "TileReduce", "TileMatmul"] {
         let entry = node_construct_laws(construct).expect("declared statement construct");
         assert!(
