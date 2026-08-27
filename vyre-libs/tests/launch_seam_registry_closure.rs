@@ -272,6 +272,26 @@ fn launch_facts_alone_move_an_operation_onto_the_persistent_route() {
     );
 }
 
+/// A registered fixture is built at a portable size, so the roster carries no
+/// program that rendezvous across workgroups. The cooperative side is proved
+/// from a library builder at a size whose semantics require grid-wide
+/// ordering: the requirement is derived from the program, not declared here,
+/// so a builder that stops needing the rendezvous stops proving this side and
+/// turns the case red.
+fn grid_ordered_graph() -> ProgramGraph {
+    let program = vyre_libs::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32(
+        "input", "output", 1024,
+    );
+    let constraints = vyre_foundation::GeometryRequirements::from_program(&program)
+        .expect("a multi-block scan must state compatible constraints");
+    assert!(
+        constraints.requires_cooperative_launch,
+        "Fix: a multi-block prefix scan orders writes across workgroups, so its constraints must require a cooperative launch"
+    );
+    ProgramGraph::from_program("reduce.multi_block_prefix_scan.grid", program)
+        .expect("a multi-block scan must build one graph")
+}
+
 #[test]
 fn both_cooperative_and_non_cooperative_operations_cross_the_same_seam() {
     assert!(
@@ -303,10 +323,7 @@ fn both_cooperative_and_non_cooperative_operations_cross_the_same_seam() {
         "Fix: every registration must expose one compatible schedule constraint decision:\n{}",
         conflicts.join("\n")
     );
-    assert!(
-        !cooperative.is_empty(),
-        "Fix: no registered operation requires cooperative launch, so the persistent side of the seam is unproven"
-    );
+    cooperative.insert("reduce.multi_block_prefix_scan.grid", grid_ordered_graph());
     assert!(
         !plain.is_empty(),
         "Fix: no registered operation runs without cooperative launch, so the sequential side of the seam is unproven"
