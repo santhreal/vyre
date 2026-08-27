@@ -49,7 +49,7 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 ### Boundaries
 
 The `test-support` owner maintains this `test-tooling` crate at `vyre-test-support`.
-Its allowed internal production dependencies are: `structure-gate`, `vyre-foundation`, `vyre-reference`, `vyre-spec`.
+Its allowed internal production dependencies are: `structure-gate`, `vyre-foundation`, `vyre-megakernel`, `vyre-reference`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
@@ -62,7 +62,7 @@ Run the checked-in behavior from `vyre-test-support/tests/adversarial_and_mutati
 
 ### Features
 
-- Manifest features: `default`, `ir-fixtures`
+- Manifest features: `default`, `ir-fixtures`, `semantic-requests`
 - Default feature members: None
 
 ### Errors and unsupported behavior

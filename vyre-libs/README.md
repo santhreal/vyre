@@ -127,7 +127,7 @@ Own every composition in the workspace: consumer dialects and compiler-internal 
 ### Boundaries
 
 The `product-libraries` owner maintains this `libraries` crate at `vyre-libs`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-primitives`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

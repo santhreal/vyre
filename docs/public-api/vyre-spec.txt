@@ -12,9 +12,11 @@
 #[non_exhaustive] pub enum vyre_spec::EngineInvariant
 #[non_exhaustive] pub enum vyre_spec::FloatType
 #[non_exhaustive] pub enum vyre_spec::InvariantCategory
+#[non_exhaustive] pub enum vyre_spec::IrLevel
 #[non_exhaustive] pub enum vyre_spec::Layer
 #[non_exhaustive] pub enum vyre_spec::MetadataCategory
 #[non_exhaustive] pub enum vyre_spec::MonotonicDirection
+#[non_exhaustive] pub enum vyre_spec::RegionLawFamily
 #[non_exhaustive] pub enum vyre_spec::SideEffectClass
 #[non_exhaustive] pub enum vyre_spec::SubgroupReduceOp
 #[non_exhaustive] pub enum vyre_spec::TernaryOp
@@ -59,11 +61,13 @@ impl vyre_spec::EngineInvariant
 impl vyre_spec::IntrinsicDescriptor
 impl vyre_spec::IntrinsicLowering
 impl vyre_spec::IntrinsicTable
+impl vyre_spec::IrLevel
 impl vyre_spec::Layer
 impl vyre_spec::MetadataCategory
 impl vyre_spec::OpSignature
 impl vyre_spec::OperationContract
 impl vyre_spec::PgNodeKind
+impl vyre_spec::RegionLawFamily
 impl vyre_spec::Semiring
 impl vyre_spec::SubgroupReduceOp
 impl vyre_spec::TernaryOp
@@ -85,12 +89,16 @@ pub const fn vyre_spec::AtomicOp::builtin_wire_tag(&self) -> core::option::Optio
 pub const fn vyre_spec::AtomicOp::combine(&self) -> core::option::Option<vyre_spec::CombineKind>
 pub const fn vyre_spec::BackendAvailabilityPredicate::new(predicate: fn(&str) -> bool) -> Self
 pub const fn vyre_spec::BinOp::builtin_wire_tag(&self) -> core::option::Option<u8>
+pub const fn vyre_spec::BinOp::commutes(self) -> bool
+pub const fn vyre_spec::BinOp::commutes_bit_exactly(self) -> bool
+pub const fn vyre_spec::BinOp::operand_swap(self) -> vyre_spec::OperandSwap
 pub const fn vyre_spec::BinOp::result_class(self) -> vyre_spec::BinOpResult
 pub const fn vyre_spec::BinOp::takes_numeric_operands(self) -> bool
 pub const fn vyre_spec::CollectiveOp::builtin_wire_tag(self) -> u8
 pub const fn vyre_spec::CollectiveOp::combine(self) -> vyre_spec::CombineKind
 pub const fn vyre_spec::CombineKind::is_bitwise(self) -> bool
 pub const fn vyre_spec::CombineKind::law_id(self, exact: bool) -> &'static str
+pub const fn vyre_spec::CombineKind::scalar_binop(self) -> vyre_spec::BinOp
 pub const fn vyre_spec::CommGroup::as_u32(self) -> u32
 pub const fn vyre_spec::DataType::arithmetic_is_exact(&self) -> bool
 pub const fn vyre_spec::DataType::bit_width(&self) -> core::option::Option<usize>
@@ -109,11 +117,17 @@ pub const fn vyre_spec::IntrinsicDescriptor::hardware(&self) -> &'static str
 pub const fn vyre_spec::IntrinsicDescriptor::name(&self) -> &'static str
 pub const fn vyre_spec::IntrinsicDescriptor::new(name: &'static str, hardware: &'static str, cpu_fn: vyre_spec::CpuFn) -> Self
 pub const fn vyre_spec::IntrinsicDescriptor::with_contract(name: &'static str, hardware: &'static str, cpu_fn: vyre_spec::CpuFn, contract: vyre_spec::OperationContract) -> Self
+pub const fn vyre_spec::IrLevel::admits_physical_policy(self) -> bool
+pub const fn vyre_spec::IrLevel::all() -> &'static [Self]
+pub const fn vyre_spec::IrLevel::name(self) -> &'static str
 pub const fn vyre_spec::Layer::id(&self) -> &'static str
 pub const fn vyre_spec::Layer::layer_description(&self) -> &'static str
 pub const fn vyre_spec::MetadataCategory::category_id(&self) -> &'static str
 pub const fn vyre_spec::OperationContract::none() -> Self
 pub const fn vyre_spec::PgNodeKind::from_u32(value: u32) -> core::option::Option<Self>
+pub const fn vyre_spec::RegionLawFamily::admits_value_difference(self) -> bool
+pub const fn vyre_spec::RegionLawFamily::all() -> &'static [Self]
+pub const fn vyre_spec::RegionLawFamily::name(self) -> &'static str
 pub const fn vyre_spec::Semiring::identity(self) -> u32
 pub const fn vyre_spec::SubgroupReduceOp::as_str(self) -> &'static str
 pub const fn vyre_spec::SubgroupReduceOp::builtin_wire_tag(self) -> u8
@@ -392,6 +406,7 @@ pub enum vyre_spec::InfinityBehavior
 pub enum vyre_spec::NanBehavior
 pub enum vyre_spec::NumericFormat
 pub enum vyre_spec::OpIntensity
+pub enum vyre_spec::OperandSwap
 pub enum vyre_spec::OverflowBehavior
 pub enum vyre_spec::QuantizationScale
 pub enum vyre_spec::QuantizationZeroPoint
@@ -446,6 +461,7 @@ pub fn vyre_spec::OpSignature::min_input_bytes(&self) -> usize
 pub fn vyre_spec::OperationContract::default() -> Self
 pub fn vyre_spec::QuantizationScale::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_spec::QuantizationZeroPoint::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_spec::RegionLawFamily::from_name(name: &str) -> core::option::Option<Self>
 pub fn vyre_spec::SubgroupReduceOp::combine_f32(self, acc: f32, lane: f32) -> core::option::Option<f32>
 pub fn vyre_spec::SubgroupReduceOp::f32_identity(self) -> core::option::Option<f32>
 pub fn vyre_spec::SubgroupReduceOp::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
@@ -766,6 +782,11 @@ pub vyre_spec::InvariantCategory::Algebra
 pub vyre_spec::InvariantCategory::Execution
 pub vyre_spec::InvariantCategory::Resource
 pub vyre_spec::InvariantCategory::Stability
+pub vyre_spec::IrLevel::Logical
+pub vyre_spec::IrLevel::PhysicalKernel
+pub vyre_spec::IrLevel::Schedule
+pub vyre_spec::IrLevel::TargetPayload
+pub vyre_spec::IrLevel::WholeGraph
 pub vyre_spec::KatVector::expected: &'static [u8]
 pub vyre_spec::KatVector::input: &'static [u8]
 pub vyre_spec::KatVector::source: &'static str
@@ -825,6 +846,9 @@ pub vyre_spec::OpSignature::input_params: core::option::Option<alloc::vec::Vec<v
 pub vyre_spec::OpSignature::inputs: alloc::vec::Vec<vyre_spec::DataType>
 pub vyre_spec::OpSignature::output: vyre_spec::DataType
 pub vyre_spec::OpSignature::output_params: core::option::Option<alloc::vec::Vec<vyre_spec::SignatureParam>>
+pub vyre_spec::OperandSwap::BitPreserving
+pub vyre_spec::OperandSwap::Ordered
+pub vyre_spec::OperandSwap::ValuePreserving
 pub vyre_spec::OperationContract::capability_requirements: core::option::Option<smallvec::SmallVec<[vyre_spec::CapabilityId; 4]>>
 pub vyre_spec::OperationContract::cost_hint: core::option::Option<vyre_spec::CostHint>
 pub vyre_spec::OperationContract::determinism: core::option::Option<vyre_spec::DeterminismClass>
@@ -865,6 +889,11 @@ pub vyre_spec::QuantizationZeroPoint::PerChannel::axis: u32
 pub vyre_spec::QuantizationZeroPoint::PerGroup
 pub vyre_spec::QuantizationZeroPoint::PerGroup::group_size: u32
 pub vyre_spec::QuantizationZeroPoint::PerTensor
+pub vyre_spec::RegionLawFamily::Algebraic
+pub vyre_spec::RegionLawFamily::Layout
+pub vyre_spec::RegionLawFamily::Numerical
+pub vyre_spec::RegionLawFamily::Recurrence
+pub vyre_spec::RegionLawFamily::Reduction
 pub vyre_spec::RoundingMode::Exact
 pub vyre_spec::RoundingMode::NearestQuantile
 pub vyre_spec::RoundingMode::RoundToNearestEven

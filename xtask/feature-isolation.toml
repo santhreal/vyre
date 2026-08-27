@@ -773,11 +773,23 @@ feature = "(default),ir-fixtures"
 
 [[pair]]
 member = "vyre-test-support"
+feature = "(default),ir-fixtures,semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
 feature = "(none)"
 
 [[pair]]
 member = "vyre-test-support"
 feature = "ir-fixtures"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "semantic-requests"
 
 [[pair]]
 member = "xtask"

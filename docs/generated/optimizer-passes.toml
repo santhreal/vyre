@@ -1,52 +1,10 @@
 # Generated from the live vyre-foundation optimizer registry by `./cargo_full run --bin xtask -- optimization-docs --write`.
 # Edit the pass registration metadata, not this file. The optimizer has one semantic layer
 # before verified lowering; concrete target strategy is not registered in this catalog.
-schema_version = 1
-
-[[pass]]
-id = "atomic_minimize"
-kind = "executable pass"
-owner = "vyre-foundation-optimizer"
-phase = "Sync"
-boundary_class = "AbiPreserving"
-requires = []
-invalidates = []
-requires_capabilities = []
-preserves_abi = "true"
-invariant = "preserves public buffer ABI and externally visible program semantics"
-termination = "bounded by the scheduler restart and iteration budgets"
-proof = "`optimizer::pass_invariants::audit_registered_passes`"
-benchmark = "foundation.optimizer.sync"
-
-[[pass]]
-id = "autotune"
-kind = "executable pass"
-owner = "vyre-foundation-optimizer"
-phase = "Unclassified"
-boundary_class = "Unknown"
-requires = []
-invalidates = []
-requires_capabilities = []
-preserves_abi = "true"
-invariant = "must not enter release/profile pipelines until classified"
-termination = "bounded by the scheduler restart and iteration budgets"
-proof = "`optimizer::pass_invariants::audit_registered_passes`"
-benchmark = "foundation.optimizer.classification-gap"
-
-[[pass]]
-id = "barrier_coalesce"
-kind = "executable pass"
-owner = "vyre-foundation-optimizer"
-phase = "Unclassified"
-boundary_class = "Unknown"
-requires = []
-invalidates = []
-requires_capabilities = []
-preserves_abi = "true"
-invariant = "must not enter release/profile pipelines until classified"
-termination = "bounded by the scheduler restart and iteration budgets"
-proof = "`optimizer::pass_invariants::audit_registered_passes`"
-benchmark = "foundation.optimizer.classification-gap"
+# An executable pass row also carries its declared rewrite contract: the IR level it
+# owns, the evidence authorizing it, and the growth it may cause. A supplemental rule
+# row carries none, because the contract belongs to the pass that runs it.
+schema_version = 2
 
 [[pass]]
 id = "branch_coalesce"
@@ -62,6 +20,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.fusion"
+level = "logical"
+witness = "structural"
+witness_argument = "an if whose body is exactly one guardless if runs its inner body under the conjunction of both conditions and nothing else"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "branch_value_hoist"
@@ -77,6 +40,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.fusion"
+level = "logical"
+witness = "structural"
+witness_argument = "a prefix common to both arms runs on every path through the branch, so evaluating it once before the branch preserves order and effects"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "buffer_decl_sort"
@@ -92,6 +60,11 @@ invariant = "must not enter release/profile pipelines until classified"
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.classification-gap"
+level = "logical"
+witness = "structural"
+witness_argument = "buffer references resolve by name, so declaration order is not observable and a canonical order makes structurally equal programs compare equal"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "canonicalize"
@@ -107,6 +80,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.scalar"
+level = "logical"
+witness = "obligation"
+witness_argument = ""
+obligation_families = ["canonicalize"]
+expansion = "non-growing"
 
 [[pass]]
 id = "const_fold"
@@ -122,6 +100,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.scalar"
+level = "logical"
+witness = "obligation"
+witness_argument = ""
+obligation_families = ["const_fold", "identity_elim"]
+expansion = "non-growing"
 
 [[pass]]
 id = "cse"
@@ -137,6 +120,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.fusion"
+level = "logical"
+witness = "structural"
+witness_argument = "two structurally equal expressions with no intervening write to what they read evaluate to the same value, so one binding serves both"
+obligation_families = []
+expansion = "node budget 1"
 
 [[pass]]
 id = "dce"
@@ -152,6 +140,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.fusion"
+level = "logical"
+witness = "structural"
+witness_argument = "a binding no reachable use reads, and a statement with no effect, contribute nothing observable"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "dead_store_elim"
@@ -167,21 +160,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.memory"
-
-[[pass]]
-id = "decode_scan_fuse"
-kind = "executable pass"
-owner = "vyre-foundation-optimizer"
-phase = "Unclassified"
-boundary_class = "Unknown"
-requires = []
-invalidates = ["buffer_layout", "fusion"]
-requires_capabilities = []
-preserves_abi = "true"
-invariant = "must not enter release/profile pipelines until classified"
-termination = "bounded by the scheduler restart and iteration budgets"
-proof = "`optimizer::pass_invariants::audit_registered_passes`"
-benchmark = "foundation.optimizer.classification-gap"
+level = "logical"
+witness = "structural"
+witness_argument = "a store overwritten by a later sibling store to the same buffer and index, with no effect between them that could read it, is never observed"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "empty_block_collapse"
@@ -197,6 +180,11 @@ invariant = "must not enter release/profile pipelines until classified"
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.classification-gap"
+level = "logical"
+witness = "structural"
+witness_argument = "an empty block performs no effect and binds no name"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "fusion"
@@ -212,6 +200,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.fusion"
+level = "logical"
+witness = "structural"
+witness_argument = "two regions whose written buffers are disjoint from what the other reads commute, so running them in one region preserves every read-write order"
+obligation_families = []
+expansion = "node factor 2"
 
 [[pass]]
 id = "dead_buffer_elim"
@@ -227,6 +220,11 @@ invariant = "requires explicit caller opt-in before changing public buffer ABI"
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.memory"
+level = "logical"
+witness = "structural"
+witness_argument = "a declared buffer no statement reads or writes, and which the entry ABI does not publish, carries no value out of the program"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "if_constant_branch_eliminate"
@@ -242,6 +240,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.scalar"
+level = "logical"
+witness = "structural"
+witness_argument = "a constant condition selects one arm on every invocation, so inlining that arm keeps the only reachable path"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "loop_bound_tighten"
@@ -257,6 +260,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.loop"
+level = "logical"
+witness = "structural"
+witness_argument = "iterations the inner guard rejects perform no effect, so narrowing the bound to the guarded range drops only empty iterations"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "loop_fission"
@@ -272,6 +280,11 @@ invariant = "must not enter release/profile pipelines until classified"
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.classification-gap"
+level = "logical"
+witness = "structural"
+witness_argument = "when the two halves of a body touch disjoint buffers, no value crosses the split, so two loops over the same range compute the same state"
+obligation_families = []
+expansion = "node factor 2"
 
 [[pass]]
 id = "loop_fusion"
@@ -287,6 +300,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.loop"
+level = "logical"
+witness = "structural"
+witness_argument = "adjacent loops with equal bounds and disjoint buffer sets have no cross-iteration dependence, so one loop runs both bodies in order"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "loop_licm"
@@ -302,6 +320,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.loop"
+level = "logical"
+witness = "structural"
+witness_argument = "a binding whose value depends on no loop variable and no written buffer evaluates identically in every iteration"
+obligation_families = []
+expansion = "node budget 2"
 
 [[pass]]
 id = "loop_lower_bound_normalize"
@@ -317,6 +340,11 @@ invariant = "must not enter release/profile pipelines until classified"
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.classification-gap"
+level = "logical"
+witness = "structural"
+witness_argument = "shifting a literal-bounded range to start at zero and adding the offset at every use enumerates the same values in the same order"
+obligation_families = []
+expansion = "node factor 2"
 
 [[pass]]
 id = "loop_peel"
@@ -332,6 +360,11 @@ invariant = "must not enter release/profile pipelines until classified"
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.classification-gap"
+level = "logical"
+witness = "structural"
+witness_argument = "the first iteration is the only one the first-iteration guard admits, so running it before the loop and starting at the next value keeps every effect once"
+obligation_families = []
+expansion = "node factor 2"
 
 [[pass]]
 id = "loop_redundant_bound_check_elide"
@@ -347,36 +380,11 @@ invariant = "must not enter release/profile pipelines until classified"
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.classification-gap"
-
-[[pass]]
-id = "loop_software_pipeline"
-kind = "executable pass"
-owner = "vyre-foundation-optimizer"
-phase = "Loop"
-boundary_class = "AbiPreserving"
-requires = ["const_fold"]
-invalidates = ["loop_unroll", "loop_strip_mine"]
-requires_capabilities = []
-preserves_abi = "true"
-invariant = "preserves public buffer ABI and externally visible program semantics"
-termination = "bounded by the scheduler restart and iteration budgets"
-proof = "`optimizer::pass_invariants::audit_registered_passes`"
-benchmark = "foundation.optimizer.loop"
-
-[[pass]]
-id = "loop_strip_mine"
-kind = "executable pass"
-owner = "vyre-foundation-optimizer"
-phase = "Loop"
-boundary_class = "AbiPreserving"
-requires = ["const_fold"]
-invalidates = ["loop_unroll", "vectorization"]
-requires_capabilities = []
-preserves_abi = "true"
-invariant = "preserves public buffer ABI and externally visible program semantics"
-termination = "bounded by the scheduler restart and iteration budgets"
-proof = "`optimizer::pass_invariants::audit_registered_passes`"
-benchmark = "foundation.optimizer.loop"
+level = "logical"
+witness = "structural"
+witness_argument = "the enclosing loop already admits only values below its upper bound, so a guard re-checking that bound is true on every iteration"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "loop_trip_zero_eliminate"
@@ -392,21 +400,11 @@ invariant = "must not enter release/profile pipelines until classified"
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.classification-gap"
-
-[[pass]]
-id = "loop_unroll"
-kind = "executable pass"
-owner = "vyre-foundation-optimizer"
-phase = "Loop"
-boundary_class = "AbiPreserving"
-requires = ["const_fold"]
-invalidates = ["const_fold", "value_numbering", "fusion"]
-requires_capabilities = []
-preserves_abi = "true"
-invariant = "preserves public buffer ABI and externally visible program semantics"
-termination = "bounded by the scheduler restart and iteration budgets"
-proof = "`optimizer::pass_invariants::audit_registered_passes`"
-benchmark = "foundation.optimizer.loop"
+level = "logical"
+witness = "structural"
+witness_argument = "a loop whose literal bounds give no iteration performs no effect"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "loop_var_range_fold"
@@ -422,6 +420,11 @@ invariant = "must not enter release/profile pipelines until classified"
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.classification-gap"
+level = "logical"
+witness = "structural"
+witness_argument = "inside a literal-bounded loop the induction variable is known to lie in that range, so a cast or bound check over that range folds to its constant answer"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "noop_assign_eliminate"
@@ -437,21 +440,11 @@ invariant = "must not enter release/profile pipelines until classified"
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.classification-gap"
-
-[[pass]]
-id = "normalize_atomics"
-kind = "executable pass"
-owner = "vyre-foundation-optimizer"
-phase = "Sync"
-boundary_class = "AbiPreserving"
-requires = []
-invalidates = ["fusion"]
-requires_capabilities = []
-preserves_abi = "true"
-invariant = "preserves public buffer ABI and externally visible program semantics"
-termination = "bounded by the scheduler restart and iteration budgets"
-proof = "`optimizer::pass_invariants::audit_registered_passes`"
-benchmark = "foundation.optimizer.sync"
+level = "logical"
+witness = "structural"
+witness_argument = "assigning a variable to itself leaves the same value bound"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "reaching_def_propagate"
@@ -467,6 +460,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.scalar"
+level = "logical"
+witness = "structural"
+witness_argument = "a let bound to a literal and never rebound has that literal as its only reaching definition, so every use reads the same value"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "read_only_load_hoist"
@@ -482,6 +480,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.memory"
+level = "logical"
+witness = "structural"
+witness_argument = "both arms load the same index of a buffer nothing in the branch writes, so one load before the branch yields the value both arms read"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "region_fusion_hint"
@@ -497,6 +500,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.fusion"
+level = "logical"
+witness = "structural"
+witness_argument = "the hint records that two adjacent regions match a fusion rule; it changes no statement and the fusion pass owns the rewrite"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "region_inline"
@@ -512,6 +520,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.scalar"
+level = "logical"
+witness = "structural"
+witness_argument = "a region is a naming scope over its body, so splicing the body into the parent keeps statement order and every binding it declares"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "region_promote_singleton_block"
@@ -527,6 +540,11 @@ invariant = "must not enter release/profile pipelines until classified"
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.classification-gap"
+level = "logical"
+witness = "structural"
+witness_argument = "a region whose body is one block has the block's statements as its body"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "rematerialize_cheap_let"
@@ -542,6 +560,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.scalar"
+level = "logical"
+witness = "structural"
+witness_argument = "a let bound to a leaf expression with no effect evaluates to the same value at every use, so inlining it and dropping the binding preserves values"
+obligation_families = []
+expansion = "node factor 2"
 
 [[pass]]
 id = "store_to_load_forward"
@@ -557,6 +580,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.memory"
+level = "logical"
+witness = "structural"
+witness_argument = "a load from the same buffer and structurally equal index in the same block, with no intervening write, reads the value the store wrote"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "strength_reduce"
@@ -572,6 +600,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.scalar"
+level = "logical"
+witness = "obligation"
+witness_argument = ""
+obligation_families = ["strength_reduce"]
+expansion = "non-growing"
 
 [[pass]]
 id = "tail_duplication"
@@ -587,6 +620,171 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.fusion"
+level = "logical"
+witness = "structural"
+witness_argument = "a tail common to both arms runs on every path out of the branch, so hoisting it after the branch keeps order and effects"
+obligation_families = []
+expansion = "non-growing"
+
+[[pass]]
+id = "atomic_minimize"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Sync"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.sync"
+level = "schedule"
+witness = "structural"
+witness_argument = "an identity-op read-modify-write under relaxed ordering observes the same value a plain load does, and non-identity atomics are left alone"
+obligation_families = []
+expansion = "non-growing"
+
+[[pass]]
+id = "autotune"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+level = "schedule"
+witness = "structural"
+witness_argument = "the pass selects among schedule alternatives the target admits and changes no statement's value"
+obligation_families = []
+expansion = "node factor 2"
+
+[[pass]]
+id = "barrier_coalesce"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = []
+invalidates = []
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+level = "schedule"
+witness = "structural"
+witness_argument = "consecutive barriers with no statement between them order the same accesses as the single barrier that joins their memory scopes"
+obligation_families = []
+expansion = "non-growing"
+
+[[pass]]
+id = "decode_scan_fuse"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Unclassified"
+boundary_class = "Unknown"
+requires = []
+invalidates = ["buffer_layout", "fusion"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "must not enter release/profile pipelines until classified"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.classification-gap"
+level = "schedule"
+witness = "structural"
+witness_argument = "the scan reads exactly the buffer the decode wrote, so computing each element and consuming it in one region keeps the same values and drops the round trip"
+obligation_families = []
+expansion = "node factor 2"
+
+[[pass]]
+id = "loop_software_pipeline"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = ["const_fold"]
+invalidates = ["loop_unroll", "loop_strip_mine"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.loop"
+level = "schedule"
+witness = "structural"
+witness_argument = "the prologue issues the first load and the body stores iteration n while loading n+1, so every load still precedes the store that reads it"
+obligation_families = []
+expansion = "node factor 3"
+
+[[pass]]
+id = "loop_strip_mine"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = ["const_fold"]
+invalidates = ["loop_unroll", "vectorization"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.loop"
+level = "schedule"
+witness = "structural"
+witness_argument = "the tiled pair enumerates the original range in the original order, with the residual tail kept as its own trip range"
+obligation_families = []
+expansion = "node factor 3"
+
+[[pass]]
+id = "loop_unroll"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Loop"
+boundary_class = "AbiPreserving"
+requires = ["const_fold"]
+invalidates = ["const_fold", "value_numbering", "fusion"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.loop"
+level = "schedule"
+witness = "structural"
+witness_argument = "each copy substitutes one literal loop value, so the copies perform exactly the iterations the loop performed, in order"
+obligation_families = []
+expansion = "node factor 8"
+
+[[pass]]
+id = "normalize_atomics"
+kind = "executable pass"
+owner = "vyre-foundation-optimizer"
+phase = "Sync"
+boundary_class = "AbiPreserving"
+requires = []
+invalidates = ["fusion"]
+requires_capabilities = []
+preserves_abi = "true"
+invariant = "preserves public buffer ABI and externally visible program semantics"
+termination = "bounded by the scheduler restart and iteration budgets"
+proof = "`optimizer::pass_invariants::audit_registered_passes`"
+benchmark = "foundation.optimizer.sync"
+level = "schedule"
+witness = "structural"
+witness_argument = "binding an atomic to a let before the branch evaluates it exactly once, which is what an atomic in a branch predicate already means"
+obligation_families = []
+expansion = "node budget 2"
 
 [[pass]]
 id = "vectorization"
@@ -602,6 +800,11 @@ invariant = "preserves public buffer ABI and externally visible program semantic
 termination = "bounded by the scheduler restart and iteration budgets"
 proof = "`optimizer::pass_invariants::audit_registered_passes`"
 benchmark = "foundation.optimizer.memory"
+level = "schedule"
+witness = "structural"
+witness_argument = "contiguous element accesses within one invocation cover the same addresses as the wide access that replaces them"
+obligation_families = []
+expansion = "non-growing"
 
 [[pass]]
 id = "const_fold.unary.logical_not_involution"

@@ -19,7 +19,7 @@ Adapt the reference interpreter to the backend contract for deterministic confor
 ### Boundaries
 
 The `reference-driver` owner maintains this `concrete-backend` crate at `vyre-driver-reference`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-foundation`, `vyre-reference`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-reference`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

@@ -37,10 +37,10 @@ Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-megakernel/tests/artifact_contract.rs`:
+Run the checked-in behavior from `vyre-megakernel/tests/algebraic_equivalence.rs`:
 
 ```console
-./cargo_full test -p vyre-megakernel --test artifact_contract
+./cargo_full test -p vyre-megakernel --test algebraic_equivalence
 ```
 
 ### Features

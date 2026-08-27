@@ -100,12 +100,19 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The ci-steps gate resolves every package, test, bench, example, binary and
   feature token in the workflow steps and the scripts against the workspace
   manifests, so a step that silently selects nothing fails.
+- Region alternatives are derived from the algebraic laws a combine registers
+  and composed by a bounded expansion over an expression e-graph, so a declared
+  law contributes rewrites without an operation-specific recipe.
 - The source-include-module gate reports include! of a tracked Rust file. A
   pasted file has no module path, so a name it defines cannot be qualified, its
   items sit in the including module's namespace, and the reachability rules
   read it as an orphan. The tree reached zero such includes by converting the
   files to modules and nothing held that line. A build script include of a
   generated path under OUT_DIR names no tracked file and is not a finding.
+- Each IR construct records the algebraic, recurrence, reduction, layout, and
+  numerical law families a rewrite may cite over it, or the reason it exposes
+  none, and a construct added to the AST registry fails the suite until one is
+  recorded.
 - hygiene-matrix bounds the panics nothing else answers for. A panicking call
   whose function documents a # Panics section is a contract, and one on a hot
   path is a release blocker; between them sat every panic that is neither,
@@ -317,6 +324,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   dequantizes each immutable weight tile once and reuses it across independent
   resident batch rows. Release evidence measures normalized per-inference
   latency.
+- The algebraic law registry records the identity element of the exact add,
+  multiply, exclusive-or, and bitwise-or combines.
 - Five operations now own the pieces the Jacobi eigensolver used to spell
   inline: `givens_rotate_pair` rotates one strided element pair,
   `jacobi_apply_rotation` applies one rotation at a pivot to a matrix and its
@@ -578,8 +587,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   built Program and wraps an invocation-gated arm so fusion does not run it
   under the widest geometry; math::scan::prefix_sum builds on that owner and
   its IR is unchanged.
+- The pass invariant audit reports a pass that grows a program past the
+  expansion bound its rewrite contract declares, and a registered pass that
+  declares no contract.
 - An artifact session allocates, binds, and releases the workspace plan the
   artifact recorded for the values its entry points pass between themselves.
+- vyre-spec states the IR level a declaration owns, the region law family an
+  equality cites, and the operand-swap class of every binary operator and
+  combine kind.
 - `scripts/check_branch_accounting.py` derives the campaign's own branch and
   worktree state from git at run time and fails when it is inconsistent: a
   branch no owner branch holds and no worktree carries is work nobody is doing
@@ -674,6 +689,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   under it, and at warning level that signal is one line in a build that emits
   many. The one allowance stays: external_ifds_engine names a bridge that
   cannot be a Cargo feature here.
+- The launch-domain analysis reads a guard written against a sum carrying the
+  axis-0 logical index, so a chunked walk dispatches one lane per cell instead
+  of one lane per declared element.
 - Four comments deferred their contract to docs/lego-block-rule.md instead of
   stating it: the Category A/C placement rule in vyre-libs, the discovery
   checklist in the visual dialect, the single-caller promotion rule in the box
@@ -793,6 +811,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   folds until the file passed the thousand-line cap. A scan leaves every lane
   holding a prefix; a tree reduction leaves one value. They share a staging
   convention and nothing else.
+- Backend selection for conformance proving names which admission rule rejected
+  an id, distinguishing a reference oracle, a registered backend with no
+  semantic-execution facets, and an unknown id.
 - The gate proof-identity rejection tests built their inputs from the live
   checkout, so a missing symbol, a non-test symbol, and a wrong-package symbol
   were all asserted against whatever the workspace happened to contain that
@@ -800,6 +821,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   needs.
 - Resident submission launches every entry point of a multi-entry artifact in
   the recorded plan order instead of refusing the artifact.
+- Every registered optimizer pass declares its IR level, preconditions, effect
+  classes, numerical contract, proof witness, profitability facts, and
+  expansion bound in one registry, and a pass without a declared contract fails
+  the suite.
 - A second name for a composition witness is an alias, not a re-typed
   signature. The CSR forward-or-changed adapter and the numerical kernel
   pipeline tests re-export the vyre-reference witnesses under their local names
@@ -848,6 +873,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   driver, the CUDA, WGPU, Metal and SPIR-V backends and the benchmark harness
   now call them. A dispatch path states which timing shape it produced instead
   of restating every field name.
+- A TOML equivalence rule file declares schema 2 and names the law family that
+  authorizes each pair, and an unregistered law name is rejected at load.
 - V139 told a caller to compute an async transfer offset and size from
   workgroup-uniform expressions and named only literals, buffer lengths and the
   workgroup ID, so the reader could not tell that a load from a read-only or
@@ -1590,6 +1617,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   two suites stay separate targets. A rule that lives only in a document stops
   being enforced the day the document is deleted, and four of these cited
   documents that already were.
+- Equality saturation rejects a rewrite rule whose recorded witness carries no
+  proof, before any rule in the set runs.
 - Selection cost prices instruction, matrix-engine, rendezvous and idle-lane
   work from reported device facts, records every term's unit and provenance,
   and rejects a register allocation only above the architectural ceiling.
@@ -2352,6 +2381,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   accumulator alongside the query scratch instead of the query scratch alone,
   and the tiled plan drops the split-reduction state, which combines across
   workgroups and is therefore never allocated as workgroup memory.
+- The wire canonicalizer, the canonicalize pass, and the common-subexpression
+  key read operand-swap legality from `BinOp::operand_swap`, so `WrappingAdd`,
+  `Min`, `Max`, `AbsDiff`, `MulHigh`, `SaturatingAdd`, and `SaturatingMul`
+  reorder consistently.
 - The WGSL and PTX emitters each carried their own copy of the source-tree
   digest: two build scripts and two tests, each with its own FNV-1a-128
   constants, directory walk and byte cap, and no other owner of that hash
@@ -2635,6 +2668,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   caller's program unchanged, which is the common case under the optimizer
   fixpoint. Legality is stated once per pass instead of twice, so an analysis
   can no longer schedule a pass for a node its own rewrite then declines.
+- Optimizer passes that become ready together are ordered by the IR level their
+  rewrite contract declares, so a schedule-level rewrite no longer runs before
+  the logical rewrites whose preconditions assume no physical constructs.
 - `vyre_foundation::optimizer`'s per-pass fixed-point contract is measured
   against every registered pass, discovered through
   `vyre_foundation::optimizer::registered_pass_registrations` and scheduled
@@ -3218,6 +3254,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   previous example called a vyre-primitives builder and executed it on the
   reference interpreter, so it demonstrated neither a libs composition nor the
   compiler.
+- The generated optimizer pass reference declares schema 2 and carries the
+  level, witness, expansion bound, and search admission of every executable
+  pass.
 - The public API snapshots record `vyre_reference::reference_inputs`,
   `vyre_foundation::ir::ProgramStats::grid_sync`,
   `vyre_driver::validation::ProgramValidationCaps::support` and
@@ -6462,6 +6501,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   delegate to that owner rather than restating the variant list, and the
   descendant scan uses an explicit worklist so a deep tree cannot overflow the
   native stack.
+- The canonicalize pass orders non-literal commutative operands by the
+  canonical wire key instead of a hash-derived key, so its output no longer
+  disagrees with `Program::canonicalized`.
 - One resolver answers which cargo a gate starts, so a build a gate spawns
   cannot compile a different workspace than the one being judged: the exported
   wrapper wins, then a wrapper beside the workspace root, then the toolchain

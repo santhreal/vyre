@@ -47,6 +47,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `autodiff_forward_local_fail_closed` | `vyre-foundation/tests/autodiff_forward_local_fail_closed.rs` | None | `./cargo_full test -p vyre-foundation --test autodiff_forward_local_fail_closed` |
 | `test` | `autodiff_transform_contracts` | `vyre-foundation/tests/autodiff_transform_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test autodiff_transform_contracts` |
 | `test` | `bench_corpus_duplication` | `vyre-foundation/tests/bench_corpus_duplication.rs` | None | `./cargo_full test -p vyre-foundation --test bench_corpus_duplication` |
+| `test` | `binop_operand_swap_law` | `vyre-foundation/tests/binop_operand_swap_law.rs` | None | `./cargo_full test -p vyre-foundation --test binop_operand_swap_law` |
 | `test` | `branch_value_hoist_scope` | `vyre-foundation/tests/branch_value_hoist_scope.rs` | None | `./cargo_full test -p vyre-foundation --test branch_value_hoist_scope` |
 | `test` | `buffer_decl_boundary` | `vyre-foundation/tests/buffer_decl_boundary.rs` | None | `./cargo_full test -p vyre-foundation --test buffer_decl_boundary` |
 | `test` | `buffer_decl_with_count` | `vyre-foundation/tests/buffer_decl_with_count.rs` | None | `./cargo_full test -p vyre-foundation --test buffer_decl_with_count` |
@@ -57,6 +58,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `collective_ir_contracts` | `vyre-foundation/tests/collective_ir_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test collective_ir_contracts` |
 | `test` | `composition_tagging_contracts` | `vyre-foundation/tests/composition_tagging_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test composition_tagging_contracts` |
 | `test` | `const_fold_shift_fusion_amount_overflow` | `vyre-foundation/tests/const_fold_shift_fusion_amount_overflow.rs` | None | `./cargo_full test -p vyre-foundation --test const_fold_shift_fusion_amount_overflow` |
+| `test` | `construct_law_closure` | `vyre-foundation/tests/construct_law_closure.rs` | None | `./cargo_full test -p vyre-foundation --test construct_law_closure` |
 | `test` | `consumer_boundary` | `vyre-foundation/tests/consumer_boundary.rs` | None | `./cargo_full test -p vyre-foundation --test consumer_boundary` |
 | `test` | `cse_effect_in_if_cond_invalidates_loads` | `vyre-foundation/tests/cse_effect_in_if_cond_invalidates_loads.rs` | None | `./cargo_full test -p vyre-foundation --test cse_effect_in_if_cond_invalidates_loads` |
 | `test` | `dataflow_fixpoint_merge_contracts` | `vyre-foundation/tests/dataflow_fixpoint_merge_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test dataflow_fixpoint_merge_contracts` |
@@ -66,6 +68,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `demos_orphan_risk` | `vyre-foundation/tests/demos_orphan_risk.rs` | None | `./cargo_full test -p vyre-foundation --test demos_orphan_risk` |
 | `test` | `diagnostic_protocol` | `vyre-foundation/tests/diagnostic_protocol.rs` | None | `./cargo_full test -p vyre-foundation --test diagnostic_protocol` |
 | `test` | `eqsat_gpu_mirror` | `vyre-foundation/tests/eqsat_gpu_mirror.rs` | None | `./cargo_full test -p vyre-foundation --test eqsat_gpu_mirror` |
+| `test` | `eqsat_unproved_rule_refusal` | `vyre-foundation/tests/eqsat_unproved_rule_refusal.rs` | None | `./cargo_full test -p vyre-foundation --test eqsat_unproved_rule_refusal` |
 | `test` | `execution_plan` | `vyre-foundation/tests/execution_plan.rs` | None | `./cargo_full test -p vyre-foundation --test execution_plan` |
 | `test` | `expr_builder_surface` | `vyre-foundation/tests/expr_builder_surface.rs` | None | `./cargo_full test -p vyre-foundation --test expr_builder_surface` |
 | `test` | `expr_type_single_owner` | `vyre-foundation/tests/expr_type_single_owner.rs` | None | `./cargo_full test -p vyre-foundation --test expr_type_single_owner` |
@@ -85,6 +88,8 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `inline_nested_call_argument_rebinding` | `vyre-foundation/tests/inline_nested_call_argument_rebinding.rs` | None | `./cargo_full test -p vyre-foundation --test inline_nested_call_argument_rebinding` |
 | `test` | `inline_per_invocation_builtin_rejection` | `vyre-foundation/tests/inline_per_invocation_builtin_rejection.rs` | None | `./cargo_full test -p vyre-foundation --test inline_per_invocation_builtin_rejection` |
 | `test` | `ir_variant_shape_owner_closure` | `vyre-foundation/tests/ir_variant_shape_owner_closure.rs` | None | `./cargo_full test -p vyre-foundation --test ir_variant_shape_owner_closure` |
+| `test` | `law_derived_region_alternatives` | `vyre-foundation/tests/law_derived_region_alternatives.rs` | None | `./cargo_full test -p vyre-foundation --test law_derived_region_alternatives` |
+| `test` | `level_pipeline_partition` | `vyre-foundation/tests/level_pipeline_partition.rs` | None | `./cargo_full test -p vyre-foundation --test level_pipeline_partition` |
 | `test` | `licm_hoist_scope_safety` | `vyre-foundation/tests/licm_hoist_scope_safety.rs` | None | `./cargo_full test -p vyre-foundation --test licm_hoist_scope_safety` |
 | `test` | `licm_speculation_bounds` | `vyre-foundation/tests/licm_speculation_bounds.rs` | None | `./cargo_full test -p vyre-foundation --test licm_speculation_bounds` |
 | `test` | `linear_type_validation` | `vyre-foundation/tests/linear_type_validation.rs` | None | `./cargo_full test -p vyre-foundation --test linear_type_validation` |
@@ -144,6 +149,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `region_inline_scope` | `vyre-foundation/tests/region_inline_scope.rs` | None | `./cargo_full test -p vyre-foundation --test region_inline_scope` |
 | `test` | `registry_closure` | `vyre-foundation/tests/registry_closure.rs` | None | `./cargo_full test -p vyre-foundation --test registry_closure` |
 | `test` | `resource_exhaustion_adversarial` | `vyre-foundation/tests/resource_exhaustion_adversarial.rs` | None | `./cargo_full test -p vyre-foundation --test resource_exhaustion_adversarial` |
+| `test` | `rewrite_contract_closure` | `vyre-foundation/tests/rewrite_contract_closure.rs` | None | `./cargo_full test -p vyre-foundation --test rewrite_contract_closure` |
 | `test` | `rewrite_driver_descends_into_async_offset` | `vyre-foundation/tests/rewrite_driver_descends_into_async_offset.rs` | None | `./cargo_full test -p vyre-foundation --test rewrite_driver_descends_into_async_offset` |
 | `test` | `scalar_operator_agreement` | `vyre-foundation/tests/scalar_operator_agreement.rs` | None | `./cargo_full test -p vyre-foundation --test scalar_operator_agreement` |
 | `test` | `scan_database_wire_contract` | `vyre-foundation/tests/scan_database_wire_contract.rs` | None | `./cargo_full test -p vyre-foundation --test scan_database_wire_contract` |
