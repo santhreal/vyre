@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The canonicalize pass orders non-literal commutative operands by the canonical wire key instead of a hash-derived key, so its output no longer disagrees with `Program::canonicalized`."

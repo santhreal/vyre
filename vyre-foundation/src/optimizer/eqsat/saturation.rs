@@ -83,6 +83,14 @@ pub fn try_saturate_named<L: ENodeLang>(
     rules: &[Box<dyn Rule<L>>],
     max_iters: usize,
 ) -> Result<SaturationReport, EGraphError> {
+    // Refuse before the degenerate-budget returns below: an empty rule set and a
+    // zero budget are reported as ordinary stop reasons, so admitting them first
+    // would let a caller launder an unproved rule through a budget of zero.
+    for rule in rules {
+        if !rule.witness().admits_candidate_search() {
+            return Err(EGraphError::UnprovedRule { rule: rule.name() });
+        }
+    }
     let class_count_before = egraph.class_count();
     if rules.is_empty() {
         return Ok(finalize_saturation_report(

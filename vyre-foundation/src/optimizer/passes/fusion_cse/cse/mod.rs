@@ -17,7 +17,6 @@
 //!   pure expressions; canonicalizes commutative operands.
 //! - `expr_has_effect.rs`  -  conservative side-effect predicate (the
 //!   safety gate that prevents merging effectful nodes).
-//! - `is_commutative.rs`  -  operator commutativity table.
 //! - `type_key.rs` + `impl_typekey_from.rs`  -  compact `Copy` key for
 //!   expression result types.
 //! - `program_pass.rs`  -  the registered `CsePass` (ProgramPass impl) that
@@ -28,8 +27,6 @@ pub use cse_ctx::CseCtx;
 pub(crate) use cse_ctx::{ScopeFrame, ScopedBinding};
 /// Classify whether an expression is unsafe to merge.
 pub(crate) use expr_has_effect::expr_has_effect;
-/// Return whether a binary operator can canonicalize operand order.
-pub(crate) use is_commutative::is_commutative;
 /// Compact key for expression result types.
 pub(crate) use type_key::TypeKey;
 
@@ -43,8 +40,6 @@ pub(crate) mod expr_key;
 pub(crate) mod impl_csectx;
 pub(crate) mod impl_exprkey;
 pub(crate) mod impl_typekey_from;
-/// Which binary operators are commutative under CSE canonicalisation?
-pub mod is_commutative;
 /// Registered `CsePass` (ProgramPass impl) for the engine.
 pub(crate) mod program_pass;
 pub(crate) mod type_key;

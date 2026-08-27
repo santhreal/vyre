@@ -114,6 +114,35 @@ commutative_combine!(
     CombineKind::Max.law_id(false),
 );
 
+/// Register an identity element for one op id.
+macro_rules! identity_combine {
+    ($($id:expr => $element:expr),+ $(,)?) => {
+        $(
+            inventory::submit! {
+                crate::algebraic_law_registry::AlgebraicLawRegistration::new(
+                    $id,
+                    AlgebraicLaw::Identity { element: $element },
+                )
+            }
+        )+
+    };
+}
+
+// The element a law states is one `u32` value, so an identity is registered
+// only where the same number is the identity of every element type the law id
+// covers. Addition and exclusive-or leave a value unchanged when combined with
+// zero, and multiplication when combined with one, at u32 and i32 alike. `Min`
+// and `Max` have no such element: their identity is the extreme of the element
+// type, and the same bits are the largest u32 and a negative i32. A bitwise
+// `And` identity is the all-ones pattern, which is not the all-ones value of a
+// boolean element.
+identity_combine!(
+    CombineKind::Add.law_id(true) => 0,
+    CombineKind::Mul.law_id(true) => 1,
+    CombineKind::Xor.law_id(true) => 0,
+    CombineKind::Or.law_id(true) => 0,
+);
+
 /// Whether the registry proves one op id both associative and commutative.
 fn reorderable(op_id: &str) -> bool {
     has_law(op_id, |law| matches!(law, AlgebraicLaw::Associative))

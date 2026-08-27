@@ -65,6 +65,8 @@ pub mod shape_facts;
 
 /// Shared algebraic rewrite legality rules consumed by semantic `Program` passes.
 pub mod algebraic_rules;
+/// Which declarative law families each IR construct exposes.
+pub mod construct_law;
 pub(crate) mod dsl;
 /// Equality-saturation engine substrate: minimal EGraph, rewrite families,
 /// saturation, and cost-based extraction.
@@ -95,6 +97,12 @@ pub mod expr_arena_analysis;
 /// region. Default-empty so passes that consume the hint must
 /// remain correct on the cold path.
 pub mod hot_path_hints;
+/// Alternatives derived from the laws a combine declares, through a bounded
+/// e-graph expansion over an expression mirror.
+pub mod law_saturation;
+/// One pass pipeline per IR level, derived from the level each pass's rewrite
+/// contract declares.
+pub mod level_pipeline;
 /// Megakernel-fusion-scheduler subsystem (homotopy weight oracle +
 /// matroid subset selection). Hoisted from `pass_substrate/` in audit
 /// cleanup A9 (2026-04-30) so megakernel scheduling lives in one place.
@@ -126,6 +134,9 @@ pub(crate) mod planar_batch;
 /// walk per query.
 pub mod program_soa;
 pub(crate) mod rewrite;
+/// Declared level, preconditions, effects, numerical contract, proof witness,
+/// profitability, and expansion bound of every registered rewriting pass.
+pub mod rewrite_contract;
 /// SMT-LIB proof obligations for proof-carrying rewrites.
 pub mod rewrite_proof;
 /// N3  -  registry of shipped rewrite proof obligations consumed by the

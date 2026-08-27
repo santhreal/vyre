@@ -53,7 +53,7 @@ pub fn declared_data_type_variants() -> BTreeSet<String> {
     let body = crate::braced_body(&source, "pub enum DataType {").unwrap_or_else(|| {
         panic!("Fix: no `pub enum DataType` declaration in {path:?}; update this enumeration")
     });
-    top_level_variant_names(body)
+    crate::top_level_variant_names(body)
 }
 
 /// The flat `DataType` forms a buffer declaration can carry as its element.
@@ -153,45 +153,6 @@ pub fn variant_name(value: &DataType) -> String {
     rendered[..end].to_string()
 }
 
-/// Variant names declared directly in an enum body, ignoring payload contents.
-fn top_level_variant_names(body: &str) -> BTreeSet<String> {
-    let mut names = BTreeSet::new();
-    let mut depth = 0usize;
-    let mut at_item_start = true;
-    let mut chars = body.char_indices().peekable();
-    while let Some((offset, ch)) = chars.next() {
-        match ch {
-            '{' | '(' | '[' => {
-                depth += 1;
-                at_item_start = false;
-            }
-            '}' | ')' | ']' => depth = depth.saturating_sub(1),
-            ',' if depth == 0 => at_item_start = true,
-            '/' if depth == 0 && body[offset..].starts_with("//") => {
-                for (_, skipped) in chars.by_ref() {
-                    if skipped == '\n' {
-                        break;
-                    }
-                }
-            }
-            '#' if depth == 0 => at_item_start = false,
-            c if c.is_whitespace() => {}
-            c if depth == 0 && at_item_start && c.is_ascii_uppercase() => {
-                let end = body[offset..]
-                    .find(|c: char| !c.is_ascii_alphanumeric() && c != '_')
-                    .map_or(body.len(), |len| offset + len);
-                names.insert(body[offset..end].to_string());
-                at_item_start = false;
-                while chars.peek().is_some_and(|(next, _)| *next < end) {
-                    chars.next();
-                }
-            }
-            _ => at_item_start = false,
-        }
-    }
-    names
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -224,7 +185,7 @@ pub enum DataType {
 ";
         let body =
             crate::braced_body(source, "pub enum DataType {").expect("the declaration is present");
-        let names = top_level_variant_names(body);
+        let names = crate::top_level_variant_names(body);
         assert_eq!(
             names,
             ["Array", "Handle", "U8"]

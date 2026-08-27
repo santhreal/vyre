@@ -16,7 +16,7 @@
 mod buffer_decl;
 mod builder;
 mod cache_digest;
-mod canonical;
+pub(crate) mod canonical;
 mod definition;
 #[allow(clippy::expect_used)]
 mod meta;

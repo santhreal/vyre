@@ -162,6 +162,29 @@ fn can_splice_block(nodes: &[Node]) -> bool {
     nodes.iter().all(|node| !matches!(node, Node::Let { .. }))
 }
 
+/// Whether a commutative operator's operands are in the wrong canonical order.
+///
+/// The canonical wire form defines the operand order every consumer must land
+/// in, so the decision lives here and the canonicalize pass reads it. The
+/// optimizer used to answer the same question with a hash-derived sort key,
+/// which disagreed with the wire-byte order it was supposed to reproduce: the
+/// pass reported a canonical program that `canonicalized` still rewrote.
+///
+/// The key buffers are reused per thread. Each call encodes both operands, and
+/// the canonicalize pass asks once per binary expression, so a fresh
+/// allocation per question would be two allocations per operator.
+pub(crate) fn commutative_operands_out_of_order(op: BinOp, left: &Expr, right: &Expr) -> bool {
+    thread_local! {
+        static KEYS: std::cell::RefCell<(Vec<u8>, Vec<u8>)> =
+            const { std::cell::RefCell::new((Vec::new(), Vec::new())) };
+    }
+    KEYS.with(|cell| {
+        let mut keys = cell.borrow_mut();
+        let (left_key, right_key) = &mut *keys;
+        should_swap_operands(op, left, right, left_key, right_key)
+    })
+}
+
 fn should_swap_operands(
     op: BinOp,
     left: &Expr,
@@ -169,7 +192,7 @@ fn should_swap_operands(
     left_key: &mut Vec<u8>,
     right_key: &mut Vec<u8>,
 ) -> bool {
-    if !is_commutative_binop(op) {
+    if !op.commutes() {
         return false;
     }
     match (is_literal(left), is_literal(right)) {
@@ -184,7 +207,7 @@ fn should_swap_operands(
             expr_wire_key_cmp(left, right, left_key, right_key).is_gt()
         }
         (false, false) => {
-            can_sort_all_operands(op) && expr_wire_key_cmp(left, right, left_key, right_key).is_gt()
+            op.commutes_bit_exactly() && expr_wire_key_cmp(left, right, left_key, right_key).is_gt()
         }
     }
 }
@@ -208,50 +231,6 @@ fn append_expr_wire_key(key: &mut Vec<u8>, expr: &Expr) {
         key.extend_from_slice(b"VYRE-CANONICAL-EXPR-WIRE-ERROR\0");
         key.extend_from_slice(error.as_bytes());
     }
-}
-
-fn is_commutative_binop(op: BinOp) -> bool {
-    matches!(
-        op,
-        BinOp::Add
-            | BinOp::WrappingAdd
-            | BinOp::SaturatingAdd
-            | BinOp::Mul
-            | BinOp::SaturatingMul
-            | BinOp::BitAnd
-            | BinOp::BitOr
-            | BinOp::BitXor
-            | BinOp::Eq
-            | BinOp::Ne
-            | BinOp::And
-            | BinOp::Or
-            | BinOp::Min
-            | BinOp::Max
-            | BinOp::AbsDiff
-    )
-}
-
-fn can_sort_all_operands(op: BinOp) -> bool {
-    // Ops whose operand swap is observably safe even when both
-    // operands are arbitrary non-literal expressions. Excludes Add /
-    // Mul because float reassociation changes rounding for non-literal
-    // chains; `should_swap_operands` handles the both-literal case
-    // separately so the canonical fingerprint still normalises
-    // `Add(1, 2)` vs `Add(2, 1)`.
-    matches!(
-        op,
-        BinOp::WrappingAdd
-            | BinOp::SaturatingAdd
-            | BinOp::SaturatingMul
-            | BinOp::BitAnd
-            | BinOp::BitOr
-            | BinOp::BitXor
-            | BinOp::Eq
-            | BinOp::Ne
-            | BinOp::And
-            | BinOp::Or
-            | BinOp::AbsDiff
-    )
 }
 
 fn is_literal(expr: &Expr) -> bool {

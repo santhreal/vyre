@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every registered optimizer pass declares its IR level, preconditions, effect classes, numerical contract, proof witness, profitability facts, and expansion bound in one registry, and a pass without a declared contract fails the suite."

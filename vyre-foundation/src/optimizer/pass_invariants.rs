@@ -48,6 +48,7 @@
 
 use crate::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use crate::optimizer::cost::CostCertificate;
+use crate::optimizer::rewrite_contract::contract_for_pass;
 use crate::optimizer::{registered_passes, ProgramPassKind};
 
 /// One verifier finding. Empty `Vec<PassInvariantFinding>` = clean run.
@@ -88,6 +89,39 @@ pub enum PassInvariantFinding {
         pass: &'static str,
         /// Synthetic corpus program identifier.
         program: &'static str,
+    },
+    /// A pass grew the program past the expansion bound its rewrite contract
+    /// declares.
+    ExpansionBoundExceeded {
+        /// Pass name.
+        pass: &'static str,
+        /// Synthetic corpus program identifier.
+        program: &'static str,
+        /// Bound the contract declares, rendered.
+        declared: String,
+        /// Node count before the rewrite.
+        before: usize,
+        /// Node count after the rewrite.
+        after: usize,
+    },
+    /// The scheduled order runs a pass at one level after a pass at a deeper
+    /// level, so the earlier pass reads constructs a later stage introduced
+    /// while its preconditions were stated about a program that had none.
+    LevelInversion {
+        /// Pass scheduled first, at the deeper level.
+        earlier: &'static str,
+        /// Pass scheduled after it, at the shallower level.
+        later: &'static str,
+        /// Level `earlier` declares.
+        earlier_level: &'static str,
+        /// Level `later` declares.
+        later_level: &'static str,
+    },
+    /// A registered pass declares no rewrite contract, so nothing states the
+    /// level it owns, the evidence authorizing it, or the growth it may cause.
+    ContractMissing {
+        /// Pass name.
+        pass: &'static str,
     },
 }
 
@@ -175,7 +209,10 @@ pub fn audit_registered_passes() -> Vec<PassInvariantFinding> {
         }
     };
     let corpus = synthetic_corpus();
-    let mut findings = Vec::new();
+    // Once per pass, not once per corpus program: whether a contract is declared is
+    // a property of the pass, not of the program it ran on.
+    let mut findings = contract_presence_findings(passes.iter().map(|pass| pass.metadata().name));
+    findings.extend(level_progression_findings());
     for pass in passes {
         for (program_name, program) in &corpus {
             findings.extend(audit_pass_on_program(
@@ -188,11 +225,41 @@ pub fn audit_registered_passes() -> Vec<PassInvariantFinding> {
     findings
 }
 
+/// One finding per pass name with no declared rewrite contract.
+fn contract_presence_findings(
+    pass_names: impl IntoIterator<Item = &'static str>,
+) -> Vec<PassInvariantFinding> {
+    pass_names
+        .into_iter()
+        .filter(|name| contract_for_pass(name).is_none())
+        .map(|pass| PassInvariantFinding::ContractMissing { pass })
+        .collect()
+}
+
+/// One finding per place the scheduled order runs a level out of order.
+fn level_progression_findings() -> Vec<PassInvariantFinding> {
+    match crate::optimizer::level_pipeline::level_inversions() {
+        Ok(inversions) => inversions
+            .into_iter()
+            .map(|inversion| PassInvariantFinding::LevelInversion {
+                earlier: inversion.earlier,
+                later: inversion.later,
+                earlier_level: inversion.earlier_level.name(),
+                later_level: inversion.later_level.name(),
+            })
+            .collect(),
+        Err(error) => vec![PassInvariantFinding::RegistryError {
+            detail: error.to_string(),
+        }],
+    }
+}
+
 fn audit_pass_on_program(
     pass: &ProgramPassKind,
     program_name: &'static str,
     program: Program,
 ) -> Vec<PassInvariantFinding> {
+    let pre_node_count = program.stats().node_count;
     let pre_cost = CostCertificate::for_program(&program);
     let pass_name = pass.metadata().name;
 
@@ -232,6 +299,21 @@ fn audit_pass_on_program(
         });
     }
 
+    // Invariant 5: the rewrite stayed inside the expansion bound its contract
+    // declares. A pass that duplicates code composes with itself, so the bound is
+    // checked on every corpus run rather than trusted from the declaration.
+    if let Some(contract) = contract_for_pass(pass_name) {
+        if !contract.expansion.admits(pre_node_count, stats.node_count) {
+            findings.push(PassInvariantFinding::ExpansionBoundExceeded {
+                pass: pass_name,
+                program: program_name,
+                declared: contract.expansion.to_string(),
+                before: pre_node_count,
+                after: stats.node_count,
+            });
+        }
+    }
+
     if IDEMPOTENCE_REQUIRED.contains(&pass_name) {
         match pass.try_transform(result.program, &audit_adapter) {
             Ok(second) if second.changed => {
@@ -250,6 +332,7 @@ fn audit_pass_on_program(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::optimizer::{PassAnalysis, PassMetadata, PassResult, ProgramPass};
 
     #[test]
     fn synthetic_corpus_has_three_programs_with_distinct_shapes() {
@@ -358,6 +441,174 @@ mod tests {
         assert!(
             invalid.is_empty(),
             "built-in passes with declared idempotence must reach a local fixed point in one application; bad outputs: {invalid:#?}"
+        );
+    }
+
+    #[test]
+    fn audit_finds_zero_expansion_bound_violations_on_built_ins() {
+        let findings = audit_registered_passes();
+        let over: Vec<_> = findings
+            .iter()
+            .filter(|f| matches!(f, PassInvariantFinding::ExpansionBoundExceeded { .. }))
+            .collect();
+        assert!(
+            over.is_empty(),
+            "a built-in pass grew the program past the bound its contract declares; either the \
+             rewrite is unbounded or the declaration is wrong: {over:#?}"
+        );
+    }
+
+    #[test]
+    fn audit_finds_zero_level_inversions_on_built_ins() {
+        let findings = audit_registered_passes();
+        let inverted: Vec<_> = findings
+            .iter()
+            .filter(|f| matches!(f, PassInvariantFinding::LevelInversion { .. }))
+            .collect();
+        assert!(
+            inverted.is_empty(),
+            "the scheduled order runs a shallower level after a deeper one, so a pass reads \
+             constructs a later stage introduced: {inverted:#?}"
+        );
+    }
+
+    #[test]
+    fn audit_finds_zero_missing_contracts_on_built_ins() {
+        let findings = audit_registered_passes();
+        let missing: Vec<_> = findings
+            .iter()
+            .filter(|f| matches!(f, PassInvariantFinding::ContractMissing { .. }))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "every registered pass must declare a rewrite contract: {missing:#?}"
+        );
+    }
+
+    /// A pass that replaces its input with a larger program, registered under the
+    /// name of a shipped pass whose contract declares `NonGrowing`. Borrowing the
+    /// name is what lets the fixture exercise the bound without registering a pass:
+    /// the audit resolves the contract by name.
+    struct GrowingUnderNonGrowingContract;
+
+    impl crate::optimizer::sealed::Sealed for GrowingUnderNonGrowingContract {}
+
+    impl ProgramPass for GrowingUnderNonGrowingContract {
+        fn metadata(&self) -> PassMetadata {
+            PassMetadata::new("dce", &[], &[])
+        }
+
+        fn analyze(&self, _program: &Program) -> PassAnalysis {
+            PassAnalysis { should_run: true }
+        }
+
+        fn transform(&self, _program: Program) -> PassResult {
+            PassResult {
+                program: Program::wrapped(
+                    vec![
+                        BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32)
+                            .with_count(4),
+                    ],
+                    [1, 1, 1],
+                    vec![
+                        Node::store("out", Expr::u32(0), Expr::u32(7)),
+                        Node::store("out", Expr::u32(1), Expr::u32(8)),
+                        Node::store("out", Expr::u32(2), Expr::u32(9)),
+                        Node::store("out", Expr::u32(3), Expr::u32(10)),
+                    ],
+                ),
+                changed: true,
+            }
+        }
+
+        fn fingerprint(&self, program: &Program) -> u64 {
+            program.stats().node_count as u64
+        }
+    }
+
+    fn corpus_program(name: &str) -> Program {
+        synthetic_corpus()
+            .into_iter()
+            .find(|(entry, _)| *entry == name)
+            .map(|(_, program)| program)
+            .expect("Fix: the corpus must carry that program")
+    }
+
+    /// WHY: a declared expansion bound that nothing checks is a comment. This proves
+    /// the audit reports a rewrite that grew past a `NonGrowing` declaration, and
+    /// names the pass, the program, the bound, and both node counts. It does not
+    /// prove the shipped bounds are the tightest ones true of each pass.
+    #[test]
+    fn a_rewrite_past_its_declared_bound_is_reported() {
+        let trivial = corpus_program("trivial");
+        let before = trivial.stats().node_count;
+        let pass = ProgramPassKind::from_boxed(Box::new(GrowingUnderNonGrowingContract));
+        let findings = audit_pass_on_program(&pass, "trivial", trivial);
+        let expansion: Vec<_> = findings
+            .iter()
+            .filter_map(|finding| match finding {
+                PassInvariantFinding::ExpansionBoundExceeded {
+                    pass,
+                    program,
+                    declared,
+                    before,
+                    after,
+                } => Some((*pass, *program, declared.clone(), *before, *after)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            expansion.len(),
+            1,
+            "exactly one expansion finding is expected: {findings:#?}"
+        );
+        let (pass_name, program_name, declared, reported_before, reported_after) =
+            expansion[0].clone();
+        assert_eq!(pass_name, "dce");
+        assert_eq!(program_name, "trivial");
+        assert_eq!(declared, "non-growing");
+        assert_eq!(reported_before, before);
+        assert!(
+            reported_after > reported_before,
+            "the finding must report the growth it observed: {reported_before} -> {reported_after}"
+        );
+    }
+
+    /// WHY: the same fixture must not be reported when the declared bound admits the
+    /// growth, or the check would refuse every code-duplicating pass.
+    #[test]
+    fn a_rewrite_inside_its_declared_bound_is_not_reported() {
+        let trivial = corpus_program("trivial");
+        let contract = contract_for_pass("dce").expect("dce declares a contract");
+        let grown = GrowingUnderNonGrowingContract
+            .transform(Clone::clone(&trivial))
+            .program;
+        let before = trivial.stats().node_count;
+        let after = grown.stats().node_count;
+        assert!(
+            !contract.expansion.admits(before, after),
+            "the fixture must exceed the non-growing bound"
+        );
+        let permissive = contract_for_pass("loop_unroll")
+            .expect("loop_unroll declares a contract")
+            .expansion;
+        assert!(
+            permissive.admits(before, after),
+            "a pass declaring a growth factor must admit the same rewrite"
+        );
+    }
+
+    /// WHY: a pass with no contract states no level, no evidence, and no bound, so the
+    /// audit must name it rather than skipping the checks that read the contract.
+    #[test]
+    fn a_pass_without_a_contract_is_reported() {
+        let findings = contract_presence_findings(["dce", "not_a_registered_pass"]);
+        assert_eq!(
+            findings,
+            vec![PassInvariantFinding::ContractMissing {
+                pass: "not_a_registered_pass"
+            }],
+            "only the undeclared pass is reported"
         );
     }
 }

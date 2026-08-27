@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The generated optimizer pass reference declares schema 2 and carries the level, witness, expansion bound, and search admission of every executable pass."

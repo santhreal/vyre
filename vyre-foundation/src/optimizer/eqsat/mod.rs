@@ -48,6 +48,8 @@ use std::hash::Hash;
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
+use crate::optimizer::rewrite_contract::RewriteWitness;
+
 mod class_index;
 mod device_aware_rule;
 mod egraph;
@@ -147,6 +149,12 @@ pub enum EGraphError {
         /// Current table length.
         len: usize,
     },
+    /// A rule set contained a rewrite whose witness records opacity instead
+    /// of proof, so saturation refused the whole run.
+    UnprovedRule {
+        /// Offending rule name, from [`Rule::name`].
+        rule: &'static str,
+    },
 }
 
 impl fmt::Display for EGraphError {
@@ -168,6 +176,10 @@ impl fmt::Display for EGraphError {
                 f,
                 "{context} referenced eclass id {} but only {len} class slots exist. Fix: pass ids returned by this EGraph instance.",
                 id.0
+            ),
+            Self::UnprovedRule { rule } => write!(
+                f,
+                "equality saturation refused rule {rule} because its witness records no proof. Fix: state the equality argument in the rule's RewriteWitness, or apply the rule by name outside candidate search."
             ),
         }
     }
@@ -191,6 +203,14 @@ pub(crate) fn log_egraph_compat_error(context: &'static str, error: &EGraphError
 pub trait Rule<L: ENodeLang> {
     /// Human-readable rule name for telemetry + tests.
     fn name(&self) -> &'static str;
+
+    /// Evidence that the equivalences this rule adds are true equalities.
+    ///
+    /// Saturation is how the compiler derives alternative programs on its own,
+    /// so a rule whose witness records opacity is refused before any rule in
+    /// the set runs. The method is required rather than defaulted: a default
+    /// would let a new rule inherit an answer nobody stated.
+    fn witness(&self) -> RewriteWitness;
 
     /// Find every match of this rule's LHS pattern in `egraph` and return
     /// the (a, b) pairs that should be equated.

@@ -5,6 +5,7 @@ use rustc_hash::FxHashMap;
 use smallvec::smallvec;
 
 use super::{EChildren, EClassId, EGraph, ENodeLang, Family, Rule};
+use crate::optimizer::rewrite_contract::RewriteWitness;
 
 /// A minimal arithmetic `ENode` language for engine tests.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -49,6 +50,10 @@ impl Rule<Arith> for UnionEqualConstsRule {
         "union_equal_consts"
     }
 
+    fn witness(&self) -> RewriteWitness {
+        RewriteWitness::Structural("two Const nodes holding the same value denote the same value")
+    }
+
     fn matches(&self, egraph: &EGraph<Arith>) -> Vec<(EClassId, EClassId)> {
         let mut by_value: FxHashMap<u32, Vec<EClassId>> = FxHashMap::default();
         for (cid, node) in egraph.iter_nodes() {
@@ -76,6 +81,10 @@ impl Rule<Arith> for PairConstSelfRule {
         "pair_const_self"
     }
 
+    fn witness(&self) -> RewriteWitness {
+        RewriteWitness::Structural("a class is equal to itself")
+    }
+
     fn matches(&self, egraph: &EGraph<Arith>) -> Vec<(EClassId, EClassId)> {
         let mut out = Vec::new();
         for (cid, node) in egraph.iter_nodes() {
@@ -92,6 +101,12 @@ pub(super) struct ForeignClassRule;
 impl Rule<Arith> for ForeignClassRule {
     fn name(&self) -> &'static str {
         "foreign_class"
+    }
+
+    fn witness(&self) -> RewriteWitness {
+        RewriteWitness::Structural(
+            "the returned pair is reflexive; the id is outside the graph on purpose, to exercise the bounds check",
+        )
     }
 
     fn matches(&self, _egraph: &EGraph<Arith>) -> Vec<(EClassId, EClassId)> {

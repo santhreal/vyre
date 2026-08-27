@@ -1,6 +1,7 @@
 //! Gating a rewrite rule on a caller-owned device-fact predicate.
 
 use super::{DeviceAwareRule, EClassId, EGraph, ENodeLang, Rule};
+use crate::optimizer::rewrite_contract::RewriteWitness;
 
 impl<L: ENodeLang, F: Fn() -> bool> DeviceAwareRule<L, F> {
     /// Wrap `inner` so it only fires when `predicate()` returns true.
@@ -12,6 +13,11 @@ impl<L: ENodeLang, F: Fn() -> bool> DeviceAwareRule<L, F> {
 impl<L: ENodeLang, F: Fn() -> bool> Rule<L> for DeviceAwareRule<L, F> {
     fn name(&self) -> &'static str {
         self.inner.name()
+    }
+    /// Gating a proved rule on a device fact does not change what authorizes
+    /// it, so the inner witness carries through unchanged.
+    fn witness(&self) -> RewriteWitness {
+        self.inner.witness()
     }
     fn matches(&self, egraph: &EGraph<L>) -> Vec<(EClassId, EClassId)> {
         if (self.predicate)() {
@@ -70,5 +76,12 @@ mod tests {
         let inner: Box<dyn Rule<Arith>> = Box::new(UnionEqualConstsRule);
         let rule = DeviceAwareRule::new(inner, || true);
         assert_eq!(rule.name(), "union_equal_consts");
+    }
+
+    #[test]
+    fn device_aware_rule_forwards_inner_witness() {
+        let inner: Box<dyn Rule<Arith>> = Box::new(UnionEqualConstsRule);
+        let rule = DeviceAwareRule::new(inner, || false);
+        assert_eq!(rule.witness(), UnionEqualConstsRule.witness());
     }
 }

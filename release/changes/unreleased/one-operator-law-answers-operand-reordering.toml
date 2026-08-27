@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The wire canonicalizer, the canonicalize pass, and the common-subexpression key read operand-swap legality from `BinOp::operand_swap`, so `WrappingAdd`, `Min`, `Max`, `AbsDiff`, `MulHigh`, `SaturatingAdd`, and `SaturatingMul` reorder consistently."
