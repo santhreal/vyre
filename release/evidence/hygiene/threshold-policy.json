@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:00da3989f3d836301c2176546db7d76135fa46ae:dirty=false",
+  "source_fingerprint": "git:d9bcd400a6ad14708796af12741b9277fca821f8:dirty=true:worktree=ba7c571995093d8fe3b85fdb312513826612d363456fb865022d0cc7517dd497",
   "schema_version": 1,
   "source_manifest": "docs/optimization/THRESHOLD_POLICY.toml",
   "evidence_artifact": "release/evidence/hygiene/threshold-policy.json",
@@ -75,7 +75,7 @@
     {
       "id": "VX475-DEFAULT_EXTRACTION_ITER_BUDGET",
       "path": "vyre-foundation/src/optimizer/eqsat/mod.rs",
-      "line": 68,
+      "line": 70,
       "name": "DEFAULT_EXTRACTION_ITER_BUDGET",
       "observed_value": "1024",
       "unit": "extraction iterations",

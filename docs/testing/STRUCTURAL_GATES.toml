@@ -461,10 +461,13 @@ population is the table's, and it is readable only as source.
 
 [[gate]]
 file = "vyre-registry-link/tests/registry_link_rules.rs"
-tests = ["every_crate_that_submits_a_backend_registration_is_declared_here"]
+tests = [
+  "every_crate_that_submits_a_backend_registration_is_declared_here",
+  "every_crate_that_submits_a_level_stage_is_declared_here",
+]
 reason = """
-Requires every workspace member that submits a BackendRegistration to be
-declared by this crate with a feature that links it. An undeclared submitter is
+Requires every workspace member that submits a BackendRegistration or a
+LevelStageRegistration to be declared by this crate. An undeclared submitter is
 absent from the registry at run time, which reads exactly like a crate that
 submits nothing.
 """

@@ -1,54 +1,9 @@
 {
-  "source_fingerprint": "git:518586efa1bd46905438f44cae6005e4d8ea8427:dirty=true:worktree=7aa6f646821e67ad47098581c63561f3020799ac626306bb13152939a14bfe84",
+  "source_fingerprint": "git:d9bcd400a6ad14708796af12741b9277fca821f8:dirty=true:worktree=ba7c571995093d8fe3b85fdb312513826612d363456fb865022d0cc7517dd497",
   "schema_version": 1,
   "executable_passes": 40,
   "catalog_entries": 173,
   "entries": [
-    {
-      "id": "atomic_minimize",
-      "kind": "executable-pass",
-      "owner": "vyre-foundation-optimizer",
-      "phase": "Sync",
-      "boundary": "AbiPreserving",
-      "requires": [],
-      "invalidates": [],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "preserves public buffer ABI and externally visible program semantics",
-      "termination": "bounded by the registered scheduler restart and iteration budgets",
-      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.sync"
-    },
-    {
-      "id": "autotune",
-      "kind": "executable-pass",
-      "owner": "vyre-foundation-optimizer",
-      "phase": "Unclassified",
-      "boundary": "Unknown",
-      "requires": [],
-      "invalidates": [],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "must not enter release/profile pipelines until classified",
-      "termination": "bounded by the registered scheduler restart and iteration budgets",
-      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
-    },
-    {
-      "id": "barrier_coalesce",
-      "kind": "executable-pass",
-      "owner": "vyre-foundation-optimizer",
-      "phase": "Unclassified",
-      "boundary": "Unknown",
-      "requires": [],
-      "invalidates": [],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "must not enter release/profile pipelines until classified",
-      "termination": "bounded by the registered scheduler restart and iteration budgets",
-      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
-    },
     {
       "id": "branch_coalesce",
       "kind": "executable-pass",
@@ -178,24 +133,6 @@
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
       "benchmark": "foundation.optimizer.memory"
-    },
-    {
-      "id": "decode_scan_fuse",
-      "kind": "executable-pass",
-      "owner": "vyre-foundation-optimizer",
-      "phase": "Unclassified",
-      "boundary": "Unknown",
-      "requires": [],
-      "invalidates": [
-        "buffer_layout",
-        "fusion"
-      ],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "must not enter release/profile pipelines until classified",
-      "termination": "bounded by the registered scheduler restart and iteration budgets",
-      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
     },
     {
       "id": "empty_block_collapse",
@@ -382,46 +319,6 @@
       "benchmark": "foundation.optimizer.classification-gap"
     },
     {
-      "id": "loop_software_pipeline",
-      "kind": "executable-pass",
-      "owner": "vyre-foundation-optimizer",
-      "phase": "Loop",
-      "boundary": "AbiPreserving",
-      "requires": [
-        "const_fold"
-      ],
-      "invalidates": [
-        "loop_unroll",
-        "loop_strip_mine"
-      ],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "preserves public buffer ABI and externally visible program semantics",
-      "termination": "bounded by the registered scheduler restart and iteration budgets",
-      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.loop"
-    },
-    {
-      "id": "loop_strip_mine",
-      "kind": "executable-pass",
-      "owner": "vyre-foundation-optimizer",
-      "phase": "Loop",
-      "boundary": "AbiPreserving",
-      "requires": [
-        "const_fold"
-      ],
-      "invalidates": [
-        "loop_unroll",
-        "vectorization"
-      ],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "preserves public buffer ABI and externally visible program semantics",
-      "termination": "bounded by the registered scheduler restart and iteration budgets",
-      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.loop"
-    },
-    {
       "id": "loop_trip_zero_eliminate",
       "kind": "executable-pass",
       "owner": "vyre-foundation-optimizer",
@@ -437,27 +334,6 @@
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
       "benchmark": "foundation.optimizer.classification-gap"
-    },
-    {
-      "id": "loop_unroll",
-      "kind": "executable-pass",
-      "owner": "vyre-foundation-optimizer",
-      "phase": "Loop",
-      "boundary": "AbiPreserving",
-      "requires": [
-        "const_fold"
-      ],
-      "invalidates": [
-        "const_fold",
-        "value_numbering",
-        "fusion"
-      ],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "preserves public buffer ABI and externally visible program semantics",
-      "termination": "bounded by the registered scheduler restart and iteration budgets",
-      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.loop"
     },
     {
       "id": "loop_var_range_fold",
@@ -490,23 +366,6 @@
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
       "benchmark": "foundation.optimizer.classification-gap"
-    },
-    {
-      "id": "normalize_atomics",
-      "kind": "executable-pass",
-      "owner": "vyre-foundation-optimizer",
-      "phase": "Sync",
-      "boundary": "AbiPreserving",
-      "requires": [],
-      "invalidates": [
-        "fusion"
-      ],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "preserves public buffer ABI and externally visible program semantics",
-      "termination": "bounded by the registered scheduler restart and iteration budgets",
-      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.sync"
     },
     {
       "id": "reaching_def_propagate",
@@ -663,6 +522,147 @@
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
       "benchmark": "foundation.optimizer.fusion"
+    },
+    {
+      "id": "atomic_minimize",
+      "kind": "executable-pass",
+      "owner": "vyre-foundation-optimizer",
+      "phase": "Sync",
+      "boundary": "AbiPreserving",
+      "requires": [],
+      "invalidates": [],
+      "capabilities": [],
+      "preserves_abi": true,
+      "invariant": "preserves public buffer ABI and externally visible program semantics",
+      "termination": "bounded by the registered scheduler restart and iteration budgets",
+      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
+      "benchmark": "foundation.optimizer.sync"
+    },
+    {
+      "id": "autotune",
+      "kind": "executable-pass",
+      "owner": "vyre-foundation-optimizer",
+      "phase": "Unclassified",
+      "boundary": "Unknown",
+      "requires": [],
+      "invalidates": [],
+      "capabilities": [],
+      "preserves_abi": true,
+      "invariant": "must not enter release/profile pipelines until classified",
+      "termination": "bounded by the registered scheduler restart and iteration budgets",
+      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
+      "benchmark": "foundation.optimizer.classification-gap"
+    },
+    {
+      "id": "barrier_coalesce",
+      "kind": "executable-pass",
+      "owner": "vyre-foundation-optimizer",
+      "phase": "Unclassified",
+      "boundary": "Unknown",
+      "requires": [],
+      "invalidates": [],
+      "capabilities": [],
+      "preserves_abi": true,
+      "invariant": "must not enter release/profile pipelines until classified",
+      "termination": "bounded by the registered scheduler restart and iteration budgets",
+      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
+      "benchmark": "foundation.optimizer.classification-gap"
+    },
+    {
+      "id": "decode_scan_fuse",
+      "kind": "executable-pass",
+      "owner": "vyre-foundation-optimizer",
+      "phase": "Unclassified",
+      "boundary": "Unknown",
+      "requires": [],
+      "invalidates": [
+        "buffer_layout",
+        "fusion"
+      ],
+      "capabilities": [],
+      "preserves_abi": true,
+      "invariant": "must not enter release/profile pipelines until classified",
+      "termination": "bounded by the registered scheduler restart and iteration budgets",
+      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
+      "benchmark": "foundation.optimizer.classification-gap"
+    },
+    {
+      "id": "loop_software_pipeline",
+      "kind": "executable-pass",
+      "owner": "vyre-foundation-optimizer",
+      "phase": "Loop",
+      "boundary": "AbiPreserving",
+      "requires": [
+        "const_fold"
+      ],
+      "invalidates": [
+        "loop_unroll",
+        "loop_strip_mine"
+      ],
+      "capabilities": [],
+      "preserves_abi": true,
+      "invariant": "preserves public buffer ABI and externally visible program semantics",
+      "termination": "bounded by the registered scheduler restart and iteration budgets",
+      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
+      "benchmark": "foundation.optimizer.loop"
+    },
+    {
+      "id": "loop_strip_mine",
+      "kind": "executable-pass",
+      "owner": "vyre-foundation-optimizer",
+      "phase": "Loop",
+      "boundary": "AbiPreserving",
+      "requires": [
+        "const_fold"
+      ],
+      "invalidates": [
+        "loop_unroll",
+        "vectorization"
+      ],
+      "capabilities": [],
+      "preserves_abi": true,
+      "invariant": "preserves public buffer ABI and externally visible program semantics",
+      "termination": "bounded by the registered scheduler restart and iteration budgets",
+      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
+      "benchmark": "foundation.optimizer.loop"
+    },
+    {
+      "id": "loop_unroll",
+      "kind": "executable-pass",
+      "owner": "vyre-foundation-optimizer",
+      "phase": "Loop",
+      "boundary": "AbiPreserving",
+      "requires": [
+        "const_fold"
+      ],
+      "invalidates": [
+        "const_fold",
+        "value_numbering",
+        "fusion"
+      ],
+      "capabilities": [],
+      "preserves_abi": true,
+      "invariant": "preserves public buffer ABI and externally visible program semantics",
+      "termination": "bounded by the registered scheduler restart and iteration budgets",
+      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
+      "benchmark": "foundation.optimizer.loop"
+    },
+    {
+      "id": "normalize_atomics",
+      "kind": "executable-pass",
+      "owner": "vyre-foundation-optimizer",
+      "phase": "Sync",
+      "boundary": "AbiPreserving",
+      "requires": [],
+      "invalidates": [
+        "fusion"
+      ],
+      "capabilities": [],
+      "preserves_abi": true,
+      "invariant": "preserves public buffer ABI and externally visible program semantics",
+      "termination": "bounded by the registered scheduler restart and iteration budgets",
+      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
+      "benchmark": "foundation.optimizer.sync"
     },
     {
       "id": "vectorization",

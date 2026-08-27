@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:f658f200d51392c80a1428e5510b0a9f393f295a:dirty=true:worktree=e1bf0d30b3232f2572097dbead93e484120e55945fd78101e95c4c3108dd9c0c",
+  "source_fingerprint": "git:d9bcd400a6ad14708796af12741b9277fca821f8:dirty=true:worktree=04b5ce828135e338277c0087ad956cec76e9012c3a8b7396a2383d6650951baf",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -226,6 +226,18 @@
       "text": "panic!(\"target identity must be non-empty and contain no surrounding whitespace\");"
     },
     {
+      "path": "vyre-foundation/src/optimizer/construct_law.rs",
+      "line": 208,
+      "pattern": "documented_panic_contract",
+      "text": "expr_construct_laws(expr_variant_name(expr)).expect("
+    },
+    {
+      "path": "vyre-foundation/src/optimizer/construct_law.rs",
+      "line": 222,
+      "pattern": "documented_panic_contract",
+      "text": "node_construct_laws(node_variant_name(node)).expect("
+    },
+    {
       "path": "vyre-foundation/src/optimizer/rewrite_proof.rs",
       "line": 295,
       "pattern": "documented_panic_contract",
@@ -431,25 +443,25 @@
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 57,
+      "line": 55,
       "pattern": "panic_macro",
       "text": "panic!(\"{}\", self.0);"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 112,
+      "line": 110,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 148,
+      "line": 146,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 180,
+      "line": 178,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: sequential-output dispatcher mutex should not be poisoned\");"
     },
@@ -940,6 +952,18 @@
       "text": "panic!("
     },
     {
+      "path": "vyre-test-support/src/bin_op_variants.rs",
+      "line": 52,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|err| panic!(\"Fix: cannot read the BinOp declaration at {path:?}: {err}\"));"
+    },
+    {
+      "path": "vyre-test-support/src/bin_op_variants.rs",
+      "line": 54,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"Fix: no `pub enum BinOp` declaration in {path:?}; update this enumeration\")"
+    },
+    {
       "path": "vyre-test-support/src/binop_parity.rs",
       "line": 243,
       "pattern": "documented_panic_contract",
@@ -1024,26 +1048,32 @@
       "text": "panic!(\"Fix: `{marker}` must be introduced by a Let binding:\\n{dump}\")"
     },
     {
+      "path": "vyre-test-support/src/le_words.rs",
+      "line": 30,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: a four-byte slice is a u32 word; state a buffer that holds the word.\"),"
+    },
+    {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 301,
+      "line": 359,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 344,
+      "line": 402,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 439,
+      "line": 497,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 447,
+      "line": 505,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -1073,25 +1103,25 @@
     },
     {
       "path": "vyre-test-support/src/pass_programs.rs",
-      "line": 95,
+      "line": 117,
       "pattern": "documented_panic_contract",
       "text": "body => panic!(\"expected single Let in body, got {body:?}\"),"
     },
     {
       "path": "vyre-test-support/src/pass_programs.rs",
-      "line": 97,
+      "line": 119,
       "pattern": "documented_panic_contract",
       "text": "entry => panic!(\"expected wrapped Program with single Region, got {entry:?}\"),"
     },
     {
       "path": "vyre-test-support/src/pass_programs.rs",
-      "line": 289,
+      "line": 311,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "vyre-test-support/src/pass_programs.rs",
-      "line": 307,
+      "line": 329,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -1106,6 +1136,84 @@
       "line": 94,
       "pattern": "documented_panic_contract",
       "text": "panic!("
+    },
+    {
+      "path": "vyre-test-support/src/selected_schedules.rs",
+      "line": 45,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"an exact workgroup shape is legal\");"
+    },
+    {
+      "path": "vyre-test-support/src/selected_schedules.rs",
+      "line": 52,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"mapping an axis of the phase is legal\");"
+    },
+    {
+      "path": "vyre-test-support/src/selected_schedules.rs",
+      "line": 69,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"a bounded pipeline between two phases is legal\");"
+    },
+    {
+      "path": "vyre-test-support/src/selected_schedules.rs",
+      "line": 75,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"a workgroup synchronization boundary is legal\");"
+    },
+    {
+      "path": "vyre-test-support/src/selected_schedules.rs",
+      "line": 95,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"a device synchronization boundary is legal\");"
+    },
+    {
+      "path": "vyre-test-support/src/selected_schedules.rs",
+      "line": 101,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"a bounded persistent queue is legal\");"
+    },
+    {
+      "path": "vyre-test-support/src/semantic_requests.rs",
+      "line": 92,
+      "pattern": "expect_call",
+      "text": ".expect(\"valid graph. Fix: keep add_program() a single-node program a graph admits.\")"
+    },
+    {
+      "path": "vyre-test-support/src/semantic_requests.rs",
+      "line": 147,
+      "pattern": "documented_panic_contract",
+      "text": ".expect("
+    },
+    {
+      "path": "vyre-test-support/src/semantic_requests.rs",
+      "line": 175,
+      "pattern": "expect_call",
+      "text": ".expect(\"logical graph. Fix: bind every external value the graph reads, or none.\");"
+    },
+    {
+      "path": "vyre-test-support/src/semantic_requests.rs",
+      "line": 180,
+      "pattern": "expect_call",
+      "text": "let request = request(&logical, inputs, target_facts, DEVICE_BUDGET, 60_000).expect("
+    },
+    {
+      "path": "vyre-test-support/src/semantic_requests.rs",
+      "line": 186,
+      "pattern": "expect_call",
+      "text": ".expect(\"semantic execution. Fix: admit a validated request under the stated budget.\");"
+    },
+    {
+      "path": "vyre-test-support/src/semantic_requests.rs",
+      "line": 207,
+      "pattern": "expect_call",
+      "text": ".expect(\"logical graph. Fix: bind every external value the graph reads, or none.\");"
+    },
+    {
+      "path": "vyre-test-support/src/semantic_requests.rs",
+      "line": 212,
+      "pattern": "expect_call",
+      "text": "let request = request(&logical, inputs, target_facts, DEVICE_BUDGET, 0).expect("
     },
     {
       "path": "xtask/src/fixture_checkout.rs",

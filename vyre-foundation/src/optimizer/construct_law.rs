@@ -196,6 +196,13 @@ pub fn node_construct_laws(construct: &str) -> Option<&'static ConstructLaws> {
 ///
 /// The closure test proves every declared variant has a row, so this answers
 /// for every expression the IR can hold.
+///
+/// # Panics
+///
+/// Panics when the expression's variant has no row, which means a variant
+/// reached the AST registry without its laws or its deliberate opacity being
+/// recorded. Failing closed is the contract: a construct whose laws are unknown
+/// must not be treated as exposing none.
 #[must_use]
 pub fn laws_of(expr: &Expr) -> &'static ConstructLaws {
     expr_construct_laws(expr_variant_name(expr)).expect(
@@ -205,6 +212,11 @@ pub fn laws_of(expr: &Expr) -> &'static ConstructLaws {
 }
 
 /// Laws `node` exposes.
+///
+/// # Panics
+///
+/// Panics when the statement's variant has no row, for the reason
+/// [`laws_of`] states.
 #[must_use]
 pub fn laws_of_node(node: &Node) -> &'static ConstructLaws {
     node_construct_laws(node_variant_name(node)).expect(

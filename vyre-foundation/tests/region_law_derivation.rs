@@ -35,23 +35,14 @@ use vyre_spec::RegionLawFamily;
 /// Parsed rather than read from `all()`, because a variant added to the enum and
 /// omitted from `all()` is the silent hole this closure exists to catch.
 fn declared_family_variants() -> BTreeSet<String> {
-    let path =
-        vyre_test_support::monorepo::vyre_workspace_root().join("vyre-spec/src/region_law.rs");
+    let path = vyre_test_support::monorepo::vyre_crate_directory("vyre-spec")
+        .join("src")
+        .join("region_law.rs");
     let source = std::fs::read_to_string(&path)
-        .unwrap_or_else(|error| panic!("Fix: cannot read {}: {error}", path.display()));
-    let body = source
-        .split_once("pub enum RegionLawFamily {")
-        .expect("Fix: `RegionLawFamily` must be declared in vyre-spec/src/region_law.rs")
-        .1
-        .split_once('}')
-        .expect("Fix: the enum body must be brace delimited")
-        .0;
-    body.lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty() && !line.starts_with("//") && !line.starts_with("#["))
-        .filter_map(|line| line.strip_suffix(','))
-        .map(str::to_owned)
-        .collect()
+        .unwrap_or_else(|err| panic!("Fix: cannot read {path:?} to derive the family set: {err}"));
+    let body = vyre_test_support::braced_body(&source, "pub enum RegionLawFamily {")
+        .unwrap_or_else(|| panic!("Fix: {path:?} no longer declares `pub enum RegionLawFamily`"));
+    vyre_test_support::top_level_variant_names(body)
 }
 
 /// A counted loop over a non-zero constant range, writing one element per

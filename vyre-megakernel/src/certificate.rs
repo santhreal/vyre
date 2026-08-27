@@ -163,10 +163,8 @@ impl SearchCertificate {
             derived: 0,
             admitted: 0,
         });
-        self.derived.last_mut().expect(
-            "a family was just pushed. Fix: keep the push and this read in one borrow, so the \
-             row a caller records cannot be dropped between them.",
-        )
+        let inserted = self.derived.len() - 1;
+        &mut self.derived[inserted]
     }
 
     /// Record the depth the search reached.

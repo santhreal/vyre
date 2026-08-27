@@ -446,6 +446,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   coverage. The FNV-1a64 and delegating-form member sets are derived from the
   source at run time, so a new member fails the suite instead of shipping
   unproven.
+- Each IR level now registers one stage naming its subject, verifier, canonical
+  form, and analyses, so a level with no verifier or two owners for one
+  analysis fails the link-closure suite instead of passing verification by
+  default.
 - `scan_prefilter_width_closure` reads the `PrefilterWidth` variants out of the
   width table's own source at run time and fails when a width has no recorded
   dispatch ABI, when a recorded row names a width the source no longer
@@ -470,6 +474,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   identity with step position can be made reversal-symmetric and stay wrong; a
   rotation separates the two and catches a subgroup collective that resolves
   its peers by physical step position.
+- Recurrence, reduction, layout, and numerical laws now derive equivalent
+  programs through a bounded composition of the registered rewrites that
+  realize them, and a law family with no derivation fails its closure suite.
 - A registration behind a feature the registry walker does not enable is
   invisible rather than absent, so nothing was red when one fell out. Two rules
   in `xtask-registry` close that class, both derived from the tree at run time

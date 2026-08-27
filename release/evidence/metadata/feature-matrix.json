@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:4fb3d8b3b0b9e5fd1a099599461e5e0abf0fed1c:dirty=true:worktree=d2f514dc3e52b5ac75fd34b9de5c18daf6acf24972279301ce61379d23b2ca8b",
+  "source_fingerprint": "git:d9bcd400a6ad14708796af12741b9277fca821f8:dirty=true:worktree=ba7c571995093d8fe3b85fdb312513826612d363456fb865022d0cc7517dd497",
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -532,12 +532,13 @@
     {
       "name": "vyre-test-support",
       "manifest": "vyre-test-support/Cargo.toml",
-      "feature_count": 2,
+      "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
         "default",
-        "ir-fixtures"
+        "ir-fixtures",
+        "semantic-requests"
       ],
       "malformed_features": [],
       "unresolved_feature_members": [],
