@@ -86,8 +86,8 @@
 //! At ONE workgroup the same code is ordered and does NOT lose a set.
 //! The per-iteration sequence is clear, barrier, `atomic_or`s, barrier,
 //! barrier, read, so no two conflicting accesses to `changed[0]` are
-//! ever concurrent, and within a single CTA a `bar.sync` carries a
-//! CTA-scope memory fence, which is sufficient. Do not read the
+//! ever concurrent, and within a single workgroup a barrier carries a
+//! workgroup-scope memory fence, which is sufficient. Do not read the
 //! paragraph above as a single-group defect; it is not one.
 //!
 //! The clear used to be a plain non-atomic `Node::store` to a location
@@ -170,7 +170,7 @@ pub const PERSISTENT_FIXPOINT_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// SCOPE, not atomicity.
 ///
 /// At one workgroup the accesses within ONE iteration are clear,
-/// barrier, sets, barrier, read, so those never race and a CTA-scope
+/// barrier, sets, barrier, read, so those never race and a workgroup-scope
 /// fence is sufficient for them. An earlier revision of this doc
 /// claimed the clear made the builder unsound at one workgroup too.
 /// That was wrong for the intra-iteration sequence: the barriers order
@@ -314,7 +314,7 @@ pub fn persistent_fixpoint(
             // returns a partially-transferred state that no caller can
             // distinguish from a converged one by looking at `changed`.
             //
-            // `bar.sync` does not count invocations that already
+            // A workgroup barrier does not count invocations that already
             // returned, so the survivors are not stranded and nothing
             // hangs. That is exactly why this was invisible: the defect
             // costs answers, never liveness.

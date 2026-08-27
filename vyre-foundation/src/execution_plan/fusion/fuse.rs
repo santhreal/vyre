@@ -548,7 +548,7 @@ fn flatten_arm_entries(
             ArmNamespace::Shared => combined_entry.extend(segment),
         }
         if barrier_after_arm.contains(&arm_idx) {
-            // Workgroup `SeqCst` (`bar.sync 0`) is sufficient only when the
+            // Workgroup `SeqCst` is sufficient only when the
             // prior write is uniform across the launch. Launch-geometry
             // dependent writes must become a top-level `GridSync`, where the
             // runtime split pass can lower the fused program into globally
