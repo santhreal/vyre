@@ -14,8 +14,8 @@
 //! Which statements and expressions combine at all is the recorded per-variant
 //! decision in [`node_combine`](crate::visit::node_combine) and
 //! [`expr_combine`](crate::visit::expr_combine), and which combine an operator
-//! applies is [`CombineKind`], so a new IR variant or a new operator states its
-//! own answer instead of passing through here unseen.
+//! applies is [`vyre_spec::CombineKind`], so a new IR variant or a new operator
+//! states its own answer instead of passing through here unseen.
 //!
 //! Where the element type of a combine is stated by the program it is read from
 //! the declaration that states it. Where it is not, every element type the

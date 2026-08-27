@@ -68,8 +68,8 @@
 //! Every register and shared-byte figure above is an estimate read off the IR.
 //! Once a candidate has been emitted and loaded, the target compiler and the
 //! device state what the entry point actually allocates, which is the same
-//! quantity measured instead of predicted. [`evaluate_reported`] re-prices a
-//! candidate with those figures in place of the estimate, so the ladder ranks
+//! quantity measured instead of predicted. Reported-figure evaluation re-prices
+//! a candidate with those figures in place of the estimate, so the ladder ranks
 //! its finalists on the register allocation the device will run rather than the
 //! one the IR suggested. A term the backend does not report stays zero and the
 //! estimate stands for it.
