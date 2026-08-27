@@ -88,8 +88,9 @@ fn run_toposort_program(node_count: u32, offsets: &[u32], targets: &[u32]) -> Ve
         node_count, "offsets", "targets", "indeg", "queue", "order",
     );
     let zeros = vec![0u32; node_count.max(1) as usize];
-    // Input order = buffer declaration order: offsets(0), targets(1), indeg(2), queue(3),
-    // order(4). indeg/queue/order are ReadWrite scratch/output, seeded to zero.
+    // Input order = declaration order over the buffers `is_reference_input` accepts:
+    // offsets(0), targets(1), indeg(2), queue(3). `order` is a pipeline live-out
+    // ReadWrite buffer, so the interpreter allocates and zero-fills it.
     let targets_in = if targets.is_empty() {
         vec![0u32]
     } else {
@@ -100,7 +101,6 @@ fn run_toposort_program(node_count: u32, offsets: &[u32], targets: &[u32]) -> Ve
         &[
             Value::from(pack(offsets)),
             Value::from(pack(&targets_in)),
-            Value::from(pack(&zeros)),
             Value::from(pack(&zeros)),
             Value::from(pack(&zeros)),
         ],

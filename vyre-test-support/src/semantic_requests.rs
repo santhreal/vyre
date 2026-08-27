@@ -36,6 +36,28 @@ pub fn unknown_policy(
     )
 }
 
+/// A policy targeting a device that grants every capability.
+///
+/// A suite proving what a kernel computes states facts that admit the kernel: a
+/// program declaring workgroup-scoped scratch, subgroup work, or a tensor
+/// operand is refused against an unknown device, and that refusal is a fact
+/// about the device rather than about the program. Facts stay device-neutral,
+/// so this grants capabilities and one invocation limit, not a vendor.
+#[must_use]
+pub fn granted_policy(
+    external_digest: Digest,
+    budget: SearchBudget,
+    max_artifact_bytes: u64,
+) -> SemanticExecutionPolicy {
+    SemanticExecutionPolicy::new(
+        ExternalFacts::new(external_digest, BTreeMap::new()),
+        DeviceFacts::new(crate::backend_capabilities::all_granted(), 1024),
+        CompileObjective::MinimizeLatency,
+        budget,
+        max_artifact_bytes,
+    )
+}
+
 /// The budget a device-backed contract runs under: search allowed, measurement not.
 pub const DEVICE_BUDGET: SearchBudget = SearchBudget::new(128, 128, 0, 0, 128);
 

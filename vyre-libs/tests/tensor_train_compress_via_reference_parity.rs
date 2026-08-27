@@ -81,7 +81,7 @@ fn two_mode_full_rank_compression_reconstructs_the_matrix() {
             .collect();
         let compressed = compress_cost_tensor_f32_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &bounded_compile_policy::granted_policy(),
             &tensor,
             &dims,
             &ranks,
@@ -120,7 +120,7 @@ fn three_mode_rank1_tensor_compresses_and_reconstructs() {
     }
     let compressed = compress_cost_tensor_f32_via(
         &dispatcher,
-        &bounded_compile_policy::policy(),
+        &bounded_compile_policy::granted_policy(),
         &tensor,
         &dims,
         &ranks,

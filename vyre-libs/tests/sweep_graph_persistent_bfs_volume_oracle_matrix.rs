@@ -61,7 +61,7 @@ fn sweep_graph_persistent_bfs_volume_oracle_matrix() {
         }
         bfs_expand_via_with_scratch_into(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &bounded_compile_policy::granted_policy(),
             case.inputs(max_iterations),
             &case.frontier,
             &mut scratch,
