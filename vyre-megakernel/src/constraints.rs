@@ -452,7 +452,7 @@ fn workspace(
             .copied()
             .unwrap_or(0);
         total = total
-            .checked_next_multiple_of(crate::WORKSPACE_REGION_ALIGNMENT)
+            .checked_next_multiple_of(crate::allocation::REGION_ALIGNMENT)
             .and_then(|aligned| aligned.checked_add(bytes))
             .ok_or(PruneReason::Workspace)?;
     }

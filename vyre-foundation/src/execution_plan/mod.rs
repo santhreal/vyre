@@ -136,16 +136,17 @@ pub enum PlanError {
         /// Per-buffer byte budget.
         budget_bytes: u64,
     },
-    /// The full Program exceeds the selected adapter's peak static memory budget.
+    /// The buffers one Program declares exceed the selected adapter's total
+    /// static memory budget.
     #[error(
-        "device peak memory budget exceeded: planned {planned_bytes} static bytes exceeds budget {budget_bytes} on backend {backend}. Fix: split the Program, enable resident reuse, or lower the graph in shards before dispatch."
+        "device static memory budget exceeded: the declared {declared_bytes} static bytes exceed budget {budget_bytes} on backend {backend}. Fix: split the Program, enable resident reuse, or lower the graph in shards before dispatch."
     )]
-    PeakBudgetExceeded {
+    DeclaredBudgetExceeded {
         /// Backend identifier.
         backend: &'static str,
-        /// Planned peak static bytes.
-        planned_bytes: u64,
-        /// Peak static byte budget.
+        /// Static bytes the Program declares.
+        declared_bytes: u64,
+        /// Total declared static byte budget.
         budget_bytes: u64,
     },
 }
@@ -655,9 +656,9 @@ mod tests {
             .expect_err("aggregate static memory must fail during planning");
         assert!(matches!(
             error,
-            PlanError::PeakBudgetExceeded {
+            PlanError::DeclaredBudgetExceeded {
                 backend: "tiny-test-gpu",
-                planned_bytes: 272,
+                declared_bytes: 272,
                 budget_bytes: 256,
             }
         ));

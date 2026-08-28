@@ -449,7 +449,7 @@ impl ArtifactSession {
             .read()
             .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
         Ok(ArtifactWorkspace::allocate(
-            state.admitted.neutral().workspace(),
+            state.admitted.neutral().allocation(),
             state.materializer.as_ref(),
         )?)
     }
@@ -504,7 +504,7 @@ impl ArtifactSession {
                     })
                 })?;
         let mut typed = BindingSet::new(state.admitted.neutral().digest());
-        for (value, resource) in workspace.regions() {
+        for (value, resource) in workspace.bindings() {
             typed.insert(*value, BoundResource::Resident(resource.clone()));
         }
         for (name, resource) in resources {

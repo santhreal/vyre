@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{BufferAccess, ProgramGraph, ProgramGraphValue, ShapeDim, ValueLifetime};
 
+use crate::allocation;
 use crate::error::{failure, overflow, CompileError, CompilerFailureKind};
 use crate::identity::{ArtifactNodeId, ArtifactValueId, FusionGroupId};
 use crate::schema::{
@@ -207,21 +208,22 @@ pub(crate) fn build_resources(
     for value in graph.values() {
         let element_count = value_element_count(value, bindings)?;
         let byte_count = value_byte_count(value, bindings)?;
-        let producer_stage = value.producer.map_or(0, |producer| {
-            stages[node_groups[producer.0 as usize].0 as usize]
-        });
-        let mut last_stage = value
+        let consumers: Vec<ArtifactNodeId> = value
             .consumers
             .iter()
-            .map(|consumer| stages[node_groups[consumer.0 as usize].0 as usize])
-            .max()
-            .unwrap_or(producer_stage);
-        if matches!(
-            value.contract.lifetime,
-            ValueLifetime::Output | ValueLifetime::Retained
-        ) {
-            last_stage = last_stage.max(final_stage);
-        }
+            .map(|consumer| ArtifactNodeId(consumer.0))
+            .collect();
+        let (first_stage, last_stage) = allocation::span(
+            value.producer.map(|producer| ArtifactNodeId(producer.0)),
+            &consumers,
+            matches!(
+                value.contract.lifetime,
+                ValueLifetime::Output | ValueLifetime::Retained
+            ),
+            node_groups,
+            stages,
+            final_stage,
+        );
         resources.push(ResourceRecord {
             value: ArtifactValueId(value.id.0),
             name: value.name.clone(),
@@ -234,7 +236,7 @@ pub(crate) fn build_resources(
                 ValueLifetime::Output => ResourceLifetime::Output,
             },
             retained_predecessor: value.retained_successor_of.map(|id| ArtifactValueId(id.0)),
-            first_stage: producer_stage,
+            first_stage,
             last_stage,
         });
     }
@@ -247,26 +249,5 @@ pub(crate) fn build_resources(
             )
         })
     })?;
-    let mut peak_live_bytes = 0u64;
-    for stage in 0..=final_stage {
-        let live = resources
-            .iter()
-            .filter(|resource| resource.first_stage <= stage && stage <= resource.last_stage)
-            .try_fold(0u64, |total, resource| {
-                total.checked_add(resource.byte_count).ok_or_else(|| {
-                    overflow(
-                        "artifact.resource_envelope.peak_live_bytes",
-                        "live resource sum exceeds u64",
-                    )
-                })
-            })?;
-        peak_live_bytes = peak_live_bytes.max(live);
-    }
-    Ok((
-        resources,
-        ResourceEnvelope {
-            total_bytes,
-            peak_live_bytes,
-        },
-    ))
+    Ok((resources, ResourceEnvelope { total_bytes }))
 }

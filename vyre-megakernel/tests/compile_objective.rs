@@ -18,7 +18,9 @@ use vyre_megakernel::{
 #[path = "support/search_fixtures.rs"]
 mod search_fixtures;
 
-use search_fixtures::{bare_device, budget, facts, joined_graph, rich_device, single_stage_graph};
+use search_fixtures::{
+    bare_device, budget, facts, joined_graph, refused_field, rich_device, single_stage_graph,
+};
 
 /// Artifact byte ceiling every request here states, well above what the
 /// fixtures emit, so an artifact-bytes bound is never what a test observes
@@ -345,11 +347,7 @@ fn every_inconsistent_objective_is_refused_at_its_own_field() {
             "{name} must be refused as an invalid objective"
         );
         assert_eq!(
-            error
-                .diagnostic
-                .location
-                .as_ref()
-                .and_then(|location| location.path.as_deref()),
+            refused_field(&error),
             Some(path),
             "{name} must name its own field"
         );
@@ -406,8 +404,7 @@ fn a_bound_the_whole_legal_set_exceeds_fails_with_the_figure_it_reached() {
             .validate()
             .expect("a tight bound is a legal objective"),
     )
-    .err()
-    .expect("no plan can run in one nanosecond");
+    .expect_err("no plan can run in one nanosecond");
     assert_eq!(
         error.diagnostic.code.as_str(),
         "MKC031_OBJECTIVE_BOUND_VIOLATED"
@@ -420,14 +417,7 @@ fn a_bound_the_whole_legal_set_exceeds_fails_with_the_figure_it_reached() {
         "the refusal must name the bound: {}",
         error.diagnostic.message
     );
-    assert_eq!(
-        error
-            .diagnostic
-            .location
-            .as_ref()
-            .and_then(|location| location.path.as_deref()),
-        Some("request.objective.bounds")
-    );
+    assert_eq!(refused_field(&error), Some("request.objective.bounds"));
 }
 
 /// WHY: the same graph under a bound its plans satisfy must compile. A bound
@@ -885,11 +875,7 @@ fn a_production_request_must_state_an_artifact_byte_ceiling() {
         let error = error_of(objective);
         assert_eq!(error.diagnostic.code.as_str(), "MKC013_ARTIFACT_LIMIT");
         assert_eq!(
-            error
-                .diagnostic
-                .location
-                .as_ref()
-                .and_then(|location| location.path.as_deref()),
+            refused_field(&error),
             Some("request.objective.bounds.artifact_bytes"),
             "the refusal must name the bound that is missing"
         );
@@ -927,8 +913,6 @@ fn an_artifact_over_the_stated_byte_ceiling_fails_as_an_artifact_limit() {
     }
     let exact = exact.expect("the artifact length must settle on the bound it states");
 
-    let error = compile(&bounded(exact - 1))
-        .err()
-        .expect("one byte short must fail");
+    let error = compile(&bounded(exact - 1)).expect_err("one byte short must fail");
     assert_eq!(error.diagnostic.code.as_str(), "MKC013_ARTIFACT_LIMIT");
 }

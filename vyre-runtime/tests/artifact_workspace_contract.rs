@@ -1,6 +1,6 @@
 //! Runtime allocation and binding of the workspace an artifact recorded.
 //!
-//! WHY: a multi-entry artifact records one workspace region per value it
+//! WHY: a multi-entry artifact records one allocation region per value it
 //! produces for itself, with the offset and byte count the selected schedule
 //! assigned. Nothing read that plan: the runtime allocated whatever a caller
 //! asked for and bound whatever a caller supplied, so a cross-entry value could
@@ -42,7 +42,7 @@ const OUTPUT: &str = "out";
 ///
 /// The intermediate value is the whole point. It is produced inside the artifact
 /// and read inside the artifact, so nothing outside owns it and the compiler
-/// records a workspace region for it.
+/// places it in an artifact-owned region.
 fn two_stage_artifact() -> Artifact {
     let mut graph = ProgramGraph::new();
     let (_, produced) = graph
@@ -250,9 +250,9 @@ static WORKSPACE_REGISTRATION: BackendRegistration = BackendRegistration {
 fn session() -> (Artifact, Arc<WorkspaceMaterializer>, ArtifactSession) {
     let artifact = two_stage_artifact();
     assert!(
-        !artifact.workspace().regions.is_empty(),
-        "Fix: the fixture must record at least one workspace region, or every contract here is \
-         vacuous."
+        artifact.allocation().owned().next().is_some(),
+        "Fix: the fixture must record at least one artifact-owned region, or every contract here \
+         is vacuous."
     );
     let mut envelope = ArtifactEnvelope::new(artifact.clone());
     envelope
@@ -271,10 +271,11 @@ fn session() -> (Artifact, Arc<WorkspaceMaterializer>, ArtifactSession) {
 /// Canonical value the fixture artifact produces for itself.
 fn workspace_value(artifact: &Artifact) -> ArtifactValueId {
     artifact
-        .workspace()
-        .regions
-        .first()
-        .expect("the fixture records a workspace region")
+        .allocation()
+        .owned()
+        .flat_map(|region| region.placements.iter())
+        .next()
+        .expect("the fixture places one artifact-owned value")
         .value
 }
 
@@ -289,30 +290,39 @@ fn the_runtime_allocates_exactly_the_recorded_workspace() {
         .allocate_workspace()
         .expect("the recorded workspace must allocate");
 
-    let plan = artifact.workspace();
-    assert_eq!(workspace.total_bytes(), plan.total_bytes);
+    let plan = artifact.allocation();
+    assert_eq!(workspace.total_bytes(), plan.owned_bytes());
     assert_eq!(
         materializer
             .allocated
             .lock()
             .expect("the allocation log must not be poisoned")
             .as_slice(),
-        plan.regions
-            .iter()
+        plan.owned()
             .map(|region| usize::try_from(region.bytes).expect("fixture regions are small"))
             .collect::<Vec<_>>()
             .as_slice(),
-        "one allocation per recorded region, of exactly the recorded byte count, in recorded order"
+        "one allocation per artifact-owned region, of exactly the recorded byte count, in recorded \
+         order"
     );
-    assert_eq!(workspace.regions().len(), plan.regions.len());
-    for region in &plan.regions {
-        assert!(
-            workspace.owns(region.value),
-            "the workspace must own every value the plan records"
-        );
+    assert_eq!(workspace.buffers().len(), plan.owned().count());
+    for region in plan.owned() {
+        for placement in &region.placements {
+            assert!(
+                workspace.owns(placement.value),
+                "the workspace must own every value the plan places in its own region"
+            );
+        }
     }
+    assert_eq!(
+        workspace.bindings().len(),
+        plan.owned()
+            .map(|region| region.placements.len())
+            .sum::<usize>(),
+        "every placed value binds a buffer"
+    );
 
-    let allocated = workspace.regions().values().cloned().collect::<Vec<_>>();
+    let allocated = workspace.buffers().to_vec();
     session
         .free_workspace(workspace)
         .expect("the workspace must release");
@@ -323,7 +333,7 @@ fn the_runtime_allocates_exactly_the_recorded_workspace() {
             .expect("the release log must not be poisoned")
             .as_slice(),
         allocated.as_slice(),
-        "every allocated region is released, and nothing else"
+        "every allocated buffer is released, and nothing else"
     );
 }
 
@@ -406,7 +416,7 @@ fn workspace_bindings_cover_the_workspace_and_demand_the_rest() {
     assert_eq!(
         bound.resources().get(&owned),
         workspace
-            .regions()
+            .bindings()
             .get(&owned)
             .map(|resource| BoundResource::Resident(resource.clone()))
             .as_ref(),

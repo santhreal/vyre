@@ -76,6 +76,12 @@ pub(crate) enum CompilerFailureKind {
     /// No admitted variant serves the stated workload and the remainder is
     /// declared unsupported.
     UnsupportedWorkload,
+    /// The allocation and layout plan states physical storage no runtime could
+    /// allocate and bind exactly.
+    InvalidAllocationPlan,
+    /// The device reports holding fewer bytes than the selected allocation plan
+    /// requires, so the plan measured is not the plan that ran.
+    UnreconciledResidentBytes,
 }
 
 impl CompilerFailureKind {
@@ -118,6 +124,8 @@ impl CompilerFailureKind {
             Self::PortfolioProvenanceMismatch => "MKC037_PORTFOLIO_PROVENANCE_MISMATCH",
             Self::TargetIdentityMismatch => "MKC038_TARGET_IDENTITY_MISMATCH",
             Self::UnsupportedWorkload => "MKC039_UNSUPPORTED_WORKLOAD",
+            Self::InvalidAllocationPlan => "MKC040_INVALID_ALLOCATION_PLAN",
+            Self::UnreconciledResidentBytes => "MKC041_UNRECONCILED_RESIDENT_BYTES",
         }
     }
 }
@@ -142,7 +150,9 @@ const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
         | CompilerFailureKind::ObjectiveBoundViolated
         | CompilerFailureKind::PortfolioCoverageUnsatisfied
         | CompilerFailureKind::GuardOverlap
-        | CompilerFailureKind::GuardCoverageGap => DiagnosticStage::Plan,
+        | CompilerFailureKind::GuardCoverageGap
+        | CompilerFailureKind::InvalidAllocationPlan
+        | CompilerFailureKind::UnreconciledResidentBytes => DiagnosticStage::Plan,
         CompilerFailureKind::ResourceOverflow | CompilerFailureKind::UnsizedResource => {
             DiagnosticStage::Lower
         }

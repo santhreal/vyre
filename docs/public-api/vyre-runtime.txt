@@ -176,8 +176,6 @@ pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::envelope(&self)
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) -> &vyre_megakernel::schema::Artifact
 pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::contract(&self) -> &vyre_megakernel::specialization::SpecializationContract
 pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::remainder(&self) -> core::option::Option<&vyre_runtime::artifact_admission::AdmittedArtifact>
-pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::remainder_kind(&self) -> vyre_megakernel::specialization::RemainderKind
-pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::target_identity(&self) -> vyre_megakernel::identity::Digest
 pub const fn vyre_runtime::artifact_admission::ArtifactAdmissionError::diagnostic(&self) -> &vyre_foundation::diagnostics::Diagnostic
 pub const fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::accounting(&self) -> &vyre_driver::peer_transfer::PeerTransferAccounting
 pub const fn vyre_runtime::mtp::MtpCoordinator::config(&self) -> &vyre_runtime::mtp::MtpConfig
@@ -443,8 +441,9 @@ pub fn vyre_runtime::artifact_admission::ArtifactSession::submit_and_wait(&self,
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit_host_inputs(&self, inputs: &[&[u8]]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::upload_resident(&self, resource: &vyre_driver::backend::resource::Resource, bytes: &[u8]) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::upload_resident_at(&self, resource: &vyre_driver::backend::resource::Resource, offset_bytes: usize, bytes: &[u8]) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::bindings(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, vyre_driver::backend::resource::Resource>
+pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::buffers(&self) -> &[vyre_driver::backend::resource::Resource]
 pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::owns(&self, value: vyre_megakernel::identity::ArtifactValueId) -> bool
-pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::regions(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, vyre_driver::backend::resource::Resource>
 pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::total_bytes(&self) -> u64
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::artifact(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::bindings(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>

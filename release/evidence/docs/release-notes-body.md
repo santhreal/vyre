@@ -420,6 +420,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   stays published, because renaming it renames a path consumers import; a
   binary root has no module path and is judged by the name a reader types to
   run it.
+- Schedule selection records one versioned allocation and layout plan that
+  lowering verifies its bindings against, the runtime allocates and binds
+  exactly, and device-reported resident bytes are reconciled with.
 - `xtask public-api-paths` measures, per crate, how many items are published at
   more than one path, and pins the number. A crate that declares `pub mod
   inner` and re-exports what it holds publishes every one of those items twice;

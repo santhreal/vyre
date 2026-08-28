@@ -7,6 +7,9 @@ use vyre_foundation::{
     optimizer::cost::CostCertificate,
 };
 
+use vyre_foundation::ir::ValueLifetime;
+
+use crate::allocation::ValueLiveness;
 use crate::{
     value_byte_count, workgroup_scratch_declarations, ArtifactNodeId, ArtifactValueId,
     CompileError, DependencyEdge, DependencyEndpoint, DependencyKind,
@@ -77,6 +80,9 @@ pub(crate) struct PlanningFacts {
     pub(crate) dataflow: Vec<DataflowEdge>,
     /// Packed byte length of every graph value, keyed by artifact value id.
     pub(crate) value_bytes: BTreeMap<u32, u64>,
+    /// What every graph value contributes to the resident byte total, ready for
+    /// one candidate's grouping to resolve into stages.
+    pub(crate) value_liveness: Vec<ValueLiveness>,
 }
 
 pub(crate) fn derive(
@@ -136,10 +142,25 @@ pub(crate) fn derive(
         })
         .collect();
     let mut value_bytes = BTreeMap::new();
+    let mut value_liveness = Vec::with_capacity(graph.values().len());
     let mut node_touched_bytes = vec![0_u64; node_count];
     for value in graph.values() {
         let bytes = value_byte_count(value, bindings)?;
         value_bytes.insert(value.id.0, bytes);
+        value_liveness.push(ValueLiveness {
+            value: ArtifactValueId(value.id.0),
+            bytes,
+            producer: value.producer.map(|producer| ArtifactNodeId(producer.0)),
+            consumers: value
+                .consumers
+                .iter()
+                .map(|consumer| ArtifactNodeId(consumer.0))
+                .collect(),
+            survives_to_end: matches!(
+                value.contract.lifetime,
+                ValueLifetime::Output | ValueLifetime::Retained
+            ),
+        });
         for node in value.producer.iter().chain(value.consumers.iter()) {
             if let Some(total) = node_touched_bytes.get_mut(node.0 as usize) {
                 *total = total.saturating_add(bytes);
@@ -162,5 +183,6 @@ pub(crate) fn derive(
         node_touched_bytes,
         dataflow,
         value_bytes,
+        value_liveness,
     })
 }

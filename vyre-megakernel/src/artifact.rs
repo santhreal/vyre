@@ -8,11 +8,10 @@ use vyre_foundation::schedule::{
 use crate::{
     build_barriers, build_materializations, certificate::SearchCertificate, domain_digest,
     facts::PlanningFacts, failure, group_stages, select::Selection, ArtifactNodeId,
-    ArtifactValueId, BarrierPhaseRecord, CompileError, CompilerFailureKind, DependencyEdge,
-    DependencyEndpoint, DeviceFacts, EntryAbiRecord, EntryPersistence, ExecutionMode,
-    ExternalFacts, FusionGroupId, FusionRecord, FusionRejection, GeometryRecord,
-    LaunchResourceIntent, PlanMeasurement, ResourceLifetime, ResourceRecord, SearchBudget,
-    SearchWork, SelectedPlan, WorkspacePlan, WorkspaceRegion, WORKSPACE_REGION_ALIGNMENT,
+    BarrierPhaseRecord, CompileError, CompilerFailureKind, DependencyEdge, DependencyEndpoint,
+    DeviceFacts, EntryPersistence, ExecutionMode, ExternalFacts, FusionGroupId, FusionRecord,
+    FusionRejection, GeometryRecord, LaunchResourceIntent, PlanMeasurement, SearchBudget,
+    SearchWork, SelectedPlan,
 };
 
 const LEGALITY_DIGEST_DOMAIN: &[u8] = b"VYRE_FUSION_LEGALITY_V1\0";
@@ -330,76 +329,4 @@ fn persistence(schedule: &SelectedSchedule, phase: SchedulePhaseId) -> EntryPers
         }
     }
     EntryPersistence::Static
-}
-
-/// Assign one workspace offset per value the artifact produces inside itself.
-///
-/// A region is storage the runtime allocates because nothing outside the
-/// artifact owns it: some entry point writes the value, and a later entry point
-/// or a retained successor reads it. Constants and graph inputs are bound by the
-/// caller and outputs are read back by the caller, so none of them is workspace
-/// even when their lifetime class matches. The live range is the span of entry
-/// points that bind the value.
-pub(crate) fn workspace_plan(
-    resources: &[ResourceRecord],
-    entries: &[EntryAbiRecord],
-) -> Result<WorkspacePlan, CompileError> {
-    let mut produced = BTreeSet::<ArtifactValueId>::new();
-    let mut span = BTreeMap::<ArtifactValueId, (ArtifactNodeId, ArtifactNodeId)>::new();
-    for entry in entries {
-        produced.extend(entry.outputs.iter().copied());
-        for value in entry.inputs.iter().chain(entry.outputs.iter()) {
-            span.entry(*value)
-                .and_modify(|range| {
-                    range.0 = range.0.min(entry.node);
-                    range.1 = range.1.max(entry.node);
-                })
-                .or_insert((entry.node, entry.node));
-        }
-    }
-    let mut plan = WorkspacePlan::default();
-    for resource in resources {
-        if !matches!(
-            resource.lifetime,
-            ResourceLifetime::Invocation | ResourceLifetime::Retained
-        ) || !produced.contains(&resource.value)
-        {
-            continue;
-        }
-        let Some((first_entry, last_entry)) = span.get(&resource.value).copied() else {
-            continue;
-        };
-        if resource.byte_count == 0 {
-            continue;
-        }
-        let offset = plan
-            .total_bytes
-            .checked_next_multiple_of(WORKSPACE_REGION_ALIGNMENT)
-            .ok_or_else(|| {
-                failure(
-                    CompilerFailureKind::ResourceOverflow,
-                    "planner.workspace.offset",
-                    "workspace offset exceeds the addressable range",
-                    "reduce the retained working set",
-                )
-            })?;
-        plan.total_bytes = offset.checked_add(resource.byte_count).ok_or_else(|| {
-            failure(
-                CompilerFailureKind::ResourceOverflow,
-                "planner.workspace.total_bytes",
-                "workspace allocation exceeds the addressable range",
-                "reduce the retained working set",
-            )
-        })?;
-        plan.regions.push(WorkspaceRegion {
-            value: resource.value,
-            offset,
-            bytes: resource.byte_count,
-            lifetime: resource.lifetime,
-            first_entry,
-            last_entry,
-        });
-    }
-    plan.validate()?;
-    Ok(plan)
 }

@@ -69,6 +69,39 @@ lineage. Materializers resolve active buffers through those named records and
 inactive split-segment declarations through exact target `(group, slot)`
 metadata. A missing, ambiguous or unrelated identity rejects the payload.
 
+## One plan owns physical storage
+
+Schedule selection produces one versioned allocation and layout plan, recorded
+in the artifact. It maps every canonical value to a region: device slot, address
+space, owner, offset, bytes, alignment and padding. Each placement inside a
+region states the value's byte offset, packed size, lifetime, alias class, live
+stage range, whether an ordering effect touches it, its element layout, and the
+storage operations permitted for it: reuse of another value's dead storage,
+in-place update, rematerialization, spill and prefetch.
+
+The plan reports the per-device liveness peak and the aggregate across devices
+before candidates are ranked, and candidate ranking prices peak memory from that
+figure. A compile whose artifact states a peak the ranking did not price is
+refused.
+
+Constant-lifetime values are addressed in the constant space and every other
+value in the device space; the artifact never allocates constant storage. Two
+values may share bytes only when their alias classes match or their live ranges
+are disjoint.
+
+Lowering verifies its own bindings against the plan. A bound value the plan
+places nowhere, a group binding a value outside its live range, and a
+constant-space placement bound writable are rejected before emission.
+
+`vyre-runtime` allocates one buffer per artifact-owned region, in recorded
+order, and binds every placement to it. It does not pack, resize, merge,
+reorder, or discover reuse.
+
+A backend that reports the device bytes it holds reconciles that figure against
+the planned peak before a measurement is spent. Fewer bytes than the plan
+requires is refused as `MKC041_UNRECONCILED_RESIDENT_BYTES`. A backend with no
+memory query reports zero, which leaves the planned figure unreconciled.
+
 ## What consumes the artifact
 
 Device admission, materialization, submission, queues, residency and

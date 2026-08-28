@@ -152,7 +152,8 @@ was selected under and the width of the legal Pareto frontier it was selected
 from. The schema records the selected launch of every entry point: the entry
 dependency order, logical coverage, grid, workgroup, vector width, pipeline
 roles, ring slots, barrier phases, dynamic shared bytes, launch resource intent,
-and persistence, together with the workspace plan a runtime allocates, the
+and persistence, together with the allocation and layout plan a runtime
+allocates and binds, the
 grammar derivation that produced the plan, and the certificate of the search that
 selected it. A target payload states the same geometry or admission rejects it,
 and emission carries the recorded launch rather than reporting one.
@@ -476,6 +477,7 @@ Fifteen fields are evidence, recorded and excluded from `total`.
 | `live_value_peak` | registers | largest per-invocation live value count in any one group |
 | `shared_scratch_bytes` | bytes | largest shared scratch any one group declares, unioned by buffer name |
 | `occupancy_passes_peak` | count | largest number of resident passes any one group needs |
+| `planned_peak_bytes` | bytes | bytes the allocation plan holds at once under this grouping |
 | `instructions` | count | scalar instructions the graph states |
 | `tensor_ops` | count | tile statements the graph states |
 | `barriers` | count | workgroup barriers the graph states |

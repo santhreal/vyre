@@ -391,8 +391,8 @@ impl CudaBackend {
             .function_for_ptx(ptx_src, key, self.ptx_target_sm())
     }
 
-    /// Registers, spill bytes and static shared bytes the driver assigned to
-    /// this PTX module's entry point.
+    /// Registers, spill bytes, static shared bytes and resident device bytes the
+    /// driver assigned to this PTX module's entry point.
     pub(crate) fn module_resources_with_key(
         &self,
         ptx_src: &str,
@@ -412,7 +412,25 @@ impl CudaBackend {
             registers_per_invocation,
             spill_bytes_per_invocation,
             shared_memory_bytes,
+            resident_device_bytes: self.resident_device_bytes()?,
         })
+    }
+
+    /// Device bytes this backend currently holds resident.
+    ///
+    /// The resident store and the transient pool are the only allocators that
+    /// hold device storage for a dispatch, so their totals are what the artifact
+    /// bound. The compiler reconciles this against the allocation plan it
+    /// selected before a measurement decides anything.
+    fn resident_device_bytes(&self) -> Result<u64, BackendError> {
+        let transient = super::transient_memory_budget::cuda_usize_bytes_to_u64(
+            self.transient_pool.allocated_bytes()?,
+            "transient pool allocated bytes",
+        )?;
+        Ok(self
+            .resident_store
+            .allocated_bytes()
+            .saturating_add(transient))
     }
 
     /// The module-scope globals this PTX module exposes to the host.

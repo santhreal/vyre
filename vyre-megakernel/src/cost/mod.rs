@@ -135,6 +135,11 @@ pub struct CostBreakdown {
     /// Largest number of resident passes any one group needs, one meaning the
     /// group fits the device budgets.
     pub occupancy_passes_peak: u64,
+    /// Bytes the allocation plan holds at once under this grouping.
+    ///
+    /// The same liveness the placement plan is packed against, so the peak the
+    /// objective ranks and the peak the artifact records are one number.
+    pub planned_peak_bytes: u64,
     /// Instructions the selected programs state.
     pub instructions: u64,
     /// Matrix-engine statements the selected programs state.
@@ -396,6 +401,7 @@ pub(crate) fn evaluate_reported(
             .saturating_sub(1),
     };
     let grid_syncs = sum(&facts.node_grid_syncs).saturating_add(rendezvous);
+    let planned_peak_bytes = crate::allocation::peak(&facts.value_liveness, &node_groups, &stages);
     let instruction_ns = rate_ns(instructions, device.compute_throughput_ops_per_ns());
     let tensor_ns = rate_ns(tensor_ops, device.tensor_throughput_ops_per_ns());
     let synchronization_ns = barriers
@@ -419,6 +425,7 @@ pub(crate) fn evaluate_reported(
         live_value_peak,
         shared_scratch_bytes,
         occupancy_passes_peak,
+        planned_peak_bytes,
         instructions,
         tensor_ops,
         barriers,

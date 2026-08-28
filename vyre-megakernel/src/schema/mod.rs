@@ -9,14 +9,12 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::allocation::AllocationPlan;
 use crate::error::{failure, serialization_failure, CompileError, CompilerFailureKind};
 use crate::frame;
 use crate::identity::{ArtifactValueId, DependencyEdge, Digest};
 
-pub use geometry::{
-    BarrierPhaseRecord, EntryPersistence, GeometryRecord, LaunchResourceIntent, WorkspacePlan,
-    WorkspaceRegion, WORKSPACE_REGION_ALIGNMENT,
-};
+pub use geometry::{BarrierPhaseRecord, EntryPersistence, GeometryRecord, LaunchResourceIntent};
 pub use plan::{ExecutionMode, PlanMeasurement, SelectedPlan};
 pub use records::{
     AbiAccess, ArtifactAbi, BarrierRecord, EntryAbiRecord, EntryResourceBinding, FusionRecord,
@@ -25,7 +23,7 @@ pub use records::{
 };
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 14;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 15;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -38,7 +36,7 @@ pub(crate) struct ArtifactPayload {
     pub(crate) resources: Vec<ResourceRecord>,
     pub(crate) resource_envelope: ResourceEnvelope,
     pub(crate) geometry: Vec<GeometryRecord>,
-    pub(crate) workspace: WorkspacePlan,
+    pub(crate) allocation: AllocationPlan,
     pub(crate) provenance: Provenance,
 }
 
@@ -123,24 +121,24 @@ impl Artifact {
         &self.payload.geometry
     }
 
-    /// Exact workspace allocation and cross-entry offsets.
+    /// Every physical allocation and layout decision the selected schedule made.
     #[must_use]
-    pub const fn workspace(&self) -> &WorkspacePlan {
-        &self.payload.workspace
+    pub const fn allocation(&self) -> &AllocationPlan {
+        &self.payload.allocation
     }
 
-    /// Reject recorded geometry or workspace a consumer could not submit.
+    /// Reject recorded geometry or physical storage a consumer could not submit.
     ///
-    /// One record per node, every predecessor and workspace value known, and
-    /// every field a launch reads present. Decoded bytes reach this check
-    /// before any consumer reads a launch out of them, because a partial
-    /// geometry set is the one shape a consumer would fill in itself.
+    /// One record per node, every predecessor known, and every field a launch
+    /// reads present. Decoded bytes reach this check before any consumer reads a
+    /// launch out of them, because a partial geometry set is the one shape a
+    /// consumer would fill in itself.
     ///
     /// # Errors
     ///
-    /// Returns when a node has no geometry, two records name one node, a
-    /// record is unlaunchable, or the workspace plan names a value the
-    /// artifact does not carry.
+    /// Returns when a node has no geometry, two records name one node, a record
+    /// is unlaunchable, the allocation plan is not bindable, or a placement and
+    /// the resource row for one value disagree on lifetime, bytes or live range.
     pub fn validate_geometry(&self) -> Result<(), CompileError> {
         let mut recorded = BTreeMap::new();
         for record in self.geometry() {
@@ -184,9 +182,9 @@ impl Artifact {
             position.insert(record.node, index);
         }
         let mut group_of = BTreeMap::new();
-        for (index, group) in self.fusion().iter().enumerate() {
+        for group in self.fusion() {
             for member in &group.members {
-                group_of.insert(*member, index);
+                group_of.insert(*member, (group.id, group.stage));
             }
         }
         for (index, record) in self.geometry().iter().enumerate() {
@@ -203,16 +201,18 @@ impl Artifact {
                     ));
                 }
                 match (group_of.get(&record.node), group_of.get(predecessor)) {
-                    (Some(consumer), Some(producer)) if producer <= consumer => {}
+                    (Some((consumer, _)), Some((producer, _))) if consumer == producer => {}
+                    (Some((_, consumer_stage)), Some((_, producer_stage)))
+                        if producer_stage < consumer_stage => {}
                     (Some(_), Some(_)) => {
                         return Err(failure(
                             CompilerFailureKind::MalformedArtifact,
                             "artifact.body.selected_plan",
                             format!(
-                                "the fusion group of node {} is planned before the group producing entry point {}",
+                                "the group of node {} runs no later than the group producing entry point {}",
                                 record.node.0, predecessor.0
                             ),
-                            "order the selected fusion groups in the dependency order they imply",
+                            "record a later stage for every group that consumes another group's value",
                         ));
                     }
                     _ => {
@@ -229,50 +229,48 @@ impl Artifact {
                 }
             }
         }
-        self.workspace().validate()?;
-        let lifetimes: BTreeMap<ArtifactValueId, ResourceLifetime> = self
+        self.allocation().validate()?;
+        let rows: BTreeMap<ArtifactValueId, &ResourceRecord> = self
             .resources()
             .iter()
-            .map(|resource| (resource.value, resource.lifetime))
+            .map(|resource| (resource.value, resource))
             .collect();
-        for region in &self.workspace().regions {
-            match lifetimes.get(&region.value) {
-                Some(lifetime) if *lifetime == region.lifetime => {}
-                Some(_) => {
-                    return Err(failure(
-                        CompilerFailureKind::MalformedArtifact,
-                        "artifact.body.workspace",
-                        format!(
-                            "workspace region for value {} disagrees with its resource lifetime",
-                            region.value.0
-                        ),
-                        "record the lifetime the resource set states",
-                    ))
+        for region in &self.allocation().regions {
+            for placement in &region.placements {
+                let Some(row) = rows.get(&placement.value) else {
+                    return Err(malformed_allocation(format!(
+                        "allocation places value {} the artifact does not carry",
+                        placement.value.0
+                    )));
+                };
+                if row.lifetime != placement.lifetime {
+                    return Err(malformed_allocation(format!(
+                        "placement of value {} disagrees with its resource lifetime",
+                        placement.value.0
+                    )));
                 }
-                None => {
-                    return Err(failure(
-                        CompilerFailureKind::MalformedArtifact,
-                        "artifact.body.workspace",
-                        format!(
-                            "workspace region names value {} the artifact does not carry",
-                            region.value.0
-                        ),
-                        "reserve workspace only for values the resource set records",
-                    ))
+                if row.byte_count != placement.bytes {
+                    return Err(malformed_allocation(format!(
+                        "placement of value {} reserves {} bytes and its resource row states {}",
+                        placement.value.0, placement.bytes, row.byte_count
+                    )));
+                }
+                if (row.first_stage, row.last_stage)
+                    != (placement.first_stage, placement.last_stage)
+                {
+                    return Err(malformed_allocation(format!(
+                        "placement of value {} states a live range the resource row does not",
+                        placement.value.0
+                    )));
                 }
             }
-            if !recorded.contains_key(&region.first_entry)
-                || !recorded.contains_key(&region.last_entry)
-            {
-                return Err(failure(
-                    CompilerFailureKind::MalformedArtifact,
-                    "artifact.body.workspace",
-                    format!(
-                        "workspace region for value {} names an entry point the artifact does not carry",
-                        region.value.0
-                    ),
-                    "record the live range across entry points the selected plan implies",
-                ));
+        }
+        for row in self.resources() {
+            if row.byte_count > 0 && self.allocation().placement(row.value).is_none() {
+                return Err(malformed_allocation(format!(
+                    "value {} occupies bytes and the allocation plan places it nowhere",
+                    row.value.0
+                )));
             }
         }
         Ok(())
@@ -364,6 +362,17 @@ impl Artifact {
     }
 }
 
+/// Refusal of a decoded plan that contradicts the resource rows beside it.
+fn malformed_allocation(message: String) -> CompileError {
+    failure(
+        CompilerFailureKind::MalformedArtifact,
+        "artifact.body.allocation",
+        message,
+        "record one placement per value the resource set carries, stating its lifetime, bytes and \
+         live range",
+    )
+}
+
 pub(crate) fn encode_payload(payload: &ArtifactPayload) -> Result<frame::Framed, CompileError> {
     let body = serde_json::to_vec(payload).map_err(serialization_failure)?;
     frame::ARTIFACT.encode(payload.schema_version, &body)
@@ -388,6 +397,10 @@ mod tests {
     //! refuses a duplicate name, but a future constructor would need the same check.
 
     use super::*;
+    use crate::allocation::{
+        AddressSpace, AliasClass, AllocationRegion, DevicePeak, DeviceSlot, PlacementLayout,
+        PlacementPermits, RegionOwner, ValuePlacement, ALLOCATION_SCHEMA_VERSION, REGION_ALIGNMENT,
+    };
     use crate::cost::CostBreakdown;
     use crate::identity::{ArtifactNodeId, FusionGroupId};
     use crate::measure::{
@@ -398,6 +411,7 @@ mod tests {
     use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform};
 
     fn payload(resources: Vec<ResourceRecord>) -> ArtifactPayload {
+        let allocation = caller_bound(&resources);
         ArtifactPayload {
             schema_version: ARTIFACT_SCHEMA_VERSION,
             nodes: Vec::new(),
@@ -427,12 +441,9 @@ mod tests {
                 entries: Vec::new(),
             },
             resources,
-            resource_envelope: ResourceEnvelope {
-                total_bytes: 0,
-                peak_live_bytes: 0,
-            },
+            resource_envelope: ResourceEnvelope { total_bytes: 0 },
             geometry: Vec::new(),
-            workspace: WorkspacePlan::default(),
+            allocation,
             provenance: Provenance {
                 source_graph: Digest([0; 32]),
                 semantic_graph: Digest([0; 32]),
@@ -453,6 +464,64 @@ mod tests {
             retained_predecessor: None,
             first_stage: 0,
             last_stage: 0,
+        }
+    }
+
+    /// Caller-bound storage for every fixture resource, one region each.
+    ///
+    /// A decoded artifact states where every value it carries lives, so a fixture
+    /// that skipped the plan would be refused for the plan rather than for the
+    /// record each case is about.
+    fn caller_bound(resources: &[ResourceRecord]) -> AllocationPlan {
+        let mut placed: Vec<&ResourceRecord> = resources
+            .iter()
+            .filter(|resource| resource.byte_count > 0)
+            .collect();
+        placed.sort_by_key(|resource| resource.value);
+        if placed.is_empty() {
+            return AllocationPlan::empty();
+        }
+        let regions: Vec<AllocationRegion> = placed
+            .iter()
+            .map(|resource| AllocationRegion {
+                device: DeviceSlot(0),
+                address_space: AddressSpace::Device,
+                owner: RegionOwner::Caller,
+                offset: 0,
+                bytes: resource.byte_count,
+                alignment: REGION_ALIGNMENT,
+                padding_bytes: 0,
+                placements: vec![ValuePlacement {
+                    value: resource.value,
+                    byte_offset: 0,
+                    bytes: resource.byte_count,
+                    lifetime: resource.lifetime,
+                    alias_class: AliasClass(resource.value.0),
+                    first_stage: resource.first_stage,
+                    last_stage: resource.last_stage,
+                    synchronized: false,
+                    layout: PlacementLayout {
+                        element_bytes: 4,
+                        storage_order: vec![0],
+                        strides: vec![1],
+                        contiguous: true,
+                    },
+                    permits: PlacementPermits::default(),
+                }],
+            })
+            .collect();
+        let peak = placed
+            .iter()
+            .fold(0u64, |total, resource| total + resource.byte_count);
+        AllocationPlan {
+            schema_version: ALLOCATION_SCHEMA_VERSION,
+            regions,
+            device_peaks: vec![DevicePeak {
+                device: DeviceSlot(0),
+                peak_bytes: peak,
+                allocated_bytes: 0,
+            }],
+            aggregate_peak_bytes: peak,
         }
     }
 
@@ -764,16 +833,40 @@ mod tests {
         }]);
         payload.nodes = vec![entry_node(0)];
         payload.geometry = vec![launch(0)];
-        payload.workspace = WorkspacePlan {
-            total_bytes: 256,
-            regions: vec![WorkspaceRegion {
-                value: ArtifactValueId(1),
+        payload.allocation = AllocationPlan {
+            schema_version: crate::allocation::ALLOCATION_SCHEMA_VERSION,
+            regions: vec![AllocationRegion {
+                device: DeviceSlot(0),
+                address_space: AddressSpace::Device,
+                owner: RegionOwner::Artifact,
                 offset: 0,
                 bytes: 256,
-                lifetime: ResourceLifetime::Invocation,
-                first_entry: ArtifactNodeId(0),
-                last_entry: ArtifactNodeId(0),
+                alignment: crate::allocation::REGION_ALIGNMENT,
+                padding_bytes: 0,
+                placements: vec![ValuePlacement {
+                    value: ArtifactValueId(1),
+                    byte_offset: 0,
+                    bytes: 256,
+                    lifetime: ResourceLifetime::Invocation,
+                    alias_class: AliasClass(1),
+                    first_stage: 0,
+                    last_stage: 0,
+                    synchronized: false,
+                    layout: PlacementLayout {
+                        element_bytes: 4,
+                        storage_order: vec![0],
+                        strides: vec![1],
+                        contiguous: true,
+                    },
+                    permits: PlacementPermits::default(),
+                }],
             }],
+            device_peaks: vec![DevicePeak {
+                device: DeviceSlot(0),
+                peak_bytes: 256,
+                allocated_bytes: 256,
+            }],
+            aggregate_peak_bytes: 256,
         };
         payload
     }
@@ -851,16 +944,17 @@ mod tests {
     }
 
     /// WHY: the recorded order is the submission order. A consumer submits the
-    /// geometry set and the selected fusion groups in the order the artifact
-    /// lists them, so a list that places an entry point before one it depends on
-    /// runs a consumer of a value before its producer wrote it. Recording that
-    /// order wrong is refused here rather than repaired by a topological sort in
-    /// every consumer, because two consumers sorting independently is how the
-    /// order stopped being the compiler's in the first place.
+    /// geometry set in the order the artifact lists it and runs each group at the
+    /// stage the artifact states, so a list that places an entry point before one
+    /// it depends on, or a stage that lets a consuming group run no later than
+    /// its producer, runs a consumer of a value before its producer wrote it.
+    /// Recording that wrong is refused here rather than repaired by a topological
+    /// sort in every consumer, because two consumers sorting independently is how
+    /// the order stopped being the compiler's in the first place.
     #[test]
     fn decode_rejects_a_recorded_order_that_contradicts_the_dependency_dag() {
         // Node 1 produces for node 0, recorded in dependency order.
-        let ordered = |dependent_first: bool, groups_swapped: bool| {
+        let ordered = |dependent_first: bool, consumer_stage: u32, producer_stage: u32| {
             let mut payload = launchable();
             payload.nodes = vec![entry_node(0), entry_node(1)];
             let mut dependent = launch(0);
@@ -870,23 +964,22 @@ mod tests {
             } else {
                 vec![launch(1), dependent]
             };
-            let group = |id: u32, node: u32| FusionRecord {
+            let group = |id: u32, node: u32, stage: u32| FusionRecord {
                 id: FusionGroupId(id),
                 members: vec![ArtifactNodeId(node)],
-                stage: 0,
+                stage,
                 legality: Vec::new(),
             };
-            payload.selected_plan.fusion = if groups_swapped {
-                vec![group(0, 0), group(1, 1)]
-            } else {
-                vec![group(1, 1), group(0, 0)]
-            };
+            // Producer group listed first, so vec position never carries the
+            // ordering: only the recorded stage does.
+            payload.selected_plan.fusion =
+                vec![group(1, 1, producer_stage), group(0, 0, consumer_stage)];
             payload
         };
 
-        decode_payload(ordered(false, false)).expect("a dependency-ordered artifact decodes");
+        decode_payload(ordered(false, 1, 0)).expect("a dependency-ordered artifact decodes");
 
-        let error = decode_payload(ordered(true, false))
+        let error = decode_payload(ordered(true, 1, 0))
             .expect_err("a dependent recorded first must not decode");
         assert!(
             error
@@ -896,40 +989,58 @@ mod tests {
             "diagnostic must name the misordered pair: {error}"
         );
 
-        assert_eq!(
-            rejection_path(ordered(false, true), "consumer group planned first"),
-            "artifact.body.selected_plan"
-        );
+        for (case, consumer_stage, producer_stage) in [
+            ("consumer group sharing its producer's stage", 0, 0),
+            ("consumer group staged before its producer", 0, 1),
+        ] {
+            assert_eq!(
+                rejection_path(ordered(false, consumer_stage, producer_stage), case),
+                "artifact.body.selected_plan",
+                "{case}"
+            );
+        }
     }
 
     /// WHY: the runtime allocates the recorded plan and binds its offsets
     /// verbatim, so a region the resource set does not back is a bind of a
     /// buffer that has no owner, and an unbindable plan must not survive decode.
     #[test]
-    fn decode_rejects_a_workspace_the_resource_set_does_not_back() {
+    fn decode_rejects_storage_the_resource_set_does_not_back() {
         let cases: Vec<(&str, fn(&mut ArtifactPayload), &str)> = vec![
             (
-                "region for a value the artifact does not carry",
-                |payload| payload.workspace.regions[0].value = ArtifactValueId(7),
-                "artifact.body.workspace",
+                "placement for a value the artifact does not carry",
+                |payload| payload.allocation.regions[0].placements[0].value = ArtifactValueId(7),
+                "artifact.body.allocation",
             ),
             (
-                "region disagreeing with its resource lifetime",
-                |payload| payload.workspace.regions[0].lifetime = ResourceLifetime::Retained,
-                "artifact.body.workspace",
+                "placement disagreeing with its resource lifetime",
+                |payload| {
+                    payload.allocation.regions[0].placements[0].lifetime =
+                        ResourceLifetime::Retained;
+                },
+                "artifact.body.allocation",
             ),
             (
-                "live range naming an entry point the artifact does not carry",
-                |payload| payload.workspace.regions[0].last_entry = ArtifactNodeId(4),
-                "artifact.body.workspace",
+                "placement disagreeing with its resource live range",
+                |payload| payload.allocation.regions[0].placements[0].last_stage = 4,
+                "artifact.body.allocation",
+            ),
+            (
+                "resource row disagreeing with the placement byte count",
+                |payload| payload.resources[0].byte_count = 128,
+                "artifact.body.allocation",
+            ),
+            (
+                "value occupying bytes the plan places nowhere",
+                |payload| {
+                    payload.allocation = AllocationPlan::empty();
+                },
+                "artifact.body.allocation",
             ),
             (
                 "misaligned region",
-                |payload| {
-                    payload.workspace.regions[0].offset = 8;
-                    payload.workspace.total_bytes = 264;
-                },
-                "artifact.workspace.regions[0].offset",
+                |payload| payload.allocation.regions[0].offset = 8,
+                "artifact.allocation.regions[0].offset",
             ),
         ];
         for (case, mutate, expected) in cases {
@@ -939,8 +1050,67 @@ mod tests {
         }
     }
 
+    /// WHY: the plan is what the runtime allocates and what lowering verifies
+    /// against, so every field of it has to be inside what the digest seals.
+    /// A field outside identity would let two different physical plans present
+    /// the same artifact, and the one admitted would not be the one measured.
+    /// Decode refuses the fields it can cross-check against the resource set;
+    /// the rest are proven here to change the artifact they belong to.
+    #[test]
+    fn every_allocation_field_participates_in_artifact_identity() {
+        let canonical = encode_payload(&launchable()).expect("the fixture payload frames");
+        let cases: Vec<(&str, fn(&mut ArtifactPayload))> = vec![
+            ("lifetime", |payload| {
+                payload.allocation.regions[0].placements[0].lifetime = ResourceLifetime::Retained;
+            }),
+            ("alias class", |payload| {
+                payload.allocation.regions[0].placements[0].alias_class = AliasClass(9);
+            }),
+            ("offset", |payload| {
+                payload.allocation.regions[0].placements[0].byte_offset = 256;
+            }),
+            ("layout", |payload| {
+                payload.allocation.regions[0].placements[0].layout.strides = vec![2];
+            }),
+            ("size", |payload| {
+                payload.allocation.regions[0].placements[0].bytes = 512;
+            }),
+            ("device", |payload| {
+                payload.allocation.regions[0].device = DeviceSlot(3);
+            }),
+            ("synchronization", |payload| {
+                payload.allocation.regions[0].placements[0].synchronized = true;
+            }),
+            ("reuse permit", |payload| {
+                payload.allocation.regions[0].placements[0].permits.in_place = true;
+            }),
+        ];
+        for (field, mutate) in cases {
+            let mut mutated = launchable();
+            mutate(&mut mutated);
+            let framed = encode_payload(&mutated).expect("a mutated payload frames");
+            assert_ne!(
+                framed.digest, canonical.digest,
+                "{field} must participate in artifact identity"
+            );
+        }
+    }
+
+    /// WHY: a region on a device the peaks do not account for states bytes on
+    /// hardware nothing sized, so the runtime would allocate against a total no
+    /// ranking ever priced.
+    #[test]
+    fn decode_rejects_a_region_the_device_peaks_do_not_account_for() {
+        let mut invalid = launchable();
+        invalid.allocation.regions[0].device = DeviceSlot(3);
+        assert_eq!(
+            rejection_path(invalid, "region on an unaccounted device"),
+            "artifact.allocation.device_peaks[0].allocated_bytes"
+        );
+    }
+
     /// WHY: a body written by the previous schema carries no geometry set and no
-    /// workspace plan, so a reader that accepted one would submit an artifact
+    /// allocation plan, so a reader that accepted one would submit an artifact
     /// with no recorded launch. The version is read before the body, so stale
     /// bytes are refused instead of partially interpreted.
     #[test]

@@ -39,6 +39,13 @@ fn two_node_facts(live_values: u64, value_bytes: u64) -> PlanningFacts {
             value: crate::ArtifactValueId(0),
         }],
         value_bytes: [(0_u32, value_bytes)].into_iter().collect(),
+        value_liveness: vec![crate::allocation::ValueLiveness {
+            value: crate::ArtifactValueId(0),
+            bytes: value_bytes,
+            producer: Some(crate::ArtifactNodeId(0)),
+            consumers: vec![crate::ArtifactNodeId(1)],
+            survives_to_end: false,
+        }],
     }
 }
 

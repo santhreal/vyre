@@ -360,6 +360,7 @@ impl vyre_foundation::serial::wire::encode::ScanDatabaseHeader
 impl vyre_foundation::serial::wire::encode::WireEncodeErr
 impl vyre_foundation::transform::collectives::CollectiveOpCounts
 impl vyre_foundation::transform::collectives::CollectiveTransportPlan
+impl vyre_foundation::validate::BackendCapabilities
 impl vyre_foundation::validate::ValidationCode
 impl vyre_foundation::validate::ValidationError
 impl vyre_foundation::validate::ValidationPhase
@@ -620,6 +621,7 @@ pub const vyre_foundation::serial::wire_round_trip::WireRoundTrip::VERSION: u32
 pub const vyre_foundation::source_digest::MAX_SOURCE_DIGEST_BYTES: u64
 pub const vyre_foundation::transform::FOUNDATION_TRANSFORM_CLASSIFICATIONS: &[vyre_foundation::transform::TransformDescriptor]
 pub const vyre_foundation::transform::HOST_REWRITES: &[vyre_foundation::transform::HostRewrite]
+pub const vyre_foundation::validate::BackendCapabilities::NONE: Self
 pub const vyre_foundation::validate::DEFAULT_MAX_CALL_DEPTH: usize
 pub const vyre_foundation::validate::DEFAULT_MAX_EXPR_DEPTH: usize
 pub const vyre_foundation::validate::DEFAULT_MAX_NESTING_DEPTH: usize
@@ -3180,7 +3182,7 @@ pub vyre_foundation::execution_plan::BufferPlan::static_size_bytes: core::option
 pub vyre_foundation::execution_plan::ConformanceStrength::Exhaustive
 pub vyre_foundation::execution_plan::ConformanceStrength::Standard
 pub vyre_foundation::execution_plan::DeviceMemoryBudget::backend: &'static str
-pub vyre_foundation::execution_plan::DeviceMemoryBudget::peak_static_bytes: u64
+pub vyre_foundation::execution_plan::DeviceMemoryBudget::declared_static_bytes: u64
 pub vyre_foundation::execution_plan::DeviceMemoryBudget::per_buffer_bytes: u64
 pub vyre_foundation::execution_plan::DispatchStrategy::CompiledPipeline
 pub vyre_foundation::execution_plan::DispatchStrategy::PersistentRuntime
@@ -3210,10 +3212,10 @@ pub vyre_foundation::execution_plan::LayoutStrategy::Dynamic
 pub vyre_foundation::execution_plan::LayoutStrategy::Empty
 pub vyre_foundation::execution_plan::LayoutStrategy::Static
 pub vyre_foundation::execution_plan::MemoryBudgetReport::backend: &'static str
+pub vyre_foundation::execution_plan::MemoryBudgetReport::declared_budget_bytes: u64
 pub vyre_foundation::execution_plan::MemoryBudgetReport::dynamic_buffers: usize
 pub vyre_foundation::execution_plan::MemoryBudgetReport::largest_buffer_bytes: u64
 pub vyre_foundation::execution_plan::MemoryBudgetReport::largest_buffer_name: alloc::string::String
-pub vyre_foundation::execution_plan::MemoryBudgetReport::peak_budget_bytes: u64
 pub vyre_foundation::execution_plan::MemoryBudgetReport::per_buffer_budget_bytes: u64
 pub vyre_foundation::execution_plan::MemoryBudgetReport::static_bytes: u64
 pub vyre_foundation::execution_plan::MemoryPlan::avoided_readback_bytes: u64
@@ -3226,6 +3228,10 @@ pub vyre_foundation::execution_plan::PlanError::BufferBudgetExceeded::backend: &
 pub vyre_foundation::execution_plan::PlanError::BufferBudgetExceeded::budget_bytes: u64
 pub vyre_foundation::execution_plan::PlanError::BufferBudgetExceeded::name: alloc::string::String
 pub vyre_foundation::execution_plan::PlanError::BufferBudgetExceeded::size_bytes: u64
+pub vyre_foundation::execution_plan::PlanError::DeclaredBudgetExceeded
+pub vyre_foundation::execution_plan::PlanError::DeclaredBudgetExceeded::backend: &'static str
+pub vyre_foundation::execution_plan::PlanError::DeclaredBudgetExceeded::budget_bytes: u64
+pub vyre_foundation::execution_plan::PlanError::DeclaredBudgetExceeded::declared_bytes: u64
 pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange
 pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange::end: usize
 pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange::full_size: u64
@@ -3233,10 +3239,6 @@ pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange::name: alloc:
 pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange::start: usize
 pub vyre_foundation::execution_plan::PlanError::NonCanonicalProgram
 pub vyre_foundation::execution_plan::PlanError::NonCanonicalProgram::source: vyre_foundation::IrError
-pub vyre_foundation::execution_plan::PlanError::PeakBudgetExceeded
-pub vyre_foundation::execution_plan::PlanError::PeakBudgetExceeded::backend: &'static str
-pub vyre_foundation::execution_plan::PlanError::PeakBudgetExceeded::budget_bytes: u64
-pub vyre_foundation::execution_plan::PlanError::PeakBudgetExceeded::planned_bytes: u64
 pub vyre_foundation::execution_plan::PlanError::RuntimeSizedBuffer
 pub vyre_foundation::execution_plan::PlanError::RuntimeSizedBuffer::element: vyre_spec::data_type::DataType
 pub vyre_foundation::execution_plan::PlanError::RuntimeSizedBuffer::name: alloc::string::String

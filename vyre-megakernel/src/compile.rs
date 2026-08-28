@@ -24,7 +24,7 @@ use crate::schema::{
     Provenance, ARTIFACT_SCHEMA_VERSION,
 };
 use crate::target::{TargetCompileError, TargetCompiler};
-use crate::{artifact, candidate, cost, facts, normalize, search, select};
+use crate::{allocation, artifact, candidate, cost, facts, normalize, search, select};
 
 /// Everything one compilation derives once and every finalist reuses.
 struct CompileContext<'a> {
@@ -200,7 +200,26 @@ fn assemble(
         &stages,
     )?;
     let abi = build_abi(&request.graph)?;
-    let workspace = artifact::workspace_plan(&resources, &abi.entries)?;
+    let allocation = allocation::plan(
+        &allocation::value_facts(
+            &context.logical,
+            &resources,
+            &request.facts.symbolic_bindings,
+        )?,
+        request.device,
+    )?;
+    let ranked_peak = selected_plan.selection_cost.planned_peak_bytes;
+    if allocation.aggregate_peak_bytes != ranked_peak {
+        return Err(failure(
+            CompilerFailureKind::InvalidAllocationPlan,
+            "artifact.allocation.aggregate_peak_bytes",
+            format!(
+                "the assembled plan holds {} bytes and ranking priced {ranked_peak}",
+                allocation.aggregate_peak_bytes
+            ),
+            "price peak memory from the same liveness the plan is packed against",
+        ));
+    }
     let nodes = frozen_nodes(&context.nodes, &geometry)?;
     let request_bytes =
         serde_json::to_vec(&RequestIdentity::from(request)).map_err(serialization_failure)?;
@@ -220,7 +239,7 @@ fn assemble(
         resources,
         resource_envelope,
         geometry,
-        workspace,
+        allocation,
         provenance,
     };
     let framed = encode_payload(&payload)?;
@@ -338,6 +357,15 @@ pub struct EmittedResources {
     pub spill_bytes_per_invocation: u32,
     /// Statically declared workgroup-scoped bytes.
     pub shared_memory_bytes: u32,
+    /// Device bytes the loaded module and its bound storage hold while this
+    /// entry point runs.
+    ///
+    /// The selected allocation plan states the bytes the artifact requires to be
+    /// resident at once. A device holding fewer than that is not running the plan
+    /// the compiler selected, so the figure is reconciled before a measurement
+    /// decides anything. Zero means the backend has no memory query and the
+    /// planned figure stands unreconciled.
+    pub resident_device_bytes: u64,
 }
 
 /// Device access the compiler borrows to time its finalists.
@@ -494,6 +522,7 @@ pub fn compile_measured(
         let reported = evaluator
             .resources(provisional, payload)
             .map_err(|error| finalist_failure(*index, &error))?;
+        reconcile_resident_bytes(provisional, &reported)?;
         let candidate = &context.ranked[*index].candidate;
         let groups = reported_groups(&reported, payload, candidate);
         let ceiling = request.device.hardware_registers_per_invocation();
@@ -724,6 +753,37 @@ fn reported_groups(
         );
     }
     groups
+}
+
+/// Reconciles the planned resident peak against what the device reports holding.
+///
+/// The allocation plan states the bytes that must be resident at once for the
+/// artifact to run. Every one of those bytes is on the device while an entry
+/// point of that artifact runs, so a device reporting fewer bytes than the plan
+/// requires is not running the selected plan, and a measurement taken there
+/// would rank a schedule nobody compiled. A backend with no memory query reports
+/// zero, which leaves the planned figure unreconciled rather than contradicted.
+fn reconcile_resident_bytes(
+    artifact: &Artifact,
+    reported: &[EmittedResources],
+) -> Result<(), CompileError> {
+    let observed = reported
+        .iter()
+        .map(|entry| entry.resident_device_bytes)
+        .max()
+        .unwrap_or(0);
+    let planned = artifact.allocation().aggregate_peak_bytes;
+    if observed == 0 || observed >= planned {
+        return Ok(());
+    }
+    Err(failure(
+        CompilerFailureKind::UnreconciledResidentBytes,
+        "measurement.resident_device_bytes",
+        format!(
+            "the device holds {observed} bytes while the selected allocation plan requires {planned}"
+        ),
+        "bind the allocation plan the artifact records before measuring it",
+    ))
 }
 
 /// Record that emission eliminated the family that derived one ranked plan.

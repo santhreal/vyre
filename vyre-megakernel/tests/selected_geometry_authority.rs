@@ -12,10 +12,13 @@ use vyre_foundation::ir::{
     BufferAccess, GraphInput, GraphOutput, Program, ProgramGraph, ValueContract, ValueLifetime,
 };
 use vyre_foundation::schedule::ScheduleTransform;
+use vyre_megakernel::allocation::{
+    AddressSpace, AllocationPlan, AllocationRegion, RegionOwner, REGION_ALIGNMENT,
+};
 use vyre_megakernel::{
     compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
     DependencyEndpoint, DeviceFacts, Digest, EntryPersistence, ExecutionMode, ExternalFacts,
-    GeometryRecord, ObjectiveMetric, ResourceLifetime, SearchBudget, WORKSPACE_REGION_ALIGNMENT,
+    GeometryRecord, ObjectiveMetric, ResourceLifetime, ResourceRecord, SearchBudget,
 };
 
 use vyre_test_support::graph_values::{graph_output, u32_symbolic};
@@ -134,7 +137,7 @@ fn every_recorded_launch_is_the_selected_schedule_phase_that_covers_the_node() {
     let schedule = &artifact.selected_plan().schedule;
 
     assert_eq!(artifact.geometry().len(), artifact.nodes().len());
-    assert_eq!(artifact.schema_version(), 14);
+    assert_eq!(artifact.schema_version(), 15);
 
     for node in artifact.nodes() {
         let record = record_for(&artifact, node.id);
@@ -231,67 +234,93 @@ fn node_programs_are_frozen_at_the_selected_workgroup() {
     }
 }
 
-/// WHY: the runtime allocates the recorded workspace and binds its offsets
-/// verbatim. A region for a value the caller owns would double-allocate it, and
-/// a missing region for a produced value would leave an entry point with nothing
-/// to write into.
+/// WHY: the runtime allocates the recorded regions and binds their offsets
+/// verbatim. A region for a value the caller owns would double-allocate it, a
+/// missing placement for a produced value would leave an entry point with
+/// nothing to write into, and a recorded peak the placements do not hold is the
+/// figure ranking priced, so it must be the figure the artifact states.
 #[test]
-fn the_workspace_holds_exactly_the_values_the_artifact_produces_for_itself() {
+fn every_value_is_placed_where_its_resource_row_says_it_lives() {
     let artifact = static_artifact();
-    let plan = artifact.workspace();
-    let lifetimes: BTreeMap<ArtifactValueId, ResourceLifetime> = artifact
+    let plan = artifact.allocation();
+    let rows: BTreeMap<ArtifactValueId, &ResourceRecord> = artifact
         .resources()
         .iter()
-        .map(|resource| (resource.value, resource.lifetime))
-        .collect();
-    let bytes: BTreeMap<ArtifactValueId, u64> = artifact
-        .resources()
-        .iter()
-        .map(|resource| (resource.value, resource.byte_count))
+        .map(|resource| (resource.value, resource))
         .collect();
 
     let mut produced = BTreeSet::new();
-    let mut binds = BTreeMap::<ArtifactValueId, BTreeSet<ArtifactNodeId>>::new();
     for entry in &artifact.abi().entries {
         produced.extend(entry.outputs.iter().copied());
-        for value in entry.inputs.iter().chain(entry.outputs.iter()) {
-            binds.entry(*value).or_default().insert(entry.node);
-        }
     }
     let expected: BTreeSet<ArtifactValueId> = produced
         .iter()
         .copied()
         .filter(|value| {
-            matches!(
-                lifetimes.get(value),
-                Some(ResourceLifetime::Invocation | ResourceLifetime::Retained)
-            ) && bytes.get(value).copied().unwrap_or(0) > 0
+            rows.get(value).is_some_and(|row| {
+                matches!(
+                    row.lifetime,
+                    ResourceLifetime::Invocation | ResourceLifetime::Retained
+                ) && row.byte_count > 0
+            })
         })
         .collect();
     assert!(
         !expected.is_empty(),
         "the fixture chain must produce at least one value the artifact owns"
     );
-    assert_eq!(
-        plan.regions
-            .iter()
-            .map(|region| region.value)
-            .collect::<BTreeSet<_>>(),
-        expected
-    );
+    let owned: BTreeSet<ArtifactValueId> = plan
+        .owned()
+        .flat_map(|region| region.placements.iter())
+        .map(|placement| placement.value)
+        .collect();
+    assert_eq!(owned, expected);
 
     let mut end = 0;
-    for region in &plan.regions {
-        assert_eq!(region.offset % WORKSPACE_REGION_ALIGNMENT, 0);
-        assert!(region.offset >= end, "regions must not overlap");
-        assert_eq!(region.bytes, bytes[&region.value]);
-        assert_eq!(Some(&region.lifetime), lifetimes.get(&region.value));
-        let bound = &binds[&region.value];
-        assert_eq!(Some(&region.first_entry), bound.iter().next());
-        assert_eq!(Some(&region.last_entry), bound.iter().next_back());
+    for region in plan.owned() {
+        assert_eq!(region.offset % REGION_ALIGNMENT, 0);
+        assert!(region.offset >= end, "artifact regions must not overlap");
+        for placement in &region.placements {
+            let row = rows[&placement.value];
+            assert_eq!(placement.bytes, row.byte_count);
+            assert_eq!(placement.lifetime, row.lifetime);
+            assert_eq!(placement.first_stage, row.first_stage);
+            assert_eq!(placement.last_stage, row.last_stage);
+            assert!(placement.byte_offset + placement.bytes <= region.bytes);
+        }
         end = region.offset + region.bytes;
     }
-    assert!(plan.total_bytes >= end);
+    for region in &plan.regions {
+        if region.owner == RegionOwner::Artifact {
+            continue;
+        }
+        assert_eq!(region.offset, 0, "a caller binds a whole buffer");
+        assert_eq!(region.placements.len(), 1);
+        assert!(!owned.contains(&region.placements[0].value));
+    }
+
+    let final_stage = artifact
+        .resources()
+        .iter()
+        .map(|row| row.last_stage)
+        .max()
+        .unwrap_or(0);
+    let independent_peak = (0..=final_stage)
+        .map(|stage| {
+            artifact
+                .resources()
+                .iter()
+                .filter(|row| row.first_stage <= stage && stage <= row.last_stage)
+                .map(|row| row.byte_count)
+                .sum::<u64>()
+        })
+        .max()
+        .unwrap_or(0);
+    assert_eq!(plan.aggregate_peak_bytes, independent_peak);
+    assert_eq!(
+        plan.owned_bytes(),
+        plan.owned().map(|region| region.bytes).sum::<u64>()
+    );
 }
 
 /// WHY: persistence is a property of the selected schedule, not a label beside
@@ -342,7 +371,7 @@ fn a_persistent_route_records_the_queue_the_schedule_reserved() {
     }
 }
 
-/// WHY: the geometry set and the workspace plan are what a consumer submits, so
+/// WHY: the geometry set and the allocation plan are what a consumer submits, so
 /// they have to survive the byte boundary exactly. A round trip that dropped or
 /// reordered a field would leave the decoded artifact launchable and wrong.
 #[test]
@@ -352,10 +381,90 @@ fn the_recorded_launch_survives_the_byte_boundary_exactly() {
         let decoded = Artifact::from_bytes(&bytes).expect("canonical bytes decode");
         assert_eq!(decoded.digest(), artifact.digest());
         assert_eq!(decoded.geometry(), artifact.geometry());
-        assert_eq!(decoded.workspace(), artifact.workspace());
+        assert_eq!(decoded.allocation(), artifact.allocation());
         assert_eq!(
             decoded.to_bytes().expect("a decoded artifact re-encodes"),
             bytes
         );
     }
+}
+
+fn rejection_path(plan: &AllocationPlan, case: &str) -> String {
+    plan.validate()
+        .expect_err(case)
+        .diagnostic
+        .location
+        .and_then(|location| location.path)
+        .unwrap_or_default()
+}
+
+/// WHY: the space a region is addressed in decides what a backend may emit
+/// against it. A constant-lifetime value addressed as device storage is emitted
+/// through a writable path, and a produced value addressed as constant storage
+/// is emitted through a path the device forbids writes on. The two facts are
+/// derived from one another here, so a plan stating one and meaning the other
+/// is refused where the plan is built rather than at whichever backend notices.
+#[test]
+fn the_space_addressing_a_value_agrees_with_its_lifetime() {
+    let artifact = static_artifact();
+    let plan = artifact.allocation();
+    plan.validate().expect("a selected plan validates");
+
+    // Regions are ordered by address space, so a mutation that keeps the order
+    // ascending is the one that reaches the placement rule under test.
+    for (case, space, wanted, last) in [
+        (
+            "a device value addressed as constant",
+            AddressSpace::Constant,
+            ResourceLifetime::Invocation,
+            true,
+        ),
+        (
+            "a constant value addressed as device",
+            AddressSpace::Device,
+            ResourceLifetime::Constant,
+            false,
+        ),
+    ] {
+        let matches = |region: &AllocationRegion| {
+            region.owner == RegionOwner::Caller
+                && region
+                    .placements
+                    .iter()
+                    .all(|placement| placement.lifetime == wanted)
+        };
+        let index = if last {
+            plan.regions.iter().rposition(matches)
+        } else {
+            plan.regions.iter().position(matches)
+        }
+        .unwrap_or_else(|| panic!("the fixture plan places {case}"));
+        let mut mutated = plan.clone();
+        mutated.regions[index].address_space = space;
+        assert_eq!(
+            rejection_path(&mutated, case),
+            format!("artifact.allocation.regions[{index}].placements[0].lifetime"),
+            "{case}"
+        );
+    }
+}
+
+/// WHY: constant storage is filled once, by the caller, before any entry runs.
+/// An artifact-owned constant region states that the runtime allocates it, which
+/// leaves storage no entry may write and no caller filled.
+#[test]
+fn the_artifact_never_allocates_constant_storage() {
+    let artifact = static_artifact();
+    let plan = artifact.allocation();
+    let index = plan
+        .regions
+        .iter()
+        .position(|region| region.owner == RegionOwner::Artifact)
+        .expect("the fixture plan owns one region");
+    let mut mutated = plan.clone();
+    mutated.regions[index].address_space = AddressSpace::Constant;
+    assert_eq!(
+        rejection_path(&mutated, "artifact-allocated constant storage"),
+        format!("artifact.allocation.regions[{index}].owner")
+    );
 }

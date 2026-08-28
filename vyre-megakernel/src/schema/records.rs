@@ -82,12 +82,13 @@ impl std::fmt::Display for ResourceNameCollision {
 impl std::error::Error for ResourceNameCollision {}
 
 /// Aggregate checked resource envelope.
+///
+/// The resident peak is not here: one owner states it, and that is the
+/// allocation plan, whose placements the peak is taken over.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResourceEnvelope {
     /// Sum of all canonical value byte counts.
     pub total_bytes: u64,
-    /// Maximum bytes simultaneously live in any artifact stage.
-    pub peak_live_bytes: u64,
 }
 
 /// Canonical neutral resource access.

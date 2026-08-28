@@ -15,6 +15,9 @@
 //!
 //! [`ProgramGraph`]: vyre_foundation::ir::ProgramGraph
 
+/// One allocation and layout plan every selected schedule owns, and the physical
+/// storage every consumer binds from it.
+pub mod allocation;
 mod artifact;
 /// The unscheduled baseline every candidate derivation starts from.
 pub mod baseline;
@@ -102,8 +105,7 @@ pub use schema::{
     EntryPersistence, EntryResourceBinding, ExecutionMode, FusionRecord, FusionRejection,
     GeometryRecord, LaunchResourceIntent, MaterializationReason, MaterializationRecord, NodeRecord,
     PlanMeasurement, Provenance, ResourceAbiRecord, ResourceEnvelope, ResourceLifetime,
-    ResourceNameCollision, ResourceRecord, SelectedPlan, WorkspacePlan, WorkspaceRegion,
-    ARTIFACT_SCHEMA_VERSION, WORKSPACE_REGION_ALIGNMENT,
+    ResourceNameCollision, ResourceRecord, SelectedPlan, ARTIFACT_SCHEMA_VERSION,
 };
 pub use target::SelectedModule;
 pub use target::{

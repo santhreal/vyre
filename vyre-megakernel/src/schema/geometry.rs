@@ -1,4 +1,4 @@
-//! Selected launch geometry and the workspace plan a runtime allocates.
+//! Selected launch geometry of every entry point.
 //!
 //! Every record here is a projection of the schedule phase the search selected.
 //! Validation is field-level and owned beside the records, so a consumer that
@@ -9,16 +9,7 @@ use serde::{Deserialize, Serialize};
 use vyre_foundation::schedule::{PipelineRoleGroup, SchedulePhaseId, SynchronizationScope};
 
 use crate::error::{failure, CompileError, CompilerFailureKind};
-use crate::identity::{ArtifactNodeId, ArtifactValueId};
-
-use super::records::ResourceLifetime;
-
-/// Byte alignment every workspace region starts on.
-///
-/// One value per region is addressed as a typed buffer on every target, and the
-/// widest alignment any of them requires is 256 bytes. Packing regions tighter
-/// would make an offset legal in the artifact and unbindable on the device.
-pub const WORKSPACE_REGION_ALIGNMENT: u64 = 256;
+use crate::identity::ArtifactNodeId;
 
 /// Whether one entry point runs once per submission or drains a bounded queue.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -188,93 +179,6 @@ impl GeometryRecord {
     }
 }
 
-/// One cross-entry workspace region with its exact offset and live range.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WorkspaceRegion {
-    /// Typed graph value stored in the region.
-    pub value: ArtifactValueId,
-    /// Byte offset of the region inside the workspace allocation.
-    pub offset: u64,
-    /// Bytes reserved for the value.
-    pub bytes: u64,
-    /// Semantic lifetime of the value.
-    pub lifetime: ResourceLifetime,
-    /// First entry point that reads or writes the region.
-    pub first_entry: ArtifactNodeId,
-    /// Last entry point that reads or writes the region.
-    pub last_entry: ArtifactNodeId,
-}
-
-/// Exact workspace the runtime allocates before submitting an artifact.
-///
-/// The compiler assigns every offset. A runtime that packed the regions itself
-/// would decide storage the selected schedule already decided, and two packers
-/// disagreeing is a wrong-buffer bind rather than a slower one.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WorkspacePlan {
-    /// Bytes the whole workspace allocation requires.
-    pub total_bytes: u64,
-    /// Regions in ascending offset order.
-    pub regions: Vec<WorkspaceRegion>,
-}
-
-impl WorkspacePlan {
-    /// Reject a plan a runtime could not allocate or bind exactly.
-    ///
-    /// # Errors
-    ///
-    /// Returns when a region is empty, misaligned, overlaps its predecessor, or
-    /// runs past the recorded allocation.
-    pub fn validate(&self) -> Result<(), CompileError> {
-        let mut next = 0u64;
-        for (index, region) in self.regions.iter().enumerate() {
-            let path = format!("artifact.workspace.regions[{index}]");
-            if region.bytes == 0 {
-                return Err(failure(
-                    CompilerFailureKind::InvalidProgram,
-                    format!("{path}.bytes"),
-                    "workspace region reserves no byte",
-                    "record the packed byte count of the value",
-                ));
-            }
-            if region.offset % WORKSPACE_REGION_ALIGNMENT != 0 {
-                return Err(failure(
-                    CompilerFailureKind::InvalidProgram,
-                    format!("{path}.offset"),
-                    format!("workspace offset is not a multiple of {WORKSPACE_REGION_ALIGNMENT}"),
-                    "align every region to the workspace alignment",
-                ));
-            }
-            if region.offset < next {
-                return Err(failure(
-                    CompilerFailureKind::InvalidProgram,
-                    format!("{path}.offset"),
-                    "workspace region overlaps the region before it",
-                    "assign one disjoint offset per retained value",
-                ));
-            }
-            let end = region.offset.checked_add(region.bytes).ok_or_else(|| {
-                failure(
-                    CompilerFailureKind::ResourceOverflow,
-                    format!("{path}.bytes"),
-                    "workspace region end exceeds the addressable range",
-                    "reduce the retained working set",
-                )
-            })?;
-            if end > self.total_bytes {
-                return Err(failure(
-                    CompilerFailureKind::InvalidProgram,
-                    format!("{path}.bytes"),
-                    "workspace region runs past the recorded allocation",
-                    "record the allocation the assigned offsets require",
-                ));
-            }
-            next = end;
-        }
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -283,18 +187,6 @@ mod tests {
     fn record() -> GeometryRecord {
         crate::geometry_fixtures::geometry(0, 0, [32, 1, 1])
     }
-
-    fn region(offset: u64, bytes: u64) -> WorkspaceRegion {
-        WorkspaceRegion {
-            value: ArtifactValueId(1),
-            offset,
-            bytes,
-            lifetime: ResourceLifetime::Invocation,
-            first_entry: ArtifactNodeId(0),
-            last_entry: ArtifactNodeId(0),
-        }
-    }
-
     fn path_of(error: &CompileError) -> String {
         error
             .diagnostic
@@ -403,69 +295,5 @@ mod tests {
         let error = GeometryRecord::covering_grid([u64::from(u32::MAX) * 2, 1, 1], [1, 1, 1])
             .expect_err("a grid past the launch limit is not launchable");
         assert_eq!(path_of(&error), "artifact.geometry.grid[0]");
-    }
-
-    /// WHY: the runtime allocates this plan and binds these offsets verbatim, so
-    /// a plan that overlaps or overruns is a wrong-buffer bind rather than a
-    /// slower one.
-    #[test]
-    fn a_workspace_plan_no_runtime_could_bind_is_rejected() {
-        let cases: Vec<(&str, WorkspacePlan, &str)> = vec![
-            (
-                "region reserving no byte",
-                WorkspacePlan {
-                    total_bytes: 256,
-                    regions: vec![region(0, 0)],
-                },
-                "artifact.workspace.regions[0].bytes",
-            ),
-            (
-                "misaligned region",
-                WorkspacePlan {
-                    total_bytes: 512,
-                    regions: vec![region(8, 256)],
-                },
-                "artifact.workspace.regions[0].offset",
-            ),
-            (
-                "region overlapping the region before it",
-                WorkspacePlan {
-                    total_bytes: 1024,
-                    regions: vec![region(0, 512), region(256, 256)],
-                },
-                "artifact.workspace.regions[1].offset",
-            ),
-            (
-                "region running past the recorded allocation",
-                WorkspacePlan {
-                    total_bytes: 128,
-                    regions: vec![region(0, 256)],
-                },
-                "artifact.workspace.regions[0].bytes",
-            ),
-            (
-                "region end past the addressable range",
-                WorkspacePlan {
-                    total_bytes: u64::MAX,
-                    regions: vec![region(WORKSPACE_REGION_ALIGNMENT, u64::MAX)],
-                },
-                "artifact.workspace.regions[0].bytes",
-            ),
-        ];
-        for (case, plan, expected) in cases {
-            let error = plan
-                .validate()
-                .expect_err(&format!("{case} must not be bindable"));
-            assert_eq!(path_of(&error), expected, "{case}");
-        }
-        WorkspacePlan {
-            total_bytes: 768,
-            regions: vec![region(0, 256), region(512, 256)],
-        }
-        .validate()
-        .expect("aligned disjoint regions inside the allocation bind");
-        WorkspacePlan::default()
-            .validate()
-            .expect("an artifact with no workspace allocates nothing");
     }
 }

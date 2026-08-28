@@ -106,6 +106,12 @@ pub const TERMS: &[CostTerm] = &[
         "DeviceFacts occupancy budgets divided into the worst group's demand",
     ),
     term(
+        "planned_peak_bytes",
+        CostUnit::Bytes,
+        CostTermRole::Evidence,
+        "the allocation plan's liveness peak over this grouping's stages",
+    ),
+    term(
         "instructions",
         CostUnit::Count,
         CostTermRole::Evidence,

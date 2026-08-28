@@ -61,6 +61,11 @@ enum Reported {
     /// It allocates more registers than the device has, which no launch can
     /// run.
     OverCeilingOnRankedFirst,
+    /// It holds one byte less than the plan requires, which is a device that is
+    /// not running the plan the compiler selected.
+    ResidentBelowPlan,
+    /// It holds exactly the bytes the plan requires.
+    ResidentAtPlan,
 }
 
 /// Local-memory bytes per invocation the fixture reports for a spilling plan.
@@ -264,6 +269,14 @@ impl FinalistEvaluator for LadderEvaluator {
             },
             Reported::OverCeilingOnRankedFirst if ranked_first => EmittedResources {
                 registers_per_invocation: OVER_CEILING_REGISTERS,
+                ..EmittedResources::default()
+            },
+            Reported::ResidentBelowPlan => EmittedResources {
+                resident_device_bytes: artifact.allocation().aggregate_peak_bytes.saturating_sub(1),
+                ..EmittedResources::default()
+            },
+            Reported::ResidentAtPlan => EmittedResources {
+                resident_device_bytes: artifact.allocation().aggregate_peak_bytes,
                 ..EmittedResources::default()
             },
             Reported::SpillOnRankedFirst | Reported::OverCeilingOnRankedFirst => {
@@ -738,4 +751,75 @@ fn distinct(order: &[usize]) -> Vec<usize> {
     counts.sort_unstable();
     counts.dedup();
     counts
+}
+
+/// WHY: the allocation plan states the bytes that must be resident for the
+/// artifact to run, and a measurement is only evidence about the plan that ran.
+/// A device reporting fewer bytes than the plan requires is holding something
+/// else, so timing it would rank a schedule nobody compiled. The reconciliation
+/// is one-directional on purpose: a device holds the caller's buffers and other
+/// work besides, so more bytes than planned is normal and fewer is impossible.
+#[test]
+fn a_device_holding_fewer_bytes_than_the_plan_requires_refuses_the_compile() {
+    let planned = measured_compile(
+        priced_device(),
+        budget(LAUNCHES),
+        &LadderEvaluator::reporting(Reported::ResidentAtPlan),
+    )
+    .expect("a device holding the planned bytes compiles")
+    .allocation()
+    .aggregate_peak_bytes;
+    assert!(
+        planned > 0,
+        "the fixture plan must require bytes for the reconciliation to have a subject"
+    );
+
+    let error = measured_compile(
+        priced_device(),
+        budget(LAUNCHES),
+        &LadderEvaluator::reporting(Reported::ResidentBelowPlan),
+    )
+    .expect_err("a device holding fewer bytes than the plan requires must not be measured");
+    assert_eq!(
+        error.diagnostic.code.as_str(),
+        "MKC041_UNRECONCILED_RESIDENT_BYTES"
+    );
+    assert_eq!(
+        error
+            .diagnostic
+            .location
+            .as_ref()
+            .and_then(|location| location.path.as_deref()),
+        Some("measurement.resident_device_bytes")
+    );
+    let figures: Vec<u64> = error
+        .diagnostic
+        .message
+        .split_whitespace()
+        .filter_map(|word| word.parse().ok())
+        .collect();
+    assert_eq!(
+        figures.len(),
+        2,
+        "the diagnostic must state the observed and the planned bytes: {error}"
+    );
+    assert_eq!(
+        figures[0] + 1,
+        figures[1],
+        "the refused pair must be the pair the device reported: {error}"
+    );
+}
+
+/// WHY: a backend with no memory query reports zero, and zero is an absent fact
+/// rather than a device holding nothing. Refusing it would make the measured
+/// path unusable on every backend that cannot answer the question.
+#[test]
+fn a_backend_that_reports_no_resident_bytes_still_measures() {
+    let artifact = measured_compile(
+        priced_device(),
+        budget(LAUNCHES),
+        &LadderEvaluator::reporting(Reported::Nothing),
+    )
+    .expect("an unreported memory figure leaves the planned figure unreconciled");
+    assert!(artifact.allocation().aggregate_peak_bytes > 0);
 }

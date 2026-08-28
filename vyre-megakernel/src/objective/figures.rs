@@ -60,8 +60,9 @@ impl MetricFigures {
     /// - throughput is stated as steady-state nanoseconds per launch, so lower
     ///   is better for it too, and it carries the cold start amortized over the
     ///   horizon;
-    /// - peak memory is the resident bytes one stream holds: declared workgroup
-    ///   scratch plus the values the plan materializes between stages.
+    /// - peak memory is the resident bytes one stream holds: the bytes the
+    ///   allocation plan holds at once, plus the workgroup scratch the selected
+    ///   programs declare, which the plan does not place.
     ///
     /// Energy has no figure: no target fact prices device energy, so an energy
     /// objective is refused during validation instead of ranked against a guess.
@@ -83,8 +84,8 @@ impl MetricFigures {
             .saturating_mul(streams);
         let throughput = shared.saturating_add(cold_start.div_ceil(horizon));
         let peak_memory = cost
-            .shared_scratch_bytes
-            .saturating_add(cost.materialized_bytes)
+            .planned_peak_bytes
+            .saturating_add(cost.shared_scratch_bytes)
             .saturating_mul(streams);
         Self::empty()
             .with(ObjectiveMetric::Latency, latency)

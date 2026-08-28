@@ -506,7 +506,7 @@ pub trait ResidentInstance: MaterializedInstance {
     /// resources, in the recorded order.
     ///
     /// A multi-entry artifact records which entry point produces each value a
-    /// later one reads, and the workspace plan says where those values live, so
+    /// later one reads, and the allocation plan states where those values live, so
     /// a resident submission needs no host round trip between entry points: the
     /// caller binds every canonical value once and each launch reads the
     /// handles its own module declares. Nothing here decides an order or a
