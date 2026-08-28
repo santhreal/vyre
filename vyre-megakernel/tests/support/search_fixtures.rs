@@ -254,3 +254,16 @@ pub(crate) fn validated(
 pub(crate) fn compiled(device: DeviceFacts, budget: SearchBudget) -> Artifact {
     compile(&validated(device, budget, latency_objective())).expect("compilation must succeed")
 }
+
+/// The field path a refusal names, when it names one.
+///
+/// A diagnostic that reports the right code against the wrong field sends a
+/// caller to edit something that was already correct, so every suite asserts the
+/// path and none restates how to read it.
+pub(crate) fn refused_field(error: &vyre_megakernel::CompileError) -> Option<&str> {
+    error
+        .diagnostic
+        .location
+        .as_ref()
+        .and_then(|location| location.path.as_deref())
+}

@@ -20,10 +20,10 @@ use vyre_foundation::ir::{
     ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::specialization::{
-    compile_specialized_portfolio, AxisDomain, AxisValue, GuardTerm, PortfolioEnvelope,
-    PortfolioVariant, RemainderKind, SpecializationAxis, SpecializationContract,
-    SpecializedPortfolio, SpecializedRemainder, VariantGuard, MAX_PROPOSED_VARIANTS,
-    PORTFOLIO_ENVELOPE_SCHEMA_VERSION, SPECIALIZATION_SCHEMA_VERSION,
+    compile_specialized_portfolio, AxisDomain, AxisValue, PortfolioEnvelope, PortfolioVariant,
+    RemainderKind, SpecializationAxis, SpecializationContract, SpecializedPortfolio,
+    SpecializedRemainder, VariantGuard, MAX_PROPOSED_VARIANTS, PORTFOLIO_ENVELOPE_SCHEMA_VERSION,
+    SPECIALIZATION_SCHEMA_VERSION,
 };
 use vyre_megakernel::{
     target_identity, Artifact, ArtifactEnvelope, CompileObjective, CompileRequest, CoveragePolicy,
@@ -31,12 +31,13 @@ use vyre_megakernel::{
     ValidatedCompileRequest,
 };
 
-/// The axis every fixture guard reads.
-fn tokens() -> SpecializationAxis {
-    SpecializationAxis::SymbolicDimension {
-        dimension: "tokens".to_string(),
-    }
-}
+#[path = "support/search_fixtures.rs"]
+mod search_fixtures;
+#[path = "support/specialization_fixtures.rs"]
+mod specialization_fixtures;
+
+use search_fixtures::refused_field;
+use specialization_fixtures::{contract_over, in_range, tokens};
 
 fn objective(max_variants: u32) -> CompileObjective {
     CompileObjective::minimize_latency()
@@ -132,20 +133,7 @@ fn request(max_variants: u32, seed: u8) -> ValidatedCompileRequest {
 }
 
 fn contract() -> SpecializationContract {
-    let mut axes = BTreeMap::new();
-    axes.insert(tokens(), AxisDomain::Interval { low: 1, high: 1024 });
-    SpecializationContract::new(axes).expect("Fix: the fixture contract must be declarable.")
-}
-
-fn in_range(low: u64, high: u64, precedence: u16) -> VariantGuard {
-    VariantGuard::new(
-        vec![GuardTerm::InRange {
-            axis: tokens(),
-            low,
-            high,
-        }],
-        precedence,
-    )
+    contract_over(AxisDomain::Interval { low: 1, high: 1024 })
 }
 
 fn facts(tokens_extent: u64) -> BTreeMap<SpecializationAxis, AxisValue> {
@@ -561,11 +549,7 @@ fn a_set_stating_another_specialization_schema_is_refused() {
             "Fix: a stale {label} schema must be reported as version skew: {error}"
         );
         assert_eq!(
-            error
-                .diagnostic
-                .location
-                .as_ref()
-                .and_then(|location| location.path.as_deref()),
+            refused_field(&error),
             Some(path),
             "Fix: the refusal must name the field that disagrees."
         );

@@ -46,6 +46,32 @@ pub struct BackendCapabilities {
     pub supports_tensor_cores: bool,
 }
 
+impl BackendCapabilities {
+    /// A target that grants nothing.
+    ///
+    /// Every capability is absent and every extent is zero, so a validator
+    /// reading this rejects IR that needs a capability instead of assuming one.
+    /// [`Default`] states the same value; this is the form a constant can name.
+    pub const NONE: Self = Self {
+        supports_subgroup_ops: false,
+        supports_indirect_dispatch: false,
+        supports_specialization_constants: false,
+        supports_distributed_collectives: false,
+        has_mul_high: false,
+        has_dual_issue_fp32_int32: false,
+        has_tensor_core_int: false,
+        has_native_f16: false,
+        has_warp_shuffle: false,
+        has_shared_memory: false,
+        has_transcendental_polynomial_emit: false,
+        max_native_int_width: 0,
+        max_shared_memory_bytes: 0,
+        regs_per_thread_max: 0,
+        subgroup_size: 0,
+        supports_tensor_cores: false,
+    };
+}
+
 /// Capability view supplied by a concrete backend during validation.
 pub trait BackendValidationCapabilities {
     /// Stable backend name used in diagnostics.

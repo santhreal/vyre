@@ -55,10 +55,10 @@ pub(crate) mod megakernel_plan_cache_records;
 #[cfg(test)]
 mod megakernel_plan_cache_tests;
 mod numeric;
-/// Occupancy-aware empirical autotuning (I4): pure estimator that picks
-/// the workgroup size with the highest predicted hardware occupancy from
-/// `(CudaDeviceCaps, KernelResourceUsage)`. The runtime feeds the result
-/// into `AutotuneStore` (I3) so subsequent dispatches reuse the choice.
+/// Occupancy facts the device reports for one candidate launch shape: resident
+/// blocks, warps and occupancy per compute unit, and the cooperative residency
+/// ceiling. Every function here states what the hardware admits; the compiler
+/// selects the shape.
 pub mod occupancy;
 pub(crate) mod pending_dispatch;
 mod pipeline;

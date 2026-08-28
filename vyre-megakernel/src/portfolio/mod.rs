@@ -16,13 +16,17 @@
 //! enumeration is exhaustive: the retained set is the best legal set under the
 //! stated objective, not the first set a greedy merge reached.
 
+pub(crate) mod retain;
+
 use std::collections::BTreeMap;
 
-use crate::compile::{compile, compile_measured, FinalistEvaluator};
+use self::retain::{
+    aggregate_bytes_refusal, compile_artifact_bytes, compile_members, ranked_figures, Scored,
+};
+use crate::compile::FinalistEvaluator;
 use crate::error::{failure, CompileError, CompilerFailureKind};
 use crate::objective::{
-    CompileObjective, MetricFigures, ObjectiveMetric, PortfolioPolicy, WorkloadClass,
-    WorkloadProfile,
+    CompileObjective, ObjectiveMetric, PortfolioPolicy, WorkloadClass, WorkloadProfile,
 };
 use crate::request::ValidatedCompileRequest;
 use crate::schema::Artifact;
@@ -120,12 +124,7 @@ pub fn compile_portfolio_measured(
 }
 
 /// One scored partition of the stated workload classes.
-struct Scored {
-    figures: Vec<u64>,
-    parts: u32,
-    aggregate_bytes: u64,
-    assignment: Vec<u32>,
-}
+type ScoredPartition = Scored<Vec<u32>>;
 
 fn select(
     request: &ValidatedCompileRequest,
@@ -152,7 +151,7 @@ fn select(
     }
     let mut compiled: BTreeMap<u16, (Artifact, u64)> = BTreeMap::new();
     let mut refused: Option<CompileError> = None;
-    let mut best: Option<Scored> = None;
+    let mut best: Option<ScoredPartition> = None;
     for assignment in partitions(classes.len(), limit) {
         let parts = part_count(&assignment);
         if !objective.portfolio().admits(parts, classes.len()) {
@@ -161,82 +160,46 @@ fn select(
         let masks = (0..parts)
             .map(|part| part_mask(&assignment, part))
             .collect::<Vec<_>>();
-        let mut compilable = true;
-        for mask in &masks {
-            if compiled.contains_key(mask) {
-                continue;
-            }
-            match compile_part(request, &objective, &classes, *mask, evaluator) {
-                Ok(part) => {
-                    compiled.insert(*mask, part);
-                }
-                Err(error) => {
-                    refused = refused.or(Some(error));
-                    compilable = false;
-                    break;
-                }
-            }
-        }
-        if !compilable {
+        if !compile_members(&masks, &mut compiled, &mut refused, |mask| {
+            compile_part(request, &objective, &classes, *mask, evaluator)
+        }) {
             continue;
         }
         let aggregate_bytes = masks
             .iter()
             .map(|mask| compiled[mask].1)
             .fold(0_u64, u64::saturating_add);
-        if let Some(ceiling) = objective.portfolio().max_aggregate_bytes() {
-            if aggregate_bytes > ceiling {
-                refused = refused.or_else(|| {
-                    Some(failure(
-                        CompilerFailureKind::ObjectiveBoundViolated,
-                        "request.objective.portfolio.max_aggregate_bytes",
-                        format!(
-                            "aggregate artifact bound is {ceiling} bytes and the retained set holds {aggregate_bytes} bytes"
-                        ),
-                        "raise the aggregate byte bound, or state a coverage policy that retains fewer artifacts",
-                    ))
-                });
-                continue;
-            }
-        }
-        let per_class = classes
-            .iter()
-            .enumerate()
-            .map(|(index, class)| {
-                let mask = part_mask(&assignment, assignment[index]);
-                let cost = &compiled[&mask].0.selected_plan().selection_cost;
-                MetricFigures::derive(
-                    cost,
-                    request.device(),
-                    *class,
-                    objective.amortization_launches(),
-                )
-            })
-            .collect::<Vec<_>>();
-        let aggregate = objective.aggregate(&per_class);
-        if let Some(violation) = objective.bounds().first_violation(aggregate.as_array()) {
-            refused = refused.or_else(|| {
-                Some(failure(
-                    CompilerFailureKind::ObjectiveBoundViolated,
-                    "request.objective.bounds",
-                    violation.statement(),
-                    "raise the bound the objective states, or state a coverage policy that retains a set within it",
-                ))
-            });
+        if let Some(refusal) = aggregate_bytes_refusal(
+            &objective,
+            aggregate_bytes,
+            "raise the aggregate byte bound, or state a coverage policy that retains fewer artifacts",
+        ) {
+            refused = refused.or(Some(refusal));
             continue;
         }
-        let figures = objective
-            .ordering_metrics()
-            .into_iter()
-            .map(|metric| aggregate.get(metric).unwrap_or(u64::MAX))
-            .collect::<Vec<_>>();
-        let scored = Scored {
-            figures,
-            parts,
-            aggregate_bytes,
-            assignment,
+        let ranked = ranked_figures(
+            request,
+            &objective,
+            "raise the bound the objective states, or state a coverage policy that retains a set within it",
+            |index| {
+                let mask = part_mask(&assignment, assignment[index]);
+                compiled[&mask].0.selected_plan().selection_cost
+            },
+        );
+        let figures = match ranked {
+            Ok(figures) => figures,
+            Err(error) => {
+                refused = refused.or(Some(error));
+                continue;
+            }
         };
-        if best.as_ref().is_none_or(|held| better(&scored, held)) {
+        let scored = ScoredPartition {
+            figures,
+            retained: parts as usize,
+            aggregate_bytes,
+            identity: assignment,
+        };
+        if best.as_ref().is_none_or(|held| scored.retained_over(held)) {
             best = Some(scored);
         }
     }
@@ -250,38 +213,18 @@ fn select(
             )
         })
     })?;
-    let mut artifacts = Vec::with_capacity(selected.parts as usize);
-    for part in 0..selected.parts {
-        let mask = part_mask(&selected.assignment, part);
+    let parts = part_count(&selected.identity);
+    let mut artifacts = Vec::with_capacity(parts as usize);
+    for part in 0..parts {
+        let mask = part_mask(&selected.identity, part);
         artifacts.push(compiled[&mask].0.clone());
     }
     Ok(ArtifactPortfolio {
         artifacts,
-        assignment: selected.assignment,
+        assignment: selected.identity,
         objective,
         aggregate_bytes: selected.aggregate_bytes,
     })
-}
-
-/// Whether `left` is the set the objective retains over `right`.
-///
-/// The objective's metric vector decides first. A tie is broken by the smaller
-/// retained set and then the smaller aggregate byte count, because two sets the
-/// objective cannot separate are separated by what they cost to compile, load,
-/// and keep. The assignment is the last term, so one compile of one graph
-/// retains one set.
-fn better(left: &Scored, right: &Scored) -> bool {
-    (
-        &left.figures,
-        left.parts,
-        left.aggregate_bytes,
-        &left.assignment,
-    ) < (
-        &right.figures,
-        right.parts,
-        right.aggregate_bytes,
-        &right.assignment,
-    )
 }
 
 /// Compile one part of the partition under the objective narrowed to it.
@@ -292,13 +235,10 @@ fn compile_part(
     mask: u16,
     evaluator: Option<&dyn FinalistEvaluator>,
 ) -> Result<(Artifact, u64), CompileError> {
-    let narrowed = request.restated(part_objective(objective, classes, mask));
-    let artifact = match evaluator {
-        Some(evaluator) => compile_measured(&narrowed, evaluator)?,
-        None => compile(&narrowed)?,
-    };
-    let bytes = u64::try_from(artifact.to_bytes()?.len()).unwrap_or(u64::MAX);
-    Ok((artifact, bytes))
+    compile_artifact_bytes(
+        &request.restated(part_objective(objective, classes, mask)),
+        evaluator,
+    )
 }
 
 /// The objective one part of the partition is compiled under.

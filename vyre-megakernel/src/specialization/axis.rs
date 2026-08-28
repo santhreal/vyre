@@ -15,7 +15,6 @@
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
-use vyre_foundation::validate::BackendCapabilities;
 
 use crate::identity::Digest;
 use crate::DeviceFacts;
@@ -109,9 +108,11 @@ impl fmt::Display for SpecializationAxis {
 
 /// One authenticated boolean capability a variant may be selected by.
 ///
-/// The reader below destructures [`BackendCapabilities`] completely, so a
-/// capability added to the validator's snapshot stops this crate compiling until
-/// it is either given an axis or explicitly declined.
+/// A capability the validator's snapshot states and no axis names is not
+/// selectable, which is a decision rather than an omission: the identity
+/// projection in `device_facts` destructures the snapshot completely, so the
+/// crate stops compiling until the new capability is either given an axis here
+/// or declined there.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TargetCapabilityAxis {
@@ -190,39 +191,28 @@ impl TargetCapabilityAxis {
     }
 
     /// Read this capability out of authenticated device facts.
+    ///
+    /// A capability added to the validator's snapshot stops this crate compiling
+    /// at the identity projection in `device_facts`, which destructures the
+    /// snapshot completely, so a fact cannot reach the compiler without a
+    /// decision recorded about it. This reader states which axis each capability
+    /// answers.
     #[must_use]
     pub fn read(self, device: DeviceFacts) -> bool {
-        let BackendCapabilities {
-            supports_subgroup_ops,
-            supports_indirect_dispatch,
-            supports_specialization_constants,
-            supports_distributed_collectives,
-            has_mul_high,
-            has_dual_issue_fp32_int32,
-            has_tensor_core_int,
-            has_native_f16,
-            has_warp_shuffle,
-            has_shared_memory,
-            has_transcendental_polynomial_emit,
-            max_native_int_width: _,
-            max_shared_memory_bytes: _,
-            regs_per_thread_max: _,
-            subgroup_size: _,
-            supports_tensor_cores,
-        } = device.capabilities();
+        let capabilities = device.capabilities();
         match self {
-            Self::SubgroupOps => supports_subgroup_ops,
-            Self::IndirectDispatch => supports_indirect_dispatch,
-            Self::SpecializationConstants => supports_specialization_constants,
-            Self::DistributedCollectives => supports_distributed_collectives,
-            Self::MulHigh => has_mul_high,
-            Self::DualIssueFp32Int32 => has_dual_issue_fp32_int32,
-            Self::TensorCoreInt => has_tensor_core_int,
-            Self::NativeF16 => has_native_f16,
-            Self::WarpShuffle => has_warp_shuffle,
-            Self::SharedMemory => has_shared_memory,
-            Self::TranscendentalPolynomialEmit => has_transcendental_polynomial_emit,
-            Self::TensorCores => supports_tensor_cores,
+            Self::SubgroupOps => capabilities.supports_subgroup_ops,
+            Self::IndirectDispatch => capabilities.supports_indirect_dispatch,
+            Self::SpecializationConstants => capabilities.supports_specialization_constants,
+            Self::DistributedCollectives => capabilities.supports_distributed_collectives,
+            Self::MulHigh => capabilities.has_mul_high,
+            Self::DualIssueFp32Int32 => capabilities.has_dual_issue_fp32_int32,
+            Self::TensorCoreInt => capabilities.has_tensor_core_int,
+            Self::NativeF16 => capabilities.has_native_f16,
+            Self::WarpShuffle => capabilities.has_warp_shuffle,
+            Self::SharedMemory => capabilities.has_shared_memory,
+            Self::TranscendentalPolynomialEmit => capabilities.has_transcendental_polynomial_emit,
+            Self::TensorCores => capabilities.supports_tensor_cores,
             Self::CooperativeLaunch => device.supports_cooperative_launch(),
             Self::DeviceTimestamps => device.supports_device_timestamps(),
             Self::SpatialPartitioning => device.supports_spatial_partitioning(),

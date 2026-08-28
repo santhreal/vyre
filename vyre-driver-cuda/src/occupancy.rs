@@ -205,38 +205,6 @@ pub(crate) fn occupancy_estimate_from_blocks(
     }
 }
 
-/// Pick the workgroup size from `candidates` that maximises occupancy on
-/// `caps` for the measured `usage`. Ties resolve toward the smaller size
-/// so launch latency stays low when occupancy is identical. Returns
-/// `None` when no candidate is runnable.
-#[must_use]
-pub fn pick_workgroup_size_for_occupancy(
-    caps: &CudaDeviceCaps,
-    usage: KernelResourceUsage,
-    candidates: &[u32],
-) -> Option<u32> {
-    let mut best: Option<(u32, OccupancyEstimate)> = None;
-    for &candidate in candidates {
-        let est = estimate_occupancy(caps, usage, candidate);
-        if !est.is_runnable() {
-            continue;
-        }
-        match best {
-            None => best = Some((candidate, est)),
-            Some((_, current)) if est.occupancy_bps > current.occupancy_bps => {
-                best = Some((candidate, est))
-            }
-            Some((current_size, current))
-                if est.occupancy_bps == current.occupancy_bps && candidate < current_size =>
-            {
-                best = Some((candidate, est))
-            }
-            _ => {}
-        }
-    }
-    best.map(|(size, _)| size)
-}
-
 /// Maximum whole-grid block count that can be resident for a cooperative launch.
 ///
 /// CUDA cooperative kernels require every block in the grid to be resident at

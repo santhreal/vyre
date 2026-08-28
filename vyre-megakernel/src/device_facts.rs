@@ -183,27 +183,7 @@ impl DeviceFacts {
     /// passes its live facts.
     #[must_use]
     pub const fn unknown() -> Self {
-        Self::new(
-            BackendCapabilities {
-                supports_subgroup_ops: false,
-                supports_indirect_dispatch: false,
-                supports_specialization_constants: false,
-                supports_distributed_collectives: false,
-                has_mul_high: false,
-                has_dual_issue_fp32_int32: false,
-                has_tensor_core_int: false,
-                has_native_f16: false,
-                has_warp_shuffle: false,
-                has_shared_memory: false,
-                has_transcendental_polynomial_emit: false,
-                max_native_int_width: 0,
-                supports_tensor_cores: false,
-                max_shared_memory_bytes: 0,
-                regs_per_thread_max: 0,
-                subgroup_size: 0,
-            },
-            0,
-        )
+        Self::new(BackendCapabilities::NONE, 0)
     }
 
     /// Construct facts from the live capability snapshot and invocation limit.

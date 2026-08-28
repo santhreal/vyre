@@ -8,8 +8,7 @@
 use vyre_driver::validation::blocks_per_compute_unit;
 use vyre_driver_cuda::occupancy::{
     can_launch_concurrently, cooperative_thread_residency_block_limit, estimate_occupancy,
-    pick_workgroup_size_for_occupancy, ConcurrentLaunchBlocker, ConcurrentLaunchDecision,
-    KernelResourceUsage, OccupancyEstimate,
+    ConcurrentLaunchBlocker, ConcurrentLaunchDecision, KernelResourceUsage, OccupancyEstimate,
 };
 use vyre_driver_cuda::synthetic_device_caps::synthetic_sm120_envelope_default;
 
@@ -75,28 +74,36 @@ fn estimate_full_occupancy_on_lightweight_kernel() {
     assert_eq!(est.occupancy_bps, 10_000);
 }
 
+/// WHY: two widths can reach the same occupancy, and a report that only stated
+/// the winner would hide that. The driver states the estimate for each width and
+/// nothing here selects one: geometry is the compiler's.
 #[test]
-fn picker_chooses_smaller_size_on_tie() {
+fn two_widths_can_reach_identical_occupancy() {
     let caps = synthetic_sm120_envelope_default();
     let usage = KernelResourceUsage {
         regs_per_thread: 16,
         shared_bytes_per_block: 0,
     };
-    // 128 and 256 both reach 100% occupancy; picker should choose 128.
-    let chosen = pick_workgroup_size_for_occupancy(&caps, usage, &[128, 256, 512]);
-    assert_eq!(chosen, Some(128));
+    let narrow = estimate_occupancy(&caps, usage, 128);
+    let wide = estimate_occupancy(&caps, usage, 256);
+    assert_eq!(narrow.occupancy_bps, 10_000);
+    assert_eq!(wide.occupancy_bps, 10_000);
 }
 
 #[test]
-fn picker_returns_none_when_no_candidate_runnable() {
+fn no_width_is_runnable_under_impossible_register_pressure() {
     let caps = synthetic_sm120_envelope_default();
     // 65_537 regs/thread per block is impossible at any block size > 0.
     let usage = KernelResourceUsage {
         regs_per_thread: 65_537,
         shared_bytes_per_block: 0,
     };
-    let chosen = pick_workgroup_size_for_occupancy(&caps, usage, &[32, 64, 128]);
-    assert_eq!(chosen, None);
+    for width in [32, 64, 128] {
+        assert!(
+            !estimate_occupancy(&caps, usage, width).is_runnable(),
+            "width {width} cannot run at 65537 registers per thread"
+        );
+    }
 }
 
 #[test]
@@ -145,19 +152,21 @@ fn occupancy_bps_is_proportional_to_warps_per_sm() {
     assert_eq!(est.occupancy_bps, 5_000);
 }
 
+/// WHY: a narrow width and a wide one can tie on occupancy while differing in
+/// block count, so an estimate that reported occupancy alone would leave the two
+/// indistinguishable to the compiler that has to choose between them.
 #[test]
-fn picker_prefers_higher_occupancy_over_smaller_size() {
+fn a_tie_on_occupancy_still_reports_distinct_block_counts() {
     let caps = synthetic_sm120_envelope_default();
-    // At 32 threads, 64 regs/thread → blocks_by_regs = 65536/2048 = 32,
-    // blocks_by_threads = 2048/32 = 64 → 32 blocks * 1 warp = 32 warps/SM = 50%.
-    // At 256 threads, 64 regs/thread → 32 warps/SM = 50% (computed above).
-    // Tie → picker prefers smaller size (32).
     let usage = KernelResourceUsage {
         regs_per_thread: 64,
         shared_bytes_per_block: 0,
     };
-    let chosen = pick_workgroup_size_for_occupancy(&caps, usage, &[32, 256]);
-    assert_eq!(chosen, Some(32));
+    let narrow = estimate_occupancy(&caps, usage, 32);
+    let wide = estimate_occupancy(&caps, usage, 256);
+    assert_eq!(narrow.occupancy_bps, wide.occupancy_bps);
+    assert_eq!(narrow.blocks_per_sm, 32);
+    assert_eq!(wide.blocks_per_sm, 4);
 }
 
 #[test]

@@ -25,9 +25,12 @@ use std::collections::BTreeMap;
 use super::axis::{AxisValue, SpecializationAxis};
 use super::guard::VariantGuard;
 use super::{precedence_order, CoverageProof, RemainderKind, SpecializationContract};
-use crate::compile::{compile, compile_measured, FinalistEvaluator};
+use crate::compile::FinalistEvaluator;
 use crate::error::{failure, CompilerFailureKind};
-use crate::objective::{CompileObjective, MetricFigures, WorkloadClass};
+use crate::objective::CompileObjective;
+use crate::portfolio::retain::{
+    aggregate_bytes_refusal, compile_artifact_bytes, compile_members, ranked_figures, Scored,
+};
 use crate::request::ValidatedCompileRequest;
 use crate::schema::Artifact;
 use crate::CompileError;
@@ -245,12 +248,9 @@ pub fn compile_specialized_portfolio_measured(
     select(request, contract, proposals, remainder, Some(evaluator))
 }
 
-/// One scored subset of the proposed guards.
-struct Scored {
-    figures: Vec<u64>,
-    variants: usize,
-    aggregate_bytes: u64,
-    guards: Vec<VariantGuard>,
+/// One scored subset of the proposed guards, with what the subset proves.
+struct ScoredSubset {
+    scored: Scored<Vec<VariantGuard>>,
     proof: CoverageProof,
 }
 
@@ -283,7 +283,7 @@ fn select(
     let limit = usize::try_from(objective.portfolio().max_variants()).unwrap_or(usize::MAX);
     let generic = match remainder {
         RemainderKind::Generic => {
-            let (artifact, bytes) = build(request, evaluator)?;
+            let (artifact, bytes) = compile_artifact_bytes(request, evaluator)?;
             SpecializedRemainder::Generic { artifact, bytes }
         }
         RemainderKind::Unsupported => SpecializedRemainder::Unsupported,
@@ -292,9 +292,10 @@ fn select(
         Some(artifact) => Some(ordering_figures(request, &objective, artifact)?),
         None => None,
     };
-    let mut compiled: BTreeMap<VariantGuard, (Artifact, u64, Vec<u64>)> = BTreeMap::new();
+    let mut compiled: BTreeMap<VariantGuard, (Artifact, u64)> = BTreeMap::new();
+    let mut figures: BTreeMap<VariantGuard, Vec<u64>> = BTreeMap::new();
     let mut refused: Option<CompileError> = None;
-    let mut best: Option<Scored> = None;
+    let mut best: Option<ScoredSubset> = None;
     for mask in 0..(1_u32 << stated.len()) {
         let guards = subset(&stated, mask);
         if guards.len() > limit {
@@ -307,56 +308,45 @@ fn select(
                 continue;
             }
         };
-        let mut compilable = true;
-        for guard in &guards {
-            if compiled.contains_key(guard) {
-                continue;
-            }
-            match build(&narrow(request, contract, guard)?, evaluator) {
-                Ok((artifact, bytes)) => {
-                    let figures = ordering_figures(request, &objective, &artifact)?;
-                    compiled.insert(guard.clone(), (artifact, bytes, figures));
-                }
-                Err(error) => {
-                    refused = refused.or(Some(error));
-                    compilable = false;
-                    break;
-                }
-            }
-        }
-        if !compilable {
+        if !compile_members(&guards, &mut compiled, &mut refused, |guard| {
+            compile_artifact_bytes(&narrow(request, contract, guard)?, evaluator)
+        }) {
             continue;
+        }
+        for guard in &guards {
+            if !figures.contains_key(guard) {
+                let stated = ordering_figures(request, &objective, &compiled[guard].0)?;
+                figures.insert(guard.clone(), stated);
+            }
         }
         let aggregate_bytes = guards
             .iter()
             .map(|guard| compiled[guard].1)
             .fold(generic.bytes(), u64::saturating_add);
-        if let Some(ceiling) = objective.portfolio().max_aggregate_bytes() {
-            if aggregate_bytes > ceiling {
-                refused = refused.or_else(|| {
-                    Some(failure(
-                        CompilerFailureKind::ObjectiveBoundViolated,
-                        "request.objective.portfolio.max_aggregate_bytes",
-                        format!(
-                            "aggregate artifact bound is {ceiling} bytes and the retained set holds {aggregate_bytes} bytes"
-                        ),
-                        "raise the aggregate byte bound, or propose guards that retain fewer variants",
-                    ))
-                });
-                continue;
-            }
+        if let Some(refusal) = aggregate_bytes_refusal(
+            &objective,
+            aggregate_bytes,
+            "raise the aggregate byte bound, or propose guards that retain fewer variants",
+        ) {
+            refused = refused.or(Some(refusal));
+            continue;
         }
-        let Some(figures) = weighted(&guards, &compiled, &proof, generic_figures.as_ref()) else {
+        let Some(ranked) = weighted(&guards, &figures, &proof, generic_figures.as_ref()) else {
             continue;
         };
-        let scored = Scored {
-            figures,
-            variants: guards.len(),
-            aggregate_bytes,
-            guards,
+        let scored = ScoredSubset {
+            scored: Scored {
+                figures: ranked,
+                retained: guards.len(),
+                aggregate_bytes,
+                identity: guards,
+            },
             proof,
         };
-        if best.as_ref().is_none_or(|held| better(&scored, held)) {
+        if best
+            .as_ref()
+            .is_none_or(|held| scored.scored.retained_over(&held.scored))
+        {
             best = Some(scored);
         }
     }
@@ -371,11 +361,12 @@ fn select(
         })
     })?;
     let variants = selected
-        .guards
+        .scored
+        .identity
         .iter()
         .enumerate()
         .map(|(index, guard)| {
-            let (artifact, bytes, _) = &compiled[guard];
+            let (artifact, bytes) = &compiled[guard];
             PortfolioVariant {
                 guard: guard.clone(),
                 artifact: artifact.clone(),
@@ -390,35 +381,15 @@ fn select(
         remainder: generic,
         proof: selected.proof,
         objective,
-        aggregate_bytes: selected.aggregate_bytes,
+        aggregate_bytes: selected.scored.aggregate_bytes,
     })
-}
-
-/// Whether `left` is the set the objective retains over `right`.
-///
-/// The objective's metric vector decides first. A tie is broken by the smaller
-/// retained set and then the smaller aggregate byte count, so a variant the
-/// objective cannot distinguish from its absence is not retained. The guard set
-/// is the last term, so one compile of one graph retains one set.
-fn better(left: &Scored, right: &Scored) -> bool {
-    (
-        &left.figures,
-        left.variants,
-        left.aggregate_bytes,
-        &left.guards,
-    ) < (
-        &right.figures,
-        right.variants,
-        right.aggregate_bytes,
-        &right.guards,
-    )
 }
 
 /// The objective figure of one retained set: each artifact's figure weighted by
 /// the part of the domain it serves.
 fn weighted(
     guards: &[VariantGuard],
-    compiled: &BTreeMap<VariantGuard, (Artifact, u64, Vec<u64>)>,
+    figures: &BTreeMap<VariantGuard, Vec<u64>>,
     proof: &CoverageProof,
     generic: Option<&Vec<u64>>,
 ) -> Option<Vec<u64>> {
@@ -428,11 +399,11 @@ fn weighted(
     }
     let width = generic
         .map(Vec::len)
-        .or_else(|| guards.first().map(|guard| compiled[guard].2.len()))?;
+        .or_else(|| guards.first().map(|guard| figures[guard].len()))?;
     let mut totals = vec![0_u64; width];
     for (index, guard) in guards.iter().enumerate() {
         let weight = u64::try_from(proof.served()[index]).ok()?;
-        for (total, figure) in totals.iter_mut().zip(&compiled[guard].2) {
+        for (total, figure) in totals.iter_mut().zip(&figures[guard]) {
             *total = total.saturating_add(figure.saturating_mul(weight));
         }
     }
@@ -447,19 +418,6 @@ fn weighted(
     Some(totals.into_iter().map(|total| total / cells).collect())
 }
 
-/// Compile one request and record its canonical byte length.
-fn build(
-    request: &ValidatedCompileRequest,
-    evaluator: Option<&dyn FinalistEvaluator>,
-) -> Result<(Artifact, u64), CompileError> {
-    let artifact = match evaluator {
-        Some(evaluator) => compile_measured(request, evaluator)?,
-        None => compile(request)?,
-    };
-    let bytes = u64::try_from(artifact.to_bytes()?.len()).unwrap_or(u64::MAX);
-    Ok((artifact, bytes))
-}
-
 /// Every ordering figure of one artifact under the stated objective.
 ///
 /// Hard bounds are checked per artifact rather than over the set, because a
@@ -470,34 +428,13 @@ fn ordering_figures(
     objective: &CompileObjective,
     artifact: &Artifact,
 ) -> Result<Vec<u64>, CompileError> {
-    let cost = &artifact.selected_plan().selection_cost;
-    let per_class = objective
-        .workload()
-        .as_slice()
-        .iter()
-        .map(|class: &WorkloadClass| {
-            MetricFigures::derive(
-                cost,
-                request.device(),
-                *class,
-                objective.amortization_launches(),
-            )
-        })
-        .collect::<Vec<_>>();
-    let aggregate = objective.aggregate(&per_class);
-    if let Some(violation) = objective.bounds().first_violation(aggregate.as_array()) {
-        return Err(failure(
-            CompilerFailureKind::ObjectiveBoundViolated,
-            "request.objective.bounds",
-            violation.statement(),
-            "raise the bound the objective states, or propose guards whose variants stay inside it",
-        ));
-    }
-    Ok(objective
-        .ordering_metrics()
-        .into_iter()
-        .map(|metric| aggregate.get(metric).unwrap_or(u64::MAX))
-        .collect())
+    let cost = artifact.selected_plan().selection_cost;
+    ranked_figures(
+        request,
+        objective,
+        "raise the bound the objective states, or propose guards whose variants stay inside it",
+        |_| cost,
+    )
 }
 
 /// The request one guard's variant is compiled from.

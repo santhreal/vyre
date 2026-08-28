@@ -10,22 +10,22 @@
 //!
 //! A contract states the axes and their domains. A guard states what one variant
 //! is selected by. Two proofs decide whether a set of guards is usable, and both
-//! are computed in [`guard`] rather than asserted: no two guards can admit the
-//! same facts at the same precedence, and the guards together with the remainder
-//! cover every value the domain declares.
+//! are computed rather than asserted: no two guards can admit the same facts at
+//! the same precedence, and the guards together with the remainder cover every
+//! value the domain declares.
 //!
 //! An axis is a typed fact. Application information reaches the compiler as the
 //! configuration digest and as graph identity, so no compiler, backend, artifact
 //! or runtime signature carries a caller's naming for a workload.
 
 /// The classes of fact a compiled variant may specialize on.
-pub mod axis;
+mod axis;
 /// One authenticated container for a whole guarded artifact set.
-pub mod envelope;
+mod envelope;
 /// What a variant is selected by, and the two proofs a guard set must pass.
-pub mod guard;
+mod guard;
 /// Joint compilation of one guarded variant set and its remainder.
-pub mod portfolio;
+mod portfolio;
 
 use std::collections::{BTreeMap, BTreeSet};
 

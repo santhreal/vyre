@@ -23,28 +23,10 @@ use vyre_megakernel::specialization::{
 };
 use vyre_megakernel::DeviceFacts;
 
-fn tokens() -> SpecializationAxis {
-    SpecializationAxis::SymbolicDimension {
-        dimension: "tokens".to_string(),
-    }
-}
+#[path = "support/specialization_fixtures.rs"]
+mod specialization_fixtures;
 
-fn contract(domain: AxisDomain) -> SpecializationContract {
-    let mut axes = BTreeMap::new();
-    axes.insert(tokens(), domain);
-    SpecializationContract::new(axes).expect("Fix: the fixture domain must be declarable.")
-}
-
-fn in_range(low: u64, high: u64, precedence: u16) -> VariantGuard {
-    VariantGuard::new(
-        vec![GuardTerm::InRange {
-            axis: tokens(),
-            low,
-            high,
-        }],
-        precedence,
-    )
-}
+use specialization_fixtures::{contract_over as contract, in_range, tokens};
 
 #[test]
 fn a_contract_states_the_schema_it_was_written_under() {

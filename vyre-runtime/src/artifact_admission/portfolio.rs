@@ -15,8 +15,7 @@
 use std::collections::BTreeMap;
 
 use vyre_megakernel::specialization::{
-    AxisValue, PortfolioEnvelope, RemainderKind, SpecializationAxis, SpecializationContract,
-    VariantGuard,
+    AxisValue, PortfolioEnvelope, SpecializationAxis, SpecializationContract, VariantGuard,
 };
 use vyre_megakernel::{Digest, TargetPayloadFormat};
 
@@ -26,8 +25,6 @@ use super::{admit_envelope, AdmittedArtifact, ArtifactAdmissionError};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AdmittedPortfolio {
     contract: SpecializationContract,
-    remainder_kind: RemainderKind,
-    target_identity: Digest,
     order: Vec<usize>,
     variants: Vec<(VariantGuard, AdmittedArtifact)>,
     remainder: Option<AdmittedArtifact>,
@@ -38,18 +35,6 @@ impl AdmittedPortfolio {
     #[must_use]
     pub const fn contract(&self) -> &SpecializationContract {
         &self.contract
-    }
-
-    /// What serves facts no guard admits.
-    #[must_use]
-    pub const fn remainder_kind(&self) -> RemainderKind {
-        self.remainder_kind
-    }
-
-    /// The target identity the set was compiled for and admitted against.
-    #[must_use]
-    pub const fn target_identity(&self) -> Digest {
-        self.target_identity
     }
 
     /// Admitted variants and their guards, in canonical guard order.
@@ -112,7 +97,6 @@ pub fn admit_portfolio(
     envelope.require_target_identity(target_identity)?;
     let order = envelope.evaluation_order();
     let contract = envelope.contract().clone();
-    let remainder_kind = envelope.remainder_kind();
     let mut variants = Vec::with_capacity(envelope.variants().len());
     for (guard, member) in envelope.variants() {
         variants.push((
@@ -126,8 +110,6 @@ pub fn admit_portfolio(
         .transpose()?;
     Ok(AdmittedPortfolio {
         contract,
-        remainder_kind,
-        target_identity,
         order,
         variants,
         remainder,

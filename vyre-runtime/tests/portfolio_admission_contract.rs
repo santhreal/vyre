@@ -16,7 +16,6 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::{BufferAccess, DataType, ValueLifetime};
 use vyre_megakernel::specialization::{
     AxisDomain, AxisValue, GuardTerm, PortfolioEnvelope, RemainderKind, SpecializationAxis,
     SpecializationContract, VariantGuard,
@@ -31,7 +30,7 @@ use vyre_runtime::artifact_admission::{admit_portfolio, ArtifactAdmissionError};
 #[path = "../../tests/support/artifact_fixtures.rs"]
 mod artifact_fixtures;
 
-use artifact_fixtures::{compile_graph, contract, entry_over, graph_over};
+use artifact_fixtures::{compile_graph, entry_over, single_input_graph};
 
 /// The axis every fixture guard reads.
 fn tokens() -> SpecializationAxis {
@@ -68,22 +67,7 @@ fn facts(extent: u64) -> BTreeMap<SpecializationAxis, AxisValue> {
 /// digest, which participates in the request identity, so each member is a
 /// distinct artifact and a selection that returned the wrong one is visible.
 fn member(seed: u8) -> Artifact {
-    compile_graph(
-        graph_over(
-            "entry",
-            [64, 1, 1],
-            &[(
-                "input",
-                contract(
-                    DataType::U32,
-                    8,
-                    BufferAccess::ReadOnly,
-                    ValueLifetime::Invocation,
-                ),
-            )],
-        ),
-        seed,
-    )
+    compile_graph(single_input_graph([64, 1, 1]), seed)
 }
 
 fn format(identity: &str, version: u16) -> TargetPayloadFormat {
