@@ -23,7 +23,7 @@ product and do not alter artifact identity.
 
 ## Logical domain boundary
 
-`LOGICAL_ALGORITHM_VERSION = 2` authenticates the schedule-free domain
+`LOGICAL_ALGORITHM_VERSION = 4` authenticates the schedule-free domain
 contract. Each graph node produces one structured logical region. Its typed
 extents come from constants or symbolic dimensions on a graph value and resolve
 before search. The region records parallel, sequential, reduction or retained
@@ -32,6 +32,30 @@ retained-state aliases, read/write and synchronization effects, producer
 dependencies and an overflow-checked point bound. Missing or zero bindings,
 unresolved runtime extents, overflowing bounds, dependency cycles and
 incompatible aliases reject the logical stage.
+
+Each region also states how it may be cut and what it exchanges, without naming
+a device. `LogicalPartitionFacts` lists the axes a shard may split, each with
+its exact bound and what splitting it means: elementwise points are
+independent, reduction points combine associatively, sequence points are
+ordered, spatial points may read a point another shard holds, routed points are
+assigned by the data. A region that reads a value it also writes has spatial
+axes; a region whose updates land at data-dependent locations has routed axes.
+The facts also state whether every participant may hold the whole region; a
+region that advances retained state or updates at data-dependent locations is
+not replicable.
+
+A region states the exact packed bytes it writes, and each dependence states the
+bytes of the values that induce it, so a placement that moves a value between
+devices prices the value's own contract.
+
+`LogicalExchange` states one semantic exchange: the region, the kind
+(all-reduce, all-gather, reduce-scatter, broadcast or point-to-point), the
+participant group, the combining operator when the kind combines, the graph
+values moved in operand order, and the exact payload bytes of one participant's
+contribution. Those bytes come from the value contract the graph connects, so an
+exchange over an unconnected buffer reports no values and places nothing.
+Devices, mesh coordinates and transports are target facts, and choosing among
+them is schedule selection.
 
 Library registrations are checked as a registry-derived set. Each registered
 composition must build a `ProgramGraph` and a complete logical region without a

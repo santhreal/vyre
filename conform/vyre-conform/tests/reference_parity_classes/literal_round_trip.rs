@@ -19,7 +19,6 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
-use vyre_foundation::schedule::SelectedSchedule;
 use vyre_lower::LiteralValue;
 use vyre_megakernel::{
     ArtifactNodeId, FusionGroupId, TargetModuleBundle, TargetModuleImage,

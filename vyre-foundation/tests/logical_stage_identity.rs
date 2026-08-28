@@ -170,7 +170,7 @@ fn logical_regions_close_the_domain_contract() {
     let logical =
         LogicalProgramGraph::validate(&graph, &BTreeMap::from([("items".to_string(), 8)]))
             .expect("symbolic graph must produce a closed logical domain");
-    assert_eq!(LOGICAL_ALGORITHM_VERSION, 2);
+    assert_eq!(LOGICAL_ALGORITHM_VERSION, 4);
     assert_eq!(logical.regions().len(), 2);
 
     let first = &logical.regions()[0];

@@ -12,7 +12,7 @@ use crate::DeviceFacts;
 
 pub(crate) const SOURCE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-source-v2\0";
 pub(crate) const SEMANTIC_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-semantic-graph-v1\0";
-pub(crate) const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v6\0";
+pub(crate) const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v7\0";
 pub(crate) const REPRESENTATIVE_INPUT_DOMAIN: &[u8] = b"vyre-megakernel-representative-input-v1\0";
 const TARGET_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-target-v1\0";
 /// Every fact that makes one compilation of one graph produce one artifact.
@@ -31,6 +31,7 @@ pub(crate) struct RequestIdentity<'a> {
     objective: CompileObjective,
     search_budget: SearchBudget,
     device: DeviceIdentity,
+    mesh: Digest,
 }
 
 /// The identity of one target a guarded artifact set was compiled for.
@@ -88,6 +89,7 @@ impl<'a> From<&'a ValidatedCompileRequest> for RequestIdentity<'a> {
             objective: request.objective,
             search_budget: request.search_budget,
             device: request.device.into(),
+            mesh: request.mesh().authentication(),
         }
     }
 }

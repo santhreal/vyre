@@ -200,6 +200,7 @@ impl vyre_foundation::ir::ProgramGraph
 impl vyre_foundation::ir::ProgramStats
 impl vyre_foundation::ir::ShapePredicate
 impl vyre_foundation::ir::Tile
+impl vyre_foundation::logical::LogicalExchangeKind
 impl vyre_foundation::lower::LoweringError
 impl vyre_foundation::lower::ProgramEffects
 impl vyre_foundation::match_result::ByteRange
@@ -430,6 +431,7 @@ pub const fn vyre_foundation::ir::Node::barrier() -> Self
 pub const fn vyre_foundation::ir::Node::barrier_with_ordering(ordering: vyre_foundation::ir::MemoryOrdering) -> Self
 pub const fn vyre_foundation::ir::Node::logical_barrier(ordering: vyre_foundation::ir::MemoryOrdering) -> Self
 pub const fn vyre_foundation::ir::Node::return_() -> Self
+pub const fn vyre_foundation::logical::LogicalExchangeKind::combines(self) -> bool
 pub const fn vyre_foundation::logical::LogicalProgramGraph<'a>::graph(&self) -> &'a vyre_foundation::ir::ProgramGraph
 pub const fn vyre_foundation::lower::ProgramEffects::bits(self) -> u32
 pub const fn vyre_foundation::lower::ProgramEffects::contains(self, other: Self) -> bool
@@ -659,7 +661,9 @@ pub enum vyre_foundation::ir::Residency
 pub enum vyre_foundation::ir::ShapeDim
 pub enum vyre_foundation::ir::ValueLifetime
 pub enum vyre_foundation::logical::LogicalDependenceKind
+pub enum vyre_foundation::logical::LogicalExchangeKind
 pub enum vyre_foundation::logical::LogicalExtent
+pub enum vyre_foundation::logical::LogicalPartitionAxisKind
 pub enum vyre_foundation::logical::LogicalProgramError
 pub enum vyre_foundation::logical::LogicalRegionKind
 pub enum vyre_foundation::operation::IdNamespace<'a>
@@ -707,6 +711,7 @@ pub enum vyre_foundation::serial::wire::encode::WireEncodeErr
 pub enum vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError
 pub enum vyre_foundation::source_digest::SourceDigestError
 pub enum vyre_foundation::transform::TransformContractClass
+pub enum vyre_foundation::transform::collectives::CollectiveExchangeKind
 pub enum vyre_foundation::transform::collectives::CollectiveTransportKind
 pub enum vyre_foundation::transform::inline::UnresolvedCalls
 pub enum vyre_foundation::vast::VastEditCorpusError
@@ -1176,6 +1181,7 @@ pub fn vyre_foundation::ir::expr_variant_name(item: &vyre_foundation::ir::Expr) 
 pub fn vyre_foundation::ir::node_op_id(node: &vyre_foundation::ir::Node) -> &'static str
 pub fn vyre_foundation::ir::node_variant_name(item: &vyre_foundation::ir::Node) -> &'static str
 pub fn vyre_foundation::launch_covers_full_input_span(program: &vyre_foundation::ir::Program) -> bool
+pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::exchanges(&self) -> &[vyre_foundation::logical::LogicalExchange]
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::regions(&self) -> &[vyre_foundation::logical::LogicalRegion]
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::semantic_wire(&self) -> &[u8]
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::validate(graph: &'a vyre_foundation::ir::ProgramGraph, bindings: &alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>) -> core::result::Result<Self, vyre_foundation::logical::LogicalProgramError>
@@ -2405,6 +2411,7 @@ pub fn vyre_foundation::transform::collectives::CollectiveTransportPlan::require
 pub fn vyre_foundation::transform::collectives::CollectiveTransportPlan::transport_collectives(&self) -> usize
 pub fn vyre_foundation::transform::collectives::CollectiveTransportPlan::transport_ops(&self) -> vyre_foundation::transform::collectives::CollectiveOpCounts
 pub fn vyre_foundation::transform::collectives::SingleRankCollectiveError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::transform::collectives::collective_exchanges(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::transform::collectives::CollectiveExchange>
 pub fn vyre_foundation::transform::collectives::collective_transport_plan(program: &vyre_foundation::ir::Program) -> vyre_foundation::transform::collectives::CollectiveTransportPlan
 pub fn vyre_foundation::transform::collectives::lower_single_rank_collectives(program: &vyre_foundation::ir::Program) -> core::result::Result<core::option::Option<vyre_foundation::ir::Program>, vyre_foundation::transform::collectives::SingleRankCollectiveError>
 pub fn vyre_foundation::transform::collectives::requires_collective_transport(program: &vyre_foundation::ir::Program) -> bool
@@ -2791,8 +2798,11 @@ pub struct vyre_foundation::ir::VarId(pub u32)
 pub struct vyre_foundation::logical::LogicalAliasFacts
 pub struct vyre_foundation::logical::LogicalDependence
 pub struct vyre_foundation::logical::LogicalEffects
+pub struct vyre_foundation::logical::LogicalExchange
 pub struct vyre_foundation::logical::LogicalIndexMap
 pub struct vyre_foundation::logical::LogicalLayout
+pub struct vyre_foundation::logical::LogicalPartitionAxis
+pub struct vyre_foundation::logical::LogicalPartitionFacts
 pub struct vyre_foundation::logical::LogicalProgramGraph<'a>
 pub struct vyre_foundation::logical::LogicalRegion
 pub struct vyre_foundation::lower::LoweringError
@@ -2966,6 +2976,7 @@ pub struct vyre_foundation::serial::wire::encode::UnsupportedScanFeature
 pub struct vyre_foundation::transform::HostRewrite
 pub struct vyre_foundation::transform::TransformDescriptor
 pub struct vyre_foundation::transform::autodiff::rules::AdjointContrib
+pub struct vyre_foundation::transform::collectives::CollectiveExchange
 pub struct vyre_foundation::transform::collectives::CollectiveOpCounts
 pub struct vyre_foundation::transform::collectives::CollectiveTransportPlan
 pub struct vyre_foundation::transform::collectives::SingleRankCollectiveError
@@ -3665,6 +3676,7 @@ pub vyre_foundation::logical::LogicalAliasFacts::in_place_values: alloc::vec::Ve
 pub vyre_foundation::logical::LogicalAliasFacts::inputs_disjoint: bool
 pub vyre_foundation::logical::LogicalAliasFacts::outputs_disjoint: bool
 pub vyre_foundation::logical::LogicalAliasFacts::retained_successors: alloc::vec::Vec<(u32, u32)>
+pub vyre_foundation::logical::LogicalDependence::bytes: u64
 pub vyre_foundation::logical::LogicalDependence::kind: vyre_foundation::logical::LogicalDependenceKind
 pub vyre_foundation::logical::LogicalDependence::predecessor: vyre_foundation::ir::GraphNodeId
 pub vyre_foundation::logical::LogicalDependence::values: alloc::vec::Vec<u32>
@@ -3675,6 +3687,17 @@ pub vyre_foundation::logical::LogicalEffects::reads: alloc::vec::Vec<u32>
 pub vyre_foundation::logical::LogicalEffects::retained_state: bool
 pub vyre_foundation::logical::LogicalEffects::synchronizes: bool
 pub vyre_foundation::logical::LogicalEffects::writes: alloc::vec::Vec<u32>
+pub vyre_foundation::logical::LogicalExchange::bytes: u64
+pub vyre_foundation::logical::LogicalExchange::combine: core::option::Option<vyre_spec::collective_op::CollectiveOp>
+pub vyre_foundation::logical::LogicalExchange::group: u32
+pub vyre_foundation::logical::LogicalExchange::kind: vyre_foundation::logical::LogicalExchangeKind
+pub vyre_foundation::logical::LogicalExchange::node: vyre_foundation::ir::GraphNodeId
+pub vyre_foundation::logical::LogicalExchange::values: alloc::vec::Vec<u32>
+pub vyre_foundation::logical::LogicalExchangeKind::AllGather
+pub vyre_foundation::logical::LogicalExchangeKind::AllReduce
+pub vyre_foundation::logical::LogicalExchangeKind::Broadcast
+pub vyre_foundation::logical::LogicalExchangeKind::PointToPoint
+pub vyre_foundation::logical::LogicalExchangeKind::ReduceScatter
 pub vyre_foundation::logical::LogicalExtent::GraphValue
 pub vyre_foundation::logical::LogicalExtent::GraphValue::axis: u32
 pub vyre_foundation::logical::LogicalExtent::GraphValue::bound: u64
@@ -3686,11 +3709,22 @@ pub vyre_foundation::logical::LogicalIndexMap::row_major_strides: alloc::vec::Ve
 pub vyre_foundation::logical::LogicalLayout::contiguous: bool
 pub vyre_foundation::logical::LogicalLayout::storage_order: alloc::vec::Vec<u32>
 pub vyre_foundation::logical::LogicalLayout::strides: alloc::vec::Vec<u64>
+pub vyre_foundation::logical::LogicalPartitionAxis::axis: u32
+pub vyre_foundation::logical::LogicalPartitionAxis::bound: u64
+pub vyre_foundation::logical::LogicalPartitionAxis::kind: vyre_foundation::logical::LogicalPartitionAxisKind
+pub vyre_foundation::logical::LogicalPartitionAxisKind::Elementwise
+pub vyre_foundation::logical::LogicalPartitionAxisKind::Reduction
+pub vyre_foundation::logical::LogicalPartitionAxisKind::Routed
+pub vyre_foundation::logical::LogicalPartitionAxisKind::Sequence
+pub vyre_foundation::logical::LogicalPartitionAxisKind::Spatial
+pub vyre_foundation::logical::LogicalPartitionFacts::axes: alloc::vec::Vec<vyre_foundation::logical::LogicalPartitionAxis>
+pub vyre_foundation::logical::LogicalPartitionFacts::replicable: bool
 pub vyre_foundation::logical::LogicalProgramError::CanonicalGraph(alloc::string::String)
 pub vyre_foundation::logical::LogicalProgramError::CyclicDomain
 pub vyre_foundation::logical::LogicalProgramError::CyclicDomain::node: vyre_foundation::ir::GraphNodeId
 pub vyre_foundation::logical::LogicalProgramError::CyclicDomain::predecessor: vyre_foundation::ir::GraphNodeId
 pub vyre_foundation::logical::LogicalProgramError::DomainRankOverflow(vyre_foundation::ir::GraphNodeId)
+pub vyre_foundation::logical::LogicalProgramError::Exchange(alloc::string::String)
 pub vyre_foundation::logical::LogicalProgramError::ExtentOverflow(vyre_foundation::ir::GraphNodeId)
 pub vyre_foundation::logical::LogicalProgramError::Graph(alloc::string::String)
 pub vyre_foundation::logical::LogicalProgramError::Identity(alloc::string::String)
@@ -3713,7 +3747,9 @@ pub vyre_foundation::logical::LogicalRegion::layout: vyre_foundation::logical::L
 pub vyre_foundation::logical::LogicalRegion::max_points: u64
 pub vyre_foundation::logical::LogicalRegion::name: alloc::string::String
 pub vyre_foundation::logical::LogicalRegion::node: vyre_foundation::ir::GraphNodeId
+pub vyre_foundation::logical::LogicalRegion::partition: vyre_foundation::logical::LogicalPartitionFacts
 pub vyre_foundation::logical::LogicalRegion::reduction_axes: alloc::vec::Vec<u32>
+pub vyre_foundation::logical::LogicalRegion::written_bytes: u64
 pub vyre_foundation::logical::LogicalRegionKind::Parallel
 pub vyre_foundation::logical::LogicalRegionKind::Reduction
 pub vyre_foundation::logical::LogicalRegionKind::RetainedState
@@ -4817,6 +4853,15 @@ pub vyre_foundation::transform::autodiff::AutodiffError::UnsupportedNode
 pub vyre_foundation::transform::autodiff::AutodiffError::UnsupportedNode::kind: alloc::string::String
 pub vyre_foundation::transform::autodiff::rules::AdjointContrib::adjoint: vyre_foundation::ir::Expr
 pub vyre_foundation::transform::autodiff::rules::AdjointContrib::child: vyre_foundation::ir::Expr
+pub vyre_foundation::transform::collectives::CollectiveExchange::buffers: alloc::vec::Vec<vyre_foundation::ir::Ident>
+pub vyre_foundation::transform::collectives::CollectiveExchange::combine: core::option::Option<vyre_spec::collective_op::CollectiveOp>
+pub vyre_foundation::transform::collectives::CollectiveExchange::group: u32
+pub vyre_foundation::transform::collectives::CollectiveExchange::kind: vyre_foundation::transform::collectives::CollectiveExchangeKind
+pub vyre_foundation::transform::collectives::CollectiveExchange::root: core::option::Option<u32>
+pub vyre_foundation::transform::collectives::CollectiveExchangeKind::AllGather
+pub vyre_foundation::transform::collectives::CollectiveExchangeKind::AllReduce
+pub vyre_foundation::transform::collectives::CollectiveExchangeKind::Broadcast
+pub vyre_foundation::transform::collectives::CollectiveExchangeKind::ReduceScatter
 pub vyre_foundation::transform::collectives::CollectiveTransportKind::LocalSingleRank
 pub vyre_foundation::transform::collectives::CollectiveTransportKind::MultiRankTransport
 pub vyre_foundation::transform::grid_sync_split::GridSyncSplitError::Accounting

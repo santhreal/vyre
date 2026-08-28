@@ -16,6 +16,8 @@ pub mod fp_parity;
 pub(crate) mod geometry;
 /// Versioned schedule-free logical algorithm stage.
 pub mod logical;
+/// Schedule-free partition and exchange facts of the logical stage.
+pub(crate) mod logical_partition;
 /// Canonical semantic operation registration and target facet views.
 pub mod operation;
 /// Versioned backend-neutral selected schedule stage.

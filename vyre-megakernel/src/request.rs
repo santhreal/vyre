@@ -12,6 +12,7 @@ use crate::error::{failure, CompileError, CompilerFailureKind};
 use crate::grid_sync;
 use crate::identity::Digest;
 use crate::measure::MeasurementRecord;
+use crate::mesh::MeshFacts;
 use crate::objective::{CompileObjective, ObjectiveMetric};
 
 /// Explicit bounds for one whole-program schedule search.
@@ -109,6 +110,7 @@ pub struct CompileRequest {
     pub(crate) search_budget: SearchBudget,
     representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
     recorded_measurement: Option<MeasurementRecord>,
+    mesh: Option<MeshFacts>,
 }
 
 impl CompileRequest {
@@ -134,7 +136,18 @@ impl CompileRequest {
             search_budget,
             representative_inputs: BTreeMap::new(),
             recorded_measurement: None,
+            mesh: None,
         }
+    }
+
+    /// Supply the device mesh this compilation may place work on.
+    ///
+    /// A caller that states none is compiled for the one device its facts
+    /// describe, which is a mesh of one device rather than a separate path.
+    #[must_use]
+    pub fn with_mesh(mut self, mesh: MeshFacts) -> Self {
+        self.mesh = Some(mesh);
+        self
     }
 
     /// Supply representative workload input bytes for finalist measurement.
@@ -229,6 +242,13 @@ impl CompileRequest {
         if let Some(recorded) = &self.recorded_measurement {
             recorded.validate()?;
         }
+        let mesh = match self.mesh {
+            Some(mesh) => {
+                mesh.authenticate()?;
+                mesh
+            }
+            None => MeshFacts::single_device(0)?,
+        };
         Ok(ValidatedCompileRequest {
             graph,
             facts: self.facts,
@@ -237,6 +257,7 @@ impl CompileRequest {
             device: self.device,
             objective: self.objective,
             search_budget: self.search_budget,
+            mesh,
         })
     }
 }
@@ -276,6 +297,7 @@ pub struct ValidatedCompileRequest {
     pub(crate) search_budget: SearchBudget,
     representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
     recorded_measurement: Option<MeasurementRecord>,
+    mesh: MeshFacts,
 }
 
 impl ValidatedCompileRequest {
@@ -335,6 +357,12 @@ impl ValidatedCompileRequest {
         self.device
     }
 
+    /// Borrow the authenticated device mesh the plan is placed on.
+    #[must_use]
+    pub const fn mesh(&self) -> &MeshFacts {
+        &self.mesh
+    }
+
     /// The same validated request under a different stated objective.
     ///
     /// Portfolio selection compiles one part of a workload partition at a time,
@@ -351,6 +379,7 @@ impl ValidatedCompileRequest {
             search_budget: self.search_budget,
             representative_inputs: self.representative_inputs.clone(),
             recorded_measurement: self.recorded_measurement.clone(),
+            mesh: self.mesh.clone(),
         }
     }
 
@@ -386,6 +415,7 @@ impl ValidatedCompileRequest {
             search_budget: self.search_budget,
             representative_inputs: self.representative_inputs.clone(),
             recorded_measurement: self.recorded_measurement.clone(),
+            mesh: self.mesh.clone(),
         })
     }
 }

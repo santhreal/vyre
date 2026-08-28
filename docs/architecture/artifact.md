@@ -54,6 +54,12 @@ from, and its own body digest is recomputed and compared on admission. A
 payload that has been edited, or that names a different artifact, does not
 admit.
 
+A payload also names the mesh device slot it runs on, inside its body digest.
+Two devices of one placement therefore carry distinct payloads for the same
+dialect bytes. An envelope holds one payload per format and device pair. Decode
+rejects a payload bound to a device the placement does not run on, and an
+envelope that covers part of the placement.
+
 Schema 9 authenticates the versioned backend-neutral phase schedule, transform
 preconditions, inverse/source provenance, exact phase geometry and bounded
 resources. Decode rejects malformed schedules before physical lowering.
@@ -101,6 +107,71 @@ A backend that reports the device bytes it holds reconciles that figure against
 the planned peak before a measurement is spent. Fewer bytes than the plan
 requires is refused as `MKC041_UNRECONCILED_RESIDENT_BYTES`. A backend with no
 memory query reports zero, which leaves the planned figure unreconciled.
+
+## One topology covers the mesh
+
+Schedule selection places the program on the device mesh the request states.
+The artifact records one topology plan: the mesh extents, the anchor device, one
+partition per region, and every transfer between shards. A partition states its
+kind, the logical axis it cuts, the region point count, and one shard per
+assignment with its device slot, mesh coordinate and point count.
+
+A partition kind is one of seven generic transforms. Replicated holds the whole
+region on each device that computes it. Data cuts independent elements, spatial
+cuts a domain whose points read their neighbours, reduction cuts points that
+combine associatively, sequence cuts an ordered axis, and routed cuts an axis
+whose updates are assigned by the data. Pipeline cuts nothing and places the
+whole region on one device. Which one applies follows from the logical partition
+facts of the region, never from the device the plan runs on.
+
+Mesh facts ride on the compile request and are authenticated there: per-device
+memory capacity, failure domain, link bandwidth and latency, and the supported
+collectives. `MKC042_INVALID_MESH_FACTS` rejects facts that describe no device,
+a coordinate outside the mesh, or a link between devices the mesh does not hold.
+The default is a single device with no stated capacity, which skips the capacity
+check instead of inventing a limit. The request digest covers those facts, so an
+artifact placed on a different mesh has a different identity.
+
+Placement candidates are generic transforms over logical facts. A cutting
+placement is admitted when every region cuts an axis of bound greater than one
+and is either replicable or routed: a routed region computes updates whose
+destination is known at run time, so its shards send the contributions they hold
+to the shard that owns them and each shard still holds one part of the region. A
+pipelined placement cuts nothing and runs each region whole on one device of a
+mesh axis, handing the values one region produces to the device that consumes
+them. A region with no axis to cut keeps the single-device placement, and the
+unpartitioned plan stays in the candidate set.
+
+Cutting a region shortens one submission, so the ranking divides latency by the
+shard count. A pipeline leaves one submission as long as it was and runs
+consecutive submissions on consecutive devices, so it divides throughput and the
+bytes one device holds by the number of stage devices instead.
+
+`MKC043_INVALID_MESH_TOPOLOGY` rejects a plan whose shards leave a region point
+uncovered, place a shard off the mesh, place no shard on the anchor, record more
+than one shard for a pipeline stage, or cut a routed region without recording
+the routing it depends on. `MKC044_MESH_CAPACITY_EXCEEDED` rejects a mesh whose
+device cannot hold its share, stating the bytes that device holds and the bytes
+the share needs. No host path replaces a refused placement.
+
+Partitioned bytes are distributed, not duplicated: each shard holds the region
+bytes its points cover and the residual lands on the last shard. A pipelined
+region holds its values whole on the device that runs it. On one device the
+allocation aggregate equals the ranked peak exactly; across a mesh it is an
+upper bound on it.
+
+Each exchange, each routed region and each cross-device handoff occupies its own
+stage. An all-gather, a broadcast, a point-to-point transfer or a handoff
+overlaps a compute stage only when its link is otherwise idle in that stage. Two
+collectives that intersect may not share a stage, and the point-to-point
+transfers of one stage form a directed acyclic graph, so deadlock freedom follows
+from the plan alone.
+
+`vyre-runtime` submits that topology exactly. A mesh session takes one
+materializer per placed device plus the peer topology, rejects a device the
+placement does not name and a placed device the caller does not hold, requires
+every recorded transfer to have a direct peer path, and reports partial-device
+failure without a host fallback.
 
 ## What consumes the artifact
 

@@ -13,6 +13,7 @@ use crate::allocation::AllocationPlan;
 use crate::error::{failure, serialization_failure, CompileError, CompilerFailureKind};
 use crate::frame;
 use crate::identity::{ArtifactValueId, DependencyEdge, Digest};
+use crate::mesh::MeshTopologyPlan;
 
 pub use geometry::{BarrierPhaseRecord, EntryPersistence, GeometryRecord, LaunchResourceIntent};
 pub use plan::{ExecutionMode, PlanMeasurement, SelectedPlan};
@@ -23,7 +24,7 @@ pub use records::{
 };
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 15;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 16;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -37,6 +38,7 @@ pub(crate) struct ArtifactPayload {
     pub(crate) resource_envelope: ResourceEnvelope,
     pub(crate) geometry: Vec<GeometryRecord>,
     pub(crate) allocation: AllocationPlan,
+    pub(crate) topology: MeshTopologyPlan,
     pub(crate) provenance: Provenance,
 }
 
@@ -125,6 +127,12 @@ impl Artifact {
     #[must_use]
     pub const fn allocation(&self) -> &AllocationPlan {
         &self.payload.allocation
+    }
+
+    /// The one coordinated topology the selected schedule placed on the mesh.
+    #[must_use]
+    pub const fn topology(&self) -> &MeshTopologyPlan {
+        &self.payload.topology
     }
 
     /// Reject recorded geometry or physical storage a consumer could not submit.
@@ -235,6 +243,9 @@ impl Artifact {
             .iter()
             .map(|resource| (resource.value, resource))
             .collect();
+        // A partitioned value is placed once per device that holds a share, so
+        // the row total is the sum of its placements, not any one of them.
+        let mut held = BTreeMap::<ArtifactValueId, u64>::new();
         for region in &self.allocation().regions {
             for placement in &region.placements {
                 let Some(row) = rows.get(&placement.value) else {
@@ -249,12 +260,8 @@ impl Artifact {
                         placement.value.0
                     )));
                 }
-                if row.byte_count != placement.bytes {
-                    return Err(malformed_allocation(format!(
-                        "placement of value {} reserves {} bytes and its resource row states {}",
-                        placement.value.0, placement.bytes, row.byte_count
-                    )));
-                }
+                let placed = held.entry(placement.value).or_insert(0);
+                *placed = placed.saturating_add(placement.bytes);
                 if (row.first_stage, row.last_stage)
                     != (placement.first_stage, placement.last_stage)
                 {
@@ -270,6 +277,30 @@ impl Artifact {
                 return Err(malformed_allocation(format!(
                     "value {} occupies bytes and the allocation plan places it nowhere",
                     row.value.0
+                )));
+            }
+            let placed = held.get(&row.value).copied().unwrap_or(0);
+            if row.byte_count > 0 && placed != row.byte_count {
+                return Err(malformed_allocation(format!(
+                    "the placements of value {} hold {placed} bytes and its resource row states {}",
+                    row.value.0, row.byte_count
+                )));
+            }
+        }
+        self.topology().validate()?;
+        // A device holding bytes the topology does not place is storage nothing
+        // submits. The converse is legal: a device computing shards of a region
+        // whose values are all caller-bound holds no artifact allocation.
+        for peak in &self.allocation().device_peaks {
+            if !self
+                .topology()
+                .devices()
+                .iter()
+                .any(|device| *device == peak.device)
+            {
+                return Err(malformed_allocation(format!(
+                    "device {} holds bytes and the topology places no work on it",
+                    peak.device.0
                 )));
             }
         }
@@ -407,6 +438,7 @@ mod tests {
         CandidateMeasurement, DeviceState, MeasurementEnvironment, MeasurementProtocol,
         MeasurementRecord, SampleEstimate,
     };
+    use crate::mesh::{PartitionKind, RegionPartition, ShardAssignment};
     use crate::request::{SearchBudget, SearchWork};
     use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform};
 
@@ -444,6 +476,22 @@ mod tests {
             resource_envelope: ResourceEnvelope { total_bytes: 0 },
             geometry: Vec::new(),
             allocation,
+            topology: MeshTopologyPlan::single_device(
+                Digest([0; 32]),
+                DeviceSlot(0),
+                vec![RegionPartition {
+                    node: ArtifactNodeId(0),
+                    kind: PartitionKind::Replicated,
+                    axis: None,
+                    region_points: 1,
+                    shards: vec![ShardAssignment {
+                        shard: 0,
+                        device: DeviceSlot(0),
+                        coordinate: vec![0],
+                        points: 1,
+                    }],
+                }],
+            ),
             provenance: Provenance {
                 source_graph: Digest([0; 32]),
                 semantic_graph: Digest([0; 32]),
@@ -478,6 +526,7 @@ mod tests {
             .filter(|resource| resource.byte_count > 0)
             .collect();
         placed.sort_by_key(|resource| resource.value);
+        placed.dedup_by_key(|resource| resource.value);
         if placed.is_empty() {
             return AllocationPlan::empty();
         }

@@ -82,6 +82,13 @@ pub(crate) enum CompilerFailureKind {
     /// The device reports holding fewer bytes than the selected allocation plan
     /// requires, so the plan measured is not the plan that ran.
     UnreconciledResidentBytes,
+    /// Mesh facts contradict what any device mesh can report, or their identity
+    /// does not cover them.
+    InvalidMeshFacts,
+    /// The mesh topology plan states placement no mesh could carry.
+    InvalidMeshTopology,
+    /// A device of the mesh holds fewer bytes than its share of the plan.
+    MeshCapacityExceeded,
 }
 
 impl CompilerFailureKind {
@@ -126,6 +133,9 @@ impl CompilerFailureKind {
             Self::UnsupportedWorkload => "MKC039_UNSUPPORTED_WORKLOAD",
             Self::InvalidAllocationPlan => "MKC040_INVALID_ALLOCATION_PLAN",
             Self::UnreconciledResidentBytes => "MKC041_UNRECONCILED_RESIDENT_BYTES",
+            Self::InvalidMeshFacts => "MKC042_INVALID_MESH_FACTS",
+            Self::InvalidMeshTopology => "MKC043_INVALID_MESH_TOPOLOGY",
+            Self::MeshCapacityExceeded => "MKC044_MESH_CAPACITY_EXCEEDED",
         }
     }
 }
@@ -144,6 +154,7 @@ const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
         | CompilerFailureKind::InvalidObjective
         | CompilerFailureKind::MissingCalibratedFact
         | CompilerFailureKind::InvalidSpecializationContract
+        | CompilerFailureKind::InvalidMeshFacts
         | CompilerFailureKind::InvalidVariantGuard => DiagnosticStage::Validate,
         CompilerFailureKind::DependencyCycle
         | CompilerFailureKind::FinalistEvaluation
@@ -152,6 +163,8 @@ const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
         | CompilerFailureKind::GuardOverlap
         | CompilerFailureKind::GuardCoverageGap
         | CompilerFailureKind::InvalidAllocationPlan
+        | CompilerFailureKind::InvalidMeshTopology
+        | CompilerFailureKind::MeshCapacityExceeded
         | CompilerFailureKind::UnreconciledResidentBytes => DiagnosticStage::Plan,
         CompilerFailureKind::ResourceOverflow | CompilerFailureKind::UnsizedResource => {
             DiagnosticStage::Lower

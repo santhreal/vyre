@@ -62,6 +62,8 @@ impl vyre_runtime::artifact_admission::AdmittedPortfolio
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl vyre_runtime::artifact_admission::ArtifactSession
 impl vyre_runtime::artifact_admission::ArtifactWorkspace
+impl vyre_runtime::artifact_admission::MeshSession
+impl vyre_runtime::artifact_admission::MeshSubmission
 impl vyre_runtime::artifact_admission::RetainedArtifactSession
 impl vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange
 impl vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler
@@ -364,6 +366,7 @@ pub const vyre_runtime::tenant::TENANT_OPCODE_BASE: u32
 pub const vyre_runtime::uring::NVME_CMD_READ: u8
 pub enum vyre_runtime::UringPollState
 pub enum vyre_runtime::artifact_admission::ArtifactSessionError
+pub enum vyre_runtime::artifact_admission::MeshSessionError
 pub enum vyre_runtime::expert_scheduling::ExpertSchedulingError
 pub enum vyre_runtime::mtp::MtpError
 pub enum vyre_runtime::mtp::MtpStorageCandidate
@@ -408,7 +411,9 @@ pub fn vyre_runtime::UringCompletionPump<'a>::poll(&mut self) -> core::result::R
 pub fn vyre_runtime::UringCompletionPump<'a>::request_shutdown(&mut self)
 pub fn vyre_runtime::UringCompletionPump<'a>::with_uring(self, stream: vyre_runtime::uring::AsyncUringStream<'a>) -> Self
 pub fn vyre_runtime::artifact_admission::AdmittedArtifact::into_envelope(self) -> vyre_megakernel::envelope::ArtifactEnvelope
+pub fn vyre_runtime::artifact_admission::AdmittedArtifact::submission_devices(&self) -> alloc::vec::Vec<vyre_megakernel::allocation::DeviceSlot>
 pub fn vyre_runtime::artifact_admission::AdmittedArtifact::target_payload(&self) -> &vyre_megakernel::envelope::TargetPayload
+pub fn vyre_runtime::artifact_admission::AdmittedArtifact::target_payload_for_device(&self, device: vyre_megakernel::allocation::DeviceSlot) -> core::result::Result<&vyre_megakernel::envelope::TargetPayload, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::AdmittedPortfolio::select(&self, facts: &alloc::collections::btree::map::BTreeMap<vyre_megakernel::specialization::axis::SpecializationAxis, vyre_megakernel::specialization::axis::AxisValue>) -> core::result::Result<&vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::AdmittedPortfolio::variants(&self) -> &[(vyre_megakernel::specialization::guard::VariantGuard, vyre_runtime::artifact_admission::AdmittedArtifact)]
 pub fn vyre_runtime::artifact_admission::ArtifactAdmissionError::from(source: vyre_megakernel::error::CompileError) -> Self
@@ -445,6 +450,14 @@ pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::bindings(&self) -> &
 pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::buffers(&self) -> &[vyre_driver::backend::resource::Resource]
 pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::owns(&self, value: vyre_megakernel::identity::ArtifactValueId) -> bool
 pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::total_bytes(&self) -> u64
+pub fn vyre_runtime::artifact_admission::MeshSession::bindings(&self, device: vyre_megakernel::allocation::DeviceSlot) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::MeshSessionError>
+pub fn vyre_runtime::artifact_admission::MeshSession::devices(&self) -> alloc::vec::Vec<vyre_megakernel::allocation::DeviceSlot>
+pub fn vyre_runtime::artifact_admission::MeshSession::new(envelope: vyre_megakernel::envelope::ArtifactEnvelope, devices: alloc::vec::Vec<(vyre_megakernel::allocation::DeviceSlot, alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>)>, peers: &vyre_driver::peer_transfer::PeerTopology) -> core::result::Result<Self, vyre_runtime::artifact_admission::MeshSessionError>
+pub fn vyre_runtime::artifact_admission::MeshSession::stage_count(&self) -> u32
+pub fn vyre_runtime::artifact_admission::MeshSession::submit(&self, bindings: alloc::collections::btree::map::BTreeMap<vyre_megakernel::allocation::DeviceSlot, vyre_driver::backend::artifact_lifecycle::BindingSet>) -> core::result::Result<vyre_runtime::artifact_admission::MeshSubmission, vyre_runtime::artifact_admission::MeshSessionError>
+pub fn vyre_runtime::artifact_admission::MeshSubmission::devices(&self) -> alloc::vec::Vec<vyre_megakernel::allocation::DeviceSlot>
+pub fn vyre_runtime::artifact_admission::MeshSubmission::is_ready(&self) -> bool
+pub fn vyre_runtime::artifact_admission::MeshSubmission::wait(self) -> core::result::Result<alloc::vec::Vec<(vyre_megakernel::allocation::DeviceSlot, vyre_driver::backend::artifact_lifecycle::Completion)>, vyre_runtime::artifact_admission::MeshSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::artifact(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::bindings(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::device(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
@@ -1051,6 +1064,8 @@ pub struct vyre_runtime::artifact_admission::AdmittedPortfolio
 pub struct vyre_runtime::artifact_admission::ArtifactAdmissionError
 pub struct vyre_runtime::artifact_admission::ArtifactSession
 pub struct vyre_runtime::artifact_admission::ArtifactWorkspace
+pub struct vyre_runtime::artifact_admission::MeshSession
+pub struct vyre_runtime::artifact_admission::MeshSubmission
 pub struct vyre_runtime::artifact_admission::RetainedArtifactSession
 pub struct vyre_runtime::expert_scheduling::ExpertWorkItem
 pub struct vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange
@@ -1236,6 +1251,27 @@ pub vyre_runtime::artifact_admission::ArtifactSessionError::Backend(vyre_driver:
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Compile(vyre_megakernel::error::CompileError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::State(alloc::string::String)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Target(vyre_megakernel::target::TargetCompileError)
+pub vyre_runtime::artifact_admission::MeshSessionError::Admission(vyre_runtime::artifact_admission::ArtifactAdmissionError)
+pub vyre_runtime::artifact_admission::MeshSessionError::Backend(vyre_driver::backend::error::BackendError)
+pub vyre_runtime::artifact_admission::MeshSessionError::DeviceFailure
+pub vyre_runtime::artifact_admission::MeshSessionError::DeviceFailure::device: u16
+pub vyre_runtime::artifact_admission::MeshSessionError::DeviceFailure::source: vyre_driver::backend::error::BackendError
+pub vyre_runtime::artifact_admission::MeshSessionError::MissingBindings
+pub vyre_runtime::artifact_admission::MeshSessionError::MissingBindings::device: u16
+pub vyre_runtime::artifact_admission::MeshSessionError::MissingDevice
+pub vyre_runtime::artifact_admission::MeshSessionError::MissingDevice::device: u16
+pub vyre_runtime::artifact_admission::MeshSessionError::MixedFormats
+pub vyre_runtime::artifact_admission::MeshSessionError::MixedFormats::anchor: u16
+pub vyre_runtime::artifact_admission::MeshSessionError::MixedFormats::device: u16
+pub vyre_runtime::artifact_admission::MeshSessionError::MixedFormats::expected: alloc::string::String
+pub vyre_runtime::artifact_admission::MeshSessionError::MixedFormats::found: alloc::string::String
+pub vyre_runtime::artifact_admission::MeshSessionError::NoDevice
+pub vyre_runtime::artifact_admission::MeshSessionError::UnplacedDevice
+pub vyre_runtime::artifact_admission::MeshSessionError::UnplacedDevice::device: u16
+pub vyre_runtime::artifact_admission::MeshSessionError::UnroutableTransfer
+pub vyre_runtime::artifact_admission::MeshSessionError::UnroutableTransfer::bytes: u64
+pub vyre_runtime::artifact_admission::MeshSessionError::UnroutableTransfer::from: u16
+pub vyre_runtime::artifact_admission::MeshSessionError::UnroutableTransfer::to: u16
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExchangeError(alloc::string::String)
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds::expert_id: u32

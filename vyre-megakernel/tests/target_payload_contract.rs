@@ -6,7 +6,7 @@ use vyre_megakernel::{
     ArtifactValueId, CompileError, EmittedTargetModule, FusionGroupId, TargetCompileError,
     TargetCompiler, TargetEntryPoint, TargetModuleBundle, TargetModuleImage, TargetPayload,
     TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
-    TargetResourceMemory,
+    TargetResourceMemory, TARGET_PAYLOAD_SCHEMA_VERSION,
 };
 
 #[path = "../../tests/support/artifact_fixtures.rs"]
@@ -216,7 +216,7 @@ fn target_payload_schema_and_format_version_skew_are_rejected() {
     )
     .expect("payload must construct");
     let mut payload_bytes = payload.to_bytes().expect("payload must encode");
-    payload_bytes[4..6].copy_from_slice(&4u16.to_le_bytes());
+    payload_bytes[4..6].copy_from_slice(&(TARGET_PAYLOAD_SCHEMA_VERSION + 1).to_le_bytes());
     let schema_error = TargetPayload::from_bytes(&payload_bytes)
         .expect_err("unsupported attachment schema must fail before body admission");
     assert_eq!(

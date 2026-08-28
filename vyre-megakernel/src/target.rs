@@ -235,18 +235,27 @@ pub trait TargetCompiler: Send + Sync {
     /// Compile every selected module and project the canonical artifact ABI.
     fn compile(&self, artifact: &Artifact) -> Result<TargetPayload, TargetCompileError>;
 }
-/// Compile and attach one target payload to its exact neutral artifact.
+/// Compile one target payload and attach it for every device the artifact places
+/// work on.
 ///
 /// This is the only orchestration boundary from a pure target compiler facet to
 /// an authenticated deployable envelope. It does not acquire a device or
 /// materialize native handles.
+///
+/// A target compiler is device-neutral: it compiles the format once for the
+/// artifact. The mesh topology states which devices submit those bytes, so the
+/// compiled payload is rebound once per topology device and the envelope carries
+/// the complete per-device set.
 pub fn attach_target(
     artifact: Artifact,
     compiler: &dyn TargetCompiler,
 ) -> Result<ArtifactEnvelope, TargetCompileError> {
     let payload = compiler.compile(&artifact)?;
+    let devices = artifact.topology().submission_devices();
     let mut envelope = ArtifactEnvelope::new(artifact);
-    envelope.attach_target_payload(payload)?;
+    for device in devices {
+        envelope.attach_target_payload(payload.for_device(device)?)?;
+    }
     Ok(envelope)
 }
 

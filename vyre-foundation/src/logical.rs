@@ -18,8 +18,13 @@ use crate::ir::{
 };
 use crate::operation::OperationEffects;
 
+pub use crate::logical_partition::{
+    LogicalExchange, LogicalExchangeKind, LogicalPartitionAxis, LogicalPartitionAxisKind,
+    LogicalPartitionFacts,
+};
+
 /// Current logical algorithm schema and identity version.
-pub const LOGICAL_ALGORITHM_VERSION: u16 = 2;
+pub const LOGICAL_ALGORITHM_VERSION: u16 = 4;
 
 /// One validated logical extent.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
@@ -109,6 +114,8 @@ pub struct LogicalDependence {
     pub predecessor: GraphNodeId,
     /// Graph values that induce the dependence.
     pub values: Vec<u32>,
+    /// Exact packed bytes of the values that induce the dependence.
+    pub bytes: u64,
     /// Dependence semantics.
     pub kind: LogicalDependenceKind,
 }
@@ -151,6 +158,10 @@ pub struct LogicalRegion {
     pub dependencies: Vec<LogicalDependence>,
     /// Closed effects derived from graph ports and executable semantics.
     pub effects: LogicalEffects,
+    /// Closed statement of how this region may be distributed.
+    pub partition: LogicalPartitionFacts,
+    /// Exact packed bytes of the values this region writes.
+    pub written_bytes: u64,
     /// Exact upper bound on logical points.
     pub max_points: u64,
 }
@@ -160,6 +171,7 @@ pub struct LogicalRegion {
 pub struct LogicalProgramGraph<'a> {
     graph: &'a ProgramGraph,
     regions: Vec<LogicalRegion>,
+    exchanges: Vec<LogicalExchange>,
     semantic_wire: Vec<u8>,
 }
 
@@ -325,9 +337,11 @@ impl<'a> LogicalProgramGraph<'a> {
                         .push(input.value.0);
                 }
             }
-            let dependencies = dependence_values
-                .into_iter()
-                .map(|(predecessor, values)| LogicalDependence {
+            let mut dependencies = Vec::with_capacity(dependence_values.len());
+            for (predecessor, values) in dependence_values {
+                let bytes = crate::logical_partition::value_bytes(graph, bindings, &values)
+                    .map_err(LogicalProgramError::Exchange)?;
+                dependencies.push(LogicalDependence {
                     predecessor,
                     kind: if retained_state {
                         LogicalDependenceKind::RetainedState
@@ -335,8 +349,9 @@ impl<'a> LogicalProgramGraph<'a> {
                         LogicalDependenceKind::Flow
                     },
                     values,
-                })
-                .collect::<Vec<_>>();
+                    bytes,
+                });
+            }
             let inputs_disjoint = node
                 .inputs
                 .iter()
@@ -365,6 +380,23 @@ impl<'a> LogicalProgramGraph<'a> {
             } else {
                 Vec::new()
             };
+            let in_place_reads = node
+                .inputs
+                .iter()
+                .any(|input| input.contract.access == BufferAccess::ReadWrite);
+            let partition = crate::logical_partition::partition_facts(
+                &extents.iter().map(LogicalExtent::bound).collect::<Vec<_>>(),
+                &reduction_axes,
+                matches!(
+                    kind,
+                    LogicalRegionKind::Sequential | LogicalRegionKind::RetainedState
+                ),
+                retained_state,
+                program_effects.atomics,
+                in_place_reads,
+            );
+            let written_bytes = crate::logical_partition::value_bytes(graph, bindings, &writes)
+                .map_err(LogicalProgramError::Exchange)?;
             regions.push(LogicalRegion {
                 node: node.id,
                 name: node.name.clone(),
@@ -394,6 +426,8 @@ impl<'a> LogicalProgramGraph<'a> {
                     atomics: program_effects.atomics,
                     synchronizes: program_effects.synchronizes,
                 },
+                partition,
+                written_bytes,
                 max_points,
             });
         }
@@ -402,6 +436,7 @@ impl<'a> LogicalProgramGraph<'a> {
         struct IdentityDependence<'b> {
             predecessor: u32,
             values: &'b [u32],
+            bytes: u64,
             kind: LogicalDependenceKind,
         }
         #[derive(Serialize)]
@@ -416,12 +451,24 @@ impl<'a> LogicalProgramGraph<'a> {
             aliases: &'b LogicalAliasFacts,
             dependencies: Vec<IdentityDependence<'b>>,
             effects: &'b LogicalEffects,
+            partition: &'b LogicalPartitionFacts,
+            written_bytes: u64,
             max_points: u64,
+        }
+        #[derive(Serialize)]
+        struct IdentityExchange<'b> {
+            node: u32,
+            kind: LogicalExchangeKind,
+            group: u32,
+            combine: Option<crate::ir::CollectiveOp>,
+            values: &'b [u32],
+            bytes: u64,
         }
         #[derive(Serialize)]
         struct Identity<'b> {
             version: u16,
             regions: Vec<IdentityRegion<'b>>,
+            exchanges: Vec<IdentityExchange<'b>>,
             graph: &'b [u8],
         }
         let graph_wire = graph
@@ -444,16 +491,32 @@ impl<'a> LogicalProgramGraph<'a> {
                     .map(|dependence| IdentityDependence {
                         predecessor: dependence.predecessor.0,
                         values: &dependence.values,
+                        bytes: dependence.bytes,
                         kind: dependence.kind,
                     })
                     .collect(),
                 effects: &region.effects,
+                partition: &region.partition,
+                written_bytes: region.written_bytes,
                 max_points: region.max_points,
             })
             .collect();
+        let exchanges = crate::logical_partition::exchanges(graph, bindings)
+            .map_err(LogicalProgramError::Exchange)?;
         let semantic_wire = serde_json::to_vec(&Identity {
             version: LOGICAL_ALGORITHM_VERSION,
             regions: identity_regions,
+            exchanges: exchanges
+                .iter()
+                .map(|exchange| IdentityExchange {
+                    node: exchange.node.0,
+                    kind: exchange.kind,
+                    group: exchange.group,
+                    combine: exchange.combine,
+                    values: &exchange.values,
+                    bytes: exchange.bytes,
+                })
+                .collect(),
             graph: &graph_wire,
         })
         .map_err(|error| LogicalProgramError::Identity(error.to_string()))?;
@@ -461,6 +524,7 @@ impl<'a> LogicalProgramGraph<'a> {
         Ok(Self {
             graph,
             regions,
+            exchanges,
             semantic_wire,
         })
     }
@@ -475,6 +539,12 @@ impl<'a> LogicalProgramGraph<'a> {
     #[must_use]
     pub fn regions(&self) -> &[LogicalRegion] {
         &self.regions
+    }
+
+    /// Semantic exchanges the graph states, in graph-node order.
+    #[must_use]
+    pub fn exchanges(&self) -> &[LogicalExchange] {
+        &self.exchanges
     }
 
     /// Canonical schedule-free identity bytes.
@@ -553,4 +623,7 @@ pub enum LogicalProgramError {
     /// Logical identity serialization failed.
     #[error("logical identity serialization failed: {0}")]
     Identity(String),
+    /// A semantic exchange payload cannot be sized.
+    #[error("logical exchange is not sizable: {0}")]
+    Exchange(String),
 }

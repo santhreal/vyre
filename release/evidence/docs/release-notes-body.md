@@ -368,6 +368,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   effects a program states against the lowered kernel descriptor and rejects a
   kernel that lost a store, invented one, or changed a read-modify-write into a
   plain access.
+- Mesh placement cuts a routed region across shards, runs a chain of regions as
+  a pipeline of stage devices, and ranks both against the single-device
+  placement.
 - Two suites close the classes above from the tree at run time. The Naga
   scanner's gate plants an atomic and a store in every body slot of every
   body-carrying `Node` variant and asserts the walk reaches both, and
@@ -432,6 +435,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre-runtime` at 735 and `vyre-driver-cuda` at 642. A crate with no row is a
   finding, so a newly published crate is red rather than unjudged, and
   `--write` lowers a recorded number to what it measured and never raises one.
+- Schedule selection places a program on the device mesh the request states,
+  recording one topology with per-region partitions, shard coordinates and
+  transfers, one target payload per placed device, and a runtime session that
+  submits that mesh exactly or refuses it.
 - Neutral lowering states a physical storage layout: one region per
   workgroup-scoped and invocation-private binding with its byte span,
   alignment, live op range and pool offset, so regions with disjoint lifetimes

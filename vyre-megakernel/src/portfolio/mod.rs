@@ -91,7 +91,7 @@ impl ArtifactPortfolio {
 /// Every partition of the stated workload classes the coverage policy and the
 /// variant bounds admit is scored, and the partition the objective orders first
 /// is retained. A compile that budgets on-device measurements is rejected here
-/// for the same reason [`compile`] rejects one: only
+/// for the same reason [`crate::compile`] rejects one: only
 /// [`compile_portfolio_measured`] can spend that budget.
 ///
 /// # Errors
@@ -107,10 +107,10 @@ pub fn compile_portfolio(
 /// Compile the retained artifact set with each part's finalists emitted for the
 /// target and timed on the device.
 ///
-/// Each part is compiled through [`compile_measured`], so the measurement budget
-/// the request states is spent per retained artifact rather than once for the
-/// whole set: two parts optimize for different arrangements and a measurement of
-/// one says nothing about the other.
+/// Each part is compiled through [`crate::compile_measured`], so the measurement
+/// budget the request states is spent per retained artifact rather than once for
+/// the whole set: two parts optimize for different arrangements and a
+/// measurement of one says nothing about the other.
 ///
 /// # Errors
 ///

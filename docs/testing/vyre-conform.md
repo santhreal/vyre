@@ -49,6 +49,7 @@ The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
 | `test` | `lens_parity` | `conform/vyre-conform/tests/lens_parity.rs` | None | `./cargo_full test -p vyre-conform --test lens_parity` |
 | `test` | `lens_parity_device` | `conform/vyre-conform/tests/lens_parity_device.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test lens_parity_device` |
 | `test` | `library_contracts` | `conform/vyre-conform/tests/library_contracts/mod.rs` | None | `./cargo_full test -p vyre-conform --test library_contracts` |
+| `test` | `mesh_placement_contracts` | `conform/vyre-conform/tests/mesh_placement_contracts.rs` | None | `./cargo_full test -p vyre-conform --test mesh_placement_contracts` |
 | `test` | `minimizer_contract` | `conform/vyre-conform/tests/minimizer_contract.rs` | None | `./cargo_full test -p vyre-conform --test minimizer_contract` |
 | `test` | `op_matrix_truth` | `conform/vyre-conform/tests/op_matrix_truth/mod.rs` | None | `./cargo_full test -p vyre-conform --test op_matrix_truth` |
 | `test` | `parity_matrix` | `conform/vyre-conform/tests/parity_matrix.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test parity_matrix` |

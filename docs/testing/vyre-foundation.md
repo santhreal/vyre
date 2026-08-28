@@ -94,6 +94,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `licm_hoist_scope_safety` | `vyre-foundation/tests/licm_hoist_scope_safety.rs` | None | `./cargo_full test -p vyre-foundation --test licm_hoist_scope_safety` |
 | `test` | `licm_speculation_bounds` | `vyre-foundation/tests/licm_speculation_bounds.rs` | None | `./cargo_full test -p vyre-foundation --test licm_speculation_bounds` |
 | `test` | `linear_type_validation` | `vyre-foundation/tests/linear_type_validation.rs` | None | `./cargo_full test -p vyre-foundation --test linear_type_validation` |
+| `test` | `logical_partition_facts` | `vyre-foundation/tests/logical_partition_facts.rs` | None | `./cargo_full test -p vyre-foundation --test logical_partition_facts` |
 | `test` | `logical_span_contracts` | `vyre-foundation/tests/logical_span_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test logical_span_contracts` |
 | `test` | `logical_stage_identity` | `vyre-foundation/tests/logical_stage_identity.rs` | None | `./cargo_full test -p vyre-foundation --test logical_stage_identity` |
 | `test` | `loop_fusion_atomic_expected_scalar_dependency` | `vyre-foundation/tests/loop_fusion_atomic_expected_scalar_dependency.rs` | None | `./cargo_full test -p vyre-foundation --test loop_fusion_atomic_expected_scalar_dependency` |

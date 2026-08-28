@@ -64,6 +64,11 @@ impl vyre_megakernel::measure::MeasurementEnvironment
 impl vyre_megakernel::measure::MeasurementProtocol
 impl vyre_megakernel::measure::MeasurementRecord
 impl vyre_megakernel::measure::SampleEstimate
+impl vyre_megakernel::mesh::CollectiveSupport
+impl vyre_megakernel::mesh::MeshFacts
+impl vyre_megakernel::mesh::MeshTopologyPlan
+impl vyre_megakernel::mesh::PartitionKind
+impl vyre_megakernel::mesh::TransferOrigin
 impl vyre_megakernel::specialization::AxisDomain
 impl vyre_megakernel::specialization::AxisValue
 impl vyre_megakernel::specialization::CoverageProof
@@ -87,6 +92,7 @@ pub const fn vyre_megakernel::Artifact::provenance(&self) -> &vyre_megakernel::P
 pub const fn vyre_megakernel::Artifact::resource_envelope(&self) -> vyre_megakernel::ResourceEnvelope
 pub const fn vyre_megakernel::Artifact::schema_version(&self) -> u16
 pub const fn vyre_megakernel::Artifact::selected_plan(&self) -> &vyre_megakernel::SelectedPlan
+pub const fn vyre_megakernel::Artifact::topology(&self) -> &vyre_megakernel::mesh::MeshTopologyPlan
 pub const fn vyre_megakernel::ArtifactEnvelope::neutral(&self) -> &vyre_megakernel::Artifact
 pub const fn vyre_megakernel::ArtifactPortfolio::aggregate_bytes(&self) -> u64
 pub const fn vyre_megakernel::ArtifactPortfolio::objective(&self) -> &vyre_megakernel::CompileObjective
@@ -192,6 +198,7 @@ pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::inputs(&self) -> &al
 pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::logical(&self) -> &vyre_foundation::logical::LogicalProgramGraph<'a>
 pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::objective(&self) -> &vyre_megakernel::CompileObjective
 pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::target_facts(&self) -> vyre_megakernel::DeviceFacts
+pub const fn vyre_megakernel::TargetPayload::device(&self) -> vyre_megakernel::allocation::DeviceSlot
 pub const fn vyre_megakernel::TargetPayload::digest(&self) -> vyre_megakernel::Digest
 pub const fn vyre_megakernel::TargetPayload::format(&self) -> &vyre_megakernel::TargetPayloadFormat
 pub const fn vyre_megakernel::TargetPayload::neutral_artifact(&self) -> vyre_megakernel::Digest
@@ -206,6 +213,7 @@ pub const fn vyre_megakernel::TargetProfile::subgroup_size(&self) -> u32
 pub const fn vyre_megakernel::ValidatedCompileRequest::device(&self) -> vyre_megakernel::DeviceFacts
 pub const fn vyre_megakernel::ValidatedCompileRequest::facts(&self) -> &vyre_megakernel::ExternalFacts
 pub const fn vyre_megakernel::ValidatedCompileRequest::graph(&self) -> &vyre_foundation::ir_inner::model::program_graph::ProgramGraph
+pub const fn vyre_megakernel::ValidatedCompileRequest::mesh(&self) -> &vyre_megakernel::mesh::MeshFacts
 pub const fn vyre_megakernel::ValidatedCompileRequest::objective(&self) -> &vyre_megakernel::CompileObjective
 pub const fn vyre_megakernel::ValidatedCompileRequest::recorded_measurement(&self) -> core::option::Option<&vyre_megakernel::measure::MeasurementRecord>
 pub const fn vyre_megakernel::ValidatedCompileRequest::representative_inputs(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::vec::Vec<u8>>
@@ -231,6 +239,13 @@ pub const fn vyre_megakernel::measure::MeasurementProtocol::rounds_exhausted(&se
 pub const fn vyre_megakernel::measure::MeasurementProtocol::rounds_sufficient(&self, rounds: u32) -> bool
 pub const fn vyre_megakernel::measure::SampleEstimate::is_settled(&self, protocol: &vyre_megakernel::measure::MeasurementProtocol) -> bool
 pub const fn vyre_megakernel::measure::SampleEstimate::relative_uncertainty_permille(&self) -> u32
+pub const fn vyre_megakernel::mesh::CollectiveSupport::carries(&self, kind: vyre_foundation::logical_partition::LogicalExchangeKind) -> bool
+pub const fn vyre_megakernel::mesh::MeshFacts::authentication(&self) -> vyre_megakernel::Digest
+pub const fn vyre_megakernel::mesh::MeshFacts::collectives(&self) -> vyre_megakernel::mesh::CollectiveSupport
+pub const fn vyre_megakernel::mesh::MeshFacts::version(&self) -> u16
+pub const fn vyre_megakernel::mesh::PartitionKind::as_str(self) -> &'static str
+pub const fn vyre_megakernel::mesh::PartitionKind::one_device(self) -> bool
+pub const fn vyre_megakernel::mesh::PartitionKind::splits_axis(self) -> bool
 pub const fn vyre_megakernel::specialization::AxisDomain::is_identity_domain(&self) -> bool
 pub const fn vyre_megakernel::specialization::AxisValue::identity(self) -> core::option::Option<vyre_megakernel::Digest>
 pub const fn vyre_megakernel::specialization::AxisValue::scalar(self) -> core::option::Option<u64>
@@ -285,6 +300,10 @@ pub const vyre_megakernel::allocation::REGION_ALIGNMENT: u64
 pub const vyre_megakernel::cost::TERMS: &[vyre_megakernel::cost::CostTerm]
 pub const vyre_megakernel::measure::MEASUREMENT_PROTOCOL_VERSION: u16
 pub const vyre_megakernel::measure::MeasurementProtocol::V1: Self
+pub const vyre_megakernel::mesh::CollectiveSupport::ALL: Self
+pub const vyre_megakernel::mesh::CollectiveSupport::NONE: Self
+pub const vyre_megakernel::mesh::MESH_FACTS_VERSION: u16
+pub const vyre_megakernel::mesh::MESH_TOPOLOGY_VERSION: u16
 pub const vyre_megakernel::specialization::MAX_COVERAGE_CELLS: usize
 pub const vyre_megakernel::specialization::MAX_PROPOSED_VARIANTS: usize
 pub const vyre_megakernel::specialization::PORTFOLIO_ENVELOPE_SCHEMA_VERSION: u16
@@ -313,6 +332,8 @@ pub enum vyre_megakernel::cost::CostUnit
 pub enum vyre_megakernel::legality::FusionDecision
 pub enum vyre_megakernel::measure::ReplacementVerdict
 pub enum vyre_megakernel::measure::ThrottleState
+pub enum vyre_megakernel::mesh::PartitionKind
+pub enum vyre_megakernel::mesh::TransferOrigin
 pub enum vyre_megakernel::specialization::AxisDomain
 pub enum vyre_megakernel::specialization::AxisValue
 pub enum vyre_megakernel::specialization::GuardTerm
@@ -336,7 +357,9 @@ pub fn vyre_megakernel::ArtifactEnvelope::attach_target_payload(&mut self, paylo
 pub fn vyre_megakernel::ArtifactEnvelope::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::ArtifactEnvelope::new(neutral: vyre_megakernel::Artifact) -> Self
 pub fn vyre_megakernel::ArtifactEnvelope::require_target_payload(&self, required: &vyre_megakernel::TargetPayloadFormat) -> core::result::Result<&vyre_megakernel::TargetPayload, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::ArtifactEnvelope::require_target_payload_for_device(&self, required: &vyre_megakernel::TargetPayloadFormat, device: vyre_megakernel::allocation::DeviceSlot) -> core::result::Result<&vyre_megakernel::TargetPayload, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::ArtifactEnvelope::require_target_payload_index(&self, required: &vyre_megakernel::TargetPayloadFormat) -> core::result::Result<usize, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::ArtifactEnvelope::require_target_payload_index_for_device(&self, required: &vyre_megakernel::TargetPayloadFormat, device: vyre_megakernel::allocation::DeviceSlot) -> core::result::Result<usize, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::ArtifactEnvelope::target_payloads(&self) -> &[vyre_megakernel::TargetPayload]
 pub fn vyre_megakernel::ArtifactEnvelope::to_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::ArtifactPortfolio::artifact_for_class(&self, class_index: usize) -> core::option::Option<&vyre_megakernel::Artifact>
@@ -348,6 +371,7 @@ pub fn vyre_megakernel::CompileObjective::aggregate(&self, per_class: &[vyre_meg
 pub fn vyre_megakernel::CompileObjective::ordering_metrics(&self) -> alloc::vec::Vec<vyre_megakernel::ObjectiveMetric>
 pub fn vyre_megakernel::CompileObjective::validate(&self, device: vyre_megakernel::DeviceFacts) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::CompileRequest::validate(self) -> core::result::Result<vyre_megakernel::ValidatedCompileRequest, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::CompileRequest::with_mesh(self, mesh: vyre_megakernel::mesh::MeshFacts) -> Self
 pub fn vyre_megakernel::CompileRequest::with_recorded_measurement(self, recorded_measurement: vyre_megakernel::measure::MeasurementRecord) -> Self
 pub fn vyre_megakernel::CompileRequest::with_representative_inputs(self, representative_inputs: alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::vec::Vec<u8>>) -> Self
 pub fn vyre_megakernel::Digest::deserialize<D: serde_core::de::Deserializer<'de>>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
@@ -395,6 +419,7 @@ pub fn vyre_megakernel::TargetModuleBundle::to_bytes(&self) -> core::result::Res
 pub fn vyre_megakernel::TargetModuleImage::binding_slot(&self, name: &str) -> core::option::Option<(u32, u32)>
 pub fn vyre_megakernel::TargetPayload::bytes(&self) -> &[u8]
 pub fn vyre_megakernel::TargetPayload::entries(&self) -> &[vyre_megakernel::TargetEntryPoint]
+pub fn vyre_megakernel::TargetPayload::for_device(&self, device: vyre_megakernel::allocation::DeviceSlot) -> core::result::Result<Self, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::TargetPayload::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::TargetPayload::new(neutral: &vyre_megakernel::Artifact, format: vyre_megakernel::TargetPayloadFormat, profile: vyre_megakernel::TargetProfile, entries: alloc::vec::Vec<vyre_megakernel::TargetEntryPoint>, bytes: alloc::vec::Vec<u8>) -> core::result::Result<Self, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::TargetPayload::to_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::CompileError>
@@ -416,7 +441,6 @@ pub fn vyre_megakernel::allocation::AllocationRegion::end(&self) -> core::result
 pub fn vyre_megakernel::allocation::AllocationRegion::last_stage(&self) -> u32
 pub fn vyre_megakernel::allocation::ValuePlacement::end(&self) -> core::result::Result<u64, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::attach_target(artifact: vyre_megakernel::Artifact, compiler: &dyn vyre_megakernel::TargetCompiler) -> core::result::Result<vyre_megakernel::ArtifactEnvelope, vyre_megakernel::TargetCompileError>
-pub fn vyre_megakernel::baseline::baseline_schedule(logical: &vyre_foundation::logical::LogicalProgramGraph<'_>) -> vyre_foundation::schedule::SelectedSchedule
 pub fn vyre_megakernel::baseline_schedule(logical: &vyre_foundation::logical::LogicalProgramGraph<'_>) -> vyre_foundation::schedule::SelectedSchedule
 pub fn vyre_megakernel::compile(request: &vyre_megakernel::ValidatedCompileRequest) -> core::result::Result<vyre_megakernel::Artifact, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::compile_measured(request: &vyre_megakernel::ValidatedCompileRequest, evaluator: &dyn vyre_megakernel::FinalistEvaluator) -> core::result::Result<vyre_megakernel::Artifact, vyre_megakernel::CompileError>
@@ -439,6 +463,22 @@ pub fn vyre_megakernel::measure::MeasurementRecord::winning_estimate_ns(&self) -
 pub fn vyre_megakernel::measure::MeasurementRecord::winning_launches(&self) -> u32
 pub fn vyre_megakernel::measure::SampleEstimate::from_samples(samples: &[u64], protocol: &vyre_megakernel::measure::MeasurementProtocol) -> core::option::Option<Self>
 pub fn vyre_megakernel::measure::improves(incumbent: &vyre_megakernel::measure::SampleEstimate, challenger: &vyre_megakernel::measure::SampleEstimate, protocol: &vyre_megakernel::measure::MeasurementProtocol) -> bool
+pub fn vyre_megakernel::mesh::MeshFacts::authenticate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::mesh::MeshFacts::axes(&self) -> &[vyre_megakernel::mesh::MeshAxis]
+pub fn vyre_megakernel::mesh::MeshFacts::device(&self, slot: vyre_megakernel::allocation::DeviceSlot) -> core::option::Option<&vyre_megakernel::mesh::MeshDevice>
+pub fn vyre_megakernel::mesh::MeshFacts::devices(&self) -> &[vyre_megakernel::mesh::MeshDevice]
+pub fn vyre_megakernel::mesh::MeshFacts::link(&self, from: vyre_megakernel::allocation::DeviceSlot, to: vyre_megakernel::allocation::DeviceSlot) -> core::option::Option<(usize, &vyre_megakernel::mesh::MeshLink)>
+pub fn vyre_megakernel::mesh::MeshFacts::links(&self) -> &[vyre_megakernel::mesh::MeshLink]
+pub fn vyre_megakernel::mesh::MeshFacts::new(axes: alloc::vec::Vec<vyre_megakernel::mesh::MeshAxis>, devices: alloc::vec::Vec<vyre_megakernel::mesh::MeshDevice>, links: alloc::vec::Vec<vyre_megakernel::mesh::MeshLink>, collectives: vyre_megakernel::mesh::CollectiveSupport) -> core::result::Result<Self, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::mesh::MeshFacts::single_device(memory_capacity_bytes: u64) -> core::result::Result<Self, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::mesh::MeshTopologyPlan::devices(&self) -> alloc::vec::Vec<vyre_megakernel::allocation::DeviceSlot>
+pub fn vyre_megakernel::mesh::MeshTopologyPlan::pipeline_depth(&self) -> u32
+pub fn vyre_megakernel::mesh::MeshTopologyPlan::single_device(mesh: vyre_megakernel::Digest, anchor: vyre_megakernel::allocation::DeviceSlot, partitions: alloc::vec::Vec<vyre_megakernel::mesh::RegionPartition>) -> Self
+pub fn vyre_megakernel::mesh::MeshTopologyPlan::stage_count(&self) -> u32
+pub fn vyre_megakernel::mesh::MeshTopologyPlan::submission_devices(&self) -> alloc::vec::Vec<vyre_megakernel::allocation::DeviceSlot>
+pub fn vyre_megakernel::mesh::MeshTopologyPlan::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::mesh::MeshTopologyPlan::verify_capacity(&self, mesh: &vyre_megakernel::mesh::MeshFacts, peaks: &[vyre_megakernel::allocation::DevicePeak]) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::mesh::TransferOrigin::label(self) -> alloc::string::String
 pub fn vyre_megakernel::registered_level_stage() -> vyre_spec::ir_level::IrLevel
 pub fn vyre_megakernel::specialization::AxisDomain::admits(&self, value: vyre_megakernel::specialization::AxisValue) -> bool
 pub fn vyre_megakernel::specialization::CoverageProof::first_gap(&self) -> core::option::Option<&str>
@@ -472,11 +512,11 @@ pub fn vyre_megakernel::writable_graph_value_buffers(node: &vyre_foundation::ir_
 pub fn vyre_megakernel::writable_graph_values(node: &vyre_foundation::ir_inner::model::program_graph::ProgramGraphNode) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program_graph::GraphValueId>
 pub mod vyre_megakernel
 pub mod vyre_megakernel::allocation
-pub mod vyre_megakernel::baseline
 pub mod vyre_megakernel::cost
 pub mod vyre_megakernel::grid_sync
 pub mod vyre_megakernel::legality
 pub mod vyre_megakernel::measure
+pub mod vyre_megakernel::mesh
 pub mod vyre_megakernel::specialization
 pub struct vyre_megakernel::Artifact
 pub struct vyre_megakernel::ArtifactAbi
@@ -554,6 +594,15 @@ pub struct vyre_megakernel::measure::MeasurementEnvironment
 pub struct vyre_megakernel::measure::MeasurementProtocol
 pub struct vyre_megakernel::measure::MeasurementRecord
 pub struct vyre_megakernel::measure::SampleEstimate
+pub struct vyre_megakernel::mesh::CollectiveSupport
+pub struct vyre_megakernel::mesh::MeshAxis
+pub struct vyre_megakernel::mesh::MeshDevice
+pub struct vyre_megakernel::mesh::MeshFacts
+pub struct vyre_megakernel::mesh::MeshLink
+pub struct vyre_megakernel::mesh::MeshTopologyPlan
+pub struct vyre_megakernel::mesh::RegionPartition
+pub struct vyre_megakernel::mesh::ShardAssignment
+pub struct vyre_megakernel::mesh::TransferAssignment
 pub struct vyre_megakernel::specialization::CoverageProof
 pub struct vyre_megakernel::specialization::PortfolioEnvelope
 pub struct vyre_megakernel::specialization::PortfolioVariant
@@ -949,6 +998,58 @@ pub vyre_megakernel::measure::SampleEstimate::uncertainty_ns: u64
 pub vyre_megakernel::measure::ThrottleState::Clear
 pub vyre_megakernel::measure::ThrottleState::Throttled
 pub vyre_megakernel::measure::ThrottleState::Unreported
+pub vyre_megakernel::mesh::CollectiveSupport::all_gather: bool
+pub vyre_megakernel::mesh::CollectiveSupport::all_reduce: bool
+pub vyre_megakernel::mesh::CollectiveSupport::broadcast: bool
+pub vyre_megakernel::mesh::CollectiveSupport::point_to_point: bool
+pub vyre_megakernel::mesh::CollectiveSupport::reduce_scatter: bool
+pub vyre_megakernel::mesh::MeshAxis::extent: u32
+pub vyre_megakernel::mesh::MeshAxis::name: alloc::string::String
+pub vyre_megakernel::mesh::MeshDevice::coordinate: alloc::vec::Vec<u32>
+pub vyre_megakernel::mesh::MeshDevice::failure_domain: u32
+pub vyre_megakernel::mesh::MeshDevice::memory_capacity_bytes: u64
+pub vyre_megakernel::mesh::MeshDevice::slot: vyre_megakernel::allocation::DeviceSlot
+pub vyre_megakernel::mesh::MeshLink::bandwidth_bytes_per_ns: u64
+pub vyre_megakernel::mesh::MeshLink::from: vyre_megakernel::allocation::DeviceSlot
+pub vyre_megakernel::mesh::MeshLink::latency_ns: u64
+pub vyre_megakernel::mesh::MeshLink::to: vyre_megakernel::allocation::DeviceSlot
+pub vyre_megakernel::mesh::MeshTopologyPlan::anchor: vyre_megakernel::allocation::DeviceSlot
+pub vyre_megakernel::mesh::MeshTopologyPlan::communication_ns: u64
+pub vyre_megakernel::mesh::MeshTopologyPlan::mesh: vyre_megakernel::Digest
+pub vyre_megakernel::mesh::MeshTopologyPlan::partitions: alloc::vec::Vec<vyre_megakernel::mesh::RegionPartition>
+pub vyre_megakernel::mesh::MeshTopologyPlan::transfers: alloc::vec::Vec<vyre_megakernel::mesh::TransferAssignment>
+pub vyre_megakernel::mesh::MeshTopologyPlan::version: u16
+pub vyre_megakernel::mesh::MeshTopologyPlan::width: u32
+pub vyre_megakernel::mesh::PartitionKind::Data
+pub vyre_megakernel::mesh::PartitionKind::Pipeline
+pub vyre_megakernel::mesh::PartitionKind::Reduction
+pub vyre_megakernel::mesh::PartitionKind::Replicated
+pub vyre_megakernel::mesh::PartitionKind::Routed
+pub vyre_megakernel::mesh::PartitionKind::Sequence
+pub vyre_megakernel::mesh::PartitionKind::Spatial
+pub vyre_megakernel::mesh::RegionPartition::axis: core::option::Option<u32>
+pub vyre_megakernel::mesh::RegionPartition::kind: vyre_megakernel::mesh::PartitionKind
+pub vyre_megakernel::mesh::RegionPartition::node: vyre_megakernel::ArtifactNodeId
+pub vyre_megakernel::mesh::RegionPartition::region_points: u64
+pub vyre_megakernel::mesh::RegionPartition::shards: alloc::vec::Vec<vyre_megakernel::mesh::ShardAssignment>
+pub vyre_megakernel::mesh::ShardAssignment::coordinate: alloc::vec::Vec<u32>
+pub vyre_megakernel::mesh::ShardAssignment::device: vyre_megakernel::allocation::DeviceSlot
+pub vyre_megakernel::mesh::ShardAssignment::points: u64
+pub vyre_megakernel::mesh::ShardAssignment::shard: u32
+pub vyre_megakernel::mesh::TransferAssignment::bytes: u64
+pub vyre_megakernel::mesh::TransferAssignment::from: vyre_megakernel::allocation::DeviceSlot
+pub vyre_megakernel::mesh::TransferAssignment::kind: vyre_foundation::logical_partition::LogicalExchangeKind
+pub vyre_megakernel::mesh::TransferAssignment::link: u32
+pub vyre_megakernel::mesh::TransferAssignment::origin: vyre_megakernel::mesh::TransferOrigin
+pub vyre_megakernel::mesh::TransferAssignment::overlaps: bool
+pub vyre_megakernel::mesh::TransferAssignment::stage: u32
+pub vyre_megakernel::mesh::TransferAssignment::to: vyre_megakernel::allocation::DeviceSlot
+pub vyre_megakernel::mesh::TransferOrigin::Exchange(u32)
+pub vyre_megakernel::mesh::TransferOrigin::Handoff
+pub vyre_megakernel::mesh::TransferOrigin::Handoff::consumer: vyre_megakernel::ArtifactNodeId
+pub vyre_megakernel::mesh::TransferOrigin::Handoff::producer: vyre_megakernel::ArtifactNodeId
+pub vyre_megakernel::mesh::TransferOrigin::Routing
+pub vyre_megakernel::mesh::TransferOrigin::Routing::node: vyre_megakernel::ArtifactNodeId
 pub vyre_megakernel::specialization::AxisDomain::Boolean
 pub vyre_megakernel::specialization::AxisDomain::Identities
 pub vyre_megakernel::specialization::AxisDomain::Identities::identities: alloc::collections::btree::set::BTreeSet<vyre_megakernel::Digest>

@@ -20,7 +20,7 @@
 pub mod allocation;
 mod artifact;
 /// The unscheduled baseline every candidate derivation starts from.
-pub mod baseline;
+mod baseline;
 mod candidate;
 mod certificate;
 mod compile;
@@ -53,6 +53,9 @@ mod level_stage;
 /// Versioned protocol budgeted device measurement runs under, and the evidence
 /// one measured selection retains.
 pub mod measure;
+/// Authenticated device-mesh facts, and the one coordinated topology a selected
+/// schedule records for the whole mesh.
+pub mod mesh;
 mod normalize;
 mod objective;
 mod portfolio;

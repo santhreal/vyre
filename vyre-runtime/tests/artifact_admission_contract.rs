@@ -2,28 +2,30 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 
 use vyre_driver::materialize::{DeviceSpec, MaterializerDevice};
 use vyre_driver::BackendRegistration;
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource, Completion,
-    Device, ResidentOwner, Resource, VyreBackend,
+    Device, PeerAccessCapability, PeerLinkKind, PeerTopology, ResidentOwner, Resource, VyreBackend,
 };
 use vyre_foundation::diagnostics::{DiagnosticStage, RetryClass};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
 };
+use vyre_megakernel::allocation::DeviceSlot;
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
     DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetCompileError,
     TargetCompiler, TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess,
-    TargetResourceBinding, TargetResourceMemory,
+    TargetResourceBinding, TargetResourceMemory, ARTIFACT_ENVELOPE_SCHEMA_VERSION,
+    TARGET_PAYLOAD_SCHEMA_VERSION,
 };
 use vyre_runtime::artifact_admission::{
     admit_artifact, admit_cached_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession,
-    RetainedArtifactSession,
+    MeshSession, MeshSessionError, RetainedArtifactSession,
 };
 use vyre_runtime::persistent_executor::{PersistentExecutor, ResidentQueueState};
 use vyre_runtime::pipeline_cache::{
@@ -39,8 +41,9 @@ mod fixture_instance;
 use fixture_instance::{completion, FixtureInstance};
 
 use artifact_fixtures::{
-    compile_graph, contract, entry_over, entry_point, graph_over, neutral_artifact,
-    single_input_graph,
+    collective_output_graph, compile_graph, compile_graph_on_mesh, contract, entry_over,
+    entry_point, graph_over, neutral_artifact, single_input_graph, two_device_mesh,
+    wired_input_graph,
 };
 use vyre_test_support::pass_programs::{add_program, copy_program};
 
@@ -233,7 +236,12 @@ fn replace_nested_payload(
     let original_json = serde_json::to_vec(original_payload).expect("bytes must serialize");
     let replacement_json = serde_json::to_vec(replacement_payload).expect("bytes must serialize");
     let body = replace_once(frame_body(envelope), &original_json, &replacement_json);
-    encode_frame(b"VME0", 2, ENVELOPE_DIGEST_DOMAIN, &body)
+    encode_frame(
+        b"VME0",
+        ARTIFACT_ENVELOPE_SCHEMA_VERSION,
+        ENVELOPE_DIGEST_DOMAIN,
+        &body,
+    )
 }
 
 fn reassociate_payload(
@@ -244,7 +252,12 @@ fn reassociate_payload(
     let original_json = serde_json::to_vec(&original_neutral).expect("digest must serialize");
     let replacement_json = serde_json::to_vec(&replacement_neutral).expect("digest must serialize");
     let body = replace_once(frame_body(payload), &original_json, &replacement_json);
-    encode_frame(b"VTP0", 3, TARGET_PAYLOAD_DIGEST_DOMAIN, &body)
+    encode_frame(
+        b"VTP0",
+        TARGET_PAYLOAD_SCHEMA_VERSION,
+        TARGET_PAYLOAD_DIGEST_DOMAIN,
+        &body,
+    )
 }
 
 /// Regression: admission returns the exact requested bytes and canonical neutral identity.
@@ -1462,4 +1475,309 @@ fn host_inputs_are_the_graph_externals_not_every_value_an_entry_reads() {
         error.contains("requires 3 host input buffer(s), but the caller supplied 5"),
         "Fix: the refusal must name the arity the graph implies so a caller can act on it; got: {error}"
     );
+}
+
+/// One acquired device of the fixture mesh, named so its identity differs.
+fn mesh_materializer(name: &str) -> Arc<dyn ArtifactMaterializer> {
+    Arc::new(TestMaterializer {
+        device: MaterializerDevice::acquire(DeviceSpec {
+            backend: "test-artifact",
+            device: name.to_string(),
+            format_extension: "test.cache-target",
+            format_version: 1,
+            profile: profile("test.cache-target", 1),
+        })
+        .expect("Fix: acquire the fixture mesh device"),
+    })
+}
+
+/// A two-device placement with one payload attached per placed device.
+fn mesh_envelope() -> (Artifact, ArtifactEnvelope) {
+    mesh_envelope_over(wired_input_graph(8))
+}
+
+/// The same, over any graph the two-device fixture mesh can cut.
+fn mesh_envelope_over(graph: ProgramGraph) -> (Artifact, ArtifactEnvelope) {
+    let neutral = compile_graph_on_mesh(graph, 0, two_device_mesh());
+    assert_eq!(
+        neutral.topology().submission_devices(),
+        vec![DeviceSlot(0), DeviceSlot(1)],
+        "Fix: the mesh fixture must place work on both devices"
+    );
+    let anchor = payload(&neutral, format("test.cache-target", 1), &[4, 5, 6, 7]);
+    let mut envelope = ArtifactEnvelope::new(neutral.clone());
+    for device in neutral.topology().submission_devices() {
+        envelope
+            .attach_target_payload(
+                anchor
+                    .for_device(device)
+                    .expect("Fix: rebind the payload to one mesh device"),
+            )
+            .expect("Fix: attach one payload per placed device");
+    }
+    (neutral, envelope)
+}
+
+/// A peer topology where both fixture devices reach each other directly.
+fn linked_peers() -> PeerTopology {
+    let mut peers = PeerTopology::new(2);
+    peers.set_symmetric_capability(
+        0,
+        1,
+        PeerAccessCapability::DirectPeerMemory {
+            bandwidth_gbps: 64,
+            link: PeerLinkKind::PCIe { gen: 5, lanes: 16 },
+        },
+    );
+    peers
+}
+
+/// WHY: a mesh artifact is submitted on every device its placement names. One
+/// payload for the whole mesh would bind the same native module to devices whose
+/// identities differ, and admission would report success for a submission that
+/// only ever reached one device.
+#[test]
+fn mesh_admission_resolves_one_payload_per_placed_device() {
+    let (neutral, envelope) = mesh_envelope();
+    let required = format("test.cache-target", 1);
+
+    let admitted = admit_envelope(envelope, &required).expect("Fix: admit the complete mesh set");
+
+    assert_eq!(
+        admitted.submission_devices(),
+        vec![DeviceSlot(0), DeviceSlot(1)]
+    );
+    let first = admitted
+        .target_payload_for_device(DeviceSlot(0))
+        .expect("Fix: resolve the anchor payload");
+    let second = admitted
+        .target_payload_for_device(DeviceSlot(1))
+        .expect("Fix: resolve the second device payload");
+    assert_eq!(first.device(), DeviceSlot(0));
+    assert_eq!(second.device(), DeviceSlot(1));
+    assert_eq!(first.bytes(), second.bytes());
+    assert_ne!(
+        first.digest(),
+        second.digest(),
+        "Fix: the device a payload is submitted to participates in its identity"
+    );
+    assert_eq!(admitted.target_payload().device(), DeviceSlot(0));
+    assert_eq!(admitted.neutral().digest(), neutral.digest());
+}
+
+/// WHY: a placement whose payload set covers some devices cannot run at all. A
+/// partial set that decoded would leave the shards of the uncovered device with
+/// no module, and the submission would compute part of the program.
+#[test]
+fn an_envelope_missing_one_device_payload_is_refused() {
+    let neutral = compile_graph_on_mesh(wired_input_graph(8), 0, two_device_mesh());
+    let required = format("test.cache-target", 1);
+    let anchor = payload(&neutral, required.clone(), &[4, 5, 6, 7]);
+    let mut envelope = ArtifactEnvelope::new(neutral);
+    envelope
+        .attach_target_payload(anchor)
+        .expect("Fix: attach the anchor payload");
+    let bytes = envelope
+        .to_bytes()
+        .expect("Fix: encode the partial envelope");
+
+    let admission = admit_envelope(envelope, &required)
+        .expect_err("Fix: refuse a mesh set that covers one device");
+    assert_eq!(
+        admission.diagnostic().code.as_str(),
+        "MKC021_INCOMPATIBLE_TARGET_PAYLOAD"
+    );
+    let decode =
+        ArtifactEnvelope::from_bytes(&bytes).expect_err("Fix: refuse to decode a partial mesh set");
+    assert_eq!(
+        decode
+            .diagnostic
+            .location
+            .as_ref()
+            .and_then(|location| location.path.as_deref()),
+        Some("envelope.target_payloads.device")
+    );
+}
+
+/// WHY: a payload names the device it runs on. A payload bound to a device the
+/// placement never named would be submitted to hardware the schedule priced
+/// nothing for.
+#[test]
+fn a_payload_bound_off_the_placement_is_refused() {
+    let neutral = compile_graph_on_mesh(wired_input_graph(8), 0, two_device_mesh());
+    let anchor = payload(&neutral, format("test.cache-target", 1), &[4, 5, 6, 7]);
+    let stray = anchor
+        .for_device(DeviceSlot(7))
+        .expect("Fix: rebind the payload to a stray device");
+    let mut envelope = ArtifactEnvelope::new(neutral);
+
+    let error = envelope
+        .attach_target_payload(stray)
+        .expect_err("Fix: refuse a payload bound off the placement");
+
+    assert_eq!(
+        error
+            .diagnostic
+            .location
+            .as_ref()
+            .and_then(|location| location.path.as_deref()),
+        Some("target_payload.device")
+    );
+}
+
+/// WHY: the runtime submits the topology the compiler selected. A session that
+/// ran a two-device placement on one device, or that completed after one device
+/// failed, would report a result the program never computed.
+#[test]
+fn a_mesh_session_submits_every_device_and_refuses_a_partial_one() {
+    let (neutral, envelope) = mesh_envelope();
+    let peers = linked_peers();
+    let devices = vec![
+        (DeviceSlot(0), mesh_materializer("mesh-device-0")),
+        (DeviceSlot(1), mesh_materializer("mesh-device-1")),
+    ];
+
+    let session = MeshSession::new(envelope.clone(), devices, &peers)
+        .expect("Fix: materialize the placement on both devices");
+    assert_eq!(session.devices(), vec![DeviceSlot(0), DeviceSlot(1)]);
+
+    let mut bindings = BTreeMap::new();
+    for device in session.devices() {
+        bindings.insert(
+            device,
+            session
+                .bindings(device)
+                .expect("Fix: bind every placed device"),
+        );
+    }
+    let completions = session
+        .submit(bindings)
+        .expect("Fix: submit every device of the placement")
+        .wait()
+        .expect("Fix: complete every device of the placement");
+    assert_eq!(
+        completions
+            .iter()
+            .map(|(device, _)| *device)
+            .collect::<Vec<_>>(),
+        vec![DeviceSlot(0), DeviceSlot(1)]
+    );
+    assert!(completions
+        .iter()
+        .all(|(_, completion)| completion.artifact == neutral.digest()));
+
+    let Err(short) = MeshSession::new(
+        envelope.clone(),
+        vec![(DeviceSlot(0), mesh_materializer("mesh-device-0"))],
+        &peers,
+    ) else {
+        panic!("Fix: refuse a placement the caller cannot run in full");
+    };
+    assert!(
+        matches!(short, MeshSessionError::MissingDevice { device: 1 }),
+        "Fix: name the device the caller does not hold; got {short}"
+    );
+
+    let Err(stray) = MeshSession::new(
+        envelope,
+        vec![
+            (DeviceSlot(0), mesh_materializer("mesh-device-0")),
+            (DeviceSlot(1), mesh_materializer("mesh-device-1")),
+            (DeviceSlot(2), mesh_materializer("mesh-device-2")),
+        ],
+        &peers,
+    ) else {
+        panic!("Fix: refuse a device the placement never named");
+    };
+    assert!(
+        matches!(stray, MeshSessionError::UnplacedDevice { device: 2 }),
+        "Fix: name the device the placement omits; got {stray}"
+    );
+}
+
+/// WHY: a single-device session must not silently run a mesh placement. Every
+/// device of the placement holds shards, so one device's module computes a
+/// fraction of the program and reports it as the whole.
+#[test]
+fn a_mesh_placement_is_refused_by_single_device_admission() {
+    let (_, envelope) = mesh_envelope();
+    let mut partial = ArtifactEnvelope::new(envelope.neutral().clone());
+    partial
+        .attach_target_payload(envelope.target_payloads()[0].clone())
+        .expect("Fix: attach the anchor payload alone");
+
+    let error = admit_envelope(partial, &format("test.cache-target", 1))
+        .expect_err("Fix: refuse to admit one device of a mesh placement");
+
+    assert!(
+        error.to_string().contains("device 1"),
+        "Fix: the refusal must name the device with no payload; got {error}"
+    );
+}
+
+/// WHY: the runtime submits the transfers the placement recorded and routes
+/// nothing itself. A session that accepted a devices pair with no direct peer
+/// path would stage the bytes through the host, which is the fallback this
+/// compiler does not have, and the measured plan would not be the plan that ran.
+#[test]
+fn a_recorded_transfer_without_a_peer_path_is_refused() {
+    let (neutral, envelope) = mesh_envelope_over(collective_output_graph(8));
+    assert!(
+        !neutral.topology().transfers.is_empty(),
+        "Fix: the collective fixture must record routed transfers"
+    );
+    let devices = vec![
+        (DeviceSlot(0), mesh_materializer("mesh-device-0")),
+        (DeviceSlot(1), mesh_materializer("mesh-device-1")),
+    ];
+
+    let Err(error) = MeshSession::new(envelope, devices, &PeerTopology::new(2)) else {
+        panic!("Fix: refuse a recorded transfer the devices have no path for");
+    };
+
+    let MeshSessionError::UnroutableTransfer { from, to, bytes } = error else {
+        panic!("Fix: name the pair with no direct path; got {error}");
+    };
+    assert!(matches!((from, to), (0, 1) | (1, 0)));
+    assert!(
+        bytes > 0,
+        "Fix: the refusal states the bytes it would have moved"
+    );
+}
+
+/// WHY: a linked mesh must still submit its routed placement. Without this case
+/// the refusal above would pass on a session that refuses every mesh carrying a
+/// transfer, which is the same as having no multi-device path at all.
+#[test]
+fn a_routed_placement_submits_on_a_linked_mesh() {
+    let (neutral, envelope) = mesh_envelope_over(collective_output_graph(8));
+    let session = MeshSession::new(
+        envelope,
+        vec![
+            (DeviceSlot(0), mesh_materializer("mesh-device-0")),
+            (DeviceSlot(1), mesh_materializer("mesh-device-1")),
+        ],
+        &linked_peers(),
+    )
+    .expect("Fix: materialize a routed placement on a linked mesh");
+
+    let mut bindings = BTreeMap::new();
+    for device in session.devices() {
+        bindings.insert(
+            device,
+            session
+                .bindings(device)
+                .expect("Fix: bind every placed device"),
+        );
+    }
+    let completions = session
+        .submit(bindings)
+        .expect("Fix: submit the routed placement")
+        .wait()
+        .expect("Fix: complete the routed placement");
+
+    assert_eq!(completions.len(), 2);
+    assert!(completions
+        .iter()
+        .all(|(_, completion)| completion.artifact == neutral.digest()));
 }

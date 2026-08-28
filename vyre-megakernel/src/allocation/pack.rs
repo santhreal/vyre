@@ -12,7 +12,8 @@ use super::{
     REGION_ALIGNMENT,
 };
 use crate::error::{overflow, CompileError};
-use crate::identity::ArtifactValueId;
+use crate::identity::{ArtifactNodeId, ArtifactValueId};
+use crate::mesh::{MeshTopologyPlan, PartitionKind};
 use crate::schema::ResourceLifetime;
 use crate::DeviceFacts;
 
@@ -26,6 +27,8 @@ use crate::DeviceFacts;
 pub(crate) struct ValueFact {
     /// Canonical value identity.
     pub(crate) value: ArtifactValueId,
+    /// Node producing the value, absent when a caller binds it.
+    pub(crate) producer: Option<ArtifactNodeId>,
     /// Packed bytes the value occupies.
     pub(crate) bytes: u64,
     /// Packed bytes of one element.
@@ -65,6 +68,13 @@ impl ValueFact {
     }
 }
 
+/// One device's regions under construction.
+#[derive(Debug, Default)]
+struct DeviceSpace {
+    slots: Vec<Slot>,
+    caller: Vec<AllocationRegion>,
+}
+
 /// One region under construction, before offsets are assigned.
 #[derive(Debug)]
 struct Slot {
@@ -73,7 +83,13 @@ struct Slot {
     placements: Vec<ValuePlacement>,
 }
 
-/// Build the one allocation and layout plan for `values`.
+/// Build the one allocation and layout plan for `values` under `topology`.
+///
+/// Every device the topology places work on gets its own offset space, its own
+/// peak, and its own share of every value it holds. A partitioned value is
+/// distributed rather than duplicated: the shares sum to the byte total its
+/// resource row states, so the mesh holds one copy of the value however many
+/// devices compute it.
 ///
 /// # Errors
 ///
@@ -82,101 +98,52 @@ struct Slot {
 pub(crate) fn plan(
     values: &[ValueFact],
     device: DeviceFacts,
+    topology: &MeshTopologyPlan,
 ) -> Result<AllocationPlan, CompileError> {
-    let slot = DeviceSlot(0);
     let classes = alias_classes(values);
     let cache_capacity = device.cache_capacity_bytes();
+    let anchor = topology.devices().first().copied().unwrap_or(DeviceSlot(0));
 
     let mut order: Vec<usize> = (0..values.len())
         .filter(|index| values[*index].bytes > 0)
         .collect();
     order.sort_by_key(|index| (values[*index].first_stage, values[*index].value));
 
-    let mut slots: Vec<Slot> = Vec::new();
-    let mut caller: Vec<AllocationRegion> = Vec::new();
+    let mut spaces = std::collections::BTreeMap::<DeviceSlot, DeviceSpace>::new();
     for index in order {
         let fact = &values[index];
-        let mut placement = ValuePlacement {
-            value: fact.value,
-            byte_offset: 0,
-            bytes: fact.bytes,
-            lifetime: fact.lifetime,
-            alias_class: classes[index],
-            first_stage: fact.first_stage,
-            last_stage: fact.last_stage,
-            synchronized: fact.synchronized,
-            layout: fact.layout.clone(),
-            permits: PlacementPermits {
-                reuses: None,
-                in_place: fact.in_place,
-                rematerialize: fact.consumer_count <= 1
-                    && !fact.synchronized
-                    && fact.lifetime == ResourceLifetime::Invocation,
-                spill: cache_capacity > 0 && fact.bytes > cache_capacity,
-                prefetch: !fact.produced && fact.consumer_count > 0,
-            },
-        };
-        if !fact.owned_by_artifact() {
-            caller.push(AllocationRegion {
-                device: slot,
-                address_space: if fact.lifetime == ResourceLifetime::Constant {
-                    AddressSpace::Constant
-                } else {
-                    AddressSpace::Device
-                },
-                owner: RegionOwner::Caller,
-                offset: 0,
-                bytes: fact.bytes,
-                alignment: REGION_ALIGNMENT,
-                padding_bytes: 0,
-                placements: vec![placement],
-            });
-            continue;
+        for (slot, bytes) in shares(fact, topology, anchor) {
+            let space = spaces.entry(slot).or_default();
+            hold(space, fact, bytes, classes[index], cache_capacity, slot);
         }
-        let reused = slots.iter().position(|held| {
-            held.last_stage < fact.first_stage
-                && held.bytes >= fact.bytes
-                && held
-                    .placements
-                    .iter()
-                    .all(|prior| prior.alias_class != classes[index])
-        });
-        if let Some(existing) = reused {
-            placement.permits.reuses = slots[existing].placements.last().map(|prior| prior.value);
-            push(&mut slots[existing], placement);
-            continue;
-        }
-        slots.push(Slot {
-            bytes: fact.bytes,
-            last_stage: fact.last_stage,
-            placements: vec![placement],
-        });
     }
 
-    let mut regions = Vec::with_capacity(slots.len() + caller.len());
-    let mut next = 0u64;
-    for held in slots {
-        let offset = align(next)?;
-        let end = offset.checked_add(held.bytes).ok_or_else(|| {
-            overflow(
-                "planner.allocation.regions",
-                "region end exceeds the addressable range",
-            )
-        })?;
-        let padding = align(end)?.saturating_sub(end);
-        regions.push(AllocationRegion {
-            device: slot,
-            address_space: AddressSpace::Device,
-            owner: RegionOwner::Artifact,
-            offset,
-            bytes: held.bytes,
-            alignment: REGION_ALIGNMENT,
-            padding_bytes: padding,
-            placements: held.placements,
-        });
-        next = end;
+    let mut regions = Vec::new();
+    for (slot, space) in spaces {
+        let mut next = 0u64;
+        for held in space.slots {
+            let offset = align(next)?;
+            let end = offset.checked_add(held.bytes).ok_or_else(|| {
+                overflow(
+                    "planner.allocation.regions",
+                    "region end exceeds the addressable range",
+                )
+            })?;
+            let padding = align(end)?.saturating_sub(end);
+            regions.push(AllocationRegion {
+                device: slot,
+                address_space: AddressSpace::Device,
+                owner: RegionOwner::Artifact,
+                offset,
+                bytes: held.bytes,
+                alignment: REGION_ALIGNMENT,
+                padding_bytes: padding,
+                placements: held.placements,
+            });
+            next = end;
+        }
+        regions.extend(space.caller);
     }
-    regions.extend(caller);
     regions.sort_by_key(|region| {
         (
             region.device,
@@ -193,15 +160,165 @@ pub(crate) fn plan(
         device_peaks: Vec::new(),
         aggregate_peak_bytes: 0,
     };
-    let peak = plan.live_peak(slot, None)?;
-    plan.device_peaks = vec![DevicePeak {
-        device: slot,
-        peak_bytes: peak,
-        allocated_bytes: plan.owned_bytes(),
-    }];
-    plan.aggregate_peak_bytes = peak;
+    let mut placed = plan
+        .regions
+        .iter()
+        .map(|region| region.device)
+        .collect::<Vec<_>>();
+    placed.sort_unstable();
+    placed.dedup();
+    let mut aggregate = 0u64;
+    let mut device_peaks = Vec::with_capacity(placed.len());
+    for slot in placed {
+        let peak_bytes = plan.live_peak(slot, None)?;
+        let allocated_bytes = plan
+            .regions
+            .iter()
+            .filter(|region| region.device == slot && region.owner == RegionOwner::Artifact)
+            .try_fold(0u64, |total, region| {
+                total.checked_add(region.bytes).ok_or_else(|| {
+                    overflow(
+                        "planner.allocation.device_peaks",
+                        "device region sum exceeds u64",
+                    )
+                })
+            })?;
+        aggregate = aggregate.checked_add(peak_bytes).ok_or_else(|| {
+            overflow(
+                "planner.allocation.aggregate_peak_bytes",
+                "device peak sum exceeds u64",
+            )
+        })?;
+        device_peaks.push(DevicePeak {
+            device: slot,
+            peak_bytes,
+            allocated_bytes,
+        });
+    }
+    plan.device_peaks = device_peaks;
+    plan.aggregate_peak_bytes = aggregate;
     plan.validate()?;
     Ok(plan)
+}
+
+/// The bytes each device holds of one value.
+///
+/// A value the topology partitions is cut in the proportion the shards are cut,
+/// with the residual on the last shard, so the shares sum to the value's own
+/// byte total exactly. A value produced by a replicated region is held whole by
+/// every device that computes it, and a value no node produces is held by the
+/// anchor device the caller binds against.
+fn shares(
+    fact: &ValueFact,
+    topology: &MeshTopologyPlan,
+    anchor: DeviceSlot,
+) -> Vec<(DeviceSlot, u64)> {
+    let partition = fact.producer.and_then(|producer| {
+        topology
+            .partitions
+            .iter()
+            .find(|partition| partition.node == producer)
+    });
+    let Some(partition) = partition else {
+        return vec![(anchor, fact.bytes)];
+    };
+    if partition.kind == PartitionKind::Replicated || partition.region_points == 0 {
+        return partition
+            .shards
+            .iter()
+            .map(|shard| (shard.device, fact.bytes))
+            .collect();
+    }
+    let mut cut = Vec::with_capacity(partition.shards.len());
+    let mut consumed = 0u64;
+    let mut points = 0u64;
+    for (index, shard) in partition.shards.iter().enumerate() {
+        points = points.saturating_add(shard.points);
+        let end = if index + 1 == partition.shards.len() {
+            fact.bytes
+        } else {
+            u64::try_from(
+                u128::from(fact.bytes) * u128::from(points) / u128::from(partition.region_points),
+            )
+            .unwrap_or(fact.bytes)
+        };
+        let bytes = end.saturating_sub(consumed);
+        consumed = end;
+        if bytes > 0 {
+            cut.push((shard.device, bytes));
+        }
+    }
+    cut
+}
+
+/// Hold `bytes` of one value on one device, reusing a dead region when the
+/// alias and stage facts permit it.
+fn hold(
+    space: &mut DeviceSpace,
+    fact: &ValueFact,
+    bytes: u64,
+    alias_class: AliasClass,
+    cache_capacity: u64,
+    slot: DeviceSlot,
+) {
+    let mut placement = ValuePlacement {
+        value: fact.value,
+        byte_offset: 0,
+        bytes,
+        lifetime: fact.lifetime,
+        alias_class,
+        first_stage: fact.first_stage,
+        last_stage: fact.last_stage,
+        synchronized: fact.synchronized,
+        layout: fact.layout.clone(),
+        permits: PlacementPermits {
+            reuses: None,
+            in_place: fact.in_place,
+            rematerialize: fact.consumer_count <= 1
+                && !fact.synchronized
+                && fact.lifetime == ResourceLifetime::Invocation,
+            spill: cache_capacity > 0 && bytes > cache_capacity,
+            prefetch: !fact.produced && fact.consumer_count > 0,
+        },
+    };
+    if !fact.owned_by_artifact() {
+        space.caller.push(AllocationRegion {
+            device: slot,
+            address_space: if fact.lifetime == ResourceLifetime::Constant {
+                AddressSpace::Constant
+            } else {
+                AddressSpace::Device
+            },
+            owner: RegionOwner::Caller,
+            offset: 0,
+            bytes,
+            alignment: REGION_ALIGNMENT,
+            padding_bytes: 0,
+            placements: vec![placement],
+        });
+        return;
+    }
+    let reused = space.slots.iter().position(|held| {
+        held.last_stage < fact.first_stage
+            && held.bytes >= bytes
+            && held
+                .placements
+                .iter()
+                .all(|prior| prior.alias_class != alias_class)
+    });
+    if let Some(existing) = reused {
+        placement.permits.reuses = space.slots[existing]
+            .placements
+            .last()
+            .map(|prior| prior.value);
+        push(&mut space.slots[existing], placement);
+        return;
+    }
+    space.slots.push(Slot {
+        bytes,
+        last_stage: fact.last_stage,
+        placements: vec![placement],
+    });
 }
 
 fn push(slot: &mut Slot, placement: ValuePlacement) {

@@ -166,7 +166,7 @@ fn library_fixtures_are_canonical_semantic_registrations() {
                 unresolved_logical.join(", ")
             ));
         }
-        assert_eq!(LOGICAL_ALGORITHM_VERSION, 2);
+        assert_eq!(LOGICAL_ALGORITHM_VERSION, 4);
         assert_eq!(logical.regions().len(), 1, "{}", entry.id);
         let domain = &logical.regions()[0];
         assert_eq!(
