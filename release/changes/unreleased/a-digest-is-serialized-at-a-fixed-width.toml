@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Canonical records serialize a 256-bit identity as 64 lowercase hex characters, so an artifact's byte length no longer varies with the content of the hashes it carries, and the artifact schema is version 14."

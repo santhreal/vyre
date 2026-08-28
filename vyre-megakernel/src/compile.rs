@@ -14,7 +14,9 @@ use crate::measure::{
     ReplacementVerdict, SampleEstimate,
 };
 use crate::request::{SearchWork, ValidatedCompileRequest};
-use crate::request_identity::{RequestIdentity, REQUEST_DIGEST_DOMAIN, SOURCE_DIGEST_DOMAIN};
+use crate::request_identity::{
+    RequestIdentity, REQUEST_DIGEST_DOMAIN, SEMANTIC_DIGEST_DOMAIN, SOURCE_DIGEST_DOMAIN,
+};
 use crate::resource_records::{build_abi, build_resources};
 use crate::schema::encode_payload;
 use crate::schema::{
@@ -28,6 +30,7 @@ use crate::{artifact, candidate, cost, facts, normalize, search, select};
 struct CompileContext<'a> {
     logical: vyre_foundation::logical::LogicalProgramGraph<'a>,
     source_graph: Digest,
+    semantic_graph: Digest,
     nodes: Vec<NodeRecord>,
     dependencies: Vec<DependencyEdge>,
     facts: facts::PlanningFacts,
@@ -55,6 +58,17 @@ fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext<'_>, Comp
         )
     })?;
     let source_graph = domain_digest(SOURCE_DIGEST_DOMAIN, logical.semantic_wire());
+    let semantic_graph = domain_digest(
+        SEMANTIC_DIGEST_DOMAIN,
+        &logical.graph().to_wire().map_err(|error| {
+            failure(
+                CompilerFailureKind::InvalidProgram,
+                "request.graph",
+                error.to_string(),
+                "supply a graph whose values and contracts serialize canonically",
+            )
+        })?,
+    );
     let nodes = logical
         .graph()
         .nodes()
@@ -125,6 +139,7 @@ fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext<'_>, Comp
     Ok(CompileContext {
         logical,
         source_graph,
+        semantic_graph,
         nodes,
         dependencies,
         facts: planning_facts,
@@ -191,6 +206,7 @@ fn assemble(
         serde_json::to_vec(&RequestIdentity::from(request)).map_err(serialization_failure)?;
     let provenance = Provenance {
         source_graph: context.source_graph,
+        semantic_graph: context.semantic_graph,
         request: domain_digest(REQUEST_DIGEST_DOMAIN, &request_bytes),
         objective: request.objective,
         compiler_version: env!("CARGO_PKG_VERSION").to_string(),

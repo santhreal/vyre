@@ -25,7 +25,7 @@ pub use records::{
 };
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 13;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 14;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -435,6 +435,7 @@ mod tests {
             workspace: WorkspacePlan::default(),
             provenance: Provenance {
                 source_graph: Digest([0; 32]),
+                semantic_graph: Digest([0; 32]),
                 request: Digest([0; 32]),
                 objective: crate::objective::CompileObjective::minimize_latency(),
                 compiler_version: env!("CARGO_PKG_VERSION").to_string(),

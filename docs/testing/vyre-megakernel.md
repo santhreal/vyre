@@ -38,6 +38,8 @@ This crate declares no Cargo features.
 | `test` | `selected_geometry_authority` | `vyre-megakernel/tests/selected_geometry_authority.rs` | None | `./cargo_full test -p vyre-megakernel --test selected_geometry_authority` |
 | `test` | `selection_cost_contract` | `vyre-megakernel/tests/selection_cost_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test selection_cost_contract` |
 | `test` | `shared_tile_cost` | `vyre-megakernel/tests/shared_tile_cost.rs` | None | `./cargo_full test -p vyre-megakernel --test shared_tile_cost` |
+| `test` | `specialization_contract` | `vyre-megakernel/tests/specialization_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test specialization_contract` |
+| `test` | `specialization_portfolio` | `vyre-megakernel/tests/specialization_portfolio.rs` | None | `./cargo_full test -p vyre-megakernel --test specialization_portfolio` |
 | `test` | `target_payload_contract` | `vyre-megakernel/tests/target_payload_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test target_payload_contract` |
 | `test` | `topology_contract` | `vyre-megakernel/tests/topology_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test topology_contract` |
 

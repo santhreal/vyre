@@ -40,6 +40,138 @@ pub struct DeviceFacts {
     calibration_version: u16,
 }
 
+/// Serializable projection of every fact a plan is selected against.
+///
+/// The conversion below destructures [`DeviceFacts`] completely, so a fact added
+/// there stops this crate compiling until it is projected here. That is the
+/// point: a fact the compiler selects against and the identity omits lets two
+/// devices that disagree share one artifact, and the calibration version is
+/// exactly such a fact, because a recalibrated device prices every candidate
+/// differently while reporting the same capabilities.
+#[derive(serde::Serialize)]
+pub(crate) struct DeviceIdentity {
+    supports_subgroup_ops: bool,
+    supports_indirect_dispatch: bool,
+    supports_specialization_constants: bool,
+    supports_distributed_collectives: bool,
+    has_mul_high: bool,
+    has_dual_issue_fp32_int32: bool,
+    has_tensor_core_int: bool,
+    has_native_f16: bool,
+    has_warp_shuffle: bool,
+    has_shared_memory: bool,
+    has_transcendental_polynomial_emit: bool,
+    max_native_int_width: u32,
+    max_shared_memory_bytes: u32,
+    regs_per_thread_max: u32,
+    capability_subgroup_size: u32,
+    supports_tensor_cores: bool,
+    supports_cooperative_launch: bool,
+    supports_device_timestamps: bool,
+    supports_spatial_partitioning: bool,
+    compute_units: u32,
+    concurrent_queues: u32,
+    max_invocations_per_workgroup: u32,
+    registers_per_invocation: u32,
+    shared_scratch_bytes_per_workgroup: u32,
+    per_launch_overhead_ns: u64,
+    persistent_setup_overhead_ns: u64,
+    peak_bandwidth_bytes_per_ns: u64,
+    calibrated_materialization_throughput_bytes_per_ns: u64,
+    architectural_registers_per_invocation: u32,
+    cache_capacity_bytes: u64,
+    compute_throughput_ops_per_ns: u64,
+    tensor_throughput_ops_per_ns: u64,
+    barrier_ns: u64,
+    grid_sync_ns: u64,
+    subgroup_size: u32,
+    calibration_version: u16,
+}
+
+impl From<DeviceFacts> for DeviceIdentity {
+    fn from(facts: DeviceFacts) -> Self {
+        let DeviceFacts {
+            capabilities,
+            supports_cooperative_launch,
+            supports_device_timestamps,
+            supports_spatial_partitioning,
+            compute_units,
+            concurrent_queues,
+            max_invocations_per_workgroup,
+            registers_per_invocation,
+            shared_scratch_bytes_per_workgroup,
+            per_launch_overhead_ns,
+            persistent_setup_overhead_ns,
+            peak_bandwidth_bytes_per_ns,
+            calibrated_materialization_throughput_bytes_per_ns,
+            architectural_registers_per_invocation,
+            cache_capacity_bytes,
+            compute_throughput_ops_per_ns,
+            tensor_throughput_ops_per_ns,
+            barrier_ns,
+            grid_sync_ns,
+            subgroup_size,
+            calibration_version,
+        } = facts;
+        let BackendCapabilities {
+            supports_subgroup_ops,
+            supports_indirect_dispatch,
+            supports_specialization_constants,
+            supports_distributed_collectives,
+            has_mul_high,
+            has_dual_issue_fp32_int32,
+            has_tensor_core_int,
+            has_native_f16,
+            has_warp_shuffle,
+            has_shared_memory,
+            has_transcendental_polynomial_emit,
+            max_native_int_width,
+            max_shared_memory_bytes,
+            regs_per_thread_max,
+            subgroup_size: capability_subgroup_size,
+            supports_tensor_cores,
+        } = capabilities;
+        Self {
+            supports_subgroup_ops,
+            supports_indirect_dispatch,
+            supports_specialization_constants,
+            supports_distributed_collectives,
+            has_mul_high,
+            has_dual_issue_fp32_int32,
+            has_tensor_core_int,
+            has_native_f16,
+            has_warp_shuffle,
+            has_shared_memory,
+            has_transcendental_polynomial_emit,
+            max_native_int_width,
+            max_shared_memory_bytes,
+            regs_per_thread_max,
+            capability_subgroup_size,
+            supports_tensor_cores,
+            supports_cooperative_launch,
+            supports_device_timestamps,
+            supports_spatial_partitioning,
+            compute_units,
+            concurrent_queues,
+            max_invocations_per_workgroup,
+            registers_per_invocation,
+            shared_scratch_bytes_per_workgroup,
+            per_launch_overhead_ns,
+            persistent_setup_overhead_ns,
+            peak_bandwidth_bytes_per_ns,
+            calibrated_materialization_throughput_bytes_per_ns,
+            architectural_registers_per_invocation,
+            cache_capacity_bytes,
+            compute_throughput_ops_per_ns,
+            tensor_throughput_ops_per_ns,
+            barrier_ns,
+            grid_sync_ns,
+            subgroup_size,
+            calibration_version,
+        }
+    }
+}
+
 impl DeviceFacts {
     /// Facts for a caller that has no device.
     ///

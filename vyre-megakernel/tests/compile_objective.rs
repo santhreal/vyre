@@ -899,20 +899,36 @@ fn a_production_request_must_state_an_artifact_byte_ceiling() {
 /// WHY: the ceiling is enforced where the figure is real, on the serialized
 /// artifact, and the failure keeps its own code so a caller can tell a
 /// too-large artifact from a plan that violated a ranking bound.
+///
+/// The artifact states the bound it was compiled under, so the boundary is the
+/// fixed point where the stated bound equals the resulting length.
 #[test]
 fn an_artifact_over_the_stated_byte_ceiling_fails_as_an_artifact_limit() {
-    let artifact =
-        compile(&request(latency()).validate().expect("must validate")).expect("must compile");
-    let len = artifact.to_bytes().expect("must serialize").len() as u64;
-    let error = compile(
-        &request(
-            CompileObjective::minimize_latency()
-                .with_bound(ObjectiveMetric::ArtifactBytes, len - 1),
+    let bounded = |bytes: u64| {
+        request(
+            CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, bytes),
         )
         .validate()
-        .expect("must validate"),
-    )
-    .err()
-    .expect("one byte short must fail");
+        .expect("must validate")
+    };
+    let mut limit = 1_000_000;
+    let mut exact = None;
+    for _ in 0..8 {
+        let len = compile(&bounded(limit))
+            .expect("must compile")
+            .to_bytes()
+            .expect("must serialize")
+            .len() as u64;
+        if len == limit {
+            exact = Some(limit);
+            break;
+        }
+        limit = len;
+    }
+    let exact = exact.expect("the artifact length must settle on the bound it states");
+
+    let error = compile(&bounded(exact - 1))
+        .err()
+        .expect("one byte short must fail");
     assert_eq!(error.diagnostic.code.as_str(), "MKC013_ARTIFACT_LIMIT");
 }

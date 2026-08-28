@@ -143,16 +143,19 @@ crate would be correct for the device it was copied from and silently wrong for
 the next one, while a report computed from it is indistinguishable from a
 measured finding.
 
-The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 13`. Schema 13 adds
-the objective the plan was selected under and the width of the legal Pareto
-frontier it was selected from. Schema 13 records
-the selected launch of every entry point: the entry dependency order, logical
-coverage, grid, workgroup, vector width, pipeline roles, ring slots, barrier
-phases, dynamic shared bytes, launch resource intent, and persistence, together
-with the workspace plan a runtime allocates, the grammar derivation that produced
-the plan, and the certificate of the search that selected it. A target payload
-states the same geometry or admission rejects it, and emission carries the
-recorded launch rather than reporting one.
+The current artifact schema is `ARTIFACT_SCHEMA_VERSION = 14`. Schema 14 adds the
+identity of the graph before any symbolic binding resolved it, so a guarded set
+of variants compiled over several extents of one graph proves it is one product,
+and states every digest at a fixed width so an artifact's canonical byte length
+does not move with the content of a hash. Schema 13 added the objective the plan
+was selected under and the width of the legal Pareto frontier it was selected
+from. The schema records the selected launch of every entry point: the entry
+dependency order, logical coverage, grid, workgroup, vector width, pipeline
+roles, ring slots, barrier phases, dynamic shared bytes, launch resource intent,
+and persistence, together with the workspace plan a runtime allocates, the
+grammar derivation that produced the plan, and the certificate of the search that
+selected it. A target payload states the same geometry or admission rejects it,
+and emission carries the recorded launch rather than reporting one.
 
 ## Candidate generation is a grammar
 
@@ -411,6 +414,48 @@ serves.
 Partitions are enumerated as restricted growth strings, so each set partition is
 enumerated once instead of once per relabelling of its parts, and the assignment
 one compile reports is canonical.
+
+## What a variant is selected by is stated
+
+A workload class states how a launch is arranged. It does not state what shape
+the data has, so the retained set above cannot say which artifact is correct for
+which input. That is what the specialization contract states, at
+`SPECIALIZATION_SCHEMA_VERSION = 1`.
+
+A contract declares axes and a domain for each. An axis is a typed fact: a
+symbolic graph dimension, the layout or density class of a graph value, retained
+state, launch batch, concurrency, a constant's content identity, an authenticated
+target capability, or a target resource fact. No axis carries a caller-supplied
+display name, so a model name or a family branch cannot enter a compiler,
+backend, artifact, or runtime signature; application information reaches the
+compiler as the configuration digest and as graph identity.
+
+A `VariantGuard` is a conjunction of terms over those axes plus a precedence. Two
+proofs decide whether a guard set is usable, and both are computed rather than
+asserted. Guards that are not provably disjoint must carry distinct precedence.
+Guard bounds cut each axis domain into cells, and every cell must be admitted by
+some guard or served by a generic remainder; a gap with an unsupported remainder
+is `MKC036_GUARD_COVERAGE_GAP`.
+
+`compile_specialized_portfolio` scores every subset of the proposed guards the
+variant ceiling admits, including the empty subset, so the unspecialized baseline
+stays in the candidate set and a variant that buys less than it costs is not
+retained. Each retained variant is compiled from the request narrowed by its
+guard, so its schedule may differ structurally from the generic one. The figure
+of a set is each member's figure weighted by the part of the domain it serves.
+
+A `PortfolioEnvelope` seals the contract, every variant with its guard, and the
+remainder as one authenticated product for one target identity. Members must
+agree on the graph before any binding resolved it, on the objective, on the
+compiler version, and on the artifact schema. Decoding re-runs both proofs, so an
+edited guard set does not decode.
+
+A runtime admits the whole set for one required payload format and one
+authenticated target identity, then selects by evaluating guards over trusted
+facts. Facts outside the declared domain are refused with
+`MKC039_UNSUPPORTED_WORKLOAD` rather than served by the remainder, which was
+compiled for that domain. Selection returns a member that was compiled and scored
+before admission; nothing after the compile alters a schedule.
 
 ## The cost model is open
 

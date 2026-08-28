@@ -60,8 +60,18 @@ pub(crate) const TARGET_PAYLOAD: Frame = Frame {
     digest_mismatch: CompilerFailureKind::TargetPayloadDigestMismatch,
 };
 
+/// Frame around the envelope that carries one guarded artifact set.
+pub(crate) const PORTFOLIO: Frame = Frame {
+    magic: b"VMP0",
+    version: crate::specialization::PORTFOLIO_ENVELOPE_SCHEMA_VERSION,
+    domain: b"vyre-megakernel-portfolio-v1\0",
+    path: "portfolio",
+    version_skew: CompilerFailureKind::VersionSkew,
+    digest_mismatch: CompilerFailureKind::DigestMismatch,
+};
+
 /// Every frame this crate emits, so a rule can be proved against all of them.
-pub(crate) const FRAMES: &[&Frame] = &[&ARTIFACT, &ENVELOPE, &TARGET_PAYLOAD];
+pub(crate) const FRAMES: &[&Frame] = &[&ARTIFACT, &ENVELOPE, &TARGET_PAYLOAD, &PORTFOLIO];
 
 /// Framed bytes and the identity stamped into them.
 pub(crate) struct Framed {

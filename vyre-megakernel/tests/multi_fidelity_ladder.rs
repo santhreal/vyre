@@ -647,10 +647,16 @@ fn a_finalist_over_the_register_ceiling_is_eliminated_before_measurement() {
 /// WHY: an authenticated winner is what makes a compilation reproducible across
 /// sessions on one device. A re-run under the same protocol and the same priced
 /// fact set must return the recorded winner even when this session's samples
-/// favour a rival inside the equivalence band, and a recalibrated fact set must
-/// be the one thing that sets that winner aside, because the figures the ranking
-/// paid with changed. Without the fact-set version the two cases are
-/// indistinguishable and a recalibration silently never takes effect.
+/// favour a rival inside the equivalence band, and a record priced by another
+/// fact set must be set aside, because the figures the ranking paid with
+/// changed.
+///
+/// The stale case stamps another fact-set version onto a record whose candidate
+/// identities are this session's own, so the fact-set comparison is the only
+/// thing that can refuse it. A record from a differently calibrated device would
+/// also carry candidate identities this session never emitted, and would be set
+/// aside by the identity lookup whether or not the fact-set version was ever
+/// read.
 #[test]
 fn a_recorded_winner_stands_until_the_priced_fact_set_is_recalibrated() {
     const CALIBRATION: u16 = 4;
@@ -691,13 +697,14 @@ fn a_recorded_winner_stands_until_the_priced_fact_set_is_recalibrated() {
         "an unchanged protocol and fact set must return the authenticated winner"
     );
 
-    let recalibrated_device = timed_device().with_calibration_version(CALIBRATION + 1);
-    let recalibrated = measured_recompile(recalibrated_device, &evaluator, recorded)
-        .expect("a recalibrated fact set must still compile");
+    let mut stale = recorded;
+    stale.environment.facts_calibration_version = CALIBRATION - 1;
+    let recalibrated =
+        measured_recompile(device, &evaluator, stale).expect("a stale record must still compile");
     assert_eq!(
         measured_winner(&recalibrated),
         canonical,
-        "a recalibrated fact set must let this session's own selection stand"
+        "a record priced by another fact set must let this session's own selection stand"
     );
 }
 

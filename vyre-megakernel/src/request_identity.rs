@@ -3,21 +3,24 @@
 use std::collections::BTreeMap;
 
 use serde::Serialize;
-use vyre_foundation::validate::BackendCapabilities;
 
+use crate::device_facts::DeviceIdentity;
 use crate::identity::{domain_digest, Digest};
 use crate::objective::CompileObjective;
 use crate::request::{SearchBudget, ValidatedCompileRequest};
+use crate::DeviceFacts;
 
 pub(crate) const SOURCE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-source-v2\0";
-pub(crate) const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v5\0";
+pub(crate) const SEMANTIC_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-semantic-graph-v1\0";
+pub(crate) const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v6\0";
 pub(crate) const REPRESENTATIVE_INPUT_DOMAIN: &[u8] = b"vyre-megakernel-representative-input-v1\0";
+const TARGET_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-target-v1\0";
 /// Every fact that makes one compilation of one graph produce one artifact.
 ///
 /// Device facts belong here because the plan is selected against them: the same
 /// graph compiled for a device with a different capability snapshot, invocation
-/// limit, occupancy budget, or launch cost is a different compilation and must
-/// not reuse a cached artifact.
+/// limit, occupancy budget, launch cost, or calibration version is a different
+/// compilation and must not reuse a cached artifact.
 #[derive(Serialize)]
 pub(crate) struct RequestIdentity<'a> {
     configuration_digest: Digest,
@@ -27,76 +30,36 @@ pub(crate) struct RequestIdentity<'a> {
     expected_launch_batch: u32,
     objective: CompileObjective,
     search_budget: SearchBudget,
-    device_capabilities: DeviceCapabilityIdentity,
-    device_cooperative_launch: bool,
-    device_timestamps: bool,
-    device_spatial_partitioning: bool,
-    device_compute_units: u32,
-    device_concurrent_queues: u32,
-    device_max_invocations_per_workgroup: u32,
-    device_registers_per_invocation: u32,
-    device_shared_scratch_bytes_per_workgroup: u32,
-    device_per_launch_overhead_ns: u64,
-    device_persistent_setup_overhead_ns: u64,
+    device: DeviceIdentity,
 }
 
-/// Serializable projection of the live capability snapshot.
+/// The identity of one target a guarded artifact set was compiled for.
 ///
-/// [`BackendCapabilities`] is owned by the foundation validator and carries no
-/// serialization, so artifact identity projects every field it exposes. A field
-/// added there and not added here would silently share one artifact identity
-/// between two devices that disagree.
-#[derive(Serialize)]
-struct DeviceCapabilityIdentity {
-    supports_subgroup_ops: bool,
-    supports_indirect_dispatch: bool,
-    supports_specialization_constants: bool,
-    supports_distributed_collectives: bool,
-    has_mul_high: bool,
-    has_dual_issue_fp32_int32: bool,
-    has_tensor_core_int: bool,
-    has_native_f16: bool,
-    has_warp_shuffle: bool,
-    has_shared_memory: bool,
-    has_transcendental_polynomial_emit: bool,
-    max_native_int_width: u32,
-}
-
-impl From<BackendCapabilities> for DeviceCapabilityIdentity {
-    fn from(capabilities: BackendCapabilities) -> Self {
-        let BackendCapabilities {
-            supports_subgroup_ops,
-            supports_indirect_dispatch,
-            supports_specialization_constants,
-            supports_distributed_collectives,
-            has_mul_high,
-            has_dual_issue_fp32_int32,
-            has_tensor_core_int,
-            has_native_f16,
-            has_warp_shuffle,
-            has_shared_memory,
-            has_transcendental_polynomial_emit,
-            max_native_int_width,
-            supports_tensor_cores: _,
-            max_shared_memory_bytes: _,
-            regs_per_thread_max: _,
-            subgroup_size: _,
-        } = capabilities;
-        Self {
-            supports_subgroup_ops,
-            supports_indirect_dispatch,
-            supports_specialization_constants,
-            supports_distributed_collectives,
-            has_mul_high,
-            has_dual_issue_fp32_int32,
-            has_tensor_core_int,
-            has_native_f16,
-            has_warp_shuffle,
-            has_shared_memory,
-            has_transcendental_polynomial_emit,
-            max_native_int_width,
-        }
+/// A consumer holding a set has to establish that the device in front of it is
+/// the device the set was compiled for before it evaluates a single guard: a
+/// variant selected on a capability the device does not have is a launch that
+/// fails, and one selected on a stale calibration is a launch priced against a
+/// device that no longer exists. The objective participates because two sets
+/// compiled for one device under different objectives answer different
+/// questions.
+#[must_use]
+pub fn target_identity(device: DeviceFacts, objective: &CompileObjective) -> Digest {
+    #[derive(Serialize)]
+    struct TargetIdentity {
+        device: DeviceIdentity,
+        objective: CompileObjective,
+        compiler_version: &'static str,
     }
+    let body = serde_json::to_vec(&TargetIdentity {
+        device: device.into(),
+        objective: *objective,
+        compiler_version: env!("CARGO_PKG_VERSION"),
+    })
+    .expect(
+        "Fix: keep every target identity field an integer, string, or fixed array; a map with \
+         non-string keys or a floating-point field is what makes this encoding fail.",
+    );
+    domain_digest(TARGET_DIGEST_DOMAIN, &body)
 }
 
 impl<'a> From<&'a ValidatedCompileRequest> for RequestIdentity<'a> {
@@ -124,19 +87,7 @@ impl<'a> From<&'a ValidatedCompileRequest> for RequestIdentity<'a> {
             expected_launch_batch: request.facts.expected_launch_batch,
             objective: request.objective,
             search_budget: request.search_budget,
-            device_capabilities: request.device.capabilities().into(),
-            device_cooperative_launch: request.device.supports_cooperative_launch(),
-            device_timestamps: request.device.supports_device_timestamps(),
-            device_spatial_partitioning: request.device.supports_spatial_partitioning(),
-            device_compute_units: request.device.compute_units(),
-            device_concurrent_queues: request.device.concurrent_queues(),
-            device_max_invocations_per_workgroup: request.device.max_invocations_per_workgroup(),
-            device_registers_per_invocation: request.device.registers_per_invocation(),
-            device_shared_scratch_bytes_per_workgroup: request
-                .device
-                .shared_scratch_bytes_per_workgroup(),
-            device_per_launch_overhead_ns: request.device.per_launch_overhead_ns(),
-            device_persistent_setup_overhead_ns: request.device.persistent_setup_overhead_ns(),
+            device: request.device.into(),
         }
     }
 }

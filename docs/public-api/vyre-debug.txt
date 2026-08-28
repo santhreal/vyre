@@ -66,6 +66,7 @@ pub vyre_debug::ArtifactReport::artifact: alloc::string::String
 pub vyre_debug::ArtifactReport::compiler_version: alloc::string::String
 pub vyre_debug::ArtifactReport::request: alloc::string::String
 pub vyre_debug::ArtifactReport::selected_plan: vyre_megakernel::schema::plan::SelectedPlan
+pub vyre_debug::ArtifactReport::semantic_graph: alloc::string::String
 pub vyre_debug::ArtifactReport::source_graph: alloc::string::String
 pub vyre_debug::ArtifactReport::targets: alloc::vec::Vec<vyre_debug::TargetPayloadReport>
 pub vyre_debug::BindResultLogError::Open(core::io::error::Error)

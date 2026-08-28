@@ -215,8 +215,18 @@ pub struct MaterializationRecord {
 /// the plan inside it was selected to optimize.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Provenance {
-    /// Canonical source-graph content identity.
+    /// Canonical identity of the resolved logical program.
+    ///
+    /// Resolved, so it moves with the extents the request's symbolic bindings
+    /// gave the graph: two compiles of one graph over different extents are
+    /// different logical programs and get different identities here.
     pub source_graph: Digest,
+    /// Canonical identity of the graph before any binding resolved it.
+    ///
+    /// Extent-independent, which is what lets a set of variants compiled for
+    /// different shapes of one graph prove it is one product. A guarded set
+    /// agrees on this and disagrees on [`Self::source_graph`] by construction.
+    pub semantic_graph: Digest,
     /// Canonical validated-request identity.
     pub request: Digest,
     /// Objective the recorded plan was selected under.

@@ -12,7 +12,11 @@ impl core::default::Default for vyre_megakernel::ObjectiveBounds
 impl core::default::Default for vyre_megakernel::PortfolioPolicy
 impl core::default::Default for vyre_megakernel::WorkloadProfile
 impl core::error::Error for vyre_megakernel::ResourceNameCollision
+impl core::fmt::Debug for vyre_megakernel::Digest
+impl core::fmt::Display for vyre_megakernel::Digest
 impl core::fmt::Display for vyre_megakernel::ResourceNameCollision
+impl core::fmt::Display for vyre_megakernel::specialization::axis::SpecializationAxis
+impl serde_core::ser::Serialize for vyre_megakernel::Digest
 impl vyre_megakernel::Artifact
 impl vyre_megakernel::ArtifactEnvelope
 impl vyre_megakernel::ArtifactPortfolio
@@ -57,7 +61,22 @@ impl vyre_megakernel::measure::MeasurementEnvironment
 impl vyre_megakernel::measure::MeasurementProtocol
 impl vyre_megakernel::measure::MeasurementRecord
 impl vyre_megakernel::measure::SampleEstimate
+impl vyre_megakernel::specialization::CoverageProof
+impl vyre_megakernel::specialization::RemainderKind
+impl vyre_megakernel::specialization::SpecializationContract
+impl vyre_megakernel::specialization::axis::AxisValue
+impl vyre_megakernel::specialization::axis::SpecializationAxis
+impl vyre_megakernel::specialization::axis::TargetCapabilityAxis
+impl vyre_megakernel::specialization::axis::TargetResourceAxis
+impl vyre_megakernel::specialization::envelope::PortfolioEnvelope
+impl vyre_megakernel::specialization::guard::AxisDomain
+impl vyre_megakernel::specialization::guard::GuardTerm
+impl vyre_megakernel::specialization::guard::VariantGuard
+impl vyre_megakernel::specialization::portfolio::PortfolioVariant
+impl vyre_megakernel::specialization::portfolio::SpecializedPortfolio
+impl vyre_megakernel::specialization::portfolio::SpecializedRemainder
 impl<'a> vyre_megakernel::SemanticExecutionRequest<'a>
+impl<'de> serde_core::de::Deserialize<'de> for vyre_megakernel::Digest
 pub const fn vyre_megakernel::Artifact::abi(&self) -> &vyre_megakernel::ArtifactAbi
 pub const fn vyre_megakernel::Artifact::digest(&self) -> vyre_megakernel::Digest
 pub const fn vyre_megakernel::Artifact::provenance(&self) -> &vyre_megakernel::Provenance
@@ -208,6 +227,40 @@ pub const fn vyre_megakernel::measure::MeasurementProtocol::rounds_exhausted(&se
 pub const fn vyre_megakernel::measure::MeasurementProtocol::rounds_sufficient(&self, rounds: u32) -> bool
 pub const fn vyre_megakernel::measure::SampleEstimate::is_settled(&self, protocol: &vyre_megakernel::measure::MeasurementProtocol) -> bool
 pub const fn vyre_megakernel::measure::SampleEstimate::relative_uncertainty_permille(&self) -> u32
+pub const fn vyre_megakernel::specialization::CoverageProof::cells(&self) -> usize
+pub const fn vyre_megakernel::specialization::CoverageProof::covered(&self) -> usize
+pub const fn vyre_megakernel::specialization::CoverageProof::gaps(&self) -> usize
+pub const fn vyre_megakernel::specialization::CoverageProof::is_complete(&self) -> bool
+pub const fn vyre_megakernel::specialization::CoverageProof::remainder(&self) -> vyre_megakernel::specialization::RemainderKind
+pub const fn vyre_megakernel::specialization::RemainderKind::name(self) -> &'static str
+pub const fn vyre_megakernel::specialization::SpecializationContract::axes(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_megakernel::specialization::axis::SpecializationAxis, vyre_megakernel::specialization::guard::AxisDomain>
+pub const fn vyre_megakernel::specialization::SpecializationContract::schema_version(&self) -> u16
+pub const fn vyre_megakernel::specialization::axis::AxisValue::identity(self) -> core::option::Option<vyre_megakernel::Digest>
+pub const fn vyre_megakernel::specialization::axis::AxisValue::scalar(self) -> core::option::Option<u64>
+pub const fn vyre_megakernel::specialization::axis::SpecializationAxis::is_identity_axis(&self) -> bool
+pub const fn vyre_megakernel::specialization::axis::TargetCapabilityAxis::name(self) -> &'static str
+pub const fn vyre_megakernel::specialization::axis::TargetResourceAxis::name(self) -> &'static str
+pub const fn vyre_megakernel::specialization::axis::TargetResourceAxis::read(self, device: vyre_megakernel::DeviceFacts) -> u64
+pub const fn vyre_megakernel::specialization::envelope::PortfolioEnvelope::contract(&self) -> &vyre_megakernel::specialization::SpecializationContract
+pub const fn vyre_megakernel::specialization::envelope::PortfolioEnvelope::new(contract: vyre_megakernel::specialization::SpecializationContract, remainder_kind: vyre_megakernel::specialization::RemainderKind, target_identity: vyre_megakernel::Digest) -> Self
+pub const fn vyre_megakernel::specialization::envelope::PortfolioEnvelope::remainder(&self) -> core::option::Option<&vyre_megakernel::ArtifactEnvelope>
+pub const fn vyre_megakernel::specialization::envelope::PortfolioEnvelope::remainder_kind(&self) -> vyre_megakernel::specialization::RemainderKind
+pub const fn vyre_megakernel::specialization::envelope::PortfolioEnvelope::target_identity(&self) -> vyre_megakernel::Digest
+pub const fn vyre_megakernel::specialization::guard::AxisDomain::is_identity_domain(&self) -> bool
+pub const fn vyre_megakernel::specialization::guard::GuardTerm::axis(&self) -> &vyre_megakernel::specialization::axis::SpecializationAxis
+pub const fn vyre_megakernel::specialization::guard::VariantGuard::precedence(&self) -> u16
+pub const fn vyre_megakernel::specialization::portfolio::PortfolioVariant::artifact(&self) -> &vyre_megakernel::Artifact
+pub const fn vyre_megakernel::specialization::portfolio::PortfolioVariant::bytes(&self) -> u64
+pub const fn vyre_megakernel::specialization::portfolio::PortfolioVariant::guard(&self) -> &vyre_megakernel::specialization::guard::VariantGuard
+pub const fn vyre_megakernel::specialization::portfolio::PortfolioVariant::served_cells(&self) -> usize
+pub const fn vyre_megakernel::specialization::portfolio::SpecializedPortfolio::aggregate_bytes(&self) -> u64
+pub const fn vyre_megakernel::specialization::portfolio::SpecializedPortfolio::contract(&self) -> &vyre_megakernel::specialization::SpecializationContract
+pub const fn vyre_megakernel::specialization::portfolio::SpecializedPortfolio::objective(&self) -> &vyre_megakernel::CompileObjective
+pub const fn vyre_megakernel::specialization::portfolio::SpecializedPortfolio::proof(&self) -> &vyre_megakernel::specialization::CoverageProof
+pub const fn vyre_megakernel::specialization::portfolio::SpecializedPortfolio::remainder(&self) -> &vyre_megakernel::specialization::portfolio::SpecializedRemainder
+pub const fn vyre_megakernel::specialization::portfolio::SpecializedRemainder::artifact(&self) -> core::option::Option<&vyre_megakernel::Artifact>
+pub const fn vyre_megakernel::specialization::portfolio::SpecializedRemainder::bytes(&self) -> u64
+pub const fn vyre_megakernel::specialization::portfolio::SpecializedRemainder::kind(&self) -> vyre_megakernel::specialization::RemainderKind
 pub const vyre_megakernel::ARTIFACT_ENVELOPE_SCHEMA_VERSION: u16
 pub const vyre_megakernel::ARTIFACT_SCHEMA_VERSION: u16
 pub const vyre_megakernel::CoveragePolicy::ALL: &'static [Self]
@@ -227,6 +280,16 @@ pub const vyre_megakernel::WorkloadProfile::CAPACITY: usize
 pub const vyre_megakernel::cost::TERMS: &[vyre_megakernel::cost::CostTerm]
 pub const vyre_megakernel::measure::MEASUREMENT_PROTOCOL_VERSION: u16
 pub const vyre_megakernel::measure::MeasurementProtocol::V1: Self
+pub const vyre_megakernel::specialization::MAX_COVERAGE_CELLS: usize
+pub const vyre_megakernel::specialization::MAX_PROPOSED_VARIANTS: usize
+pub const vyre_megakernel::specialization::PORTFOLIO_ENVELOPE_SCHEMA_VERSION: u16
+pub const vyre_megakernel::specialization::RemainderKind::ALL: &'static [Self]
+pub const vyre_megakernel::specialization::SPECIALIZATION_SCHEMA_VERSION: u16
+pub const vyre_megakernel::specialization::axis::TargetCapabilityAxis::ALL: &'static [Self]
+pub const vyre_megakernel::specialization::axis::TargetResourceAxis::ALL: &'static [Self]
+pub const vyre_megakernel::specialization::envelope::PORTFOLIO_ENVELOPE_SCHEMA_VERSION: u16
+pub const vyre_megakernel::specialization::guard::MAX_COVERAGE_CELLS: usize
+pub const vyre_megakernel::specialization::portfolio::MAX_PROPOSED_VARIANTS: usize
 pub enum vyre_megakernel::AbiAccess
 pub enum vyre_megakernel::DependencyEndpoint
 pub enum vyre_megakernel::DependencyKind
@@ -246,6 +309,21 @@ pub enum vyre_megakernel::cost::CostUnit
 pub enum vyre_megakernel::legality::FusionDecision
 pub enum vyre_megakernel::measure::ReplacementVerdict
 pub enum vyre_megakernel::measure::ThrottleState
+pub enum vyre_megakernel::specialization::AxisDomain
+pub enum vyre_megakernel::specialization::AxisValue
+pub enum vyre_megakernel::specialization::GuardTerm
+pub enum vyre_megakernel::specialization::RemainderKind
+pub enum vyre_megakernel::specialization::SpecializationAxis
+pub enum vyre_megakernel::specialization::SpecializedRemainder
+pub enum vyre_megakernel::specialization::TargetCapabilityAxis
+pub enum vyre_megakernel::specialization::TargetResourceAxis
+pub enum vyre_megakernel::specialization::axis::AxisValue
+pub enum vyre_megakernel::specialization::axis::SpecializationAxis
+pub enum vyre_megakernel::specialization::axis::TargetCapabilityAxis
+pub enum vyre_megakernel::specialization::axis::TargetResourceAxis
+pub enum vyre_megakernel::specialization::guard::AxisDomain
+pub enum vyre_megakernel::specialization::guard::GuardTerm
+pub enum vyre_megakernel::specialization::portfolio::SpecializedRemainder
 pub fn vyre_megakernel::Artifact::barriers(&self) -> &[vyre_megakernel::BarrierRecord]
 pub fn vyre_megakernel::Artifact::canonical_value_by_name(&self) -> core::result::Result<alloc::collections::btree::map::BTreeMap<&str, vyre_megakernel::ArtifactValueId>, vyre_megakernel::ResourceNameCollision>
 pub fn vyre_megakernel::Artifact::dependencies(&self) -> &[vyre_megakernel::DependencyEdge]
@@ -275,6 +353,10 @@ pub fn vyre_megakernel::CompileObjective::validate(&self, device: vyre_megakerne
 pub fn vyre_megakernel::CompileRequest::validate(self) -> core::result::Result<vyre_megakernel::ValidatedCompileRequest, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::CompileRequest::with_recorded_measurement(self, recorded_measurement: vyre_megakernel::measure::MeasurementRecord) -> Self
 pub fn vyre_megakernel::CompileRequest::with_representative_inputs(self, representative_inputs: alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::vec::Vec<u8>>) -> Self
+pub fn vyre_megakernel::Digest::deserialize<D: serde_core::de::Deserializer<'de>>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+pub fn vyre_megakernel::Digest::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_megakernel::Digest::serialize<S: serde_core::ser::Serializer>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+pub fn vyre_megakernel::Digest::to_hex(self) -> alloc::string::String
 pub fn vyre_megakernel::ExecutionTopology::default() -> Self
 pub fn vyre_megakernel::ExternalFacts::new(configuration_digest: vyre_megakernel::Digest, symbolic_bindings: alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>) -> Self
 pub fn vyre_megakernel::ExternalFacts::with_expected_launch_batch(self, expected_launch_batch: u32) -> Self
@@ -354,6 +436,36 @@ pub fn vyre_megakernel::measure::MeasurementRecord::winning_launches(&self) -> u
 pub fn vyre_megakernel::measure::SampleEstimate::from_samples(samples: &[u64], protocol: &vyre_megakernel::measure::MeasurementProtocol) -> core::option::Option<Self>
 pub fn vyre_megakernel::measure::improves(incumbent: &vyre_megakernel::measure::SampleEstimate, challenger: &vyre_megakernel::measure::SampleEstimate, protocol: &vyre_megakernel::measure::MeasurementProtocol) -> bool
 pub fn vyre_megakernel::registered_level_stage() -> vyre_spec::ir_level::IrLevel
+pub fn vyre_megakernel::specialization::CoverageProof::first_gap(&self) -> core::option::Option<&str>
+pub fn vyre_megakernel::specialization::CoverageProof::served(&self) -> &[usize]
+pub fn vyre_megakernel::specialization::SpecializationContract::admits_facts(&self, facts: &alloc::collections::btree::map::BTreeMap<vyre_megakernel::specialization::axis::SpecializationAxis, vyre_megakernel::specialization::axis::AxisValue>) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::SpecializationContract::new(axes: alloc::collections::btree::map::BTreeMap<vyre_megakernel::specialization::axis::SpecializationAxis, vyre_megakernel::specialization::guard::AxisDomain>) -> core::result::Result<Self, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::SpecializationContract::prove(&self, guards: &[vyre_megakernel::specialization::guard::VariantGuard], remainder: vyre_megakernel::specialization::RemainderKind) -> core::result::Result<vyre_megakernel::specialization::CoverageProof, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::SpecializationContract::validate_for(&self, request: &vyre_megakernel::ValidatedCompileRequest) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::SpecializationContract::validate_guard(&self, guard: &vyre_megakernel::specialization::guard::VariantGuard) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::axis::SpecializationAxis::field(&self) -> alloc::string::String
+pub fn vyre_megakernel::specialization::axis::SpecializationAxis::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_megakernel::specialization::axis::TargetCapabilityAxis::read(self, device: vyre_megakernel::DeviceFacts) -> bool
+pub fn vyre_megakernel::specialization::compile_specialized_portfolio(request: &vyre_megakernel::ValidatedCompileRequest, contract: &vyre_megakernel::specialization::SpecializationContract, proposals: &[vyre_megakernel::specialization::guard::VariantGuard], remainder: vyre_megakernel::specialization::RemainderKind) -> core::result::Result<vyre_megakernel::specialization::portfolio::SpecializedPortfolio, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::compile_specialized_portfolio_measured(request: &vyre_megakernel::ValidatedCompileRequest, contract: &vyre_megakernel::specialization::SpecializationContract, proposals: &[vyre_megakernel::specialization::guard::VariantGuard], remainder: vyre_megakernel::specialization::RemainderKind, evaluator: &dyn vyre_megakernel::FinalistEvaluator) -> core::result::Result<vyre_megakernel::specialization::portfolio::SpecializedPortfolio, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::envelope::PortfolioEnvelope::attach_remainder(&mut self, envelope: vyre_megakernel::ArtifactEnvelope) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::envelope::PortfolioEnvelope::attach_variant(&mut self, guard: vyre_megakernel::specialization::guard::VariantGuard, envelope: vyre_megakernel::ArtifactEnvelope) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::envelope::PortfolioEnvelope::evaluation_order(&self) -> alloc::vec::Vec<usize>
+pub fn vyre_megakernel::specialization::envelope::PortfolioEnvelope::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::envelope::PortfolioEnvelope::require_target_identity(&self, identity: vyre_megakernel::Digest) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::envelope::PortfolioEnvelope::seal(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::envelope::PortfolioEnvelope::to_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::envelope::PortfolioEnvelope::variants(&self) -> &[(vyre_megakernel::specialization::guard::VariantGuard, vyre_megakernel::ArtifactEnvelope)]
+pub fn vyre_megakernel::specialization::guard::AxisDomain::admits(&self, value: vyre_megakernel::specialization::axis::AxisValue) -> bool
+pub fn vyre_megakernel::specialization::guard::VariantGuard::admits_facts(&self, facts: &alloc::collections::btree::map::BTreeMap<vyre_megakernel::specialization::axis::SpecializationAxis, vyre_megakernel::specialization::axis::AxisValue>) -> core::result::Result<bool, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::guard::VariantGuard::new(terms: alloc::vec::Vec<vyre_megakernel::specialization::guard::GuardTerm>, precedence: u16) -> Self
+pub fn vyre_megakernel::specialization::guard::VariantGuard::terms(&self) -> &[vyre_megakernel::specialization::guard::GuardTerm]
+pub fn vyre_megakernel::specialization::portfolio::SpecializedPortfolio::select(&self, facts: &alloc::collections::btree::map::BTreeMap<vyre_megakernel::specialization::axis::SpecializationAxis, vyre_megakernel::specialization::axis::AxisValue>) -> core::result::Result<&vyre_megakernel::Artifact, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::portfolio::SpecializedPortfolio::variants(&self) -> &[vyre_megakernel::specialization::portfolio::PortfolioVariant]
+pub fn vyre_megakernel::specialization::portfolio::compile_specialized_portfolio(request: &vyre_megakernel::ValidatedCompileRequest, contract: &vyre_megakernel::specialization::SpecializationContract, proposals: &[vyre_megakernel::specialization::guard::VariantGuard], remainder: vyre_megakernel::specialization::RemainderKind) -> core::result::Result<vyre_megakernel::specialization::portfolio::SpecializedPortfolio, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::specialization::portfolio::compile_specialized_portfolio_measured(request: &vyre_megakernel::ValidatedCompileRequest, contract: &vyre_megakernel::specialization::SpecializationContract, proposals: &[vyre_megakernel::specialization::guard::VariantGuard], remainder: vyre_megakernel::specialization::RemainderKind, evaluator: &dyn vyre_megakernel::FinalistEvaluator) -> core::result::Result<vyre_megakernel::specialization::portfolio::SpecializedPortfolio, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::target_identity(device: vyre_megakernel::DeviceFacts, objective: &vyre_megakernel::CompileObjective) -> vyre_megakernel::Digest
+pub fn vyre_megakernel::unsupported_workload(message: alloc::string::String) -> vyre_megakernel::CompileError
 pub fn vyre_megakernel::writable_graph_value_buffers(node: &vyre_foundation::ir_inner::model::program_graph::ProgramGraphNode) -> alloc::vec::Vec<(vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::string::String)>
 pub fn vyre_megakernel::writable_graph_values(node: &vyre_foundation::ir_inner::model::program_graph::ProgramGraphNode) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program_graph::GraphValueId>
 pub mod vyre_megakernel
@@ -362,6 +474,11 @@ pub mod vyre_megakernel::cost
 pub mod vyre_megakernel::grid_sync
 pub mod vyre_megakernel::legality
 pub mod vyre_megakernel::measure
+pub mod vyre_megakernel::specialization
+pub mod vyre_megakernel::specialization::axis
+pub mod vyre_megakernel::specialization::envelope
+pub mod vyre_megakernel::specialization::guard
+pub mod vyre_megakernel::specialization::portfolio
 pub struct vyre_megakernel::Artifact
 pub struct vyre_megakernel::ArtifactAbi
 pub struct vyre_megakernel::ArtifactEnvelope
@@ -432,6 +549,16 @@ pub struct vyre_megakernel::measure::MeasurementEnvironment
 pub struct vyre_megakernel::measure::MeasurementProtocol
 pub struct vyre_megakernel::measure::MeasurementRecord
 pub struct vyre_megakernel::measure::SampleEstimate
+pub struct vyre_megakernel::specialization::CoverageProof
+pub struct vyre_megakernel::specialization::PortfolioEnvelope
+pub struct vyre_megakernel::specialization::PortfolioVariant
+pub struct vyre_megakernel::specialization::SpecializationContract
+pub struct vyre_megakernel::specialization::SpecializedPortfolio
+pub struct vyre_megakernel::specialization::VariantGuard
+pub struct vyre_megakernel::specialization::envelope::PortfolioEnvelope
+pub struct vyre_megakernel::specialization::guard::VariantGuard
+pub struct vyre_megakernel::specialization::portfolio::PortfolioVariant
+pub struct vyre_megakernel::specialization::portfolio::SpecializedPortfolio
 pub trait vyre_megakernel::FinalistEvaluator
 pub trait vyre_megakernel::SemanticExecutor: core::marker::Send + core::marker::Sync
 pub trait vyre_megakernel::TargetCompiler: core::marker::Send + core::marker::Sync
@@ -546,6 +673,7 @@ pub vyre_megakernel::PlanMeasurement::UntimedDevice
 pub vyre_megakernel::Provenance::compiler_version: alloc::string::String
 pub vyre_megakernel::Provenance::objective: vyre_megakernel::CompileObjective
 pub vyre_megakernel::Provenance::request: vyre_megakernel::Digest
+pub vyre_megakernel::Provenance::semantic_graph: vyre_megakernel::Digest
 pub vyre_megakernel::Provenance::source_graph: vyre_megakernel::Digest
 pub vyre_megakernel::PruneReason::AliasOrEffect
 pub vyre_megakernel::PruneReason::BarrierVisibility
@@ -789,3 +917,133 @@ pub vyre_megakernel::measure::SampleEstimate::uncertainty_ns: u64
 pub vyre_megakernel::measure::ThrottleState::Clear
 pub vyre_megakernel::measure::ThrottleState::Throttled
 pub vyre_megakernel::measure::ThrottleState::Unreported
+pub vyre_megakernel::specialization::AxisDomain::Boolean
+pub vyre_megakernel::specialization::AxisDomain::Identities
+pub vyre_megakernel::specialization::AxisDomain::Identities::identities: alloc::collections::btree::set::BTreeSet<vyre_megakernel::Digest>
+pub vyre_megakernel::specialization::AxisDomain::Interval
+pub vyre_megakernel::specialization::AxisDomain::Interval::high: u64
+pub vyre_megakernel::specialization::AxisDomain::Interval::low: u64
+pub vyre_megakernel::specialization::AxisDomain::Members
+pub vyre_megakernel::specialization::AxisDomain::Members::members: alloc::collections::btree::set::BTreeSet<u64>
+pub vyre_megakernel::specialization::AxisValue::Identity(vyre_megakernel::Digest)
+pub vyre_megakernel::specialization::AxisValue::Scalar(u64)
+pub vyre_megakernel::specialization::GuardTerm::DivisibleBy
+pub vyre_megakernel::specialization::GuardTerm::DivisibleBy::axis: vyre_megakernel::specialization::axis::SpecializationAxis
+pub vyre_megakernel::specialization::GuardTerm::DivisibleBy::divisor: u64
+pub vyre_megakernel::specialization::GuardTerm::Identity
+pub vyre_megakernel::specialization::GuardTerm::Identity::axis: vyre_megakernel::specialization::axis::SpecializationAxis
+pub vyre_megakernel::specialization::GuardTerm::Identity::identity: vyre_megakernel::Digest
+pub vyre_megakernel::specialization::GuardTerm::InRange
+pub vyre_megakernel::specialization::GuardTerm::InRange::axis: vyre_megakernel::specialization::axis::SpecializationAxis
+pub vyre_megakernel::specialization::GuardTerm::InRange::high: u64
+pub vyre_megakernel::specialization::GuardTerm::InRange::low: u64
+pub vyre_megakernel::specialization::GuardTerm::OneOf
+pub vyre_megakernel::specialization::GuardTerm::OneOf::axis: vyre_megakernel::specialization::axis::SpecializationAxis
+pub vyre_megakernel::specialization::GuardTerm::OneOf::members: alloc::collections::btree::set::BTreeSet<u64>
+pub vyre_megakernel::specialization::RemainderKind::Generic
+pub vyre_megakernel::specialization::RemainderKind::Unsupported
+pub vyre_megakernel::specialization::SpecializationAxis::Concurrency
+pub vyre_megakernel::specialization::SpecializationAxis::ConstantIdentity
+pub vyre_megakernel::specialization::SpecializationAxis::ConstantIdentity::value: u32
+pub vyre_megakernel::specialization::SpecializationAxis::LaunchBatch
+pub vyre_megakernel::specialization::SpecializationAxis::RetainedState
+pub vyre_megakernel::specialization::SpecializationAxis::SymbolicDimension
+pub vyre_megakernel::specialization::SpecializationAxis::SymbolicDimension::dimension: alloc::string::String
+pub vyre_megakernel::specialization::SpecializationAxis::TargetCapability
+pub vyre_megakernel::specialization::SpecializationAxis::TargetCapability::capability: vyre_megakernel::specialization::axis::TargetCapabilityAxis
+pub vyre_megakernel::specialization::SpecializationAxis::TargetResource
+pub vyre_megakernel::specialization::SpecializationAxis::TargetResource::resource: vyre_megakernel::specialization::axis::TargetResourceAxis
+pub vyre_megakernel::specialization::SpecializationAxis::ValueDensity
+pub vyre_megakernel::specialization::SpecializationAxis::ValueDensity::value: u32
+pub vyre_megakernel::specialization::SpecializationAxis::ValueLayout
+pub vyre_megakernel::specialization::SpecializationAxis::ValueLayout::value: u32
+pub vyre_megakernel::specialization::SpecializedRemainder::Generic
+pub vyre_megakernel::specialization::SpecializedRemainder::Generic::artifact: vyre_megakernel::Artifact
+pub vyre_megakernel::specialization::SpecializedRemainder::Generic::bytes: u64
+pub vyre_megakernel::specialization::SpecializedRemainder::Unsupported
+pub vyre_megakernel::specialization::TargetCapabilityAxis::CooperativeLaunch
+pub vyre_megakernel::specialization::TargetCapabilityAxis::DeviceTimestamps
+pub vyre_megakernel::specialization::TargetCapabilityAxis::DistributedCollectives
+pub vyre_megakernel::specialization::TargetCapabilityAxis::DualIssueFp32Int32
+pub vyre_megakernel::specialization::TargetCapabilityAxis::IndirectDispatch
+pub vyre_megakernel::specialization::TargetCapabilityAxis::MulHigh
+pub vyre_megakernel::specialization::TargetCapabilityAxis::NativeF16
+pub vyre_megakernel::specialization::TargetCapabilityAxis::SharedMemory
+pub vyre_megakernel::specialization::TargetCapabilityAxis::SpatialPartitioning
+pub vyre_megakernel::specialization::TargetCapabilityAxis::SpecializationConstants
+pub vyre_megakernel::specialization::TargetCapabilityAxis::SubgroupOps
+pub vyre_megakernel::specialization::TargetCapabilityAxis::TensorCoreInt
+pub vyre_megakernel::specialization::TargetCapabilityAxis::TensorCores
+pub vyre_megakernel::specialization::TargetCapabilityAxis::TranscendentalPolynomialEmit
+pub vyre_megakernel::specialization::TargetCapabilityAxis::WarpShuffle
+pub vyre_megakernel::specialization::TargetResourceAxis::CacheCapacityBytes
+pub vyre_megakernel::specialization::TargetResourceAxis::ComputeUnits
+pub vyre_megakernel::specialization::TargetResourceAxis::ConcurrentQueues
+pub vyre_megakernel::specialization::TargetResourceAxis::MaxInvocationsPerWorkgroup
+pub vyre_megakernel::specialization::TargetResourceAxis::RegistersPerInvocation
+pub vyre_megakernel::specialization::TargetResourceAxis::SharedScratchBytesPerWorkgroup
+pub vyre_megakernel::specialization::TargetResourceAxis::SubgroupSize
+pub vyre_megakernel::specialization::axis::AxisValue::Identity(vyre_megakernel::Digest)
+pub vyre_megakernel::specialization::axis::AxisValue::Scalar(u64)
+pub vyre_megakernel::specialization::axis::SpecializationAxis::Concurrency
+pub vyre_megakernel::specialization::axis::SpecializationAxis::ConstantIdentity
+pub vyre_megakernel::specialization::axis::SpecializationAxis::ConstantIdentity::value: u32
+pub vyre_megakernel::specialization::axis::SpecializationAxis::LaunchBatch
+pub vyre_megakernel::specialization::axis::SpecializationAxis::RetainedState
+pub vyre_megakernel::specialization::axis::SpecializationAxis::SymbolicDimension
+pub vyre_megakernel::specialization::axis::SpecializationAxis::SymbolicDimension::dimension: alloc::string::String
+pub vyre_megakernel::specialization::axis::SpecializationAxis::TargetCapability
+pub vyre_megakernel::specialization::axis::SpecializationAxis::TargetCapability::capability: vyre_megakernel::specialization::axis::TargetCapabilityAxis
+pub vyre_megakernel::specialization::axis::SpecializationAxis::TargetResource
+pub vyre_megakernel::specialization::axis::SpecializationAxis::TargetResource::resource: vyre_megakernel::specialization::axis::TargetResourceAxis
+pub vyre_megakernel::specialization::axis::SpecializationAxis::ValueDensity
+pub vyre_megakernel::specialization::axis::SpecializationAxis::ValueDensity::value: u32
+pub vyre_megakernel::specialization::axis::SpecializationAxis::ValueLayout
+pub vyre_megakernel::specialization::axis::SpecializationAxis::ValueLayout::value: u32
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::CooperativeLaunch
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::DeviceTimestamps
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::DistributedCollectives
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::DualIssueFp32Int32
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::IndirectDispatch
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::MulHigh
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::NativeF16
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::SharedMemory
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::SpatialPartitioning
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::SpecializationConstants
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::SubgroupOps
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::TensorCoreInt
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::TensorCores
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::TranscendentalPolynomialEmit
+pub vyre_megakernel::specialization::axis::TargetCapabilityAxis::WarpShuffle
+pub vyre_megakernel::specialization::axis::TargetResourceAxis::CacheCapacityBytes
+pub vyre_megakernel::specialization::axis::TargetResourceAxis::ComputeUnits
+pub vyre_megakernel::specialization::axis::TargetResourceAxis::ConcurrentQueues
+pub vyre_megakernel::specialization::axis::TargetResourceAxis::MaxInvocationsPerWorkgroup
+pub vyre_megakernel::specialization::axis::TargetResourceAxis::RegistersPerInvocation
+pub vyre_megakernel::specialization::axis::TargetResourceAxis::SharedScratchBytesPerWorkgroup
+pub vyre_megakernel::specialization::axis::TargetResourceAxis::SubgroupSize
+pub vyre_megakernel::specialization::guard::AxisDomain::Boolean
+pub vyre_megakernel::specialization::guard::AxisDomain::Identities
+pub vyre_megakernel::specialization::guard::AxisDomain::Identities::identities: alloc::collections::btree::set::BTreeSet<vyre_megakernel::Digest>
+pub vyre_megakernel::specialization::guard::AxisDomain::Interval
+pub vyre_megakernel::specialization::guard::AxisDomain::Interval::high: u64
+pub vyre_megakernel::specialization::guard::AxisDomain::Interval::low: u64
+pub vyre_megakernel::specialization::guard::AxisDomain::Members
+pub vyre_megakernel::specialization::guard::AxisDomain::Members::members: alloc::collections::btree::set::BTreeSet<u64>
+pub vyre_megakernel::specialization::guard::GuardTerm::DivisibleBy
+pub vyre_megakernel::specialization::guard::GuardTerm::DivisibleBy::axis: vyre_megakernel::specialization::axis::SpecializationAxis
+pub vyre_megakernel::specialization::guard::GuardTerm::DivisibleBy::divisor: u64
+pub vyre_megakernel::specialization::guard::GuardTerm::Identity
+pub vyre_megakernel::specialization::guard::GuardTerm::Identity::axis: vyre_megakernel::specialization::axis::SpecializationAxis
+pub vyre_megakernel::specialization::guard::GuardTerm::Identity::identity: vyre_megakernel::Digest
+pub vyre_megakernel::specialization::guard::GuardTerm::InRange
+pub vyre_megakernel::specialization::guard::GuardTerm::InRange::axis: vyre_megakernel::specialization::axis::SpecializationAxis
+pub vyre_megakernel::specialization::guard::GuardTerm::InRange::high: u64
+pub vyre_megakernel::specialization::guard::GuardTerm::InRange::low: u64
+pub vyre_megakernel::specialization::guard::GuardTerm::OneOf
+pub vyre_megakernel::specialization::guard::GuardTerm::OneOf::axis: vyre_megakernel::specialization::axis::SpecializationAxis
+pub vyre_megakernel::specialization::guard::GuardTerm::OneOf::members: alloc::collections::btree::set::BTreeSet<u64>
+pub vyre_megakernel::specialization::portfolio::SpecializedRemainder::Generic
+pub vyre_megakernel::specialization::portfolio::SpecializedRemainder::Generic::artifact: vyre_megakernel::Artifact
+pub vyre_megakernel::specialization::portfolio::SpecializedRemainder::Generic::bytes: u64
+pub vyre_megakernel::specialization::portfolio::SpecializedRemainder::Unsupported

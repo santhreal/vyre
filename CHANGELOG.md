@@ -53,6 +53,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   longer pass as coverage. A gate whose honest output is a note is declared
   with the gate that carries its failing form, and the sweep also fails a
   declaration whose gate can find or whose name is not registered.
+- A specialized portfolio is admitted only when its guards are provably
+  disjoint or ordered by precedence and every declared workload cell is served
+  by a variant or by a generic remainder.
 - `vyre_driver::launch_fixtures::wide_limits` states the launch-geometry limits
   a preparation or tuning test runs under, so such a test names only the
   backend and the per-compute-unit thread budget.
@@ -103,6 +106,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   sweep reports a workflow step that names a script the checkout does not
   carry, which is what every script this campaign deletes leaves behind: a step
   that fails at run time under a name that still reads as coverage.
+- A guarded artifact set states the target identity it was compiled for, and
+  admission rejects a set whose authenticated target is a different device or
+  objective before any guard is evaluated.
 - plan_adaptive_traversal_step and plan_adaptive_dense_step return the
   traversal step selected for measured graph statistics, together with the
   byte-tile table the Four-Russians kernel binds.
@@ -112,6 +118,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Region alternatives are derived from the algebraic laws a combine registers
   and composed by a bounded expansion over an expression e-graph, so a declared
   law contributes rewrites without an operation-specific recipe.
+- An artifact records the identity of its graph before any symbolic binding
+  resolved it, so a guarded set compiled over several extents of one graph
+  proves it is one product.
 - The source-include-module gate reports include! of a tracked Rust file. A
   pasted file has no module path, so a name it defines cannot be qualified, its
   items sit in the including module's namespace, and the reachability rules
@@ -568,6 +577,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `single_invocation_region` build the entry of a serial kernel: one anonymous
   composition region whose body runs on invocation zero of axis zero. The shape
   was written out by hand in every serial primitive.
+- A versioned specialization contract states which typed facts a compile may
+  specialize on, and rejects a variant guard that reads an undeclared axis or
+  states values the axis domain does not admit.
 - `structure-gate` derives the set of crates that submit `inventory`
   registrations from the tree and rejects any `use <that crate> as _;` in
   workspace sources, naming `vyre-registry-link` as the way to read the
@@ -754,6 +766,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   range precondition alongside the injectivity one: an entry naming a block at
   or past the block count addresses past the cache, and neither guard can bound
   it.
+- Canonical records serialize a 256-bit identity as 64 lowercase hex
+  characters, so an artifact's byte length no longer varies with the content of
+  the hashes it carries, and the artifact schema is version 14.
 - A dispatch carries one complete launch, so a resident step submits the
   workgroup it states instead of running its grid under the program's declared
   shape.
@@ -5163,6 +5178,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   nine-parameter builder and its too_many_arguments allow are gone, as are
   three further allows on Scallop provenance dispatch entry points that were
   already under the argument threshold.
+- Variant selection refuses a workload outside the domain the specialization
+  contract declares instead of serving it from the generic remainder compiled
+  for that domain.
 - The worktree-lifetime gate's own test resolves the checkout with
   `structure_gate::workspace_root` instead of the manifest directory baked in
   at compile time, so a unit reused across checkouts that share a target

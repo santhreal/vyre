@@ -218,7 +218,7 @@ fn occupancy_exceeded_rejects_resident_partition_candidate() {
 // ============================================================================
 
 #[test]
-fn artifact_encoding_preserves_schema_12_and_compiled_topology_schedule() {
+fn artifact_encoding_preserves_the_pinned_schema_and_compiled_topology_schedule() {
     let graph = independent_two_arm_graph();
     let device = device_default().with_concurrent_queues(4);
 
@@ -234,7 +234,7 @@ fn artifact_encoding_preserves_schema_12_and_compiled_topology_schedule() {
 
     let artifact = compile(&request).expect("compilation must succeed");
     assert_eq!(artifact.schema_version(), ARTIFACT_SCHEMA_VERSION);
-    assert_eq!(artifact.schema_version(), 13);
+    assert_eq!(artifact.schema_version(), 14);
 
     let wire_bytes = artifact.to_bytes().expect("artifact must encode");
     let decoded = Artifact::from_bytes(&wire_bytes).expect("artifact must decode");

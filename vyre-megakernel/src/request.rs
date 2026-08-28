@@ -353,6 +353,41 @@ impl ValidatedCompileRequest {
             recorded_measurement: self.recorded_measurement.clone(),
         }
     }
+
+    /// The same validated request under narrowed external facts.
+    ///
+    /// A specialization variant is this graph and this device compiled for a
+    /// pinned dimension or a stated submission arrangement. Only the facts move,
+    /// so only the fact validations run again: the graph already passed
+    /// structural, capability and device admission, and re-running the grid-fence
+    /// cut over an already cut graph would be a second answer to a question that
+    /// was settled.
+    pub(crate) fn restated_facts(&self, facts: ExternalFacts) -> Result<Self, CompileError> {
+        if facts.expected_launch_batch == 0 {
+            return Err(failure(
+                CompilerFailureKind::InvalidDeviceFacts,
+                "request.facts.expected_launch_batch",
+                "expected launch batch is zero, so the artifact would never run",
+                "supply the number of launches the caller will submit, at least one",
+            ));
+        }
+        validate_bindings(&self.graph, &facts.symbolic_bindings)?;
+        validate_constant_identities(&self.graph, &facts.constant_identities)?;
+        validate_representative_inputs(
+            &self.graph,
+            &self.representative_inputs,
+            &facts.symbolic_bindings,
+        )?;
+        Ok(Self {
+            graph: self.graph.clone(),
+            facts,
+            device: self.device,
+            objective: self.objective,
+            search_budget: self.search_budget,
+            representative_inputs: self.representative_inputs.clone(),
+            recorded_measurement: self.recorded_measurement.clone(),
+        })
+    }
 }
 
 fn validate_bindings(

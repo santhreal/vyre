@@ -42,6 +42,7 @@ The crate lives at `vyre-runtime`. The `runtime` owner maintains its
 | `test` | `multi_tenant_scheduler` | `vyre-runtime/tests/multi_tenant_scheduler.rs` | None | `./cargo_full test -p vyre-runtime --test multi_tenant_scheduler` |
 | `test` | `paged_prefix_mtp_contracts` | `vyre-runtime/tests/paged_prefix_mtp_contracts.rs` | None | `./cargo_full test -p vyre-runtime --test paged_prefix_mtp_contracts` |
 | `test` | `pipeline_fingerprint_surface` | `vyre-runtime/tests/pipeline_fingerprint_surface.rs` | None | `./cargo_full test -p vyre-runtime --test pipeline_fingerprint_surface` |
+| `test` | `portfolio_admission_contract` | `vyre-runtime/tests/portfolio_admission_contract.rs` | None | `./cargo_full test -p vyre-runtime --test portfolio_admission_contract` |
 | `test` | `registry_closure` | `vyre-runtime/tests/registry_closure.rs` | None | `./cargo_full test -p vyre-runtime --test registry_closure` |
 | `test` | `replay_log` | `vyre-runtime/tests/replay_log.rs` | None | `./cargo_full test -p vyre-runtime --test replay_log` |
 | `test` | `resident_queue_contracts` | `vyre-runtime/tests/resident_queue_contracts.rs` | None | `./cargo_full test -p vyre-runtime --test resident_queue_contracts` |

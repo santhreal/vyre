@@ -58,6 +58,7 @@ impl vyre_megakernel::execution::SemanticExecutor for vyre_runtime::RegisteredSe
 impl vyre_runtime::PipelineError
 impl vyre_runtime::RegisteredSemanticExecutor
 impl vyre_runtime::artifact_admission::AdmittedArtifact
+impl vyre_runtime::artifact_admission::AdmittedPortfolio
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl vyre_runtime::artifact_admission::ArtifactSession
 impl vyre_runtime::artifact_admission::ArtifactWorkspace
@@ -173,6 +174,10 @@ pub const fn vyre_runtime::RegisteredSemanticExecutor::new(registration: &'stati
 pub const fn vyre_runtime::RegisteredSemanticExecutor::registration(&self) -> &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::envelope(&self) -> &vyre_megakernel::envelope::ArtifactEnvelope
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) -> &vyre_megakernel::schema::Artifact
+pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::contract(&self) -> &vyre_megakernel::specialization::SpecializationContract
+pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::remainder(&self) -> core::option::Option<&vyre_runtime::artifact_admission::AdmittedArtifact>
+pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::remainder_kind(&self) -> vyre_megakernel::specialization::RemainderKind
+pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::target_identity(&self) -> vyre_megakernel::identity::Digest
 pub const fn vyre_runtime::artifact_admission::ArtifactAdmissionError::diagnostic(&self) -> &vyre_foundation::diagnostics::Diagnostic
 pub const fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::accounting(&self) -> &vyre_driver::peer_transfer::PeerTransferAccounting
 pub const fn vyre_runtime::mtp::MtpCoordinator::config(&self) -> &vyre_runtime::mtp::MtpConfig
@@ -406,6 +411,8 @@ pub fn vyre_runtime::UringCompletionPump<'a>::request_shutdown(&mut self)
 pub fn vyre_runtime::UringCompletionPump<'a>::with_uring(self, stream: vyre_runtime::uring::AsyncUringStream<'a>) -> Self
 pub fn vyre_runtime::artifact_admission::AdmittedArtifact::into_envelope(self) -> vyre_megakernel::envelope::ArtifactEnvelope
 pub fn vyre_runtime::artifact_admission::AdmittedArtifact::target_payload(&self) -> &vyre_megakernel::envelope::TargetPayload
+pub fn vyre_runtime::artifact_admission::AdmittedPortfolio::select(&self, facts: &alloc::collections::btree::map::BTreeMap<vyre_megakernel::specialization::axis::SpecializationAxis, vyre_megakernel::specialization::axis::AxisValue>) -> core::result::Result<&vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
+pub fn vyre_runtime::artifact_admission::AdmittedPortfolio::variants(&self) -> &[(vyre_megakernel::specialization::guard::VariantGuard, vyre_runtime::artifact_admission::AdmittedArtifact)]
 pub fn vyre_runtime::artifact_admission::ArtifactAdmissionError::from(source: vyre_megakernel::error::CompileError) -> Self
 pub fn vyre_runtime::artifact_admission::ArtifactAdmissionError::into_compile_error(self) -> vyre_megakernel::error::CompileError
 pub fn vyre_runtime::artifact_admission::ArtifactSession::allocate_resident(&self, byte_len: usize) -> core::result::Result<vyre_driver::backend::resource::Resource, vyre_runtime::artifact_admission::ArtifactSessionError>
@@ -449,6 +456,7 @@ pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::submit_and_wai
 pub fn vyre_runtime::artifact_admission::admit_artifact(envelope_bytes: &[u8], required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_cached_artifact(store: &dyn vyre_runtime::pipeline_cache::PipelineCacheStore, fingerprint: &vyre_runtime::pipeline_cache::PipelineFingerprint, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::AdmittedArtifact>, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_envelope(envelope: vyre_megakernel::envelope::ArtifactEnvelope, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
+pub fn vyre_runtime::artifact_admission::admit_portfolio(portfolio_bytes: &[u8], required_format: &vyre_megakernel::envelope::TargetPayloadFormat, target_identity: vyre_megakernel::identity::Digest) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedPortfolio, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::new(topology: vyre_driver::peer_transfer::PeerTopology) -> Self
 pub fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::route_all_to_all(&mut self, tokens: alloc::vec::Vec<vyre_runtime::expert_scheduling::InterDeviceToken>) -> core::result::Result<alloc::collections::btree::map::BTreeMap<u32, alloc::vec::Vec<vyre_runtime::expert_scheduling::InterDeviceToken>>, vyre_runtime::expert_scheduling::ExpertSchedulingError>
 pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits::default() -> Self
@@ -1040,6 +1048,7 @@ pub mod vyre_runtime::uring
 pub struct vyre_runtime::RegisteredSemanticExecutor
 pub struct vyre_runtime::UringCompletionPump<'a>
 pub struct vyre_runtime::artifact_admission::AdmittedArtifact
+pub struct vyre_runtime::artifact_admission::AdmittedPortfolio
 pub struct vyre_runtime::artifact_admission::ArtifactAdmissionError
 pub struct vyre_runtime::artifact_admission::ArtifactSession
 pub struct vyre_runtime::artifact_admission::ArtifactWorkspace

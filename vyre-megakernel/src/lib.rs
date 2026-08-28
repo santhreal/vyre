@@ -59,6 +59,9 @@ mod resource_records;
 mod schema;
 mod search;
 mod select;
+/// Which facts a compile may specialize on, the guards that select one variant,
+/// and the authenticated set a consumer admits whole.
+pub mod specialization;
 /// Target compiler facets over compiler-selected modules and canonical ABI.
 pub(crate) mod target;
 
@@ -72,7 +75,7 @@ pub use envelope::{
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
     ARTIFACT_ENVELOPE_SCHEMA_VERSION, TARGET_PAYLOAD_SCHEMA_VERSION,
 };
-pub use error::CompileError;
+pub use error::{unsupported_workload, CompileError};
 pub use execution::{
     execute_single_program, writable_graph_value_buffers, writable_graph_values,
     SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
@@ -93,6 +96,7 @@ pub use portfolio::{compile_portfolio, compile_portfolio_measured, ArtifactPortf
 pub use request::{
     CompileRequest, ExternalFacts, SearchBudget, SearchWork, ValidatedCompileRequest,
 };
+pub use request_identity::target_identity;
 pub use schema::{
     AbiAccess, Artifact, ArtifactAbi, BarrierPhaseRecord, BarrierRecord, EntryAbiRecord,
     EntryPersistence, EntryResourceBinding, ExecutionMode, FusionRecord, FusionRejection,

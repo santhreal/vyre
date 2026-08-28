@@ -624,11 +624,34 @@ fn zero_mandatory_search_bound_is_rejected() {
 }
 
 /// WHY: exact artifact limits are inclusive and smaller limits fail closed.
+///
+/// The canonical artifact states the bound it was compiled under, so its length
+/// is a function of that bound. The boundary is therefore the fixed point where
+/// the stated bound equals the resulting length: it admits, and one byte below
+/// it refuses.
 #[test]
 fn artifact_byte_limit_is_inclusive_and_checked() {
-    let len = compile(&request(LIMIT)).unwrap().to_bytes().unwrap().len() as u64;
-    compile(&request(len)).expect("exact byte limit is inclusive");
-    let error = compile(&request(len - 1)).expect_err("one-byte-short limit must fail");
+    let mut limit = LIMIT;
+    let mut exact = None;
+    for _ in 0..8 {
+        let len = compile(&request(limit))
+            .expect("a generous byte limit must admit")
+            .to_bytes()
+            .expect("a compiled artifact must serialize")
+            .len() as u64;
+        if len == limit {
+            exact = Some(limit);
+            break;
+        }
+        limit = len;
+    }
+    let exact = exact.expect(
+        "the artifact length must settle on the bound it states, or the ceiling is not a property \
+         of the program",
+    );
+
+    compile(&request(exact)).expect("exact byte limit is inclusive");
+    let error = compile(&request(exact - 1)).expect_err("one-byte-short limit must fail");
     assert_eq!(error.diagnostic.code.as_str(), "MKC013_ARTIFACT_LIMIT");
 }
 

@@ -1,8 +1,10 @@
 mod finalist;
+mod portfolio;
 mod retained;
 mod session;
 mod workspace;
 
+pub use portfolio::{admit_portfolio, AdmittedPortfolio};
 pub use retained::RetainedArtifactSession;
 pub use session::{ArtifactSession, ArtifactSessionError};
 pub use workspace::ArtifactWorkspace;

@@ -59,6 +59,23 @@ pub(crate) enum CompilerFailureKind {
     /// One artifact cannot satisfy the artifact coverage policy the objective
     /// states.
     PortfolioCoverageUnsatisfied,
+    /// The stated specialization contract declares an axis or domain nothing can
+    /// read.
+    InvalidSpecializationContract,
+    /// A variant guard reads an undeclared axis, states values its domain does
+    /// not hold, or conjoins terms that cannot hold at once.
+    InvalidVariantGuard,
+    /// Two variant guards admit the same facts at one precedence.
+    GuardOverlap,
+    /// Part of the declared domain is served by no variant and no remainder.
+    GuardCoverageGap,
+    /// A guarded artifact set holds artifacts from more than one compile.
+    PortfolioProvenanceMismatch,
+    /// The authenticated target is not the one a guarded set was compiled for.
+    TargetIdentityMismatch,
+    /// No admitted variant serves the stated workload and the remainder is
+    /// declared unsupported.
+    UnsupportedWorkload,
 }
 
 impl CompilerFailureKind {
@@ -94,6 +111,13 @@ impl CompilerFailureKind {
             Self::MissingCalibratedFact => "MKC030_MISSING_CALIBRATED_FACT",
             Self::ObjectiveBoundViolated => "MKC031_OBJECTIVE_BOUND_VIOLATED",
             Self::PortfolioCoverageUnsatisfied => "MKC032_PORTFOLIO_COVERAGE_UNSATISFIED",
+            Self::InvalidSpecializationContract => "MKC033_INVALID_SPECIALIZATION_CONTRACT",
+            Self::InvalidVariantGuard => "MKC034_INVALID_VARIANT_GUARD",
+            Self::GuardOverlap => "MKC035_GUARD_OVERLAP",
+            Self::GuardCoverageGap => "MKC036_GUARD_COVERAGE_GAP",
+            Self::PortfolioProvenanceMismatch => "MKC037_PORTFOLIO_PROVENANCE_MISMATCH",
+            Self::TargetIdentityMismatch => "MKC038_TARGET_IDENTITY_MISMATCH",
+            Self::UnsupportedWorkload => "MKC039_UNSUPPORTED_WORKLOAD",
         }
     }
 }
@@ -110,11 +134,15 @@ const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
         | CompilerFailureKind::UnknownRepresentativeInput
         | CompilerFailureKind::RepresentativeInputLengthMismatch
         | CompilerFailureKind::InvalidObjective
-        | CompilerFailureKind::MissingCalibratedFact => DiagnosticStage::Validate,
+        | CompilerFailureKind::MissingCalibratedFact
+        | CompilerFailureKind::InvalidSpecializationContract
+        | CompilerFailureKind::InvalidVariantGuard => DiagnosticStage::Validate,
         CompilerFailureKind::DependencyCycle
         | CompilerFailureKind::FinalistEvaluation
         | CompilerFailureKind::ObjectiveBoundViolated
-        | CompilerFailureKind::PortfolioCoverageUnsatisfied => DiagnosticStage::Plan,
+        | CompilerFailureKind::PortfolioCoverageUnsatisfied
+        | CompilerFailureKind::GuardOverlap
+        | CompilerFailureKind::GuardCoverageGap => DiagnosticStage::Plan,
         CompilerFailureKind::ResourceOverflow | CompilerFailureKind::UnsizedResource => {
             DiagnosticStage::Lower
         }
@@ -126,7 +154,10 @@ const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
         | CompilerFailureKind::TargetPayloadVersionSkew
         | CompilerFailureKind::TargetPayloadDigestMismatch
         | CompilerFailureKind::TargetPayloadAssociationMismatch
-        | CompilerFailureKind::IncompatibleTargetPayload => DiagnosticStage::Admit,
+        | CompilerFailureKind::IncompatibleTargetPayload
+        | CompilerFailureKind::PortfolioProvenanceMismatch
+        | CompilerFailureKind::TargetIdentityMismatch
+        | CompilerFailureKind::UnsupportedWorkload => DiagnosticStage::Admit,
     }
 }
 
@@ -162,6 +193,21 @@ pub(crate) fn overflow(path: impl Into<String>, message: impl Into<String>) -> C
         path,
         message,
         "reduce resolved extents or split the graph before compilation",
+    )
+}
+
+/// The rejection a consumer reports when no admitted variant serves a workload.
+///
+/// A guarded set whose remainder is declared unsupported has one legal answer
+/// for facts nothing admits, and it is a failure with a corrective action, not a
+/// nearby variant.
+#[must_use]
+pub fn unsupported_workload(message: String) -> CompileError {
+    failure(
+        CompilerFailureKind::UnsupportedWorkload,
+        "specialization.remainder",
+        message,
+        "state facts a retained guard admits, or compile a set with a generic remainder",
     )
 }
 
