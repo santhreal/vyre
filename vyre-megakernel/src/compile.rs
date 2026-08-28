@@ -103,6 +103,7 @@ fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext<'_>, Comp
         request.search_budget,
         request.device,
         &request.objective,
+        request.numeric,
     );
     let mut certificate = search.certificate;
     let ranked = select::rank(
@@ -197,6 +198,7 @@ fn assemble(
         work,
         measurement,
         pareto_frontier: context.pareto_frontier,
+        numeric: request.numeric,
     })?;
     let (resources, resource_envelope) = build_resources(
         &request.graph,

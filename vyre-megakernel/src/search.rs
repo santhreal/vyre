@@ -1,4 +1,5 @@
 use vyre_foundation::logical::LogicalProgramGraph;
+use vyre_foundation::numeric::NumericContract;
 
 use crate::{
     candidate::CandidatePlan,
@@ -36,6 +37,7 @@ pub(crate) fn explore(
     budget: SearchBudget,
     device: DeviceFacts,
     objective: &CompileObjective,
+    numeric: Option<NumericContract>,
 ) -> SearchResult {
     let graph = logical.graph();
     let mut rejected = Vec::new();
@@ -55,7 +57,15 @@ pub(crate) fn explore(
         }
     }
 
-    let derived = derive::derive(logical, facts, dependencies, budget, device, objective);
+    let derived = derive::derive(
+        logical,
+        facts,
+        dependencies,
+        budget,
+        device,
+        objective,
+        numeric,
+    );
     let cpu_work = cpu_work
         .saturating_add(derived.cpu_work)
         .min(budget.max_cpu_work);

@@ -31,7 +31,7 @@ and no second place to declare an operation.
 | `test_inputs` | deterministic fixture inputs |
 | `expected_output` | deterministic fixture outputs, or a reference-oracle projection |
 | `laws` | algebraic or semantic law identifiers |
-| `tolerance` | numerical comparison policy |
+| `numeric` | numeric contract the result is held to |
 | `geometry_requirements` | recorded neutral schedule-constraint decision |
 
 The constructor states the schedule decision in its name.
@@ -39,9 +39,14 @@ The constructor states the schedule decision in its name.
 `primitive_unconstrained` record that semantics add no constraint beyond the
 canonical program. `new_unconstrained` accepts an explicit tier.
 
-`tolerance` defaults to `TolerancePolicy::EXACT`, which is byte identity.
-`TolerancePolicy::f32_ulp(n)` accepts drift measured in ULPs, and the
-operation owns that number rather than a backend deciding it.
+`numeric` defaults to `NumericContract::EXACT`, which is byte identity over
+the device word. `NumericContract::ieee_f32(n)` states binary32 storage with a
+bound of `n` units in the last place, and the operation owns that bound rather
+than a backend deciding it. The contract also states reassociation, the
+accumulator and intermediate formats, rounding, overflow, special values,
+subnormals, determinism, atomic-order sensitivity, and whether an approximate
+native instruction is admitted; a schedule that cannot prove it stays inside
+the stated bound is refused.
 
 `schedule_constraints()` composes the recorded decision with constraints
 derived from the canonical program. Workgroup and subgroup widths, uniformity,

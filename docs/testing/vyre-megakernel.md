@@ -35,6 +35,7 @@ This crate declares no Cargo features.
 | `test` | `measurement_protocol` | `vyre-megakernel/tests/measurement_protocol.rs` | None | `./cargo_full test -p vyre-megakernel --test measurement_protocol` |
 | `test` | `mesh_topology_contract` | `vyre-megakernel/tests/mesh_topology_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test mesh_topology_contract` |
 | `test` | `multi_fidelity_ladder` | `vyre-megakernel/tests/multi_fidelity_ladder.rs` | None | `./cargo_full test -p vyre-megakernel --test multi_fidelity_ladder` |
+| `test` | `numeric_budget_legality` | `vyre-megakernel/tests/numeric_budget_legality.rs` | None | `./cargo_full test -p vyre-megakernel --test numeric_budget_legality` |
 | `test` | `schedule_grammar_contract` | `vyre-megakernel/tests/schedule_grammar_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test schedule_grammar_contract` |
 | `test` | `selected_geometry_authority` | `vyre-megakernel/tests/selected_geometry_authority.rs` | None | `./cargo_full test -p vyre-megakernel --test selected_geometry_authority` |
 | `test` | `selection_cost_contract` | `vyre-megakernel/tests/selection_cost_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test selection_cost_contract` |

@@ -115,6 +115,10 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `memory_pass_alias_owner` | `vyre-foundation/tests/memory_pass_alias_owner.rs` | None | `./cargo_full test -p vyre-foundation --test memory_pass_alias_owner` |
 | `test` | `node_rewrite_walk_closure` | `vyre-foundation/tests/node_rewrite_walk_closure.rs` | None | `./cargo_full test -p vyre-foundation --test node_rewrite_walk_closure` |
 | `test` | `node_variant_traversal_closure` | `vyre-foundation/tests/node_variant_traversal_closure.rs` | None | `./cargo_full test -p vyre-foundation --test node_variant_traversal_closure` |
+| `test` | `numeric_contract` | `vyre-foundation/tests/numeric_contract.rs` | None | `./cargo_full test -p vyre-foundation --test numeric_contract` |
+| `test` | `numeric_range_proof` | `vyre-foundation/tests/numeric_range_proof.rs` | None | `./cargo_full test -p vyre-foundation --test numeric_range_proof` |
+| `test` | `numeric_region_budget` | `vyre-foundation/tests/numeric_region_budget.rs` | None | `./cargo_full test -p vyre-foundation --test numeric_region_budget` |
+| `test` | `numeric_scalar_format` | `vyre-foundation/tests/numeric_scalar_format.rs` | None | `./cargo_full test -p vyre-foundation --test numeric_scalar_format` |
 | `test` | `opaque_payload_endian` | `vyre-foundation/tests/opaque_payload_endian.rs` | None | `./cargo_full test -p vyre-foundation --test opaque_payload_endian` |
 | `test` | `opaque_wire_round_trip` | `vyre-foundation/tests/opaque_wire_round_trip.rs` | None | `./cargo_full test -p vyre-foundation --test opaque_wire_round_trip` |
 | `test` | `operation_call_graph_closure` | `vyre-foundation/tests/operation_call_graph_closure.rs` | None | `./cargo_full test -p vyre-foundation --test operation_call_graph_closure` |

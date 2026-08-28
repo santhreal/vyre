@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 use vyre_foundation::ir::{GraphValueId, ProgramGraph, ShapeDim, ValueLifetime};
+use vyre_foundation::numeric::NumericContract;
 use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};
 
 use crate::device_facts::{validate_device_support, DeviceFacts};
@@ -111,6 +112,7 @@ pub struct CompileRequest {
     representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
     recorded_measurement: Option<MeasurementRecord>,
     mesh: Option<MeshFacts>,
+    numeric: Option<NumericContract>,
 }
 
 impl CompileRequest {
@@ -137,7 +139,22 @@ impl CompileRequest {
             representative_inputs: BTreeMap::new(),
             recorded_measurement: None,
             mesh: None,
+            numeric: None,
         }
+    }
+
+    /// State the numeric budget the caller admits for the graph's outputs.
+    ///
+    /// A schedule that reorders a rounding accumulation computes a different
+    /// number. Without a stated budget the search refuses every such schedule,
+    /// because nothing says how far the result may move. With one it admits the
+    /// reorderings whose composed error stays inside the budget, which is what
+    /// makes a tree reduction and a spatial split available over a floating
+    /// accumulation.
+    #[must_use]
+    pub const fn with_numeric_budget(mut self, numeric: NumericContract) -> Self {
+        self.numeric = Some(numeric);
+        self
     }
 
     /// Supply the device mesh this compilation may place work on.
@@ -258,6 +275,7 @@ impl CompileRequest {
             objective: self.objective,
             search_budget: self.search_budget,
             mesh,
+            numeric: self.numeric,
         })
     }
 }
@@ -298,6 +316,7 @@ pub struct ValidatedCompileRequest {
     representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
     recorded_measurement: Option<MeasurementRecord>,
     mesh: MeshFacts,
+    pub(crate) numeric: Option<NumericContract>,
 }
 
 impl ValidatedCompileRequest {
@@ -324,6 +343,12 @@ impl ValidatedCompileRequest {
     #[must_use]
     pub const fn recorded_measurement(&self) -> Option<&MeasurementRecord> {
         self.recorded_measurement.as_ref()
+    }
+
+    /// The numeric budget the caller stated, when it stated one.
+    #[must_use]
+    pub const fn numeric_budget(&self) -> Option<NumericContract> {
+        self.numeric
     }
 
     /// Return the explicit bounded-search policy.
@@ -380,6 +405,7 @@ impl ValidatedCompileRequest {
             representative_inputs: self.representative_inputs.clone(),
             recorded_measurement: self.recorded_measurement.clone(),
             mesh: self.mesh.clone(),
+            numeric: self.numeric,
         }
     }
 
@@ -416,6 +442,7 @@ impl ValidatedCompileRequest {
             representative_inputs: self.representative_inputs.clone(),
             recorded_measurement: self.recorded_measurement.clone(),
             mesh: self.mesh.clone(),
+            numeric: self.numeric,
         })
     }
 }

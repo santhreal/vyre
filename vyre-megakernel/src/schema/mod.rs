@@ -16,7 +16,7 @@ use crate::identity::{ArtifactValueId, DependencyEdge, Digest};
 use crate::mesh::MeshTopologyPlan;
 
 pub use geometry::{BarrierPhaseRecord, EntryPersistence, GeometryRecord, LaunchResourceIntent};
-pub use plan::{ExecutionMode, PlanMeasurement, SelectedPlan};
+pub use plan::{ExecutionMode, NumericRecord, PlanMeasurement, SelectedPlan};
 pub use records::{
     AbiAccess, ArtifactAbi, BarrierRecord, EntryAbiRecord, EntryResourceBinding, FusionRecord,
     FusionRejection, MaterializationReason, MaterializationRecord, NodeRecord, Provenance,
@@ -24,7 +24,7 @@ pub use records::{
 };
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 16;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 17;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

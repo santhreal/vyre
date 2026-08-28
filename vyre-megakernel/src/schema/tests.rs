@@ -51,6 +51,7 @@ fn payload(resources: Vec<ResourceRecord>) -> ArtifactPayload {
             pruned_fusions: Vec::new(),
             execution: ExecutionMode::Static,
             measurement: PlanMeasurement::Unbudgeted,
+            numeric_budget: crate::NumericRecord::exact(),
         },
         abi: ArtifactAbi {
             resources: Vec::new(),

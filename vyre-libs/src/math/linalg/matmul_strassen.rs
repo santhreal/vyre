@@ -93,7 +93,7 @@ inventory::submit! {
         }),
     )
     .with_category("math")
-    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(32))
+    .with_numeric(vyre_foundation::numeric::NumericContract::ieee_f32(32))
 }
 
 /// Build a Program that computes `C = A · B` for NxN row-major F32

@@ -31,6 +31,19 @@ emits a one-off kernel and skips the planner.
 decide whether to be persistent. A runtime that decided that would be
 taking the decision away from the search that could have measured it.
 
+A resident route also has to be a numerical decision. A persistent queue lets
+invocations reach a shared accumulator in an order the schedule does not fix, so
+a plan keeps the resident route only where the combines reassociate or the
+caller's stated budget covers the new order. Without a budget the route is
+downgraded to a sequence of dispatches rather than priced.
+
+## The plan records what it was selected under
+
+`SelectedPlan::numeric_budget` carries the numeric contract version, the budget
+the caller declared, the budget the graph composes to, the contract of every
+region, and the regions this plan combines in an order the program did not
+state. See [numeric contracts](../reference/numeric-contracts.md).
+
 ## Identity is neutral; payloads are not
 
 The same semantic plan digests the same everywhere. A `TargetPayload`

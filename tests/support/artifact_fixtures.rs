@@ -40,12 +40,7 @@ pub(crate) fn contract(
     access: BufferAccess,
     lifetime: ValueLifetime,
 ) -> ValueContract {
-    ValueContract {
-        dtype,
-        shape: vec![ShapeDim::Known(u64::from(count))],
-        access,
-        lifetime,
-    }
+    vyre_test_support::graph_values::typed_vector(count, dtype, access, lifetime)
 }
 
 /// Element count a fixture value's contract declares.
@@ -270,6 +265,7 @@ fn placed_request_with(
         .nodes()
         .iter()
         .any(|node| node.program.stats().distributed_collectives());
+    let native_f16 = graph.nodes().iter().any(|node| node.program.stats().f16());
     let constant_identities = graph
         .values()
         .iter()
@@ -281,7 +277,7 @@ fn placed_request_with(
     let request = CompileRequest::new(
         graph,
         facts,
-        device_facts_for(collectives),
+        device_facts_for(collectives, native_f16),
         SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
         objective,
     );
@@ -295,15 +291,17 @@ fn placed_request_with(
 /// Facts for the device a fixture graph is compiled against.
 ///
 /// A graph that states a distributed collective needs a device that carries one,
-/// so the fixture states that capability exactly where the program uses it
-/// instead of granting it to every fixture compile.
-fn device_facts_for(collectives: bool) -> DeviceFacts {
-    if !collectives {
+/// and a graph that stores binary16 needs a device with native f16, so the
+/// fixture states each capability exactly where a program uses it instead of
+/// granting it to every fixture compile.
+fn device_facts_for(collectives: bool, native_f16: bool) -> DeviceFacts {
+    if !collectives && !native_f16 {
         return DeviceFacts::unknown();
     }
     DeviceFacts::new(
         BackendCapabilities {
-            supports_distributed_collectives: true,
+            supports_distributed_collectives: collectives,
+            has_native_f16: native_f16,
             ..BackendCapabilities::NONE
         },
         0,

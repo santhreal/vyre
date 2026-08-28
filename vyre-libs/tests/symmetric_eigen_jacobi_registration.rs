@@ -112,7 +112,9 @@ fn registry_entry_ships_both_fixtures_with_the_program_buffer_shape() {
 fn reference_execution_reproduces_the_registered_oracle_within_tolerance() {
     let entry = registered();
     let program = entry.program().expect("registration must build a program");
-    let tolerance = entry.tolerance();
+    let tolerance = entry
+        .ulp_budget()
+        .expect("the registered eigensolve states a ULP budget");
     let inputs = (entry.test_inputs.expect("test_inputs"))();
     let expected = (entry.expected_output.expect("expected_output"))();
 
@@ -148,7 +150,7 @@ fn reference_execution_reproduces_the_registered_oracle_within_tolerance() {
                 assert!(
                     drift <= tolerance,
                     "case {case} buffer {slot} element {index}: {got} vs oracle {want} is \
-                     {drift} ULP, registered tolerance is {tolerance}."
+                     {drift} ULP, registered budget is {tolerance} ULP."
                 );
             }
         }

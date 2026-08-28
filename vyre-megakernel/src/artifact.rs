@@ -1,10 +1,14 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use vyre_foundation::algebraic_reordering::ReorderingClass;
 use vyre_foundation::logical::LogicalProgramGraph;
+use vyre_foundation::numeric::{reordering_admitted, NumericContract, NUMERIC_CONTRACT_VERSION};
 use vyre_foundation::schedule::{
-    PipelineRoleGroup, SchedulePhase, SchedulePhaseId, ScheduleTransform, SelectedSchedule,
+    CombineOrder, PipelineRoleGroup, SchedulePhase, SchedulePhaseId, ScheduleTransform,
+    SelectedSchedule,
 };
 
+use crate::schema::NumericRecord;
 use crate::{
     build_barriers, build_materializations, certificate::SearchCertificate, domain_digest,
     facts::PlanningFacts, failure, group_stages, select::Selection, ArtifactNodeId,
@@ -37,6 +41,7 @@ pub(crate) struct PlanInputs<'a, 'graph> {
     pub(crate) work: SearchWork,
     pub(crate) measurement: PlanMeasurement,
     pub(crate) pareto_frontier: u32,
+    pub(crate) numeric: Option<NumericContract>,
 }
 
 pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileError> {
@@ -53,6 +58,7 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
         work,
         measurement,
         pareto_frontier,
+        numeric,
     } = inputs;
     let graph = logical.graph();
     let candidate = &selection.candidate;
@@ -105,7 +111,7 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
         .collect();
     let barriers = build_barriers(dependencies, &node_groups, &stages)?;
     let materializations = build_materializations(graph, &node_groups, &stages);
-    let execution = execution_mode(device, external, selection.cost.launches);
+    let mut execution = execution_mode(device, external, selection.cost.launches);
     let mut schedule = candidate.selected_schedule(facts).map_err(|error| {
         failure(
             CompilerFailureKind::InvalidProgram,
@@ -114,6 +120,17 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
             "repair schedule candidate generation before selecting an artifact",
         )
     })?;
+    if matches!(execution, ExecutionMode::Persistent { .. })
+        && !persistence_preserves_numbers(facts, &schedule, numeric)
+    {
+        // A resident kernel polling a work queue lets invocations reach a
+        // shared accumulator in an order the program did not state. That is the
+        // same question the search answered for every reordering production,
+        // and it is asked again here because the route is selected after
+        // ranking. A route that cannot prove the stated budget is not priced
+        // down, it is not selected.
+        execution = ExecutionMode::Static;
+    }
     // A persistent route is a schedule decision, so it is applied to the
     // schedule rather than recorded beside it. Recording the mode alone left
     // the queue capacity nowhere, and a consumer that needed one sized it.
@@ -146,6 +163,7 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
             )
         })
         .collect::<Result<Vec<_>, CompileError>>()?;
+    let numeric_budget = numeric_record(logical, facts, numeric, &schedule);
     let selected_plan = SelectedPlan {
         topology: candidate.topology(),
         schedule,
@@ -162,6 +180,7 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
         pruned_fusions: pruned_fusions.to_vec(),
         execution,
         measurement,
+        numeric_budget,
     };
     selected_plan.validate()?;
     Ok(ArtifactPlan {
@@ -170,6 +189,128 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
         geometry,
         selected_plan,
     })
+}
+
+/// Whether a resident route combines the same numbers the program states.
+///
+/// A region whose combines reassociate, or that combines nothing across
+/// invocations, is unaffected by the order workers arrive in. A region that
+/// does not is admitted only where the caller stated a budget wide enough for
+/// the order the queue produces, priced the same way the search prices a
+/// reordering production.
+fn persistence_preserves_numbers(
+    facts: &PlanningFacts,
+    schedule: &SelectedSchedule,
+    declared: Option<NumericContract>,
+) -> bool {
+    schedule.phases.iter().all(|phase| {
+        phase.source_regions.iter().all(|region| {
+            let index = *region as usize;
+            if facts
+                .node_reordering
+                .get(index)
+                .copied()
+                .unwrap_or(ReorderingClass::Ordered)
+                .permits_reordering()
+            {
+                return true;
+            }
+            let (Some(budget), Some(contract)) = (declared, facts.node_numeric.get(index)) else {
+                return false;
+            };
+            reordering_admitted(
+                &budget,
+                contract,
+                facts
+                    .node_reduction_terms
+                    .get(index)
+                    .copied()
+                    .unwrap_or(u32::MAX),
+            )
+        })
+    })
+}
+
+/// What the selected plan states about the numbers it computes.
+///
+/// The per-region contracts are the derivation the logical stage carried out,
+/// the proven budget is the widest contract any caller-visible output carries,
+/// and the reordered list names the regions this plan combines in an order the
+/// program did not state. An output whose budget cannot be read as a fraction is
+/// the widest answer available, because nothing proved it is narrower.
+fn numeric_record(
+    logical: &LogicalProgramGraph<'_>,
+    facts: &PlanningFacts,
+    declared: Option<NumericContract>,
+    schedule: &SelectedSchedule,
+) -> NumericRecord {
+    let proven = logical
+        .output_budgets()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(_, contract)| contract)
+        .reduce(|widest, next| {
+            let reading =
+                |contract: &NumericContract| contract.relative_error().unwrap_or(f64::INFINITY);
+            if reading(&next) > reading(&widest) {
+                next
+            } else {
+                widest
+            }
+        })
+        .unwrap_or(NumericContract::EXACT);
+    let covered = |phase: SchedulePhaseId| {
+        schedule
+            .phases
+            .iter()
+            .find(|item| item.id == phase)
+            .map(|item| item.source_regions.as_slice())
+            .unwrap_or_default()
+    };
+    let mut reordered = BTreeSet::new();
+    for record in &schedule.transforms {
+        let phases = record.provenance.source_phases.as_slice();
+        match record.transform.combine_order() {
+            CombineOrder::Preserved => continue,
+            // A phase frozen at the shape its own nodes declared is combined in
+            // the order they stated, so only a shape a node did not declare is
+            // a reordering. This is the reading legality selected the plan
+            // under, so the record cannot name a region legality did not price.
+            CombineOrder::ChangedWhenReshaped(shape) => {
+                let reshaped = phases.iter().any(|phase| {
+                    covered(*phase).iter().any(|region| {
+                        facts
+                            .node_declared_workgroup
+                            .get(*region as usize)
+                            .copied()
+                            .is_some_and(|declared| declared != shape)
+                    })
+                });
+                if !reshaped {
+                    continue;
+                }
+            }
+            CombineOrder::Changed => {}
+        }
+        for phase in phases {
+            for region in covered(*phase).iter().copied() {
+                if facts
+                    .node_numeric
+                    .get(region as usize)
+                    .is_some_and(|contract| !contract.storage.is_exact())
+                {
+                    reordered.insert(region);
+                }
+            }
+        }
+    }
+    NumericRecord {
+        version: NUMERIC_CONTRACT_VERSION,
+        declared,
+        proven,
+        regions: facts.node_numeric.clone(),
+        reordered: reordered.into_iter().collect(),
+    }
 }
 
 /// Decide how the runtime executes this plan.

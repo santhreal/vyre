@@ -1,10 +1,17 @@
 //! Target compilation: the boundary from one authenticated neutral artifact to
 //! immutable target-native bytes.
 
+use std::collections::BTreeSet;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use vyre_foundation::{
-    execution_plan::fusion::merge_programs_shared, ir::Program, schedule::SchedulePhase,
+    execution_plan::fusion::merge_programs_shared,
+    fp_parity::approximable_operations,
+    ir::{Expr, Program},
+    numeric::{ScalarFormat, NUMERIC_CONTRACT_VERSION},
+    schedule::SchedulePhase,
+    visit::walk_exprs,
 };
 use vyre_lower::{KernelDescriptor, MemoryClass, PhysicalSchedule};
 
@@ -65,12 +72,37 @@ impl SelectedLowering {
 
 /// Canonical target-module bundle schema carried inside one target payload.
 ///
-/// Version 3 encodes an f32 literal by its IEEE-754 bits. Version 2 wrote the
-/// number, which JSON cannot spell for a non-finite value: a bundle carrying an
-/// infinity was written with `null` in its place and refused on decode. A stored
-/// version 2 bundle is refused by version rather than reinterpreted, because the
-/// two encodings read the same field differently.
-pub const TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16 = 3;
+/// Version 4 carries the numeric choices lowering made for the module. Version
+/// 3 encodes an f32 literal by its IEEE-754 bits. Version 2 wrote the number,
+/// which JSON cannot spell for a non-finite value: a bundle carrying an infinity
+/// was written with `null` in its place and refused on decode. A stored bundle
+/// of an older version is refused by version rather than reinterpreted, because
+/// the encodings read the same field differently.
+pub const TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16 = 4;
+
+/// What one lowered module does to the numbers it computes.
+///
+/// A caller comparing a device result against a bound needs to know what the
+/// module actually did, not what the program asked for: which formats it held
+/// values in, which conversions it performed, which operations it computed
+/// through an approximation the parity window admits, and how wide a combine it
+/// was cut into. Every field is read from the lowered program and the frozen
+/// schedule phase, so it states the module that was emitted rather than an
+/// intention recorded beside it.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ModuleNumericRecord {
+    /// Numeric contract shape this record is stated under.
+    pub version: u32,
+    /// Scalar formats the module holds values in, in ascending order.
+    pub formats: Vec<ScalarFormat>,
+    /// Scalar formats the module converts values to, in ascending order.
+    pub conversions: Vec<ScalarFormat>,
+    /// Operations the module computes through the approximation window, named
+    /// by their neutral IR variant, in ascending order.
+    pub approximations: Vec<String>,
+    /// Elements one invocation combines, when the phase selected more than one.
+    pub chunk: Option<u32>,
+}
 
 /// One generated target module corresponding to one selected fusion group.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -87,6 +119,8 @@ pub struct TargetModuleImage {
     pub descriptor: KernelDescriptor,
     /// Target entry-point name.
     pub entry_point: String,
+    /// Numeric choices lowering made for this module.
+    pub numeric: ModuleNumericRecord,
     /// Immutable target-native module bytes.
     pub bytes: Vec<u8>,
 }
@@ -401,6 +435,7 @@ pub fn compile_selected_modules(
                 selected.group.0
             ))
         })?;
+        let numeric = ModuleNumericRecord::of(&selected.program, &selected.schedule_phase);
         images.push(TargetModuleImage {
             group: selected.group,
             stage: selected.stage,
@@ -408,11 +443,49 @@ pub fn compile_selected_modules(
             program,
             descriptor: selected.descriptor().clone(),
             entry_point,
+            numeric,
             bytes: emitted.bytes,
         });
     }
     let bytes = TargetModuleBundle::new(images).to_bytes()?;
     TargetPayload::new(artifact, format, profile, entries, bytes).map_err(Into::into)
+}
+
+impl ModuleNumericRecord {
+    /// The numeric choices lowering made for one emitted module.
+    ///
+    /// Every answer is read from the lowered program and the frozen phase, so
+    /// the record cannot state a choice the module does not carry. A format
+    /// appears because a buffer holds it or a conversion produces it, an
+    /// approximation appears because the parity window admits one for that
+    /// operation, and a chunk appears because the phase combines more than one
+    /// element per invocation. A consumer holding a bundle and the artifact it
+    /// was emitted from re-derives the record here and compares.
+    #[must_use]
+    pub fn of(program: &Program, phase: &SchedulePhase) -> Self {
+        let mut formats = BTreeSet::new();
+        let mut conversions = BTreeSet::new();
+        for buffer in program.buffers() {
+            if let Some(format) = ScalarFormat::of(&buffer.element()) {
+                formats.insert(format);
+            }
+        }
+        walk_exprs(program, |expr| {
+            if let Expr::Cast { target, .. } = expr {
+                if let Some(format) = ScalarFormat::of(target) {
+                    conversions.insert(format);
+                    formats.insert(format);
+                }
+            }
+        });
+        Self {
+            version: NUMERIC_CONTRACT_VERSION,
+            formats: formats.into_iter().collect(),
+            conversions: conversions.into_iter().collect(),
+            approximations: approximable_operations(program),
+            chunk: (phase.vector_width > 1).then_some(phase.vector_width),
+        }
+    }
 }
 
 /// Refuse an entry point whose recorded geometry is not the schedule the

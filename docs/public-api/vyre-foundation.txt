@@ -102,6 +102,7 @@ impl core::error::Error for vyre_foundation::execution_plan::fusion::FusionError
 impl core::error::Error for vyre_foundation::graph_view::GraphValidateError
 impl core::error::Error for vyre_foundation::ir::EvalError
 impl core::error::Error for vyre_foundation::lower::LoweringError
+impl core::error::Error for vyre_foundation::numeric::ContractRefusal
 impl core::error::Error for vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated
 impl core::error::Error for vyre_foundation::optimizer::eqsat::EGraphError
 impl core::error::Error for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
@@ -132,6 +133,9 @@ impl core::fmt::Display for vyre_foundation::graph_view::GraphValidateError
 impl core::fmt::Display for vyre_foundation::ir::EvalError
 impl core::fmt::Display for vyre_foundation::ir::Ident
 impl core::fmt::Display for vyre_foundation::lower::LoweringError
+impl core::fmt::Display for vyre_foundation::numeric::ContractRefusal
+impl core::fmt::Display for vyre_foundation::numeric::MagnitudeRange
+impl core::fmt::Display for vyre_foundation::numeric::ScalarFormat
 impl core::fmt::Display for vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated
 impl core::fmt::Display for vyre_foundation::operation::TargetId
 impl core::fmt::Display for vyre_foundation::optimizer::RefusalReason
@@ -204,6 +208,11 @@ impl vyre_foundation::logical::LogicalExchangeKind
 impl vyre_foundation::lower::LoweringError
 impl vyre_foundation::lower::ProgramEffects
 impl vyre_foundation::match_result::ByteRange
+impl vyre_foundation::numeric::ErrorMeasure
+impl vyre_foundation::numeric::MagnitudeRange
+impl vyre_foundation::numeric::NumericContract
+impl vyre_foundation::numeric::RegionNumericFacts
+impl vyre_foundation::numeric::ScalarFormat
 impl vyre_foundation::opaque_payload::endian::LeBytesWriter
 impl vyre_foundation::operation::CallGraphClosure
 impl vyre_foundation::operation::OperationEffects
@@ -212,7 +221,6 @@ impl vyre_foundation::operation::OperationRegistry
 impl vyre_foundation::operation::OperationTier
 impl vyre_foundation::operation::SemanticOperation
 impl vyre_foundation::operation::TargetId
-impl vyre_foundation::operation::TolerancePolicy
 impl vyre_foundation::optimizer::AdapterCaps
 impl vyre_foundation::optimizer::AnalysisCache
 impl vyre_foundation::optimizer::DerivedPassOrder
@@ -444,6 +452,21 @@ pub const fn vyre_foundation::match_result::ByteRange::ends_before(&self, other:
 pub const fn vyre_foundation::match_result::ByteRange::is_empty(&self) -> bool
 pub const fn vyre_foundation::match_result::ByteRange::len(&self) -> u32
 pub const fn vyre_foundation::match_result::ByteRange::new(tag: u32, start: u32, end: u32) -> Self
+pub const fn vyre_foundation::numeric::ErrorMeasure::absolute(distance: f64) -> Self
+pub const fn vyre_foundation::numeric::ErrorMeasure::is_exact(self) -> bool
+pub const fn vyre_foundation::numeric::ErrorMeasure::relative(fraction: f64) -> Self
+pub const fn vyre_foundation::numeric::NumericContract::accumulating_in(self, accumulator: vyre_foundation::numeric::ScalarFormat) -> Self
+pub const fn vyre_foundation::numeric::NumericContract::approximating(self, approximation: vyre_foundation::numeric::Approximation) -> Self
+pub const fn vyre_foundation::numeric::NumericContract::computing_in(self, intermediate: vyre_foundation::numeric::ScalarFormat) -> Self
+pub const fn vyre_foundation::numeric::NumericContract::exact_word() -> Self
+pub const fn vyre_foundation::numeric::NumericContract::flushing_subnormals(self) -> Self
+pub const fn vyre_foundation::numeric::NumericContract::ieee_f32(ulp: u32) -> Self
+pub const fn vyre_foundation::numeric::NumericContract::reassociating(self, reassociation: vyre_foundation::numeric::Reassociation) -> Self
+pub const fn vyre_foundation::numeric::NumericContract::sensitive_to(self, sensitivity: vyre_foundation::numeric::AtomicOrderSensitivity) -> Self
+pub const fn vyre_foundation::numeric::NumericContract::under(self, determinism: vyre_foundation::numeric::Determinism) -> Self
+pub const fn vyre_foundation::numeric::NumericContract::with_measure(self, measure: vyre_foundation::numeric::ErrorMeasure) -> Self
+pub const fn vyre_foundation::numeric::NumericContract::within_ulp(self, count: u32) -> Self
+pub const fn vyre_foundation::numeric::RegionNumericFacts::opaque() -> Self
 pub const fn vyre_foundation::operation::OperationEffects::union(self, other: Self) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::category(&self) -> core::option::Option<&'static str>
 pub const fn vyre_foundation::operation::OperationRegistration::declared_schedule_constraints(&self) -> vyre_foundation::GeometryRequirements
@@ -451,21 +474,18 @@ pub const fn vyre_foundation::operation::OperationRegistration::intrinsic_uncons
 pub const fn vyre_foundation::operation::OperationRegistration::library_unconstrained(id: &'static str, build: fn() -> vyre_foundation::ir::Program, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::new_unconstrained(id: &'static str, tier: vyre_foundation::operation::OperationTier, build: core::option::Option<fn() -> vyre_foundation::ir::Program>, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::primitive_unconstrained(id: &'static str, build: fn() -> vyre_foundation::ir::Program, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
-pub const fn vyre_foundation::operation::OperationRegistration::tolerance(&self) -> u32
 pub const fn vyre_foundation::operation::OperationRegistration::with_category(self, category: &'static str) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_explicit_capabilities(self, capabilities: vyre_foundation::program_caps::RequiredCapabilities) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_explicit_effects(self, effects: vyre_foundation::operation::OperationEffects) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_geometry_requirements(self, requirements: vyre_foundation::GeometryRequirements) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_laws(self, laws: &'static [&'static str]) -> Self
+pub const fn vyre_foundation::operation::OperationRegistration::with_numeric(self, numeric: vyre_foundation::numeric::NumericContract) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_signature(self, signature: vyre_foundation::dialect_lookup::Signature) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_source_file(self, source_file: &'static str) -> Self
-pub const fn vyre_foundation::operation::OperationRegistration::with_tolerance(self, tolerance: vyre_foundation::operation::TolerancePolicy) -> Self
 pub const fn vyre_foundation::operation::OperationTier::matrix_value(self) -> &'static str
 pub const fn vyre_foundation::operation::SemanticOperation::category(self) -> core::option::Option<&'static str>
-pub const fn vyre_foundation::operation::SemanticOperation::tolerance(self) -> u32
 pub const fn vyre_foundation::operation::TargetId::expect_valid(id: &'static str) -> Self
 pub const fn vyre_foundation::operation::TargetId::new(id: &'static str) -> core::result::Result<Self, &'static str>
-pub const fn vyre_foundation::operation::TolerancePolicy::f32_ulp(maximum: u32) -> Self
 pub const fn vyre_foundation::optimizer::AdapterCaps::conservative() -> Self
 pub const fn vyre_foundation::optimizer::AdapterCaps::high_end() -> Self
 pub const fn vyre_foundation::optimizer::PassAnalysis::run_if(condition: bool) -> Self
@@ -565,6 +585,9 @@ pub const vyre_foundation::lower::ProgramEffects::BUFFER_WRITE: Self
 pub const vyre_foundation::lower::ProgramEffects::GPU_DISPATCH: Self
 pub const vyre_foundation::lower::ProgramEffects::HOST_IO: Self
 pub const vyre_foundation::lower::ProgramEffects::TRAP: Self
+pub const vyre_foundation::numeric::NUMERIC_CONTRACT_VERSION: u32
+pub const vyre_foundation::numeric::NumericContract::EXACT: Self
+pub const vyre_foundation::numeric::ScalarFormat::ALL: [Self; 17]
 pub const vyre_foundation::operation::OperationEffects::ALL: Self
 pub const vyre_foundation::operation::OperationEffects::NONE: Self
 pub const vyre_foundation::operation::OperationEffects::READ_ONLY: Self
@@ -572,7 +595,6 @@ pub const vyre_foundation::operation::OperationEffects::READ_WRITE: Self
 pub const vyre_foundation::operation::OperationEffects::READ_WRITE_SYNCHRONIZES: Self
 pub const vyre_foundation::operation::OperationEffects::SYNCHRONIZES: Self
 pub const vyre_foundation::operation::OperationTier::ALL: &'static [Self]
-pub const vyre_foundation::operation::TolerancePolicy::EXACT: Self
 pub const vyre_foundation::optimizer::PassAnalysis::RUN: Self
 pub const vyre_foundation::optimizer::PassAnalysis::SKIP: Self
 pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_CANONICALIZE_ADD_COMMUTATIVE: &str
@@ -666,6 +688,15 @@ pub enum vyre_foundation::logical::LogicalExtent
 pub enum vyre_foundation::logical::LogicalPartitionAxisKind
 pub enum vyre_foundation::logical::LogicalProgramError
 pub enum vyre_foundation::logical::LogicalRegionKind
+pub enum vyre_foundation::numeric::Approximation
+pub enum vyre_foundation::numeric::AtomicOrderSensitivity
+pub enum vyre_foundation::numeric::ContractRefusal
+pub enum vyre_foundation::numeric::Determinism
+pub enum vyre_foundation::numeric::ErrorMeasure
+pub enum vyre_foundation::numeric::NumericChoice
+pub enum vyre_foundation::numeric::Reassociation
+pub enum vyre_foundation::numeric::RegionArithmetic
+pub enum vyre_foundation::numeric::ScalarFormat
 pub enum vyre_foundation::operation::IdNamespace<'a>
 pub enum vyre_foundation::operation::OperationRegistryError
 pub enum vyre_foundation::optimizer::CatalogLookupStatus
@@ -815,6 +846,7 @@ pub fn vyre_foundation::extension::try_resolve_atomic_op(id: vyre_spec::extensio
 pub fn vyre_foundation::extension::try_resolve_bin_op(id: vyre_spec::extension::ExtensionBinOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionBinOp>, alloc::string::String>
 pub fn vyre_foundation::extension::try_resolve_data_type(id: vyre_spec::extension::ExtensionDataTypeId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionDataType>, alloc::string::String>
 pub fn vyre_foundation::extension::try_resolve_un_op(id: vyre_spec::extension::ExtensionUnOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionUnOp>, alloc::string::String>
+pub fn vyre_foundation::fp_parity::approximable_operations(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<alloc::string::String>
 pub fn vyre_foundation::fp_parity::canonical_f32(value: f32) -> f32
 pub fn vyre_foundation::fp_parity::compare_operation_outputs(op_id: &str, program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> vyre_foundation::fp_parity::BufferParity
 pub fn vyre_foundation::fp_parity::compare_output_buffers(program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> vyre_foundation::fp_parity::BufferParity
@@ -1182,9 +1214,12 @@ pub fn vyre_foundation::ir::node_op_id(node: &vyre_foundation::ir::Node) -> &'st
 pub fn vyre_foundation::ir::node_variant_name(item: &vyre_foundation::ir::Node) -> &'static str
 pub fn vyre_foundation::launch_covers_full_input_span(program: &vyre_foundation::ir::Program) -> bool
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::exchanges(&self) -> &[vyre_foundation::logical::LogicalExchange]
+pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::output_budgets(&self) -> core::result::Result<alloc::vec::Vec<(vyre_foundation::ir::GraphValueId, vyre_foundation::numeric::NumericContract)>, vyre_foundation::logical::LogicalProgramError>
+pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::region(&self, node: vyre_foundation::ir::GraphNodeId) -> core::option::Option<&vyre_foundation::logical::LogicalRegion>
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::regions(&self) -> &[vyre_foundation::logical::LogicalRegion]
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::semantic_wire(&self) -> &[u8]
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::validate(graph: &'a vyre_foundation::ir::ProgramGraph, bindings: &alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>) -> core::result::Result<Self, vyre_foundation::logical::LogicalProgramError>
+pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::value_budget(&self, value: vyre_foundation::ir::GraphValueId) -> core::result::Result<vyre_foundation::numeric::NumericContract, vyre_foundation::logical::LogicalProgramError>
 pub fn vyre_foundation::lower::LoweringError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::lower::LoweringError::invalid(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::lower::LoweringError::message(&self) -> &str
@@ -1197,6 +1232,45 @@ pub fn vyre_foundation::lower::ProgramEffects::bitor(self, rhs: Self) -> Self
 pub fn vyre_foundation::lower::ProgramEffects::bitor_assign(&mut self, rhs: Self)
 pub fn vyre_foundation::lower::compute_program_effects(program: &vyre_foundation::ir::Program) -> vyre_foundation::lower::ProgramEffects
 pub fn vyre_foundation::lower::lower_subgroup_reductions(program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::ir::Program
+pub fn vyre_foundation::numeric::ContractRefusal::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::numeric::ErrorMeasure::magnitude(self) -> f64
+pub fn vyre_foundation::numeric::MagnitudeRange::affine_recurrence(self, gain: f64, offset: f64, steps: u32) -> core::option::Option<Self>
+pub fn vyre_foundation::numeric::MagnitudeRange::contains_zero(self) -> bool
+pub fn vyre_foundation::numeric::MagnitudeRange::exponential(self) -> core::option::Option<Self>
+pub fn vyre_foundation::numeric::MagnitudeRange::fits(self, format: vyre_foundation::numeric::ScalarFormat) -> bool
+pub fn vyre_foundation::numeric::MagnitudeRange::floor(self) -> f64
+pub fn vyre_foundation::numeric::MagnitudeRange::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::numeric::MagnitudeRange::high(self) -> f64
+pub fn vyre_foundation::numeric::MagnitudeRange::join(self, other: Self) -> Self
+pub fn vyre_foundation::numeric::MagnitudeRange::low(self) -> f64
+pub fn vyre_foundation::numeric::MagnitudeRange::new(low: f64, high: f64) -> core::option::Option<Self>
+pub fn vyre_foundation::numeric::MagnitudeRange::peak(self) -> f64
+pub fn vyre_foundation::numeric::MagnitudeRange::point(value: f64) -> core::option::Option<Self>
+pub fn vyre_foundation::numeric::MagnitudeRange::reciprocal(self) -> core::option::Option<Self>
+pub fn vyre_foundation::numeric::MagnitudeRange::relative_of(self, measure: vyre_foundation::numeric::ErrorMeasure, storage: vyre_foundation::numeric::ScalarFormat) -> core::result::Result<f64, vyre_foundation::numeric::ContractRefusal>
+pub fn vyre_foundation::numeric::MagnitudeRange::single_signed(self) -> bool
+pub fn vyre_foundation::numeric::MagnitudeRange::symmetric(bound: f64) -> core::option::Option<Self>
+pub fn vyre_foundation::numeric::NumericContract::admits(&self, composed: &vyre_foundation::numeric::ErrorMeasure) -> core::result::Result<(), vyre_foundation::numeric::ContractRefusal>
+pub fn vyre_foundation::numeric::NumericContract::check(&self) -> core::result::Result<(), vyre_foundation::numeric::ContractRefusal>
+pub fn vyre_foundation::numeric::NumericContract::compose(&self, next: &Self) -> core::result::Result<Self, vyre_foundation::numeric::ContractRefusal>
+pub fn vyre_foundation::numeric::NumericContract::of(storage: vyre_foundation::numeric::ScalarFormat) -> Self
+pub fn vyre_foundation::numeric::NumericContract::over_recurrence(&self, steps: u32) -> core::result::Result<Self, vyre_foundation::numeric::ContractRefusal>
+pub fn vyre_foundation::numeric::NumericContract::over_reduction(&self, terms: u32) -> core::result::Result<Self, vyre_foundation::numeric::ContractRefusal>
+pub fn vyre_foundation::numeric::NumericContract::permits_reassociation(&self) -> core::result::Result<(), vyre_foundation::numeric::ContractRefusal>
+pub fn vyre_foundation::numeric::NumericContract::relative_error(&self) -> core::result::Result<f64, vyre_foundation::numeric::ContractRefusal>
+pub fn vyre_foundation::numeric::NumericContract::ulp_budget(&self) -> core::option::Option<u32>
+pub fn vyre_foundation::numeric::NumericContract::ulp_fraction(format: vyre_foundation::numeric::ScalarFormat) -> core::option::Option<f64>
+pub fn vyre_foundation::numeric::ScalarFormat::data_type(self) -> vyre_spec::data_type::DataType
+pub fn vyre_foundation::numeric::ScalarFormat::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::numeric::ScalarFormat::is_exact(self) -> bool
+pub fn vyre_foundation::numeric::ScalarFormat::of(dtype: &vyre_spec::data_type::DataType) -> core::option::Option<Self>
+pub fn vyre_foundation::numeric::ScalarFormat::semantics(self) -> vyre_spec::numeric_semantics::NumericSemantics
+pub fn vyre_foundation::numeric::ScalarFormat::ulp_fraction(self) -> core::option::Option<f64>
+pub fn vyre_foundation::numeric::budget_admits(declared: &vyre_foundation::numeric::NumericContract, proven: &vyre_foundation::numeric::NumericContract) -> core::result::Result<(), vyre_foundation::numeric::ContractRefusal>
+pub fn vyre_foundation::numeric::graph_budget<'a>(regions: impl core::iter::traits::collect::IntoIterator<Item = &'a vyre_foundation::numeric::NumericContract>) -> core::result::Result<vyre_foundation::numeric::NumericContract, vyre_foundation::numeric::ContractRefusal>
+pub fn vyre_foundation::numeric::prove(range: vyre_foundation::numeric::MagnitudeRange, contract: &vyre_foundation::numeric::NumericContract, choice: vyre_foundation::numeric::NumericChoice) -> core::result::Result<vyre_foundation::numeric::RangeProof, vyre_foundation::numeric::ContractRefusal>
+pub fn vyre_foundation::numeric::region_contract(facts: &vyre_foundation::numeric::RegionNumericFacts) -> core::result::Result<vyre_foundation::numeric::NumericContract, vyre_foundation::numeric::ContractRefusal>
+pub fn vyre_foundation::numeric::reordering_admitted(declared: &vyre_foundation::numeric::NumericContract, contract: &vyre_foundation::numeric::NumericContract, terms: u32) -> bool
 pub fn vyre_foundation::opaque_payload::canonicalize::canonical_f32_zero(value: f32) -> f32
 pub fn vyre_foundation::opaque_payload::canonicalize::canonical_f64_zero(value: f64) -> f64
 pub fn vyre_foundation::opaque_payload::canonicalize::canonical_regex_flags(flags: &str) -> alloc::string::String
@@ -1243,6 +1317,7 @@ pub fn vyre_foundation::operation::OperationRegistration::effects(&self) -> core
 pub fn vyre_foundation::operation::OperationRegistration::program(&self) -> core::option::Option<vyre_foundation::ir::Program>
 pub fn vyre_foundation::operation::OperationRegistration::required_capabilities(&self) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub fn vyre_foundation::operation::OperationRegistration::schedule_constraints(&self) -> core::result::Result<vyre_foundation::GeometryRequirements, vyre_foundation::GeometryConstraintConflict>
+pub fn vyre_foundation::operation::OperationRegistration::ulp_budget(&self) -> core::option::Option<u32>
 pub fn vyre_foundation::operation::OperationRegistry::call_graph_closure(&self) -> &vyre_foundation::operation::CallGraphClosure
 pub fn vyre_foundation::operation::OperationRegistry::call_graph_closure_identity(&self) -> u64
 pub fn vyre_foundation::operation::OperationRegistry::callees(&self, id: &str) -> core::option::Option<&[&'static str]>
@@ -1261,6 +1336,7 @@ pub fn vyre_foundation::operation::SemanticOperation::from(registration: &'stati
 pub fn vyre_foundation::operation::SemanticOperation::program(self) -> core::option::Option<vyre_foundation::ir::Program>
 pub fn vyre_foundation::operation::SemanticOperation::required_capabilities(self) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub fn vyre_foundation::operation::SemanticOperation::schedule_constraints(self) -> core::result::Result<vyre_foundation::GeometryRequirements, vyre_foundation::GeometryConstraintConflict>
+pub fn vyre_foundation::operation::SemanticOperation::ulp_budget(&self) -> core::option::Option<u32>
 pub fn vyre_foundation::operation::TargetId::as_str(&self) -> &str
 pub fn vyre_foundation::operation::TargetId::deserialize<D>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
 pub fn vyre_foundation::operation::TargetId::eq(&self, other: &&str) -> bool
@@ -2616,6 +2692,7 @@ pub mod vyre_foundation::ir::stats
 pub mod vyre_foundation::logical
 pub mod vyre_foundation::lower
 pub mod vyre_foundation::match_result
+pub mod vyre_foundation::numeric
 pub mod vyre_foundation::opaque_payload
 pub mod vyre_foundation::opaque_payload::canonicalize
 pub mod vyre_foundation::opaque_payload::endian
@@ -2807,6 +2884,10 @@ pub struct vyre_foundation::logical::LogicalProgramGraph<'a>
 pub struct vyre_foundation::logical::LogicalRegion
 pub struct vyre_foundation::lower::LoweringError
 pub struct vyre_foundation::lower::ProgramEffects(_)
+pub struct vyre_foundation::numeric::MagnitudeRange
+pub struct vyre_foundation::numeric::NumericContract
+pub struct vyre_foundation::numeric::RangeProof
+pub struct vyre_foundation::numeric::RegionNumericFacts
 pub struct vyre_foundation::opaque_payload::endian::LeBytesWriter
 pub struct vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated
 pub struct vyre_foundation::operation::CallGraphClosure
@@ -2816,7 +2897,6 @@ pub struct vyre_foundation::operation::OperationRegistry
 pub struct vyre_foundation::operation::SemanticOperation
 pub struct vyre_foundation::operation::TargetId(_)
 pub struct vyre_foundation::operation::TargetOperationFacet
-pub struct vyre_foundation::operation::TolerancePolicy
 pub struct vyre_foundation::optimizer::AdapterCaps
 pub struct vyre_foundation::optimizer::AnalysisCache
 pub struct vyre_foundation::optimizer::DerivedPassEdge
@@ -3732,6 +3812,9 @@ pub vyre_foundation::logical::LogicalProgramError::IncompatibleAliases(vyre_foun
 pub vyre_foundation::logical::LogicalProgramError::MissingDomain(vyre_foundation::ir::GraphNodeId)
 pub vyre_foundation::logical::LogicalProgramError::MissingDomainValue(vyre_foundation::ir::GraphValueId)
 pub vyre_foundation::logical::LogicalProgramError::MissingSymbol(alloc::string::String)
+pub vyre_foundation::logical::LogicalProgramError::Numeric
+pub vyre_foundation::logical::LogicalProgramError::Numeric::node: vyre_foundation::ir::GraphNodeId
+pub vyre_foundation::logical::LogicalProgramError::Numeric::reason: alloc::string::String
 pub vyre_foundation::logical::LogicalProgramError::UnexpectedSymbol(alloc::string::String)
 pub vyre_foundation::logical::LogicalProgramError::UnresolvedExtent
 pub vyre_foundation::logical::LogicalProgramError::UnresolvedExtent::axis: u32
@@ -3747,6 +3830,7 @@ pub vyre_foundation::logical::LogicalRegion::layout: vyre_foundation::logical::L
 pub vyre_foundation::logical::LogicalRegion::max_points: u64
 pub vyre_foundation::logical::LogicalRegion::name: alloc::string::String
 pub vyre_foundation::logical::LogicalRegion::node: vyre_foundation::ir::GraphNodeId
+pub vyre_foundation::logical::LogicalRegion::numeric: vyre_foundation::numeric::NumericContract
 pub vyre_foundation::logical::LogicalRegion::partition: vyre_foundation::logical::LogicalPartitionFacts
 pub vyre_foundation::logical::LogicalRegion::reduction_axes: alloc::vec::Vec<u32>
 pub vyre_foundation::logical::LogicalRegion::written_bytes: u64
@@ -3757,6 +3841,95 @@ pub vyre_foundation::logical::LogicalRegionKind::Sequential
 pub vyre_foundation::match_result::ByteRange::end: u32
 pub vyre_foundation::match_result::ByteRange::start: u32
 pub vyre_foundation::match_result::ByteRange::tag: u32
+pub vyre_foundation::numeric::Approximation::Native
+pub vyre_foundation::numeric::Approximation::Native::measure: vyre_foundation::numeric::ErrorMeasure
+pub vyre_foundation::numeric::Approximation::Refused
+pub vyre_foundation::numeric::AtomicOrderSensitivity::Insensitive
+pub vyre_foundation::numeric::AtomicOrderSensitivity::Sensitive
+pub vyre_foundation::numeric::ContractRefusal::ApproximationRefused
+pub vyre_foundation::numeric::ContractRefusal::BudgetExceeded
+pub vyre_foundation::numeric::ContractRefusal::BudgetExceeded::composed: vyre_foundation::numeric::ErrorMeasure
+pub vyre_foundation::numeric::ContractRefusal::BudgetExceeded::declared: vyre_foundation::numeric::ErrorMeasure
+pub vyre_foundation::numeric::ContractRefusal::FormatDisagrees
+pub vyre_foundation::numeric::ContractRefusal::FormatDisagrees::field: &'static str
+pub vyre_foundation::numeric::ContractRefusal::FormatDisagrees::format: alloc::string::String
+pub vyre_foundation::numeric::ContractRefusal::FormatDisagrees::stated: alloc::string::String
+pub vyre_foundation::numeric::ContractRefusal::FormatMismatch
+pub vyre_foundation::numeric::ContractRefusal::FormatMismatch::first: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::ContractRefusal::FormatMismatch::second: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::ContractRefusal::RangeUnproven
+pub vyre_foundation::numeric::ContractRefusal::RangeUnproven::needed: alloc::string::String
+pub vyre_foundation::numeric::ContractRefusal::RangeUnproven::proven: alloc::string::String
+pub vyre_foundation::numeric::ContractRefusal::ReassociationRefused
+pub vyre_foundation::numeric::ContractRefusal::ReassociationRefused::stated: vyre_foundation::numeric::Reassociation
+pub vyre_foundation::numeric::ContractRefusal::UnboundedMagnitude
+pub vyre_foundation::numeric::ContractRefusal::UnboundedMagnitude::measure: vyre_foundation::numeric::ErrorMeasure
+pub vyre_foundation::numeric::Determinism::Deterministic
+pub vyre_foundation::numeric::Determinism::RunToRunVariable
+pub vyre_foundation::numeric::ErrorMeasure::Absolute
+pub vyre_foundation::numeric::ErrorMeasure::Absolute::bits: u64
+pub vyre_foundation::numeric::ErrorMeasure::Exact
+pub vyre_foundation::numeric::ErrorMeasure::Relative
+pub vyre_foundation::numeric::ErrorMeasure::Relative::bits: u64
+pub vyre_foundation::numeric::ErrorMeasure::Ulp
+pub vyre_foundation::numeric::ErrorMeasure::Ulp::count: u32
+pub vyre_foundation::numeric::NumericChoice::AccumulateIn
+pub vyre_foundation::numeric::NumericChoice::AccumulateIn::format: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::NumericChoice::AccumulateIn::terms: u32
+pub vyre_foundation::numeric::NumericChoice::Approximate
+pub vyre_foundation::numeric::NumericChoice::Approximate::measure: vyre_foundation::numeric::ErrorMeasure
+pub vyre_foundation::numeric::NumericChoice::ChunkReduction
+pub vyre_foundation::numeric::NumericChoice::ChunkReduction::chunk: u32
+pub vyre_foundation::numeric::NumericChoice::ChunkReduction::terms: u32
+pub vyre_foundation::numeric::NumericChoice::Reassociate
+pub vyre_foundation::numeric::NumericChoice::Reassociate::terms: u32
+pub vyre_foundation::numeric::NumericChoice::StoreAs(vyre_foundation::numeric::ScalarFormat)
+pub vyre_foundation::numeric::NumericContract::accumulator: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::NumericContract::approximation: vyre_foundation::numeric::Approximation
+pub vyre_foundation::numeric::NumericContract::atomic_order: vyre_foundation::numeric::AtomicOrderSensitivity
+pub vyre_foundation::numeric::NumericContract::determinism: vyre_foundation::numeric::Determinism
+pub vyre_foundation::numeric::NumericContract::infinity: vyre_spec::numeric_semantics::InfinityBehavior
+pub vyre_foundation::numeric::NumericContract::intermediate: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::NumericContract::measure: vyre_foundation::numeric::ErrorMeasure
+pub vyre_foundation::numeric::NumericContract::nan: vyre_spec::numeric_semantics::NanBehavior
+pub vyre_foundation::numeric::NumericContract::overflow: vyre_spec::numeric_semantics::OverflowBehavior
+pub vyre_foundation::numeric::NumericContract::reassociation: vyre_foundation::numeric::Reassociation
+pub vyre_foundation::numeric::NumericContract::rounding: vyre_spec::numeric_semantics::RoundingMode
+pub vyre_foundation::numeric::NumericContract::storage: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::NumericContract::subnormal: vyre_spec::numeric_semantics::SubnormalBehavior
+pub vyre_foundation::numeric::RangeProof::choice: vyre_foundation::numeric::NumericChoice
+pub vyre_foundation::numeric::RangeProof::measure: vyre_foundation::numeric::ErrorMeasure
+pub vyre_foundation::numeric::RangeProof::range: vyre_foundation::numeric::MagnitudeRange
+pub vyre_foundation::numeric::Reassociation::Exact
+pub vyre_foundation::numeric::Reassociation::Forbidden
+pub vyre_foundation::numeric::Reassociation::WithinBudget
+pub vyre_foundation::numeric::RegionArithmetic::Pointwise
+pub vyre_foundation::numeric::RegionArithmetic::Recurrence
+pub vyre_foundation::numeric::RegionArithmetic::Recurrence::steps: u64
+pub vyre_foundation::numeric::RegionArithmetic::Reduction
+pub vyre_foundation::numeric::RegionArithmetic::Reduction::terms: u64
+pub vyre_foundation::numeric::RegionNumericFacts::arithmetic: vyre_foundation::numeric::RegionArithmetic
+pub vyre_foundation::numeric::RegionNumericFacts::atomics: bool
+pub vyre_foundation::numeric::RegionNumericFacts::input: core::option::Option<vyre_foundation::numeric::ScalarFormat>
+pub vyre_foundation::numeric::RegionNumericFacts::output: core::option::Option<vyre_foundation::numeric::ScalarFormat>
+pub vyre_foundation::numeric::RegionNumericFacts::reorderable: bool
+pub vyre_foundation::numeric::ScalarFormat::BF16
+pub vyre_foundation::numeric::ScalarFormat::F16
+pub vyre_foundation::numeric::ScalarFormat::F32
+pub vyre_foundation::numeric::ScalarFormat::F64
+pub vyre_foundation::numeric::ScalarFormat::F8E4M3
+pub vyre_foundation::numeric::ScalarFormat::F8E5M2
+pub vyre_foundation::numeric::ScalarFormat::FP4
+pub vyre_foundation::numeric::ScalarFormat::I16
+pub vyre_foundation::numeric::ScalarFormat::I32
+pub vyre_foundation::numeric::ScalarFormat::I4
+pub vyre_foundation::numeric::ScalarFormat::I64
+pub vyre_foundation::numeric::ScalarFormat::I8
+pub vyre_foundation::numeric::ScalarFormat::NF4
+pub vyre_foundation::numeric::ScalarFormat::U16
+pub vyre_foundation::numeric::ScalarFormat::U32
+pub vyre_foundation::numeric::ScalarFormat::U64
+pub vyre_foundation::numeric::ScalarFormat::U8
 pub vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated::available: usize
 pub vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated::expected: usize
 pub vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated::field: &'static str
@@ -3782,12 +3955,12 @@ pub vyre_foundation::operation::OperationRegistration::explicit_effects: core::o
 pub vyre_foundation::operation::OperationRegistration::geometry_requirements: vyre_foundation::GeometryRequirements
 pub vyre_foundation::operation::OperationRegistration::id: &'static str
 pub vyre_foundation::operation::OperationRegistration::laws: &'static [&'static str]
+pub vyre_foundation::operation::OperationRegistration::numeric: vyre_foundation::numeric::NumericContract
 pub vyre_foundation::operation::OperationRegistration::semantic_version: u32
 pub vyre_foundation::operation::OperationRegistration::signature: core::option::Option<vyre_foundation::dialect_lookup::Signature>
 pub vyre_foundation::operation::OperationRegistration::source_file: &'static str
 pub vyre_foundation::operation::OperationRegistration::test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>
 pub vyre_foundation::operation::OperationRegistration::tier: vyre_foundation::operation::OperationTier
-pub vyre_foundation::operation::OperationRegistration::tolerance: vyre_foundation::operation::TolerancePolicy
 pub vyre_foundation::operation::OperationRegistryError::DuplicateId
 pub vyre_foundation::operation::OperationRegistryError::DuplicateId::id: &'static str
 pub vyre_foundation::operation::OperationRegistryError::InvalidTier
@@ -3813,16 +3986,15 @@ pub vyre_foundation::operation::SemanticOperation::explicit_effects: core::optio
 pub vyre_foundation::operation::SemanticOperation::geometry_requirements: vyre_foundation::GeometryRequirements
 pub vyre_foundation::operation::SemanticOperation::id: &'static str
 pub vyre_foundation::operation::SemanticOperation::laws: &'static [&'static str]
+pub vyre_foundation::operation::SemanticOperation::numeric: vyre_foundation::numeric::NumericContract
 pub vyre_foundation::operation::SemanticOperation::semantic_version: u32
 pub vyre_foundation::operation::SemanticOperation::signature: core::option::Option<&'static vyre_foundation::dialect_lookup::Signature>
 pub vyre_foundation::operation::SemanticOperation::source_file: &'static str
 pub vyre_foundation::operation::SemanticOperation::test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>
 pub vyre_foundation::operation::SemanticOperation::tier: vyre_foundation::operation::OperationTier
-pub vyre_foundation::operation::SemanticOperation::tolerance: vyre_foundation::operation::TolerancePolicy
 pub vyre_foundation::operation::TargetOperationFacet::operation_id: &'static str
 pub vyre_foundation::operation::TargetOperationFacet::target_id: vyre_foundation::operation::TargetId
 pub vyre_foundation::operation::TargetOperationFacet::version: u32
-pub vyre_foundation::operation::TolerancePolicy::f32_ulp: u32
 pub vyre_foundation::optimizer::AdapterCaps::backend: &'static str
 pub vyre_foundation::optimizer::AdapterCaps::compute_units: u32
 pub vyre_foundation::optimizer::AdapterCaps::ideal_unroll_depth: u32

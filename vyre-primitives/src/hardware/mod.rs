@@ -42,7 +42,7 @@ macro_rules! submit_intrinsic_operation {
                 test_inputs: Some($inputs),
                 expected_output: Some($expected),
                 laws: &[],
-                tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
+                numeric: vyre_foundation::numeric::NumericContract::EXACT,
                 geometry_requirements: vyre_foundation::GeometryRequirements::agnostic(),
             }
         }

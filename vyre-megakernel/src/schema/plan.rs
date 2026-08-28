@@ -2,6 +2,7 @@
 //! decoded under.
 
 use serde::{Deserialize, Serialize};
+use vyre_foundation::numeric::{NumericContract, NUMERIC_CONTRACT_VERSION};
 use vyre_foundation::schedule::SelectedSchedule;
 
 use crate::certificate::SearchCertificate;
@@ -51,6 +52,47 @@ pub enum PlanMeasurement {
     Measured(MeasurementRecord),
 }
 
+/// What one plan states about the numbers it computes.
+///
+/// Every field is a compile-time statement, not a measurement: the formats each
+/// region holds, computes and accumulates in, the approximations it admits, the
+/// conversions it performs, and the budget the whole graph composes to. A
+/// consumer reads this to know what the artifact promises without re-deriving it
+/// from the programs, and a conformance run compares its measured error against
+/// the composed contract recorded here.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct NumericRecord {
+    /// Version of the contract shape these records are stated in.
+    pub version: u32,
+    /// Budget the caller stated, when it stated one.
+    pub declared: Option<NumericContract>,
+    /// Contract the graph's regions compose to along its outputs.
+    pub proven: NumericContract,
+    /// Contract each region states, in graph-node order.
+    pub regions: Vec<NumericContract>,
+    /// Regions whose combine order this plan changed.
+    ///
+    /// A region here computes its result in an order the program did not state,
+    /// which is legal because the declared budget covers the difference. An
+    /// empty list over a rounding graph means every combine kept its stated
+    /// order.
+    pub reordered: Vec<u32>,
+}
+
+impl NumericRecord {
+    /// The record of a plan that reorders nothing and states no budget.
+    #[must_use]
+    pub fn exact() -> Self {
+        Self {
+            version: NUMERIC_CONTRACT_VERSION,
+            declared: None,
+            proven: NumericContract::EXACT,
+            regions: Vec::new(),
+            reordered: Vec::new(),
+        }
+    }
+}
+
 /// Immutable compiler-selected whole-program plan.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SelectedPlan {
@@ -90,6 +132,8 @@ pub struct SelectedPlan {
     pub execution: ExecutionMode,
     /// Whether a device measurement chose this plan over its finalists.
     pub measurement: PlanMeasurement,
+    /// What this plan states about the numbers it computes.
+    pub numeric_budget: NumericRecord,
 }
 
 impl SelectedPlan {

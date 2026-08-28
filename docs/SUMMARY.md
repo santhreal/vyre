@@ -30,6 +30,7 @@
 # API and operation reference
 
 - [Diagnostics](reference/diagnostics.md)
+- [Numeric contracts](reference/numeric-contracts.md)
 - [Program wire format](reference/wire-format.md)
 - [The operation registry](reference/operations.md)
 - [Value contracts](reference/values.md)

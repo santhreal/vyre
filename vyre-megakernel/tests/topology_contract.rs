@@ -234,7 +234,11 @@ fn artifact_encoding_preserves_the_pinned_schema_and_compiled_topology_schedule(
 
     let artifact = compile(&request).expect("compilation must succeed");
     assert_eq!(artifact.schema_version(), ARTIFACT_SCHEMA_VERSION);
-    assert_eq!(artifact.schema_version(), 16);
+    assert_eq!(
+        artifact.schema_version(),
+        vyre_megakernel::ARTIFACT_SCHEMA_VERSION,
+        "an artifact stamps the schema its own crate states"
+    );
 
     let wire_bytes = artifact.to_bytes().expect("artifact must encode");
     let decoded = Artifact::from_bytes(&wire_bytes).expect("artifact must decode");

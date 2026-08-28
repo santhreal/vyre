@@ -4,6 +4,7 @@ use vyre_foundation::{
     algebraic_reordering::{reordering_class, ReorderingClass},
     ir::Ident,
     logical::LogicalProgramGraph,
+    numeric::NumericContract,
     optimizer::cost::CostCertificate,
 };
 
@@ -52,6 +53,18 @@ pub(crate) struct PlanningFacts {
     /// the combines once, from operator laws and element types, so search never
     /// re-derives numerics from a candidate.
     pub(crate) node_reordering: Vec<ReorderingClass>,
+    /// Numeric contract each region states, derived by the logical stage.
+    ///
+    /// A schedule that reorders a combine is legal over a rounding accumulation
+    /// only where a stated budget admits the error the new order produces, so
+    /// the contract travels with the region rather than being re-derived per
+    /// candidate.
+    pub(crate) node_numeric: Vec<NumericContract>,
+    /// Values each region combines into one output point.
+    ///
+    /// A reduction over more points rounds more often, so the count decides how
+    /// much a reordered schedule costs.
+    pub(crate) node_reduction_terms: Vec<u32>,
     /// Instructions each node's program states.
     ///
     /// The count is static: a loop body counts once, because no analysis here
@@ -99,6 +112,8 @@ pub(crate) fn derive(
     let mut node_declared_workgroup = Vec::with_capacity(node_count);
     let mut node_accepts_width = Vec::with_capacity(node_count);
     let mut node_reordering = Vec::with_capacity(node_count);
+    let mut node_numeric = Vec::with_capacity(node_count);
+    let mut node_reduction_terms = Vec::with_capacity(node_count);
     let mut node_instructions = Vec::with_capacity(node_count);
     let mut node_barriers = Vec::with_capacity(node_count);
     let mut node_grid_syncs = Vec::with_capacity(node_count);
@@ -123,6 +138,11 @@ pub(crate) fn derive(
         node_declared_workgroup.push(declared);
         node_accepts_width.push(accepts_width);
         node_reordering.push(reordering_class(program));
+        let region = logical.region(node.id);
+        node_numeric.push(region.map_or(NumericContract::EXACT, |region| region.numeric));
+        node_reduction_terms.push(region.map_or(1, |region| {
+            u32::try_from(region.max_points).unwrap_or(u32::MAX)
+        }));
         node_instructions.push(stats.instruction_count);
         node_barriers.push(stats.barrier_count);
         node_grid_syncs.push(stats.grid_sync_count);
@@ -175,6 +195,8 @@ pub(crate) fn derive(
         node_declared_workgroup,
         node_accepts_width,
         node_reordering,
+        node_numeric,
+        node_reduction_terms,
         node_instructions,
         node_barriers,
         node_grid_syncs,

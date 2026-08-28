@@ -51,6 +51,7 @@ fn image_for(operation_id: &str, program: &Program) -> Result<TargetModuleImage,
         program,
         descriptor,
         entry_point: "main".to_string(),
+        numeric: vyre_megakernel::ModuleNumericRecord::default(),
         bytes: Vec::new(),
     })
 }

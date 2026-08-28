@@ -34,7 +34,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_NEWTON_SCHULZ_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
-    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(64))
+    .with_numeric(vyre_foundation::numeric::NumericContract::ieee_f32(64))
 }
 
 #[cfg(test)]

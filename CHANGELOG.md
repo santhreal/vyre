@@ -59,6 +59,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - `vyre_driver::launch_fixtures::wide_limits` states the launch-geometry limits
   a preparation or tuning test runs under, so such a test names only the
   backend and the per-compute-unit thread budget.
+- Range analysis proves the magnitudes a bounded exponential, inverse or
+  recurrent state carries and prices each storage, accumulator, approximation,
+  reassociation and chunking choice against the contract that admits it.
 - `conformance-matrix` compares every `docs/optimization/OP_MATRIX.toml`
   backend cell against the recorded conformance run for that backend, in both
   directions: a cell claiming support the run does not cover or reports
@@ -74,6 +77,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - `vyre_megakernel::mesh::implied_width` states the parallel width a placed
   region set implies, and plan construction, plan validation and the topology
   tests all read it from there.
+- Every emitted target module records the storage formats, conversions,
+  approximable operations, and chunk width it was lowered under.
 - The `ci-required` gate holds the required status contexts to the workflows
   that define them: every context resolves to a job by display name or job id,
   every workflow carrying one runs on pull requests and on pushes to the
@@ -109,6 +114,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   sweep reports a workflow step that names a script the checkout does not
   carry, which is what every script this campaign deletes leaves behind: a step
   that fails at run time under a name that still reads as coverage.
+- CompileRequest::with_numeric_budget states the error a caller admits, and a
+  schedule that reorders a rounding accumulation is admitted where the
+  reordered contract fits that budget instead of being eliminated.
 - A guarded artifact set states the target identity it was compiled for, and
   admission rejects a set whose authenticated target is a different device or
   objective before any guard is evaluated.
@@ -134,6 +142,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   numerical law families a rewrite may cite over it, or the reason it exposes
   none, and a construct added to the AST registry fails the suite until one is
   recorded.
+- Every operation registration and every validated region states a numeric
+  contract covering error measure, reassociation, storage, intermediate and
+  accumulator formats, rounding, overflow, special-value handling, determinism,
+  atomic-order sensitivity and approximation.
 - hygiene-matrix bounds the panics nothing else answers for. A panicking call
   whose function documents a # Panics section is a contract, and one on a hot
   path is a release blocker; between them sat every panic that is neither,
@@ -958,6 +970,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - An admitted target module submits the grid, workgroup, coverage and shared
   bytes the artifact recorded for its own entry point, and a payload-stated
   geometry never reaches a submission.
+- Artifact schema 17 records the declared budget, the composed output budget,
+  the per-region contracts and the regions the selected plan combines in an
+  order the program did not state.
 - `examples/external_backend_extension` registers a dispatch backend from
   outside the workspace. It described `vyre_driver::VyreBackend` as sealed
   against outside implementations and built a program instead, which stated a
@@ -4888,6 +4903,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   instead of a 64-bit FxHash of the program wire, so a resident dispatch cannot
   be answered by a pipeline compiled for another adapter, ABI, naga build or
   emitter lowering digest.
+- A resident route is selected over a rounding accumulation only where the
+  combines reassociate or the stated numeric budget covers the order a work
+  queue produces.
 - A retired release claim is any dotted number that starts with the retired
   train, so a four component version is reported, and the same digits inside
   another train version or inside a hash are not.

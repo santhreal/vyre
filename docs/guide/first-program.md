@@ -76,6 +76,11 @@ selected for. `minimize_latency` is the single-submission case; see
 [compile search](../architecture/compile-search.md) for the metrics, the
 calibrated facts each one needs, and the bounds.
 
+A floating-point graph also states what its result may be. `with_numeric_budget`
+takes the `NumericContract` the caller admits; without one the search keeps only
+schedules that combine in the order the program states. See
+[numeric contracts](../reference/numeric-contracts.md).
+
 **Compile.** `compile` returns one immutable `Artifact`: node records,
 resource records, the whole-program ABI, the selected plan, and a
 provenance record. Compiling the same validated request twice produces the

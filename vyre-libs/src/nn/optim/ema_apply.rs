@@ -49,5 +49,5 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_EMA_APPLY_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
-    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(1))
+    .with_numeric(vyre_foundation::numeric::NumericContract::ieee_f32(1))
 }

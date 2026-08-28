@@ -27,6 +27,8 @@ fn two_node_facts(live_values: u64, value_bytes: u64) -> PlanningFacts {
         node_declared_workgroup: vec![[256, 1, 1], [256, 1, 1]],
         node_accepts_width: vec![true, true],
         node_reordering: vec![ReorderingClass::NoCombine; 2],
+        node_numeric: vec![vyre_foundation::numeric::NumericContract::EXACT; 2],
+        node_reduction_terms: vec![1, 1],
         node_instructions: vec![0, 0],
         node_barriers: vec![0, 0],
         node_grid_syncs: vec![0, 0],

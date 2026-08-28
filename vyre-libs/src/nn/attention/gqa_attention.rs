@@ -356,7 +356,7 @@ inventory::submit! {
         }),
     )
     .with_category("nn")
-    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(4))
+    .with_numeric(vyre_foundation::numeric::NumericContract::ieee_f32(4))
 }
 
 #[cfg(test)]

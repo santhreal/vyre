@@ -8,9 +8,7 @@ pub use self::registry_error::OperationRegistryError;
 mod semantics;
 mod target_facet;
 
-pub use self::semantics::{
-    operation_id_namespace, IdNamespace, OperationEffects, OperationTier, TolerancePolicy,
-};
+pub use self::semantics::{operation_id_namespace, IdNamespace, OperationEffects, OperationTier};
 pub use self::target_facet::{TargetId, TargetOperationFacet};
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -19,6 +17,7 @@ use std::sync::LazyLock;
 
 use crate::dialect_lookup::Signature;
 use crate::ir::Program;
+use crate::numeric::NumericContract;
 use crate::program_caps::{scan as scan_capabilities, RequiredCapabilities};
 use crate::visit::collect_call_op_ids;
 
@@ -47,8 +46,8 @@ pub struct SemanticOperation {
     pub expected_output: Option<OperationFixtures>,
     /// Algebraic or semantic law identifiers.
     pub laws: &'static [&'static str],
-    /// Numerical comparison policy.
-    pub tolerance: TolerancePolicy,
+    /// What the result is allowed to be.
+    pub numeric: NumericContract,
     /// Recorded target-neutral schedule constraints.
     pub geometry_requirements: crate::geometry::GeometryRequirements,
     /// Source file that owns the registration.
@@ -129,9 +128,14 @@ impl SemanticOperation {
     }
 
     /// Return the permitted f32 drift in ULPs.
+    ///
+    /// A contract stated in ULPs answers with its count, an exact contract with
+    /// zero, and a relative bound with the count it spans over the declared
+    /// storage. An absolute bound has no ULP reading without a magnitude, so it
+    /// answers `None` rather than a number a comparison would trust.
     #[must_use]
-    pub const fn tolerance(self) -> u32 {
-        self.tolerance.f32_ulp
+    pub fn ulp_budget(&self) -> Option<u32> {
+        self.numeric.ulp_budget()
     }
 
     /// Effective composite semantic version including local schema version, transitive effects,
@@ -199,8 +203,8 @@ pub struct OperationRegistration {
     pub expected_output: Option<OperationFixtures>,
     /// Algebraic or semantic law identifiers.
     pub laws: &'static [&'static str],
-    /// Numerical comparison policy.
-    pub tolerance: TolerancePolicy,
+    /// What the result is allowed to be.
+    pub numeric: NumericContract,
     /// Recorded target-neutral schedule constraints.
     pub geometry_requirements: crate::geometry::GeometryRequirements,
     /// Source file that owns the registration.
@@ -232,7 +236,7 @@ impl OperationRegistration {
             test_inputs,
             expected_output,
             laws: &[],
-            tolerance: TolerancePolicy::EXACT,
+            numeric: NumericContract::EXACT,
             geometry_requirements: crate::geometry::GeometryRequirements::agnostic(),
             source_file: Location::caller().file(),
             explicit_effects: None,
@@ -331,15 +335,20 @@ impl OperationRegistration {
     }
 
     /// Return the permitted f32 drift in ULPs.
+    ///
+    /// A contract stated in ULPs answers with its count, an exact contract with
+    /// zero, and a relative bound with the count it spans over the declared
+    /// storage. An absolute bound has no ULP reading without a magnitude, so it
+    /// answers `None` rather than a number a comparison would trust.
     #[must_use]
-    pub const fn tolerance(&self) -> u32 {
-        self.tolerance.f32_ulp
+    pub fn ulp_budget(&self) -> Option<u32> {
+        self.numeric.ulp_budget()
     }
 
-    /// Attach the numerical tolerance policy.
+    /// State what the result is allowed to be.
     #[must_use]
-    pub const fn with_tolerance(mut self, tolerance: TolerancePolicy) -> Self {
-        self.tolerance = tolerance;
+    pub const fn with_numeric(mut self, numeric: NumericContract) -> Self {
+        self.numeric = numeric;
         self
     }
 
@@ -438,7 +447,7 @@ impl From<&'static OperationRegistration> for SemanticOperation {
             test_inputs: registration.test_inputs,
             expected_output: registration.expected_output,
             laws: registration.laws,
-            tolerance: registration.tolerance,
+            numeric: registration.numeric,
             geometry_requirements: registration.geometry_requirements,
             source_file: registration.source_file,
             explicit_effects: registration.explicit_effects,

@@ -51,6 +51,7 @@ The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
 | `test` | `library_contracts` | `conform/vyre-conform/tests/library_contracts/mod.rs` | None | `./cargo_full test -p vyre-conform --test library_contracts` |
 | `test` | `mesh_placement_contracts` | `conform/vyre-conform/tests/mesh_placement_contracts.rs` | None | `./cargo_full test -p vyre-conform --test mesh_placement_contracts` |
 | `test` | `minimizer_contract` | `conform/vyre-conform/tests/minimizer_contract.rs` | None | `./cargo_full test -p vyre-conform --test minimizer_contract` |
+| `test` | `numeric_contract_conformance` | `conform/vyre-conform/tests/numeric_contract_conformance.rs` | None | `./cargo_full test -p vyre-conform --test numeric_contract_conformance` |
 | `test` | `op_matrix_truth` | `conform/vyre-conform/tests/op_matrix_truth/mod.rs` | None | `./cargo_full test -p vyre-conform --test op_matrix_truth` |
 | `test` | `parity_matrix` | `conform/vyre-conform/tests/parity_matrix.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test parity_matrix` |
 | `test` | `production_route` | `conform/vyre-conform/tests/production_route.rs` | None | `./cargo_full test -p vyre-conform --test production_route` |

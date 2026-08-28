@@ -25,7 +25,7 @@ pub fn in_place_input_graph(count: u32, workgroup: [u32; 3]) -> ProgramGraph {
     let mut graph = ProgramGraph::new();
     let value = graph
         .add_external_value("state", state.clone())
-        .expect("fixture external value must be valid");
+        .expect("Fix: declare the fixture external value with a contract the graph admits.");
     graph
         .add_node(
             "relax",
@@ -45,7 +45,7 @@ pub fn in_place_input_graph(count: u32, workgroup: [u32; 3]) -> ProgramGraph {
             }],
             Vec::new(),
         )
-        .expect("fixture in-place node must be valid");
+        .expect("Fix: wire the in-place fixture node to the value contract it reads and writes.");
     graph
 }
 
@@ -78,7 +78,7 @@ pub fn atomic_output_graph(count: u32, workgroup: [u32; 3]) -> ProgramGraph {
                 retained_successor_of: None,
             }],
         )
-        .expect("fixture atomic node must be valid");
+        .expect("Fix: wire the atomic fixture node to the value contract it updates.");
     graph
 }
 
@@ -107,7 +107,7 @@ pub fn chained_graph(count: u32, workgroup: [u32; 3]) -> ProgramGraph {
                 retained_successor_of: None,
             }],
         )
-        .expect("fixture producer node must be valid");
+        .expect("Fix: wire the producer fixture node to the value contract it writes.");
     graph
         .add_node(
             "consumer",
@@ -135,6 +135,6 @@ pub fn chained_graph(count: u32, workgroup: [u32; 3]) -> ProgramGraph {
                 retained_successor_of: None,
             }],
         )
-        .expect("fixture consumer node must be valid");
+        .expect("Fix: wire the consumer fixture node to the value the producer wrote.");
     graph
 }

@@ -181,21 +181,3 @@ impl OperationEffects {
         effects
     }
 }
-
-/// Numerical comparison policy owned by the semantic operation.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
-pub struct TolerancePolicy {
-    /// Maximum accepted f32 drift measured in ULPs.
-    pub f32_ulp: u32,
-}
-
-impl TolerancePolicy {
-    /// Exact byte identity.
-    pub const EXACT: Self = Self { f32_ulp: 0 };
-
-    /// Construct an f32 ULP tolerance.
-    #[must_use]
-    pub const fn f32_ulp(maximum: u32) -> Self {
-        Self { f32_ulp: maximum }
-    }
-}

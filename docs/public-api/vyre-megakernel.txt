@@ -31,6 +31,8 @@ impl vyre_megakernel::ExternalFacts
 impl vyre_megakernel::GeometryRecord
 impl vyre_megakernel::MetricFigures
 impl vyre_megakernel::MetricSequence
+impl vyre_megakernel::ModuleNumericRecord
+impl vyre_megakernel::NumericRecord
 impl vyre_megakernel::ObjectiveBounds
 impl vyre_megakernel::ObjectiveMetric
 impl vyre_megakernel::PortfolioPolicy
@@ -114,6 +116,7 @@ pub const fn vyre_megakernel::CompileObjective::with_tie_breaker(self, metric: v
 pub const fn vyre_megakernel::CompileObjective::with_workload(self, workload: vyre_megakernel::WorkloadProfile) -> Self
 pub const fn vyre_megakernel::CompileObjective::workload(&self) -> &vyre_megakernel::WorkloadProfile
 pub const fn vyre_megakernel::CompileRequest::new(graph: vyre_foundation::ir_inner::model::program_graph::ProgramGraph, facts: vyre_megakernel::ExternalFacts, device: vyre_megakernel::DeviceFacts, search_budget: vyre_megakernel::SearchBudget, objective: vyre_megakernel::CompileObjective) -> Self
+pub const fn vyre_megakernel::CompileRequest::with_numeric_budget(self, numeric: vyre_foundation::numeric::contract::NumericContract) -> Self
 pub const fn vyre_megakernel::CoveragePolicy::minimum_variants(self, classes: usize) -> usize
 pub const fn vyre_megakernel::CoveragePolicy::name(self) -> &'static str
 pub const fn vyre_megakernel::DeviceFacts::architectural_registers_per_invocation(&self) -> u32
@@ -214,6 +217,7 @@ pub const fn vyre_megakernel::ValidatedCompileRequest::device(&self) -> vyre_meg
 pub const fn vyre_megakernel::ValidatedCompileRequest::facts(&self) -> &vyre_megakernel::ExternalFacts
 pub const fn vyre_megakernel::ValidatedCompileRequest::graph(&self) -> &vyre_foundation::ir_inner::model::program_graph::ProgramGraph
 pub const fn vyre_megakernel::ValidatedCompileRequest::mesh(&self) -> &vyre_megakernel::mesh::MeshFacts
+pub const fn vyre_megakernel::ValidatedCompileRequest::numeric_budget(&self) -> core::option::Option<vyre_foundation::numeric::contract::NumericContract>
 pub const fn vyre_megakernel::ValidatedCompileRequest::objective(&self) -> &vyre_megakernel::CompileObjective
 pub const fn vyre_megakernel::ValidatedCompileRequest::recorded_measurement(&self) -> core::option::Option<&vyre_megakernel::measure::MeasurementRecord>
 pub const fn vyre_megakernel::ValidatedCompileRequest::representative_inputs(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::vec::Vec<u8>>
@@ -392,6 +396,8 @@ pub fn vyre_megakernel::MetricFigures::unavoidable(unavoidable_ns: u64, class: v
 pub fn vyre_megakernel::MetricSequence::as_slice(&self) -> &[vyre_megakernel::ObjectiveMetric]
 pub fn vyre_megakernel::MetricSequence::contains(&self, metric: vyre_megakernel::ObjectiveMetric) -> bool
 pub fn vyre_megakernel::MetricSequence::default() -> Self
+pub fn vyre_megakernel::ModuleNumericRecord::of(program: &vyre_foundation::ir_inner::model::program::definition::Program, phase: &vyre_foundation::schedule::SchedulePhase) -> Self
+pub fn vyre_megakernel::NumericRecord::exact() -> Self
 pub fn vyre_megakernel::ObjectiveBounds::default() -> Self
 pub fn vyre_megakernel::ObjectiveBounds::first_violation(&self, figures: &[core::option::Option<u64>; 9]) -> core::option::Option<vyre_megakernel::BoundViolation>
 pub fn vyre_megakernel::ObjectiveBounds::is_unbounded(&self) -> bool
@@ -549,7 +555,9 @@ pub struct vyre_megakernel::LaunchResourceIntent
 pub struct vyre_megakernel::MaterializationRecord
 pub struct vyre_megakernel::MetricFigures
 pub struct vyre_megakernel::MetricSequence
+pub struct vyre_megakernel::ModuleNumericRecord
 pub struct vyre_megakernel::NodeRecord
+pub struct vyre_megakernel::NumericRecord
 pub struct vyre_megakernel::ObjectiveBounds
 pub struct vyre_megakernel::PayloadAttachment
 pub struct vyre_megakernel::PortfolioPolicy
@@ -705,9 +713,19 @@ pub vyre_megakernel::MaterializationRecord::producer: vyre_megakernel::FusionGro
 pub vyre_megakernel::MaterializationRecord::reason: vyre_megakernel::MaterializationReason
 pub vyre_megakernel::MaterializationRecord::stage: u32
 pub vyre_megakernel::MaterializationRecord::value: vyre_megakernel::ArtifactValueId
+pub vyre_megakernel::ModuleNumericRecord::approximations: alloc::vec::Vec<alloc::string::String>
+pub vyre_megakernel::ModuleNumericRecord::chunk: core::option::Option<u32>
+pub vyre_megakernel::ModuleNumericRecord::conversions: alloc::vec::Vec<vyre_foundation::numeric::format::ScalarFormat>
+pub vyre_megakernel::ModuleNumericRecord::formats: alloc::vec::Vec<vyre_foundation::numeric::format::ScalarFormat>
+pub vyre_megakernel::ModuleNumericRecord::version: u32
 pub vyre_megakernel::NodeRecord::id: vyre_megakernel::ArtifactNodeId
 pub vyre_megakernel::NodeRecord::name: alloc::string::String
 pub vyre_megakernel::NodeRecord::program: alloc::vec::Vec<u8>
+pub vyre_megakernel::NumericRecord::declared: core::option::Option<vyre_foundation::numeric::contract::NumericContract>
+pub vyre_megakernel::NumericRecord::proven: vyre_foundation::numeric::contract::NumericContract
+pub vyre_megakernel::NumericRecord::regions: alloc::vec::Vec<vyre_foundation::numeric::contract::NumericContract>
+pub vyre_megakernel::NumericRecord::reordered: alloc::vec::Vec<u32>
+pub vyre_megakernel::NumericRecord::version: u32
 pub vyre_megakernel::ObjectiveMetric::ArtifactBytes
 pub vyre_megakernel::ObjectiveMetric::ColdStart
 pub vyre_megakernel::ObjectiveMetric::CompileWork
@@ -826,6 +844,7 @@ pub vyre_megakernel::SelectedPlan::execution: vyre_megakernel::ExecutionMode
 pub vyre_megakernel::SelectedPlan::fusion: alloc::vec::Vec<vyre_megakernel::FusionRecord>
 pub vyre_megakernel::SelectedPlan::materializations: alloc::vec::Vec<vyre_megakernel::MaterializationRecord>
 pub vyre_megakernel::SelectedPlan::measurement: vyre_megakernel::PlanMeasurement
+pub vyre_megakernel::SelectedPlan::numeric_budget: vyre_megakernel::NumericRecord
 pub vyre_megakernel::SelectedPlan::pareto_frontier: u32
 pub vyre_megakernel::SelectedPlan::pruned_fusions: alloc::vec::Vec<vyre_megakernel::FusionRejection>
 pub vyre_megakernel::SelectedPlan::schedule: vyre_foundation::schedule::SelectedSchedule
@@ -862,6 +881,7 @@ pub vyre_megakernel::TargetModuleImage::descriptor: vyre_lower::descriptor::Kern
 pub vyre_megakernel::TargetModuleImage::entry_point: alloc::string::String
 pub vyre_megakernel::TargetModuleImage::group: vyre_megakernel::FusionGroupId
 pub vyre_megakernel::TargetModuleImage::nodes: alloc::vec::Vec<vyre_megakernel::ArtifactNodeId>
+pub vyre_megakernel::TargetModuleImage::numeric: vyre_megakernel::ModuleNumericRecord
 pub vyre_megakernel::TargetModuleImage::program: alloc::vec::Vec<u8>
 pub vyre_megakernel::TargetModuleImage::stage: u32
 pub vyre_megakernel::TargetResourceAccess::ReadOnly

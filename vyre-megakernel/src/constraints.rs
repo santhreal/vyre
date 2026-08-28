@@ -14,6 +14,7 @@
 use vyre_foundation::{
     algebraic_reordering::ReorderingClass,
     ir::ProgramGraph,
+    numeric::{reordering_admitted, NumericContract},
     schedule::{CombineOrder, MappingLevel, SchedulePhaseId, ScheduleTransform},
 };
 
@@ -38,6 +39,10 @@ pub(crate) struct ConstraintContext<'a> {
     pub(crate) dependencies: &'a [DependencyEdge],
     /// Authenticated capabilities of the compile target.
     pub(crate) device: DeviceFacts,
+    /// Numeric budget the caller stated for the graph's outputs, when it stated
+    /// one. Absent, every schedule that changes a rounding combine order is
+    /// eliminated rather than priced.
+    pub(crate) numeric: Option<NumericContract>,
 }
 
 /// Whether one derived candidate is legal, and why not when it is not.
@@ -169,14 +174,19 @@ fn numerical(
     Ok(())
 }
 
-/// A transform that changes combine order must combine reorderably.
+/// A transform that changes combine order must combine reorderably, or stay
+/// inside a numeric budget the caller stated.
 ///
 /// A work queue, a spatial partition, a pipeline, and an asymmetric join let
 /// invocations reach a shared accumulator in an order the schedule does not fix,
 /// and splitting or remapping an axis changes which invocations reach it at all.
 /// Over a rounding accumulation that computes a different number from the one
-/// the graph states, and the difference is data-dependent, so it is eliminated
-/// here rather than reported as an accuracy result.
+/// the graph states, and the difference is data-dependent.
+///
+/// A caller that states no numeric budget gets the strict answer: the schedule
+/// is eliminated here rather than reported as an accuracy result. A caller that
+/// states one gets every reordering whose composed error the budget admits,
+/// which is what makes a tree reduction over a floating accumulation reachable.
 fn reordering(
     candidate: &CandidatePlan,
     context: &ConstraintContext<'_>,
@@ -208,7 +218,8 @@ fn reordering(
 ///
 /// A phase covering no known region permits reordering: there is no combine to
 /// reorder. A region the facts do not describe does not, because an unclassified
-/// program is not a proof.
+/// program is not a proof. A region whose combine is not reorderable is admitted
+/// only where the stated budget covers the error its new order produces.
 fn phase_permits_reordering(
     candidate: &CandidatePlan,
     context: &ConstraintContext<'_>,
@@ -218,14 +229,38 @@ fn phase_permits_reordering(
         return true;
     };
     regions.iter().all(|region| {
+        let index = *region as usize;
         context
             .facts
             .node_reordering
-            .get(*region as usize)
+            .get(index)
             .copied()
             .unwrap_or(ReorderingClass::Ordered)
             .permits_reordering()
+            || reordering_within_budget(context, index)
     })
+}
+
+/// Whether the stated budget covers reordering one region's combines.
+///
+/// The new order is a tree over the region's points, so it rounds `log2(n)`
+/// times where the stated order rounds `n - 1` times. Both are priced from the
+/// region's own contract, and the budget is the caller's declared ceiling for
+/// the value.
+fn reordering_within_budget(context: &ConstraintContext<'_>, region: usize) -> bool {
+    let Some(declared) = context.numeric else {
+        return false;
+    };
+    let Some(contract) = context.facts.node_numeric.get(region) else {
+        return false;
+    };
+    let terms = context
+        .facts
+        .node_reduction_terms
+        .get(region)
+        .copied()
+        .unwrap_or(u32::MAX);
+    reordering_admitted(&declared, contract, terms)
 }
 
 /// Whether a selected shape differs from a shape some covered node declared.

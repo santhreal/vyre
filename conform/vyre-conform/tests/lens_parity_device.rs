@@ -120,7 +120,7 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
         test_inputs: Some(sin_inputs),
         expected_output: None,
         laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
+        numeric: vyre_foundation::numeric::NumericContract::EXACT,
         geometry_requirements: vyre_foundation::GeometryRequirements::agnostic(),
         source_file: file!(),
         explicit_effects: None,

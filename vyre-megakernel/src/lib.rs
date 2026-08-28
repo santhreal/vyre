@@ -108,13 +108,13 @@ pub use schema::{
     AbiAccess, Artifact, ArtifactAbi, BarrierPhaseRecord, BarrierRecord, EntryAbiRecord,
     EntryPersistence, EntryResourceBinding, ExecutionMode, FusionRecord, FusionRejection,
     GeometryRecord, LaunchResourceIntent, MaterializationReason, MaterializationRecord, NodeRecord,
-    PlanMeasurement, Provenance, ResourceAbiRecord, ResourceEnvelope, ResourceLifetime,
-    ResourceNameCollision, ResourceRecord, SelectedPlan, ARTIFACT_SCHEMA_VERSION,
+    NumericRecord, PlanMeasurement, Provenance, ResourceAbiRecord, ResourceEnvelope,
+    ResourceLifetime, ResourceNameCollision, ResourceRecord, SelectedPlan, ARTIFACT_SCHEMA_VERSION,
 };
 pub use target::SelectedModule;
 pub use target::{
-    attach_target, compile_selected_modules, EmittedTargetModule, SelectedLowering,
-    TargetCompileError, TargetCompiler, TargetModuleBundle, TargetModuleImage,
+    attach_target, compile_selected_modules, EmittedTargetModule, ModuleNumericRecord,
+    SelectedLowering, TargetCompileError, TargetCompiler, TargetModuleBundle, TargetModuleImage,
     TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
 };
 pub use vyre_foundation::diagnostics::Diagnostic;

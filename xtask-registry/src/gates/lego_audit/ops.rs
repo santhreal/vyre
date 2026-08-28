@@ -91,7 +91,7 @@ fn build_registered_info(
     info.category = entry.category.map(str::to_string);
     info.laws = entry.laws.iter().map(|law| (*law).to_string()).collect();
     info.semantic_version = entry.semantic_version;
-    info.tolerance = entry.tolerance();
+    info.tolerance = entry.ulp_budget().unwrap_or(0);
     info.effects = vyre_foundation::operation::OperationEffects::from_program(&info.program);
     info.required_caps = vyre_foundation::program_caps::scan(&info.program);
     info.capabilities = format!("{:?}", info.required_caps);

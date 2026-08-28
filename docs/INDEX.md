@@ -24,7 +24,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 
 ## Lifecycle counts
 
-- current: 19.
+- current: 20.
 - generated: 37.
 - superseded: 0.
 - archived: 33.
@@ -84,6 +84,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `current` | `user` | `public-facade` | `guide` | `guide/install.md` | self | manual |
 | `current` | `extension` | `architecture` | `ownership` | `lego-block-rule.md` | self | manual |
 | `current` | `user` | `public-facade` | `reference` | `reference/diagnostics.md` | self | manual |
+| `current` | `user` | `public-facade` | `reference` | `reference/numeric-contracts.md` | self | manual |
 | `current` | `user` | `operation-registry` | `reference` | `reference/operations.md` | self | manual |
 | `current` | `user` | `public-facade` | `reference` | `reference/values.md` | self | manual |
 | `current` | `user` | `public-facade` | `reference` | `reference/wire-format.md` | self | manual |

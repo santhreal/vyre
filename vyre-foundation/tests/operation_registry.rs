@@ -1,9 +1,8 @@
 //! Canonical semantic operation registry regression contracts.
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::operation::{
-    OperationRegistration, OperationRegistry, OperationTier, TolerancePolicy,
-};
+use vyre_foundation::numeric::NumericContract;
+use vyre_foundation::operation::{OperationRegistration, OperationRegistry, OperationTier};
 
 const OP_ID: &str = "external_fixture::operation_registry::identity";
 
@@ -24,7 +23,7 @@ inventory::submit! {
         None,
     )
     .with_category("test")
-    .with_tolerance(TolerancePolicy::f32_ulp(2))
+    .with_numeric(NumericContract::ieee_f32(2))
 }
 
 /// WHY: one semantic identity must resolve its program, derived effects,
@@ -37,7 +36,7 @@ fn operation_identity_resolves_semantics() {
 
     assert_eq!(registration.semantic_version, 1);
     assert_eq!(registration.category, Some("test"));
-    assert_eq!(registration.tolerance.f32_ulp, 2);
+    assert_eq!(registration.ulp_budget(), Some(2));
     let program = registration.program().expect("neutral program must build");
     assert_eq!(program.entry_op_id(), Some(OP_ID));
     let effects = registration.effects().expect("effects must derive");

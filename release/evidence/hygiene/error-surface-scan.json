@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:ca5a721355cd1c4e5f29260fad39cea17fcca005:dirty=true:worktree=f90ed774caf1743e89342e7e15effa79a4f0f88623dd77ee3c56774dfba7abd0",
+  "source_fingerprint": "git:18b3d376a062d60cc3e9f73f5b3ab3d72e9b2f10:dirty=true:worktree=6d0c97db4619296424ca7e5367066b2e1730161bd159a892556318d294811394",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -143,79 +143,79 @@
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 600,
+      "line": 609,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: registered callee must have transitive effect state\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 604,
+      "line": 613,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: registered callee must have transitive capability state\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 612,
+      "line": 621,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: caller node in direct_callees must be registered in transitive_effects\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 621,
+      "line": 630,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: caller node in direct_callees must be registered in transitive_capabilities\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 750,
+      "line": 759,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan traversal node must have an adjacency entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 759,
+      "line": 768,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan visited child node must have a lowlink entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 763,
+      "line": 772,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 771,
+      "line": 780,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan on-stack node must have an index entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 775,
+      "line": 784,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 783,
+      "line": 792,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 788,
+      "line": 797,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan active node must have an index entry\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 795,
+      "line": 804,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: Tarjan component stack must contain its root\");"
     },
     {
       "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 920,
+      "line": 929,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"invalid semantic operation registry: {error}\"))"
     },
@@ -1045,31 +1045,31 @@
       "path": "vyre-test-support/src/graph_shapes.rs",
       "line": 28,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture external value must be valid\");"
+      "text": ".expect(\"Fix: declare the fixture external value with a contract the graph admits.\");"
     },
     {
       "path": "vyre-test-support/src/graph_shapes.rs",
       "line": 48,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture in-place node must be valid\");"
+      "text": ".expect(\"Fix: wire the in-place fixture node to the value contract it reads and writes.\");"
     },
     {
       "path": "vyre-test-support/src/graph_shapes.rs",
       "line": 81,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture atomic node must be valid\");"
+      "text": ".expect(\"Fix: wire the atomic fixture node to the value contract it updates.\");"
     },
     {
       "path": "vyre-test-support/src/graph_shapes.rs",
       "line": 110,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture producer node must be valid\");"
+      "text": ".expect(\"Fix: wire the producer fixture node to the value contract it writes.\");"
     },
     {
       "path": "vyre-test-support/src/graph_shapes.rs",
       "line": 138,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture consumer node must be valid\");"
+      "text": ".expect(\"Fix: wire the consumer fixture node to the value the producer wrote.\");"
     },
     {
       "path": "vyre-test-support/src/ir_regions.rs",

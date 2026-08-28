@@ -626,7 +626,7 @@ pub static REG: OperationRegistration = OperationRegistration {
     test_inputs: None,
     expected_output: Some(|| vec![vec![struct_literal_oracle(&[1, 2])]]),
     laws: &[],
-    tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
+    numeric: vyre_foundation::numeric::NumericContract::EXACT,
     geometry_requirements: vyre_foundation::GeometryRequirements::agnostic(),
     source_file: "test.rs",
     explicit_effects: None,

@@ -5,6 +5,7 @@
 //! sequences and may use native approximate transcendental instructions.
 
 use core::ops::ControlFlow;
+use std::collections::BTreeSet;
 
 use crate::ir::{DataType, Expr, Program, UnOp};
 use crate::operation::OperationRegistry;
@@ -72,13 +73,38 @@ pub fn f32_ulp_tolerance(program: &Program) -> u32 {
     }
 }
 
-/// Combine an op-id-specific tolerance with the program-level f32 policy.
+/// Combine an op-id-specific budget with the program-level f32 policy.
+///
+/// A registration whose contract states an absolute bound has no ULP reading,
+/// so the comparison falls back to the program-level policy rather than
+/// treating an unreadable bound as byte identity.
 #[must_use]
 pub fn effective_tolerance(op_id: &str, program: &Program) -> u32 {
     OperationRegistry::global()
         .get(op_id)
-        .map_or(0, |entry| entry.tolerance())
+        .and_then(|entry| entry.ulp_budget())
+        .unwrap_or(0)
         .max(f32_ulp_tolerance(program))
+}
+
+/// The operations in `program` a backend may lower to an approximate native
+/// instruction, named by their IR variant, in ascending order without repeats.
+///
+/// The set is [`is_transcendental_op`]'s, so a lowering record and the parity
+/// window are answers to the same question. An op added to the policy appears
+/// here without anyone editing a second list.
+#[must_use]
+pub fn approximable_operations(program: &Program) -> Vec<String> {
+    let mut named = BTreeSet::new();
+    try_for_each_expr(program.entry(), |expr| {
+        if let Expr::UnOp { op, .. } = expr {
+            if is_transcendental_op(expr) {
+                named.insert(format!("{op:?}"));
+            }
+        }
+        ControlFlow::<()>::Continue(())
+    });
+    named.into_iter().collect()
 }
 
 /// True when any expression in `program` reaches an approximable f32 op.

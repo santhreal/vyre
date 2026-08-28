@@ -614,7 +614,7 @@ kind = "architecture"
 section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
-covers = ["vyre-foundation/src/geometry/**", "vyre-foundation/src/operation/mod.rs", "vyre-driver/src/device_profile.rs"]
+covers = ["vyre-foundation/src/geometry/**", "vyre-driver/src/device_profile.rs"]
 nav = true
 
 [[page]]
@@ -712,6 +712,19 @@ section = "API and operation reference"
 authority = "self"
 generation = "manual"
 covers = ["vyre-foundation/src/validate/catalog.rs", "vyre-driver/src/backend/error_catalog.rs"]
+nav = true
+
+[[page]]
+path = "reference/numeric-contracts.md"
+title = "Numeric contracts"
+status = "current"
+audience = "user"
+owner = "public-facade"
+kind = "reference"
+section = "API and operation reference"
+authority = "self"
+generation = "manual"
+covers = ["vyre-foundation/src/numeric/**", "vyre-foundation/src/operation/mod.rs", "vyre-megakernel/src/target.rs"]
 nav = true
 
 [[page]]

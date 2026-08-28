@@ -16,6 +16,9 @@ use crate::ir::{
     stats::{NODE_KIND_ALL_REDUCE, NODE_KIND_REDUCE_SCATTER, NODE_KIND_TILE_REDUCE},
     BufferAccess, GraphNodeId, GraphValueId, ProgramGraph, ShapeDim, ValueLifetime,
 };
+use crate::numeric::{
+    region_contract, NumericContract, RegionArithmetic, RegionNumericFacts, ScalarFormat,
+};
 use crate::operation::OperationEffects;
 
 pub use crate::logical_partition::{
@@ -164,6 +167,12 @@ pub struct LogicalRegion {
     pub written_bytes: u64,
     /// Exact upper bound on logical points.
     pub max_points: u64,
+    /// Numeric contract derived from the formats and combines this region states.
+    ///
+    /// Derived, not declared: every field is a function of the value contracts,
+    /// the region kind and the effects already in this region, so it is not part
+    /// of schedule-free identity.
+    pub numeric: NumericContract,
 }
 
 /// A graph plus validated logical regions and schedule-free canonical identity.
@@ -397,6 +406,26 @@ impl<'a> LogicalProgramGraph<'a> {
             );
             let written_bytes = crate::logical_partition::value_bytes(graph, bindings, &writes)
                 .map_err(LogicalProgramError::Exchange)?;
+            let numeric = region_contract(&RegionNumericFacts {
+                input: promoted_format(node.inputs.iter().map(|input| &input.contract.dtype)),
+                output: promoted_format(node.output_ports.iter().map(|port| &port.contract.dtype)),
+                arithmetic: match kind {
+                    LogicalRegionKind::Parallel => RegionArithmetic::Pointwise,
+                    LogicalRegionKind::Reduction => RegionArithmetic::Reduction {
+                        terms: reduced_points(&extents, &reduction_axes),
+                    },
+                    LogicalRegionKind::Sequential | LogicalRegionKind::RetainedState => {
+                        RegionArithmetic::Recurrence { steps: max_points }
+                    }
+                },
+                atomics: program_effects.atomics,
+                reorderable: crate::algebraic_reordering::reordering_class(&node.program)
+                    .permits_reordering(),
+            })
+            .map_err(|refusal| LogicalProgramError::Numeric {
+                node: node.id,
+                reason: refusal.to_string(),
+            })?;
             regions.push(LogicalRegion {
                 node: node.id,
                 name: node.name.clone(),
@@ -429,6 +458,7 @@ impl<'a> LogicalProgramGraph<'a> {
                 partition,
                 written_bytes,
                 max_points,
+                numeric,
             });
         }
 
@@ -552,6 +582,107 @@ impl<'a> LogicalProgramGraph<'a> {
     pub fn semantic_wire(&self) -> &[u8] {
         &self.semantic_wire
     }
+
+    /// The numeric contract one graph value carries.
+    ///
+    /// The regions that feed the value are composed in dependence order, so the
+    /// budget is what the value accumulated along its own chain rather than the
+    /// widest region in the graph. A value no region produces carries the exact
+    /// contract: it is what the caller supplied.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LogicalProgramError::Numeric`] when two regions in the chain
+    /// cannot be composed, which is a region reading a format the region before
+    /// it does not produce.
+    pub fn value_budget(
+        &self,
+        value: GraphValueId,
+    ) -> Result<NumericContract, LogicalProgramError> {
+        let Some(producer) = self
+            .graph
+            .values()
+            .get(value.0 as usize)
+            .and_then(|value| value.producer)
+        else {
+            return Ok(NumericContract::EXACT);
+        };
+        let mut chain = BTreeSet::new();
+        self.collect_ancestors(producer, &mut chain);
+        let contracts = chain
+            .iter()
+            .filter_map(|node| self.region(*node))
+            .map(|region| &region.numeric);
+        crate::numeric::graph_budget(contracts).map_err(|refusal| LogicalProgramError::Numeric {
+            node: producer,
+            reason: refusal.to_string(),
+        })
+    }
+
+    /// The numeric contract every caller-visible output carries.
+    ///
+    /// # Errors
+    ///
+    /// Returns the first [`LogicalProgramError::Numeric`] one output produced.
+    pub fn output_budgets(
+        &self,
+    ) -> Result<Vec<(GraphValueId, NumericContract)>, LogicalProgramError> {
+        self.graph
+            .values()
+            .iter()
+            .filter(|value| value.contract.lifetime == ValueLifetime::Output)
+            .map(|value| Ok((value.id, self.value_budget(value.id)?)))
+            .collect()
+    }
+
+    /// The region one graph node states.
+    #[must_use]
+    pub fn region(&self, node: GraphNodeId) -> Option<&LogicalRegion> {
+        self.regions.iter().find(|region| region.node == node)
+    }
+
+    /// Collect `node` and every region it transitively depends on.
+    fn collect_ancestors(&self, node: GraphNodeId, chain: &mut BTreeSet<GraphNodeId>) {
+        if !chain.insert(node) {
+            return;
+        }
+        let Some(region) = self.region(node) else {
+            return;
+        };
+        for dependence in &region.dependencies {
+            self.collect_ancestors(dependence.predecessor, chain);
+        }
+    }
+}
+
+/// The format a region computes in, given the formats it reads or writes.
+///
+/// A rounding format wins over an exact one because that is the promotion an
+/// operation performs, and among rounding formats the finest wins because a
+/// value held in it is not made coarser by being read.
+fn promoted_format<'b>(
+    types: impl Iterator<Item = &'b crate::ir::DataType>,
+) -> Option<ScalarFormat> {
+    types.filter_map(ScalarFormat::of).fold(None, |best, next| {
+        let Some(best) = best else {
+            return Some(next);
+        };
+        Some(match (best.ulp_fraction(), next.ulp_fraction()) {
+            (None, Some(_)) => next,
+            (Some(_), None) => best,
+            (Some(left), Some(right)) if right < left => next,
+            _ => best,
+        })
+    })
+}
+
+/// The number of points one reduction combines into a single output point.
+fn reduced_points(extents: &[LogicalExtent], axes: &[u32]) -> u64 {
+    axes.iter()
+        .filter_map(|axis| extents.get(*axis as usize))
+        .fold(1u64, |product, extent| {
+            product.saturating_mul(extent.bound())
+        })
 }
 
 fn row_major_strides(
@@ -626,4 +757,12 @@ pub enum LogicalProgramError {
     /// A semantic exchange payload cannot be sized.
     #[error("logical exchange is not sizable: {0}")]
     Exchange(String),
+    /// A region states a numeric contract that cannot be priced or composed.
+    #[error("logical region for graph node {node:?} has no numeric budget: {reason}")]
+    Numeric {
+        /// Region whose contract was refused.
+        node: GraphNodeId,
+        /// Exact refusal.
+        reason: String,
+    },
 }

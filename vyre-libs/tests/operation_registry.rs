@@ -192,7 +192,7 @@ fn library_fixtures_are_canonical_semantic_registrations() {
         domain_failures.join("\n")
     );
 
-    let tolerances = [
+    let ulp_budgets = [
         ("vyre-libs::nn::softmax", 1),
         ("vyre-libs::nn::attention", 4),
         ("vyre-libs::nn::gqa_attention", 4),
@@ -207,13 +207,13 @@ fn library_fixtures_are_canonical_semantic_registrations() {
         ("vyre-libs::optim::ema_apply", 1),
         ("vyre-libs::optim::muoneq_r", 8),
     ];
-    for (id, expected) in tolerances {
+    for (id, expected) in ulp_budgets {
         assert_eq!(
             OperationRegistry::global()
                 .get(id)
-                .expect("Fix: tolerance owner must be registered")
-                .tolerance(),
-            expected,
+                .expect("Fix: register the operation that states this ULP budget")
+                .ulp_budget(),
+            Some(expected),
             "{id}"
         );
     }

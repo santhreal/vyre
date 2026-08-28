@@ -87,7 +87,7 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
             category: entry.category(),
             has_inputs: entry.test_inputs.is_some(),
             has_expected: entry.expected_output.is_some(),
-            tolerance_ulp: entry.tolerance(),
+            tolerance_ulp: entry.ulp_budget().unwrap_or(0),
             recorded_constraints: entry.geometry_requirements,
             laws: entry.laws,
         })

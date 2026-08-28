@@ -13,15 +13,171 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{
-    BufferAccess, DataType, GraphInput, GraphOutput, ProgramGraph, ShapeDim, ValueContract,
-    ValueLifetime,
+    BinOp, BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program,
+    ProgramGraph, ShapeDim, SubgroupReduceOp, ValueContract, ValueLifetime,
 };
+use vyre_foundation::numeric::NumericContract;
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::{
     compile, Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
-    ObjectiveMetric, SearchBudget, ValidatedCompileRequest,
+    ObjectiveMetric, PruneReason, ScheduleProduction, SearchBudget, SearchCertificate,
+    ValidatedCompileRequest,
 };
 use vyre_test_support::pass_programs::{add_program, copy_program};
+
+pub(crate) fn contract(
+    element: &DataType,
+    access: BufferAccess,
+    lifetime: ValueLifetime,
+) -> ValueContract {
+    ValueContract {
+        dtype: element.clone(),
+        shape: vec![
+            ShapeDim::Symbol("rows".into()),
+            ShapeDim::Symbol("cols".into()),
+        ],
+        access,
+        lifetime,
+    }
+}
+
+pub(crate) fn invocation(element: &DataType) -> ValueContract {
+    contract(element, BufferAccess::ReadWrite, ValueLifetime::Invocation)
+}
+
+/// One subgroup reduction of a loaded element, stored back.
+pub(crate) fn reduce_program(input: &str, output: &str, element: &DataType) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read_write(input, 0, element.clone()),
+            BufferDecl::read_write(output, 1, element.clone()),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            output,
+            Expr::LocalId { axis: 0 },
+            Expr::SubgroupReduce {
+                op: SubgroupReduceOp::Add,
+                value: Box::new(Expr::load(input, Expr::LocalId { axis: 0 })),
+            },
+        )],
+    )
+}
+
+/// The same reduction over the sum of two loaded elements.
+pub(crate) fn join_program(left: &str, right: &str, output: &str, element: &DataType) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read_write(left, 0, element.clone()),
+            BufferDecl::read_write(right, 1, element.clone()),
+            BufferDecl::read_write(output, 2, element.clone()),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            output,
+            Expr::LocalId { axis: 0 },
+            Expr::SubgroupReduce {
+                op: SubgroupReduceOp::Add,
+                value: Box::new(Expr::BinOp {
+                    op: BinOp::Add,
+                    left: Box::new(Expr::load(left, Expr::LocalId { axis: 0 })),
+                    right: Box::new(Expr::load(right, Expr::LocalId { axis: 0 })),
+                }),
+            },
+        )],
+    )
+}
+
+/// A chain, an independent arm, and a fan-in, every stage reducing.
+///
+/// The independent arm is what gives the concurrency productions an operand, and
+/// the fan-in is what gives the joining production one, so one graph exercises
+/// every production that reorders a combine.
+pub(crate) fn reducing_graph(element: &DataType) -> ProgramGraph {
+    let mut graph = ProgramGraph::new();
+    let in_a = graph
+        .add_external_value("in_a", invocation(element))
+        .expect("external input");
+    let in_b = graph
+        .add_external_value("in_b", invocation(element))
+        .expect("external input");
+    let (_, mid_a) = graph
+        .add_node(
+            "n0",
+            reduce_program("in_a", "mid_a", element),
+            vec![GraphInput {
+                buffer: "in_a".into(),
+                value: in_a,
+                contract: invocation(element),
+            }],
+            vec![GraphOutput {
+                buffer: "mid_a".into(),
+                name: "mid_a".into(),
+                contract: invocation(element),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("first stage");
+    let (_, mid_b) = graph
+        .add_node(
+            "n1",
+            reduce_program("mid_a", "mid_b", element),
+            vec![GraphInput {
+                buffer: "mid_a".into(),
+                value: mid_a[0],
+                contract: invocation(element),
+            }],
+            vec![GraphOutput {
+                buffer: "mid_b".into(),
+                name: "mid_b".into(),
+                contract: invocation(element),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("second stage");
+    let (_, mid_c) = graph
+        .add_node(
+            "n2",
+            reduce_program("in_b", "mid_c", element),
+            vec![GraphInput {
+                buffer: "in_b".into(),
+                value: in_b,
+                contract: invocation(element),
+            }],
+            vec![GraphOutput {
+                buffer: "mid_c".into(),
+                name: "mid_c".into(),
+                contract: invocation(element),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("independent arm");
+    graph
+        .add_node(
+            "n3",
+            join_program("mid_b", "mid_c", "out", element),
+            vec![
+                GraphInput {
+                    buffer: "mid_b".into(),
+                    value: mid_b[0],
+                    contract: invocation(element),
+                },
+                GraphInput {
+                    buffer: "mid_c".into(),
+                    value: mid_c[0],
+                    contract: invocation(element),
+                },
+            ],
+            vec![GraphOutput {
+                buffer: "out".into(),
+                name: "out".into(),
+                contract: contract(element, BufferAccess::ReadWrite, ValueLifetime::Output),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("fan-in stage");
+    graph
+}
 
 /// A two-dimensional `u32` value, so a phase carries more than one axis.
 pub(crate) fn matrix(lifetime: ValueLifetime) -> ValueContract {
@@ -266,4 +422,45 @@ pub(crate) fn refused_field(error: &vyre_megakernel::CompileError) -> Option<&st
         .location
         .as_ref()
         .and_then(|location| location.path.as_deref())
+}
+
+/// Productions whose transforms change the order invocations combine in.
+///
+/// Two suites ask what a reordering production does to a rounding reduction and
+/// what a stated budget changes about it, so the roster they both range over is
+/// stated once.
+pub(crate) const REORDERING_PRODUCTIONS: [ScheduleProduction; 5] = [
+    ScheduleProduction::SpatialPartition,
+    ScheduleProduction::PersistentQueue,
+    ScheduleProduction::Pipeline,
+    ScheduleProduction::AsymmetricJoin,
+    ScheduleProduction::AxisReorder,
+];
+
+/// The reducing graph over `element`, compiled under `numeric` when stated.
+pub(crate) fn reducing_artifact(element: &DataType, numeric: Option<NumericContract>) -> Artifact {
+    let mut request = CompileRequest::new(
+        reducing_graph(element),
+        facts(),
+        rich_device(),
+        budget(),
+        latency_objective(),
+    );
+    if let Some(numeric) = numeric {
+        request = request.with_numeric_budget(numeric);
+    }
+    compile(&request.validate().expect("request must validate")).expect("compilation must succeed")
+}
+
+/// Candidates of one production the search eliminated as numerically illegal.
+pub(crate) fn numerically_pruned(
+    certificate: &SearchCertificate,
+    production: ScheduleProduction,
+) -> u32 {
+    certificate
+        .pruned
+        .iter()
+        .filter(|family| family.production == production && family.reason == PruneReason::Numerical)
+        .map(|family| family.count)
+        .sum()
 }

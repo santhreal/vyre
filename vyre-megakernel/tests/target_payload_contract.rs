@@ -1,11 +1,16 @@
 //! Regression contracts for canonical neutral artifacts with attached target payloads.
 
-use vyre_foundation::ir::Program;
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
+    ValueLifetime,
+};
+use vyre_foundation::numeric::ScalarFormat;
+use vyre_foundation::schedule::{SchedulePhase, SchedulePhaseId, ScheduleResourceBounds};
 use vyre_megakernel::{
     attach_target, compile_selected_modules, Artifact, ArtifactEnvelope, ArtifactNodeId,
-    ArtifactValueId, CompileError, EmittedTargetModule, FusionGroupId, TargetCompileError,
-    TargetCompiler, TargetEntryPoint, TargetModuleBundle, TargetModuleImage, TargetPayload,
-    TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
+    ArtifactValueId, CompileError, EmittedTargetModule, FusionGroupId, ModuleNumericRecord,
+    TargetCompileError, TargetCompiler, TargetEntryPoint, TargetModuleBundle, TargetModuleImage,
+    TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
     TargetResourceMemory, TARGET_PAYLOAD_SCHEMA_VERSION,
 };
 
@@ -284,6 +289,7 @@ fn target_module_bundle_rejects_noncanonical_module_order() {
         program: program.clone(),
         descriptor: descriptor.clone(),
         entry_point: format!("group_{group}"),
+        numeric: vyre_megakernel::ModuleNumericRecord::default(),
         bytes: vec![group as u8],
     };
     for modules in [
@@ -834,4 +840,186 @@ fn emission_packages_exactly_the_recorded_launch() {
         TargetModuleBundle::from_bytes(payload.bytes()).expect("packaged bundle must be canonical");
     let program = Program::from_wire(&bundle.modules[0].program).expect("module program decodes");
     assert_eq!(program.workgroup_size, recorded.workgroup_size);
+}
+
+/// One node that reads binary16, converts to binary32, and exponentiates.
+///
+/// Every numeric choice the record claims to carry is present exactly once:
+/// two storage formats, one conversion, one approximable operation.
+fn mixed_precision_artifact() -> Artifact {
+    let input = artifact_fixtures::contract(
+        DataType::F16,
+        8,
+        BufferAccess::ReadOnly,
+        ValueLifetime::Invocation,
+    );
+    let output = artifact_fixtures::contract(
+        DataType::F32,
+        8,
+        BufferAccess::WriteOnly,
+        ValueLifetime::Output,
+    );
+    let mut graph = ProgramGraph::new();
+    let value = graph
+        .add_external_value("input", input.clone())
+        .expect("fixture external value must be valid");
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::F16).with_count(8),
+            BufferDecl::output("out", 1, DataType::F32).with_count(8),
+        ],
+        [8, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::LocalId { axis: 0 },
+            Expr::exp(Expr::cast(
+                DataType::F32,
+                Expr::load("input", Expr::LocalId { axis: 0 }),
+            )),
+        )],
+    );
+    graph
+        .add_node(
+            "entry",
+            program,
+            vec![GraphInput {
+                buffer: "input".into(),
+                value,
+                contract: input,
+            }],
+            vec![GraphOutput {
+                buffer: "out".into(),
+                name: "out".into(),
+                contract: output,
+                retained_successor_of: None,
+            }],
+        )
+        .expect("fixture node must be valid");
+    artifact_fixtures::compile_graph(graph, 0)
+}
+
+/// Package `artifact` through the emission seam and return the module bundle.
+fn emitted_bundle(artifact: &Artifact) -> TargetModuleBundle {
+    let payload =
+        compile_selected_modules(artifact, format(1), profile(1), |selected, _profile| {
+            Ok(EmittedTargetModule {
+                entry_point: "entry".into(),
+                resource_bindings: selected.canonical_bindings.clone(),
+                bytes: vec![1],
+            })
+        })
+        .expect("selected module compilation must succeed");
+    TargetModuleBundle::from_bytes(payload.bytes()).expect("packaged bundle must be canonical")
+}
+
+/// WHY: a numeric contract is proven on the IR, and lowering is where the proof
+/// stops applying unless the module states what it actually did. A module that
+/// stores binary16, widens to binary32 and reaches an approximable instruction
+/// has three separate error sources, none of which the neutral artifact records.
+/// A record derived from the lowered program cannot claim a choice the module
+/// does not carry, and cannot omit one it does.
+#[test]
+fn an_emitted_module_records_the_precision_and_approximation_it_lowered() {
+    let bundle = emitted_bundle(&mixed_precision_artifact());
+    let record = &bundle.modules[0].numeric;
+
+    assert_eq!(
+        record.formats,
+        vec![ScalarFormat::F16, ScalarFormat::F32],
+        "a module must record every storage format it holds and produces"
+    );
+    assert_eq!(
+        record.conversions,
+        vec![ScalarFormat::F32],
+        "a widening conversion is a numeric choice, not a free move"
+    );
+    assert_eq!(
+        record.approximations,
+        vec!["Exp".to_string()],
+        "an operation a backend may approximate must be named"
+    );
+}
+
+/// WHY: a module with nothing to approximate must record nothing, or the record
+/// says only that a program exists. The neutral fixture stores one integer
+/// format, converts nothing and reaches no transcendental.
+#[test]
+fn a_module_with_no_numeric_latitude_records_none() {
+    let bundle = emitted_bundle(&neutral_artifact([8, 1, 1]));
+    let record = &bundle.modules[0].numeric;
+
+    assert!(
+        record.conversions.is_empty(),
+        "a module that converts nothing must not record a conversion, got {:?}",
+        record.conversions
+    );
+    assert!(
+        record.approximations.is_empty(),
+        "a module with no approximable operation must not record one, got {:?}",
+        record.approximations
+    );
+}
+
+/// WHY: chunking is stated twice, once in the geometry the artifact selected and
+/// once in the module the launch loads. Two statements of one fact drift, and a
+/// module chunked differently from the recorded geometry computes a different
+/// combine order than the one legality priced.
+#[test]
+fn every_emitted_module_records_the_chunking_the_artifact_selected() {
+    for artifact in [mixed_precision_artifact(), neutral_artifact([8, 1, 1])] {
+        let bundle = emitted_bundle(&artifact);
+        for module in &bundle.modules {
+            let width = artifact
+                .geometry()
+                .iter()
+                .find(|record| module.nodes.contains(&record.node))
+                .map(|record| record.vector_width)
+                .expect("every emitted module packages a node the artifact recorded");
+            assert_eq!(
+                module.numeric.chunk,
+                (width > 1).then_some(width),
+                "module chunking must be the vector width the artifact selected"
+            );
+        }
+    }
+}
+
+/// A frozen phase that combines `vector_width` elements per invocation.
+fn phase(vector_width: u32) -> SchedulePhase {
+    SchedulePhase {
+        id: SchedulePhaseId(0),
+        source_regions: vec![0],
+        axes: Vec::new(),
+        grid: [8, 1, 1],
+        workgroup: [8, 1, 1],
+        vector_width,
+        mappings: Vec::new(),
+        predecessors: Vec::new(),
+        resources: ScheduleResourceBounds::default(),
+    }
+}
+
+/// WHY: a chunked phase computes a combine over several elements per
+/// invocation, which is a different order from one element per invocation. The
+/// search never selects a width above one for the fixtures here, so driving the
+/// record through emission cannot reach the arm. The derivation is asked
+/// directly, at both widths, so the arm is proven rather than assumed.
+#[test]
+fn a_module_records_the_chunk_the_frozen_phase_states() {
+    let program = Program::wrapped(
+        vec![BufferDecl::read("input", 0, DataType::F32).with_count(8)],
+        [8, 1, 1],
+        Vec::new(),
+    );
+
+    assert_eq!(
+        ModuleNumericRecord::of(&program, &phase(1)).chunk,
+        None,
+        "one element per invocation is not a chunk"
+    );
+    assert_eq!(
+        ModuleNumericRecord::of(&program, &phase(4)).chunk,
+        Some(4),
+        "a chunked phase must record the width it combines over"
+    );
 }

@@ -73,10 +73,13 @@ operation that supplies fixtures is tested by the harness without anyone
 writing a test for it; an operation that supplies none is untested by the
 harness, which is a decision you are making rather than a step you skipped.
 
-`tolerance` defaults to exact byte identity. Widen it with
-`TolerancePolicy::f32_ulp(n)` only where the operation's own numerics
-require it, because the operation owns that number and every backend is
-held to it.
+`numeric` defaults to exact byte identity. Widen it with
+`NumericContract::ieee_f32(n)` only where the operation's own numerics
+require it, because the operation owns that bound and every backend is
+held to it. The same contract states whether a schedule may reassociate the
+combines, what the reduction accumulates in, and whether an approximate
+native instruction is admitted, so a schedule that changes any of those
+either proves it stays inside the bound or is refused.
 
 ## Dialects are a view
 

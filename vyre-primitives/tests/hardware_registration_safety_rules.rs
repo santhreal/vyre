@@ -68,11 +68,11 @@ fn every_hardware_registration_carries_the_fixtures_the_safety_rules_need() {
             gaps.push("expected_output");
         }
         // A Category C intrinsic maps to one hardware instruction, so its oracle is a
-        // byte identity. An ULP tolerance here would make the oracle comparison in the
-        // rules gate approximate, which is how a wrong lane model with a near-miss
+        // byte identity. Any admitted error here would make the oracle comparison in
+        // the rules gate approximate, which is how a wrong lane model with a near-miss
         // value survives.
-        if entry.tolerance.f32_ulp != 0 {
-            gaps.push("exact tolerance");
+        if !entry.numeric.measure.is_exact() {
+            gaps.push("exact numeric contract");
         }
         if !gaps.is_empty() {
             missing.push(format!("{} (missing {})", entry.id, gaps.join(", ")));

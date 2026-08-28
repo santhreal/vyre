@@ -78,7 +78,7 @@ impl xtask::gate::GateBehavior for ConformanceMatrixGate {
                 requires_fixture: entry.program().is_some(),
                 has_test_inputs: entry.test_inputs.is_some(),
                 has_expected_output: entry.expected_output.is_some(),
-                tolerance_ulp: entry.tolerance(),
+                tolerance_ulp: entry.ulp_budget().unwrap_or(0),
             });
         }
         entries.sort_by(|left, right| left.id.cmp(&right.id));

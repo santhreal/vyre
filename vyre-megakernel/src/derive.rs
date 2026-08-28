@@ -11,6 +11,7 @@
 use std::collections::BTreeSet;
 
 use vyre_foundation::logical::LogicalProgramGraph;
+use vyre_foundation::numeric::NumericContract;
 
 use crate::{
     candidate::{CandidateKey, CandidatePlan, ExecutionTopology},
@@ -50,6 +51,7 @@ pub(crate) fn derive(
     budget: SearchBudget,
     device: DeviceFacts,
     objective: &CompileObjective,
+    numeric: Option<NumericContract>,
 ) -> Derivation {
     let grammar = GrammarContext { facts };
     let constraint = ConstraintContext {
@@ -57,6 +59,7 @@ pub(crate) fn derive(
         facts,
         dependencies,
         device,
+        numeric,
     };
     let baseline = arrange(
         CandidatePlan::baseline_for(logical),

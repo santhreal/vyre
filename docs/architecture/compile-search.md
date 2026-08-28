@@ -257,6 +257,13 @@ never scored. Each eliminated family records a stable reason.
 eliminated family with its count, so a plan that looks unfused says which
 constraint removed the alternative.
 
+`MKC001_NUMERICAL` reads the budget the caller stated. Without one, every
+candidate that reorders a rounding accumulation is eliminated. With one, a
+candidate is admitted where the reordered contract fits the declared measure, so
+stating a budget is what makes a tree reduction, a spatial partition and a
+resident queue reachable over floating point. See
+[numeric contracts](../reference/numeric-contracts.md).
+
 Fusion and topology legality keep their own codes, and the constraint classes map
 onto them rather than restating them:
 

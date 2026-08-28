@@ -159,6 +159,7 @@ pub(crate) fn compiled_artifact() -> ArtifactEnvelope {
         program,
         descriptor,
         entry_point: "main".into(),
+        numeric: vyre_megakernel::ModuleNumericRecord::default(),
         bytes: b"target-payload-fixture".to_vec(),
     }])
     .to_bytes()

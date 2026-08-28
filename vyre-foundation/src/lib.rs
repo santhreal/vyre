@@ -18,6 +18,8 @@ pub(crate) mod geometry;
 pub mod logical;
 /// Schedule-free partition and exchange facts of the logical stage.
 pub(crate) mod logical_partition;
+/// What a numeric result is allowed to be, and what a schedule may do to it.
+pub mod numeric;
 /// Canonical semantic operation registration and target facet views.
 pub mod operation;
 /// Versioned backend-neutral selected schedule stage.
