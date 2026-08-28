@@ -647,26 +647,6 @@ obligation_families = []
 expansion = "non-growing"
 
 [[pass]]
-id = "autotune"
-kind = "executable pass"
-owner = "vyre-foundation-optimizer"
-phase = "Unclassified"
-boundary_class = "Unknown"
-requires = []
-invalidates = []
-requires_capabilities = []
-preserves_abi = "true"
-invariant = "must not enter release/profile pipelines until classified"
-termination = "bounded by the scheduler restart and iteration budgets"
-proof = "`optimizer::pass_invariants::audit_registered_passes`"
-benchmark = "foundation.optimizer.classification-gap"
-level = "schedule"
-witness = "structural"
-witness_argument = "the pass selects among schedule alternatives the target admits and changes no statement's value"
-obligation_families = []
-expansion = "node factor 2"
-
-[[pass]]
 id = "barrier_coalesce"
 kind = "executable pass"
 owner = "vyre-foundation-optimizer"

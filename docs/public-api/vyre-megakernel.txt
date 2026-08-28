@@ -479,6 +479,7 @@ pub fn vyre_megakernel::mesh::MeshTopologyPlan::submission_devices(&self) -> all
 pub fn vyre_megakernel::mesh::MeshTopologyPlan::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::mesh::MeshTopologyPlan::verify_capacity(&self, mesh: &vyre_megakernel::mesh::MeshFacts, peaks: &[vyre_megakernel::allocation::DevicePeak]) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::mesh::TransferOrigin::label(self) -> alloc::string::String
+pub fn vyre_megakernel::mesh::implied_width(partitions: &[vyre_megakernel::mesh::RegionPartition]) -> u32
 pub fn vyre_megakernel::registered_level_stage() -> vyre_spec::ir_level::IrLevel
 pub fn vyre_megakernel::specialization::AxisDomain::admits(&self, value: vyre_megakernel::specialization::AxisValue) -> bool
 pub fn vyre_megakernel::specialization::CoverageProof::first_gap(&self) -> core::option::Option<&str>

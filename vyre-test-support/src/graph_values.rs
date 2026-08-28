@@ -22,6 +22,17 @@ pub fn u32_scalar(access: BufferAccess, lifetime: ValueLifetime) -> ValueContrac
     }
 }
 
+/// A `u32` contract of `count` elements under `access` and `lifetime`.
+#[must_use]
+pub fn u32_vector(count: u32, access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
+    ValueContract {
+        dtype: DataType::U32,
+        shape: vec![ShapeDim::Known(u64::from(count))],
+        access,
+        lifetime,
+    }
+}
+
 /// A `u32` contract whose extent is the symbol `items`, under `access` and `lifetime`.
 #[must_use]
 pub fn u32_symbolic(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {

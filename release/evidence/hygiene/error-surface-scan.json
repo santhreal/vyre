@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:fcead95f37263065a9b4007c01bf4f3add4f43cb:dirty=true:worktree=5b6f1ae8dbfb2d5349b4f539868776ce0e2ba9e1d945745b3fdb23d9618ff83d",
+  "source_fingerprint": "git:ca5a721355cd1c4e5f29260fad39cea17fcca005:dirty=true:worktree=f90ed774caf1743e89342e7e15effa79a4f0f88623dd77ee3c56774dfba7abd0",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -443,25 +443,25 @@
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 55,
+      "line": 95,
       "pattern": "panic_macro",
       "text": "panic!(\"{}\", self.0);"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 110,
+      "line": 150,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 146,
+      "line": 186,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 178,
+      "line": 218,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: sequential-output dispatcher mutex should not be poisoned\");"
     },
@@ -518,6 +518,12 @@
       "line": 351,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: vector chain candidate must contain at least one operation\");"
+    },
+    {
+      "path": "vyre-megakernel/src/request_identity.rs",
+      "line": 66,
+      "pattern": "documented_panic_contract",
+      "text": ".expect("
     },
     {
       "path": "vyre-reference/src/composition_witness/bitset.rs",
@@ -1036,6 +1042,36 @@
       "text": "let b_bits = u32::from_le_bytes(back_bytes[i * 4..(i + 1) * 4].try_into().unwrap());"
     },
     {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 28,
+      "pattern": "expect_call",
+      "text": ".expect(\"fixture external value must be valid\");"
+    },
+    {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 48,
+      "pattern": "expect_call",
+      "text": ".expect(\"fixture in-place node must be valid\");"
+    },
+    {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 81,
+      "pattern": "expect_call",
+      "text": ".expect(\"fixture atomic node must be valid\");"
+    },
+    {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 110,
+      "pattern": "expect_call",
+      "text": ".expect(\"fixture producer node must be valid\");"
+    },
+    {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 138,
+      "pattern": "expect_call",
+      "text": ".expect(\"fixture consumer node must be valid\");"
+    },
+    {
       "path": "vyre-test-support/src/ir_regions.rs",
       "line": 51,
       "pattern": "documented_panic_contract",
@@ -1055,37 +1091,37 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 327,
+      "line": 329,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|err| panic!(\"Fix: cannot read {path:?} to derive the level set: {err}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 329,
+      "line": 331,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {path:?} no longer declares `pub enum IrLevel`\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 380,
+      "line": 382,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 423,
+      "line": 425,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 518,
+      "line": 520,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 526,
+      "line": 528,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -1151,37 +1187,37 @@
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 45,
+      "line": 104,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: restate the workgroup shape so it divides the phase extents\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 52,
+      "line": 111,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: map an axis this phase declares, at a level the schedule admits\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 69,
+      "line": 128,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: state ring slots and role workers a two-phase pipeline admits\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 75,
+      "line": 134,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: synchronize phases that share the workgroup scope\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 95,
+      "line": 154,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: synchronize a phase the device scope reaches\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 101,
+      "line": 160,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: state a persistent queue capacity the phase admits\");"
     },
@@ -1247,7 +1283,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1523,
+      "line": 1533,
       "pattern": "documented_panic_contract",
       "text": "descriptor(gate_name).unwrap_or_else(|| panic!(\"gate `{gate_name}` is not in GATE_METADATA\"))"
     },

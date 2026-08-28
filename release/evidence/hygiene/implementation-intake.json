@@ -1,7 +1,7 @@
 {
-  "source_fingerprint": "git:fcead95f37263065a9b4007c01bf4f3add4f43cb:dirty=true:worktree=7a9577461fb296e825808aed9502f5b37929c7d9ae35047aeed445b972849538",
+  "source_fingerprint": "git:ca5a721355cd1c4e5f29260fad39cea17fcca005:dirty=true:worktree=f90ed774caf1743e89342e7e15effa79a4f0f88623dd77ee3c56774dfba7abd0",
   "schema_version": 1,
-  "release_blocker_count": 21,
+  "release_blocker_count": 0,
   "intake_summary": [
     {
       "owner_lane": "bench_harness",
@@ -19,16 +19,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "bench_harness",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 1
+      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -37,7 +28,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 39
+      "count": 40
     },
     {
       "owner_lane": "coordination",
@@ -46,7 +37,7 @@
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 2
+      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -55,16 +46,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 36
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 2
+      "count": 41
     },
     {
       "owner_lane": "coordination",
@@ -82,7 +64,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 9
+      "count": 14
     },
     {
       "owner_lane": "coordination",
@@ -415,16 +397,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 34
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 18
+      "count": 53
     },
     {
       "owner_lane": "testing_evidence",
@@ -454,7 +427,5 @@
       "count": 1
     }
   ],
-  "blockers": [
-    "21 release-blocking hygiene finding(s) remain; implementation-intake.json groups them by owner lane, surface, risk, hot-path flag, and pattern"
-  ]
+  "blockers": []
 }

@@ -71,6 +71,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   stale checkout keeps a second source of the same package versions against
   those artifacts, and every grep, gate and duplication scan walks it for
   nothing. The bound was written in `CONTRIBUTING.md` and enforced by nobody.
+- `vyre_megakernel::mesh::implied_width` states the parallel width a placed
+  region set implies, and plan construction, plan validation and the topology
+  tests all read it from there.
 - The `ci-required` gate holds the required status contexts to the workflows
   that define them: every context resolves to a job by display name or job id,
   every workflow carrying one runs on pull requests and on pushes to the
@@ -1881,6 +1884,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   c11_lexer, wire, host_preprocess, lex_c11_max_munch, chunk_lexer_cpu,
   max_munch_cpu) instead of a flat crate-root re-export, because two sibling
   tables both define Action and a flat name cannot say which one it is.
+- The in-place, atomic and chained graph fixtures are built once in
+  `vyre-test-support::graph_shapes` and used by both the foundation logical
+  tests and the workspace artifact fixtures.
 - The buffer layout every CSR graph primitive appends to the read-only
   ProgramGraph bundle has one owner. `graph::program_graph` gains
   `word_buffer`, `frontier_buffer`, and `push_frontier_changed_buffers`;
@@ -4997,6 +5003,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   and the build hung instead of refusing. The read now takes one byte more than
   the remaining budget allows, so an endless input crosses the cap and the walk
   reports the file that crossed it.
+- The hygiene scan reads assertion macro bodies, so a test that states its
+  whole source inspection inside `assert_eq!` is classified as a
+  source-inspecting test instead of passing unseen.
 - vyre-driver-spirv's adversarial closure contract no longer passes when no
   Vulkan device is present. It printed a line and returned, so on every CPU
   runner it reported success having asserted nothing, which is the shape of a

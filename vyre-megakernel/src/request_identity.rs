@@ -43,6 +43,13 @@ pub(crate) struct RequestIdentity<'a> {
 /// device that no longer exists. The objective participates because two sets
 /// compiled for one device under different objectives answer different
 /// questions.
+///
+/// # Panics
+///
+/// Panics when the identity fields cannot be encoded. Every field is an
+/// integer, a string, or a fixed array, so the encoding fails only if a field
+/// of another shape is added, which is a compile-time decision rather than a
+/// run-time input.
 #[must_use]
 pub fn target_identity(device: DeviceFacts, objective: &CompileObjective) -> Digest {
     #[derive(Serialize)]

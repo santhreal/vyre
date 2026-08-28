@@ -160,8 +160,8 @@ region holds its values whole on the device that runs it. On one device the
 allocation aggregate equals the ranked peak exactly; across a mesh it is an
 upper bound on it.
 
-Each exchange, each routed region and each cross-device handoff occupies its own
-stage. An all-gather, a broadcast, a point-to-point transfer or a handoff
+Each exchange, each routed region and each producer-to-consumer transfer
+occupies its own stage. An all-gather, a broadcast or a point-to-point transfer
 overlaps a compute stage only when its link is otherwise idle in that stage. Two
 collectives that intersect may not share a stage, and the point-to-point
 transfers of one stage form a directed acyclic graph, so deadlock freedom follows

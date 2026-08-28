@@ -164,9 +164,8 @@ fn a_single_artifact_compile_refuses_a_coverage_policy_it_cannot_satisfy() {
         CoveragePolicy::EveryWorkloadClass,
         2,
     ));
-    let error = compile(&request)
-        .err()
-        .expect("one artifact cannot serve a per-class coverage policy");
+    let error =
+        compile(&request).expect_err("one artifact cannot serve a per-class coverage policy");
     assert_eq!(
         error.diagnostic.code.as_str(),
         "MKC032_PORTFOLIO_COVERAGE_UNSATISFIED"
@@ -195,8 +194,7 @@ fn the_measured_single_artifact_compile_refuses_the_same_policy() {
         compiler: RefusingCompiler::new(),
     };
     let error = compile_measured(&request, &evaluator)
-        .err()
-        .expect("one measured artifact cannot serve a per-class coverage policy");
+        .expect_err("one measured artifact cannot serve a per-class coverage policy");
     assert_eq!(
         error.diagnostic.code.as_str(),
         "MKC032_PORTFOLIO_COVERAGE_UNSATISFIED",
@@ -369,8 +367,7 @@ fn a_variant_bound_below_the_coverage_minimum_retains_nothing() {
     let objective = objective(two_classes(), CoveragePolicy::EveryWorkloadClass, 2)
         .with_bound(ObjectiveMetric::VariantCount, 1);
     let error = compile_portfolio(&request(objective))
-        .err()
-        .expect("one artifact cannot cover two classes under a per-class policy");
+        .expect_err("one artifact cannot cover two classes under a per-class policy");
     assert_eq!(
         error.diagnostic.code.as_str(),
         "MKC031_OBJECTIVE_BOUND_VIOLATED"
@@ -396,9 +393,8 @@ fn a_variant_bound_below_the_coverage_minimum_retains_nothing() {
 fn a_variant_bound_of_zero_names_the_bound_it_refused_for() {
     let objective = objective(two_classes(), CoveragePolicy::EveryWorkloadClass, 2)
         .with_bound(ObjectiveMetric::VariantCount, 0);
-    let error = compile_portfolio(&request(objective))
-        .err()
-        .expect("a zero variant bound retains nothing");
+    let error =
+        compile_portfolio(&request(objective)).expect_err("a zero variant bound retains nothing");
     assert_eq!(
         error.diagnostic.code.as_str(),
         "MKC031_OBJECTIVE_BOUND_VIOLATED"
@@ -424,9 +420,8 @@ fn an_aggregate_byte_bound_the_retained_set_exceeds_is_refused() {
                 .with_max_aggregate_bytes(1_024),
         )
         .with_bound(ObjectiveMetric::ArtifactBytes, ARTIFACT_BYTES);
-    let error = compile_portfolio(&request(objective))
-        .err()
-        .expect("two artifacts do not fit in a kilobyte");
+    let error =
+        compile_portfolio(&request(objective)).expect_err("two artifacts do not fit in a kilobyte");
     assert_eq!(
         error.diagnostic.code.as_str(),
         "MKC031_OBJECTIVE_BOUND_VIOLATED"
@@ -486,7 +481,6 @@ fn a_measured_portfolio_reports_the_target_failure_it_hit() {
         objective,
     );
     let error = compile_portfolio_measured(&request, &evaluator)
-        .err()
-        .expect("a target that builds nothing cannot produce a retained set");
+        .expect_err("a target that builds nothing cannot produce a retained set");
     assert_eq!(error.diagnostic.code.as_str(), "MKC026_FINALIST_EVALUATION");
 }

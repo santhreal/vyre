@@ -177,6 +177,24 @@ pub(crate) fn collect_macro_identifiers(
     }
 }
 
+/// Whether a macro body names a Rust source path.
+///
+/// [`collect_macro_identifiers`] drops literals so a string's contents never
+/// read as a call. The path a test hands its helper is a literal, so a test
+/// that states its whole inspection inside `assert_eq!` names its `.rs` file
+/// nowhere a typed visitor reaches, and the walk that reads it stayed
+/// invisible.
+pub(crate) fn macro_names_rust_path(tokens: &proc_macro2::TokenStream) -> bool {
+    tokens.clone().into_iter().any(|tree| match tree {
+        proc_macro2::TokenTree::Literal(literal) => {
+            let rendered = literal.to_string();
+            rendered.ends_with(".rs\"") || rendered == "\"rs\""
+        }
+        proc_macro2::TokenTree::Group(group) => macro_names_rust_path(&group.stream()),
+        proc_macro2::TokenTree::Ident(_) | proc_macro2::TokenTree::Punct(_) => false,
+    })
+}
+
 impl<'ast> Visit<'ast> for RustSourceFactsVisitor {
     fn visit_macro(&mut self, expression: &'ast syn::Macro) {
         if expression.path.is_ident("include_str")
@@ -185,7 +203,11 @@ impl<'ast> Visit<'ast> for RustSourceFactsVisitor {
         {
             self.reads_rust_source = true;
         }
-        collect_macro_identifiers(expression.tokens.clone(), &mut self.callees);
+        let mut named = BTreeSet::new();
+        collect_macro_identifiers(expression.tokens.clone(), &mut named);
+        self.calls_read_to_string |= named.contains("read_to_string");
+        self.mentions_rust_path |= macro_names_rust_path(&expression.tokens);
+        self.callees.extend(named);
         syn::visit::visit_macro(self, expression);
     }
 

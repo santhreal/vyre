@@ -7,7 +7,7 @@ use vyre_foundation::ir::{
 };
 use vyre_foundation::logical::{LogicalProgramGraph, LOGICAL_ALGORITHM_VERSION};
 use vyre_foundation::operation::{OperationRegistration, OperationRegistry, OperationTier};
-use vyre_foundation::schedule::{SchedulePhaseId, SelectedSchedule};
+use vyre_foundation::schedule::SchedulePhaseId;
 use vyre_foundation::visit::{for_each_expr, for_each_node};
 use vyre_lower::lower_scheduled;
 use vyre_test_support::logical_markers::{census, logical_marker_sum};

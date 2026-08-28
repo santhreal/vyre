@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:fcead95f37263065a9b4007c01bf4f3add4f43cb:dirty=true:worktree=5b6f1ae8dbfb2d5349b4f539868776ce0e2ba9e1d945745b3fdb23d9618ff83d",
+  "source_fingerprint": "git:ca5a721355cd1c4e5f29260fad39cea17fcca005:dirty=true:worktree=c6bbe533c6b4fb3e5a379b8b04d4576c008af12c951b908b570b5aec1562d078",
   "schema_version": 1,
   "scan": "resource-bound",
   "findings": [
@@ -17,7 +17,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 326,
+      "line": 328,
       "pattern": "unbounded_read",
       "text": "let source = std::fs::read_to_string(&path)"
     },

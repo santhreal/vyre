@@ -20,8 +20,8 @@ use vyre_foundation::logical::{
 
 pub use facts::{CollectiveSupport, MeshAxis, MeshDevice, MeshFacts, MeshLink, MESH_FACTS_VERSION};
 pub use plan::{
-    MeshTopologyPlan, PartitionKind, RegionPartition, ShardAssignment, TransferAssignment,
-    TransferOrigin, MESH_TOPOLOGY_VERSION,
+    implied_width, MeshTopologyPlan, PartitionKind, RegionPartition, ShardAssignment,
+    TransferAssignment, TransferOrigin, MESH_TOPOLOGY_VERSION,
 };
 
 use crate::allocation::DeviceSlot;
@@ -119,7 +119,6 @@ fn split_along(
         return Ok(None);
     }
     let mut partitions = Vec::with_capacity(logical.regions().len());
-    let mut width = u32::MAX;
     for region in logical.regions() {
         let Some((logical_axis, kind)) = region
             .partition
@@ -140,7 +139,6 @@ fn split_along(
         if shards.len() < 2 {
             return Ok(None);
         }
-        width = width.min(u32::try_from(shards.len()).unwrap_or(u32::MAX));
         partitions.push(RegionPartition {
             node: ArtifactNodeId(region.node.0),
             kind,
@@ -170,9 +168,9 @@ fn split_along(
         version: MESH_TOPOLOGY_VERSION,
         mesh: mesh.authentication(),
         anchor: row[0].slot,
+        width: implied_width(&partitions),
         partitions,
         transfers,
-        width: if width == u32::MAX { 1 } else { width },
         communication_ns: 0,
     };
     plan.communication_ns = communication_ns(&plan, mesh);

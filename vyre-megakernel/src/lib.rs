@@ -70,6 +70,7 @@ mod select;
 pub mod specialization;
 /// Target compiler facets over compiler-selected modules and canonical ABI.
 pub(crate) mod target;
+mod target_bindings;
 
 pub use baseline::baseline_schedule;
 pub use candidate::{ExecutionTopology, ResidentPartitionMode};

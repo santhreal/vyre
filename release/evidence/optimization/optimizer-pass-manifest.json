@@ -1,8 +1,8 @@
 {
-  "source_fingerprint": "git:d9bcd400a6ad14708796af12741b9277fca821f8:dirty=true:worktree=ba7c571995093d8fe3b85fdb312513826612d363456fb865022d0cc7517dd497",
+  "source_fingerprint": "git:ca5a721355cd1c4e5f29260fad39cea17fcca005:dirty=true:worktree=c6bbe533c6b4fb3e5a379b8b04d4576c008af12c951b908b570b5aec1562d078",
   "schema_version": 1,
-  "executable_passes": 40,
-  "catalog_entries": 173,
+  "executable_passes": 39,
+  "catalog_entries": 172,
   "entries": [
     {
       "id": "branch_coalesce",
@@ -537,21 +537,6 @@
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
       "benchmark": "foundation.optimizer.sync"
-    },
-    {
-      "id": "autotune",
-      "kind": "executable-pass",
-      "owner": "vyre-foundation-optimizer",
-      "phase": "Unclassified",
-      "boundary": "Unknown",
-      "requires": [],
-      "invalidates": [],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "must not enter release/profile pipelines until classified",
-      "termination": "bounded by the registered scheduler restart and iteration budgets",
-      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
     },
     {
       "id": "barrier_coalesce",

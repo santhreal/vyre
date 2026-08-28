@@ -172,6 +172,8 @@ pub mod expr_variants;
 pub mod extension_variants;
 pub mod fixed_point;
 #[cfg(feature = "ir-fixtures")]
+pub mod graph_shapes;
+#[cfg(feature = "ir-fixtures")]
 pub mod graph_values;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_regions;

@@ -1,12 +1,12 @@
 {
-  "source_fingerprint": "git:d9bcd400a6ad14708796af12741b9277fca821f8:dirty=true:worktree=ba7c571995093d8fe3b85fdb312513826612d363456fb865022d0cc7517dd497",
+  "source_fingerprint": "git:ca5a721355cd1c4e5f29260fad39cea17fcca005:dirty=true:worktree=d45b7f7ff39a0f3a7f179447f9a9da3a76362a45fead73c6dc97eb210959f2ab",
   "schema_version": 2,
   "architecture": "semantic Program optimizer -> verified representation lowering -> concrete target strategy",
   "semantic_optimizer_owner": "vyre-foundation",
   "verified_lowering_owner": "vyre-lower",
   "target_strategy_owner": "concrete emitters and drivers",
-  "executable_passes": 40,
-  "catalog_entries": 173,
+  "executable_passes": 39,
+  "catalog_entries": 172,
   "entries": [
     {
       "id": "branch_coalesce",
@@ -603,23 +603,6 @@
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
       "benchmark": "foundation.optimizer.sync",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program"
-    },
-    {
-      "id": "autotune",
-      "kind": "executable-pass",
-      "owner": "vyre-foundation-optimizer",
-      "phase": "Unclassified",
-      "boundary": "Unknown",
-      "requires": [],
-      "invalidates": [],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "must not enter release/profile pipelines until classified",
-      "termination": "bounded by the registered scheduler restart and iteration budgets",
-      "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap",
       "input": "vyre-foundation Program",
       "output": "semantically equivalent vyre-foundation Program"
     },

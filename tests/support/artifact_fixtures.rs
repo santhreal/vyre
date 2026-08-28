@@ -20,8 +20,8 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, CollectiveOp, CommGroup, DataType, Expr, GraphInput, GraphOutput,
-    Node, Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
+    BufferAccess, BufferDecl, CollectiveOp, CommGroup, DataType, GraphInput, GraphOutput, Node,
+    Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::allocation::DeviceSlot;
@@ -31,6 +31,7 @@ use vyre_megakernel::{
     DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetEntryPoint,
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory, ValidatedCompileRequest,
 };
+use vyre_test_support::graph_shapes;
 
 /// A single-dimension external value contract.
 pub(crate) fn contract(
@@ -146,77 +147,13 @@ pub(crate) fn collective_output_graph(count: u32) -> ProgramGraph {
 }
 
 /// One node that atomically updates a caller-visible value of `count` elements.
-///
-/// The update lands at a location the program computes, which is what makes the
-/// region routed rather than replicable: a shard holds contributions for points
-/// another shard owns.
 pub(crate) fn atomic_output_graph(count: u32) -> ProgramGraph {
-    let counters = contract(
-        DataType::U32,
-        count,
-        BufferAccess::ReadWrite,
-        ValueLifetime::Invocation,
-    );
-    let mut graph = ProgramGraph::new();
-    graph
-        .add_node(
-            "scatter",
-            Program::wrapped(
-                vec![decl_for("out", 0, &counters)],
-                [8, 1, 1],
-                vec![Node::let_bind(
-                    "prior",
-                    Expr::atomic_add("out", Expr::gid_x(), Expr::u32(1)),
-                )],
-            ),
-            Vec::new(),
-            vec![GraphOutput {
-                buffer: "out".into(),
-                name: "out".into(),
-                contract: counters,
-                retained_successor_of: None,
-            }],
-        )
-        .expect("fixture atomic node must be valid");
-    graph
+    graph_shapes::atomic_output_graph(count, [8, 1, 1])
 }
 
 /// One node that reads the caller-supplied value it also writes.
-///
-/// A region reading a value it writes may read a point another shard holds, so
-/// its axes address a spatial domain rather than independent elements.
 pub(crate) fn in_place_input_graph(count: u32) -> ProgramGraph {
-    let state = contract(
-        DataType::U32,
-        count,
-        BufferAccess::ReadWrite,
-        ValueLifetime::Invocation,
-    );
-    let mut graph = ProgramGraph::new();
-    let value = graph
-        .add_external_value("state", state.clone())
-        .expect("fixture external value must be valid");
-    graph
-        .add_node(
-            "relax",
-            Program::wrapped(
-                vec![decl_for("state", 0, &state)],
-                [8, 1, 1],
-                vec![Node::store(
-                    "state",
-                    Expr::gid_x(),
-                    Expr::add(Expr::load("state", Expr::gid_x()), Expr::u32(1)),
-                )],
-            ),
-            vec![GraphInput {
-                buffer: "state".into(),
-                value,
-                contract: state.clone(),
-            }],
-            Vec::new(),
-        )
-        .expect("fixture in-place node must be valid");
-    graph
+    graph_shapes::in_place_input_graph(count, [8, 1, 1])
 }
 
 /// Two nodes over one-element values, the second consuming the first.
@@ -225,62 +162,7 @@ pub(crate) fn in_place_input_graph(count: u32) -> ProgramGraph {
 /// placement that uses more than one device is the one that runs consecutive
 /// regions on consecutive devices.
 pub(crate) fn chained_graph() -> ProgramGraph {
-    let carried = contract(
-        DataType::U32,
-        1,
-        BufferAccess::ReadWrite,
-        ValueLifetime::Invocation,
-    );
-    let mut graph = ProgramGraph::new();
-    let (_, produced) = graph
-        .add_node(
-            "stage_one",
-            Program::wrapped(
-                vec![decl_for("mid", 0, &carried)],
-                [1, 1, 1],
-                vec![Node::store("mid", Expr::u32(0), Expr::u32(1))],
-            ),
-            Vec::new(),
-            vec![GraphOutput {
-                buffer: "mid".into(),
-                name: "mid".into(),
-                contract: carried.clone(),
-                retained_successor_of: None,
-            }],
-        )
-        .expect("fixture producer node must be valid");
-    let result = contract(
-        DataType::U32,
-        1,
-        BufferAccess::ReadWrite,
-        ValueLifetime::Output,
-    );
-    graph
-        .add_node(
-            "stage_two",
-            Program::wrapped(
-                vec![decl_for("mid", 0, &carried), decl_for("result", 1, &result)],
-                [1, 1, 1],
-                vec![Node::store(
-                    "result",
-                    Expr::u32(0),
-                    Expr::load("mid", Expr::u32(0)),
-                )],
-            ),
-            vec![GraphInput {
-                buffer: "mid".into(),
-                value: produced[0],
-                contract: carried,
-            }],
-            vec![GraphOutput {
-                buffer: "result".into(),
-                name: "result".into(),
-                contract: result,
-                retained_successor_of: None,
-            }],
-        )
-        .expect("fixture consumer node must be valid");
-    graph
+    graph_shapes::chained_graph(1, [1, 1, 1])
 }
 
 /// One-node graph over `values`, bound to Program slots in the order given.

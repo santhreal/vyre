@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:f658f200d51392c80a1428e5510b0a9f393f295a:dirty=true:worktree=e1bf0d30b3232f2572097dbead93e484120e55945fd78101e95c4c3108dd9c0c",
+  "source_fingerprint": "git:ca5a721355cd1c4e5f29260fad39cea17fcca005:dirty=true:worktree=c6bbe533c6b4fb3e5a379b8b04d4576c008af12c951b908b570b5aec1562d078",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -50,6 +50,12 @@
       "line": 348,
       "pattern": "placeholder_text",
       "text": "// `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder"
+    },
+    {
+      "path": "vyre-megakernel/src/baseline.rs",
+      "line": 19,
+      "pattern": "placeholder_text",
+      "text": "/// candidate rather than a placeholder: it is the schedule every ranking is"
     },
     {
       "path": "vyre-primitives/src/hardware/mod.rs",

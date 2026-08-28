@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:fcead95f37263065a9b4007c01bf4f3add4f43cb:dirty=true:worktree=7a9577461fb296e825808aed9502f5b37929c7d9ae35047aeed445b972849538",
+  "source_fingerprint": "git:ca5a721355cd1c4e5f29260fad39cea17fcca005:dirty=true:worktree=f90ed774caf1743e89342e7e15effa79a4f0f88623dd77ee3c56774dfba7abd0",
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4336,
+  "scanned_files": 4358,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -50,11 +50,11 @@
     },
     {
       "pattern": "documented_panic_contract",
-      "count": 195
+      "count": 196
     },
     {
       "pattern": "expect_call",
-      "count": 22
+      "count": 27
     },
     {
       "pattern": "panic_macro",
@@ -62,11 +62,11 @@
     },
     {
       "pattern": "placeholder_text",
-      "count": 30
+      "count": 31
     },
     {
       "pattern": "source_inspection_test",
-      "count": 101
+      "count": 105
     },
     {
       "pattern": "std_thread_sleep",
@@ -108,15 +108,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "bench_harness",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 1
+      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -124,7 +116,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 39
+      "count": 40
     },
     {
       "owner_lane": "coordination",
@@ -132,7 +124,7 @@
       "risk": "release_debt",
       "hot_path": false,
       "release_blocker": false,
-      "count": 2
+      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -140,15 +132,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 36
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 2
+      "count": 41
     },
     {
       "owner_lane": "coordination",
@@ -156,7 +140,7 @@
       "risk": "test_hygiene",
       "hot_path": false,
       "release_blocker": false,
-      "count": 55
+      "count": 60
     },
     {
       "owner_lane": "driver_cuda",
@@ -348,15 +332,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 34
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 18
+      "count": 53
     },
     {
       "owner_lane": "testing_evidence",
@@ -384,16 +360,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "bench_harness",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 1
+      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -402,7 +369,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 39
+      "count": 40
     },
     {
       "owner_lane": "coordination",
@@ -411,7 +378,7 @@
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 2
+      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -420,16 +387,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 36
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 2
+      "count": 41
     },
     {
       "owner_lane": "coordination",
@@ -447,7 +405,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 9
+      "count": 14
     },
     {
       "owner_lane": "coordination",
@@ -780,16 +738,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 34
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 18
+      "count": 53
     },
     {
       "owner_lane": "testing_evidence",
@@ -1109,12 +1058,92 @@
       },
       {
         "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "cfg_test_cpu_ref_is_permitted_and_not_flagged",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "cfg_test_impl_block_is_scoped_as_test",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "cfg_test_item_level_function_body_vyre_reference_is_not_misclassified",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "cfg_test_trait_block_is_scoped_as_test",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "clean_dispatcher_allows_inter_dispatch_staging_loop",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "clean_dispatcher_allows_optional_local_and_capacity_reserve_decoder_loop",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "clean_dispatcher_allows_strict_fixed_width_decoder_only_return",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "clean_operation_registration_allows_literal_and_const_byte_array",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "clean_production_code_produces_no_findings",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "compiler_planner_reachable_from_builder_is_permitted",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "control_bogus_local_operation_registration_does_not_false_positive",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
         "test": "every_registration_constructor_convicts_a_host_oracle_in_expected_output",
         "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
       },
       {
         "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "expected_output_with_wire_pack_and_literal_helper_is_convicted",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "gpu_dispatcher_boundary_and_validation_functions_are_permitted",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
         "test": "mutation_catches_crate_bogus_program_masquerade",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "mutation_catches_decoder_loop_bitshift_transform",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "mutation_catches_decoder_loop_independent_constant_append",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "mutation_catches_decoder_loop_subsliced_width_mismatch",
         "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
       },
       {
@@ -1199,6 +1228,11 @@
       },
       {
         "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "mutation_catches_unqualified_or_custom_from_le_bytes_helper",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
         "test": "mutation_operation_registration_aliased_as_or_catches_expected_output_oracle",
         "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
       },
@@ -1230,6 +1264,11 @@
       {
         "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
         "test": "mutation_operation_registration_struct_literal_catches_expected_output_oracle",
+        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
+      },
+      {
+        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
+        "test": "mutation_oracle_detection_catches_production_vyre_reference_usage",
         "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
       },
       {
@@ -1421,11 +1460,39 @@
         "file": "vyre-megakernel/tests/compile_objective.rs",
         "test": "every_declared_policy_variant_is_listed",
         "reason": "Same closure for `WorkloadAggregation`, `RiskStatistic` and `CoveragePolicy`.\nValidation and evidence projection read each through its own `ALL`, so a variant\nmissing from one of those lists is a policy no compile can be validated against\nand no artifact can record."
+      },
+      {
+        "file": "vyre-bench/tests/feature_cfg_contract.rs",
+        "test": "every_benchmark_feature_guard_is_declared",
+        "reason": "Resolves every `#[cfg(feature = ...)]` a benchmark module carries against the\nfeatures the manifest declares. A module behind an undeclared feature is never\ncompiled, so no run of the benchmark harness observes it: the absence is the\ndefect and the source is the only place it exists."
+      },
+      {
+        "file": "vyre-foundation/tests/law_derived_region_alternatives.rs",
+        "test": "every_declared_law_has_a_recorded_derivation",
+        "reason": "Asserts that every declared `AlgebraicLaw` variant has a row stating what it\nderives. `AlgebraicLaw` lives in vyre-spec and is read here through a match on\nnames, so a variant added there is invisible to every execution this crate can\nrun; Rust has no reflection and the declaration is the only witness."
+      },
+      {
+        "file": "vyre-foundation/tests/region_law_derivation.rs",
+        "test": "every_declared_family_cites_at_least_one_law",
+        "reason": "Same closure for `RegionLawFamily`: a family absent from `all()` derives nothing\nand refuses nothing, and a family present in the list but not in the enum cannot\nexist. Neither state has a run-time witness, because both are about which\nvariants were declared."
+      },
+      {
+        "file": "vyre-libs/tests/shared_owner_closure.rs",
+        "test": "both_crate_directories_are_the_ones_this_workspace_holds",
+        "reason": "Floor check for the two crate directories every gate in this file walks. A\nresolver that points at another checkout produces a clean sweep of the wrong\ntree, which is indistinguishable from a clean sweep of this one at run time."
+      },
+      {
+        "file": "vyre-test-support/src/monorepo.rs",
+        "test": "a_marker_quoted_inside_a_line_is_not_a_declaration",
+        "reason": "Asserts that the marker resolver matches a declaration and not a mention of one.\nIts subject is this file, which quotes the marker mid-line and still resolves as\nthe single declaring home; the distinction exists only in the source text the\nresolver reads."
+      },
+      {
+        "file": "xtask/src/gates/hygiene_matrix/tests.rs",
+        "test": "every_xtask_crate_carries_the_release_tooling_rules",
+        "reason": "Derives the xtask crate list from the workspace manifest and checks that surface\nclassification, owner attribution and the source walk key off that list rather\nthan the literal name `xtask`. A crate added to the manifest is text until a\nbuild selects it, so no running process can report that a fourth xtask crate\ninherited production thresholds."
       }
     ],
-    "blockers": [
-      "docs/testing/STRUCTURAL_GATES.toml: `every_declared_policy_variant_is_listed` is declared for `vyre-megakernel/tests/compile_objective.rs`, which no longer has a test by that name that inspects source. Fix: delete the row or correct the name."
-    ]
+    "blockers": []
   },
   "panic_budget": {
     "schema_version": 1,
@@ -2319,7 +2386,7 @@
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 55,
+      "line": 95,
       "pattern": "panic_macro",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2329,7 +2396,7 @@
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 110,
+      "line": 150,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2339,7 +2406,7 @@
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 146,
+      "line": 186,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2349,7 +2416,7 @@
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 178,
+      "line": 218,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2442,6 +2509,26 @@
       "line": 351,
       "pattern": "documented_panic_contract",
       "owner_lane": "lower_emit",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-megakernel/src/baseline.rs",
+      "line": 19,
+      "pattern": "placeholder_text",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "release_debt",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-megakernel/src/request_identity.rs",
+      "line": 66,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -3368,6 +3455,56 @@
       "release_blocker": false
     },
     {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 28,
+      "pattern": "expect_call",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 48,
+      "pattern": "expect_call",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 81,
+      "pattern": "expect_call",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 110,
+      "pattern": "expect_call",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 138,
+      "pattern": "expect_call",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
       "path": "vyre-test-support/src/ir_regions.rs",
       "line": 51,
       "pattern": "documented_panic_contract",
@@ -3409,18 +3546,8 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 326,
+      "line": 328,
       "pattern": "unbounded_read",
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-test-support/src/lib.rs",
-      "line": 327,
-      "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
       "risk": "test_hygiene",
@@ -3439,7 +3566,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 380,
+      "line": 331,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3449,7 +3576,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 423,
+      "line": 382,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3459,7 +3586,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 518,
+      "line": 425,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3469,7 +3596,17 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 526,
+      "line": 520,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/lib.rs",
+      "line": 528,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3524,6 +3661,16 @@
       "owner_lane": "coordination",
       "surface": "test",
       "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 423,
+      "pattern": "source_inspection_test",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "informational",
       "hot_path": false,
       "release_blocker": false
     },
@@ -3589,7 +3736,7 @@
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 45,
+      "line": 104,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3599,7 +3746,7 @@
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 52,
+      "line": 111,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3609,7 +3756,7 @@
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 69,
+      "line": 128,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3619,7 +3766,7 @@
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 75,
+      "line": 134,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3629,7 +3776,7 @@
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 95,
+      "line": 154,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3639,7 +3786,7 @@
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 101,
+      "line": 160,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3773,9 +3920,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "bench_harness",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-driver/tests/vyre_backend_forwarding_closure.rs",
@@ -3863,9 +4010,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-foundation/tests/region_law_derivation.rs",
@@ -3873,9 +4020,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-foundation/tests/scalar_operator_agreement.rs",
@@ -4108,8 +4255,8 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-megakernel/tests/compile_objective.rs",
-      "line": 79,
+      "path": "vyre-libs/tests/shared_owner_closure.rs",
+      "line": 783,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -4119,7 +4266,27 @@
     },
     {
       "path": "vyre-megakernel/tests/compile_objective.rs",
-      "line": 102,
+      "line": 81,
+      "pattern": "source_inspection_test",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-megakernel/tests/compile_objective.rs",
+      "line": 104,
+      "pattern": "source_inspection_test",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-megakernel/tests/compile_objective.rs",
+      "line": 128,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -4193,9 +4360,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4203,9 +4370,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4213,9 +4380,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4223,9 +4390,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4233,9 +4400,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4243,9 +4410,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4253,9 +4420,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4263,9 +4430,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4283,9 +4450,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4413,9 +4580,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4433,9 +4600,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4553,9 +4720,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4573,9 +4740,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4583,9 +4750,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4593,9 +4760,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4603,9 +4770,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4613,9 +4780,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
@@ -4623,9 +4790,19 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
+    },
+    {
+      "path": "xtask/src/gates/hygiene_matrix/tests.rs",
+      "line": 1572,
+      "pattern": "source_inspection_test",
+      "owner_lane": "testing_evidence",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
     },
     {
       "path": "xtask/tests/tree_contracts/cargo_invocation_resolution.rs",
@@ -4739,7 +4916,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1523,
+      "line": 1533,
       "pattern": "documented_panic_contract",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -5228,7 +5405,7 @@
       "release_blocker": false
     }
   ],
-  "release_blocker_count": 21,
+  "release_blocker_count": 0,
   "findings": [
     {
       "path": "conform/vyre-conform-spec/src/schema.rs",
@@ -5730,25 +5907,25 @@
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 55,
+      "line": 95,
       "pattern": "panic_macro",
       "text": "panic!(\"{}\", self.0);"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 110,
+      "line": 150,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 146,
+      "line": 186,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
     },
     {
       "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 178,
+      "line": 218,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: sequential-output dispatcher mutex should not be poisoned\");"
     },
@@ -5805,6 +5982,18 @@
       "line": 351,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: vector chain candidate must contain at least one operation\");"
+    },
+    {
+      "path": "vyre-megakernel/src/baseline.rs",
+      "line": 19,
+      "pattern": "placeholder_text",
+      "text": "/// candidate rather than a placeholder: it is the schedule every ranking is"
+    },
+    {
+      "path": "vyre-megakernel/src/request_identity.rs",
+      "line": 66,
+      "pattern": "documented_panic_contract",
+      "text": ".expect("
     },
     {
       "path": "vyre-primitives/src/hardware/mod.rs",
@@ -6360,6 +6549,36 @@
       "text": "let b_bits = u32::from_le_bytes(back_bytes[i * 4..(i + 1) * 4].try_into().unwrap());"
     },
     {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 28,
+      "pattern": "expect_call",
+      "text": ".expect(\"fixture external value must be valid\");"
+    },
+    {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 48,
+      "pattern": "expect_call",
+      "text": ".expect(\"fixture in-place node must be valid\");"
+    },
+    {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 81,
+      "pattern": "expect_call",
+      "text": ".expect(\"fixture atomic node must be valid\");"
+    },
+    {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 110,
+      "pattern": "expect_call",
+      "text": ".expect(\"fixture producer node must be valid\");"
+    },
+    {
+      "path": "vyre-test-support/src/graph_shapes.rs",
+      "line": 138,
+      "pattern": "expect_call",
+      "text": ".expect(\"fixture consumer node must be valid\");"
+    },
+    {
       "path": "vyre-test-support/src/ir_regions.rs",
       "line": 51,
       "pattern": "documented_panic_contract",
@@ -6385,43 +6604,43 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 326,
+      "line": 328,
       "pattern": "unbounded_read",
       "text": "let source = std::fs::read_to_string(&path)"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 327,
+      "line": 329,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|err| panic!(\"Fix: cannot read {path:?} to derive the level set: {err}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 329,
+      "line": 331,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {path:?} no longer declares `pub enum IrLevel`\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 380,
+      "line": 382,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 423,
+      "line": 425,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 518,
+      "line": 520,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 526,
+      "line": 528,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -6454,6 +6673,13 @@
       "line": 211,
       "pattern": "documented_panic_contract",
       "text": "panic!("
+    },
+    {
+      "path": "vyre-test-support/src/monorepo.rs",
+      "line": 423,
+      "pattern": "source_inspection_test",
+      "text": "test `a_marker_quoted_inside_a_line_is_not_a_declaration` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "a_marker_quoted_inside_a_line_is_not_a_declaration"
     },
     {
       "path": "vyre-test-support/src/pass_programs.rs",
@@ -6493,37 +6719,37 @@
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 45,
+      "line": 104,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: restate the workgroup shape so it divides the phase extents\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 52,
+      "line": 111,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: map an axis this phase declares, at a level the schedule admits\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 69,
+      "line": 128,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: state ring slots and role workers a two-phase pipeline admits\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 75,
+      "line": 134,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: synchronize phases that share the workgroup scope\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 95,
+      "line": 154,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: synchronize a phase the device scope reaches\");"
     },
     {
       "path": "vyre-test-support/src/selected_schedules.rs",
-      "line": 101,
+      "line": 160,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: state a persistent queue capacity the phase admits\");"
     },
@@ -6843,18 +7069,32 @@
       "test": "no_production_op_calls_unrouted_persistent_fixpoint"
     },
     {
+      "path": "vyre-libs/tests/shared_owner_closure.rs",
+      "line": 783,
+      "pattern": "source_inspection_test",
+      "text": "test `both_crate_directories_are_the_ones_this_workspace_holds` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "both_crate_directories_are_the_ones_this_workspace_holds"
+    },
+    {
       "path": "vyre-megakernel/tests/compile_objective.rs",
-      "line": 79,
+      "line": 81,
       "pattern": "source_inspection_test",
       "text": "test `every_declared_metric_is_listed_once_at_its_own_index` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_declared_metric_is_listed_once_at_its_own_index"
     },
     {
       "path": "vyre-megakernel/tests/compile_objective.rs",
-      "line": 102,
+      "line": 104,
       "pattern": "source_inspection_test",
       "text": "test `every_declared_calibrated_fact_is_listed_and_names_its_builder` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_declared_calibrated_fact_is_listed_and_names_its_builder"
+    },
+    {
+      "path": "vyre-megakernel/tests/compile_objective.rs",
+      "line": 128,
+      "pattern": "source_inspection_test",
+      "text": "test `every_declared_policy_variant_is_listed` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "every_declared_policy_variant_is_listed"
     },
     {
       "path": "vyre-registry-link/tests/registry_link_rules.rs",
@@ -7207,6 +7447,13 @@
       "test": "mutation_catches_unqualified_or_custom_from_le_bytes_helper"
     },
     {
+      "path": "xtask/src/gates/hygiene_matrix/tests.rs",
+      "line": 1572,
+      "pattern": "source_inspection_test",
+      "text": "test `every_xtask_crate_carries_the_release_tooling_rules` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "every_xtask_crate_carries_the_release_tooling_rules"
+    },
+    {
       "path": "xtask/tests/tree_contracts/cargo_invocation_resolution.rs",
       "line": 52,
       "pattern": "source_inspection_test",
@@ -7281,7 +7528,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1523,
+      "line": 1533,
       "pattern": "documented_panic_contract",
       "text": "descriptor(gate_name).unwrap_or_else(|| panic!(\"gate `{gate_name}` is not in GATE_METADATA\"))"
     },
@@ -7576,8 +7823,5 @@
       "text": "let w = stack.pop().expect("
     }
   ],
-  "blockers": [
-    "21 release-blocking source hygiene finding(s) remain; 374 total finding(s) preserved in classification output",
-    "docs/testing/STRUCTURAL_GATES.toml: `every_declared_policy_variant_is_listed` is declared for `vyre-megakernel/tests/compile_objective.rs`, which no longer has a test by that name that inspects source. Fix: delete the row or correct the name."
-  ]
+  "blockers": []
 }

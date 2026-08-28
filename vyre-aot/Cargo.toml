@@ -36,3 +36,4 @@ ptx = []
 vyre-lower.workspace = true
 tempfile.workspace = true
 inventory.workspace = true
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }

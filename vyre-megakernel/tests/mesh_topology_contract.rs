@@ -16,7 +16,7 @@
 use vyre_foundation::logical::LogicalExchangeKind;
 use vyre_megakernel::allocation::DeviceSlot;
 use vyre_megakernel::mesh::{
-    CollectiveSupport, MeshFacts, MeshTopologyPlan, PartitionKind, RegionPartition,
+    implied_width, CollectiveSupport, MeshFacts, MeshTopologyPlan, PartitionKind, RegionPartition,
     ShardAssignment, TransferAssignment, TransferOrigin, MESH_TOPOLOGY_VERSION,
 };
 use vyre_megakernel::{ArtifactNodeId, CompileError};
@@ -70,17 +70,7 @@ fn transfer(
 }
 
 fn plan(partitions: Vec<RegionPartition>, transfers: Vec<TransferAssignment>) -> MeshTopologyPlan {
-    let width = partitions
-        .iter()
-        .map(|partition| {
-            if partition.kind.splits_axis() {
-                u32::try_from(partition.shards.len()).unwrap_or(u32::MAX)
-            } else {
-                1
-            }
-        })
-        .min()
-        .unwrap_or(1);
+    let width = implied_width(&partitions);
     let anchor = partitions
         .first()
         .and_then(|partition| partition.shards.first())

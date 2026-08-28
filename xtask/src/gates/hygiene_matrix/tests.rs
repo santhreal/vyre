@@ -470,6 +470,61 @@ fn source_inspection_is_detected_when_the_parse_is_delegated() {
         .contains("every_declared_variant_is_listed"));
 }
 
+/// WHY: a typed visitor never enters a macro body, so a test that states its
+/// whole inspection inside `assert_eq!` named its `.rs` file nowhere the
+/// scanner looked. The walk over this checkout was invisible while the same
+/// test written with a `let` binding was a blocker, which made the rule depend
+/// on assertion style rather than on what the test reads.
+#[test]
+fn source_inspection_stated_only_inside_a_macro_is_detected() {
+    let inside_macro = r#"
+            fn variants(relative: &str) -> Vec<String> {
+                let source = std::fs::read_to_string(root().join(relative)).unwrap();
+                vyre_test_support::top_level_variant_names(&source)
+            }
+
+            #[test]
+            fn every_declared_policy_variant_is_listed() {
+                assert_eq!(variants("objective/workload.rs"), listed(Policy::ALL));
+            }
+        "#;
+    let mut findings = Vec::new();
+    scan_source_inspection_tests(
+        Path::new("driver/tests/policy.rs"),
+        inside_macro,
+        &mut findings,
+    );
+    assert_eq!(
+        findings.len(),
+        1,
+        "an inspection inside an assertion macro is still an inspection"
+    );
+    assert!(findings[0]
+        .text
+        .contains("every_declared_policy_variant_is_listed"));
+
+    let whole_read_inside_macro = r#"
+            #[test]
+            fn every_declared_metric_is_listed() {
+                assert!(std::fs::read_to_string("objective/metric.rs")
+                    .unwrap()
+                    .contains("Latency"));
+            }
+        "#;
+    findings.clear();
+    scan_source_inspection_tests(
+        Path::new("driver/tests/metric.rs"),
+        whole_read_inside_macro,
+        &mut findings,
+    );
+    assert_eq!(
+        findings.len(),
+        1,
+        "a read stated inside an assertion macro is still a read"
+    );
+    assert!(findings[0].text.contains("every_declared_metric_is_listed"));
+}
+
 /// WHY: the rule condemns a test that reads this checkout's source instead of
 /// asserting behavior. A test that WRITES a source tree in a temporary
 /// directory and runs the analyzer over it is asserting behavior, and the

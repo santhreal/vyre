@@ -169,6 +169,27 @@ pub struct TransferAssignment {
     pub overlaps: bool,
 }
 
+/// Parallel width a placed region set implies.
+///
+/// A region cut along an axis contributes its shard count. A replicated or
+/// pipelined region is computed whole on the device that holds it, so it
+/// contributes one whatever its shard count. The width is the smallest of
+/// those, because a submission runs no wider than its narrowest region.
+#[must_use]
+pub fn implied_width(partitions: &[RegionPartition]) -> u32 {
+    partitions
+        .iter()
+        .map(|partition| {
+            if partition.kind.splits_axis() {
+                u32::try_from(partition.shards.len()).unwrap_or(u32::MAX)
+            } else {
+                1
+            }
+        })
+        .min()
+        .unwrap_or(1)
+}
+
 /// Every placement and communication decision one selected schedule made.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -354,20 +375,7 @@ impl MeshTopologyPlan {
                 "price only the transfers the topology records",
             ));
         }
-        // A replicated region is computed whole on every device that holds it,
-        // so it contributes one to the width whatever its shard count.
-        let recorded = self
-            .partitions
-            .iter()
-            .map(|partition| {
-                if partition.kind.splits_axis() {
-                    u32::try_from(partition.shards.len()).unwrap_or(u32::MAX)
-                } else {
-                    1
-                }
-            })
-            .min()
-            .unwrap_or(1);
+        let recorded = implied_width(&self.partitions);
         if self.width != recorded {
             return Err(invalid(
                 "topology.width",

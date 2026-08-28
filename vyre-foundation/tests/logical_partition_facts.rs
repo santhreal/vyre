@@ -18,6 +18,7 @@ use vyre_foundation::ir::{
 use vyre_foundation::logical::{
     LogicalExchangeKind, LogicalPartitionAxisKind, LogicalProgramGraph,
 };
+use vyre_test_support::graph_shapes::{atomic_output_graph, chained_graph, in_place_input_graph};
 
 fn map_program(count: u32) -> Program {
     Program::wrapped(
@@ -66,138 +67,6 @@ fn atomic_program(count: u32) -> Program {
 
 fn logical_of(program: Program) -> ProgramGraph {
     ProgramGraph::from_program("region", program).expect("fixture graph must validate")
-}
-
-/// A graph whose node reads the caller-supplied value it also writes.
-fn in_place_graph(count: u32) -> ProgramGraph {
-    let state = ValueContract {
-        dtype: DataType::U32,
-        shape: vec![ShapeDim::Known(u64::from(count))],
-        access: BufferAccess::ReadWrite,
-        lifetime: ValueLifetime::Invocation,
-    };
-    let mut graph = ProgramGraph::new();
-    let value = graph
-        .add_external_value("state", state.clone())
-        .expect("fixture external value must be valid");
-    graph
-        .add_node(
-            "relax",
-            Program::wrapped(
-                vec![BufferDecl::read_write("state", 0, DataType::U32).with_count(count)],
-                [64, 1, 1],
-                vec![Node::store(
-                    "state",
-                    Expr::gid_x(),
-                    Expr::add(Expr::load("state", Expr::gid_x()), Expr::u32(1)),
-                )],
-            ),
-            vec![GraphInput {
-                buffer: "state".into(),
-                value,
-                contract: state,
-            }],
-            Vec::new(),
-        )
-        .expect("fixture in-place node must be valid");
-    graph
-}
-
-/// A graph whose second node consumes the value the first produces.
-fn chained_graph(count: u32) -> ProgramGraph {
-    let carried = ValueContract {
-        dtype: DataType::U32,
-        shape: vec![ShapeDim::Known(u64::from(count))],
-        access: BufferAccess::ReadWrite,
-        lifetime: ValueLifetime::Invocation,
-    };
-    let mut graph = ProgramGraph::new();
-    let (_, produced) = graph
-        .add_node(
-            "producer",
-            Program::wrapped(
-                vec![BufferDecl::read_write("mid", 0, DataType::U32).with_count(count)],
-                [64, 1, 1],
-                vec![Node::store("mid", Expr::gid_x(), Expr::u32(1))],
-            ),
-            Vec::new(),
-            vec![GraphOutput {
-                buffer: "mid".into(),
-                name: "mid".into(),
-                contract: carried.clone(),
-                retained_successor_of: None,
-            }],
-        )
-        .expect("fixture producer node must be valid");
-    graph
-        .add_node(
-            "consumer",
-            Program::wrapped(
-                vec![
-                    BufferDecl::read_write("mid", 0, DataType::U32).with_count(count),
-                    BufferDecl::output("result", 1, DataType::U32).with_count(count),
-                ],
-                [64, 1, 1],
-                vec![Node::store(
-                    "result",
-                    Expr::gid_x(),
-                    Expr::load("mid", Expr::gid_x()),
-                )],
-            ),
-            vec![GraphInput {
-                buffer: "mid".into(),
-                value: produced[0],
-                contract: carried,
-            }],
-            vec![GraphOutput {
-                buffer: "result".into(),
-                name: "result".into(),
-                contract: ValueContract {
-                    dtype: DataType::U32,
-                    shape: vec![ShapeDim::Known(u64::from(count))],
-                    access: BufferAccess::WriteOnly,
-                    lifetime: ValueLifetime::Output,
-                },
-                retained_successor_of: None,
-            }],
-        )
-        .expect("fixture consumer node must be valid");
-    graph
-}
-
-/// A graph whose node atomically updates a caller-visible value.
-///
-/// The value is written for the invocation rather than retained across
-/// submissions, so the region is atomic without being ordered.
-fn atomic_graph(count: u32) -> ProgramGraph {
-    let counters = ValueContract {
-        dtype: DataType::U32,
-        shape: vec![ShapeDim::Known(u64::from(count))],
-        access: BufferAccess::ReadWrite,
-        lifetime: ValueLifetime::Invocation,
-    };
-    let mut graph = ProgramGraph::new();
-    graph
-        .add_node(
-            "scatter",
-            Program::wrapped(
-                vec![BufferDecl::read_write("out", 0, DataType::U32).with_count(count)],
-                [64, 1, 1],
-                vec![Node::let_bind(
-                    "prior",
-                    Expr::atomic_add("out", Expr::gid_x(), Expr::u32(1)),
-                )],
-            ),
-            Vec::new(),
-            vec![GraphOutput {
-                buffer: "out".into(),
-                name: "out".into(),
-                contract: counters,
-                retained_successor_of: None,
-            }],
-        )
-        .expect("fixture atomic node must be valid");
-    graph
 }
 
 #[test]
@@ -292,7 +161,7 @@ fn a_symbolic_payload_is_sized_from_its_binding() {
 /// lose every contribution that crossed a shard boundary.
 #[test]
 fn a_region_with_atomics_routes_its_points() {
-    let graph = atomic_graph(64);
+    let graph = atomic_output_graph(64, [64, 1, 1]);
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .expect("atomic logical stage must validate");
     let facts = &logical.regions()[0].partition;
@@ -305,7 +174,7 @@ fn a_region_with_atomics_routes_its_points() {
 /// neighbour's bytes, which is what makes a halo exchange go missing.
 #[test]
 fn a_region_that_reads_what_it_writes_addresses_a_spatial_domain() {
-    let graph = in_place_graph(128);
+    let graph = in_place_input_graph(128, [64, 1, 1]);
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .expect("in-place logical stage must validate");
     let facts = &logical.regions()[0].partition;
@@ -322,7 +191,7 @@ fn a_region_that_reads_what_it_writes_addresses_a_spatial_domain() {
 /// and the placement that needs it would rank as free.
 #[test]
 fn a_region_states_the_bytes_it_writes_and_the_bytes_it_waits_for() {
-    let graph = chained_graph(256);
+    let graph = chained_graph(256, [64, 1, 1]);
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .expect("chained logical stage must validate");
     let regions = logical.regions();

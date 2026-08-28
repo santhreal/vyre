@@ -196,8 +196,24 @@ make, which no execution observes.
 file = "xtask/src/gates/host_oracle_elimination_tests_part1.rs"
 tests = [
   "canonical_semantic_executor_exact_path_derives_execution_methods",
+  "cfg_test_cpu_ref_is_permitted_and_not_flagged",
+  "cfg_test_impl_block_is_scoped_as_test",
+  "cfg_test_item_level_function_body_vyre_reference_is_not_misclassified",
+  "cfg_test_trait_block_is_scoped_as_test",
+  "clean_dispatcher_allows_inter_dispatch_staging_loop",
+  "clean_dispatcher_allows_optional_local_and_capacity_reserve_decoder_loop",
+  "clean_dispatcher_allows_strict_fixed_width_decoder_only_return",
+  "clean_operation_registration_allows_literal_and_const_byte_array",
+  "clean_production_code_produces_no_findings",
+  "compiler_planner_reachable_from_builder_is_permitted",
+  "control_bogus_local_operation_registration_does_not_false_positive",
   "every_registration_constructor_convicts_a_host_oracle_in_expected_output",
+  "expected_output_with_wire_pack_and_literal_helper_is_convicted",
+  "gpu_dispatcher_boundary_and_validation_functions_are_permitted",
   "mutation_catches_crate_bogus_program_masquerade",
+  "mutation_catches_decoder_loop_bitshift_transform",
+  "mutation_catches_decoder_loop_independent_constant_append",
+  "mutation_catches_decoder_loop_subsliced_width_mismatch",
   "mutation_catches_dispatch_error_and_resident_read_range_param_masquerade",
   "mutation_catches_dispatcher_err_fallback_branch_oracle",
   "mutation_catches_dispatcher_map_closure_post_dispatch_reduction",
@@ -214,6 +230,7 @@ tests = [
   "mutation_catches_result_vec_with_fusion_error_masquerade",
   "mutation_catches_sibling_imported_fake_dispatcher_trait_masquerade",
   "mutation_catches_sibling_imported_fake_program_masquerade",
+  "mutation_catches_unqualified_or_custom_from_le_bytes_helper",
   "mutation_operation_registration_aliased_as_or_catches_expected_output_oracle",
   "mutation_operation_registration_allows_test_inputs_generator_and_catches_expected_output_oracle",
   "mutation_operation_registration_catches_helper_function_in_expected_output",
@@ -221,6 +238,7 @@ tests = [
   "mutation_operation_registration_catches_local_closure_alias_in_expected_output",
   "mutation_operation_registration_catches_wire_pack_in_expected_output",
   "mutation_operation_registration_struct_literal_catches_expected_output_oracle",
+  "mutation_oracle_detection_catches_production_vyre_reference_usage",
   "production_trait_default_method_uncalled_oracle_is_flagged",
 ]
 reason = """
@@ -548,4 +566,64 @@ Same closure for `WorkloadAggregation`, `RiskStatistic` and `CoveragePolicy`.
 Validation and evidence projection read each through its own `ALL`, so a variant
 missing from one of those lists is a policy no compile can be validated against
 and no artifact can record.
+"""
+
+[[gate]]
+file = "vyre-bench/tests/feature_cfg_contract.rs"
+tests = ["every_benchmark_feature_guard_is_declared"]
+reason = """
+Resolves every `#[cfg(feature = ...)]` a benchmark module carries against the
+features the manifest declares. A module behind an undeclared feature is never
+compiled, so no run of the benchmark harness observes it: the absence is the
+defect and the source is the only place it exists.
+"""
+
+[[gate]]
+file = "vyre-foundation/tests/law_derived_region_alternatives.rs"
+tests = ["every_declared_law_has_a_recorded_derivation"]
+reason = """
+Asserts that every declared `AlgebraicLaw` variant has a row stating what it
+derives. `AlgebraicLaw` lives in vyre-spec and is read here through a match on
+names, so a variant added there is invisible to every execution this crate can
+run; Rust has no reflection and the declaration is the only witness.
+"""
+
+[[gate]]
+file = "vyre-foundation/tests/region_law_derivation.rs"
+tests = ["every_declared_family_cites_at_least_one_law"]
+reason = """
+Same closure for `RegionLawFamily`: a family absent from `all()` derives nothing
+and refuses nothing, and a family present in the list but not in the enum cannot
+exist. Neither state has a run-time witness, because both are about which
+variants were declared.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/shared_owner_closure.rs"
+tests = ["both_crate_directories_are_the_ones_this_workspace_holds"]
+reason = """
+Floor check for the two crate directories every gate in this file walks. A
+resolver that points at another checkout produces a clean sweep of the wrong
+tree, which is indistinguishable from a clean sweep of this one at run time.
+"""
+
+[[gate]]
+file = "vyre-test-support/src/monorepo.rs"
+tests = ["a_marker_quoted_inside_a_line_is_not_a_declaration"]
+reason = """
+Asserts that the marker resolver matches a declaration and not a mention of one.
+Its subject is this file, which quotes the marker mid-line and still resolves as
+the single declaring home; the distinction exists only in the source text the
+resolver reads.
+"""
+
+[[gate]]
+file = "xtask/src/gates/hygiene_matrix/tests.rs"
+tests = ["every_xtask_crate_carries_the_release_tooling_rules"]
+reason = """
+Derives the xtask crate list from the workspace manifest and checks that surface
+classification, owner attribution and the source walk key off that list rather
+than the literal name `xtask`. A crate added to the manifest is text until a
+build selects it, so no running process can report that a fourth xtask crate
+inherited production thresholds.
 """
