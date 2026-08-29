@@ -144,8 +144,9 @@ pub use affine_access_map::{
 };
 pub use bank_conflict::{analyze as analyze_bank_conflict, BankConflictReport};
 pub use bank_conflict::{
-    evaluate_mitigation_candidate, select_bank_conflict_strategy, AccessPhase, AccessPhaseProfile,
-    BankConflictMitigation, MitigationEvaluation, PhaseConflictReport, TargetBankGeometry,
+    derive_shared_access_profiles, evaluate_mitigation_candidate, select_bank_conflict_strategy,
+    AccessPhase, AccessPhaseProfile, BankConflictMitigation, MitigationEvaluation,
+    PhaseConflictReport, SharedBindingAccessProfile, SharedPermutationBlock, TargetBankGeometry,
 };
 pub use bank_conflict::{BankAccessSite, BankConflictKind, ConflictSeverity};
 pub use coalesce::{analyze as analyze_coalesce, CoalescenceReport};

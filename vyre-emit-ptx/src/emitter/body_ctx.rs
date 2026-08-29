@@ -37,6 +37,9 @@ pub(super) struct BodyCtx<'a> {
     pub(super) slot_to_ptr: FxHashMap<u32, Reg>,
     /// Map from shared-memory binding slot → PTX shared symbol.
     pub(super) slot_to_shared_symbol: FxHashMap<u32, String>,
+    /// Index permutation chosen for a shared binding, when one was. Absent
+    /// means the binding keeps its element index unrewritten.
+    pub(super) slot_to_shared_permutation: FxHashMap<u32, super::memory::SharedPermutation>,
     /// Read-only global bindings with enough spatial reuse to route loads
     /// through CUDA's non-coherent/read-only cache path (`ld.global.nc`).
     pub(super) read_only_cache_slots: FxHashSet<u32>,

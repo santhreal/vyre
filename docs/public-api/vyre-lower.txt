@@ -202,6 +202,7 @@ pub enum vyre_lower::analyses::BranchUniformity
 pub enum vyre_lower::analyses::CoalescenceRewrite
 pub enum vyre_lower::analyses::ConflictSeverity
 pub enum vyre_lower::analyses::DimExtent
+pub enum vyre_lower::analyses::SharedPermutationBlock
 pub enum vyre_lower::analyses::SharedStoreLegality
 pub enum vyre_lower::analyses::StrideExpr
 pub enum vyre_lower::analyses::structured_walk::ArmDescent
@@ -375,6 +376,7 @@ pub fn vyre_lower::analyses::analyze_workgroup_uniform(desc: &vyre_lower::Kernel
 pub fn vyre_lower::analyses::candidate_plan::CandidatePlan<Candidate>::candidate_count(&self) -> usize
 pub fn vyre_lower::analyses::child_body_operands<'a>(kind: &vyre_lower::KernelOpKind, operands: &'a [u32]) -> impl core::iter::traits::iterator::Iterator<Item = u32> + 'a
 pub fn vyre_lower::analyses::dead_by_no_use(desc: &vyre_lower::KernelDescriptor) -> alloc::vec::Vec<(alloc::vec::Vec<usize>, u32)>
+pub fn vyre_lower::analyses::derive_shared_access_profiles(desc: &vyre_lower::KernelDescriptor, banks: core::num::nonzero::NonZeroU32) -> alloc::vec::Vec<vyre_lower::analyses::SharedBindingAccessProfile>
 pub fn vyre_lower::analyses::evaluate_mitigation_candidate(phases: &[vyre_lower::analyses::AccessPhaseProfile], geometry: &vyre_lower::analyses::TargetBankGeometry, candidate: vyre_lower::analyses::BankConflictMitigation, baseline_worst: vyre_lower::analyses::ConflictSeverity) -> vyre_lower::analyses::MitigationEvaluation
 pub fn vyre_lower::analyses::import_descriptor_reaching_defs(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::analyses::ReachingDefFactSet
 pub fn vyre_lower::analyses::resolve_copy_alias(id: u32, copy_aliases: &rustc_hash::FxHashMap<u32, u32>) -> u32
@@ -565,6 +567,7 @@ pub struct vyre_lower::analyses::PromotionPlan
 pub struct vyre_lower::analyses::ReachingDefFactSet
 pub struct vyre_lower::analyses::ResourceBounds
 pub struct vyre_lower::analyses::RetainedFallbacks
+pub struct vyre_lower::analyses::SharedBindingAccessProfile
 pub struct vyre_lower::analyses::SharedStoreRaceReport
 pub struct vyre_lower::analyses::SharedStoreRaceSite
 pub struct vyre_lower::analyses::SliceSpec
@@ -1164,6 +1167,14 @@ pub vyre_lower::analyses::ResourceBounds::spill_bytes: usize
 pub vyre_lower::analyses::RetainedFallbacks::synchronous_candidate_retained: bool
 pub vyre_lower::analyses::RetainedFallbacks::unfused_candidate_retained: bool
 pub vyre_lower::analyses::RetainedFallbacks::unswizzled_candidate_retained: bool
+pub vyre_lower::analyses::SharedBindingAccessProfile::binding_slot: u32
+pub vyre_lower::analyses::SharedBindingAccessProfile::blocked_by: core::option::Option<vyre_lower::analyses::SharedPermutationBlock>
+pub vyre_lower::analyses::SharedBindingAccessProfile::element_count: u32
+pub vyre_lower::analyses::SharedBindingAccessProfile::phases: alloc::vec::Vec<vyre_lower::analyses::AccessPhaseProfile>
+pub vyre_lower::analyses::SharedPermutationBlock::AsyncTransaction
+pub vyre_lower::analyses::SharedPermutationBlock::Atomic
+pub vyre_lower::analyses::SharedPermutationBlock::NoDeclaredExtent
+pub vyre_lower::analyses::SharedPermutationBlock::UnprovenAccess
 pub vyre_lower::analyses::SharedStoreLegality::IllegalMultiInvocationConstantStore
 pub vyre_lower::analyses::SharedStoreLegality::RaceFreeAtomic
 pub vyre_lower::analyses::SharedStoreLegality::RaceFreeDistinctIndices

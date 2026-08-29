@@ -56,6 +56,10 @@ impl<'a> BodyCtx<'a> {
                 slot_count,
                 Default::default(),
             ),
+            slot_to_shared_permutation: FxHashMap::with_capacity_and_hasher(
+                slot_count,
+                Default::default(),
+            ),
             read_only_cache_slots,
             pending_transfers: Vec::with_capacity(4),
             loop_indices: FxHashMap::with_capacity_and_hasher(8, Default::default()),
@@ -144,6 +148,7 @@ impl<'a> BodyCtx<'a> {
     }
 
     pub(super) fn preload_bindings(&mut self, desc: &KernelDescriptor) -> Result<(), EmitError> {
+        self.plan_shared_permutations(desc);
         for binding in &desc.bindings.slots {
             if matches!(binding.memory_class, MemoryClass::Shared) {
                 let element_count =
@@ -154,6 +159,14 @@ impl<'a> BodyCtx<'a> {
                             reason: "shared bindings need a fixed element_count for PTX allocation"
                                 .into(),
                         })?;
+                // A padded binding is declared at the extent its permutation
+                // addresses, not the extent the descriptor states.
+                let element_count = self
+                    .slot_to_shared_permutation
+                    .get(&binding.slot)
+                    .map_or(element_count, |permutation| {
+                        permutation.extent(element_count)
+                    });
                 let byte_len = element_count
                     .checked_mul(binding.element_type.size_bytes().unwrap_or(0) as u32)
                     .filter(|bytes| *bytes > 0)

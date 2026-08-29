@@ -34,6 +34,7 @@ pub(crate) mod strategy;
 pub use analysis::analyze;
 pub use report::{BankAccessSite, BankConflictKind, BankConflictReport, ConflictSeverity};
 pub use strategy::{
-    evaluate_mitigation_candidate, select_bank_conflict_strategy, AccessPhase, AccessPhaseProfile,
-    BankConflictMitigation, MitigationEvaluation, PhaseConflictReport, TargetBankGeometry,
+    derive_shared_access_profiles, evaluate_mitigation_candidate, select_bank_conflict_strategy,
+    AccessPhase, AccessPhaseProfile, BankConflictMitigation, MitigationEvaluation,
+    PhaseConflictReport, SharedBindingAccessProfile, SharedPermutationBlock, TargetBankGeometry,
 };

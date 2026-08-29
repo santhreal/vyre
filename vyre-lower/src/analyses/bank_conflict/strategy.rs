@@ -8,9 +8,16 @@
 //! A candidate is rejected when a transformation merely moves an unacceptable
 //! conflict to another phase. Universal zero conflicts is not promised.
 
+use super::analysis::classify_index;
 use super::report::{BankConflictKind, ConflictSeverity};
 use crate::analyses::gcd_u32;
+use crate::analyses::structured_walk::{walk_structured, ArmDescent, StructuredVisitor};
+use crate::analyses::{AccessKind, ProducerMap};
+use crate::operand_class::{classify_operand, OperandClass};
+use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind, MemoryClass};
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
+use std::num::NonZeroU32;
 
 /// Physical and execution geometry for target shared-memory banks.
 ///
@@ -265,5 +272,278 @@ fn severity_rank(sev: ConflictSeverity) -> u32 {
         ConflictSeverity::Unknown => 2,
         ConflictSeverity::Severe => 3,
         ConflictSeverity::Critical => 4,
+    }
+}
+
+/// Why a shared binding's element index cannot be rewritten.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SharedPermutationBlock {
+    /// An asynchronous transaction reads or writes the binding. The transfer
+    /// addresses the allocation itself, so rewriting the scalar address site
+    /// would move part of the traffic and leave the rest where it was.
+    AsyncTransaction,
+    /// An atomic reaches the binding.
+    Atomic,
+    /// An access reaches the binding that classification proved no stride for,
+    /// or that does not route through the scalar address site.
+    UnprovenAccess,
+    /// The binding declares no element count, so a padded allocation has no
+    /// extent to grow from.
+    NoDeclaredExtent,
+}
+
+/// One shared binding's derived access profile.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SharedBindingAccessProfile {
+    /// Binding slot the profile describes.
+    pub binding_slot: u32,
+    /// Element count the binding declares, or zero when it declares none.
+    pub element_count: u32,
+    /// One entry per distinct phase and stride the kernel reaches, ordered by
+    /// phase then stride.
+    pub phases: Vec<AccessPhaseProfile>,
+    /// Why the index cannot be rewritten. `None` means every access to the
+    /// binding is a scalar shared load or store with a proven stride, so a
+    /// rewrite at the address site rewrites all of them.
+    pub blocked_by: Option<SharedPermutationBlock>,
+}
+
+/// Derive every shared binding's access phases from a descriptor.
+///
+/// A target needs three facts before it may rewrite a shared index: which
+/// phases touch the binding, the stride and active width of each, and whether
+/// rewriting the one address site rewrites every access. All three are derived
+/// here from the descriptor and the bank count the caller states. Which rewrite
+/// to apply is not decided here.
+///
+/// The phase a record lands in is derived from the barrier structure, counting
+/// barriers in source order across nested bodies: a store before the first
+/// barrier stages the tile, a load is a compute read, a store into an interval
+/// that also loads the binding is a reduction, and a store in the last interval
+/// is the epilogue.
+///
+/// Active width is the invocation count the descriptor's workgroup shape
+/// states. How many of those lanes transact together is a device fact, so the
+/// caller's geometry, not this derivation, bounds the way count.
+#[must_use]
+pub fn derive_shared_access_profiles(
+    desc: &KernelDescriptor,
+    banks: NonZeroU32,
+) -> Vec<SharedBindingAccessProfile> {
+    let active_width = desc
+        .dispatch
+        .workgroup_size
+        .iter()
+        .copied()
+        .try_fold(1_u32, |total, extent| total.checked_mul(extent.max(1)))
+        .unwrap_or(u32::MAX);
+    let mut collector = SharedAccessCollector {
+        shared_slots: desc
+            .bindings
+            .slots
+            .iter()
+            .filter(|binding| matches!(binding.memory_class, MemoryClass::Shared))
+            .map(|binding| binding.slot)
+            .collect(),
+        bank_count: banks.get(),
+        interval: 0,
+        records: Vec::new(),
+        blocks: BTreeMap::new(),
+    };
+    walk_structured(&desc.body, ArmDescent::Enter, &mut collector);
+
+    let mut profiles = Vec::new();
+    for binding in &desc.bindings.slots {
+        if !matches!(binding.memory_class, MemoryClass::Shared) {
+            continue;
+        }
+        let slot = binding.slot;
+        let records: Vec<&SharedAccessRecord> = collector
+            .records
+            .iter()
+            .filter(|record| record.slot == slot)
+            .collect();
+        let last_interval = records
+            .iter()
+            .map(|record| record.interval)
+            .max()
+            .unwrap_or(0);
+        let loading_intervals: BTreeSet<u32> = records
+            .iter()
+            .filter(|record| matches!(record.kind, AccessKind::Load))
+            .map(|record| record.interval)
+            .collect();
+
+        let mut counts: Vec<(AccessPhase, u32, u32)> = Vec::new();
+        for record in &records {
+            let phase = match (record.kind, record.interval) {
+                (AccessKind::Load, _) => AccessPhase::ComputeRead,
+                (AccessKind::Store, 0) => AccessPhase::LoadStage,
+                (AccessKind::Store, interval) if loading_intervals.contains(&interval) => {
+                    AccessPhase::Reduction
+                }
+                (AccessKind::Store, interval) if interval == last_interval => {
+                    AccessPhase::EpilogueStore
+                }
+                (AccessKind::Store, _) => AccessPhase::LoadStage,
+            };
+            match counts
+                .iter_mut()
+                .find(|(seen, stride, _)| *seen == phase && *stride == record.stride)
+            {
+                Some((_, _, weight)) => *weight = weight.saturating_add(1),
+                None => counts.push((phase, record.stride, 1)),
+            }
+        }
+        counts.sort_unstable_by_key(|(phase, stride, _)| (phase_index(*phase), *stride));
+
+        let blocked_by = match collector.blocks.get(&slot).copied() {
+            Some(reason) => Some(reason),
+            None if binding.element_count.is_none() => {
+                Some(SharedPermutationBlock::NoDeclaredExtent)
+            }
+            None => None,
+        };
+        profiles.push(SharedBindingAccessProfile {
+            binding_slot: slot,
+            element_count: binding.element_count.unwrap_or(0),
+            phases: counts
+                .into_iter()
+                .map(
+                    |(phase, stride_elements, access_weight)| AccessPhaseProfile {
+                        phase,
+                        stride_elements,
+                        active_threads: active_width,
+                        access_weight,
+                    },
+                )
+                .collect(),
+            blocked_by,
+        });
+    }
+    profiles
+}
+
+/// Rank of a phase in kernel execution order.
+///
+/// Exhaustive with no catch-all: a phase added to [`AccessPhase`] stops this
+/// compiling until someone states where in the order it belongs.
+fn phase_index(phase: AccessPhase) -> u32 {
+    match phase {
+        AccessPhase::LoadStage => 0,
+        AccessPhase::ComputeRead => 1,
+        AccessPhase::Reduction => 2,
+        AccessPhase::EpilogueStore => 3,
+    }
+}
+
+/// One classified scalar shared access.
+struct SharedAccessRecord {
+    /// Shared binding the access reaches.
+    slot: u32,
+    /// Number of barriers that preceded it in source order.
+    interval: u32,
+    /// Read or write.
+    kind: AccessKind,
+    /// Proven element stride between consecutive lanes.
+    stride: u32,
+}
+
+/// Collects scalar shared accesses and what blocks a binding from being
+/// rewritten, in one walk of the body tree.
+struct SharedAccessCollector {
+    /// Slots the binding layout states are shared.
+    shared_slots: BTreeSet<u32>,
+    /// Bank count the caller stated.
+    bank_count: u32,
+    /// Barriers seen so far.
+    interval: u32,
+    /// Classified scalar accesses, in walk order.
+    records: Vec<SharedAccessRecord>,
+    /// First block recorded per slot.
+    blocks: BTreeMap<u32, SharedPermutationBlock>,
+}
+
+impl SharedAccessCollector {
+    /// Record `reason` against `slot`, keeping the first reason found.
+    fn block(&mut self, slot: u32, reason: SharedPermutationBlock) {
+        if self.shared_slots.contains(&slot) {
+            self.blocks.entry(slot).or_insert(reason);
+        }
+    }
+}
+
+impl<'a> StructuredVisitor<'a> for SharedAccessCollector {
+    fn visit_op(
+        &mut self,
+        body: &'a KernelBody,
+        producers: &ProducerMap<'a>,
+        _op_index: usize,
+        op: &'a KernelOp,
+    ) {
+        // Which operands state a binding slot is asked of the one owner of the
+        // operand namespace. An op kind added there either declares a binding
+        // operand, and falls into the unproven arm below, or declares none and
+        // reaches no allocation. There is no second list to keep in step.
+        let bindings: Vec<u32> = op
+            .operands
+            .iter()
+            .copied()
+            .enumerate()
+            .filter(|(pos, _)| {
+                matches!(classify_operand(&op.kind, *pos), OperandClass::BindingSlot)
+            })
+            .map(|(_, slot)| slot)
+            .collect();
+
+        match &op.kind {
+            KernelOpKind::Barrier { .. } => self.interval = self.interval.saturating_add(1),
+            KernelOpKind::LoadShared | KernelOpKind::StoreShared => {
+                let Some(slot) = bindings.first().copied() else {
+                    return;
+                };
+                if !self.shared_slots.contains(&slot) {
+                    return;
+                }
+                let Some(index_operand) = op.operands.get(1).copied() else {
+                    self.block(slot, SharedPermutationBlock::UnprovenAccess);
+                    return;
+                };
+                let pattern = classify_index(body, producers, index_operand, self.bank_count);
+                let Some(stride) = pattern.stride_elements else {
+                    self.block(slot, SharedPermutationBlock::UnprovenAccess);
+                    return;
+                };
+                self.records.push(SharedAccessRecord {
+                    slot,
+                    interval: self.interval,
+                    kind: if matches!(op.kind, KernelOpKind::LoadShared) {
+                        AccessKind::Load
+                    } else {
+                        AccessKind::Store
+                    },
+                    stride,
+                });
+            }
+            KernelOpKind::Atomic { .. } => {
+                for slot in bindings {
+                    self.block(slot, SharedPermutationBlock::Atomic);
+                }
+            }
+            // A transfer addresses the allocation, so rewriting the scalar
+            // address site would move part of the traffic and leave the rest.
+            KernelOpKind::AsyncLoad(_) | KernelOpKind::AsyncStore(_) => {
+                for slot in bindings {
+                    self.block(slot, SharedPermutationBlock::AsyncTransaction);
+                }
+            }
+            // Any other op that addresses a binding reaches it through a path
+            // the one scalar address site does not carry.
+            _ => {
+                for slot in bindings {
+                    self.block(slot, SharedPermutationBlock::UnprovenAccess);
+                }
+            }
+        }
     }
 }

@@ -760,6 +760,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The launch-domain analysis reads a guard written against a sum carrying the
   axis-0 logical index, so a chunked walk dispatches one lane per cell instead
   of one lane per declared element.
+- The PTX backend applies the bank-conflict strategy it selects to each
+  permutable shared binding, rewriting the element index at the one shared
+  address site and declaring a padded binding at its grown extent.
 - Four comments deferred their contract to docs/lego-block-rule.md instead of
   stating it: the Category A/C placement rule in vyre-libs, the discovery
   checklist in the visual dialect, the single-caller promotion rule in the box

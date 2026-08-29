@@ -3,9 +3,9 @@
 //! Each test asserts the exact PTX instruction suffix/mnemonic that the
 //! fix introduced, confirming the pre-fix behaviour is gone.
 
-use vyre_foundation::ir::{BinOp, DataType};
+use vyre_foundation::ir::{BinOp, DataType, MemoryOrdering};
 use vyre_lower::descriptor_builder::{
-    binop, body, descriptor, global_rw, lit, load_global, op, store_global,
+    binop, body, descriptor, effect, global_rw, lit, load_global, op, shared_rw, store_global,
 };
 use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
@@ -180,5 +180,85 @@ fn f16_store_of_u64_value_uses_direct_cvt_rn_f32_u64() {
         !ptx.contains("cvt.u32.u64"),
         "`cvt.u32.u64` must not appear; it truncates the high 32 bits of the U64 \
          value before conversion. PTX emitted:\n{ptx}"
+    );
+}
+
+/// A column walk over a tile of `element_count` U32 elements: lane `t`
+/// addresses element `t * 32`, so every lane lands in the same bank.
+fn column_walk_tile(element_count: u32) -> KernelDescriptor {
+    descriptor("column_walk_tile")
+        .slot(global_rw(0, DataType::U32, "out"))
+        .slot(shared_rw(1, DataType::U32, element_count, "tile"))
+        .dispatch(32, 1, 1)
+        .body(
+            body()
+                .literals([LiteralValue::U32(32)])
+                .op(thread_id(0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Mul, 0, 1, 2))
+                .op(effect(KernelOpKind::StoreShared, [1, 2, 0]))
+                .op(effect(
+                    KernelOpKind::Barrier {
+                        ordering: MemoryOrdering::SeqCst,
+                    },
+                    [],
+                ))
+                .op(op(KernelOpKind::LoadShared, [1, 2], 3))
+                .op(store_global(0, 0, 3)),
+        )
+        .build()
+}
+
+/// The classified 32-way conflict of a column walk is mitigated in the emitted
+/// kernel, not only in the selector's ranking.
+///
+/// One element of padding per 32-element row is the cheapest accepted candidate
+/// for this geometry, so the tile is declared at 32 rows of 33 elements and the
+/// element index is rewritten to `(index >> 5) * 33 + (index & 31)` at the one
+/// shared address site both the store and the load pass through.
+#[test]
+fn a_permutable_shared_tile_is_padded_and_its_index_rewritten() {
+    let ptx = emit(&column_walk_tile(1024), "column walk over a padded tile");
+
+    assert!(
+        ptx.contains(".shared .align 4 .b8 shared_buf_1[4224];"),
+        "a padded tile is declared at its grown extent: 32 rows of 33 four-byte \
+         elements is 4224 bytes, not 4096. PTX emitted:\n{ptx}"
+    );
+    for instruction in ["shr.u32", "and.b32", "mul.lo.u32", "add.u32"] {
+        assert!(
+            ptx.contains(instruction),
+            "the row-padding rewrite emits `{instruction}`. PTX emitted:\n{ptx}"
+        );
+    }
+    assert_eq!(
+        ptx.matches(", 33;").count(),
+        2,
+        "both the store and the load scale their row by the padded row length, \
+         so a rewrite applied at one site only is a wrong kernel. PTX emitted:\n{ptx}"
+    );
+    assert_eq!(
+        ptx.matches(", 31;").count(),
+        2,
+        "each rewrite keeps the within-row offset. PTX emitted:\n{ptx}"
+    );
+}
+
+/// A tile whose extent is not a whole number of rows cannot be padded: the
+/// rewrite would address elements the grown allocation does not contain. The
+/// emitter refuses the strategy rather than approximating it, so the
+/// declaration and the index stay as the descriptor stated them.
+#[test]
+fn a_tile_that_is_not_a_whole_number_of_rows_is_not_padded() {
+    let ptx = emit(&column_walk_tile(1000), "column walk over an unpadded tile");
+
+    assert!(
+        ptx.contains(".shared .align 4 .b8 shared_buf_1[4000];"),
+        "a refused strategy leaves the declared extent alone. PTX emitted:\n{ptx}"
+    );
+    assert!(
+        !ptx.contains(", 33;"),
+        "no row-padding rewrite is emitted for a tile the strategy was refused \
+         for. PTX emitted:\n{ptx}"
     );
 }

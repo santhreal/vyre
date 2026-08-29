@@ -56,16 +56,17 @@ pub fn analyze(desc: &KernelDescriptor, banks: NonZeroU32) -> BankConflictReport
             if !is_shared {
                 return;
             }
+            let pattern = classify_index(
+                access.body,
+                access.producers,
+                access.index_operand_id,
+                bank_count,
+            );
             sites.push(BankAccessSite {
                 op_index: access.op_index,
                 kind: access.kind,
                 binding_slot: access.binding_slot,
-                conflict: classify_index(
-                    access.body,
-                    access.producers,
-                    access.index_operand_id,
-                    bank_count,
-                ),
+                conflict: pattern.conflict,
             });
         },
     );
@@ -76,19 +77,69 @@ pub fn analyze(desc: &KernelDescriptor, banks: NonZeroU32) -> BankConflictReport
     }
 }
 
-fn classify_index(
+/// What classification proved about one shared access's index.
+///
+/// The conflict class alone is not enough to build a mitigation profile: two
+/// strides that collide by the same gcd rank differently once a candidate
+/// rewrites the stride, so the stride travels with the class. `None` means the
+/// analysis proved no stride, which is not the same as a stride of zero.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct IndexPattern {
+    /// Conflict class for the access.
+    pub(super) conflict: BankConflictKind,
+    /// Element stride between consecutive lanes, when one was proven.
+    pub(super) stride_elements: Option<u32>,
+}
+
+impl IndexPattern {
+    /// A classified access with a proven stride.
+    const fn new(conflict: BankConflictKind, stride_elements: u32) -> Self {
+        Self {
+            conflict,
+            stride_elements: Some(stride_elements),
+        }
+    }
+
+    /// An access no rule classified.
+    const fn unknown() -> Self {
+        Self {
+            conflict: BankConflictKind::Unknown,
+            stride_elements: None,
+        }
+    }
+
+    /// Every lane reads one address.
+    const fn broadcast() -> Self {
+        Self::new(BankConflictKind::BroadcastSafe, 0)
+    }
+
+    /// Consecutive lanes read consecutive elements.
+    const fn unit() -> Self {
+        Self::new(BankConflictKind::NoConflict, 1)
+    }
+
+    /// Whether the class is a lane-varying one a stride can be carried through.
+    const fn lane_varying(self) -> bool {
+        matches!(
+            self.conflict,
+            BankConflictKind::NoConflict | BankConflictKind::Conflict { .. }
+        )
+    }
+}
+
+pub(super) fn classify_index(
     body: &KernelBody,
     producers: &ProducerMap<'_>,
     index_operand_id: u32,
     bank_count: u32,
-) -> BankConflictKind {
+) -> IndexPattern {
     let producer = match producers.get(&index_operand_id).copied() {
         Some(producer) => producer,
         None => {
             return if body.literals.get(index_operand_id as usize).is_some() {
-                BankConflictKind::BroadcastSafe
+                IndexPattern::broadcast()
             } else {
-                BankConflictKind::Unknown
+                IndexPattern::unknown()
             };
         }
     };
@@ -97,21 +148,21 @@ fn classify_index(
         KernelOpKind::LocalInvocationId | KernelOpKind::GlobalInvocationId => {
             classify_invocation_id(producer)
         }
-        KernelOpKind::Literal => BankConflictKind::BroadcastSafe,
+        KernelOpKind::Literal => IndexPattern::broadcast(),
         KernelOpKind::BinOpKind(BinOp::Add | BinOp::WrappingAdd) => {
             classify_add(body, producers, &producer.operands, bank_count)
         }
         KernelOpKind::BinOpKind(BinOp::Mul) => {
             classify_mul(body, producers, &producer.operands, bank_count)
         }
-        _ => BankConflictKind::Unknown,
+        _ => IndexPattern::unknown(),
     }
 }
 
-fn classify_invocation_id(op: &crate::KernelOp) -> BankConflictKind {
+fn classify_invocation_id(op: &crate::KernelOp) -> IndexPattern {
     match op.operands.first().copied().unwrap_or(0) {
-        0 => BankConflictKind::NoConflict,
-        _ => BankConflictKind::Unknown,
+        0 => IndexPattern::unit(),
+        _ => IndexPattern::unknown(),
     }
 }
 
@@ -120,22 +171,18 @@ fn classify_add(
     producers: &ProducerMap<'_>,
     operands: &[u32],
     bank_count: u32,
-) -> BankConflictKind {
+) -> IndexPattern {
     if operands.len() != 2 {
-        return BankConflictKind::Unknown;
+        return IndexPattern::unknown();
     }
     let lhs = classify_index(body, producers, operands[0], bank_count);
     let rhs = classify_index(body, producers, operands[1], bank_count);
-    match (lhs, rhs) {
-        (BankConflictKind::NoConflict, BankConflictKind::BroadcastSafe)
-        | (BankConflictKind::BroadcastSafe, BankConflictKind::NoConflict) => {
-            BankConflictKind::NoConflict
-        }
-        (BankConflictKind::Conflict { way_count }, BankConflictKind::BroadcastSafe)
-        | (BankConflictKind::BroadcastSafe, BankConflictKind::Conflict { way_count }) => {
-            BankConflictKind::Conflict { way_count }
-        }
-        _ => BankConflictKind::Unknown,
+    // Adding a lane-invariant offset shifts every address by the same amount,
+    // so the bank pattern is the lane-varying side's, stride included.
+    match (lhs.conflict, rhs.conflict) {
+        (BankConflictKind::BroadcastSafe, _) if rhs.lane_varying() => rhs,
+        (_, BankConflictKind::BroadcastSafe) if lhs.lane_varying() => lhs,
+        _ => IndexPattern::unknown(),
     }
 }
 
@@ -144,34 +191,34 @@ fn classify_mul(
     producers: &ProducerMap<'_>,
     operands: &[u32],
     bank_count: u32,
-) -> BankConflictKind {
+) -> IndexPattern {
     if operands.len() != 2 {
-        return BankConflictKind::Unknown;
+        return IndexPattern::unknown();
     }
     let l = classify_index(body, producers, operands[0], bank_count);
     let r = classify_index(body, producers, operands[1], bank_count);
-    let const_operand = match (l, r) {
+    let const_operand = match (l.conflict, r.conflict) {
         (BankConflictKind::NoConflict, BankConflictKind::BroadcastSafe) => operands[1],
         (BankConflictKind::BroadcastSafe, BankConflictKind::NoConflict) => operands[0],
-        _ => return BankConflictKind::Unknown,
+        _ => return IndexPattern::unknown(),
     };
 
     let stride = constant_u32_operand(body, producers, const_operand);
 
     let stride = match stride {
         Some(s) => s,
-        None => return BankConflictKind::Unknown,
+        None => return IndexPattern::unknown(),
     };
 
     if stride == 0 {
         // tid * 0 = 0  -  all threads same address → broadcast.
-        return BankConflictKind::BroadcastSafe;
+        return IndexPattern::broadcast();
     }
     let g = gcd_u32(stride, bank_count);
     if g == 1 {
-        BankConflictKind::NoConflict
+        IndexPattern::new(BankConflictKind::NoConflict, stride)
     } else {
-        BankConflictKind::Conflict { way_count: g }
+        IndexPattern::new(BankConflictKind::Conflict { way_count: g }, stride)
     }
 }
 
