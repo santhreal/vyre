@@ -697,6 +697,17 @@ impl<'ast> syn::visit::Visit<'ast> for Walker<'_> {
         syn::visit::visit_expr_struct(self, expr);
     }
 
+    /// A pattern reads a decision and never makes one.
+    ///
+    /// `syn` aliases `PatPath` to `ExprPath`, and its `visit_pat` dispatches a
+    /// unit-variant pattern to `visit_expr_path`, so `match topology {
+    /// Topology::Sparse => .. }` arrives at the construction hook and every arm
+    /// is charged as a second route to the decision. The module doc has claimed
+    /// since it landed that the walk reaches expressions only; this is what
+    /// makes that true. Guards and arm bodies are expressions and stay on the
+    /// walk, so a guard that writes geometry is still judged.
+    fn visit_pat(&mut self, _pattern: &'ast syn::Pat) {}
+
     fn visit_expr_path(&mut self, expr: &'ast syn::ExprPath) {
         if expr.path.segments.len() < 2 {
             syn::visit::visit_expr_path(self, expr);
@@ -1265,5 +1276,100 @@ mod tests {
             None
         );
         assert_eq!(registry.layer("vyre-runtime"), "runtime");
+    }
+
+    /// WHY: a match arm pattern reads a decision and must never be counted as a
+    /// construction (such as matching on execution mode variants). In contrast,
+    /// a function constructing a decision variant is a finding, and a match guard that
+    /// writes a geometry field remains an observable rule 2 violation.
+    #[test]
+    fn match_arm_patterns_are_not_constructions_but_variant_constructs_and_guard_writes_are() {
+        let reading_source = r#"
+            pub enum ExecutionMode { Static, Persistent }
+            pub struct ModeDecision { pub mode: ExecutionMode }
+
+            impl ModeDecision {
+                fn reason_code(&self) -> &'static str {
+                    match self.mode {
+                        ExecutionMode::Static => "static",
+                        ExecutionMode::Persistent => "persistent",
+                    }
+                }
+            }
+        "#;
+        let constructing_source = r#"
+            pub enum ExecutionMode { Static, Persistent }
+
+            fn select_mode(node_count: usize) -> ExecutionMode {
+                if node_count > 64 {
+                    ExecutionMode::Persistent
+                } else {
+                    ExecutionMode::Static
+                }
+            }
+        "#;
+        let guard_writing_source = r#"
+            pub enum ExecutionMode { Static, Persistent }
+
+            fn match_with_guard_write(mode: ExecutionMode, phase: &mut SchedulePhase) -> u32 {
+                match mode {
+                    ExecutionMode::Persistent if { phase.workgroup = [128, 1, 1]; true } => 1,
+                    _ => 0,
+                }
+            }
+        "#;
+
+        let rules = rules();
+
+        // 1. Matching only to read variants produces no findings
+        let reading_file = syn::parse_file(reading_source).expect("valid rust");
+        let reading_funcs = collect(&reading_file, &rules);
+        let reading_findings = findings(
+            &PathBuf::from("vyre-driver/src/megakernel_execution.rs"),
+            "vyre-driver",
+            &reading_funcs,
+            &rules,
+            &registry(),
+        );
+        assert!(
+            reading_findings.is_empty(),
+            "reading decision variants in match patterns must produce no findings: {}",
+            Finding::messages(&reading_findings)
+        );
+
+        // 2. Constructing decision variants produces findings
+        let constructing_file = syn::parse_file(constructing_source).expect("valid rust");
+        let constructing_funcs = collect(&constructing_file, &rules);
+        let constructing_findings = findings(
+            &PathBuf::from("vyre-driver/src/megakernel_execution.rs"),
+            "vyre-driver",
+            &constructing_funcs,
+            &rules,
+            &registry(),
+        );
+        assert_eq!(
+            constructing_findings.len(),
+            2,
+            "constructing decision variants without receiving one must produce findings: {}",
+            Finding::messages(&constructing_findings)
+        );
+
+        // 3. Match guard writing geometry field produces a rule 2 finding
+        let guard_file = syn::parse_file(guard_writing_source).expect("valid rust");
+        let guard_funcs = collect(&guard_file, &rules);
+        let guard_findings = findings(
+            &PathBuf::from("vyre-driver/src/megakernel_execution.rs"),
+            "vyre-driver",
+            &guard_funcs,
+            &rules,
+            &registry(),
+        );
+        assert!(
+            guard_findings
+                .iter()
+                .any(|f| f.message.contains("workgroup")),
+            "geometry write in match guard must be reported: {}",
+            Finding::messages(&guard_findings)
+        );
     }
 }
