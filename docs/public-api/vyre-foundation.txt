@@ -3,6 +3,7 @@
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::DiagnosticStage
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::RetryClass
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::Severity
+#[non_exhaustive] pub enum vyre_foundation::dialect::SemanticVersionRejection
 #[non_exhaustive] pub enum vyre_foundation::dialect_lookup::AttrType
 #[non_exhaustive] pub enum vyre_foundation::execution_plan::InnovationTrack
 #[non_exhaustive] pub enum vyre_foundation::execution_plan::fusion::FusionError
@@ -861,6 +862,9 @@ pub fn vyre_foundation::dialect::DialectValidator::validate_dialect_call(op: <D 
 pub fn vyre_foundation::dialect::DialectVisitor::visit_op(&mut self, op: <D as vyre_foundation::dialect::Dialect>::Op, args: &[vyre_foundation::ir::Expr]) -> Self::Output
 pub fn vyre_foundation::dialect::ResourceAbi::find_resource(&self, name: &str) -> core::option::Option<&'static vyre_foundation::dialect::ResourceBinding>
 pub fn vyre_foundation::dialect::ResourceAbi::verify_complete_roster(&self, bound: &[&str]) -> core::result::Result<(), &'static str>
+pub fn vyre_foundation::dialect::admit_descriptor_versions(descriptor: &vyre_foundation::dialect::DialectDescriptor) -> core::result::Result<(), vyre_foundation::dialect::SemanticVersionRejection>
+pub fn vyre_foundation::dialect::admit_program_versions(declared: &alloc::collections::btree::map::BTreeMap<alloc::string::String, u32>, called_op_ids: &[&str]) -> core::result::Result<(), vyre_foundation::dialect::SemanticVersionRejection>
+pub fn vyre_foundation::dialect::admit_registered_versions() -> core::result::Result<(), vyre_foundation::dialect::SemanticVersionRejection>
 pub fn vyre_foundation::dialect::validate_dialect_version(descriptor: &vyre_foundation::dialect::DialectDescriptor, requested: u32) -> core::result::Result<(), vyre_foundation::dialect::DialectVersionError>
 pub fn vyre_foundation::dialect::validate_node_fields(dialect: &'static str, node_op: &str, raw_fields: &[(alloc::string::String, alloc::string::String)], declared_fields: &[vyre_foundation::dialect::FieldContract]) -> core::result::Result<(), vyre_foundation::dialect::SchemaTranslationError>
 pub fn vyre_foundation::dialect::validate_node_resources(dialect: &'static str, node_op: &str, bound_resources: &[alloc::string::String], abi: &vyre_foundation::dialect::ResourceAbi) -> core::result::Result<(), vyre_foundation::dialect::SchemaTranslationError>
@@ -3422,6 +3426,9 @@ pub vyre_foundation::dialect::SchemaTranslationError::UnknownField::node_op: all
 pub vyre_foundation::dialect::SchemaTranslationError::UnmappedNode
 pub vyre_foundation::dialect::SchemaTranslationError::UnmappedNode::dialect: &'static str
 pub vyre_foundation::dialect::SchemaTranslationError::UnmappedNode::node_op: alloc::string::String
+pub vyre_foundation::dialect::SemanticVersionRejection::UnregisteredDialect
+pub vyre_foundation::dialect::SemanticVersionRejection::UnregisteredDialect::dialect: alloc::string::String
+pub vyre_foundation::dialect::SemanticVersionRejection::Version(vyre_foundation::dialect::DialectVersionError)
 pub vyre_foundation::dialect_lookup::AttrSchema::default: core::option::Option<&'static str>
 pub vyre_foundation::dialect_lookup::AttrSchema::name: &'static str
 pub vyre_foundation::dialect_lookup::AttrSchema::ty: vyre_foundation::dialect_lookup::AttrType

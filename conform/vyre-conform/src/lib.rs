@@ -20,7 +20,8 @@ pub use cert::{issue_certificate, verify_structural, CertificateError, IssueInpu
 pub use minimizer::{CounterexampleMinimizer, MinimizationBudget, MinimizerReport};
 pub use panic_payload::panic_message;
 pub use production::{
-    submit_under_every_schedule, ProductionError, ProductionExecution, ProductionSession,
-    ReplayCapsule, ScheduleOutcome, CONFORMANCE_SCHEDULES,
+    check_family_outputs, check_schedule_agreement, submit_under_every_schedule, ProductionError,
+    ProductionExecution, ProductionSession, ReplayCapsule, ScheduleAgreement,
+    ScheduleAgreementReport, ScheduleDisagreement, ScheduleOutcome, CONFORMANCE_SCHEDULES,
 };
 pub use prover::{LawProver, LawVerdict};

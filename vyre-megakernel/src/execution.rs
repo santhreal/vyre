@@ -20,6 +20,7 @@ pub struct SemanticExecutionPolicy {
     objective: CompileObjective,
     budget: SearchBudget,
     required_schedule: Option<RequiredSchedule>,
+    declared_dialects: BTreeMap<String, u32>,
 }
 
 impl SemanticExecutionPolicy {
@@ -37,6 +38,7 @@ impl SemanticExecutionPolicy {
             objective,
             budget,
             required_schedule: None,
+            declared_dialects: BTreeMap::new(),
         }
     }
 
@@ -56,6 +58,25 @@ impl SemanticExecutionPolicy {
     #[must_use]
     pub const fn required_schedule(&self) -> Option<RequiredSchedule> {
         self.required_schedule
+    }
+
+    /// State the dialect schema version the graph was built against.
+    ///
+    /// A declared version outside the dialect's supported window, and a call to
+    /// an operation introduced after it, are refused before any plan is
+    /// derived. A dialect left undeclared is compiled at its registered
+    /// version.
+    #[must_use]
+    pub fn declaring_dialect_version(mut self, dialect_id: &str, version: u32) -> Self {
+        self.declared_dialects
+            .insert(dialect_id.to_owned(), version);
+        self
+    }
+
+    /// Dialect schema versions this policy declares.
+    #[must_use]
+    pub const fn declared_dialects(&self) -> &BTreeMap<String, u32> {
+        &self.declared_dialects
     }
 
     /// Borrow immutable semantic facts outside graph topology.
@@ -93,6 +114,7 @@ pub struct SemanticExecutionRequest<'a> {
     objective: CompileObjective,
     budget: SearchBudget,
     required_schedule: Option<RequiredSchedule>,
+    declared_dialects: BTreeMap<String, u32>,
 }
 
 impl<'a> SemanticExecutionRequest<'a> {
@@ -141,6 +163,7 @@ impl<'a> SemanticExecutionRequest<'a> {
             objective,
             budget,
             required_schedule: None,
+            declared_dialects: BTreeMap::new(),
         })
     }
 
@@ -155,6 +178,20 @@ impl<'a> SemanticExecutionRequest<'a> {
     #[must_use]
     pub const fn required_schedule(&self) -> Option<RequiredSchedule> {
         self.required_schedule
+    }
+
+    /// State the dialect schema version the graph was built against.
+    #[must_use]
+    pub fn declaring_dialect_version(mut self, dialect_id: &str, version: u32) -> Self {
+        self.declared_dialects
+            .insert(dialect_id.to_owned(), version);
+        self
+    }
+
+    /// Dialect schema versions this request declares.
+    #[must_use]
+    pub const fn declared_dialects(&self) -> &BTreeMap<String, u32> {
+        &self.declared_dialects
     }
 
     /// Borrow the validated schedule-free graph.
@@ -208,6 +245,9 @@ impl<'a> SemanticExecutionRequest<'a> {
         );
         if let Some(required) = self.required_schedule {
             request = request.requiring_schedule(required);
+        }
+        for (dialect, version) in &self.declared_dialects {
+            request = request.declaring_dialect_version(dialect, *version);
         }
         if self.budget.max_measurements > 0 {
             let representative_inputs = self

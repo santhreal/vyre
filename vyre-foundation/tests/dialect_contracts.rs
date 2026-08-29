@@ -13,9 +13,10 @@
 
 use vyre_foundation::define_dialect;
 use vyre_foundation::dialect::{
+    admit_descriptor_versions, admit_program_versions, admit_registered_versions,
     validate_dialect_version, validate_schema_identity, Dialect, DialectRegistry,
     DialectVersionError, ExternalSchemaNode, FieldContract, FieldType, ResourceAbi,
-    ResourceBinding, SchemaTranslationError,
+    ResourceBinding, SchemaTranslationError, SemanticVersionRejection,
 };
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{BufferAccess, DataType, Expr};
@@ -421,4 +422,125 @@ fn dialect_external_schema_translation_and_adversarial_rejections() {
         SchemaTranslationError::IncompatibleIdentity { .. }
     ));
     assert!(id_err.to_string().contains("Fix:"));
+}
+
+/// WHY: a dialect whose supported floor is above its schema version admits no
+/// declarable version, and an operation declaring a version its dialect has not
+/// reached is unreachable at every one. Deriving the roster from the live
+/// registry turns a newly registered dialect red rather than leaving it
+/// unchecked.
+#[test]
+fn every_registered_dialect_admits_its_own_version_declarations() {
+    admit_registered_versions().expect("every registered dialect must admit its own declarations");
+    let registry = DialectRegistry::global();
+    assert!(
+        !registry.is_empty(),
+        "the dialect registry must register at least one dialect for this contract to prove anything"
+    );
+    for (id, descriptor) in registry {
+        admit_descriptor_versions(descriptor).unwrap_or_else(|error| {
+            panic!("dialect `{id}` declares an inadmissible version: {error}")
+        });
+        assert!(
+            descriptor.min_supported_version <= descriptor.version,
+            "dialect `{id}` supports a floor of {} above its schema version {}",
+            descriptor.min_supported_version,
+            descriptor.version
+        );
+        for op in descriptor.operations {
+            assert!(
+                op.version <= descriptor.version,
+                "operation `{}` declares version {} above dialect `{id}` schema version {}",
+                op.id,
+                op.version,
+                descriptor.version
+            );
+        }
+    }
+}
+
+/// WHY: a declared schema version has to decide something. Every registered
+/// operation introduced above its dialect's floor is rejected one version below
+/// its introduction and admitted at it, so a version declaration that authorized
+/// nothing would fail here.
+#[test]
+fn a_declared_version_admits_an_operation_only_from_its_introduction() {
+    let mut proven = 0_usize;
+    for (id, descriptor) in DialectRegistry::global() {
+        for op in descriptor.operations {
+            let admitted = op.version.max(descriptor.min_supported_version);
+            let declared = std::collections::BTreeMap::from([((*id).to_owned(), admitted)]);
+            admit_program_versions(&declared, &[op.id]).unwrap_or_else(|error| {
+                panic!(
+                    "operation `{}` must be admitted at version {admitted}: {error}",
+                    op.id
+                )
+            });
+            if op.version <= descriptor.min_supported_version {
+                continue;
+            }
+            let stale = std::collections::BTreeMap::from([((*id).to_owned(), op.version - 1)]);
+            let rejection = admit_program_versions(&stale, &[op.id])
+                .expect_err("an operation introduced after the declared version must be rejected");
+            assert_eq!(
+                rejection,
+                SemanticVersionRejection::Version(DialectVersionError::OperationVersionMismatch {
+                    op_id: op.id,
+                    introduced_in: op.version,
+                    target_version: op.version - 1,
+                }),
+                "dialect `{id}` operation `{}` produced the wrong rejection",
+                op.id
+            );
+            proven += 1;
+        }
+    }
+    assert!(
+        proven > 0,
+        "no registered operation is introduced above its dialect floor, so this contract proves nothing"
+    );
+}
+
+/// WHY: a stale declaration must be refused rather than read as current, and a
+/// dialect nothing registers must be refused rather than ignored.
+#[test]
+fn a_stale_or_unregistered_declaration_is_refused() {
+    let (id, descriptor) = DialectRegistry::global()
+        .iter()
+        .find(|(_, descriptor)| descriptor.min_supported_version > 0)
+        .expect("at least one registered dialect must state a supported floor above zero");
+    let stale = std::collections::BTreeMap::from([(
+        (*id).to_owned(),
+        descriptor.min_supported_version - 1,
+    )]);
+    assert_eq!(
+        admit_program_versions(&stale, &[]),
+        Err(SemanticVersionRejection::Version(
+            DialectVersionError::StaleVersion {
+                dialect: descriptor.id,
+                found: descriptor.min_supported_version - 1,
+                min_supported: descriptor.min_supported_version,
+                current: descriptor.version,
+            }
+        ))
+    );
+    let future = std::collections::BTreeMap::from([((*id).to_owned(), descriptor.version + 1)]);
+    assert_eq!(
+        admit_program_versions(&future, &[]),
+        Err(SemanticVersionRejection::Version(
+            DialectVersionError::UnsupportedVersion {
+                dialect: descriptor.id,
+                found: descriptor.version + 1,
+                current: descriptor.version,
+            }
+        ))
+    );
+    let unregistered =
+        std::collections::BTreeMap::from([("vyre::no-such-dialect".to_owned(), 1_u32)]);
+    assert_eq!(
+        admit_program_versions(&unregistered, &[]),
+        Err(SemanticVersionRejection::UnregisteredDialect {
+            dialect: "vyre::no-such-dialect".to_owned(),
+        })
+    );
 }

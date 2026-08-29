@@ -202,6 +202,27 @@ impl ProductionSession {
         }
     }
 
+    /// Bind the same program and executor to one declared dialect schema
+    /// version.
+    ///
+    /// A conformance case that states the version its graph was built against
+    /// is refused when that version is outside the dialect's supported window,
+    /// or when the graph calls an operation the version predates.
+    #[must_use]
+    pub fn declaring_dialect_version(&self, dialect_id: &str, version: u32) -> Self {
+        Self {
+            executor: Arc::clone(&self.executor),
+            policy: self
+                .policy
+                .clone()
+                .declaring_dialect_version(dialect_id, version),
+            program: Arc::clone(&self.program),
+            op_id: self.op_id.clone(),
+            backend: self.backend,
+            abandoned: AtomicBool::new(false),
+        }
+    }
+
     /// Execute caller inputs through semantic compilation and admitted artifact submission.
     pub fn submit(&self, inputs: &[&[u8]]) -> Result<ProductionExecution, ProductionError> {
         if self.abandoned.load(Ordering::Acquire) {
@@ -323,6 +344,232 @@ pub fn submit_under_every_schedule(
     Ok(outcomes)
 }
 
+/// Numeric contract a conformance operation declares across schedule families.
+///
+/// A schedule family changes summation order, tile boundaries and invocation
+/// count, so an operation states which of the two contracts its outputs hold to
+/// before its families are compared.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ScheduleAgreement {
+    /// Every reached family produces byte-identical outputs.
+    Exact,
+    /// Every reached family agrees with the baseline within `ulps` for each
+    /// finite `f32` lane, and bit-exactly for every non-finite lane.
+    Float32Ulps {
+        /// Inclusive bound on the unit-in-last-place distance per lane.
+        ulps: u32,
+    },
+}
+
+/// One schedule family produced outputs the declared contract does not admit.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[non_exhaustive]
+pub enum ScheduleDisagreement {
+    /// No legal plan reached the unspecialized baseline, so nothing can be
+    /// compared against it.
+    #[error("the unspecialized baseline produced no execution to compare against")]
+    NoBaseline,
+    /// A family produced a different number of writable buffers.
+    #[error("schedule {schedule} produced {found} output buffers, baseline produced {baseline}")]
+    BufferCount {
+        /// Family that disagreed.
+        schedule: &'static str,
+        /// Buffer count the baseline produced.
+        baseline: usize,
+        /// Buffer count this family produced.
+        found: usize,
+    },
+    /// A family produced a differently sized buffer.
+    #[error("schedule {schedule} buffer {buffer} is {found} bytes, baseline is {baseline} bytes")]
+    BufferLength {
+        /// Family that disagreed.
+        schedule: &'static str,
+        /// Writable buffer index in declaration order.
+        buffer: usize,
+        /// Byte length the baseline produced.
+        baseline: usize,
+        /// Byte length this family produced.
+        found: usize,
+    },
+    /// A family produced a value outside the declared contract.
+    #[error(
+        "schedule {schedule} buffer {buffer} lane {lane} is outside the declared contract: \
+         baseline {baseline:#010x}, found {found:#010x}, distance {distance}"
+    )]
+    Lane {
+        /// Family that disagreed.
+        schedule: &'static str,
+        /// Writable buffer index in declaration order.
+        buffer: usize,
+        /// Lane index within the buffer under the declared contract.
+        lane: usize,
+        /// Baseline lane bits.
+        baseline: u32,
+        /// Lane bits this family produced.
+        found: u32,
+        /// Unit-in-last-place distance, or `u32::MAX` for a sign or class change.
+        distance: u32,
+    },
+    /// A buffer length is not a whole number of lanes for the declared contract.
+    #[error(
+        "schedule {schedule} buffer {buffer} is {bytes} bytes, not a whole number of f32 lanes"
+    )]
+    LaneAlignment {
+        /// Family that disagreed.
+        schedule: &'static str,
+        /// Writable buffer index in declaration order.
+        buffer: usize,
+        /// Byte length that does not divide into lanes.
+        bytes: usize,
+    },
+}
+
+/// Which families a graph reached and which no legal plan admitted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScheduleAgreementReport {
+    /// Families that produced outputs and satisfied the declared contract.
+    pub reached: Vec<&'static str>,
+    /// Families no legal candidate reached for this graph on this device.
+    pub unreachable: Vec<&'static str>,
+}
+
+/// Compare every reached schedule family against the unspecialized baseline
+/// under the contract the operation declares.
+///
+/// # Errors
+///
+/// Returns the first family whose outputs the declared contract does not admit.
+pub fn check_schedule_agreement(
+    outcomes: &[ScheduleOutcome],
+    agreement: ScheduleAgreement,
+) -> Result<ScheduleAgreementReport, ScheduleDisagreement> {
+    let baseline = outcomes
+        .iter()
+        .find(|outcome| outcome.required == RequiredSchedule::Baseline)
+        .and_then(|outcome| outcome.execution.as_ref())
+        .ok_or(ScheduleDisagreement::NoBaseline)?;
+    let mut report = ScheduleAgreementReport {
+        reached: Vec::with_capacity(outcomes.len()),
+        unreachable: Vec::new(),
+    };
+    for outcome in outcomes {
+        let Some(execution) = outcome.execution.as_ref() else {
+            report.unreachable.push(outcome.schedule);
+            continue;
+        };
+        check_family_outputs(
+            outcome.schedule,
+            &baseline.outputs,
+            &execution.outputs,
+            agreement,
+        )?;
+        report.reached.push(outcome.schedule);
+    }
+    Ok(report)
+}
+
+/// Compare one family's writable buffers against the baseline's under a
+/// declared contract.
+///
+/// # Errors
+///
+/// Returns the first buffer, lane, count or length the contract does not admit.
+pub fn check_family_outputs(
+    schedule: &'static str,
+    baseline: &[Vec<u8>],
+    found: &[Vec<u8>],
+    agreement: ScheduleAgreement,
+) -> Result<(), ScheduleDisagreement> {
+    if baseline.len() != found.len() {
+        return Err(ScheduleDisagreement::BufferCount {
+            schedule,
+            baseline: baseline.len(),
+            found: found.len(),
+        });
+    }
+    for (buffer, (left, right)) in baseline.iter().zip(found).enumerate() {
+        if left.len() != right.len() {
+            return Err(ScheduleDisagreement::BufferLength {
+                schedule,
+                buffer,
+                baseline: left.len(),
+                found: right.len(),
+            });
+        }
+        match agreement {
+            ScheduleAgreement::Exact => {
+                if let Some(lane) = left.iter().zip(right).position(|(a, b)| a != b) {
+                    return Err(ScheduleDisagreement::Lane {
+                        schedule,
+                        buffer,
+                        lane,
+                        baseline: u32::from(left[lane]),
+                        found: u32::from(right[lane]),
+                        distance: u32::MAX,
+                    });
+                }
+            }
+            ScheduleAgreement::Float32Ulps { ulps } => {
+                compare_f32_lanes(schedule, buffer, left, right, ulps)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn compare_f32_lanes(
+    schedule: &'static str,
+    buffer: usize,
+    baseline: &[u8],
+    found: &[u8],
+    ulps: u32,
+) -> Result<(), ScheduleDisagreement> {
+    if baseline.len() % 4 != 0 {
+        return Err(ScheduleDisagreement::LaneAlignment {
+            schedule,
+            buffer,
+            bytes: baseline.len(),
+        });
+    }
+    for (lane, (left, right)) in baseline
+        .chunks_exact(4)
+        .zip(found.chunks_exact(4))
+        .enumerate()
+    {
+        let left_bits = u32::from_le_bytes([left[0], left[1], left[2], left[3]]);
+        let right_bits = u32::from_le_bytes([right[0], right[1], right[2], right[3]]);
+        let distance = ulp_distance(left_bits, right_bits);
+        if distance > ulps {
+            return Err(ScheduleDisagreement::Lane {
+                schedule,
+                buffer,
+                lane,
+                baseline: left_bits,
+                found: right_bits,
+                distance,
+            });
+        }
+    }
+    Ok(())
+}
+
+/// Unit-in-last-place distance between two `f32` bit patterns.
+///
+/// A sign change, a non-finite value, or a class change between the two is
+/// `u32::MAX`, so only bit equality admits it.
+fn ulp_distance(left: u32, right: u32) -> u32 {
+    if left == right {
+        return 0;
+    }
+    let (a, b) = (f32::from_bits(left), f32::from_bits(right));
+    if !a.is_finite() || !b.is_finite() || a.is_sign_negative() != b.is_sign_negative() {
+        return u32::MAX;
+    }
+    let ordered = |bits: u32| bits & 0x7fff_ffff;
+    ordered(left).abs_diff(ordered(right))
+}
+
 /// Construct the explicit compiler policy from immutable registered target facts.
 pub fn semantic_policy_for_registration(
     registration: &'static BackendRegistration,
@@ -400,6 +647,9 @@ fn execute_program(
     )?;
     if let Some(required) = policy.required_schedule() {
         request = request.requiring_schedule(required);
+    }
+    for (dialect, version) in policy.declared_dialects() {
+        request = request.declaring_dialect_version(dialect, *version);
     }
     let SemanticExecutionOutput {
         artifact,

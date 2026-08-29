@@ -16,17 +16,18 @@ use vyre_foundation::schedule::{
     ScheduleTransform, SynchronizationScope,
 };
 use vyre_megakernel::{
-    compile, is_required_schedule_unreachable, CompileObjective, CompileRequest, ObjectiveMetric,
-    PruneReason, RequiredSchedule, ScheduleProduction, SearchBudget, REQUIRED_SCHEDULE_UNREACHABLE,
-    SCHEDULE_GRAMMAR_VERSION,
+    compile, is_required_schedule_unreachable, is_semantic_version_skew, CompileObjective,
+    CompileRequest, ObjectiveMetric, PruneReason, RequiredSchedule, ScheduleProduction,
+    SearchBudget, REQUIRED_SCHEDULE_UNREACHABLE, SCHEDULE_GRAMMAR_VERSION, SEMANTIC_VERSION_SKEW,
 };
 
 #[path = "support/search_fixtures.rs"]
 mod search_fixtures;
 
 use search_fixtures::{
-    bare_device, budget, compiled, facts, joined_graph, launch_bound_device, no_progress_device,
-    occupancy_bound_device, refused_field, rich_device, single_stage_graph,
+    bare_device, budget, compiled, facts, fixture_request, joined_graph, latency_objective,
+    launch_bound_device, no_progress_device, occupancy_bound_device, refused_field, rich_device,
+    single_stage_graph,
 };
 
 /// WHY: a production the grammar declares and never proposes is a family the
@@ -511,4 +512,35 @@ fn a_requirement_narrows_selection_without_narrowing_the_search() {
             production.code()
         );
     }
+}
+
+/// WHY: a declared dialect schema version that no linked crate registers cannot
+/// be honoured, and a compile that proceeded anyway would be compiling against
+/// a schema it never read. The refusal is at validation, before any candidate is
+/// derived, so the diagnostic names the declaration rather than a plan.
+#[test]
+fn a_declared_dialect_no_crate_registers_is_refused_before_planning() {
+    let request = fixture_request(rich_device(), budget(), latency_objective())
+        .declaring_dialect_version("vyre::absent-dialect", 1);
+    let error = request
+        .validate()
+        .expect_err("a declaration naming no registered dialect must be refused");
+    assert_eq!(error.diagnostic.code.as_str(), SEMANTIC_VERSION_SKEW);
+    assert!(is_semantic_version_skew(&error));
+    assert_eq!(refused_field(&error), Some("request.declared_dialects"));
+    assert!(
+        error.diagnostic.message.contains("vyre::absent-dialect"),
+        "the diagnostic must state the declared dialect: {}",
+        error.diagnostic.message
+    );
+}
+
+/// WHY: the version check must be a refusal of a bad declaration and nothing
+/// else. A request that declares no version compiles exactly as before, so the
+/// mechanism cannot have made every caller pay a rejection.
+#[test]
+fn a_request_that_declares_no_dialect_version_still_compiles() {
+    fixture_request(rich_device(), budget(), latency_objective())
+        .validate()
+        .expect("a request with no dialect declaration must validate");
 }

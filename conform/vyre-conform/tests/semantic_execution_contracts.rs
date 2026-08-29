@@ -4,7 +4,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_conform::{submit_under_every_schedule, ProductionSession, CONFORMANCE_SCHEDULES};
+use vyre_conform::{
+    check_family_outputs, check_schedule_agreement, submit_under_every_schedule, ProductionSession,
+    ScheduleAgreement, ScheduleDisagreement, ScheduleOutcome, CONFORMANCE_SCHEDULES,
+};
 use vyre_megakernel::{
     CompileObjective, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, RequiredSchedule,
     ScheduleProduction, SearchBudget, SemanticExecutionError, SemanticExecutionOutput,
@@ -292,4 +295,147 @@ fn every_grammar_production_is_a_conformance_family_or_a_recorded_exclusion() {
             if excluded { "a member" } else { "absent" }
         );
     }
+}
+
+fn lanes(values: &[f32]) -> Vec<Vec<u8>> {
+    vec![values.iter().flat_map(|v| v.to_le_bytes()).collect()]
+}
+
+/// WHY: an exact contract admits nothing but byte equality, so a family that
+/// reorders a sum by one bit is a conformance failure rather than a tolerance.
+#[test]
+fn an_exact_contract_rejects_a_single_bit_of_reordering() {
+    let baseline = lanes(&[1.0, 2.0]);
+    let mut found = baseline.clone();
+    found[0][0] ^= 1;
+    let error = check_family_outputs("tiled", &baseline, &found, ScheduleAgreement::Exact)
+        .expect_err("an exact contract must reject a changed byte");
+    let ScheduleDisagreement::Lane {
+        schedule,
+        buffer,
+        lane,
+        ..
+    } = error
+    else {
+        panic!("expected a lane disagreement, found {error:?}");
+    };
+    assert_eq!((schedule, buffer, lane), ("tiled", 0, 0));
+    check_family_outputs("tiled", &baseline, &baseline, ScheduleAgreement::Exact)
+        .expect("byte-identical outputs satisfy an exact contract");
+}
+
+/// WHY: a tolerance contract states a bound, so it has to admit a family inside
+/// the bound and refuse one outside it; a bound that admits everything proves
+/// nothing about a reassociated sum.
+#[test]
+fn a_tolerance_contract_admits_its_bound_and_refuses_beyond_it() {
+    let baseline = lanes(&[1.0, 4.0]);
+    let near = lanes(&[f32::from_bits(1.0f32.to_bits() + 2), 4.0]);
+    let far = lanes(&[f32::from_bits(1.0f32.to_bits() + 5), 4.0]);
+    let agreement = ScheduleAgreement::Float32Ulps { ulps: 2 };
+    check_family_outputs("fused", &baseline, &near, agreement)
+        .expect("a lane at the declared bound is admitted");
+    let error = check_family_outputs("fused", &baseline, &far, agreement)
+        .expect_err("a lane beyond the declared bound is refused");
+    assert!(
+        matches!(error, ScheduleDisagreement::Lane { distance: 5, .. }),
+        "expected the measured distance, found {error:?}"
+    );
+}
+
+/// WHY: a sign flip and a non-finite lane are class changes no unit-in-last-place
+/// bound expresses, so only bit equality may admit them.
+#[test]
+fn a_tolerance_contract_never_admits_a_sign_or_class_change() {
+    let agreement = ScheduleAgreement::Float32Ulps { ulps: u32::MAX - 1 };
+    for (baseline, found) in [
+        (lanes(&[0.0]), lanes(&[-0.0])),
+        (lanes(&[1.0]), lanes(&[-1.0])),
+        (lanes(&[1.0]), lanes(&[f32::NAN])),
+        (lanes(&[1.0]), lanes(&[f32::INFINITY])),
+    ] {
+        let error = check_family_outputs("concurrent", &baseline, &found, agreement)
+            .expect_err("a class change must be refused");
+        assert!(
+            matches!(
+                error,
+                ScheduleDisagreement::Lane {
+                    distance: u32::MAX,
+                    ..
+                }
+            ),
+            "expected a class change, found {error:?}"
+        );
+    }
+    let nan = lanes(&[f32::NAN]);
+    check_family_outputs("concurrent", &nan, &nan, agreement)
+        .expect("identical non-finite lanes are admitted");
+}
+
+/// WHY: a family that produces a different number or size of writable buffers
+/// has changed the semantic contract, which no numeric tolerance covers.
+#[test]
+fn a_family_that_changes_the_output_shape_is_refused() {
+    let baseline = lanes(&[1.0, 2.0]);
+    let count = check_family_outputs("persistent", &baseline, &[], ScheduleAgreement::Exact)
+        .expect_err("a missing buffer must be refused");
+    assert_eq!(
+        count,
+        ScheduleDisagreement::BufferCount {
+            schedule: "persistent",
+            baseline: 1,
+            found: 0,
+        }
+    );
+    let length = check_family_outputs(
+        "persistent",
+        &baseline,
+        &lanes(&[1.0]),
+        ScheduleAgreement::Exact,
+    )
+    .expect_err("a shortened buffer must be refused");
+    assert_eq!(
+        length,
+        ScheduleDisagreement::BufferLength {
+            schedule: "persistent",
+            buffer: 0,
+            baseline: 8,
+            found: 4,
+        }
+    );
+    let unaligned = vec![vec![0u8; 6]];
+    let alignment = check_family_outputs(
+        "persistent",
+        &unaligned,
+        &unaligned,
+        ScheduleAgreement::Float32Ulps { ulps: 0 },
+    )
+    .expect_err("a buffer that is not a whole number of lanes must be refused");
+    assert_eq!(
+        alignment,
+        ScheduleDisagreement::LaneAlignment {
+            schedule: "persistent",
+            buffer: 0,
+            bytes: 6,
+        }
+    );
+}
+
+/// WHY: comparison is against the unspecialized baseline, so a run whose
+/// baseline produced nothing must fail rather than silently promote another
+/// family to reference.
+#[test]
+fn agreement_without_a_baseline_execution_is_refused() {
+    let outcomes = CONFORMANCE_SCHEDULES
+        .iter()
+        .map(|(schedule, required)| ScheduleOutcome {
+            schedule,
+            required: *required,
+            execution: None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        check_schedule_agreement(&outcomes, ScheduleAgreement::Exact),
+        Err(ScheduleDisagreement::NoBaseline)
+    );
 }

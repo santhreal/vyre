@@ -87,8 +87,8 @@ pub use envelope::{
     ARTIFACT_ENVELOPE_SCHEMA_VERSION, TARGET_PAYLOAD_SCHEMA_VERSION,
 };
 pub use error::{
-    is_required_schedule_unreachable, unsupported_workload, CompileError,
-    REQUIRED_SCHEDULE_UNREACHABLE,
+    is_required_schedule_unreachable, is_semantic_version_skew, unsupported_workload, CompileError,
+    REQUIRED_SCHEDULE_UNREACHABLE, SEMANTIC_VERSION_SKEW,
 };
 pub use execution::{
     execute_single_program, writable_graph_value_buffers, writable_graph_values,

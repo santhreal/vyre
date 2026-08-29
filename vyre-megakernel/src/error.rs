@@ -92,6 +92,9 @@ pub(crate) enum CompilerFailureKind {
     /// The caller required a schedule family and no legal candidate exercises
     /// it, so the compile is refused rather than served a different schedule.
     RequiredScheduleUnreachable,
+    /// A declared dialect schema version is outside the window the compiler
+    /// supports, or the program calls an operation that version predates.
+    SemanticVersionSkew,
 }
 
 impl CompilerFailureKind {
@@ -140,6 +143,7 @@ impl CompilerFailureKind {
             Self::InvalidMeshTopology => "MKC043_INVALID_MESH_TOPOLOGY",
             Self::MeshCapacityExceeded => "MKC044_MESH_CAPACITY_EXCEEDED",
             Self::RequiredScheduleUnreachable => REQUIRED_SCHEDULE_UNREACHABLE,
+            Self::SemanticVersionSkew => SEMANTIC_VERSION_SKEW,
         }
     }
 }
@@ -159,6 +163,7 @@ const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
         | CompilerFailureKind::MissingCalibratedFact
         | CompilerFailureKind::InvalidSpecializationContract
         | CompilerFailureKind::InvalidMeshFacts
+        | CompilerFailureKind::SemanticVersionSkew
         | CompilerFailureKind::InvalidVariantGuard => DiagnosticStage::Validate,
         CompilerFailureKind::DependencyCycle
         | CompilerFailureKind::FinalistEvaluation
@@ -251,6 +256,17 @@ pub const REQUIRED_SCHEDULE_UNREACHABLE: &str = "MKC045_REQUIRED_SCHEDULE_UNREAC
 #[must_use]
 pub fn is_required_schedule_unreachable(error: &CompileError) -> bool {
     error.diagnostic.code.as_str() == REQUIRED_SCHEDULE_UNREACHABLE
+}
+
+/// Diagnostic code a compile carries when a declared dialect schema version is
+/// outside the window the compiler supports, or the program calls an operation
+/// that version predates.
+pub const SEMANTIC_VERSION_SKEW: &str = "MKC046_SEMANTIC_VERSION_SKEW";
+
+/// Whether `error` is the refusal of a declared semantic schema version.
+#[must_use]
+pub fn is_semantic_version_skew(error: &CompileError) -> bool {
+    error.diagnostic.code.as_str() == SEMANTIC_VERSION_SKEW
 }
 
 pub(crate) fn failure(

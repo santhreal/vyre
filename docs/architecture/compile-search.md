@@ -286,6 +286,31 @@ Conformance uses this to run one semantic graph under each family of
 them. Without it a case written to check a tiled schedule checks whichever
 family the objective ranked first.
 
+`ScheduleAgreement` states which contract those outputs hold to.
+`ScheduleAgreement::Exact` admits byte equality alone.
+`ScheduleAgreement::Float32Ulps` admits a bounded unit-in-last-place distance
+per finite lane and refuses a sign change, a class change, and any non-finite
+lane that is not bit-identical, because no unit-in-last-place bound expresses
+one. `check_schedule_agreement` compares every reached family against the
+unspecialized baseline and refuses a run whose baseline produced nothing, so no
+other family is promoted to reference.
+
+## A declared dialect schema version is enforced
+
+`CompileRequest::declaring_dialect_version` states the dialect schema version a
+program was built against. A dialect left undeclared is compiled at its
+registered version, which is what a caller rebuilding against the current
+schema has migrated to. A declared version is held to: below the dialect's
+supported floor, above its schema version, and a call to an operation
+introduced after it all fail validation with `MKC046_SEMANTIC_VERSION_SKEW`,
+before any candidate is derived.
+
+Every registered dialect's own declarations are admitted on the same path. A
+dialect whose supported floor exceeds its schema version admits no declarable
+version, and an operation declaring a version its dialect has not reached is
+unreachable at every version a caller could declare. Both are refused before a
+program compiles rather than surfacing as a plan that cannot be selected.
+
 Fusion and topology legality keep their own codes, and the constraint classes map
 onto them rather than restating them:
 

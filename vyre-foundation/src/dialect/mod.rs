@@ -26,7 +26,10 @@ pub use schema::{
 pub use traits::{
     Dialect, DialectCodec, DialectMatcher, DialectOp, DialectValidator, DialectVisitor,
 };
-pub use version::{validate_dialect_version, validate_op_version, DialectVersionError};
+pub use version::{
+    admit_descriptor_versions, admit_program_versions, admit_registered_versions,
+    validate_dialect_version, validate_op_version, DialectVersionError, SemanticVersionRejection,
+};
 
 #[cfg(test)]
 mod tests;

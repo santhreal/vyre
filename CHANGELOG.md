@@ -37,6 +37,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `is_composable` while registering no program builder, a class the operation
   registry cannot see because the dialect macro always emits a signature and so
   never trips the missing-semantics check.
+- A compilation request states the dialect schema version its program was built
+  against, and a version below the dialect's supported floor, above its schema
+  version, or predating a called operation fails validation before any plan is
+  derived.
 - The CI registry keeps a row for every workflow path the tree carries or once
   carried, and the row says whether it runs, is paused with a way back, is
   superseded by the workflow and gate that run its checks, or leaves a
@@ -248,6 +252,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   a neighbouring step's package. Nothing is listed in the test: a workflow
   added tomorrow is judged tomorrow, and renaming a target without updating its
   workflow is red locally instead of in CI.
+- Conformance compares every schedule family a semantic graph reaches against
+  the unspecialized baseline under an exact or bounded unit-in-last-place
+  contract the operation declares.
 - A gate over `vyre_libs::graph` rejects the argument-transposition class. It
   walks the module directory and parses every declared signature at run time,
   so a CSR entry point added later is covered without editing a list: closure

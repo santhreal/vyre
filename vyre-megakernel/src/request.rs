@@ -4,9 +4,11 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
+use vyre_foundation::dialect::{admit_program_versions, admit_registered_versions};
 use vyre_foundation::ir::{GraphValueId, ProgramGraph, ShapeDim, ValueLifetime};
 use vyre_foundation::numeric::NumericContract;
 use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};
+use vyre_foundation::visit::collect_call_op_ids;
 
 use crate::device_facts::{validate_device_support, DeviceFacts};
 use crate::error::{failure, CompileError, CompilerFailureKind};
@@ -156,6 +158,7 @@ pub struct CompileRequest {
     mesh: Option<MeshFacts>,
     numeric: Option<NumericContract>,
     required_schedule: Option<RequiredSchedule>,
+    declared_dialects: BTreeMap<String, u32>,
 }
 
 impl CompileRequest {
@@ -184,6 +187,7 @@ impl CompileRequest {
             mesh: None,
             numeric: None,
             required_schedule: None,
+            declared_dialects: BTreeMap::new(),
         }
     }
 
@@ -210,6 +214,21 @@ impl CompileRequest {
     #[must_use]
     pub const fn requiring_schedule(mut self, required: RequiredSchedule) -> Self {
         self.required_schedule = Some(required);
+        self
+    }
+
+    /// State the dialect schema version this program was built against.
+    ///
+    /// A dialect the caller declares no version for is compiled at its
+    /// registered version, which is what a caller rebuilding against the
+    /// current schema has already migrated to. A declared version is enforced:
+    /// one below the dialect's supported floor, one above its schema version,
+    /// and a call to an operation introduced after it are all refused before
+    /// any plan is derived.
+    #[must_use]
+    pub fn declaring_dialect_version(mut self, dialect_id: &str, version: u32) -> Self {
+        self.declared_dialects
+            .insert(dialect_id.to_owned(), version);
         self
     }
 
@@ -290,6 +309,7 @@ impl CompileRequest {
                 "supply a structurally valid acyclic ProgramGraph",
             )
         })?;
+        admit_declared_dialects(&self.graph, &self.declared_dialects)?;
         // A device without cooperative launch needs every hoistable grid fence
         // lowered to launch boundaries before capability admission. A cooperative
         // device keeps the original fenced node: cutting it would manufacture a
@@ -335,6 +355,45 @@ impl CompileRequest {
             required_schedule: self.required_schedule,
         })
     }
+}
+
+/// Refuse a program whose declared dialect schema versions do not admit it.
+///
+/// Every registered dialect's own declarations are admitted first, because a
+/// dialect whose supported floor is above its schema version, or an operation
+/// declaring a version its dialect has not reached, is unreachable at every
+/// version a caller could declare. Enforcement is here rather than at
+/// derivation so a stale declaration costs nothing to find: the graph is walked
+/// once, before any candidate exists.
+fn admit_declared_dialects(
+    graph: &ProgramGraph,
+    declared: &BTreeMap<String, u32>,
+) -> Result<(), CompileError> {
+    admit_registered_versions().map_err(|rejection| {
+        failure(
+            CompilerFailureKind::SemanticVersionSkew,
+            "dialect.registry",
+            rejection.to_string(),
+            "declare an operation version at or below its dialect schema version, and a supported floor at or below it",
+        )
+    })?;
+    if declared.is_empty() {
+        return Ok(());
+    }
+    let called = graph
+        .nodes()
+        .iter()
+        .flat_map(|node| collect_call_op_ids(&node.program))
+        .collect::<Vec<_>>();
+    let op_ids = called.iter().map(AsRef::as_ref).collect::<Vec<&str>>();
+    admit_program_versions(declared, &op_ids).map_err(|rejection| {
+        failure(
+            CompilerFailureKind::SemanticVersionSkew,
+            "request.declared_dialects",
+            rejection.to_string(),
+            "declare a schema version inside the dialect's supported window and rebuild the program against it",
+        )
+    })
 }
 
 /// Validate every node program against the live capability snapshot.
