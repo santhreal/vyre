@@ -59,7 +59,7 @@ fn dual_module_findings(sources: &[PathBuf]) -> Vec<Finding> {
                 path.clone(),
                 format!(
                     "sits beside the module directory `{}`, so this module is spelled two ways",
-                    sibling.display()
+                    sibling.to_string_lossy().replace('\\', "/")
                 ),
                 "move the file to `<name>/mod.rs`; this tree spells a directory module one way, \
                  and the pair leaves two places to look for the same module's own items",

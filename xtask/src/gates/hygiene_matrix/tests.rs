@@ -774,12 +774,15 @@ fn source_inspection_test_scanner_covers_integration_files_and_inline_test_modul
         2,
         "Fix: the repository scanner must reject source-shape tests in both inline modules and integration-test files."
     );
+    // The scanner records a `/`-separated path on every host, so the fixture
+    // path is spelled the same way before it is compared.
+    let recorded = |path: &std::path::Path| path.to_string_lossy().replace('\\', "/");
     assert!(source_findings
         .iter()
-        .any(|finding| finding.path == inline.display().to_string()));
+        .any(|finding| finding.path == recorded(&inline)));
     assert!(source_findings
         .iter()
-        .any(|finding| finding.path == integration.display().to_string()));
+        .any(|finding| finding.path == recorded(&integration)));
 }
 
 #[test]

@@ -625,19 +625,50 @@ mod tests {
         assert!(!plan.is_empty());
     }
 
+    /// WHY: an iterative walk and a recursive one agree on every shallow
+    /// program, so depth is the only input that separates them. The depth is
+    /// judged against a stated stack rather than the host's default: 8192 nested
+    /// blocks fit an iterative walk on a quarter-megabyte stack and overflow a
+    /// recursive visitor there, and a test that leans on whatever stack the
+    /// harness happens to give a thread proves nothing on one host and
+    /// overflows on another.
+    ///
+    /// Building the nest and dropping it recurse through `Vec<Node>` whatever
+    /// the walk does, so both happen on a thread sized for the depth, and only
+    /// the walk runs on the small stack.
     #[test]
     fn transport_plan_handles_deeply_nested_collectives_without_recursive_walk() {
-        let mut node = Node::AllGather {
-            input: "input".into(),
-            output: "out".into(),
-            group: CommGroup::WORLD,
-        };
-        for _ in 0..8192 {
-            node = Node::Block(vec![node]);
-        }
-        let program = program_with(node, 8);
+        /// Nesting depth no recursive walk survives on `WALK_STACK`.
+        const DEPTH: usize = 8192;
+        /// Stack sized for constructing and dropping a `DEPTH`-deep nest.
+        const BUILD_STACK: usize = 32 * 1024 * 1024;
+        /// Stack an iterative walk fits in and a recursive one does not.
+        const WALK_STACK: usize = 256 * 1024;
 
-        let plan = collective_transport_plan(&program);
+        let plan = std::thread::Builder::new()
+            .stack_size(BUILD_STACK)
+            .spawn(|| {
+                let mut node = Node::AllGather {
+                    input: "input".into(),
+                    output: "out".into(),
+                    group: CommGroup::WORLD,
+                };
+                for _ in 0..DEPTH {
+                    node = Node::Block(vec![node]);
+                }
+                let program = program_with(node, 8);
+                std::thread::scope(|scope| {
+                    std::thread::Builder::new()
+                        .stack_size(WALK_STACK)
+                        .spawn_scoped(scope, || collective_transport_plan(&program))
+                        .expect("Fix: the bounded-stack walk thread must spawn.")
+                        .join()
+                        .expect("Fix: the walk must not recurse over program depth.")
+                })
+            })
+            .expect("Fix: the deep-nest builder thread must spawn.")
+            .join()
+            .expect("Fix: building a bounded-depth nest must not overflow its own stack.");
 
         assert_eq!(plan.local_single_rank_collectives(), 1);
         assert_eq!(plan.transport_collectives(), 0);

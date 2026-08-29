@@ -613,13 +613,18 @@ mod tests {
                 "fixture",
             ],
         );
+        // Serialized rather than interpolated: an absolute Windows path carries
+        // backslashes, and a citation pasted into a JSON string literal makes
+        // the artifact unparseable rather than making the gate report on it.
+        let cited = serde_json::json!({
+            "files": [
+                { "path": root.join("tracked.rs") },
+                { "path": root.join("generated.rs") },
+            ]
+        });
         fs::write(
             root.join(EVIDENCE_DIR).join("artifact.json"),
-            format!(
-                r#"{{"files":[{{"path":"{}"}},{{"path":"{}"}}]}}"#,
-                root.join("tracked.rs").display(),
-                root.join("generated.rs").display()
-            ),
+            serde_json::to_vec(&cited).expect("Fix: the fixture citation must serialize."),
         )
         .expect("an evidence artifact");
 

@@ -31,7 +31,12 @@ fn build_example() -> PathBuf {
         .parent()
         .and_then(std::path::Path::parent)
         .expect("a test binary lives under <target>/<profile>/deps");
-    let path = profile.join("examples").join("wire_harness_smoke");
+    // The suffix is part of the name cargo writes: on Windows the example is
+    // `wire_harness_smoke.exe`, and a bare stem never exists there.
+    let path = profile.join("examples").join(format!(
+        "wire_harness_smoke{}",
+        std::env::consts::EXE_SUFFIX
+    ));
     if path.exists() {
         return path;
     }

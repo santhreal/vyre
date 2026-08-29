@@ -116,6 +116,12 @@ mod tests {
     use std::process::Command;
 
     /// The shell launch path must load the same RC and final tags as the Rust release contract.
+    ///
+    /// Unix only, because the launcher is: `scripts/lib/toml_reader.sh` reads
+    /// the manifest through `python3`, and on Windows that name resolves to the
+    /// Store execution alias, which exits nonzero and prints nothing. The
+    /// release hosts run the script; Windows never does.
+    #[cfg(unix)]
     #[test]
     fn shell_release_loader_matches_canonical_tag_creation_order() {
         let workspace = crate::checkout::checkout_root();

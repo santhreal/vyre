@@ -47,7 +47,12 @@ pub(crate) fn flush_disk_pipeline_cache() -> Result<(), BackendError> {
 }
 
 fn flush_disk_cache_paths(paths: &[PathBuf]) -> Result<(), BackendError> {
-    sync_cache_files_bounded(paths, File::sync_data, "pipeline cache explicit flush")?;
+    sync_cache_files_bounded(
+        paths,
+        vyre_driver::durable_fanout::open_for_sync,
+        File::sync_data,
+        "pipeline cache explicit flush",
+    )?;
     let parents = vyre_driver::durable_fanout::parent_directories(paths, |parents, capacity| {
         reserve_backend_vec(parents, capacity, "pipeline cache parent directory staging")
     })?;
@@ -102,9 +107,16 @@ fn register_pending_durable_cache_file(path: &Path) -> Result<(), BackendError> 
     Ok(())
 }
 
+/// A directory carries no write access to request, so it is opened read-only:
+/// [`vyre_driver::durable_fanout::open_for_sync`] is for the file half.
 #[cfg(unix)]
 fn sync_parent_dirs_bounded(parents: &[PathBuf]) -> Result<(), BackendError> {
-    sync_cache_files_bounded(parents, File::sync_all, "pipeline cache directory flush")
+    sync_cache_files_bounded(
+        parents,
+        File::open,
+        File::sync_all,
+        "pipeline cache directory flush",
+    )
 }
 
 #[cfg(not(unix))]
@@ -114,13 +126,14 @@ fn sync_parent_dirs_bounded(_parents: &[PathBuf]) -> Result<(), BackendError> {
 
 fn sync_cache_files_bounded(
     paths: &[PathBuf],
+    open: fn(&Path) -> std::io::Result<File>,
     sync: fn(&File) -> std::io::Result<()>,
     context: &'static str,
 ) -> Result<(), BackendError> {
     vyre_driver::durable_fanout::for_each_bounded(
         paths,
         |path| {
-            let file = File::open(path).map_err(|error| {
+            let file = open(path).map_err(|error| {
                 trace_io_err(path, &error, "pipeline cache flush open failed");
                 BackendError::new(format!(
                     "{context} failed to open {}: {error}. Fix: remove the corrupted cache entry and retry.",

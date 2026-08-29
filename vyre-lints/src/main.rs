@@ -359,7 +359,14 @@ fn run_lint(cli: &Cli, lint: &Lint, overrides: &[PathBuf]) -> Result<()> {
         let workspace = workspace_manifest_root(&cli.workspace_root)?;
         for root in (lint.default_roots)(&cli.workspace_root)? {
             let shown = root.strip_prefix(&workspace).unwrap_or(&root);
-            println!("{}", shown.display());
+            // Forward slashes on every host: this list is an interface a caller
+            // parses, and a native separator makes it read differently on
+            // Windows than the member paths the manifest declares.
+            let shown: Vec<String> = shown
+                .components()
+                .map(|component| component.as_os_str().to_string_lossy().into_owned())
+                .collect();
+            println!("{}", shown.join("/"));
         }
         return Ok(());
     }

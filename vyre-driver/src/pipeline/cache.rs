@@ -249,6 +249,7 @@ fn read_bounded(path: &std::path::Path, max_bytes: u64) -> std::io::Result<Vec<u
 fn flush_paths(paths: &[std::path::PathBuf]) -> std::io::Result<()> {
     sync_files_bounded(
         paths,
+        crate::durable_fanout::open_for_sync,
         std::fs::File::sync_data,
         "disk cache file sync worker panicked",
     )?;
@@ -265,10 +266,13 @@ fn flush_paths(paths: &[std::path::PathBuf]) -> std::io::Result<()> {
     sync_parent_dirs(&parents)
 }
 
+/// A directory carries no write access to request, so it is opened read-only:
+/// [`crate::durable_fanout::open_for_sync`] is for the file half.
 #[cfg(unix)]
 fn sync_parent_dirs(parents: &[std::path::PathBuf]) -> std::io::Result<()> {
     sync_files_bounded(
         parents,
+        std::fs::File::open,
         std::fs::File::sync_all,
         "disk cache dir sync worker panicked",
     )
@@ -281,13 +285,14 @@ fn sync_parent_dirs(_parents: &[std::path::PathBuf]) -> std::io::Result<()> {
 
 fn sync_files_bounded(
     paths: &[std::path::PathBuf],
+    open: fn(&std::path::Path) -> std::io::Result<std::fs::File>,
     sync: fn(&std::fs::File) -> std::io::Result<()>,
     panic_message: &'static str,
 ) -> std::io::Result<()> {
     crate::durable_fanout::for_each_bounded(
         paths,
         |path| {
-            let file = std::fs::File::open(path)?;
+            let file = open(path)?;
             sync(&file)
         },
         || std::io::Error::other(panic_message),

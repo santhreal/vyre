@@ -12,7 +12,8 @@
 //! and the parent-directory set the second pass runs over.
 
 use std::collections::TryReserveError;
-use std::path::PathBuf;
+use std::fs::{File, OpenOptions};
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 /// Upper bound on concurrent durability workers.
@@ -63,6 +64,25 @@ pub fn parent_directories<E>(
     parents.sort_unstable();
     parents.dedup();
     Ok(parents)
+}
+
+/// Open `path` with the access its platform requires to flush its buffers.
+///
+/// A read-only handle is enough to fsync on Unix and is not on Windows, where
+/// `FlushFileBuffers` rejects a handle carrying no write access with
+/// `ERROR_ACCESS_DENIED`. Every cache layer that made an entry durable opened
+/// the file for reading, so every explicit flush failed on Windows with a
+/// permission error against a file the process had just written itself.
+///
+/// Write access is requested on every platform rather than behind a target
+/// predicate: the caller already wrote the file, and one open shape keeps the
+/// durability path the same code on every host.
+///
+/// # Errors
+///
+/// Returns the open error for `path`.
+pub fn open_for_sync(path: &Path) -> std::io::Result<File> {
+    OpenOptions::new().read(true).write(true).open(path)
 }
 
 /// Run `task` over every item across a bounded pool of scoped threads.

@@ -2092,6 +2092,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   emits what every former copy emitted. Seven files that reimplemented
   little-endian `pack`/`unpack` read `vyre_primitives::wire::pack_u32_slice`
   and `decode_u32_le_bytes_all`, the crate that owns that layout.
+- `vyre-lints --print-default-roots` prints member paths with forward slashes
+  on every host.
 - Three concepts in `vyre-lower` had two copies each. The constant behind an
   index operand is written in one of two encodings, a `Literal` op whose first
   operand is a pool index or an operand id that is itself a pool index, and
@@ -6946,6 +6948,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   buffer once a program carries atomics, so four nodes with 257 edges, and a
   17-by-17 kernel over two 17-element scaling vectors, both cross the threshold
   while the ping-pong state still fits one workgroup.
+- An explicit pipeline cache flush opens each entry with write access, so
+  making a cache durable no longer fails with a permission error on Windows.
 - The optimizer compiles for the adapter it was given. `Autotune` and
   `DecodeScanFuse` both read device facts, and both hardcoded
   `AdapterCaps::conservative()` in their `ProgramPass::transform`, so every

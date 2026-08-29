@@ -153,6 +153,12 @@ mod tests {
     /// asserted through `binary` without writing process environment that every
     /// other test in the binary shares. `resolve` is crate-private, so no
     /// integration test reaches it.
+    ///
+    /// Both answers this test ranks are read only off Windows: `cargo_full` is a
+    /// shell script, and `resolve` skips the exported runner and the wrapper
+    /// beside the root there rather than starting something Windows cannot
+    /// execute.
+    #[cfg(not(windows))]
     #[test]
     fn the_exported_runner_outranks_every_other_answer() {
         let root = Path::new("/does/not/exist");
@@ -165,6 +171,7 @@ mod tests {
         assert_eq!(chosen, PathBuf::from("/wrapper/cargo_full"));
     }
 
+    #[cfg(not(windows))]
     #[test]
     fn a_wrapper_beside_the_root_outranks_the_parent_toolchain() {
         let root = tempfile::tempdir().expect("temporary directory");
@@ -174,6 +181,26 @@ mod tests {
         let chosen = resolve(None, root.path(), Some(OsString::from("/toolchain/cargo")));
 
         assert_eq!(chosen, root.path().join(WRAPPER));
+    }
+
+    /// WHY: the two cases above are the whole of the non-Windows ranking, and
+    /// on Windows the same inputs must reach a different answer. Without this
+    /// case the Windows arm of `resolve` is unasserted, and deleting the
+    /// `cfg!(windows)` guard would turn no test red on any host.
+    #[cfg(windows)]
+    #[test]
+    fn the_toolchain_answers_on_windows_over_a_runner_and_a_wrapper() {
+        let root = tempfile::tempdir().expect("temporary directory");
+        std::fs::write(root.path().join(WRAPPER), "#!/bin/sh\nexec cargo \"$@\"\n")
+            .expect("wrapper");
+
+        let chosen = resolve(
+            Some(OsString::from(r"C:\wrapper\cargo_full")),
+            root.path(),
+            Some(OsString::from(r"C:\toolchain\cargo.exe")),
+        );
+
+        assert_eq!(chosen, PathBuf::from(r"C:\toolchain\cargo.exe"));
     }
 
     #[test]

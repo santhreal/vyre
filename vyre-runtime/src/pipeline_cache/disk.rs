@@ -236,6 +236,7 @@ impl PipelineCacheStore for DiskCache {
 fn flush_paths(paths: &[PathBuf]) -> io::Result<()> {
     sync_paths_bounded(
         paths,
+        vyre_driver::durable_fanout::open_for_sync,
         File::sync_data,
         "pipeline cache file sync worker panicked",
     )?;
@@ -252,10 +253,13 @@ fn flush_paths(paths: &[PathBuf]) -> io::Result<()> {
     sync_parent_dirs(&parents)
 }
 
+/// A directory carries no write access to request, so it is opened read-only:
+/// [`vyre_driver::durable_fanout::open_for_sync`] is for the file half.
 #[cfg(unix)]
 fn sync_parent_dirs(parents: &[PathBuf]) -> io::Result<()> {
     sync_paths_bounded(
         parents,
+        File::open,
         File::sync_all,
         "pipeline cache directory sync worker panicked",
     )
@@ -268,13 +272,14 @@ fn sync_parent_dirs(_parents: &[PathBuf]) -> io::Result<()> {
 
 fn sync_paths_bounded(
     paths: &[PathBuf],
+    open: fn(&Path) -> io::Result<File>,
     sync: fn(&File) -> io::Result<()>,
     panic_message: &'static str,
 ) -> io::Result<()> {
     vyre_driver::durable_fanout::for_each_bounded(
         paths,
         |path| {
-            let file = File::open(path)?;
+            let file = open(path)?;
             sync(&file)
         },
         || io::Error::other(panic_message),
