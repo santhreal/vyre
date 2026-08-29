@@ -25,6 +25,7 @@ use crate::measure::{
 use crate::mesh::{PartitionKind, RegionPartition, ShardAssignment};
 use crate::request::{SearchBudget, SearchWork};
 use vyre_foundation::ir::DataType;
+use vyre_foundation::numeric::{NumericContract, NUMERIC_CONTRACT_VERSION};
 use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform};
 
 fn payload(resources: Vec<ResourceRecord>) -> ArtifactPayload {
@@ -1075,6 +1076,73 @@ fn decode_refuses_an_extent_boundary_the_recorded_grid_no_longer_covers() {
             rejection_path(payload, what),
             path,
             "{what} must be refused at the extent field that moved"
+        );
+    }
+}
+
+/// A plan that reorders the combines of two rounding regions and leaves an
+/// exact-format region alone.
+fn reordering_plan() -> ArtifactPayload {
+    let mut payload = launchable();
+    payload.selected_plan.numeric_budget = NumericRecord {
+        version: NUMERIC_CONTRACT_VERSION,
+        declared: Some(NumericContract::ieee_f32(8)),
+        proven: NumericContract::ieee_f32(4),
+        regions: vec![
+            NumericContract::ieee_f32(2),
+            NumericContract::ieee_f32(3),
+            NumericContract::EXACT,
+        ],
+        reordered: vec![0, 1],
+    };
+    payload
+}
+
+/// WHY: the reordered list is the plan's own statement of which regions it
+/// combines in an order the program did not state, and legality admitted the
+/// plan by pricing exactly those regions against the declared budget. A decoded
+/// list that repeats an index, states one out of order, points past the
+/// contracts beside it, or points at a region whose format rounds nothing, is a
+/// reordering no contract on the plan priced, and a contract shape this compiler
+/// does not state is a constraint read under the wrong rules.
+#[test]
+fn decode_refuses_a_numeric_constraint_no_contract_on_the_plan_priced() {
+    decode_payload(reordering_plan()).expect("the priced reordering decodes");
+
+    let cases: Vec<(&str, fn(&mut ArtifactPayload), &str)> = vec![
+        (
+            "the contracts are stated in another shape",
+            |payload| payload.selected_plan.numeric_budget.version += 1,
+            "artifact.body.selected_plan.numeric_budget.version",
+        ),
+        (
+            "one region is reordered twice",
+            |payload| payload.selected_plan.numeric_budget.reordered = vec![0, 0],
+            "artifact.body.selected_plan.numeric_budget.reordered",
+        ),
+        (
+            "the regions are recorded out of order",
+            |payload| payload.selected_plan.numeric_budget.reordered = vec![1, 0],
+            "artifact.body.selected_plan.numeric_budget.reordered",
+        ),
+        (
+            "a reordered region has no contract",
+            |payload| payload.selected_plan.numeric_budget.reordered = vec![7],
+            "artifact.body.selected_plan.numeric_budget.reordered",
+        ),
+        (
+            "a region whose format rounds nothing is reordered",
+            |payload| payload.selected_plan.numeric_budget.reordered.push(2),
+            "artifact.body.selected_plan.numeric_budget.reordered",
+        ),
+    ];
+    for (what, mutate, path) in cases {
+        let mut payload = reordering_plan();
+        mutate(&mut payload);
+        assert_eq!(
+            rejection_path(payload, what),
+            path,
+            "{what} must be refused where the constraint is recorded"
         );
     }
 }

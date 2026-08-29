@@ -5486,6 +5486,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   before device measurement. Write-complete elementwise, hypervector, p-adic,
   and backward-gradient outputs are declared write-only, so callers submit only
   source buffers.
+- Artifact decode refuses a plan whose reordered-region list no contract beside
+  it prices, and one whose numeric contracts are stated in another shape.
 - Two rewrites that enumerated `Node` themselves reached fewer operands than
   the analysis that fed them. Cross-scope CSE recorded occurrences inside the
   offset and size of an asynchronous copy and the address of a trap, but its

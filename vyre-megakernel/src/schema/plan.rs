@@ -367,6 +367,53 @@ impl SelectedPlan {
             }
             PlanMeasurement::Unbudgeted | PlanMeasurement::UntimedDevice => {}
         }
+        // A reordered region is one whose combines this plan performs in an
+        // order the program did not state, admitted because the region's own
+        // contract prices the difference. The list is derived from a set of
+        // indices into the region contracts beside it, so a decoded list that
+        // repeats an index, states one out of order, points past the contracts,
+        // or points at a region whose storage rounds nothing, is a reordering no
+        // contract on this plan authorized.
+        if self.numeric_budget.version != NUMERIC_CONTRACT_VERSION {
+            return Err(invalid(
+                "numeric_budget.version",
+                format!(
+                    "numeric contracts are stated in shape {} and this compiler states shape {NUMERIC_CONTRACT_VERSION}",
+                    self.numeric_budget.version
+                ),
+                "re-compile the graph so its contracts are stated in the current shape",
+            ));
+        }
+        let mut previous: Option<u32> = None;
+        for region in &self.numeric_budget.reordered {
+            if let Some(earlier) = previous.filter(|earlier| *earlier >= *region) {
+                return Err(invalid(
+                    "numeric_budget.reordered",
+                    format!("region {region} is recorded after region {earlier}"),
+                    "record each reordered region once, in ascending region order",
+                ));
+            }
+            previous = Some(*region);
+            let Some(contract) = self.numeric_budget.regions.get(*region as usize) else {
+                return Err(invalid(
+                    "numeric_budget.reordered",
+                    format!(
+                        "region {region} is reordered and the plan states {} region contracts",
+                        self.numeric_budget.regions.len()
+                    ),
+                    "state one contract per region the plan carries",
+                ));
+            };
+            if contract.storage.is_exact() {
+                return Err(invalid(
+                    "numeric_budget.reordered",
+                    format!(
+                        "region {region} combines in an order the program did not state and holds an exact format"
+                    ),
+                    "record a reordering only for a region whose format rounds",
+                ));
+            }
+        }
         Ok(())
     }
 }
