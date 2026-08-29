@@ -391,8 +391,8 @@ fn compiled_requiring(
 /// WHY: conformance has to run one semantic graph under a named schedule family,
 /// not under whichever family the objective ranked first. Without a requirement
 /// the fused, tiled, partitioned and resident plans are all derived and all
-/// discarded, so a case that claims to check a tiled schedule checks the
-/// baseline. This ranges over every family the grammar declares, so a production
+/// discarded, so a case written to check a tiled schedule checks the baseline
+/// instead. This ranges over every family the grammar declares, so a production
 /// added to `ScheduleProduction::ALL` is required here before it can go
 /// unexercised in silence.
 #[test]
