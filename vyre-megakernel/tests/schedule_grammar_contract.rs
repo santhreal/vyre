@@ -16,16 +16,17 @@ use vyre_foundation::schedule::{
     ScheduleTransform, SynchronizationScope,
 };
 use vyre_megakernel::{
-    compile, CompileObjective, CompileRequest, ObjectiveMetric, PruneReason, ScheduleProduction,
-    SearchBudget, SCHEDULE_GRAMMAR_VERSION,
+    compile, is_required_schedule_unreachable, CompileObjective, CompileRequest, ObjectiveMetric,
+    PruneReason, RequiredSchedule, ScheduleProduction, SearchBudget, REQUIRED_SCHEDULE_UNREACHABLE,
+    SCHEDULE_GRAMMAR_VERSION,
 };
 
 #[path = "support/search_fixtures.rs"]
 mod search_fixtures;
 
 use search_fixtures::{
-    bare_device, budget, compiled, facts, launch_bound_device, no_progress_device,
-    occupancy_bound_device, rich_device, single_stage_graph,
+    bare_device, budget, compiled, facts, joined_graph, launch_bound_device, no_progress_device,
+    occupancy_bound_device, refused_field, rich_device, single_stage_graph,
 };
 
 /// WHY: a production the grammar declares and never proposes is a family the
@@ -367,4 +368,147 @@ fn the_baseline_wins_when_no_production_pays() {
         "a candidate whose proved bound cannot beat the incumbent must be \
          eliminated against the objective, not ranked behind it"
     );
+}
+
+/// The fixture graph and facts, compiled under one required schedule family.
+fn compiled_requiring(
+    required: RequiredSchedule,
+) -> Result<vyre_megakernel::Artifact, vyre_megakernel::CompileError> {
+    let request = CompileRequest::new(
+        joined_graph(),
+        facts(),
+        rich_device(),
+        budget(),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 4_000_000),
+    )
+    .requiring_schedule(required)
+    .validate()
+    .expect("request must validate");
+    compile(&request)
+}
+
+/// WHY: conformance has to run one semantic graph under a named schedule family,
+/// not under whichever family the objective ranked first. Without a requirement
+/// the fused, tiled, partitioned and resident plans are all derived and all
+/// discarded, so a case that claims to check a tiled schedule checks the
+/// baseline. This ranges over every family the grammar declares, so a production
+/// added to `ScheduleProduction::ALL` is required here before it can go
+/// unexercised in silence.
+#[test]
+fn a_required_family_that_the_graph_reaches_is_the_family_selected() {
+    let mut reached = 0_u32;
+    for production in ScheduleProduction::ALL {
+        let required = RequiredSchedule::Production(*production);
+        let artifact = match compiled_requiring(required) {
+            Ok(artifact) => artifact,
+            Err(error) if is_required_schedule_unreachable(&error) => continue,
+            Err(error) => panic!(
+                "requiring family {} failed for a reason other than \
+                 unreachability: {error}",
+                production.code()
+            ),
+        };
+        reached += 1;
+        let plan = artifact.selected_plan();
+        assert!(
+            plan.derivation
+                .iter()
+                .any(|step| step.production == *production),
+            "the plan selected under required family {} applied {:?}",
+            production.code(),
+            plan.derivation
+                .iter()
+                .map(|step| step.production)
+                .collect::<Vec<_>>()
+        );
+    }
+    assert!(
+        reached >= 4,
+        "the fixture graph reached only {reached} of the declared families; a \
+         graph that reaches almost none proves nothing about the requirement"
+    );
+}
+
+/// WHY: the baseline is the family a conformance case starts from, and it is the
+/// one family stated by the absence of a production rather than the presence of
+/// one. A requirement that read an empty derivation as unconstrained would
+/// silently accept any plan for the single-invocation case.
+#[test]
+fn the_required_baseline_selects_a_plan_that_applied_no_production() {
+    let artifact = compiled_requiring(RequiredSchedule::Baseline)
+        .expect("the baseline is always in the candidate set");
+    let plan = artifact.selected_plan();
+
+    assert!(
+        plan.derivation.is_empty(),
+        "the plan selected under a required baseline applied {} production(s)",
+        plan.derivation.len()
+    );
+    assert!(
+        plan.certificate
+            .pruned_for(PruneReason::ScheduleRequirement)
+            > 0,
+        "every derived candidate outside the required family must be eliminated \
+         with its own reason, so a reader can tell a constrained selection from \
+         an unconstrained one"
+    );
+}
+
+/// WHY: a family no legal plan reaches is the one case where a fallback would be
+/// invisible. A one-node graph cannot be fused; served the baseline instead, a
+/// conformance case would record a passing fused schedule it never ran. The
+/// refusal carries its own code so a caller iterating families tells it apart
+/// from a compile that failed.
+#[test]
+fn a_required_family_no_legal_plan_reaches_is_refused_and_not_replaced() {
+    let request = CompileRequest::new(
+        single_stage_graph(),
+        facts(),
+        bare_device(),
+        budget(),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 4_000_000),
+    )
+    .requiring_schedule(RequiredSchedule::Production(ScheduleProduction::Fusion))
+    .validate()
+    .expect("request must validate");
+
+    let error =
+        compile(&request).expect_err("a one-node graph has no producer-consumer pair to contract");
+    assert!(
+        is_required_schedule_unreachable(&error),
+        "the refusal must carry {REQUIRED_SCHEDULE_UNREACHABLE}, got {}",
+        error.diagnostic.code
+    );
+    assert_eq!(
+        refused_field(&error),
+        Some("request.required_schedule"),
+        "the refusal must name the field the caller stated"
+    );
+}
+
+/// WHY: a requirement must narrow what may be selected and never what may be
+/// considered. If it pruned before derivation, the certificate would stop
+/// recording the families it eliminated and the artifact would no longer state
+/// why a plan was legal, which is what reproduces a selection.
+#[test]
+fn a_requirement_narrows_selection_without_narrowing_the_search() {
+    let unconstrained = compiled(rich_device(), budget());
+    let constrained = compiled_requiring(RequiredSchedule::Baseline)
+        .expect("the baseline is always in the candidate set");
+
+    for production in ScheduleProduction::ALL {
+        assert_eq!(
+            constrained
+                .selected_plan()
+                .certificate
+                .derived_by(*production),
+            unconstrained
+                .selected_plan()
+                .certificate
+                .derived_by(*production),
+            "production {} derived a different number of candidates under a \
+             requirement",
+            production.code()
+        );
+    }
 }

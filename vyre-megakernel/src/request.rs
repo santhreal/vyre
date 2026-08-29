@@ -10,11 +10,53 @@ use vyre_foundation::validate::{validate_with_options, BackendCapabilities, Vali
 
 use crate::device_facts::{validate_device_support, DeviceFacts};
 use crate::error::{failure, CompileError, CompilerFailureKind};
+use crate::grammar::{DerivationStep, ScheduleProduction};
 use crate::grid_sync;
 use crate::identity::Digest;
 use crate::measure::MeasurementRecord;
 use crate::mesh::MeshFacts;
 use crate::objective::{CompileObjective, ObjectiveMetric};
+
+/// Schedule family the caller requires the selected plan to exercise.
+///
+/// Selection is otherwise the objective's to make. A requirement states that
+/// the caller wants the same semantic graph executed a particular way, which is
+/// what conformance needs in order to check one operation's declared contract
+/// under every legal schedule instead of only under whichever schedule the
+/// objective happened to rank first.
+///
+/// A requirement no legal candidate satisfies is a refusal, never a fallback: a
+/// caller told a schedule was unreachable can raise the budget or change the
+/// device facts, while a caller silently served a different schedule has
+/// measured something else.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RequiredSchedule {
+    /// The unspecialized baseline: a plan that applies no grammar production.
+    Baseline,
+    /// A plan whose derivation applies `production` at least once.
+    Production(ScheduleProduction),
+}
+
+impl RequiredSchedule {
+    /// Whether a candidate derived by `derivation` satisfies this requirement.
+    #[must_use]
+    pub fn admits(self, derivation: &[DerivationStep]) -> bool {
+        match self {
+            Self::Baseline => derivation.is_empty(),
+            Self::Production(required) => derivation.iter().any(|step| step.production == required),
+        }
+    }
+
+    /// Stable machine-readable identity of the required family.
+    #[must_use]
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Baseline => "MKP000_BASELINE",
+            Self::Production(production) => production.code(),
+        }
+    }
+}
 
 /// Explicit bounds for one whole-program schedule search.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -113,6 +155,7 @@ pub struct CompileRequest {
     recorded_measurement: Option<MeasurementRecord>,
     mesh: Option<MeshFacts>,
     numeric: Option<NumericContract>,
+    required_schedule: Option<RequiredSchedule>,
 }
 
 impl CompileRequest {
@@ -140,6 +183,7 @@ impl CompileRequest {
             recorded_measurement: None,
             mesh: None,
             numeric: None,
+            required_schedule: None,
         }
     }
 
@@ -154,6 +198,18 @@ impl CompileRequest {
     #[must_use]
     pub const fn with_numeric_budget(mut self, numeric: NumericContract) -> Self {
         self.numeric = Some(numeric);
+        self
+    }
+
+    /// Require the selected plan to exercise one schedule family.
+    ///
+    /// Every candidate the grammar derives is still derived and every legality
+    /// decision is still made, so the requirement narrows what may be selected
+    /// and never what may be considered. A requirement no legal candidate
+    /// satisfies fails the compile with the family it could not reach.
+    #[must_use]
+    pub const fn requiring_schedule(mut self, required: RequiredSchedule) -> Self {
+        self.required_schedule = Some(required);
         self
     }
 
@@ -276,6 +332,7 @@ impl CompileRequest {
             search_budget: self.search_budget,
             mesh,
             numeric: self.numeric,
+            required_schedule: self.required_schedule,
         })
     }
 }
@@ -317,6 +374,7 @@ pub struct ValidatedCompileRequest {
     recorded_measurement: Option<MeasurementRecord>,
     mesh: MeshFacts,
     pub(crate) numeric: Option<NumericContract>,
+    pub(crate) required_schedule: Option<RequiredSchedule>,
 }
 
 impl ValidatedCompileRequest {
@@ -330,6 +388,12 @@ impl ValidatedCompileRequest {
     #[must_use]
     pub const fn facts(&self) -> &ExternalFacts {
         &self.facts
+    }
+
+    /// The schedule family the caller required, when one was stated.
+    #[must_use]
+    pub const fn required_schedule(&self) -> Option<RequiredSchedule> {
+        self.required_schedule
     }
 
     /// Borrow the validated representative workload used for finalist measurement.

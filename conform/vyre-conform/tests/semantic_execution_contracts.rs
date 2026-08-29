@@ -4,11 +4,11 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_conform::ProductionSession;
+use vyre_conform::{submit_under_every_schedule, ProductionSession, CONFORMANCE_SCHEDULES};
 use vyre_megakernel::{
-    CompileObjective, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
-    SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
-    SemanticExecutionRequest, SemanticExecutor,
+    CompileObjective, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, RequiredSchedule,
+    ScheduleProduction, SearchBudget, SemanticExecutionError, SemanticExecutionOutput,
+    SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -121,4 +121,175 @@ fn semantic_request_and_admitted_output_cross_the_production_boundary() {
             target_facts,
         })
     );
+}
+
+/// Records the required schedule family of every request it is given.
+struct ScheduleRecordingExecutor {
+    seen: Mutex<Vec<Option<RequiredSchedule>>>,
+    output: Vec<u8>,
+}
+
+impl SemanticExecutor for ScheduleRecordingExecutor {
+    fn execute(
+        &self,
+        request: &SemanticExecutionRequest<'_>,
+    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+        self.seen
+            .lock()
+            .expect("schedule recording executor lock")
+            .push(request.required_schedule());
+        let outputs = request
+            .logical()
+            .graph()
+            .values()
+            .iter()
+            .filter(|value| value.producer.is_some() && value.consumers.is_empty())
+            .map(|value| (value.id, self.output.clone()))
+            .collect::<BTreeMap<_, _>>();
+        Ok(SemanticExecutionOutput {
+            artifact: Digest([3; 32]),
+            payload: Digest([5; 32]),
+            outputs,
+        })
+    }
+}
+
+/// The one-node copy program every schedule-family case runs.
+fn copy_one_word() -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(1),
+            BufferDecl::output("output", 1, DataType::U32).with_count(1),
+        ],
+        [8, 1, 1],
+        vec![Node::store(
+            "output",
+            Expr::u32(0),
+            Expr::load("input", Expr::u32(0)),
+        )],
+    )
+}
+
+/// WHY: the requirement is stated on the policy and enforced inside the
+/// compiler, so the two are joined only by the semantic request that carries it.
+/// A request that dropped the family would run one schedule six times and every
+/// case would pass, which is the shape of a conformance suite that proves
+/// nothing. This asserts the family reaches the executor for every entry of
+/// `CONFORMANCE_SCHEDULES`, in order.
+#[test]
+fn every_conformance_schedule_reaches_the_compiler_boundary() {
+    let executor = Arc::new(ScheduleRecordingExecutor {
+        seen: Mutex::new(Vec::new()),
+        output: 11_u32.to_le_bytes().to_vec(),
+    });
+    let program = copy_one_word();
+    let session = ProductionSession::with_executor(
+        &program,
+        executor.clone(),
+        SemanticExecutionPolicy::new(
+            ExternalFacts::new(Digest([7; 32]), BTreeMap::new()),
+            DeviceFacts::unknown(),
+            CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 65_536),
+            SearchBudget::new(19, 23, 1, 1, 31),
+        ),
+        "recording-semantic-backend",
+    );
+    let input = 37_u32.to_le_bytes();
+
+    let outcomes = submit_under_every_schedule(&session, &[&input])
+        .expect("a recording executor refuses no family");
+
+    assert_eq!(
+        outcomes
+            .iter()
+            .map(|outcome| (outcome.schedule, outcome.required))
+            .collect::<Vec<_>>(),
+        CONFORMANCE_SCHEDULES.to_vec(),
+        "every declared family must be run, under the name it is declared with"
+    );
+    assert_eq!(
+        *executor
+            .seen
+            .lock()
+            .expect("schedule recording executor lock"),
+        CONFORMANCE_SCHEDULES
+            .iter()
+            .map(|(_, required)| Some(*required))
+            .collect::<Vec<_>>(),
+        "the family stated on the policy must reach the compiler boundary"
+    );
+}
+
+/// WHY: a production added to the grammar is a schedule a conformance case can
+/// run one semantic graph under, and one nobody has decided about is one nobody
+/// checks. The roster is derived from `ScheduleProduction::ALL` at run time, so a
+/// new production turns this red until it is either added to
+/// `CONFORMANCE_SCHEDULES` or recorded here as a family conformance does not
+/// range over, with the reason stated beside it.
+#[test]
+fn every_grammar_production_is_a_conformance_family_or_a_recorded_exclusion() {
+    /// Productions no conformance family requires, and why.
+    ///
+    /// Each one is a refinement of a schedule another family already forces
+    /// rather than a distinct way of executing the graph, so requiring it would
+    /// run a variant of a case already run.
+    const EXCLUDED: &[(ScheduleProduction, &str)] = &[
+        (ScheduleProduction::Fission, "the inverse of the fused case"),
+        (
+            ScheduleProduction::Pipeline,
+            "an overlap of the concurrent case",
+        ),
+        (
+            ScheduleProduction::DispatchCut,
+            "a submission boundary inside the multi-invocation case",
+        ),
+        (
+            ScheduleProduction::AsymmetricJoin,
+            "a fan-in shape of the fused case",
+        ),
+        (
+            ScheduleProduction::Synchronization,
+            "an ordering boundary inside every other family",
+        ),
+        (
+            ScheduleProduction::MemoryPlacement,
+            "a storage class, not an execution schedule",
+        ),
+        (
+            ScheduleProduction::Prefetch,
+            "a distance inside the concurrent case",
+        ),
+        (
+            ScheduleProduction::Recomputation,
+            "a materialization choice, not an execution schedule",
+        ),
+        (ScheduleProduction::AxisSplit, "a factor of the tiled case"),
+        (
+            ScheduleProduction::Vectorization,
+            "a lane width inside the tiled case",
+        ),
+        (
+            ScheduleProduction::AxisMapping,
+            "a hierarchy level inside the tiled case",
+        ),
+        (
+            ScheduleProduction::AxisReorder,
+            "an axis order inside the tiled case",
+        ),
+    ];
+
+    for production in ScheduleProduction::ALL {
+        let required = CONFORMANCE_SCHEDULES
+            .iter()
+            .any(|(_, family)| *family == RequiredSchedule::Production(*production));
+        let excluded = EXCLUDED.iter().any(|(family, _)| family == production);
+        assert!(
+            required != excluded,
+            "production {} is {} of `CONFORMANCE_SCHEDULES` and {} of the \
+             recorded exclusions; decide one",
+            production.code(),
+            if required { "a member" } else { "absent" },
+            if excluded { "a member" } else { "absent" }
+        );
+    }
 }

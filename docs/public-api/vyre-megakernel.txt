@@ -43,6 +43,7 @@ impl vyre_megakernel::ObjectiveMetric
 impl vyre_megakernel::PortfolioPolicy
 impl vyre_megakernel::PruneReason
 impl vyre_megakernel::RequiredFact
+impl vyre_megakernel::RequiredSchedule
 impl vyre_megakernel::RiskStatistic
 impl vyre_megakernel::ScheduleProduction
 impl vyre_megakernel::SearchBudget
@@ -121,6 +122,7 @@ pub const fn vyre_megakernel::CompileObjective::with_tie_breaker(self, metric: v
 pub const fn vyre_megakernel::CompileObjective::with_workload(self, workload: vyre_megakernel::WorkloadProfile) -> Self
 pub const fn vyre_megakernel::CompileObjective::workload(&self) -> &vyre_megakernel::WorkloadProfile
 pub const fn vyre_megakernel::CompileRequest::new(graph: vyre_foundation::ir_inner::model::program_graph::ProgramGraph, facts: vyre_megakernel::ExternalFacts, device: vyre_megakernel::DeviceFacts, search_budget: vyre_megakernel::SearchBudget, objective: vyre_megakernel::CompileObjective) -> Self
+pub const fn vyre_megakernel::CompileRequest::requiring_schedule(self, required: vyre_megakernel::RequiredSchedule) -> Self
 pub const fn vyre_megakernel::CompileRequest::with_numeric_budget(self, numeric: vyre_foundation::numeric::contract::NumericContract) -> Self
 pub const fn vyre_megakernel::CoveragePolicy::minimum_variants(self, classes: usize) -> usize
 pub const fn vyre_megakernel::CoveragePolicy::name(self) -> &'static str
@@ -194,6 +196,7 @@ pub const fn vyre_megakernel::PortfolioPolicy::with_max_aggregate_bytes(self, by
 pub const fn vyre_megakernel::PruneReason::code(self) -> &'static str
 pub const fn vyre_megakernel::RequiredFact::name(self) -> &'static str
 pub const fn vyre_megakernel::RequiredFact::supplied_by(self) -> &'static str
+pub const fn vyre_megakernel::RequiredSchedule::code(self) -> &'static str
 pub const fn vyre_megakernel::RiskStatistic::name(self) -> &'static str
 pub const fn vyre_megakernel::RiskStatistic::permille_rank(self) -> core::option::Option<u16>
 pub const fn vyre_megakernel::ScheduleProduction::code(self) -> &'static str
@@ -203,12 +206,15 @@ pub const fn vyre_megakernel::SemanticExecutionPolicy::budget(&self) -> vyre_meg
 pub const fn vyre_megakernel::SemanticExecutionPolicy::external_facts(&self) -> &vyre_megakernel::ExternalFacts
 pub const fn vyre_megakernel::SemanticExecutionPolicy::new(external_facts: vyre_megakernel::ExternalFacts, target_facts: vyre_megakernel::DeviceFacts, objective: vyre_megakernel::CompileObjective, budget: vyre_megakernel::SearchBudget) -> Self
 pub const fn vyre_megakernel::SemanticExecutionPolicy::objective(&self) -> &vyre_megakernel::CompileObjective
+pub const fn vyre_megakernel::SemanticExecutionPolicy::required_schedule(&self) -> core::option::Option<vyre_megakernel::RequiredSchedule>
+pub const fn vyre_megakernel::SemanticExecutionPolicy::requiring_schedule(self, required: vyre_megakernel::RequiredSchedule) -> Self
 pub const fn vyre_megakernel::SemanticExecutionPolicy::target_facts(&self) -> vyre_megakernel::DeviceFacts
 pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::budget(&self) -> vyre_megakernel::SearchBudget
 pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::external_facts(&self) -> &vyre_megakernel::ExternalFacts
 pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::inputs(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, &'a [u8]>
 pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::logical(&self) -> &vyre_foundation::logical::LogicalProgramGraph<'a>
 pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::objective(&self) -> &vyre_megakernel::CompileObjective
+pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::required_schedule(&self) -> core::option::Option<vyre_megakernel::RequiredSchedule>
 pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::target_facts(&self) -> vyre_megakernel::DeviceFacts
 pub const fn vyre_megakernel::TargetPayload::device(&self) -> vyre_megakernel::allocation::DeviceSlot
 pub const fn vyre_megakernel::TargetPayload::digest(&self) -> vyre_megakernel::Digest
@@ -230,6 +236,7 @@ pub const fn vyre_megakernel::ValidatedCompileRequest::numeric_budget(&self) -> 
 pub const fn vyre_megakernel::ValidatedCompileRequest::objective(&self) -> &vyre_megakernel::CompileObjective
 pub const fn vyre_megakernel::ValidatedCompileRequest::recorded_measurement(&self) -> core::option::Option<&vyre_megakernel::measure::MeasurementRecord>
 pub const fn vyre_megakernel::ValidatedCompileRequest::representative_inputs(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::vec::Vec<u8>>
+pub const fn vyre_megakernel::ValidatedCompileRequest::required_schedule(&self) -> core::option::Option<vyre_megakernel::RequiredSchedule>
 pub const fn vyre_megakernel::ValidatedCompileRequest::search_budget(&self) -> vyre_megakernel::SearchBudget
 pub const fn vyre_megakernel::WorkloadAggregation::name(self) -> &'static str
 pub const fn vyre_megakernel::WorkloadAggregation::reads_weights(self) -> bool
@@ -300,6 +307,7 @@ pub const vyre_megakernel::MetricSequence::CAPACITY: usize
 pub const vyre_megakernel::OBJECTIVE_SCHEMA_VERSION: u16
 pub const vyre_megakernel::ObjectiveMetric::ALL: &'static [Self]
 pub const vyre_megakernel::PruneReason::ALL: &'static [Self]
+pub const vyre_megakernel::REQUIRED_SCHEDULE_UNREACHABLE: &str
 pub const vyre_megakernel::RequiredFact::ALL: &'static [Self]
 pub const vyre_megakernel::RiskStatistic::ALL: &'static [Self]
 pub const vyre_megakernel::SCHEDULE_GRAMMAR_VERSION: u32
@@ -333,6 +341,7 @@ pub enum vyre_megakernel::ExecutionTopology
 pub enum vyre_megakernel::FrontierTopology
 pub enum vyre_megakernel::MaterializationReason
 pub enum vyre_megakernel::PlanMeasurement
+pub enum vyre_megakernel::RequiredSchedule
 pub enum vyre_megakernel::ResidentPartitionMode
 pub enum vyre_megakernel::ResourceLifetime
 pub enum vyre_megakernel::ScheduleProduction
@@ -417,6 +426,7 @@ pub fn vyre_megakernel::ObjectiveBounds::first_violation(&self, figures: &[core:
 pub fn vyre_megakernel::ObjectiveBounds::is_unbounded(&self) -> bool
 pub fn vyre_megakernel::ObjectiveBounds::stated(&self) -> alloc::vec::Vec<(vyre_megakernel::ObjectiveMetric, u64)>
 pub fn vyre_megakernel::PortfolioPolicy::default() -> Self
+pub fn vyre_megakernel::RequiredSchedule::admits(self, derivation: &[vyre_megakernel::DerivationStep]) -> bool
 pub fn vyre_megakernel::ResourceNameCollision::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_megakernel::RiskStatistic::read(self, ordered: &[u64], trimmed_mean: u64) -> u64
 pub fn vyre_megakernel::ScheduleProduction::deriving(transform: &vyre_foundation::schedule::ScheduleTransform) -> Self
@@ -428,6 +438,7 @@ pub fn vyre_megakernel::SearchCertificate::pruned_for(&self, reason: vyre_megake
 pub fn vyre_megakernel::SelectedPlan::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::SemanticExecutionRequest<'a>::compile_request(&self) -> vyre_megakernel::CompileRequest
 pub fn vyre_megakernel::SemanticExecutionRequest<'a>::new(logical: &'a vyre_foundation::logical::LogicalProgramGraph<'a>, inputs: alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, &'a [u8]>, external_facts: vyre_megakernel::ExternalFacts, target_facts: vyre_megakernel::DeviceFacts, objective: vyre_megakernel::CompileObjective, budget: vyre_megakernel::SearchBudget) -> core::result::Result<Self, vyre_megakernel::SemanticExecutionError>
+pub fn vyre_megakernel::SemanticExecutionRequest<'a>::requiring_schedule(self, required: vyre_megakernel::RequiredSchedule) -> Self
 pub fn vyre_megakernel::SemanticExecutor::execute(&self, request: &vyre_megakernel::SemanticExecutionRequest<'_>) -> core::result::Result<vyre_megakernel::SemanticExecutionOutput, vyre_megakernel::SemanticExecutionError>
 pub fn vyre_megakernel::SingleProgramExecutionOutput::buffer(&self, name: &str) -> core::option::Option<&[u8]>
 pub fn vyre_megakernel::TargetCompiler::compile(&self, artifact: &vyre_megakernel::Artifact) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::TargetCompileError>
@@ -471,6 +482,7 @@ pub fn vyre_megakernel::compile_selected_modules(artifact: &vyre_megakernel::Art
 pub fn vyre_megakernel::cost::CostBreakdown::term(field: &str) -> core::option::Option<&'static vyre_megakernel::cost::CostTerm>
 pub fn vyre_megakernel::execute_single_program(executor: &dyn vyre_megakernel::SemanticExecutor, node_name: &str, program: vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], policy: &vyre_megakernel::SemanticExecutionPolicy) -> core::result::Result<vyre_megakernel::SingleProgramExecutionOutput, vyre_megakernel::SemanticExecutionError>
 pub fn vyre_megakernel::grid_sync::requires_grid_sync(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> bool
+pub fn vyre_megakernel::is_required_schedule_unreachable(error: &vyre_megakernel::CompileError) -> bool
 pub fn vyre_megakernel::legality::analyze_fusion_pair(graph: &vyre_foundation::ir_inner::model::program_graph::ProgramGraph, from: vyre_megakernel::ArtifactNodeId, to: vyre_megakernel::ArtifactNodeId, value: vyre_megakernel::ArtifactValueId) -> vyre_megakernel::legality::FusionDecision
 pub fn vyre_megakernel::measure::CandidateMeasurement::prediction_error_permille(&self) -> i32
 pub fn vyre_megakernel::measure::MeasurementEnvironment::drift_permille(&self) -> i32
@@ -796,6 +808,7 @@ pub vyre_megakernel::PruneReason::PipelineCapacity
 pub vyre_megakernel::PruneReason::Progress
 pub vyre_megakernel::PruneReason::Representation
 pub vyre_megakernel::PruneReason::ScheduleLegality
+pub vyre_megakernel::PruneReason::ScheduleRequirement
 pub vyre_megakernel::PruneReason::Scratch
 pub vyre_megakernel::PruneReason::TargetFacts
 pub vyre_megakernel::PruneReason::Workspace
@@ -804,6 +817,8 @@ pub vyre_megakernel::PrunedFamily::production: vyre_megakernel::ScheduleProducti
 pub vyre_megakernel::PrunedFamily::reason: vyre_megakernel::PruneReason
 pub vyre_megakernel::RequiredFact::EnergyRate
 pub vyre_megakernel::RequiredFact::PersistentSetup
+pub vyre_megakernel::RequiredSchedule::Baseline
+pub vyre_megakernel::RequiredSchedule::Production(vyre_megakernel::ScheduleProduction)
 pub vyre_megakernel::ResidentPartitionMode::BoundedWorkQueue
 pub vyre_megakernel::ResidentPartitionMode::FixedSpatialMask
 pub vyre_megakernel::ResourceAbiRecord::access: vyre_megakernel::AbiAccess

@@ -12,7 +12,8 @@ use vyre_driver::{BackendRegistration, BindingPlan};
 use vyre_foundation::ir::{BufferDecl, GraphValueId, Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_megakernel::{
-    CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, SemanticExecutionError,
+    is_required_schedule_unreachable, CompileObjective, Digest, ExternalFacts, ObjectiveMetric,
+    RequiredSchedule, ScheduleProduction, SearchBudget, SemanticExecutionError,
     SemanticExecutionOutput, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
 };
 use vyre_runtime::RegisteredSemanticExecutor;
@@ -182,6 +183,25 @@ impl ProductionSession {
         }
     }
 
+    /// Bind the same program and executor to one required schedule family.
+    ///
+    /// The semantic graph, the inputs, the objective, the budget and the target
+    /// facts are the ones this session already carries, so two sessions that
+    /// differ only in required family differ only in the schedule the compiler
+    /// may select. That is what makes a difference in their outputs a schedule
+    /// defect rather than a difference of request.
+    #[must_use]
+    pub fn requiring_schedule(&self, required: RequiredSchedule) -> Self {
+        Self {
+            executor: Arc::clone(&self.executor),
+            policy: self.policy.clone().requiring_schedule(required),
+            program: Arc::clone(&self.program),
+            op_id: self.op_id.clone(),
+            backend: self.backend,
+            abandoned: AtomicBool::new(false),
+        }
+    }
+
     /// Execute caller inputs through semantic compilation and admitted artifact submission.
     pub fn submit(&self, inputs: &[&[u8]]) -> Result<ProductionExecution, ProductionError> {
         if self.abandoned.load(Ordering::Acquire) {
@@ -215,6 +235,92 @@ impl ProductionSession {
     pub const fn proof(&self) -> &'static str {
         "through canonical semantic artifact submission"
     }
+}
+
+/// The legal schedule families one conformance case runs a semantic graph
+/// under, with the name a report records for each.
+///
+/// Each entry is a grammar production family, not a device mode: the compiler
+/// decides whether a family is reachable for a graph on a device, and a family
+/// it cannot reach is recorded as unreached rather than skipped silently.
+///
+/// The single-invocation entry is the unspecialized baseline, which the
+/// megakernel model keeps in the candidate set for every compile. The others
+/// each name the production that has to appear in the derivation: a launch width
+/// for scalar multi-invocation, a tiling for tiled, a fusion for fused, a
+/// spatial partition for concurrent, and a bounded resident queue for
+/// persistent.
+pub const CONFORMANCE_SCHEDULES: &[(&str, RequiredSchedule)] = &[
+    ("single-invocation", RequiredSchedule::Baseline),
+    (
+        "scalar-multi-invocation",
+        RequiredSchedule::Production(ScheduleProduction::LaunchWidth),
+    ),
+    (
+        "tiled",
+        RequiredSchedule::Production(ScheduleProduction::Tiling),
+    ),
+    (
+        "fused",
+        RequiredSchedule::Production(ScheduleProduction::Fusion),
+    ),
+    (
+        "concurrent",
+        RequiredSchedule::Production(ScheduleProduction::SpatialPartition),
+    ),
+    (
+        "persistent",
+        RequiredSchedule::Production(ScheduleProduction::PersistentQueue),
+    ),
+];
+
+/// What one schedule family produced for one semantic graph.
+#[derive(Debug)]
+pub struct ScheduleOutcome {
+    /// Name the report records for the family.
+    pub schedule: &'static str,
+    /// Family the compiler was required to select from.
+    pub required: RequiredSchedule,
+    /// Outputs the family produced, or `None` when no legal plan reaches it for
+    /// this graph on this device.
+    pub execution: Option<ProductionExecution>,
+}
+
+/// Run one semantic graph under every family of [`CONFORMANCE_SCHEDULES`].
+///
+/// A family no legal plan reaches is recorded with no execution, because a
+/// single-node graph cannot be fused and a device that grants no resident
+/// forward progress cannot run a persistent queue. Every other failure is the
+/// caller's to see: a family that is reachable and produces the wrong bytes is
+/// the defect this route exists to find.
+///
+/// # Errors
+///
+/// Propagates every compilation, admission, or submission failure that is not
+/// the refusal of an unreachable family.
+pub fn submit_under_every_schedule(
+    session: &ProductionSession,
+    inputs: &[&[u8]],
+) -> Result<Vec<ScheduleOutcome>, ProductionError> {
+    let mut outcomes = Vec::with_capacity(CONFORMANCE_SCHEDULES.len());
+    for (schedule, required) in CONFORMANCE_SCHEDULES {
+        let constrained = session.requiring_schedule(*required);
+        let execution = match constrained.submit(inputs) {
+            Ok(execution) => Some(execution),
+            Err(ProductionError::Semantic(SemanticExecutionError::Compile(error)))
+                if is_required_schedule_unreachable(&error) =>
+            {
+                None
+            }
+            Err(error) => return Err(error),
+        };
+        outcomes.push(ScheduleOutcome {
+            schedule,
+            required: *required,
+            execution,
+        });
+    }
+    Ok(outcomes)
 }
 
 /// Construct the explicit compiler policy from immutable registered target facts.
@@ -284,7 +390,7 @@ fn execute_program(
         .zip(inputs)
         .map(|(port, bytes)| (port.value, bytes.as_slice()))
         .collect::<BTreeMap<GraphValueId, &[u8]>>();
-    let request = SemanticExecutionRequest::new(
+    let mut request = SemanticExecutionRequest::new(
         &logical,
         request_inputs,
         policy.external_facts().clone(),
@@ -292,6 +398,9 @@ fn execute_program(
         *policy.objective(),
         policy.budget(),
     )?;
+    if let Some(required) = policy.required_schedule() {
+        request = request.requiring_schedule(required);
+    }
     let SemanticExecutionOutput {
         artifact,
         payload,

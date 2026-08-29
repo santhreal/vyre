@@ -86,7 +86,10 @@ pub use envelope::{
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
     ARTIFACT_ENVELOPE_SCHEMA_VERSION, TARGET_PAYLOAD_SCHEMA_VERSION,
 };
-pub use error::{unsupported_workload, CompileError};
+pub use error::{
+    is_required_schedule_unreachable, unsupported_workload, CompileError,
+    REQUIRED_SCHEDULE_UNREACHABLE,
+};
 pub use execution::{
     execute_single_program, writable_graph_value_buffers, writable_graph_values,
     SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
@@ -105,7 +108,8 @@ pub use objective::{
 };
 pub use portfolio::{compile_portfolio, compile_portfolio_measured, ArtifactPortfolio};
 pub use request::{
-    CompileRequest, ExternalFacts, SearchBudget, SearchWork, ValidatedCompileRequest,
+    CompileRequest, ExternalFacts, RequiredSchedule, SearchBudget, SearchWork,
+    ValidatedCompileRequest,
 };
 pub use request_identity::target_identity;
 pub use schema::{

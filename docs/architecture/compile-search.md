@@ -252,6 +252,7 @@ never scored. Each eliminated family records a stable reason.
 | `MKC013_SCHEDULE_LEGALITY` | a typed schedule precondition failed |
 | `MKC014_EMISSION` | the target compiler rejected the plan before measurement |
 | `MKC015_OBJECTIVE_BOUND` | an aggregated figure exceeds a hard bound the objective states |
+| `MKC016_SCHEDULE_REQUIREMENT` | the candidate is outside the schedule family the caller required |
 
 `PruneReason::ALL` is the variant space, and the certificate records one row per
 eliminated family with its count, so a plan that looks unfused says which
@@ -263,6 +264,27 @@ candidate is admitted where the reordered contract fits the declared measure, so
 stating a budget is what makes a tree reduction, a spatial partition and a
 resident queue reachable over floating point. See
 [numeric contracts](../reference/numeric-contracts.md).
+
+## A caller may require one schedule family
+
+`CompileRequest::requiring_schedule` states the family the selected plan must
+exercise: `RequiredSchedule::Baseline` for a plan that applies no production, or
+`RequiredSchedule::Production(p)` for a plan whose derivation applies `p` at
+least once. Every candidate is still derived and every legality decision is
+still recorded, so a requirement narrows what may be selected and not what is
+searched. A candidate outside the family is eliminated with
+`MKC016_SCHEDULE_REQUIREMENT`.
+
+A family no legal candidate reaches fails the compile with
+`MKC045_REQUIRED_SCHEDULE_UNREACHABLE`, and `is_required_schedule_unreachable`
+reads that refusal by code. A single-node graph has no producer-consumer pair to
+contract, so requiring a fusion of one is answered with the refusal rather than
+with the baseline.
+
+Conformance uses this to run one semantic graph under each family of
+`CONFORMANCE_SCHEDULES` and check one declared numeric contract across all of
+them. Without it a case written to check a tiled schedule checks whichever
+family the objective ranked first.
 
 Fusion and topology legality keep their own codes, and the constraint classes map
 onto them rather than restating them:

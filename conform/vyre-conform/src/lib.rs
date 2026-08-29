@@ -19,5 +19,8 @@ pub use bundle_cert::verify::{verify_bundle_against_reference, verify_bundle_wit
 pub use cert::{issue_certificate, verify_structural, CertificateError, IssueInput};
 pub use minimizer::{CounterexampleMinimizer, MinimizationBudget, MinimizerReport};
 pub use panic_payload::panic_message;
-pub use production::{ProductionError, ProductionExecution, ProductionSession, ReplayCapsule};
+pub use production::{
+    submit_under_every_schedule, ProductionError, ProductionExecution, ProductionSession,
+    ReplayCapsule, ScheduleOutcome, CONFORMANCE_SCHEDULES,
+};
 pub use prover::{LawProver, LawVerdict};

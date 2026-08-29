@@ -8,7 +8,7 @@ use vyre_foundation::logical::LogicalProgramGraph;
 
 use crate::error::CompileError;
 use crate::objective::CompileObjective;
-use crate::request::CompileRequest;
+use crate::request::{CompileRequest, RequiredSchedule};
 use crate::target::TargetCompileError;
 use crate::{DeviceFacts, Digest, ExternalFacts, SearchBudget};
 
@@ -19,6 +19,7 @@ pub struct SemanticExecutionPolicy {
     target_facts: DeviceFacts,
     objective: CompileObjective,
     budget: SearchBudget,
+    required_schedule: Option<RequiredSchedule>,
 }
 
 impl SemanticExecutionPolicy {
@@ -35,7 +36,26 @@ impl SemanticExecutionPolicy {
             target_facts,
             objective,
             budget,
+            required_schedule: None,
         }
+    }
+
+    /// Require the selected plan to exercise one schedule family.
+    ///
+    /// Conformance states one so the same semantic graph can be executed under
+    /// every legal schedule and checked against one declared contract. A family
+    /// no legal plan reaches fails the compile instead of being served by
+    /// whichever family ranked next.
+    #[must_use]
+    pub const fn requiring_schedule(mut self, required: RequiredSchedule) -> Self {
+        self.required_schedule = Some(required);
+        self
+    }
+
+    /// The schedule family this policy requires, when it states one.
+    #[must_use]
+    pub const fn required_schedule(&self) -> Option<RequiredSchedule> {
+        self.required_schedule
     }
 
     /// Borrow immutable semantic facts outside graph topology.
@@ -72,6 +92,7 @@ pub struct SemanticExecutionRequest<'a> {
     target_facts: DeviceFacts,
     objective: CompileObjective,
     budget: SearchBudget,
+    required_schedule: Option<RequiredSchedule>,
 }
 
 impl<'a> SemanticExecutionRequest<'a> {
@@ -119,7 +140,21 @@ impl<'a> SemanticExecutionRequest<'a> {
             target_facts,
             objective,
             budget,
+            required_schedule: None,
         })
+    }
+
+    /// Require the selected plan to exercise one schedule family.
+    #[must_use]
+    pub fn requiring_schedule(mut self, required: RequiredSchedule) -> Self {
+        self.required_schedule = Some(required);
+        self
+    }
+
+    /// The schedule family this request requires, when it states one.
+    #[must_use]
+    pub const fn required_schedule(&self) -> Option<RequiredSchedule> {
+        self.required_schedule
     }
 
     /// Borrow the validated schedule-free graph.
@@ -171,6 +206,9 @@ impl<'a> SemanticExecutionRequest<'a> {
             self.budget,
             self.objective,
         );
+        if let Some(required) = self.required_schedule {
+            request = request.requiring_schedule(required);
+        }
         if self.budget.max_measurements > 0 {
             let representative_inputs = self
                 .inputs

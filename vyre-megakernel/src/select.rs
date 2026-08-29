@@ -19,7 +19,7 @@ use crate::{
     facts::PlanningFacts,
     grammar::ScheduleProduction,
     objective::{BoundViolation, CompileObjective, MetricFigures},
-    DependencyEdge, DeviceFacts,
+    DependencyEdge, DeviceFacts, RequiredSchedule,
 };
 
 #[derive(Debug)]
@@ -43,6 +43,8 @@ pub(crate) struct Ranking {
     pub(crate) admitted: Vec<Selection>,
     /// Bound the whole legal set exceeded, when nothing was admitted.
     pub(crate) refused: Option<BoundViolation>,
+    /// Schedule family the caller required that no legal candidate exercised.
+    pub(crate) unreachable_schedule: Option<RequiredSchedule>,
 }
 
 /// Score, bound, and order every candidate under `objective`.
@@ -52,6 +54,12 @@ pub(crate) struct Ranking {
 /// width and the topology. Derivation length comes before content, so a
 /// production that does not pay for itself never displaces the baseline, and two
 /// candidates that tie on every metric are ordered by content.
+///
+/// A stated `required` family is enforced here rather than in derivation, so
+/// every candidate is still derived and every legality decision is still made
+/// and recorded. A candidate outside the family is eliminated with
+/// [`PruneReason::ScheduleRequirement`], and a family no candidate exercises is
+/// reported instead of quietly replaced by the family that ranked next.
 pub(crate) fn rank(
     candidates: Vec<CandidatePlan>,
     facts: &PlanningFacts,
@@ -59,13 +67,22 @@ pub(crate) fn rank(
     device: DeviceFacts,
     objective: &CompileObjective,
     certificate: &mut SearchCertificate,
+    required: Option<RequiredSchedule>,
 ) -> Ranking {
     let classes = objective.workload().as_slice();
     let horizon = objective.amortization_launches();
     let ordering = objective.ordering_metrics();
     let mut refused: Option<BoundViolation> = None;
     let mut admitted = Vec::with_capacity(candidates.len());
+    let mut satisfying = 0_usize;
     for candidate in candidates {
+        if let Some(required) = required {
+            if !required.admits(&candidate.derivation) {
+                certificate.pruned(charged_to(&candidate), PruneReason::ScheduleRequirement);
+                continue;
+            }
+        }
+        satisfying += 1;
         let cost = evaluate(&candidate, facts, dependencies, device);
         let per_class = classes
             .iter()
@@ -110,8 +127,16 @@ pub(crate) fn rank(
             })
             .then_with(|| left.candidate.topology.cmp(&right.candidate.topology))
     });
+    let unreachable_schedule = match required {
+        Some(required) if satisfying == 0 => Some(required),
+        _ => None,
+    };
     let refused = if admitted.is_empty() { refused } else { None };
-    Ranking { admitted, refused }
+    Ranking {
+        admitted,
+        refused,
+        unreachable_schedule,
+    }
 }
 
 /// Production the elimination of one candidate is charged to.

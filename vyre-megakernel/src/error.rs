@@ -89,6 +89,9 @@ pub(crate) enum CompilerFailureKind {
     InvalidMeshTopology,
     /// A device of the mesh holds fewer bytes than its share of the plan.
     MeshCapacityExceeded,
+    /// The caller required a schedule family and no legal candidate exercises
+    /// it, so the compile is refused rather than served a different schedule.
+    RequiredScheduleUnreachable,
 }
 
 impl CompilerFailureKind {
@@ -136,6 +139,7 @@ impl CompilerFailureKind {
             Self::InvalidMeshFacts => "MKC042_INVALID_MESH_FACTS",
             Self::InvalidMeshTopology => "MKC043_INVALID_MESH_TOPOLOGY",
             Self::MeshCapacityExceeded => "MKC044_MESH_CAPACITY_EXCEEDED",
+            Self::RequiredScheduleUnreachable => REQUIRED_SCHEDULE_UNREACHABLE,
         }
     }
 }
@@ -165,6 +169,7 @@ const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
         | CompilerFailureKind::InvalidAllocationPlan
         | CompilerFailureKind::InvalidMeshTopology
         | CompilerFailureKind::MeshCapacityExceeded
+        | CompilerFailureKind::RequiredScheduleUnreachable
         | CompilerFailureKind::UnreconciledResidentBytes => DiagnosticStage::Plan,
         CompilerFailureKind::ResourceOverflow | CompilerFailureKind::UnsizedResource => {
             DiagnosticStage::Lower
@@ -232,6 +237,20 @@ pub fn unsupported_workload(message: String) -> CompileError {
         message,
         "state facts a retained guard admits, or compile a set with a generic remainder",
     )
+}
+
+/// Diagnostic code a compile carries when the caller required a schedule family
+/// no legal candidate plan exercises.
+///
+/// A caller iterating schedule families reads this instead of the message text,
+/// so a graph that cannot be fused is told apart from a graph that failed to
+/// compile.
+pub const REQUIRED_SCHEDULE_UNREACHABLE: &str = "MKC045_REQUIRED_SCHEDULE_UNREACHABLE";
+
+/// Whether `error` is the refusal of a required schedule family.
+#[must_use]
+pub fn is_required_schedule_unreachable(error: &CompileError) -> bool {
+    error.diagnostic.code.as_str() == REQUIRED_SCHEDULE_UNREACHABLE
 }
 
 pub(crate) fn failure(

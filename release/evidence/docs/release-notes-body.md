@@ -14,6 +14,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   not declare.
 - Binding over an allocated workspace rejects a caller resource for a
   workspace-owned canonical value.
+- A compile request may require the selected plan to exercise one schedule
+  family, and a family no legal candidate reaches is refused rather than
+  replaced by the family that ranked next.
 - `compile_portfolio` and `compile_portfolio_measured` jointly select the
   artifact set an objective's coverage policy retains, enumerating every legal
   partition of the stated workload classes under the variant and aggregate byte

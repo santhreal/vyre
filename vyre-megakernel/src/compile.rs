@@ -113,8 +113,20 @@ fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext<'_>, Comp
         request.device,
         &request.objective,
         &mut certificate,
+        request.required_schedule,
     );
     certificate.canonicalize();
+    if let Some(required) = ranked.unreachable_schedule {
+        return Err(failure(
+            CompilerFailureKind::RequiredScheduleUnreachable,
+            "request.required_schedule",
+            format!(
+                "no legal candidate plan exercises the required schedule family {}",
+                required.code()
+            ),
+            "raise the candidate bound, state device facts that grant the family, or require a schedule the graph admits",
+        ));
+    }
     if let Some(violation) = ranked.refused {
         return Err(failure(
             CompilerFailureKind::ObjectiveBoundViolated,

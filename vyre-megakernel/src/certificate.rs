@@ -50,6 +50,9 @@ pub enum PruneReason {
     /// The candidate's aggregated figures exceed a hard bound the objective
     /// states, so it is refused rather than ranked last.
     ObjectiveBound,
+    /// The candidate does not exercise the schedule family the caller required,
+    /// so it is eliminated before ranking rather than ranked and passed over.
+    ScheduleRequirement,
 }
 
 impl PruneReason {
@@ -70,6 +73,7 @@ impl PruneReason {
         Self::ScheduleLegality,
         Self::Emission,
         Self::ObjectiveBound,
+        Self::ScheduleRequirement,
     ];
 
     /// Stable machine-readable diagnostic code.
@@ -91,6 +95,7 @@ impl PruneReason {
             Self::ScheduleLegality => "MKC013_SCHEDULE_LEGALITY",
             Self::Emission => "MKC014_EMISSION",
             Self::ObjectiveBound => "MKC015_OBJECTIVE_BOUND",
+            Self::ScheduleRequirement => "MKC016_SCHEDULE_REQUIREMENT",
         }
     }
 }
