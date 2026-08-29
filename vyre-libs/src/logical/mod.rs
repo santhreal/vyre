@@ -125,10 +125,6 @@ define_dialect! {
     ]
 }
 
-pub use dialect::{
-    call_nand, call_nor, dispatch_visitor, match_call, match_op_id, LogicalVisitor, Op,
-};
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -11,10 +11,10 @@
 //! 8. Closure rosters and compile-time exhaustive variant enforcement.
 //! 9. External schema, field, and resource ABI translation validation.
 
-pub mod descriptor;
-pub mod schema;
-pub mod traits;
-pub mod version;
+mod descriptor;
+mod schema;
+mod traits;
+mod version;
 
 pub use descriptor::{
     DialectDescriptor, DialectDescriptorRegistration, DialectOpDescriptor, DialectRegistry,
@@ -338,7 +338,7 @@ macro_rules! define_dialect {
                 errors: &mut Vec<$crate::validate::ValidationError>,
             ) {
                 let desc = op.descriptor();
-                if let Err(err) = $crate::dialect::version::validate_op_version(desc, target_version) {
+                if let Err(err) = $crate::dialect::validate_op_version(desc, target_version) {
                     errors.push($crate::validate::err(
                         "V023",
                         $crate::validate::ValidationPhase::Expression,
