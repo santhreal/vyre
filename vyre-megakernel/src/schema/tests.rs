@@ -606,6 +606,13 @@ fn decode_rejects_a_recorded_order_that_contradicts_the_dependency_dag() {
         // ordering: only the recorded stage does.
         payload.selected_plan.fusion =
             vec![group(1, 1, producer_stage), group(0, 0, consumer_stage)];
+        payload.selected_plan.barriers = (1..=producer_stage.max(consumer_stage))
+            .map(|after| BarrierRecord {
+                before_stage: after - 1,
+                after_stage: after,
+                dependencies: Vec::new(),
+            })
+            .collect();
         payload
     };
 
@@ -771,4 +778,153 @@ fn frontier_topology_participates_in_artifact_identity() {
         framed.digest, canonical.digest,
         "frontier_topology must participate in artifact identity"
     );
+}
+
+/// One stage assignment with a data edge from the first stage into the second.
+fn staged_groups() -> BTreeMap<ArtifactNodeId, (FusionGroupId, u32)> {
+    BTreeMap::from([
+        (ArtifactNodeId(0), (FusionGroupId(0), 0)),
+        (ArtifactNodeId(1), (FusionGroupId(1), 1)),
+    ])
+}
+
+fn staged_edges() -> Vec<DependencyEdge> {
+    vec![DependencyEdge {
+        from: DependencyEndpoint::Node(ArtifactNodeId(0)),
+        to: DependencyEndpoint::Node(ArtifactNodeId(1)),
+        kind: crate::identity::DependencyKind::Data,
+        value: None,
+    }]
+}
+
+fn one_boundary() -> Vec<BarrierRecord> {
+    vec![BarrierRecord {
+        before_stage: 0,
+        after_stage: 1,
+        dependencies: vec![0],
+    }]
+}
+
+/// WHY: a barrier record is what a backend submits between two stages. Every
+/// mutation of the pair it states, of the edges it admits, and of the set of
+/// records itself is a device ordering the plan was not selected under, so each
+/// one has to be refused rather than decoded.
+#[test]
+fn every_barrier_mutation_is_refused() {
+    let groups = staged_groups();
+    let edges = staged_edges();
+    validate_barrier_records(&one_boundary(), &edges, &groups, 1)
+        .expect("the derived boundary set is admitted");
+
+    let cases: Vec<(&str, fn(&mut Vec<BarrierRecord>))> = vec![
+        ("the boundary is removed", |barriers| barriers.clear()),
+        ("a second boundary is added", |barriers| {
+            barriers.push(BarrierRecord {
+                before_stage: 1,
+                after_stage: 2,
+                dependencies: Vec::new(),
+            });
+        }),
+        ("the stage pair is inverted", |barriers| {
+            barriers[0].before_stage = 1;
+            barriers[0].after_stage = 0;
+        }),
+        ("the pair is no longer consecutive", |barriers| {
+            barriers[0].after_stage = 2;
+        }),
+        ("the crossing edge is dropped", |barriers| {
+            barriers[0].dependencies.clear();
+        }),
+        ("an edge that does not cross is admitted", |barriers| {
+            barriers[0].dependencies.push(7);
+        }),
+        ("the admitted edges are reordered", |barriers| {
+            barriers[0].dependencies = vec![1, 0];
+        }),
+    ];
+    for (what, mutate) in cases {
+        let mut barriers = one_boundary();
+        mutate(&mut barriers);
+        let error = validate_barrier_records(&barriers, &edges, &groups, 1).expect_err(what);
+        assert_eq!(
+            error.diagnostic.code.as_str(),
+            CompilerFailureKind::MalformedArtifact.as_str(),
+            "{what} must be refused as a malformed artifact"
+        );
+        assert_eq!(
+            error
+                .diagnostic
+                .location
+                .as_ref()
+                .and_then(|location| location.path.as_deref()),
+            Some("artifact.body.selected_plan.barriers"),
+            "{what} must name the barrier records"
+        );
+    }
+}
+
+/// Two groups on consecutive stages, carrying the data edge that crosses
+/// between them and the boundary the compiler derives for it.
+fn staged_payload() -> ArtifactPayload {
+    let mut payload = launchable();
+    payload.nodes = vec![entry_node(0), entry_node(1)];
+    let mut dependent = launch(1);
+    dependent.predecessors = vec![ArtifactNodeId(0)];
+    payload.geometry = vec![launch(0), dependent];
+    payload.dependencies = staged_edges();
+    payload.selected_plan.fusion = vec![
+        FusionRecord {
+            id: FusionGroupId(0),
+            members: vec![ArtifactNodeId(0)],
+            stage: 0,
+            legality: Vec::new(),
+        },
+        FusionRecord {
+            id: FusionGroupId(1),
+            members: vec![ArtifactNodeId(1)],
+            stage: 1,
+            legality: Vec::new(),
+        },
+    ];
+    payload.selected_plan.barriers = one_boundary();
+    payload
+}
+
+/// WHY: `every_barrier_mutation_is_refused` proves the derivation and would
+/// stay green with the check unreachable from decode. This one proves decode
+/// reaches it with the stage count the plan actually runs, so dropping the
+/// call, or passing a stage count that makes the record set look complete,
+/// turns it red.
+#[test]
+fn decode_refuses_a_barrier_set_the_recorded_stages_contradict() {
+    decode_payload(staged_payload()).expect("the derived boundary set decodes");
+
+    let cases: Vec<(&str, fn(&mut ArtifactPayload))> = vec![
+        ("the only boundary is dropped", |payload| {
+            payload.selected_plan.barriers.clear();
+        }),
+        ("a boundary past the last stage is admitted", |payload| {
+            payload.selected_plan.barriers.push(BarrierRecord {
+                before_stage: 1,
+                after_stage: 2,
+                dependencies: Vec::new(),
+            });
+        }),
+        ("the crossing edge is no longer admitted", |payload| {
+            payload.selected_plan.barriers[0].dependencies.clear();
+        }),
+        ("the boundary states the wrong stage pair", |payload| {
+            payload.selected_plan.barriers[0].before_stage = 1;
+            payload.selected_plan.barriers[0].after_stage = 2;
+        }),
+    ];
+    for (what, mutate) in cases {
+        let mut payload = staged_payload();
+        mutate(&mut payload);
+        assert_eq!(
+            rejection_path(payload, what),
+            "artifact.body.selected_plan.barriers",
+            "{what} must be refused where the boundaries are recorded"
+        );
+    }
 }

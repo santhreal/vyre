@@ -12,7 +12,9 @@ use serde::{Deserialize, Serialize};
 use crate::allocation::AllocationPlan;
 use crate::error::{failure, serialization_failure, CompileError, CompilerFailureKind};
 use crate::frame;
-use crate::identity::{ArtifactValueId, DependencyEdge, Digest};
+use crate::identity::{
+    ArtifactNodeId, ArtifactValueId, DependencyEdge, DependencyEndpoint, Digest, FusionGroupId,
+};
 use crate::mesh::MeshTopologyPlan;
 
 pub use geometry::{BarrierPhaseRecord, EntryPersistence, GeometryRecord, LaunchResourceIntent};
@@ -304,6 +306,13 @@ impl Artifact {
                 )));
             }
         }
+        let last_stage = self
+            .fusion()
+            .iter()
+            .map(|group| group.stage)
+            .max()
+            .unwrap_or(0);
+        validate_barrier_records(self.barriers(), self.dependencies(), &group_of, last_stage)?;
         Ok(())
     }
 
@@ -402,6 +411,84 @@ fn malformed_allocation(message: String) -> CompileError {
         "record one placement per value the resource set carries, stating its lifetime, bytes and \
          live range",
     )
+}
+
+/// Admit the stage boundaries a decoded artifact carries.
+///
+/// A barrier record is what a backend submits between two stages, so a record
+/// that states the wrong pair of stages, an edge that does not cross it, or that
+/// omits an edge which does, is a schedule the device would run without the
+/// ordering the plan was selected under. The boundaries are derived from one
+/// topological stage assignment, so they cover stages 1 through the last one in
+/// order, each after its immediate predecessor.
+fn validate_barrier_records(
+    barriers: &[BarrierRecord],
+    dependencies: &[DependencyEdge],
+    group_of: &BTreeMap<ArtifactNodeId, (FusionGroupId, u32)>,
+    last_stage: u32,
+) -> Result<(), CompileError> {
+    let malformed = |message: String| {
+        failure(
+            CompilerFailureKind::MalformedArtifact,
+            "artifact.body.selected_plan.barriers",
+            message,
+            "record one boundary per consecutive stage pair, stating every dependency edge that \
+             crosses it and no other",
+        )
+    };
+    let expected = usize::try_from(last_stage).unwrap_or(usize::MAX);
+    if barriers.len() != expected {
+        return Err(malformed(format!(
+            "the plan runs {} stages and records {} boundaries",
+            last_stage + 1,
+            barriers.len()
+        )));
+    }
+    let mut crossing = BTreeMap::<u32, Vec<u32>>::new();
+    for (index, edge) in dependencies.iter().enumerate() {
+        let (DependencyEndpoint::Node(from), DependencyEndpoint::Node(to)) = (edge.from, edge.to)
+        else {
+            continue;
+        };
+        let (Some((_, from_stage)), Some((_, to_stage))) = (group_of.get(&from), group_of.get(&to))
+        else {
+            return Err(malformed(format!(
+                "dependency edge {index} connects a node that belongs to no selected fusion group"
+            )));
+        };
+        if from_stage < to_stage {
+            let id = u32::try_from(index)
+                .map_err(|_| malformed("dependency edge identity exceeds u32".to_string()))?;
+            crossing.entry(*to_stage).or_default().push(id);
+        }
+    }
+    for (position, record) in barriers.iter().enumerate() {
+        let after = u32::try_from(position + 1)
+            .map_err(|_| malformed("stage identity exceeds u32".to_string()))?;
+        if record.after_stage != after || record.before_stage + 1 != record.after_stage {
+            return Err(malformed(format!(
+                "boundary {position} admits stage {} after stage {}, and the derived order admits \
+                 stage {after} after stage {}",
+                record.after_stage,
+                record.before_stage,
+                after - 1
+            )));
+        }
+        let derived = crossing.remove(&after).unwrap_or_default();
+        if record.dependencies != derived {
+            return Err(malformed(format!(
+                "boundary into stage {after} states dependency edges {:?} and the edges crossing \
+                 it are {derived:?}",
+                record.dependencies
+            )));
+        }
+    }
+    if let Some((stage, edges)) = crossing.pop_first() {
+        return Err(malformed(format!(
+            "dependency edges {edges:?} cross into stage {stage} and no boundary admits them"
+        )));
+    }
+    Ok(())
 }
 
 pub(crate) fn encode_payload(payload: &ArtifactPayload) -> Result<frame::Framed, CompileError> {
