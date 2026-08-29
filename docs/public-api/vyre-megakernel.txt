@@ -379,6 +379,7 @@ pub fn vyre_megakernel::Artifact::materializations(&self) -> &[vyre_megakernel::
 pub fn vyre_megakernel::Artifact::nodes(&self) -> &[vyre_megakernel::NodeRecord]
 pub fn vyre_megakernel::Artifact::resources(&self) -> &[vyre_megakernel::ResourceRecord]
 pub fn vyre_megakernel::Artifact::to_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::Artifact::validate_abi(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::Artifact::validate_geometry(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::ArtifactEnvelope::attach_target_payload(&mut self, payload: vyre_megakernel::TargetPayload) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::ArtifactEnvelope::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::CompileError>

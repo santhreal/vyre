@@ -24,6 +24,7 @@ use crate::measure::{
 };
 use crate::mesh::{PartitionKind, RegionPartition, ShardAssignment};
 use crate::request::{SearchBudget, SearchWork};
+use vyre_foundation::ir::DataType;
 use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform};
 
 fn payload(resources: Vec<ResourceRecord>) -> ArtifactPayload {
@@ -55,7 +56,10 @@ fn payload(resources: Vec<ResourceRecord>) -> ArtifactPayload {
             numeric_budget: crate::NumericRecord::exact(),
         },
         abi: ArtifactAbi {
-            resources: Vec::new(),
+            resources: vec![
+                abi_slot(0, AbiAccess::ReadOnly),
+                abi_slot(1, AbiAccess::ReadWrite),
+            ],
             entries: Vec::new(),
         },
         resources,
@@ -440,6 +444,34 @@ fn every_resource_name_resolves_to_its_own_value() {
     }
 }
 
+/// One dense ABI resource slot, projected onto the value that occupies it.
+fn abi_slot(slot: u32, access: AbiAccess) -> ResourceAbiRecord {
+    ResourceAbiRecord {
+        slot,
+        value: ArtifactValueId(slot),
+        dtype: DataType::F32,
+        access,
+    }
+}
+
+/// The executable entry for one node: reads value 0, writes value 1, with the
+/// positional and named bindings derived from one buffer order.
+fn abi_entry(node: u32) -> EntryAbiRecord {
+    EntryAbiRecord {
+        node: ArtifactNodeId(node),
+        inputs: vec![ArtifactValueId(0)],
+        input_bindings: vec![EntryResourceBinding {
+            buffer: "in".to_string(),
+            value: ArtifactValueId(0),
+        }],
+        outputs: vec![ArtifactValueId(1)],
+        output_bindings: vec![EntryResourceBinding {
+            buffer: "out".to_string(),
+            value: ArtifactValueId(1),
+        }],
+    }
+}
+
 fn entry_node(id: u32) -> NodeRecord {
     NodeRecord {
         id: ArtifactNodeId(id),
@@ -464,6 +496,7 @@ fn launchable() -> ArtifactPayload {
         last_stage: 0,
     }]);
     payload.nodes = vec![entry_node(0)];
+    payload.abi.entries = vec![abi_entry(0)];
     payload.geometry = vec![launch(0)];
     payload.allocation = AllocationPlan {
         schema_version: crate::allocation::ALLOCATION_SCHEMA_VERSION,
@@ -589,6 +622,7 @@ fn decode_rejects_a_recorded_order_that_contradicts_the_dependency_dag() {
     let ordered = |dependent_first: bool, consumer_stage: u32, producer_stage: u32| {
         let mut payload = launchable();
         payload.nodes = vec![entry_node(0), entry_node(1)];
+        payload.abi.entries = vec![abi_entry(0), abi_entry(1)];
         let mut dependent = launch(0);
         dependent.predecessors = vec![ArtifactNodeId(1)];
         payload.geometry = if dependent_first {
@@ -868,6 +902,7 @@ fn every_barrier_mutation_is_refused() {
 fn staged_payload() -> ArtifactPayload {
     let mut payload = launchable();
     payload.nodes = vec![entry_node(0), entry_node(1)];
+    payload.abi.entries = vec![abi_entry(0), abi_entry(1)];
     let mut dependent = launch(1);
     dependent.predecessors = vec![ArtifactNodeId(0)];
     payload.geometry = vec![launch(0), dependent];
@@ -925,6 +960,63 @@ fn decode_refuses_a_barrier_set_the_recorded_stages_contradict() {
             rejection_path(payload, what),
             "artifact.body.selected_plan.barriers",
             "{what} must be refused where the boundaries are recorded"
+        );
+    }
+}
+
+/// WHY: the ABI is the projection every consumer binds through, and it states
+/// each entry's values twice so that a positional consumer and a name-bound one
+/// read the same buffers. Each mutation here is a pair of consumers binding
+/// different buffers out of one authenticated artifact, or a binding target the
+/// artifact does not carry, so decode has to refuse the bytes rather than leave
+/// each consumer to check.
+#[test]
+fn decode_refuses_a_resource_and_entry_mapping_no_consumer_could_share() {
+    decode_payload(launchable()).expect("the derived mapping decodes");
+
+    let cases: Vec<(&str, fn(&mut ArtifactPayload))> = vec![
+        ("a slot holds a value other than its own", |payload| {
+            payload.abi.resources[1].value = ArtifactValueId(0);
+        }),
+        ("the slot projection is not dense", |payload| {
+            payload.abi.resources[1].slot = 2;
+        }),
+        ("an entry implements a node that is absent", |payload| {
+            payload.abi.entries[0].node = ArtifactNodeId(9);
+        }),
+        ("one node carries two entries", |payload| {
+            payload.abi.entries.push(abi_entry(0));
+        }),
+        ("a carried node has no entry", |payload| {
+            payload.abi.entries.clear();
+        }),
+        ("the positional inputs drop a bound buffer", |payload| {
+            payload.abi.entries[0].inputs.clear();
+        }),
+        ("the named outputs bind a different value", |payload| {
+            payload.abi.entries[0].output_bindings[0].value = ArtifactValueId(0);
+        }),
+        ("a binding names a value with no slot", |payload| {
+            payload.abi.entries[0].outputs = vec![ArtifactValueId(4)];
+            payload.abi.entries[0].output_bindings[0].value = ArtifactValueId(4);
+        }),
+        ("one buffer name is bound twice", |payload| {
+            payload.abi.entries[0].inputs.push(ArtifactValueId(0));
+            payload.abi.entries[0]
+                .input_bindings
+                .push(EntryResourceBinding {
+                    buffer: "in".to_string(),
+                    value: ArtifactValueId(0),
+                });
+        }),
+    ];
+    for (what, mutate) in cases {
+        let mut payload = launchable();
+        mutate(&mut payload);
+        assert_eq!(
+            rejection_path(payload, what),
+            "artifact.body.abi",
+            "{what} must be refused where the mapping is recorded"
         );
     }
 }

@@ -5,7 +5,7 @@ mod geometry;
 mod plan;
 mod records;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -135,6 +135,102 @@ impl Artifact {
     #[must_use]
     pub const fn topology(&self) -> &MeshTopologyPlan {
         &self.payload.topology
+    }
+
+    /// Admit the resource and entry mapping a decoded artifact carries.
+    ///
+    /// The ABI is the only projection a consumer binds through, and it carries
+    /// each entry's values twice: a positional consumer reads `inputs` and a
+    /// name-bound consumer reads `input_bindings`, both derived from one walk of
+    /// one Program's buffers. A record set where the two disagree binds two
+    /// consumers to different buffers out of one authenticated artifact, and a
+    /// slot that is not its own value, or an entry for a node the artifact does
+    /// not carry, is a binding target with no owner.
+    ///
+    /// # Errors
+    ///
+    /// Returns a malformed-artifact diagnostic when the slot projection is not
+    /// dense, when an entry does not correspond to exactly one carried node, or
+    /// when an entry's positional and named bindings differ.
+    pub fn validate_abi(&self) -> Result<(), CompileError> {
+        let malformed = |message: String| {
+            failure(
+                CompilerFailureKind::MalformedArtifact,
+                "artifact.body.abi",
+                message,
+                "project one dense resource slot per canonical value and one entry per canonical \
+                 node, deriving positional and named bindings from the same buffer order",
+            )
+        };
+        for (index, record) in self.abi().resources.iter().enumerate() {
+            let slot = u32::try_from(index)
+                .map_err(|_| malformed("resource slot identity exceeds u32".to_string()))?;
+            if record.slot != slot || record.value != ArtifactValueId(slot) {
+                return Err(malformed(format!(
+                    "resource {index} occupies slot {} for value {}, and the dense projection \
+                     places value {slot} in slot {slot}",
+                    record.slot, record.value.0
+                )));
+            }
+        }
+        let slots = u32::try_from(self.abi().resources.len())
+            .map_err(|_| malformed("resource slot count exceeds u32".to_string()))?;
+        let nodes: BTreeSet<ArtifactNodeId> = self.nodes().iter().map(|node| node.id).collect();
+        let mut implemented = BTreeSet::new();
+        for entry in &self.abi().entries {
+            if !nodes.contains(&entry.node) {
+                return Err(malformed(format!(
+                    "an entry implements node {} the artifact does not carry",
+                    entry.node.0
+                )));
+            }
+            if !implemented.insert(entry.node) {
+                return Err(malformed(format!(
+                    "node {} carries two executable entries",
+                    entry.node.0
+                )));
+            }
+            for (direction, values, bindings) in [
+                ("input", &entry.inputs, &entry.input_bindings),
+                ("output", &entry.outputs, &entry.output_bindings),
+            ] {
+                let bound: Vec<ArtifactValueId> =
+                    bindings.iter().map(|binding| binding.value).collect();
+                if *values != bound {
+                    return Err(malformed(format!(
+                        "entry for node {} states {direction} values {:?} positionally and {:?} by \
+                         buffer name",
+                        entry.node.0,
+                        values.iter().map(|value| value.0).collect::<Vec<_>>(),
+                        bound.iter().map(|value| value.0).collect::<Vec<_>>()
+                    )));
+                }
+                let mut named = BTreeSet::new();
+                for binding in bindings {
+                    if binding.value.0 >= slots {
+                        return Err(malformed(format!(
+                            "entry for node {} binds {direction} buffer {} to value {}, which \
+                             occupies no resource slot",
+                            entry.node.0, binding.buffer, binding.value.0
+                        )));
+                    }
+                    if !named.insert(binding.buffer.as_str()) {
+                        return Err(malformed(format!(
+                            "entry for node {} binds {direction} buffer {} twice",
+                            entry.node.0, binding.buffer
+                        )));
+                    }
+                }
+            }
+        }
+        if implemented != nodes {
+            return Err(malformed(format!(
+                "the artifact carries {} nodes and {} executable entries",
+                nodes.len(),
+                implemented.len()
+            )));
+        }
+        Ok(())
     }
 
     /// Reject recorded geometry or physical storage a consumer could not submit.
@@ -385,6 +481,7 @@ impl Artifact {
         };
         artifact.payload.selected_plan.validate()?;
         artifact.validate_geometry()?;
+        artifact.validate_abi()?;
         // A compiled artifact cannot carry a duplicate resource name because graph
         // value names are unique, so this is a check on decoded bytes rather than on
         // this crate's own output. Refusing here keeps every consumer's name lookup

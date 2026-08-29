@@ -5472,6 +5472,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   operation registries, CUDA-first backend evidence, typed cross-program
   composition, and explicit runtime/compiler/driver megakernel boundaries. The
   earlier device-bytecode-interpreter RFC is retained as superseded rationale.
+- Artifact decode refuses a resource and entry mapping whose positional and
+  named bindings disagree, whose slot projection is not dense, or which leaves
+  a node without exactly one executable entry.
 - Artifact decode refuses a barrier record set that the recorded fusion stages
   and dependency edges contradict.
 - Artifact materialization now maps target resources to Program inputs by
