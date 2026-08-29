@@ -11,6 +11,7 @@
 //! 8. Closure rosters and exhaustive variant coverage
 //! 9. External schema, field, and resource ABI translation validation
 
+use vyre_foundation::define_dialect;
 use vyre_foundation::dialect::{
     validate_dialect_version, validate_schema_identity, Dialect, DialectRegistry,
     DialectVersionError, ExternalSchemaNode, FieldContract, FieldType, ResourceAbi, ResourceBinding,
@@ -19,7 +20,6 @@ use vyre_foundation::dialect::{
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{BufferAccess, DataType, Expr};
 use vyre_foundation::operation::OperationTier;
-use vyre_foundation::define_dialect;
 
 const TEST_UNARY_SIG: Signature = Signature {
     inputs: &[TypedParam {

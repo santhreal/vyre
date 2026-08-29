@@ -1,4 +1,9 @@
 //! Unit tests for declarative and versioned dialects.
+//!
+//! `define_dialect!` emits the public surface a dialect crate exports. Invoked
+//! in a private test module that surface is unreachable, which the lint reports
+//! once per generated item.
+#![allow(unreachable_pub)]
 
 use crate::dialect::descriptor::DialectRegistry;
 use crate::dialect::schema::{
