@@ -522,9 +522,9 @@ fn a_requirement_narrows_selection_without_narrowing_the_search() {
 fn a_declared_dialect_no_crate_registers_is_refused_before_planning() {
     let request = fixture_request(rich_device(), budget(), latency_objective())
         .declaring_dialect_version("vyre::absent-dialect", 1);
-    let error = request
-        .validate()
-        .expect_err("a declaration naming no registered dialect must be refused");
+    let Err(error) = request.validate() else {
+        panic!("a declaration naming no registered dialect must be refused");
+    };
     assert_eq!(error.diagnostic.code.as_str(), SEMANTIC_VERSION_SKEW);
     assert!(is_semantic_version_skew(&error));
     assert_eq!(refused_field(&error), Some("request.declared_dialects"));
