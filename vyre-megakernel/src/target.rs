@@ -15,6 +15,7 @@ use vyre_foundation::{
 };
 use vyre_lower::{KernelDescriptor, MemoryClass, PhysicalSchedule};
 
+use crate::candidate::ExecutionTopology;
 use crate::target_bindings::{
     selected_abi, selected_logical_element_count, selected_resource_bindings,
 };
@@ -74,13 +75,27 @@ impl SelectedLowering {
 
 /// Canonical target-module bundle schema carried inside one target payload.
 ///
-/// Version 4 carries the numeric choices lowering made for the module. Version
-/// 3 encodes an f32 literal by its IEEE-754 bits. Version 2 wrote the number,
-/// which JSON cannot spell for a non-finite value: a bundle carrying an infinity
-/// was written with `null` in its place and refused on decode. A stored bundle
-/// of an older version is refused by version rather than reinterpreted, because
-/// the encodings read the same field differently.
-pub const TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16 = 4;
+/// Version 5 carries the selected execution topology and the arm every module
+/// is submitted on, so a concurrent or resident selection cannot be claimed by
+/// an artifact whose modules record no executable topology. Version 4 carries
+/// the numeric choices lowering made for the module. Version 3 encodes an f32
+/// literal by its IEEE-754 bits. Version 2 wrote the number, which JSON cannot
+/// spell for a non-finite value: a bundle carrying an infinity was written with
+/// `null` in its place and refused on decode. A stored bundle of an older
+/// version is refused by version rather than reinterpreted, because the
+/// encodings read the same field differently.
+pub const TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16 = 5;
+
+/// Which executable arm one selected module is submitted on.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TargetArmAssignment {
+    /// Selected fusion group this assignment binds.
+    pub group: FusionGroupId,
+    /// Dependency stage the group executes in.
+    pub stage: u32,
+    /// Queue or spatial partition index carrying the module.
+    pub arm: u32,
+}
 
 /// What one lowered module does to the numbers it computes.
 ///
@@ -157,17 +172,58 @@ impl TargetModuleImage {
 pub struct TargetModuleBundle {
     /// Bundle schema.
     pub schema_version: u16,
+    /// Execution topology the compiler selected for this artifact.
+    pub topology: ExecutionTopology,
+    /// Arm carrying each module, ordered with `modules`.
+    pub arms: Vec<TargetArmAssignment>,
     /// Modules ordered by dependency stage and fusion-group identity.
     pub modules: Vec<TargetModuleImage>,
 }
 
+/// Bind each module to an executable arm under `topology`.
+///
+/// Modules sharing a dependency stage are independent, so they spread across
+/// the available arms and may overlap on device. Modules in different stages
+/// are dependent, and stage order separates them whatever arm they land on.
+fn assign_arms(
+    topology: ExecutionTopology,
+    modules: &[TargetModuleImage],
+) -> Vec<TargetArmAssignment> {
+    let width = topology.arm_width();
+    let mut arms = Vec::with_capacity(modules.len());
+    let mut stage = None;
+    let mut within = 0u32;
+    for module in modules {
+        if stage != Some(module.stage) {
+            stage = Some(module.stage);
+            within = 0;
+        }
+        arms.push(TargetArmAssignment {
+            group: module.group,
+            stage: module.stage,
+            arm: within % width,
+        });
+        within = within.saturating_add(1);
+    }
+    arms
+}
+
 impl TargetModuleBundle {
-    /// Construct and canonically order target modules.
+    /// Construct and canonically order target modules on the sequential baseline.
     #[must_use]
-    pub fn new(mut modules: Vec<TargetModuleImage>) -> Self {
+    pub fn new(modules: Vec<TargetModuleImage>) -> Self {
+        Self::with_topology(ExecutionTopology::Sequential, modules)
+    }
+
+    /// Construct and canonically order target modules under a selected topology.
+    #[must_use]
+    pub fn with_topology(topology: ExecutionTopology, mut modules: Vec<TargetModuleImage>) -> Self {
         modules.sort_by_key(|module| (module.stage, module.group));
+        let arms = assign_arms(topology, &modules);
         Self {
             schema_version: TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+            topology,
+            arms,
             modules,
         }
     }
@@ -230,6 +286,14 @@ impl TargetModuleBundle {
         }) {
             return Err(TargetCompileError::ModuleBundle(
                 "module bundle is not in canonical stage/group order".to_string(),
+            ));
+        }
+        // The arms are the executable form of the selected topology, so they are
+        // checked against it rather than trusted: a bundle whose arm records are
+        // stripped or rewritten claims a topology it cannot submit.
+        if bundle.arms != assign_arms(bundle.topology, &bundle.modules) {
+            return Err(TargetCompileError::ModuleBundle(
+                "module bundle arms are not the selected topology's assignment".to_string(),
             ));
         }
         let canonical = bundle.to_bytes()?;
@@ -450,7 +514,8 @@ pub fn compile_selected_modules(
             bytes: emitted.bytes,
         });
     }
-    let bytes = TargetModuleBundle::new(images).to_bytes()?;
+    let bytes = TargetModuleBundle::with_topology(artifact.selected_plan().topology, images)
+        .to_bytes()?;
     TargetPayload::new(artifact, format, profile, entries, bytes).map_err(Into::into)
 }
 

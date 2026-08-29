@@ -38,6 +38,34 @@ impl Default for ExecutionTopology {
     }
 }
 
+impl ExecutionTopology {
+    /// Number of executable arms this topology submits work on.
+    ///
+    /// One arm is the sequential baseline. A concurrent or resident topology
+    /// declaring no arm is a contradiction the caller cannot express as a
+    /// submission, so it reads as the baseline rather than as zero queues.
+    #[must_use]
+    pub const fn arm_width(self) -> u32 {
+        match self {
+            Self::Sequential => 1,
+            Self::ConcurrentQueue { queues } => {
+                if queues == 0 {
+                    1
+                } else {
+                    queues
+                }
+            }
+            Self::ResidentPartition { partitions, .. } => {
+                if partitions == 0 {
+                    1
+                } else {
+                    partitions
+                }
+            }
+        }
+    }
+}
+
 /// Mode governing spatial placement and forward progress for resident partitions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

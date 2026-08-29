@@ -299,6 +299,8 @@ fn target_module_bundle_rejects_noncanonical_module_order() {
     ] {
         let bytes = TargetModuleBundle {
             schema_version: vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+            topology: vyre_megakernel::ExecutionTopology::Sequential,
+            arms: Vec::new(),
             modules,
         }
         .to_bytes()
@@ -1022,4 +1024,128 @@ fn a_module_records_the_chunk_the_frozen_phase_states() {
         Some(4),
         "a chunked phase must record the width it combines over"
     );
+}
+
+fn topology_fixture_images(stages: &[(u32, u32)]) -> Vec<TargetModuleImage> {
+    let program = Program::wrapped(Vec::new(), [1, 1, 1], Vec::new());
+    let descriptor = vyre_lower::lower_physical(&program)
+        .expect("fixture lowering must succeed")
+        .into_descriptor();
+    let program = program.to_wire().expect("fixture Program must encode");
+    stages
+        .iter()
+        .map(|&(stage, group)| TargetModuleImage {
+            group: FusionGroupId(group),
+            stage,
+            nodes: vec![ArtifactNodeId(group)],
+            program: program.clone(),
+            descriptor: descriptor.clone(),
+            entry_point: format!("group_{group}"),
+            numeric: ModuleNumericRecord::default(),
+            bytes: vec![group as u8],
+        })
+        .collect()
+}
+
+/// WHY: a concurrent winner is only executable if the bundle records which arm each
+/// module is submitted on. Independent modules sharing a dependency stage must land on
+/// distinct arms so they overlap on device, a dependent module must stay in a later
+/// stage so it cannot, and both facts must survive encode and admission.
+#[test]
+fn concurrent_topology_records_overlapping_arms_and_keeps_dependent_stages_ordered() {
+    use vyre_megakernel::{ExecutionTopology, TargetArmAssignment};
+
+    let images = topology_fixture_images(&[(0, 0), (0, 1), (0, 2), (1, 3)]);
+    let topology = ExecutionTopology::ConcurrentQueue { queues: 2 };
+    let bundle = TargetModuleBundle::with_topology(topology, images);
+    assert_eq!(
+        bundle.arms,
+        vec![
+            TargetArmAssignment {
+                group: FusionGroupId(0),
+                stage: 0,
+                arm: 0
+            },
+            TargetArmAssignment {
+                group: FusionGroupId(1),
+                stage: 0,
+                arm: 1
+            },
+            TargetArmAssignment {
+                group: FusionGroupId(2),
+                stage: 0,
+                arm: 0
+            },
+            TargetArmAssignment {
+                group: FusionGroupId(3),
+                stage: 1,
+                arm: 0
+            },
+        ],
+        "two-queue topology must spread one stage across both arms and restart per stage"
+    );
+    let bytes = bundle.to_bytes().expect("fixture bundle must encode");
+    let decoded = TargetModuleBundle::from_bytes(&bytes).expect("valid bundle must be admitted");
+    assert_eq!(decoded.topology, topology);
+    assert_eq!(decoded.arms, bundle.arms);
+    assert_eq!(
+        decoded.schema_version,
+        vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION
+    );
+
+    let sequential = TargetModuleBundle::new(topology_fixture_images(&[
+        (0, 0),
+        (0, 1),
+        (0, 2),
+        (1, 3),
+    ]))
+    .to_bytes()
+    .expect("baseline bundle must encode");
+    assert_ne!(
+        sequential, bytes,
+        "the selected topology must change the bundle digest"
+    );
+}
+
+/// WHY: removing topology lowering must fail rather than degrade silently. A bundle whose
+/// arm records are stripped, or whose topology no longer matches them, claims a schedule it
+/// cannot submit and is refused on admission.
+#[test]
+fn bundle_admission_rejects_arm_records_that_are_not_the_selected_topology() {
+    use vyre_megakernel::ExecutionTopology;
+
+    let stages = [(0u32, 0u32), (0, 1), (0, 2), (1, 3)];
+    let concurrent = ExecutionTopology::ConcurrentQueue { queues: 2 };
+    let assigned = TargetModuleBundle::with_topology(concurrent, topology_fixture_images(&stages));
+
+    for (case, bundle) in [
+        (
+            "stripped arm records",
+            TargetModuleBundle {
+                schema_version: vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+                topology: concurrent,
+                arms: Vec::new(),
+                modules: assigned.modules.clone(),
+            },
+        ),
+        (
+            "topology rewritten under kept arms",
+            TargetModuleBundle {
+                schema_version: vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+                topology: ExecutionTopology::Sequential,
+                arms: assigned.arms.clone(),
+                modules: assigned.modules.clone(),
+            },
+        ),
+    ] {
+        let bytes = bundle.to_bytes().expect("fixture bundle must encode");
+        let error = TargetModuleBundle::from_bytes(&bytes)
+            .expect_err("bundle without executable topology must fail admission");
+        assert!(
+            error
+                .to_string()
+                .contains("arms are not the selected topology's assignment"),
+            "{case}: unexpected admission error: {error}"
+        );
+    }
 }
