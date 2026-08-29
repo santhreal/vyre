@@ -152,6 +152,6 @@ You need a supported physical GPU adapter on the execution host (axiomexec) for 
 
 ## Skips and failures
 
-The default command omits only tests marked `#[ignore]`. Run the ignored-test command on a configured GPU host (axiomexec). Backend initialization failures must remain visible.
+The default command omits only tests marked `#[ignore]`. Run the ignored-test command on a configured GPU host (axiomexec). Backend initialization failures must remain visible. The bitwise transcendental tests in `gap_transcendentals_parity.rs` stay ignored on that host too: they wait on strict-IEEE lowering that blocks multiply-add contraction and on f32/u32 bitcast ops in the IR, and the enforced contract is the bounded envelope in `transcendentals_parity.rs`.
 
 A failed assertion, build error, backend acquisition error, or malformed fixture returns a nonzero status with the failing test and contract in the diagnostic.

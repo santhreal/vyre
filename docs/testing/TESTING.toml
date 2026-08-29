@@ -76,7 +76,7 @@ evidence_outputs = ["release/evidence/conformance/release-all-backends-certifica
 [package.vyre-driver-wgpu]
 commands = ["./cargo_full test -p vyre-driver-wgpu", "./cargo_full test -p vyre-driver-wgpu -- --ignored --nocapture"]
 hardware = "You need a supported physical GPU adapter on the execution host (axiomexec) for device dispatch and ignored physical-adapter tests. A requested adapter that cannot initialize is an error."
-expected_skips = "The default command omits only tests marked `#[ignore]`. Run the ignored-test command on a configured GPU host (axiomexec). Backend initialization failures must remain visible."
+expected_skips = "The default command omits only tests marked `#[ignore]`. Run the ignored-test command on a configured GPU host (axiomexec). Backend initialization failures must remain visible. The bitwise transcendental tests in `gap_transcendentals_parity.rs` stay ignored on that host too: they wait on strict-IEEE lowering that blocks multiply-add contraction and on f32/u32 bitcast ops in the IR, and the enforced contract is the bounded envelope in `transcendentals_parity.rs`."
 evidence_outputs = ["release/evidence/conformance/release-all-backends-certificate.json", "Command status and exact portable-backend parity assertions"]
 
 [package.vyre-driver-metal]
