@@ -267,12 +267,14 @@ fn flush_paths(paths: &[std::path::PathBuf]) -> std::io::Result<()> {
 }
 
 /// A directory carries no write access to request, so it is opened read-only:
-/// [`crate::durable_fanout::open_for_sync`] is for the file half.
+/// [`crate::durable_fanout::open_for_sync`] is for the file half. The opener is
+/// a closure because `File::open` is generic over its argument and states no
+/// single opener signature.
 #[cfg(unix)]
 fn sync_parent_dirs(parents: &[std::path::PathBuf]) -> std::io::Result<()> {
     sync_files_bounded(
         parents,
-        std::fs::File::open,
+        |path: &std::path::Path| std::fs::File::open(path),
         std::fs::File::sync_all,
         "disk cache dir sync worker panicked",
     )

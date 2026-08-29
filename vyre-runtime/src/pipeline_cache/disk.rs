@@ -254,12 +254,14 @@ fn flush_paths(paths: &[PathBuf]) -> io::Result<()> {
 }
 
 /// A directory carries no write access to request, so it is opened read-only:
-/// [`vyre_driver::durable_fanout::open_for_sync`] is for the file half.
+/// [`vyre_driver::durable_fanout::open_for_sync`] is for the file half. The
+/// opener is a closure because `File::open` is generic over its argument and
+/// states no single opener signature.
 #[cfg(unix)]
 fn sync_parent_dirs(parents: &[PathBuf]) -> io::Result<()> {
     sync_paths_bounded(
         parents,
-        File::open,
+        |path: &Path| File::open(path),
         File::sync_all,
         "pipeline cache directory sync worker panicked",
     )
