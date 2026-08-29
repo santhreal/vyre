@@ -1591,6 +1591,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   rotated candidate interleaving, a trimmed-median estimator with uncertainty,
   a stopping rule and an equivalence band, and the artifact retains every
   candidate's raw samples, prediction error and reported device state.
+- Dialect items are published at one path each: `vyre-foundation` exposes them
+  under `dialect` rather than also under `dialect::descriptor`,
+  `dialect::schema`, `dialect::traits`, and `dialect::version`, and `vyre-libs`
+  exposes the logical dialect under `logical::dialect` only.
 - User-facing crate READMEs, `docs/ARCHITECTURE.md`, `THESIS.md`,
   `CONTRIBUTING.md`, and the ownership/guide registries follow the workspace
   `README.md` charter. `vyre-libs` owns every composition, including
@@ -3283,6 +3287,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   from `vyre_foundation::visit::walk_exprs` instead of a hand-rolled counter
   over `#[non_exhaustive]` enums whose catch-all arm read an unlisted variant
   as a leaf, so a tree that grew through a new variant counted as small.
+- `TargetModuleBundle` schema version 5 serializes the selected
+  `ExecutionTopology` and a per-module `TargetArmAssignment`, both covered by
+  the bundle digest, and admission rejects a bundle whose arm records are not
+  the selected topology's assignment.
 - A test-only IR extension payload is declared through
   `vyre_test_support::test_expr_extension!` or `test_node_extension!` instead
   of six hand-written trait methods. Five of the six are the same in every test
