@@ -417,3 +417,310 @@ impl<C: CanonicalLookup + ?Sized> NodeRewrite for LetDedupeWalker<'_, C> {
         Some(self.rewrite_scope(body))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeMap;
+    use vyre_foundation::ir::GraphValueId;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_megakernel::{Digest, SemanticExecutionOutput, SemanticExecutionRequest};
+
+    use super::super::arena_kernel::{
+        semantic_test_policy, single_lit_u32_arena as one_expr_arena,
+    };
+
+    struct CseMockExecutor {
+        structural_hash_outputs: Vec<Vec<u8>>,
+        canonical_id_outputs: Vec<Vec<u8>>,
+        extra_hash_output: bool,
+    }
+
+    impl CseMockExecutor {
+        fn new(structural_hash_outputs: Vec<Vec<u8>>, canonical_id_outputs: Vec<Vec<u8>>) -> Self {
+            Self {
+                structural_hash_outputs,
+                canonical_id_outputs,
+                extra_hash_output: false,
+            }
+        }
+
+        fn with_extra_hash_output(outputs: Vec<Vec<u8>>) -> Self {
+            Self {
+                structural_hash_outputs: outputs,
+                canonical_id_outputs: Vec::new(),
+                extra_hash_output: true,
+            }
+        }
+    }
+
+    impl SemanticExecutor for CseMockExecutor {
+        fn execute(
+            &self,
+            request: &SemanticExecutionRequest<'_>,
+        ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+            let stage = request.logical().regions()[0].name.as_str();
+            let node = &request.logical().graph().nodes()[0];
+            let written = vyre_megakernel::writable_graph_values(node);
+            let mut outputs = BTreeMap::new();
+            let src = match stage {
+                "cse-structural-hash" => &self.structural_hash_outputs,
+                "cse-canonical-id" => &self.canonical_id_outputs,
+                other => panic!("unexpected cse stage: {other}"),
+            };
+            for (val, bytes) in written.into_iter().zip(src.iter()) {
+                outputs.insert(val, bytes.clone());
+            }
+            if self.extra_hash_output && stage == "cse-structural-hash" {
+                outputs.insert(GraphValueId(u32::MAX), vec![0u8; 4]);
+            }
+            Ok(SemanticExecutionOutput {
+                artifact: Digest([0; 32]),
+                payload: Digest([1; 32]),
+                outputs,
+            })
+        }
+    }
+
+    #[test]
+    fn structural_hash_program_compiles_to_program() {
+        let p = build_structural_hash_program(8, 4);
+        assert!(p.buffers().iter().any(|b| b.name() == "hash"));
+        assert!(p.buffers().iter().any(|b| b.name() == "max_depth_buf"));
+    }
+
+    #[test]
+    fn canonical_id_program_carries_table_buffer() {
+        let p = build_canonical_id_program(8);
+        assert!(p.buffers().iter().any(|b| b.name() == "canonical"));
+        assert!(
+            p.buffers().iter().any(|b| b.name() == "arena_kinds"),
+            "canonical-id program must declare arena_kinds for structural tuple check"
+        );
+        assert!(
+            p.buffers().iter().any(|b| b.name() == "arena_arg0"),
+            "canonical-id program must declare arena_arg0 for structural tuple check"
+        );
+        assert!(
+            p.buffers().iter().any(|b| b.name() == "arena_arg1"),
+            "canonical-id program must declare arena_arg1 for structural tuple check"
+        );
+        assert!(
+            p.buffers().iter().any(|b| b.name() == "arena_arg2"),
+            "canonical-id program must declare arena_arg2 for structural tuple check"
+        );
+    }
+
+    #[test]
+    fn canonical_delta_compact_program_carries_sparse_output_buffer() {
+        let p = build_canonical_delta_compact_program(8);
+        assert!(p.buffers().iter().any(|b| b.name() == "canonical"));
+        assert!(p.buffers().iter().any(|b| b.name() == "canonical_delta"));
+    }
+
+    #[test]
+    fn sparse_canonical_map_defaults_identity_and_overrides_duplicates() {
+        let map = SparseCanonicalMap::from_compacted_pair_words(
+            8,
+            2,
+            &[3, 1, 7, 2],
+            "test sparse canonical",
+        )
+        .expect("Fix: valid compact canonical pairs decode");
+        assert_eq!(map.override_count(), 2);
+        assert_eq!(map.canonical_of(0), 0);
+        assert_eq!(map.canonical_of(3), 1);
+        assert_eq!(map.canonical_of(7), 2);
+    }
+
+    #[test]
+    fn top_level_canonical_preflight_ignores_inner_only_duplicates() {
+        let arena = ExprArenaEncoding {
+            expr_count: 4,
+            node_top_level_exprs: vec![Vec::new(), vec![1], vec![3]],
+            ..ExprArenaEncoding::default()
+        };
+        assert!(
+            !has_repeated_top_level_canonical(&arena, &[0, 1, 1, 3][..]),
+            "an inner duplicate cannot make a node-level CSE rewrite productive"
+        );
+        assert!(
+            has_repeated_top_level_canonical(&arena, &[0, 1, 2, 1][..]),
+            "equivalent node-owned expressions must keep the CSE rewrite enabled"
+        );
+    }
+
+    #[test]
+    fn sparse_canonical_map_rejects_malformed_pair_count() {
+        let err =
+            SparseCanonicalMap::from_compacted_pair_words(8, 2, &[3, 1], "test sparse canonical")
+                .expect_err("compact canonical pair count must match pair words exactly");
+        assert!(
+            matches!(
+                &err,
+                SemanticExecutionError::InvalidRequest(msg)
+                    if msg.contains("compact canonical expected 4 pair word(s) for 2 pair(s), got 2")
+            ),
+            "unexpected error: {err:?}"
+        );
+    }
+
+    #[test]
+    fn cse_kernels_decode_exact_canonical_into_reused_buffer() {
+        let executor = CseMockExecutor::new(
+            vec![u32_slice_to_le_bytes(&[123])],
+            vec![u32_slice_to_le_bytes(&[0])],
+        );
+        let mut canonical = Vec::with_capacity(4);
+        let ptr = canonical.as_ptr();
+        run_cse_kernels_into(
+            &one_expr_arena(),
+            &executor,
+            &semantic_test_policy(),
+            &mut canonical,
+        )
+        .expect("Fix: dispatch succeeds");
+        assert_eq!(canonical, vec![0]);
+        assert_eq!(canonical.as_ptr(), ptr);
+    }
+
+    #[test]
+    fn cse_kernels_with_scratch_reuse_dispatch_decode_and_output_storage() {
+        let executor = CseMockExecutor::new(
+            vec![u32_slice_to_le_bytes(&[123])],
+            vec![u32_slice_to_le_bytes(&[0])],
+        );
+        let arena = one_expr_arena();
+        let mut scratch = CseKernelScratch::default();
+        let mut canonical = Vec::with_capacity(1);
+
+        run_cse_kernels_with_scratch_into(
+            &arena,
+            &executor,
+            &semantic_test_policy(),
+            &mut scratch,
+            &mut canonical,
+        )
+        .expect("Fix: dispatch succeeds");
+
+        let hash_input_capacities = scratch
+            .hash_inputs
+            .iter()
+            .map(Vec::capacity)
+            .collect::<Vec<_>>();
+        let canonical_input_capacities = scratch
+            .canonical_inputs
+            .iter()
+            .map(Vec::capacity)
+            .collect::<Vec<_>>();
+        let hash_words_capacity = scratch.hash_words.capacity();
+        let canonical_capacity = canonical.capacity();
+
+        run_cse_kernels_with_scratch_into(
+            &arena,
+            &executor,
+            &semantic_test_policy(),
+            &mut scratch,
+            &mut canonical,
+        )
+        .expect("Fix: dispatch succeeds");
+
+        assert_eq!(
+            scratch
+                .hash_inputs
+                .iter()
+                .map(Vec::capacity)
+                .collect::<Vec<_>>(),
+            hash_input_capacities
+        );
+        assert_eq!(
+            scratch
+                .canonical_inputs
+                .iter()
+                .map(Vec::capacity)
+                .collect::<Vec<_>>(),
+            canonical_input_capacities
+        );
+        assert_eq!(scratch.hash_words.capacity(), hash_words_capacity);
+        assert_eq!(canonical.capacity(), canonical_capacity);
+        assert_eq!(canonical, vec![0]);
+    }
+
+    #[test]
+    fn cse_rejects_extra_hash_outputs() {
+        let executor =
+            CseMockExecutor::with_extra_hash_output(vec![u32_slice_to_le_bytes(&[123])]);
+        let mut canonical = Vec::new();
+        let err = run_cse_kernels_into(
+            &one_expr_arena(),
+            &executor,
+            &semantic_test_policy(),
+            &mut canonical,
+        )
+        .expect_err("extra hash outputs must be rejected");
+        assert!(
+            matches!(
+                &err,
+                SemanticExecutionError::Backend(msg)
+                    if msg.contains("undeclared output value")
+                        || msg.contains("expected one output")
+            ),
+            "unexpected error: {err:?}"
+        );
+    }
+
+    #[test]
+    fn cse_rejects_trailing_canonical_bytes() {
+        let executor = CseMockExecutor::new(
+            vec![u32_slice_to_le_bytes(&[123])],
+            vec![vec![0, 0, 0, 0, 1]],
+        );
+        let mut canonical = Vec::new();
+        let err = run_cse_kernels_into(
+            &one_expr_arena(),
+            &executor,
+            &semantic_test_policy(),
+            &mut canonical,
+        )
+        .expect_err("trailing canonical bytes must be rejected");
+        assert!(
+            matches!(
+                &err,
+                SemanticExecutionError::Backend(msg)
+                    if msg.contains("cse canonical output") && msg.contains("expected 4 output bytes")
+            ),
+            "unexpected error: {err:?}"
+        );
+    }
+
+    #[test]
+    fn apply_cse_canonicals_rewrites_duplicate_let_to_var() {
+        use vyre_foundation::ir::{Expr, Ident, Node, Program};
+        let entry = vec![
+            Node::let_bind("a", Expr::u32(42)),
+            Node::let_bind("b", Expr::u32(42)),
+        ];
+        let prog = Program::wrapped(Vec::new(), [1, 1, 1], entry);
+        let arena = encode_expr_arena(&prog).expect("Fix: simple program encodes");
+        assert_eq!(arena.expr_count, 2, "expected 2 exprs in arena");
+        let canonical = vec![0u32, 0u32]; // canonical[1] = 0
+        let rewritten = apply_cse_canonicals(&prog, &arena, &canonical);
+        let entry_nodes: Vec<Node> = match rewritten.entry() {
+            [Node::Region { body, .. }] => body.as_ref().to_vec(),
+            other => other.to_vec(),
+        };
+        assert_eq!(entry_nodes.len(), 2, "program must still have 2 nodes");
+        match &entry_nodes[1] {
+            Node::Let { name, value } => {
+                assert_eq!(name.as_ref(), "b", "second let must remain named 'b'");
+                assert_eq!(
+                    value,
+                    &Expr::Var(Ident::new(std::sync::Arc::from("a"))),
+                    "apply_cse_canonicals must rewrite let b = LitU32(42) to let b = Var(\"a\") \
+                     when canonical[1] == 0 and the canonical expr is bound to 'a'"
+                );
+            }
+            other => panic!("expected Node::Let for 'b', got {other:?}"),
+        }
+    }
+}

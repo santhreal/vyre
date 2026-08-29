@@ -151,3 +151,236 @@ fn write_padded_one_u32_bytes(out: &mut Vec<u8>, buf: &[u32]) {
         write_u32_slice_le_bytes(out, buf);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeMap;
+    use vyre_foundation::ir::{Expr, GraphValueId, Node, Program};
+    use vyre_libs::bitset::bitset_words;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_megakernel::{
+        Digest, SemanticExecutionOutput, SemanticExecutionRequest, SemanticExecutor,
+    };
+
+    use super::super::arena_kernel::semantic_test_policy;
+
+    fn wrapped_program(entry: Vec<Node>) -> Program {
+        Program::wrapped(Vec::new(), [1, 1, 1], entry)
+    }
+
+    struct MalformedExecutor {
+        outputs: Vec<Vec<u8>>,
+        extra_output: bool,
+        omit_output: bool,
+    }
+
+    impl MalformedExecutor {
+        fn new(outputs: Vec<Vec<u8>>) -> Self {
+            Self {
+                outputs,
+                extra_output: false,
+                omit_output: false,
+            }
+        }
+
+        fn with_extra_output(outputs: Vec<Vec<u8>>) -> Self {
+            Self {
+                outputs,
+                extra_output: true,
+                omit_output: false,
+            }
+        }
+
+        fn with_omitted_output(outputs: Vec<Vec<u8>>) -> Self {
+            Self {
+                outputs,
+                extra_output: false,
+                omit_output: true,
+            }
+        }
+    }
+
+    impl SemanticExecutor for MalformedExecutor {
+        fn execute(
+            &self,
+            request: &SemanticExecutionRequest<'_>,
+        ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+            let node = &request.logical().graph().nodes()[0];
+            let written = vyre_megakernel::writable_graph_values(node);
+            let mut outputs = BTreeMap::new();
+            for (idx, (val, bytes)) in written.into_iter().zip(self.outputs.iter()).enumerate() {
+                if self.omit_output && idx == 2 {
+                    // Omit converged output
+                    continue;
+                }
+                outputs.insert(val, bytes.clone());
+            }
+            if self.extra_output {
+                outputs.insert(GraphValueId(u32::MAX), vec![0u8; 4]);
+            }
+            Ok(SemanticExecutionOutput {
+                artifact: Digest([0; 32]),
+                payload: Digest([1; 32]),
+                outputs,
+            })
+        }
+    }
+    #[test]
+    fn dce_rejects_extra_dispatch_outputs() {
+        let program = wrapped_program(vec![Node::store("buf", Expr::u32(0), Expr::u32(1))]);
+        let executor = MalformedExecutor::with_extra_output(vec![
+            u32_slice_to_le_bytes(&[1]),
+            u32_slice_to_le_bytes(&[0]),
+            u32_slice_to_le_bytes(&[1]),
+        ]);
+        let err = gpu_dce(program, &executor, &semantic_test_policy())
+            .expect_err("extra outputs must be rejected");
+        assert!(
+            matches!(
+                &err,
+                DceError::Semantic(SemanticExecutionError::Backend(msg))
+                    if msg.contains("undeclared output values")
+                        || msg.contains("expected three canonical outputs")
+            ),
+            "unexpected error: {err:?}"
+        );
+    }
+
+    #[test]
+    fn dce_rejects_a_dispatch_missing_the_converged_output() {
+        let program = wrapped_program(vec![Node::store("buf", Expr::u32(0), Expr::u32(1))]);
+        let encoded = encode_program(&program).expect("Fix: encoder accepts store");
+        let words = bitset_words(encoded.node_count) as usize;
+        let executor = MalformedExecutor::with_omitted_output(vec![
+            u32_slice_to_le_bytes(&vec![1; words]),
+            u32_slice_to_le_bytes(&[0]),
+            u32_slice_to_le_bytes(&[1]),
+        ]);
+        let err = gpu_dce(program, &executor, &semantic_test_policy())
+            .expect_err("missing converged must be rejected");
+        assert!(
+            matches!(
+                &err,
+                DceError::Semantic(SemanticExecutionError::Backend(msg))
+                    if msg.contains("omitted canonical output value")
+            ),
+            "unexpected error: {err:?}"
+        );
+    }
+
+    #[test]
+    fn dce_fails_closed_when_the_liveness_closure_did_not_converge() {
+        let program = wrapped_program(vec![Node::store("buf", Expr::u32(0), Expr::u32(1))]);
+        let encoded = encode_program(&program).expect("Fix: encoder accepts store");
+        let words = bitset_words(encoded.node_count) as usize;
+        let executor = MalformedExecutor::new(vec![
+            u32_slice_to_le_bytes(&vec![1; words]),
+            u32_slice_to_le_bytes(&[1]),
+            u32_slice_to_le_bytes(&[0]),
+        ]);
+        let err = gpu_dce(program, &executor, &semantic_test_policy())
+            .expect_err("non-converged closure must fail");
+        let DceError::Semantic(SemanticExecutionError::Backend(message)) = err else {
+            panic!("expected a backend error naming the truncated closure, got {err:?}");
+        };
+        assert!(
+            message.contains("did not converge within its"),
+            "the error must say why a partial closure is unusable, got: {message}"
+        );
+    }
+
+    #[test]
+    fn dce_rejects_a_converged_word_that_is_neither_zero_nor_one() {
+        let program = wrapped_program(vec![Node::store("buf", Expr::u32(0), Expr::u32(1))]);
+        let encoded = encode_program(&program).expect("Fix: encoder accepts store");
+        let words = bitset_words(encoded.node_count) as usize;
+        let executor = MalformedExecutor::new(vec![
+            u32_slice_to_le_bytes(&vec![1; words]),
+            u32_slice_to_le_bytes(&[0]),
+            u32_slice_to_le_bytes(&[7]),
+        ]);
+        let err = gpu_dce(program, &executor, &semantic_test_policy())
+            .expect_err("a non-boolean converged is rejected");
+        assert!(
+            matches!(
+                &err,
+                DceError::Semantic(SemanticExecutionError::Backend(msg))
+                    if msg.contains("converged flag readback must be 0 or 1, got 7")
+            ),
+            "unexpected error: {err:?}"
+        );
+    }
+
+    #[test]
+    fn dce_rejects_trailing_changed_bytes() {
+        let program = wrapped_program(vec![Node::store("buf", Expr::u32(0), Expr::u32(1))]);
+        let encoded = encode_program(&program).expect("Fix: encoder accepts store");
+        let words = bitset_words(encoded.node_count) as usize;
+        let executor = MalformedExecutor::new(vec![
+            u32_slice_to_le_bytes(&vec![1; words]),
+            vec![0, 0, 0, 0, 1],
+            u32_slice_to_le_bytes(&[1]),
+        ]);
+        let err = gpu_dce(program, &executor, &semantic_test_policy())
+            .expect_err("trailing changed bytes rejected");
+        assert!(
+            matches!(
+                &err,
+                DceError::Semantic(SemanticExecutionError::Backend(msg))
+                    if msg.contains("dce changed output") && msg.contains("expected 4 output bytes")
+            ),
+            "unexpected error: {err:?}"
+        );
+    }
+
+    #[test]
+    fn live_mask_with_scratch_reuses_dispatch_decode_and_output_storage() {
+        let program = wrapped_program(vec![Node::store("buf", Expr::u32(0), Expr::u32(1))]);
+        let encoded = encode_program(&program).expect("Fix: encoder accepts store");
+        let words = bitset_words(encoded.node_count) as usize;
+        let executor = MalformedExecutor::new(vec![
+            u32_slice_to_le_bytes(&vec![u32::MAX; words]),
+            vec![0, 0, 0, 0],
+            u32_slice_to_le_bytes(&[1]),
+        ]);
+        let mut scratch = DceKernelScratch::default();
+        let mut live = Vec::with_capacity(encoded.node_count as usize);
+
+        compute_live_mask_with_scratch_into(
+            &encoded,
+            &executor,
+            &semantic_test_policy(),
+            &mut scratch,
+            &mut live,
+        )
+        .expect("Fix: dispatch succeeds");
+
+        let input_capacities = scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>();
+        let seed_capacity = scratch.seed.capacity();
+        let frontier_capacity = scratch.frontier.capacity();
+        let changed_capacity = scratch.changed.capacity();
+        let converged_capacity = scratch.converged.capacity();
+        let live_capacity = live.capacity();
+
+        compute_live_mask_with_scratch_into(
+            &encoded,
+            &executor,
+            &semantic_test_policy(),
+            &mut scratch,
+            &mut live,
+        )
+        .expect("Fix: dispatch succeeds");
+
+        assert_eq!(
+            scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>(),
+            input_capacities
+        );
+        assert_eq!(scratch.seed.capacity(), seed_capacity);
+        assert_eq!(scratch.frontier.capacity(), frontier_capacity);
+        assert_eq!(scratch.changed.capacity(), changed_capacity);
+        assert_eq!(scratch.converged.capacity(), converged_capacity);
+        assert_eq!(live.capacity(), live_capacity);
+        assert!(live.iter().all(|&is_live| is_live));
+    }
+}

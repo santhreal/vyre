@@ -44,7 +44,7 @@ fn slot_publish_empty_ring_rejects_any_slot() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn packed_slot_boundary_budget_and_overflow() {
+fn packed_slot_exact_12_word_boundary_succeeds() {
     let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let boundary_ops = vec![(1u8, vec![0u32; 5]), (2u8, vec![0u32; 5])];
     ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &boundary_ops)
@@ -52,21 +52,29 @@ fn packed_slot_boundary_budget_and_overflow() {
     let base = (STATUS_WORD as usize) * 4;
     let status = u32::from_le_bytes(ring[base..base + 4].try_into().unwrap());
     assert_eq!(status, slot::PUBLISHED);
+}
 
+#[test]
+fn packed_slot_13_word_boundary_fails() {
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let over_ops = vec![(1u8, vec![0u32; 5]), (2u8, vec![0u32; 6])];
     let err = ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &over_ops)
         .expect_err("packed slot with 13 words must fail");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert!(matches!(&err, PipelineError::QueueFull { .. }));
     let msg = err.to_string();
     assert!(
         msg.contains("12-word") || msg.contains("exceeds") || msg.contains("budget"),
         "error must mention slot argument budget: {msg}"
     );
+}
 
+#[test]
+fn packed_slot_256_ops_rejects_u8_opcode_count_overflow() {
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let max_ops: Vec<_> = (0..256).map(|i| (i as u8, vec![])).collect();
     let err = ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &max_ops)
         .expect_err("256 inner ops must fail u8 opcode_count overflow");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert!(matches!(&err, PipelineError::QueueFull { .. }));
     assert!(
         err.to_string().contains("255"),
         "error must mention u8 limit: {err}"
