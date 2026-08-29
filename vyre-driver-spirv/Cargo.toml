@@ -52,7 +52,6 @@ vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # integration tests/benches assert against these crates' public APIs
 vyre-reference = { path = "../vyre-reference" }
 tempfile.workspace = true
-vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 
 [[test]]
 name = "spirv_parity"
