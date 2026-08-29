@@ -161,6 +161,33 @@ fn cuda_backend_caps_match_driver_attributes() {
         backend.max_threads_per_block(),
         "Fix: CUDA megakernel plan cache key must include live max workgroup size."
     );
+    assert_eq!(
+        backend.caps.compute_capability.0, expected.compute_capability.0,
+        "Fix: CUDA device caps must include probed SM major version."
+    );
+    assert_eq!(
+        backend.caps.compute_capability.1, expected.compute_capability.1,
+        "Fix: CUDA device caps must include probed SM minor version."
+    );
+    assert_eq!(
+        backend.caps.warp_size as u32, expected.warp_size as u32,
+        "Fix: CUDA device caps must include probed warp size."
+    );
+    assert_eq!(
+        backend.caps.cooperative_launch,
+        backend.hardware_supports_grid_sync(),
+        "Fix: CUDA device caps cooperative launch must match live cooperative grid-sync capability."
+    );
+    assert_eq!(
+        backend.caps.hardware_supports_tensor_cores(),
+        backend.hardware_supports_tensor_cores(),
+        "Fix: CUDA device caps must match live tensor-core capability."
+    );
+    assert_eq!(
+        backend.caps.max_threads_per_block as u32,
+        backend.max_threads_per_block(),
+        "Fix: CUDA device caps must include live max workgroup size."
+    );
 }
 
 #[test]

@@ -127,6 +127,16 @@ fn cuda_direct_dispatch_updates_runtime_telemetry() {
         scheduler_sample.frontier_density > 0.0 && scheduler_sample.frontier_density <= 1.0,
         "Fix: scheduler sample must derive bounded frontier-density proxy from real CUDA launch telemetry."
     );
+    assert_eq!(
+        snapshot.readback_bytes,
+        outputs[0].len() as u64,
+        "Fix: scheduler sample must carry real compact readback volume from CUDA telemetry."
+    );
+    let frontier_density = f64::from(snapshot.logical_thread_utilization_bps) / 10_000.0;
+    assert!(
+        frontier_density > 0.0 && frontier_density <= 1.0,
+        "Fix: scheduler sample must derive bounded frontier-density proxy from real CUDA launch telemetry."
+    );
 
     backend.reset_telemetry();
     assert_eq!(
