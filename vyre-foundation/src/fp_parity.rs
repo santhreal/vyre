@@ -90,9 +90,9 @@ pub fn effective_tolerance(op_id: &str, program: &Program) -> u32 {
 /// The operations in `program` a backend may lower to an approximate native
 /// instruction, named by their IR variant, in ascending order without repeats.
 ///
-/// The set is [`is_transcendental_op`]'s, so a lowering record and the parity
-/// window are answers to the same question. An op added to the policy appears
-/// here without anyone editing a second list.
+/// The set is the one `is_transcendental_op` classifies, so a lowering record
+/// and the parity window are answers to the same question. An op added to the
+/// policy appears here without anyone editing a second list.
 #[must_use]
 pub fn approximable_operations(program: &Program) -> Vec<String> {
     let mut named = BTreeSet::new();
