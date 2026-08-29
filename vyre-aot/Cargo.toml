@@ -36,3 +36,9 @@ ptx = []
 vyre-lower.workspace = true
 tempfile.workspace = true
 inventory.workspace = true
+# Used through the shared `tests/support/artifact_fixtures.rs` include, which
+# the unused-dependency audit cannot follow out of this directory.
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
+
+[package.metadata.cargo-machete]
+ignored = ["vyre-test-support"]

@@ -52,6 +52,9 @@ vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # integration tests/benches assert against these crates' public APIs
 vyre-reference = { path = "../vyre-reference" }
 tempfile.workspace = true
+# Used through the shared `tests/support/target_compiler_contract.rs` include,
+# which the unused-dependency audit cannot follow out of this directory.
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 
 [[test]]
 name = "spirv_parity"
@@ -67,3 +70,6 @@ required-features = ["device-tests"]
 name = "hostile_input_closure_contract"
 path = "tests/hostile_input_closure_contract.rs"
 required-features = ["device-tests"]
+
+[package.metadata.cargo-machete]
+ignored = ["vyre-test-support"]
