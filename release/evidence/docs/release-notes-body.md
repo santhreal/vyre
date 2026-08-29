@@ -2570,6 +2570,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   without the `anonymous::` prefix the audit gates read, or a child region
   could be attached with no parent. The literals carry no information the two
   constructors do not, so they are gone.
+- The benchmark evidence check reads the release-surface coverage flag names
+  from the hygiene scan that records them instead of carrying a second list.
 - The backend matrix gate reads the unresolved-work marker vocabulary from the
   hygiene family that owns it instead of carrying a second list.
 - The line scanner that separates code from a comment, counts nesting, and

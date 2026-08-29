@@ -16,14 +16,11 @@ pub(crate) const MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES: u64 = 16_777_216;
 pub(crate) const BENCHMARK_SCHEMA_DIGEST_CHAIN_PREFIX: &str = "benchmark-schema-digest-chain:v1:";
 
 /// Release surfaces the hygiene matrix must report as scanned.
-pub(crate) const RELEASE_SURFACE_COVERAGE_FLAGS: &[&str] = &[
-    "vyre_workspace",
-    "cuda_driver_crate",
-    "wgpu_driver_crate",
-    "release_scripts",
-    "github_workflows",
-    "branch_protection_controls",
-];
+///
+/// The names come from the scan that records them, so a surface added there is
+/// required here without a second list to update.
+pub(crate) const RELEASE_SURFACE_COVERAGE_FLAGS: &[&str] =
+    xtask::gates::hygiene_matrix::RELEASE_SURFACE_COVERAGE_FLAGS;
 
 /// Hygiene pattern families and the patterns each one must cover.
 ///

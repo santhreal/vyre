@@ -1713,3 +1713,38 @@ fn the_panic_ceiling_fails_over_unrecorded_and_stale_and_only_notes_slack() {
         "every recorded row carries what the tree measured against it"
     );
 }
+
+/// WHY: a consumer in another crate spelled out the six coverage flag names,
+/// so a surface added to the record was never required of the recorded
+/// evidence. The expectation is the serialized record itself: a boolean field
+/// added to `ReleaseSurfaceCoverage` stops the probe below compiling until it
+/// is given a value, and then fails here until it is listed. What it does not
+/// catch is a surface the scan reports under a name serde renames.
+#[test]
+fn every_serialized_coverage_flag_is_declared() {
+    let probe = records::ReleaseSurfaceCoverage {
+        vyre_workspace: false,
+        cuda_driver_crate: false,
+        wgpu_driver_crate: false,
+        release_scripts: false,
+        github_workflows: false,
+        branch_protection_controls: false,
+        resource_bound_patterns: Vec::new(),
+        hidden_fallback_patterns: Vec::new(),
+        release_tooling_patterns: Vec::new(),
+    };
+    let value = serde_json::to_value(&probe)
+        .expect("Fix: the coverage record must serialize for the flag comparison.");
+    let serialized: BTreeSet<&str> = value
+        .as_object()
+        .into_iter()
+        .flatten()
+        .filter(|(_, field)| field.is_boolean())
+        .map(|(name, _)| name.as_str())
+        .collect();
+    let declared: BTreeSet<&str> = RELEASE_SURFACE_COVERAGE_FLAGS.iter().copied().collect();
+    assert_eq!(
+        serialized, declared,
+        "Fix: every boolean field of the coverage record must be a declared flag"
+    );
+}

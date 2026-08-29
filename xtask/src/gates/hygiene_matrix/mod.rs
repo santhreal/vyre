@@ -108,6 +108,22 @@ pub fn unresolved_marker_pattern_texts() -> Vec<(&'static str, &'static str)> {
         .collect()
 }
 
+/// The release-surface coverage flags the hygiene scan records.
+///
+/// A consumer outside this gate required six flag names it spelled out itself,
+/// so a surface added to the record was never required of the recorded
+/// evidence. The names have one owner here, and a test in this gate holds the
+/// list to the record's boolean fields, so a surface added to the record fails
+/// until it is listed.
+pub const RELEASE_SURFACE_COVERAGE_FLAGS: &[&str] = &[
+    "vyre_workspace",
+    "cuda_driver_crate",
+    "wgpu_driver_crate",
+    "release_scripts",
+    "github_workflows",
+    "branch_protection_controls",
+];
+
 /// Scans the release surface for hidden fallbacks, unbounded reads, missing
 /// panic contracts and undeclared thresholds, and owns the evidence artifacts.
 pub struct HygieneMatrix;
