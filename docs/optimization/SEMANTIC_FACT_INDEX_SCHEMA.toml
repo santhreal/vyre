@@ -22,7 +22,7 @@ does_not_own = [
   "file content identity and chunk digests, owned by CORPUS_CONTENT_IDENTITY_INDEX",
   "language import/include/module edges, owned by LANGUAGE_DEPENDENCY_EDGE_MATRIX",
   "parser object cache lifecycle, owned by the libs_parsing roadmap substrate",
-  "ProgramFacts and low-level optimizer facts, owned by BACKLOG.md P6 and foundation optimizer substrates",
+  "ProgramFacts and low-level optimizer facts, owned by the foundation optimizer substrates",
   "generic source impact graph audits, owned by SOURCE_IMPACT_GRAPH",
   "reported output schema, owned by OUTPUT_SLAB_SCHEMA_PROVENANCE",
 ]

@@ -5,8 +5,8 @@
 //! coverage: `rg -l natural_gradient vyre-primitives/tests/` = zero files, and its only self-substrate
 //! consumer (`precondition_autotune_gradient_fixed_via`) was exercised solely by a
 //! `NaturalGradientDispatcher` mock that IGNORES the `_program` IR and hand-computes the matvec, so
-//! the real kernel never ran (the mock-dispatcher-coherence gap; see the SWEEP-self-substrate row in
-//! BACKLOG.md). Its only host oracle (`natural_gradient_block_apply_cpu`) is f64, giving no exact
+//! the real kernel never ran (the mock-dispatcher-coherence gap). Its only host oracle
+//! (`natural_gradient_block_apply_cpu`) is f64, giving no exact
 //! reference for the u32 fixed-point dispatch path.
 //!
 //! This runs the real fixed-point `natural_gradient_block_apply` Program through the shared

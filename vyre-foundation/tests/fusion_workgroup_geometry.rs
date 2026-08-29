@@ -12,7 +12,7 @@
 //! (`vyre-libs::math::scan_prefix_sum`, workgroup 4) fused behind a 256-wide
 //! elementwise arm returned the wrong final lane on roughly one dispatch in
 //! ten. It was intermittent, so it read as flakiness rather than as the
-//! unsound fusion it was. See BACKLOG.md R73.
+//! unsound fusion it was.
 
 use std::sync::Arc;
 

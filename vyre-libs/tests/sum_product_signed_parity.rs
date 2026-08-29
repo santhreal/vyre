@@ -331,7 +331,7 @@ fn run_leveled(c: &Circuit, depths: &[u32], max_depth: u32) -> Vec<u32> {
 #[test]
 fn sum_product_leveled_evaluates_multilevel_dag_that_single_pass_gets_wrong() {
     // A DEPTH-2 circuit (PRODUCT reads the internal SUM node) is exactly the case the single-pass IR
-    // races (BACKLOG BUG-sum-product-multilevel-dag-no-topo-barrier): the product reads the sum's
+    // races: the product reads the sum's
     // `out` cell before it commits → root = 0. The LEVELED evaluator drives the same body through the
     // depth-wave harness with a barrier between levels, so the product reads the committed sum → the
     // topo-correct value. This proves the fix AND that it preserves sign.

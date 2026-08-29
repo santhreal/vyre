@@ -64,8 +64,8 @@ fn depth_wave_body(
     // `and(lane < lane_count, load(depth_buf, lane) == depth)` evaluates BOTH operands
     // (the IR has no short-circuit), so `load(depth_buf, lane)` reads `depth_buf` for the
     // whole-workgroup lanes a real GPU fires past `lane_count`: an OOB read the reference
-    // silently masks but hardware faults on (the ssa_dominance_scan gather-class bug,
-    // BACKLOG BUG-level-wave-depth-guard-eager-oob-load). Nesting means the load only runs
+    // silently masks but hardware faults on (the ssa_dominance_scan gather-class
+    // bug). Nesting means the load only runs
     // when `lane < lane_count`.
     vec![Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(lane_count)),

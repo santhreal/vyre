@@ -21,7 +21,7 @@ owns = [
 does_not_own = [
   "language dependency edge extraction, owned by LANGUAGE_DEPENDENCY_EDGE_MATRIX",
   "cross-file traversal policy, owned by CROSS_FILE_INVALIDATION_PROPAGATION_POLICY",
-  "low-level optimizer dataflow programs, owned by BACKLOG.md P6",
+  "low-level optimizer dataflow programs, owned by the foundation optimizer substrates",
   "GPU graph/dataflow execution policy, owned by primitives_graph and libs_dataflow ownership seams",
   "statistical release gates, owned by STATISTICAL_PERFORMANCE_GATES",
 ]

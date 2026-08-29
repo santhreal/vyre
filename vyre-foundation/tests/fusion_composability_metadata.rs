@@ -8,9 +8,9 @@
 //! `reject_non_composable_self_fusion` could no longer see it: fusing the fused
 //! program with another copy of the same arm was accepted.
 //!
-//! See BACKLOG.md R74. The sibling failure one layer up, where the pairwise
-//! test harness lost the same flag through its own `Program::wrapped` rebuilds,
-//! is R70.
+//! The sibling failure one layer up, where the pairwise test harness lost the
+//! same flag through its own `Program::wrapped` rebuilds, is covered by
+//! `program_rebuild_preserves_metadata.rs`.
 
 use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

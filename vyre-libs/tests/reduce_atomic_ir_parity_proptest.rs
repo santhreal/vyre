@@ -112,7 +112,7 @@ fn run_ir(op: Op, values: &[u32]) -> u32 {
 /// which is EXACTLY the multi-workgroup dispatch that used to make the non-idempotent
 /// Sum/Count/CountNonZero double-count. Since the `lane < WORKGROUP_SIZE` guard landed in
 /// `atomic_scalar.rs` (extra workgroups fail closed), this range now VERIFIES the fix across the
-/// boundary. See BACKLOG FINDING-atomic-scalar-reduce-double-counts-under-multi-workgroup-dispatch.
+/// boundary.
 fn arb_values() -> impl Strategy<Value = Vec<u32>> {
     prop_oneof![
         // Full-range, spanning the 256-lane boundary into 4+ workgroups.

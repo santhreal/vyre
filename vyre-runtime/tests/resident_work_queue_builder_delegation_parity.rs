@@ -14,8 +14,6 @@
 //! a consumer-owned resident workspace into the buffer set + body. We prove the distinguishing
 //! behavior, the adapter's `buffer_decl()` lands in the program's buffers (and does NOT in the
 //! plain sharded build) and its `bootstrap_nodes()` reach the entry body.
-//!
-//! Drains the vyre-runtime slice of BACKLOG.md WIRING-tautology-closure-25crates.
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};

@@ -5,7 +5,7 @@
 //! shipped with NO `tests/` file and its inline `#[cfg(test)]` block only
 //! exercises the CPU reference helpers (`p2m_zeroth_moment_cpu`, …), never the
 //! GPU IR. So the GPU program bodies had ZERO parity coverage (found by the
-//! registry-coverage audit, BACKLOG.md WIRING-registry-coverage). This pins each
+//! registry-coverage audit). This pins each
 //! builder's semantics against a hand-computed reference via `reference_eval`,
 //! asserting concrete output values (Testing-Contract: never `!is_empty`).
 //!

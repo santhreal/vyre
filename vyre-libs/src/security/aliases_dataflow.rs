@@ -243,8 +243,8 @@ fn witness_inputs() -> Vec<Vec<u8>> {
         // witness for a buffer the interpreter allocates itself, shifting every
         // later input by one. See `vyre_reference::is_reference_input`, which is
         // the owner of this rule; vyre-reference is only a dev-dependency here,
-        // so this restates it. BACKLOG.md R78 moves the predicate somewhere both
-        // crates can reach.
+        // so this restates it. The restatement goes away when the predicate
+        // moves to a crate both can reach.
         .filter(|decl| {
             decl.access() != BufferAccess::Workgroup && !decl.is_backend_allocated_output()
         })

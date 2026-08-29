@@ -5,8 +5,7 @@
 //! IR-execution coverage: `rg -l vietoris_rips vyre-primitives/tests/` = zero files, and its only
 //! self-substrate consumer (`region_loop_skeleton_fixed_via`) was exercised solely by a
 //! `SkeletonDispatcher` mock that IGNORES the `_program` IR and hand-returns a mask, so the actual
-//! edge-filter kernel never ran (the mock-dispatcher-coherence gap; see the SWEEP-self-substrate row
-//! in BACKLOG.md).
+//! edge-filter kernel never ran (the mock-dispatcher-coherence gap).
 //!
 //! This runs the real `vietoris_rips_edge_filter` Program through the shared `ReferenceSemanticExecutor`
 //! and asserts it EXACTLY (no tolerance) reproduces a u32 oracle. The mask is a pure comparison

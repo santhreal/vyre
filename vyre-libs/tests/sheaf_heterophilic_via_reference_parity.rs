@@ -12,7 +12,7 @@
 //!   `stalks_next[t] = stalks[t] - fixed_mul(fixed_mul(damping, restriction_diag[t]), stalks[t])`
 //! where `fixed_mul(a,b)` is the SIGNED 16.16 multiply (bits [16..48] of the i64 product, matching the
 //! corrected `fixed_mul_16_16_expr`; this generated corpus stays non-negative so the value is unchanged,
-//! but the oracle mirrors the signed kernel exactly (see BACKLOG FIXED-amg-fixed-path-unsigned-mul)).
+//! but the oracle mirrors the signed kernel exactly).
 //! That is exactly reproducible in u32, so the oracle here is BIT-EXACT (no tolerance).
 
 mod bounded_compile_policy;

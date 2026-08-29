@@ -10,7 +10,7 @@
 //!
 //! `with_rewritten_buffers`, `with_rewritten_entry`, `with_rewritten_wrapped_entry`
 //! and `map_entry` are the rebuild forms. This suite is what makes a fifth site
-//! impossible to add unnoticed. See BACKLOG.md R70, R74, R76 and R77.
+//! impossible to add unnoticed.
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 

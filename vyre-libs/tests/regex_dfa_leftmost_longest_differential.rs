@@ -15,7 +15,7 @@
 //! recall-correct today (verified: the 4 `ghp_…{36}` parity cases pass). BOUNDED
 //! RANGE `{n,m}` repeats are intentionally EXCLUDED, they are a known, tracked bug
 //! (the single-pass DFA over-reports every admissible end `n..=m` instead of the one
-//! leftmost-longest end; vyre `BACKLOG.md` item 18/27). Locking the range contract
+//! leftmost-longest end). Locking the range contract
 //! belongs with that fix, not here, so this suite stays green and pins the
 //! correct-today semantics as a regression floor beneath the range work.
 #![cfg(feature = "pattern-regex")]

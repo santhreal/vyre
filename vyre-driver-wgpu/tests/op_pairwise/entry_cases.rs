@@ -1210,7 +1210,7 @@ fn lone_write_only_result_is_a_pairwise_pipeline_value() {
 /// guarded body and never reach the barriers the working four wait on.
 ///
 /// The contract is a clean refusal, not a lucky pass: a racy kernel that is
-/// usually right is worse than one that never builds. See BACKLOG.md R73.
+/// usually right is worse than one that never builds.
 #[test]
 fn a_narrow_scan_is_not_fused_behind_a_wide_elementwise_op() {
     let a = entry_named("vyre-libs::math::avg_floor");
@@ -1257,7 +1257,6 @@ fn runtime_sized_input_witness_must_match_upstream_extent() {
 /// `core_delimiter_match` carries per-instance scratch, so two copies in one
 /// kernel would stomp each other. The harness used to call this pair
 /// compatible and then report the validator's refusal as a composition bug.
-/// See BACKLOG.md R71.
 #[test]
 fn a_self_exclusive_parser_is_not_piped_into_itself() {
     let entry = entry_named("vyre-libs::parsing::core_delimiter_match");

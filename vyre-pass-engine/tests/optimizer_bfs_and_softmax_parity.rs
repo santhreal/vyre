@@ -4,8 +4,6 @@
 //! (math/dataflow_compaction_pipeline.rs). Each is a thin wrapper over a private impl, so we
 //! pin the OBSERVABLE behavior through the CPU reference interpreter, asserting exact bytes
 //! (never `!is_empty`: Testing Contract).
-//!
-//! Drains the vyre-pass-engine slice of BACKLOG.md WIRING-tautology-closure-25crates.
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::Program;
