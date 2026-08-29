@@ -22,7 +22,6 @@
 #[repr(u32)] pub enum vyre_libs::graph::state_index_frontier::StateIndexDuplicateRule
 #[repr(u32)] pub enum vyre_libs::graph::state_index_frontier::StateIndexFrontierDomain
 #[repr(u32)] pub enum vyre_libs::graph::state_index_frontier::StateIndexSpillDecision
-#[repr(u32)] pub enum vyre_libs::logical::Op
 #[repr(u32)] pub enum vyre_libs::logical::dialect::Op
 impl core::cmp::Eq for vyre_libs::rule::RuleCondition
 impl core::cmp::Ord for vyre_libs::pattern::RegionTriple
@@ -1749,10 +1748,6 @@ pub fn vyre_libs::llm::paged_kv::paged_kv_gather(spec: &vyre_libs::llm::paged_kv
 pub fn vyre_libs::llm::sampling::TokenSampler<'_>::program(&self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::llm::sampling::SamplingError>
 pub fn vyre_libs::llm::sampling::logit_adjust(logits: &str, counts: &str, adjusted: &str, vocabulary: u32, temperature: f32, penalty: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::llm::sampling::nucleus_select(selected: &str, weights: &str, uniform: &str, token: &str, candidates: u32, top_p: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::logical::LogicalVisitor::Nand(&mut self, args: &[vyre_foundation::ir_inner::model::generated::Expr]) -> Self::Output
-pub fn vyre_libs::logical::LogicalVisitor::Nor(&mut self, args: &[vyre_foundation::ir_inner::model::generated::Expr]) -> Self::Output
-pub fn vyre_libs::logical::call_nand(args: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Expr>) -> vyre_foundation::ir_inner::model::generated::Expr
-pub fn vyre_libs::logical::call_nor(args: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Expr>) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::logical::dialect::DialectMarker::descriptor() -> &'static vyre_foundation::dialect::descriptor::DialectDescriptor
 pub fn vyre_libs::logical::dialect::DialectMarker::match_op_id(op_id: &str) -> core::option::Option<Self::Op>
 pub fn vyre_libs::logical::dialect::LogicalVisitor::Nand(&mut self, args: &[vyre_foundation::ir_inner::model::generated::Expr]) -> Self::Output
@@ -1773,9 +1768,6 @@ pub fn vyre_libs::logical::dialect::match_call<'a>(expr: &'a vyre_foundation::ir
 pub fn vyre_libs::logical::dialect::match_op_id(op_id: &str) -> core::option::Option<vyre_libs::logical::dialect::Op>
 pub fn vyre_libs::logical::dialect::validate_call(op: vyre_libs::logical::dialect::Op, args: &[vyre_foundation::ir_inner::model::generated::Expr], target_version: u32, errors: &mut alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>)
 pub fn vyre_libs::logical::dialect::validate_external_node(node: &vyre_foundation::dialect::schema::ExternalSchemaNode) -> core::result::Result<vyre_libs::logical::dialect::Op, vyre_foundation::dialect::schema::SchemaTranslationError>
-pub fn vyre_libs::logical::dispatch_visitor<V: vyre_libs::logical::dialect::LogicalVisitor>(op: vyre_libs::logical::dialect::Op, args: &[vyre_foundation::ir_inner::model::generated::Expr], visitor: &mut V) -> <V as vyre_libs::logical::dialect::LogicalVisitor>::Output
-pub fn vyre_libs::logical::match_call<'a>(expr: &'a vyre_foundation::ir_inner::model::generated::Expr) -> core::option::Option<(vyre_libs::logical::dialect::Op, &'a [vyre_foundation::ir_inner::model::generated::Expr])>
-pub fn vyre_libs::logical::match_op_id(op_id: &str) -> core::option::Option<vyre_libs::logical::dialect::Op>
 pub fn vyre_libs::logical::nand(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::logical::nor(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::algebra::bool_semiring_matmul(a: &str, b: &str, out: &str, rows: u32, inner: u32, cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -3314,10 +3306,8 @@ pub struct vyre_libs::visual::GaussianKernel
 pub struct vyre_libs::visual::GaussianKernelError
 pub struct vyre_libs::visual::GlassParams
 pub struct vyre_libs::visual::GridShape
-pub trait vyre_libs::logical::LogicalVisitor
 pub trait vyre_libs::logical::dialect::LogicalVisitor
 pub type vyre_libs::graph::vast_tree_walk::VastTreeWalkPlan = vyre_libs::graph::vast_tree_walk::VastTreeWalkProgramPlan
-pub type vyre_libs::logical::LogicalVisitor::Output
 pub type vyre_libs::logical::dialect::DialectMarker::Op = vyre_libs::logical::dialect::Op
 pub type vyre_libs::logical::dialect::LogicalVisitor::Output
 pub type vyre_libs::parsing::python::source_cache::Python312PipelineCache = vyre_libs::parsing::source_cache::ParsedSourceLru<vyre_libs::parsing::python::source_cache::Python312PipelinePrograms>
@@ -4059,8 +4049,6 @@ pub vyre_libs::llm::sampling::TokenSampler::token: &'a str
 pub vyre_libs::llm::sampling::TokenSampler::top_p: f32
 pub vyre_libs::llm::sampling::TokenSampler::uniform: &'a str
 pub vyre_libs::llm::sampling::TokenSampler::vocabulary: u32
-pub vyre_libs::logical::Op::Nand = 0
-pub vyre_libs::logical::Op::Nor = 1
 pub vyre_libs::logical::dialect::Op::Nand = 0
 pub vyre_libs::logical::dialect::Op::Nor = 1
 pub vyre_libs::math::bellman_shortest_path::BellmanBuffers::changed: &'a str

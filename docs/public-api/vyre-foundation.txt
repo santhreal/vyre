@@ -164,7 +164,7 @@ impl core::ops::bit::BitOrAssign for vyre_foundation::lower::ProgramEffects
 impl core::ops::deref::Deref for vyre_foundation::ir::Ident
 impl core::ops::drop::Drop for vyre_foundation::perf::SpanGuard
 impl inventory::Collect for vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration
-impl inventory::Collect for vyre_foundation::dialect::descriptor::DialectDescriptorRegistration
+impl inventory::Collect for vyre_foundation::dialect::DialectDescriptorRegistration
 impl inventory::Collect for vyre_foundation::extension::ExtensionAtomicOpRegistration
 impl inventory::Collect for vyre_foundation::extension::ExtensionBinOpRegistration
 impl inventory::Collect for vyre_foundation::extension::ExtensionDataTypeRegistration
@@ -185,9 +185,9 @@ impl vyre_foundation::diagnostics::Diagnostic
 impl vyre_foundation::diagnostics::DiagnosticCode
 impl vyre_foundation::diagnostics::OpLocation
 impl vyre_foundation::diagnostics::Severity
-impl vyre_foundation::dialect::descriptor::DialectDescriptor
-impl vyre_foundation::dialect::descriptor::DialectRegistry
-impl vyre_foundation::dialect::schema::ResourceAbi
+impl vyre_foundation::dialect::DialectDescriptor
+impl vyre_foundation::dialect::DialectRegistry
+impl vyre_foundation::dialect::ResourceAbi
 impl vyre_foundation::dialect_lookup::Signature
 impl vyre_foundation::execution_plan::DeviceMemoryBudget
 impl vyre_foundation::execution_plan::ExecutionPlan
@@ -556,7 +556,7 @@ pub const fn vyre_foundation::validate::ValidationPhase::as_str(self) -> &'stati
 pub const vyre_foundation::algebraic_reordering::ReorderingClass::ALL: &'static [Self]
 pub const vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES: [&str; 2]
 pub const vyre_foundation::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
-pub const vyre_foundation::dialect::schema::ResourceAbi::EMPTY: Self
+pub const vyre_foundation::dialect::ResourceAbi::EMPTY: Self
 pub const vyre_foundation::fp_parity::BACKEND_ELEMENTARY_F32_ULP_BUDGET: u32
 pub const vyre_foundation::fp_parity::BACKEND_TRANSCENDENTAL_ULP_BUDGET: u32
 pub const vyre_foundation::fp_parity::REFERENCE_TRANSCENDENTAL_ULP_BUDGET: u32
@@ -687,9 +687,6 @@ pub enum vyre_foundation::algebraic_reordering::ReorderingClass
 pub enum vyre_foundation::dialect::DialectVersionError
 pub enum vyre_foundation::dialect::FieldType
 pub enum vyre_foundation::dialect::SchemaTranslationError
-pub enum vyre_foundation::dialect::schema::FieldType
-pub enum vyre_foundation::dialect::schema::SchemaTranslationError
-pub enum vyre_foundation::dialect::version::DialectVersionError
 pub enum vyre_foundation::execution_plan::AutotuneStrategy
 pub enum vyre_foundation::execution_plan::ConformanceStrength
 pub enum vyre_foundation::execution_plan::DispatchStrategy
@@ -841,55 +838,34 @@ pub fn vyre_foundation::diagnostics::OpLocation::op(op_id: impl core::convert::I
 pub fn vyre_foundation::diagnostics::OpLocation::with_attr(self, name: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::OpLocation::with_operand(self, index: u32) -> Self
 pub fn vyre_foundation::diagnostics::OpLocation::with_path(self, path: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_foundation::dialect::Dialect::descriptor() -> &'static vyre_foundation::dialect::descriptor::DialectDescriptor
+pub fn vyre_foundation::dialect::Dialect::descriptor() -> &'static vyre_foundation::dialect::DialectDescriptor
 pub fn vyre_foundation::dialect::Dialect::id() -> &'static str
 pub fn vyre_foundation::dialect::Dialect::match_op_id(op_id: &str) -> core::option::Option<Self::Op>
-pub fn vyre_foundation::dialect::Dialect::ops() -> &'static [vyre_foundation::dialect::descriptor::DialectOpDescriptor]
-pub fn vyre_foundation::dialect::Dialect::validate_version(requested: u32) -> core::result::Result<(), vyre_foundation::dialect::version::DialectVersionError>
+pub fn vyre_foundation::dialect::Dialect::ops() -> &'static [vyre_foundation::dialect::DialectOpDescriptor]
+pub fn vyre_foundation::dialect::Dialect::validate_version(requested: u32) -> core::result::Result<(), vyre_foundation::dialect::DialectVersionError>
 pub fn vyre_foundation::dialect::Dialect::version() -> u32
-pub fn vyre_foundation::dialect::DialectCodec::decode_token(token: u32) -> core::option::Option<<D as vyre_foundation::dialect::traits::Dialect>::Op>
-pub fn vyre_foundation::dialect::DialectCodec::encode_token(op: <D as vyre_foundation::dialect::traits::Dialect>::Op) -> u32
-pub fn vyre_foundation::dialect::DialectMatcher::match_call<'a>(expr: &'a vyre_foundation::ir::Expr) -> core::option::Option<(<D as vyre_foundation::dialect::traits::Dialect>::Op, &'a [vyre_foundation::ir::Expr])>
-pub fn vyre_foundation::dialect::DialectOp::descriptor(self) -> &'static vyre_foundation::dialect::descriptor::DialectOpDescriptor
+pub fn vyre_foundation::dialect::DialectCodec::decode_token(token: u32) -> core::option::Option<<D as vyre_foundation::dialect::Dialect>::Op>
+pub fn vyre_foundation::dialect::DialectCodec::encode_token(op: <D as vyre_foundation::dialect::Dialect>::Op) -> u32
+pub fn vyre_foundation::dialect::DialectDescriptor::contains_op(&self, op_id: &str) -> bool
+pub fn vyre_foundation::dialect::DialectDescriptor::find_op(&self, op_id: &str) -> core::option::Option<&'static vyre_foundation::dialect::DialectOpDescriptor>
+pub fn vyre_foundation::dialect::DialectMatcher::match_call<'a>(expr: &'a vyre_foundation::ir::Expr) -> core::option::Option<(<D as vyre_foundation::dialect::Dialect>::Op, &'a [vyre_foundation::ir::Expr])>
+pub fn vyre_foundation::dialect::DialectOp::descriptor(self) -> &'static vyre_foundation::dialect::DialectOpDescriptor
 pub fn vyre_foundation::dialect::DialectOp::introduced_version(self) -> u32
 pub fn vyre_foundation::dialect::DialectOp::is_composable(self) -> bool
 pub fn vyre_foundation::dialect::DialectOp::op_id(self) -> &'static str
 pub fn vyre_foundation::dialect::DialectOp::op_name(self) -> &'static str
-pub fn vyre_foundation::dialect::DialectValidator::validate_dialect_call(op: <D as vyre_foundation::dialect::traits::Dialect>::Op, args: &[vyre_foundation::ir::Expr], target_version: u32, errors: &mut alloc::vec::Vec<vyre_foundation::validate::ValidationError>)
-pub fn vyre_foundation::dialect::DialectVisitor::visit_op(&mut self, op: <D as vyre_foundation::dialect::traits::Dialect>::Op, args: &[vyre_foundation::ir::Expr]) -> Self::Output
-pub fn vyre_foundation::dialect::descriptor::DialectDescriptor::contains_op(&self, op_id: &str) -> bool
-pub fn vyre_foundation::dialect::descriptor::DialectDescriptor::find_op(&self, op_id: &str) -> core::option::Option<&'static vyre_foundation::dialect::descriptor::DialectOpDescriptor>
-pub fn vyre_foundation::dialect::descriptor::DialectRegistry::find_by_op_id(op_id: &str) -> core::option::Option<&'static vyre_foundation::dialect::descriptor::DialectDescriptor>
-pub fn vyre_foundation::dialect::descriptor::DialectRegistry::get(dialect_id: &str) -> core::option::Option<&'static vyre_foundation::dialect::descriptor::DialectDescriptor>
-pub fn vyre_foundation::dialect::descriptor::DialectRegistry::global() -> &'static alloc::collections::btree::map::BTreeMap<&'static str, &'static vyre_foundation::dialect::descriptor::DialectDescriptor>
-pub fn vyre_foundation::dialect::schema::ResourceAbi::find_resource(&self, name: &str) -> core::option::Option<&'static vyre_foundation::dialect::schema::ResourceBinding>
-pub fn vyre_foundation::dialect::schema::ResourceAbi::verify_complete_roster(&self, bound: &[&str]) -> core::result::Result<(), &'static str>
-pub fn vyre_foundation::dialect::schema::validate_node_fields(dialect: &'static str, node_op: &str, raw_fields: &[(alloc::string::String, alloc::string::String)], declared_fields: &[vyre_foundation::dialect::schema::FieldContract]) -> core::result::Result<(), vyre_foundation::dialect::schema::SchemaTranslationError>
-pub fn vyre_foundation::dialect::schema::validate_node_resources(dialect: &'static str, node_op: &str, bound_resources: &[alloc::string::String], abi: &vyre_foundation::dialect::schema::ResourceAbi) -> core::result::Result<(), vyre_foundation::dialect::schema::SchemaTranslationError>
-pub fn vyre_foundation::dialect::schema::validate_schema_identity(dialect: &'static str, found_schema_id: &str, found_version: u32, expected_dialect: &'static str, expected_version: u32) -> core::result::Result<(), vyre_foundation::dialect::schema::SchemaTranslationError>
-pub fn vyre_foundation::dialect::traits::Dialect::descriptor() -> &'static vyre_foundation::dialect::descriptor::DialectDescriptor
-pub fn vyre_foundation::dialect::traits::Dialect::id() -> &'static str
-pub fn vyre_foundation::dialect::traits::Dialect::match_op_id(op_id: &str) -> core::option::Option<Self::Op>
-pub fn vyre_foundation::dialect::traits::Dialect::ops() -> &'static [vyre_foundation::dialect::descriptor::DialectOpDescriptor]
-pub fn vyre_foundation::dialect::traits::Dialect::validate_version(requested: u32) -> core::result::Result<(), vyre_foundation::dialect::version::DialectVersionError>
-pub fn vyre_foundation::dialect::traits::Dialect::version() -> u32
-pub fn vyre_foundation::dialect::traits::DialectCodec::decode_token(token: u32) -> core::option::Option<<D as vyre_foundation::dialect::traits::Dialect>::Op>
-pub fn vyre_foundation::dialect::traits::DialectCodec::encode_token(op: <D as vyre_foundation::dialect::traits::Dialect>::Op) -> u32
-pub fn vyre_foundation::dialect::traits::DialectMatcher::match_call<'a>(expr: &'a vyre_foundation::ir::Expr) -> core::option::Option<(<D as vyre_foundation::dialect::traits::Dialect>::Op, &'a [vyre_foundation::ir::Expr])>
-pub fn vyre_foundation::dialect::traits::DialectOp::descriptor(self) -> &'static vyre_foundation::dialect::descriptor::DialectOpDescriptor
-pub fn vyre_foundation::dialect::traits::DialectOp::introduced_version(self) -> u32
-pub fn vyre_foundation::dialect::traits::DialectOp::is_composable(self) -> bool
-pub fn vyre_foundation::dialect::traits::DialectOp::op_id(self) -> &'static str
-pub fn vyre_foundation::dialect::traits::DialectOp::op_name(self) -> &'static str
-pub fn vyre_foundation::dialect::traits::DialectValidator::validate_dialect_call(op: <D as vyre_foundation::dialect::traits::Dialect>::Op, args: &[vyre_foundation::ir::Expr], target_version: u32, errors: &mut alloc::vec::Vec<vyre_foundation::validate::ValidationError>)
-pub fn vyre_foundation::dialect::traits::DialectVisitor::visit_op(&mut self, op: <D as vyre_foundation::dialect::traits::Dialect>::Op, args: &[vyre_foundation::ir::Expr]) -> Self::Output
-pub fn vyre_foundation::dialect::validate_dialect_version(descriptor: &vyre_foundation::dialect::descriptor::DialectDescriptor, requested: u32) -> core::result::Result<(), vyre_foundation::dialect::version::DialectVersionError>
-pub fn vyre_foundation::dialect::validate_node_fields(dialect: &'static str, node_op: &str, raw_fields: &[(alloc::string::String, alloc::string::String)], declared_fields: &[vyre_foundation::dialect::schema::FieldContract]) -> core::result::Result<(), vyre_foundation::dialect::schema::SchemaTranslationError>
-pub fn vyre_foundation::dialect::validate_node_resources(dialect: &'static str, node_op: &str, bound_resources: &[alloc::string::String], abi: &vyre_foundation::dialect::schema::ResourceAbi) -> core::result::Result<(), vyre_foundation::dialect::schema::SchemaTranslationError>
-pub fn vyre_foundation::dialect::validate_op_version(op: &vyre_foundation::dialect::descriptor::DialectOpDescriptor, target_version: u32) -> core::result::Result<(), vyre_foundation::dialect::version::DialectVersionError>
-pub fn vyre_foundation::dialect::validate_schema_identity(dialect: &'static str, found_schema_id: &str, found_version: u32, expected_dialect: &'static str, expected_version: u32) -> core::result::Result<(), vyre_foundation::dialect::schema::SchemaTranslationError>
-pub fn vyre_foundation::dialect::version::validate_dialect_version(descriptor: &vyre_foundation::dialect::descriptor::DialectDescriptor, requested: u32) -> core::result::Result<(), vyre_foundation::dialect::version::DialectVersionError>
-pub fn vyre_foundation::dialect::version::validate_op_version(op: &vyre_foundation::dialect::descriptor::DialectOpDescriptor, target_version: u32) -> core::result::Result<(), vyre_foundation::dialect::version::DialectVersionError>
+pub fn vyre_foundation::dialect::DialectRegistry::find_by_op_id(op_id: &str) -> core::option::Option<&'static vyre_foundation::dialect::DialectDescriptor>
+pub fn vyre_foundation::dialect::DialectRegistry::get(dialect_id: &str) -> core::option::Option<&'static vyre_foundation::dialect::DialectDescriptor>
+pub fn vyre_foundation::dialect::DialectRegistry::global() -> &'static alloc::collections::btree::map::BTreeMap<&'static str, &'static vyre_foundation::dialect::DialectDescriptor>
+pub fn vyre_foundation::dialect::DialectValidator::validate_dialect_call(op: <D as vyre_foundation::dialect::Dialect>::Op, args: &[vyre_foundation::ir::Expr], target_version: u32, errors: &mut alloc::vec::Vec<vyre_foundation::validate::ValidationError>)
+pub fn vyre_foundation::dialect::DialectVisitor::visit_op(&mut self, op: <D as vyre_foundation::dialect::Dialect>::Op, args: &[vyre_foundation::ir::Expr]) -> Self::Output
+pub fn vyre_foundation::dialect::ResourceAbi::find_resource(&self, name: &str) -> core::option::Option<&'static vyre_foundation::dialect::ResourceBinding>
+pub fn vyre_foundation::dialect::ResourceAbi::verify_complete_roster(&self, bound: &[&str]) -> core::result::Result<(), &'static str>
+pub fn vyre_foundation::dialect::validate_dialect_version(descriptor: &vyre_foundation::dialect::DialectDescriptor, requested: u32) -> core::result::Result<(), vyre_foundation::dialect::DialectVersionError>
+pub fn vyre_foundation::dialect::validate_node_fields(dialect: &'static str, node_op: &str, raw_fields: &[(alloc::string::String, alloc::string::String)], declared_fields: &[vyre_foundation::dialect::FieldContract]) -> core::result::Result<(), vyre_foundation::dialect::SchemaTranslationError>
+pub fn vyre_foundation::dialect::validate_node_resources(dialect: &'static str, node_op: &str, bound_resources: &[alloc::string::String], abi: &vyre_foundation::dialect::ResourceAbi) -> core::result::Result<(), vyre_foundation::dialect::SchemaTranslationError>
+pub fn vyre_foundation::dialect::validate_op_version(op: &vyre_foundation::dialect::DialectOpDescriptor, target_version: u32) -> core::result::Result<(), vyre_foundation::dialect::DialectVersionError>
+pub fn vyre_foundation::dialect::validate_schema_identity(dialect: &'static str, found_schema_id: &str, found_version: u32, expected_dialect: &'static str, expected_version: u32) -> core::result::Result<(), vyre_foundation::dialect::SchemaTranslationError>
 pub fn vyre_foundation::execution_plan::DeviceMemoryBudget::from_adapter(caps: &vyre_foundation::optimizer::AdapterCaps) -> Self
 pub fn vyre_foundation::execution_plan::DeviceMemoryBudget::validate(&self, plan: &vyre_foundation::execution_plan::MemoryPlan) -> core::result::Result<vyre_foundation::execution_plan::MemoryBudgetReport, vyre_foundation::execution_plan::PlanError>
 pub fn vyre_foundation::execution_plan::ExecutionPlan::track_active(&self, track: vyre_foundation::execution_plan::InnovationTrack) -> bool
@@ -2792,10 +2768,6 @@ pub mod vyre_foundation::composition
 pub mod vyre_foundation::cpu_op
 pub mod vyre_foundation::diagnostics
 pub mod vyre_foundation::dialect
-pub mod vyre_foundation::dialect::descriptor
-pub mod vyre_foundation::dialect::schema
-pub mod vyre_foundation::dialect::traits
-pub mod vyre_foundation::dialect::version
 pub mod vyre_foundation::dialect_lookup
 pub mod vyre_foundation::execution_plan
 pub mod vyre_foundation::execution_plan::fusion
@@ -2950,14 +2922,6 @@ pub struct vyre_foundation::dialect::ExternalSchemaNode
 pub struct vyre_foundation::dialect::FieldContract
 pub struct vyre_foundation::dialect::ResourceAbi
 pub struct vyre_foundation::dialect::ResourceBinding
-pub struct vyre_foundation::dialect::descriptor::DialectDescriptor
-pub struct vyre_foundation::dialect::descriptor::DialectDescriptorRegistration
-pub struct vyre_foundation::dialect::descriptor::DialectOpDescriptor
-pub struct vyre_foundation::dialect::descriptor::DialectRegistry
-pub struct vyre_foundation::dialect::schema::ExternalSchemaNode
-pub struct vyre_foundation::dialect::schema::FieldContract
-pub struct vyre_foundation::dialect::schema::ResourceAbi
-pub struct vyre_foundation::dialect::schema::ResourceBinding
 pub struct vyre_foundation::dialect_lookup::AttrSchema
 pub struct vyre_foundation::dialect_lookup::Signature
 pub struct vyre_foundation::dialect_lookup::TypedParam
@@ -3221,17 +3185,11 @@ pub struct vyre_foundation::visit::NodeShape
 pub trait vyre_foundation::cpu_op::CategoryAOp
 pub trait vyre_foundation::cpu_op::CpuOp
 pub trait vyre_foundation::dialect::Dialect: core::marker::Send + core::marker::Sync + 'static
-pub trait vyre_foundation::dialect::DialectCodec<D: vyre_foundation::dialect::traits::Dialect>
-pub trait vyre_foundation::dialect::DialectMatcher<D: vyre_foundation::dialect::traits::Dialect>
+pub trait vyre_foundation::dialect::DialectCodec<D: vyre_foundation::dialect::Dialect>
+pub trait vyre_foundation::dialect::DialectMatcher<D: vyre_foundation::dialect::Dialect>
 pub trait vyre_foundation::dialect::DialectOp: core::marker::Copy + core::cmp::Eq + core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
-pub trait vyre_foundation::dialect::DialectValidator<D: vyre_foundation::dialect::traits::Dialect>
-pub trait vyre_foundation::dialect::DialectVisitor<D: vyre_foundation::dialect::traits::Dialect>
-pub trait vyre_foundation::dialect::traits::Dialect: core::marker::Send + core::marker::Sync + 'static
-pub trait vyre_foundation::dialect::traits::DialectCodec<D: vyre_foundation::dialect::traits::Dialect>
-pub trait vyre_foundation::dialect::traits::DialectMatcher<D: vyre_foundation::dialect::traits::Dialect>
-pub trait vyre_foundation::dialect::traits::DialectOp: core::marker::Copy + core::cmp::Eq + core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
-pub trait vyre_foundation::dialect::traits::DialectValidator<D: vyre_foundation::dialect::traits::Dialect>
-pub trait vyre_foundation::dialect::traits::DialectVisitor<D: vyre_foundation::dialect::traits::Dialect>
+pub trait vyre_foundation::dialect::DialectValidator<D: vyre_foundation::dialect::Dialect>
+pub trait vyre_foundation::dialect::DialectVisitor<D: vyre_foundation::dialect::Dialect>
 pub trait vyre_foundation::extension::RuleConditionExt: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_foundation::ir::ExprNode: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_foundation::ir::NodeExtension: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
@@ -3251,10 +3209,8 @@ pub trait vyre_foundation::visit::Lowerable<Ctx: ?core::marker::Sized>
 pub trait vyre_foundation::visit::NodeSink
 pub trait vyre_foundation::visit::NodeVisitor
 pub type vyre_foundation::IrResult<T, E> = core::result::Result<T, E>
-pub type vyre_foundation::dialect::Dialect::Op: vyre_foundation::dialect::traits::DialectOp
+pub type vyre_foundation::dialect::Dialect::Op: vyre_foundation::dialect::DialectOp
 pub type vyre_foundation::dialect::DialectVisitor::Output
-pub type vyre_foundation::dialect::traits::Dialect::Op: vyre_foundation::dialect::traits::DialectOp
-pub type vyre_foundation::dialect::traits::DialectVisitor::Output
 pub type vyre_foundation::extension::ExprExtensionDeserializer = fn(&[u8]) -> core::result::Result<alloc::sync::Arc<dyn vyre_foundation::ir::ExprNode>, alloc::string::String>
 pub type vyre_foundation::extension::NodeExtensionDeserializer = fn(&[u8]) -> core::result::Result<alloc::sync::Arc<dyn vyre_foundation::ir::NodeExtension>, alloc::string::String>
 pub type vyre_foundation::ir::Ident::Target = str
@@ -3396,11 +3352,11 @@ pub vyre_foundation::dialect::DialectDescriptor::category: &'static str
 pub vyre_foundation::dialect::DialectDescriptor::id: &'static str
 pub vyre_foundation::dialect::DialectDescriptor::min_supported_version: u32
 pub vyre_foundation::dialect::DialectDescriptor::name: &'static str
-pub vyre_foundation::dialect::DialectDescriptor::operations: &'static [vyre_foundation::dialect::descriptor::DialectOpDescriptor]
+pub vyre_foundation::dialect::DialectDescriptor::operations: &'static [vyre_foundation::dialect::DialectOpDescriptor]
 pub vyre_foundation::dialect::DialectDescriptor::summary: &'static str
 pub vyre_foundation::dialect::DialectDescriptor::tier: vyre_foundation::operation::OperationTier
 pub vyre_foundation::dialect::DialectDescriptor::version: u32
-pub vyre_foundation::dialect::DialectDescriptorRegistration::descriptor: &'static vyre_foundation::dialect::descriptor::DialectDescriptor
+pub vyre_foundation::dialect::DialectDescriptorRegistration::descriptor: &'static vyre_foundation::dialect::DialectDescriptor
 pub vyre_foundation::dialect::DialectOpDescriptor::dialect: &'static str
 pub vyre_foundation::dialect::DialectOpDescriptor::id: &'static str
 pub vyre_foundation::dialect::DialectOpDescriptor::is_composable: bool
@@ -3424,7 +3380,7 @@ pub vyre_foundation::dialect::DialectVersionError::UnsupportedVersion::found: u3
 pub vyre_foundation::dialect::ExternalSchemaNode::bound_resources: alloc::vec::Vec<alloc::string::String>
 pub vyre_foundation::dialect::ExternalSchemaNode::op_name: alloc::string::String
 pub vyre_foundation::dialect::ExternalSchemaNode::raw_fields: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
-pub vyre_foundation::dialect::FieldContract::field_type: vyre_foundation::dialect::schema::FieldType
+pub vyre_foundation::dialect::FieldContract::field_type: vyre_foundation::dialect::FieldType
 pub vyre_foundation::dialect::FieldContract::name: &'static str
 pub vyre_foundation::dialect::FieldContract::required: bool
 pub vyre_foundation::dialect::FieldType::Bool
@@ -3434,7 +3390,7 @@ pub vyre_foundation::dialect::FieldType::F32
 pub vyre_foundation::dialect::FieldType::I32
 pub vyre_foundation::dialect::FieldType::String
 pub vyre_foundation::dialect::FieldType::U32
-pub vyre_foundation::dialect::ResourceAbi::resources: &'static [vyre_foundation::dialect::schema::ResourceBinding]
+pub vyre_foundation::dialect::ResourceAbi::resources: &'static [vyre_foundation::dialect::ResourceBinding]
 pub vyre_foundation::dialect::ResourceBinding::access: vyre_spec::buffer_access::BufferAccess
 pub vyre_foundation::dialect::ResourceBinding::alignment: u32
 pub vyre_foundation::dialect::ResourceBinding::element_type: vyre_spec::data_type::DataType
@@ -3466,80 +3422,6 @@ pub vyre_foundation::dialect::SchemaTranslationError::UnknownField::node_op: all
 pub vyre_foundation::dialect::SchemaTranslationError::UnmappedNode
 pub vyre_foundation::dialect::SchemaTranslationError::UnmappedNode::dialect: &'static str
 pub vyre_foundation::dialect::SchemaTranslationError::UnmappedNode::node_op: alloc::string::String
-pub vyre_foundation::dialect::descriptor::DialectDescriptor::category: &'static str
-pub vyre_foundation::dialect::descriptor::DialectDescriptor::id: &'static str
-pub vyre_foundation::dialect::descriptor::DialectDescriptor::min_supported_version: u32
-pub vyre_foundation::dialect::descriptor::DialectDescriptor::name: &'static str
-pub vyre_foundation::dialect::descriptor::DialectDescriptor::operations: &'static [vyre_foundation::dialect::descriptor::DialectOpDescriptor]
-pub vyre_foundation::dialect::descriptor::DialectDescriptor::summary: &'static str
-pub vyre_foundation::dialect::descriptor::DialectDescriptor::tier: vyre_foundation::operation::OperationTier
-pub vyre_foundation::dialect::descriptor::DialectDescriptor::version: u32
-pub vyre_foundation::dialect::descriptor::DialectDescriptorRegistration::descriptor: &'static vyre_foundation::dialect::descriptor::DialectDescriptor
-pub vyre_foundation::dialect::descriptor::DialectOpDescriptor::dialect: &'static str
-pub vyre_foundation::dialect::descriptor::DialectOpDescriptor::id: &'static str
-pub vyre_foundation::dialect::descriptor::DialectOpDescriptor::is_composable: bool
-pub vyre_foundation::dialect::descriptor::DialectOpDescriptor::name: &'static str
-pub vyre_foundation::dialect::descriptor::DialectOpDescriptor::signature: &'static vyre_foundation::dialect_lookup::Signature
-pub vyre_foundation::dialect::descriptor::DialectOpDescriptor::summary: &'static str
-pub vyre_foundation::dialect::descriptor::DialectOpDescriptor::version: u32
-pub vyre_foundation::dialect::schema::ExternalSchemaNode::bound_resources: alloc::vec::Vec<alloc::string::String>
-pub vyre_foundation::dialect::schema::ExternalSchemaNode::op_name: alloc::string::String
-pub vyre_foundation::dialect::schema::ExternalSchemaNode::raw_fields: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
-pub vyre_foundation::dialect::schema::FieldContract::field_type: vyre_foundation::dialect::schema::FieldType
-pub vyre_foundation::dialect::schema::FieldContract::name: &'static str
-pub vyre_foundation::dialect::schema::FieldContract::required: bool
-pub vyre_foundation::dialect::schema::FieldType::Bool
-pub vyre_foundation::dialect::schema::FieldType::Buffer
-pub vyre_foundation::dialect::schema::FieldType::Bytes
-pub vyre_foundation::dialect::schema::FieldType::F32
-pub vyre_foundation::dialect::schema::FieldType::I32
-pub vyre_foundation::dialect::schema::FieldType::String
-pub vyre_foundation::dialect::schema::FieldType::U32
-pub vyre_foundation::dialect::schema::ResourceAbi::resources: &'static [vyre_foundation::dialect::schema::ResourceBinding]
-pub vyre_foundation::dialect::schema::ResourceBinding::access: vyre_spec::buffer_access::BufferAccess
-pub vyre_foundation::dialect::schema::ResourceBinding::alignment: u32
-pub vyre_foundation::dialect::schema::ResourceBinding::element_type: vyre_spec::data_type::DataType
-pub vyre_foundation::dialect::schema::ResourceBinding::minimum_bytes: u64
-pub vyre_foundation::dialect::schema::ResourceBinding::name: &'static str
-pub vyre_foundation::dialect::schema::SchemaTranslationError::DuplicateField
-pub vyre_foundation::dialect::schema::SchemaTranslationError::DuplicateField::dialect: &'static str
-pub vyre_foundation::dialect::schema::SchemaTranslationError::DuplicateField::field: alloc::string::String
-pub vyre_foundation::dialect::schema::SchemaTranslationError::DuplicateField::node_op: alloc::string::String
-pub vyre_foundation::dialect::schema::SchemaTranslationError::IncompatibleIdentity
-pub vyre_foundation::dialect::schema::SchemaTranslationError::IncompatibleIdentity::dialect: &'static str
-pub vyre_foundation::dialect::schema::SchemaTranslationError::IncompatibleIdentity::expected_version: u32
-pub vyre_foundation::dialect::schema::SchemaTranslationError::IncompatibleIdentity::found_version: u32
-pub vyre_foundation::dialect::schema::SchemaTranslationError::IncompatibleIdentity::required_dialect: &'static str
-pub vyre_foundation::dialect::schema::SchemaTranslationError::IncompatibleIdentity::schema_id: alloc::string::String
-pub vyre_foundation::dialect::schema::SchemaTranslationError::IncompleteResourceRoster
-pub vyre_foundation::dialect::schema::SchemaTranslationError::IncompleteResourceRoster::declared: alloc::vec::Vec<&'static str>
-pub vyre_foundation::dialect::schema::SchemaTranslationError::IncompleteResourceRoster::dialect: &'static str
-pub vyre_foundation::dialect::schema::SchemaTranslationError::IncompleteResourceRoster::expected_resource: &'static str
-pub vyre_foundation::dialect::schema::SchemaTranslationError::IncompleteResourceRoster::node_op: alloc::string::String
-pub vyre_foundation::dialect::schema::SchemaTranslationError::MissingRequiredField
-pub vyre_foundation::dialect::schema::SchemaTranslationError::MissingRequiredField::dialect: &'static str
-pub vyre_foundation::dialect::schema::SchemaTranslationError::MissingRequiredField::field: alloc::string::String
-pub vyre_foundation::dialect::schema::SchemaTranslationError::MissingRequiredField::node_op: alloc::string::String
-pub vyre_foundation::dialect::schema::SchemaTranslationError::UnknownField
-pub vyre_foundation::dialect::schema::SchemaTranslationError::UnknownField::dialect: &'static str
-pub vyre_foundation::dialect::schema::SchemaTranslationError::UnknownField::field: alloc::string::String
-pub vyre_foundation::dialect::schema::SchemaTranslationError::UnknownField::node_op: alloc::string::String
-pub vyre_foundation::dialect::schema::SchemaTranslationError::UnmappedNode
-pub vyre_foundation::dialect::schema::SchemaTranslationError::UnmappedNode::dialect: &'static str
-pub vyre_foundation::dialect::schema::SchemaTranslationError::UnmappedNode::node_op: alloc::string::String
-pub vyre_foundation::dialect::version::DialectVersionError::OperationVersionMismatch
-pub vyre_foundation::dialect::version::DialectVersionError::OperationVersionMismatch::introduced_in: u32
-pub vyre_foundation::dialect::version::DialectVersionError::OperationVersionMismatch::op_id: &'static str
-pub vyre_foundation::dialect::version::DialectVersionError::OperationVersionMismatch::target_version: u32
-pub vyre_foundation::dialect::version::DialectVersionError::StaleVersion
-pub vyre_foundation::dialect::version::DialectVersionError::StaleVersion::current: u32
-pub vyre_foundation::dialect::version::DialectVersionError::StaleVersion::dialect: &'static str
-pub vyre_foundation::dialect::version::DialectVersionError::StaleVersion::found: u32
-pub vyre_foundation::dialect::version::DialectVersionError::StaleVersion::min_supported: u32
-pub vyre_foundation::dialect::version::DialectVersionError::UnsupportedVersion
-pub vyre_foundation::dialect::version::DialectVersionError::UnsupportedVersion::current: u32
-pub vyre_foundation::dialect::version::DialectVersionError::UnsupportedVersion::dialect: &'static str
-pub vyre_foundation::dialect::version::DialectVersionError::UnsupportedVersion::found: u32
 pub vyre_foundation::dialect_lookup::AttrSchema::default: core::option::Option<&'static str>
 pub vyre_foundation::dialect_lookup::AttrSchema::name: &'static str
 pub vyre_foundation::dialect_lookup::AttrSchema::ty: vyre_foundation::dialect_lookup::AttrType

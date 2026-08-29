@@ -119,8 +119,8 @@ pub use schema::{
 pub use target::SelectedModule;
 pub use target::{
     attach_target, compile_selected_modules, EmittedTargetModule, ModuleNumericRecord,
-    SelectedLowering, TargetCompileError, TargetCompiler, TargetModuleBundle, TargetModuleImage,
-    TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+    SelectedLowering, TargetArmAssignment, TargetCompileError, TargetCompiler, TargetModuleBundle,
+    TargetModuleImage, TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
 };
 pub use vyre_foundation::diagnostics::Diagnostic;
 

@@ -28,6 +28,7 @@ impl vyre_megakernel::CompileRequest
 impl vyre_megakernel::CoveragePolicy
 impl vyre_megakernel::DeviceFacts
 impl vyre_megakernel::Digest
+impl vyre_megakernel::ExecutionTopology
 impl vyre_megakernel::ExternalFacts
 impl vyre_megakernel::FrontierExecutionSample
 impl vyre_megakernel::FrontierTopology
@@ -162,6 +163,7 @@ pub const fn vyre_megakernel::DeviceFacts::with_spatial_partitioning(self, suppo
 pub const fn vyre_megakernel::DeviceFacts::with_subgroup_size(self, subgroup_size: u32) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_synchronization_costs(self, barrier_ns: u64, grid_sync_ns: u64) -> Self
 pub const fn vyre_megakernel::Digest::as_bytes(&self) -> &[u8; 32]
+pub const fn vyre_megakernel::ExecutionTopology::arm_width(self) -> u32
 pub const fn vyre_megakernel::FrontierTopology::baseline() -> Self
 pub const fn vyre_megakernel::FrontierTopology::fallback_baseline(self) -> Self
 pub const fn vyre_megakernel::FrontierTopology::is_baseline(self) -> bool
@@ -434,6 +436,7 @@ pub fn vyre_megakernel::TargetCompiler::profile(&self) -> &vyre_megakernel::Targ
 pub fn vyre_megakernel::TargetModuleBundle::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::TargetModuleBundle::new(modules: alloc::vec::Vec<vyre_megakernel::TargetModuleImage>) -> Self
 pub fn vyre_megakernel::TargetModuleBundle::to_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::TargetCompileError>
+pub fn vyre_megakernel::TargetModuleBundle::with_topology(topology: vyre_megakernel::ExecutionTopology, modules: alloc::vec::Vec<vyre_megakernel::TargetModuleImage>) -> Self
 pub fn vyre_megakernel::TargetModuleImage::binding_slot(&self, name: &str) -> core::option::Option<(u32, u32)>
 pub fn vyre_megakernel::TargetPayload::bytes(&self) -> &[u8]
 pub fn vyre_megakernel::TargetPayload::entries(&self) -> &[vyre_megakernel::TargetEntryPoint]
@@ -595,6 +598,7 @@ pub struct vyre_megakernel::SemanticExecutionOutput
 pub struct vyre_megakernel::SemanticExecutionPolicy
 pub struct vyre_megakernel::SemanticExecutionRequest<'a>
 pub struct vyre_megakernel::SingleProgramExecutionOutput
+pub struct vyre_megakernel::TargetArmAssignment
 pub struct vyre_megakernel::TargetEntryPoint
 pub struct vyre_megakernel::TargetModuleBundle
 pub struct vyre_megakernel::TargetModuleImage
@@ -906,6 +910,9 @@ pub vyre_megakernel::SingleProgramExecutionOutput::artifact: vyre_megakernel::Di
 pub vyre_megakernel::SingleProgramExecutionOutput::output_buffers: alloc::vec::Vec<alloc::string::String>
 pub vyre_megakernel::SingleProgramExecutionOutput::outputs: alloc::vec::Vec<alloc::vec::Vec<u8>>
 pub vyre_megakernel::SingleProgramExecutionOutput::payload: vyre_megakernel::Digest
+pub vyre_megakernel::TargetArmAssignment::arm: u32
+pub vyre_megakernel::TargetArmAssignment::group: vyre_megakernel::FusionGroupId
+pub vyre_megakernel::TargetArmAssignment::stage: u32
 pub vyre_megakernel::TargetCompileError::Emission(alloc::string::String)
 pub vyre_megakernel::TargetCompileError::InvalidArtifact(alloc::string::String)
 pub vyre_megakernel::TargetCompileError::ModuleBundle(alloc::string::String)
@@ -917,8 +924,10 @@ pub vyre_megakernel::TargetEntryPoint::name: alloc::string::String
 pub vyre_megakernel::TargetEntryPoint::node: vyre_megakernel::ArtifactNodeId
 pub vyre_megakernel::TargetEntryPoint::resource_bindings: alloc::vec::Vec<vyre_megakernel::TargetResourceBinding>
 pub vyre_megakernel::TargetEntryPoint::workgroup_size: [u32; 3]
+pub vyre_megakernel::TargetModuleBundle::arms: alloc::vec::Vec<vyre_megakernel::TargetArmAssignment>
 pub vyre_megakernel::TargetModuleBundle::modules: alloc::vec::Vec<vyre_megakernel::TargetModuleImage>
 pub vyre_megakernel::TargetModuleBundle::schema_version: u16
+pub vyre_megakernel::TargetModuleBundle::topology: vyre_megakernel::ExecutionTopology
 pub vyre_megakernel::TargetModuleImage::bytes: alloc::vec::Vec<u8>
 pub vyre_megakernel::TargetModuleImage::descriptor: vyre_lower::descriptor::KernelDescriptor
 pub vyre_megakernel::TargetModuleImage::entry_point: alloc::string::String
