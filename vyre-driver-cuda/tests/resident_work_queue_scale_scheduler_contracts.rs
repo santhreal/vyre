@@ -157,7 +157,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
             dense_decision.topology,
             FrontierTopology::DenseFrontier | FrontierTopology::FusedWave
         ),
-        dense_decision
+        "{dense_decision:?}"
     );
     let bytes = MegakernelByteLayout {
         bytes_per_node: 16,
@@ -305,7 +305,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
             sparse_decision.topology,
             FrontierTopology::WarpSparseFrontier | FrontierTopology::SparseFrontier
         ),
-        sparse_decision.topology
+        "{:?}", sparse_decision.topology
     );
 
     let mut plan_cache = CudaMegakernelPlanCache::new();
