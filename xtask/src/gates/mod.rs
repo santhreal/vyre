@@ -84,6 +84,7 @@ pub mod shader_source;
 pub mod source_reachability;
 pub mod sweep;
 pub mod test_material;
+pub mod test_only_capability;
 pub mod testing_guides;
 pub mod unification;
 pub mod use_paths;
@@ -204,6 +205,10 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     (
         "test-material-placement",
         &test_material::TestMaterialPlacement,
+    ),
+    (
+        "test-only-capability",
+        &test_only_capability::TestOnlyCapability,
     ),
     ("testing-guides", &testing_guides::TestingGuides),
     ("unification", &unification::Unification),

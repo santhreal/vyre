@@ -45,7 +45,7 @@ use vyre_reference::composition_witness::{
     identity_functor_witness_into, identity_matrix_witness_into, idoms_to_dominator_sets_witness,
     iht_top_k_witness, interval_merge_witness, jacobi_solve_to_tolerance_witness_into,
     kernel_to_fixed_16_16_witness, kernel_to_fixed_16_16_witness_into, kfac_block_inverse_witness,
-    knn_csr_witness, l2p_zeroth_all_witness, launch_dominance_witness, linear_homotopy_witness,
+    knn_csr_witness, l2p_zeroth_all_witness, linear_homotopy_witness,
     m2l_zeroth_all_witness, matmul_u32_witness, matroid_exchange_bfs_step_witness,
     matroid_intersection_augmentation_witness, matroid_select_optimal_subset_witness,
     matroid_select_optimal_subset_witness_into, merge_frontier_out_witness_into,
@@ -61,9 +61,9 @@ use vyre_reference::composition_witness::{
     qsvt_apply_witness_into, qsvt_block_encode_witness, qsvt_block_encode_witness_into,
     rdp_to_dp_witness, reachable_witness, reduce_max_f32_witness, reduce_sum_f32_witness,
     region_of_witness, resolve_bigint_carry_chain_witness, resolve_bigint_carry_chain_witness_into,
-    resolve_family_witness, rms_norm_linear_witness, scale_aware_pressure_witness,
-    scallop_join_fixpoint_witness, scc_decompose_witness, schedule_via_homotopy_witness,
-    schedule_via_scale_aware_samples_witness, select_retention_set_witness,
+    resolve_family_witness, rms_norm_linear_witness,
+    scallop_join_fixpoint_witness, scc_decompose_witness,
+    select_retention_set_witness,
     select_retention_set_witness_into, semiring_gemm_witness,
     sheaf_diffusion_equilibrium_witness_into, sheaf_diffusion_step_witness,
     sheaf_diffusion_step_witness_into, sheaf_dominant_spectrum_witness_into,
@@ -94,7 +94,7 @@ use vyre_reference::composition_witness::{
     try_tensor_train_full_chain_witness_into, union_find_alias_witness, unpack_i4x8_witness,
     vector_graph_traverse_from_seed_witness, vector_top_k_witness,
     vietoris_rips_edge_filter_witness, vietoris_rips_edges_witness, vsa_fingerprint_witness,
-    AmgSolveScratchWitness, ExplodedIfdsScratchWitness, MegakernelScaleSampleWitness,
+    AmgSolveScratchWitness, ExplodedIfdsScratchWitness,
     NewtonSchulzScratchWitness, RuleConditionWitness, RuleEvaluationContextWitness,
     RuleFormulaWitness,
 };
@@ -2615,56 +2615,6 @@ fn tensor_flow_forward_and_vector_graph_witness_contracts() {
     let reached = vector_graph_traverse_from_seed_witness(0, 5, &csr_offsets, &csr_targets);
     assert_eq!(reached, vec![true, true, true, true, true]);
 }
-#[test]
-fn megakernel_schedule_witness_contracts() {
-    // Homotopy continuation contract
-    let costs = vec![1.0, 2.0, 3.0];
-    let schedule = schedule_via_homotopy_witness(&costs, 100, 0.2);
-    assert_eq!(schedule.len(), 3);
-    for &v in &schedule {
-        assert!((0.0..=1.0).contains(&v));
-        assert!(v > 0.3);
-    }
-    assert!(schedule[2] > schedule[1]);
-    assert!(schedule[1] > schedule[0]);
-
-    // Zero steps returns zeros
-    let zero_steps = schedule_via_homotopy_witness(&costs, 0, 0.1);
-    assert_eq!(zero_steps, vec![0.0, 0.0, 0.0]);
-
-    // Zero costs returns zeros
-    let zero_costs = schedule_via_homotopy_witness(&[0.0, 0.0, 0.0], 100, 0.5);
-    assert_eq!(zero_costs, vec![0.0, 0.0, 0.0]);
-
-    // Scale-aware telemetry witness contract
-    let sample_small = MegakernelScaleSampleWitness {
-        dispatch_cost_ns: 10.0,
-        frontier_density: 0.05,
-        readback_bytes: 64,
-    };
-    let sample_large = MegakernelScaleSampleWitness {
-        dispatch_cost_ns: 1000.0,
-        frontier_density: 0.95,
-        readback_bytes: 4096,
-    };
-    let scale_schedule =
-        schedule_via_scale_aware_samples_witness(&[sample_small, sample_large], 25.0, 64, 0.25);
-    assert_eq!(scale_schedule.len(), 2);
-    assert!(
-        scale_schedule[1] > scale_schedule[0],
-        "dense, readback-heavy candidate must receive stronger fusion pressure"
-    );
-
-    // Launch dominance and scale aware pressure mathematical properties
-    assert_eq!(launch_dominance_witness(0.0, 10.0), 0.0);
-    assert_eq!(launch_dominance_witness(10.0, 0.0), 1.0);
-    assert!((launch_dominance_witness(10.0, 10.0) - 0.5).abs() < 1e-12);
-
-    let pressure_low = scale_aware_pressure_witness(0.1, 0.1, 0.1, 0.1);
-    let pressure_high = scale_aware_pressure_witness(0.9, 0.9, 0.9, 0.9);
-    assert!(pressure_high > pressure_low);
-}
-
 #[test]
 fn dense_bitmatrix_step_and_select_retention_set_contracts() {
     // Dense bitmatrix step on 4 nodes: 0->1, 1->2, 2->3

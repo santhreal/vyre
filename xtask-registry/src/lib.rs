@@ -41,6 +41,10 @@ pub static GATES: &[(&str, &'static dyn GateBehavior)] = &[
         &gates::abstraction_gate::AbstractionGate,
     ),
     ("cross-target", &gates::cross_target::CrossTarget),
+    (
+        "dialect-lowering",
+        &gates::dialect_lowering::DialectLowering,
+    ),
     ("gate1", &gates::gate1::Gate1),
     ("heuristic-audit", &gates::heuristic_audit::HeuristicAudit),
     ("lego-composability", &gates::lego_audit::LegoComposability),

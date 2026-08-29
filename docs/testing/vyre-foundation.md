@@ -67,6 +67,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `dead_store_elim_overwriter_reads` | `vyre-foundation/tests/dead_store_elim_overwriter_reads.rs` | None | `./cargo_full test -p vyre-foundation --test dead_store_elim_overwriter_reads` |
 | `test` | `demos_orphan_risk` | `vyre-foundation/tests/demos_orphan_risk.rs` | None | `./cargo_full test -p vyre-foundation --test demos_orphan_risk` |
 | `test` | `diagnostic_protocol` | `vyre-foundation/tests/diagnostic_protocol.rs` | None | `./cargo_full test -p vyre-foundation --test diagnostic_protocol` |
+| `test` | `dialect_contracts` | `vyre-foundation/tests/dialect_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test dialect_contracts` |
 | `test` | `eqsat_gpu_mirror` | `vyre-foundation/tests/eqsat_gpu_mirror.rs` | None | `./cargo_full test -p vyre-foundation --test eqsat_gpu_mirror` |
 | `test` | `eqsat_unproved_rule_refusal` | `vyre-foundation/tests/eqsat_unproved_rule_refusal.rs` | None | `./cargo_full test -p vyre-foundation --test eqsat_unproved_rule_refusal` |
 | `test` | `execution_plan` | `vyre-foundation/tests/execution_plan.rs` | None | `./cargo_full test -p vyre-foundation --test execution_plan` |

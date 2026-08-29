@@ -73,7 +73,11 @@ pub(crate) mod target;
 mod target_bindings;
 
 pub use baseline::baseline_schedule;
-pub use candidate::{ExecutionTopology, ResidentPartitionMode};
+pub use candidate::{
+    select_frontier_topology, select_frontier_topology_stable, ExecutionTopology,
+    FrontierExecutionSample, FrontierGraphShape, FrontierMemoryBudget, FrontierTopology,
+    FrontierTopologyDecision, ResidentPartitionMode,
+};
 pub use certificate::{DerivedFamily, PruneReason, PrunedFamily, SearchCertificate};
 pub use compile::{compile, compile_measured, EmittedResources, FinalistEvaluator};
 pub use device_facts::DeviceFacts;
@@ -106,10 +110,11 @@ pub use request::{
 pub use request_identity::target_identity;
 pub use schema::{
     AbiAccess, Artifact, ArtifactAbi, BarrierPhaseRecord, BarrierRecord, EntryAbiRecord,
-    EntryPersistence, EntryResourceBinding, ExecutionMode, FusionRecord, FusionRejection,
-    GeometryRecord, LaunchResourceIntent, MaterializationReason, MaterializationRecord, NodeRecord,
-    NumericRecord, PlanMeasurement, Provenance, ResourceAbiRecord, ResourceEnvelope,
-    ResourceLifetime, ResourceNameCollision, ResourceRecord, SelectedPlan, ARTIFACT_SCHEMA_VERSION,
+    EntryPersistence, EntryResourceBinding, ExecutionMode, FrontierTopology as SchemaFrontierTopology,
+    FusionRecord, FusionRejection, GeometryRecord, LaunchResourceIntent, MaterializationReason,
+    MaterializationRecord, NodeRecord, NumericRecord, PlanMeasurement, Provenance, ResourceAbiRecord,
+    ResourceEnvelope, ResourceLifetime, ResourceNameCollision, ResourceRecord, SelectedPlan,
+    ARTIFACT_SCHEMA_VERSION,
 };
 pub use target::SelectedModule;
 pub use target::{

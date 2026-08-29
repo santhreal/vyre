@@ -8,6 +8,7 @@
 pub mod abstraction_gate;
 pub mod composition_budget;
 pub mod cross_target;
+pub mod dialect_lowering;
 pub mod gate1;
 pub mod handrolled_operations;
 pub mod heuristic_audit;

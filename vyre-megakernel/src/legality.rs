@@ -114,6 +114,14 @@ pub(crate) fn analyze_topology_legality(
     dependencies: &[DependencyEdge],
     device: DeviceFacts,
 ) -> TopologyDecision {
+    if candidate.frontier_topology == crate::candidate::FrontierTopology::FusedWave {
+        if !device.supports_cooperative_launch() {
+            return TopologyDecision::Rejected(TopologyRejectionReason::RequiresCooperativeLaunch);
+        }
+        if candidate.group_count() >= candidate.node_groups.len() {
+            return TopologyDecision::Rejected(TopologyRejectionReason::NoIndependentConcurrency);
+        }
+    }
     match candidate.topology {
         ExecutionTopology::Sequential => TopologyDecision::Legal,
         ExecutionTopology::ConcurrentQueue { queues } => {

@@ -59,6 +59,8 @@ pub struct SelectedLowering {
     pub canonical_bindings: Vec<TargetResourceBinding>,
     /// Authoritative logical invocation span before target grid projection.
     pub logical_element_count: u32,
+    /// Selected frontier-density traversal topology.
+    pub frontier_topology: crate::candidate::FrontierTopology,
     program: Program,
 }
 
@@ -394,6 +396,7 @@ pub fn compile_selected_modules(
             abi,
             canonical_bindings: bindings,
             logical_element_count,
+            frontier_topology: artifact.selected_plan().frontier_topology,
             program: lowered.program,
         };
         let emitted = emit(&selected, &profile)?;

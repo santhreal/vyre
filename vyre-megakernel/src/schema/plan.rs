@@ -12,6 +12,8 @@ use crate::grammar::{DerivationStep, ScheduleProduction, SCHEDULE_GRAMMAR_VERSIO
 use crate::measure::{MeasurementRecord, MEASUREMENT_PROTOCOL_VERSION};
 use crate::request::{SearchBudget, SearchWork};
 
+
+pub use crate::candidate::FrontierTopology;
 use super::records::{BarrierRecord, FusionRecord, FusionRejection, MaterializationRecord};
 
 /// How the runtime executes one compiled artifact.
@@ -98,6 +100,8 @@ impl NumericRecord {
 pub struct SelectedPlan {
     /// Executable queue or resident-partition topology selected by search.
     pub topology: crate::candidate::ExecutionTopology,
+    /// Frontier-density traversal topology selected by search.
+    pub frontier_topology: crate::candidate::FrontierTopology,
     /// Versioned backend-neutral phase and transform schedule selected by search.
     pub schedule: SelectedSchedule,
     /// Grammar productions the search applied to the unfused baseline, in order.
@@ -246,6 +250,15 @@ impl SelectedPlan {
                     "select at least one resident partition",
                 ));
             }
+        }
+        if self.frontier_topology == crate::candidate::FrontierTopology::FusedWave
+            && self.fusion.is_empty()
+        {
+            return Err(invalid(
+                "frontier_topology",
+                "fused wave frontier topology selected without any fusion group".to_string(),
+                "select a fused wave topology only when search derived at least one fusion group",
+            ));
         }
         if self.candidates_explored == 0 {
             return Err(invalid(

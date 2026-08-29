@@ -1,10 +1,11 @@
 //! CUDA telemetry adapter for the scale-aware megakernel scheduler.
 
 use vyre_driver::megakernel_execution::{
-    plan_megakernel_execution, select_megakernel_topology, select_megakernel_topology_stable,
-    MegakernelByteLayout, MegakernelDeviceCapabilities, MegakernelExecutionPlan,
-    MegakernelExecutionSample, MegakernelExecutionTopology, MegakernelGraphShape,
-    MegakernelMemoryBudget, MegakernelMemoryError, MegakernelTopologyDecision,
+    plan_megakernel_execution, select_frontier_topology, select_frontier_topology_stable,
+    FrontierExecutionSample, FrontierGraphShape, FrontierMemoryBudget, FrontierTopology,
+    FrontierTopologyDecision, MegakernelByteLayout, MegakernelDeviceCapabilities,
+    MegakernelExecutionPlan, MegakernelExecutionSample, MegakernelGraphShape,
+    MegakernelMemoryBudget, MegakernelMemoryError,
 };
 
 use crate::backend::CudaTelemetrySnapshot;
@@ -60,14 +61,24 @@ pub fn select_cuda_megakernel_topology(
     memory: MegakernelMemoryBudget,
     launch_overhead_ns: f64,
     fusion_pressure: f64,
-) -> MegakernelTopologyDecision {
-    select_megakernel_topology(
-        sample.execution_sample(),
-        graph,
-        memory,
+) -> FrontierTopologyDecision {
+    select_frontier_topology(
+        FrontierExecutionSample {
+            dispatch_cost_ns: sample.dispatch_cost_ns,
+            frontier_density: sample.frontier_density,
+            readback_bytes: sample.readback_bytes,
+        },
+        FrontierGraphShape {
+            node_count: graph.node_count,
+            edge_count: graph.edge_count,
+        },
+        FrontierMemoryBudget {
+            required_bytes: memory.required_bytes,
+            budget_bytes: memory.budget_bytes,
+        },
         launch_overhead_ns,
         fusion_pressure,
-        CALLER_GATED,
+        CALLER_GATED.supports_device_wide_barrier,
     )
 }
 
@@ -79,16 +90,26 @@ pub fn select_cuda_megakernel_topology_stable(
     memory: MegakernelMemoryBudget,
     launch_overhead_ns: f64,
     fusion_pressure: f64,
-    previous_topology: MegakernelExecutionTopology,
-) -> MegakernelTopologyDecision {
-    select_megakernel_topology_stable(
-        sample.execution_sample(),
-        graph,
-        memory,
+    previous_topology: FrontierTopology,
+) -> FrontierTopologyDecision {
+    select_frontier_topology_stable(
+        FrontierExecutionSample {
+            dispatch_cost_ns: sample.dispatch_cost_ns,
+            frontier_density: sample.frontier_density,
+            readback_bytes: sample.readback_bytes,
+        },
+        FrontierGraphShape {
+            node_count: graph.node_count,
+            edge_count: graph.edge_count,
+        },
+        FrontierMemoryBudget {
+            required_bytes: memory.required_bytes,
+            budget_bytes: memory.budget_bytes,
+        },
         launch_overhead_ns,
         fusion_pressure,
         previous_topology,
-        CALLER_GATED,
+        CALLER_GATED.supports_device_wide_barrier,
     )
 }
 
@@ -96,8 +117,9 @@ pub fn select_cuda_megakernel_topology_stable(
 ///
 /// # Errors
 ///
-/// Returns [`MegakernelMemoryError`] when byte accounting overflows or the plan
-/// does not fit the approved budget.
+/// Returns [`MegakernelMemoryError`] when a telemetry fact lies outside its
+/// declared domain, when byte accounting overflows, or when the plan does not
+/// fit the approved budget.
 pub fn plan_cuda_megakernel_execution(
     sample: CudaMegakernelScheduleSample,
     graph: MegakernelGraphShape,
@@ -139,8 +161,8 @@ mod tests {
         let decision = select_cuda_megakernel_topology(sample, graph, memory, 10.0, 1.0);
         assert_eq!(
             decision,
-            MegakernelTopologyDecision {
-                topology: MegakernelExecutionTopology::DenseFrontier,
+            FrontierTopologyDecision {
+                topology: FrontierTopology::DenseFrontier,
                 memory_pressure_bps: 9,
                 average_degree_bps: 20_000,
                 launch_pressure_bps: 1_000,

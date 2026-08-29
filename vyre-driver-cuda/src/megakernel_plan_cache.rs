@@ -18,9 +18,9 @@ use crate::megakernel_scheduler::{
     CudaMegakernelScheduleSample,
 };
 use vyre_driver::megakernel_execution::{
-    plan_megakernel_memory_budget, MegakernelByteLayout, MegakernelExecutionPlan,
-    MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
-    MegakernelMemoryError, MegakernelTopologyDecision,
+    megakernel_base_required_bytes, plan_megakernel_memory_budget, FrontierExecutionSample,
+    FrontierTopology, FrontierTopologyDecision, MegakernelByteLayout, MegakernelExecutionPlan,
+    MegakernelGraphShape, MegakernelMemoryBudget, MegakernelMemoryError,
 };
 
 pub use crate::megakernel_plan_cache_records::*;
@@ -30,7 +30,7 @@ pub use crate::megakernel_plan_cache_records::*;
 pub struct CudaMegakernelPlanCache {
     pub(crate) entries: FxHashMap<CudaMegakernelPlanCacheKey, CudaMegakernelPlanCacheEntry>,
     latest_by_identity:
-        FxHashMap<CudaMegakernelPlanIdentityKey, (u64, MegakernelExecutionTopology)>,
+        FxHashMap<CudaMegakernelPlanIdentityKey, (u64, FrontierTopology)>,
     eviction_queue: BinaryHeap<Reverse<(u64, CudaMegakernelPlanCacheKey)>>,
     max_entries: usize,
     pub(crate) serial: u64,
@@ -71,7 +71,7 @@ impl CudaMegakernelPlanCache {
     pub fn get_or_insert_with(
         &mut self,
         key: CudaMegakernelPlanCacheKey,
-        build: impl FnOnce() -> MegakernelTopologyDecision,
+        build: impl FnOnce() -> FrontierTopologyDecision,
     ) -> Result<CudaMegakernelCachedPlan, MegakernelMemoryError> {
         let serial = self.advance_serial()?;
         if let Some(entry) = self.entries.get_mut(&key) {
@@ -114,6 +114,12 @@ impl CudaMegakernelPlanCache {
     /// This is the hot-path convenience API: callers provide stable graph,
     /// analysis, device, and telemetry inputs, while the cache owns the
     /// pressure bucketing needed to avoid stale sparse/dense decisions.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MegakernelMemoryError::InvalidSample`] when an observed fact
+    /// lies outside its declared domain, so a measurement defect is never
+    /// bucketed as a cached decision.
     pub fn get_or_select_topology(
         &mut self,
         graph_layout_hash: u64,
@@ -125,6 +131,14 @@ impl CudaMegakernelPlanCache {
         launch_overhead_ns: f64,
         fusion_pressure: f64,
     ) -> Result<CudaMegakernelCachedPlan, MegakernelMemoryError> {
+        let frontier_sample = FrontierExecutionSample {
+            dispatch_cost_ns: sample.dispatch_cost_ns,
+            frontier_density: sample.frontier_density,
+            readback_bytes: sample.readback_bytes,
+        };
+        if let Some(field) = frontier_sample.unrepresentable_fact() {
+            return Err(MegakernelMemoryError::InvalidSample { field });
+        }
         let effective_fusion_pressure = if device.supports_grid_sync {
             fusion_pressure
         } else {
@@ -186,14 +200,7 @@ impl CudaMegakernelPlanCache {
         launch_overhead_ns: f64,
         fusion_pressure: f64,
     ) -> Result<MegakernelExecutionPlan, MegakernelMemoryError> {
-        let sparse_memory = plan_megakernel_memory_budget(
-            MegakernelExecutionTopology::SparseFrontier,
-            graph,
-            MegakernelByteLayout {
-                budget_bytes: u64::MAX,
-                ..bytes
-            },
-        )?;
+        let base_required_bytes = megakernel_base_required_bytes(graph, bytes)?;
         let cached = self.get_or_select_topology(
             graph_layout_hash,
             analysis_kind,
@@ -201,7 +208,7 @@ impl CudaMegakernelPlanCache {
             sample,
             graph,
             MegakernelMemoryBudget {
-                required_bytes: sparse_memory.required_bytes,
+                required_bytes: base_required_bytes,
                 budget_bytes: bytes.budget_bytes,
             },
             launch_overhead_ns,
@@ -214,15 +221,15 @@ impl CudaMegakernelPlanCache {
                 downgraded_to_sparse: false,
             }),
             Err(MegakernelMemoryError::OverBudget { .. })
-                if cached.topology != MegakernelExecutionTopology::SparseFrontier =>
+                if !cached.topology.is_baseline() =>
             {
                 let memory = plan_megakernel_memory_budget(
-                    MegakernelExecutionTopology::SparseFrontier,
+                    cached.topology.fallback_baseline(),
                     graph,
                     bytes,
                 )?;
                 Ok(MegakernelExecutionPlan {
-                    topology: MegakernelExecutionTopology::SparseFrontier,
+                    topology: cached.topology.fallback_baseline(),
                     memory,
                     downgraded_to_sparse: true,
                 })
@@ -254,7 +261,7 @@ impl CudaMegakernelPlanCache {
         graph_layout_hash: u64,
         analysis_kind: CudaMegakernelAnalysisKind,
         device: CudaMegakernelDeviceKey,
-    ) -> Option<MegakernelExecutionTopology> {
+    ) -> Option<FrontierTopology> {
         self.latest_by_identity
             .get(&CudaMegakernelPlanIdentityKey {
                 graph_layout_hash,
@@ -268,7 +275,7 @@ impl CudaMegakernelPlanCache {
         &mut self,
         identity: CudaMegakernelPlanIdentityKey,
         serial: u64,
-        topology: MegakernelExecutionTopology,
+        topology: FrontierTopology,
     ) {
         match self.latest_by_identity.get(&identity) {
             Some((latest_serial, _)) if *latest_serial > serial => {}

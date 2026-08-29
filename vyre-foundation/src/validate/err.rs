@@ -12,8 +12,10 @@ pub(crate) fn issue(
     ValidationError::new(code, phase, location, cause, corrective_action)
 }
 
+/// Construct a structured validation error issue.
 #[inline]
-pub(crate) fn err(
+#[must_use]
+pub fn err(
     code: &'static str,
     phase: ValidationPhase,
     location: ValidationLocation,

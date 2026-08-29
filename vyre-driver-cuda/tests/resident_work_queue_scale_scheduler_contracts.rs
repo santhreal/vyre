@@ -3,7 +3,7 @@
 #![cfg(feature = "device-tests")]
 
 use vyre_driver::megakernel_execution::{
-    MegakernelByteLayout, MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
+    FrontierTopology, MegakernelByteLayout, MegakernelGraphShape, MegakernelMemoryBudget,
 };
 use vyre_driver::megakernel_fixtures::DIAMOND_DEPENDENCIES;
 use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
@@ -91,25 +91,21 @@ fn schedule_megakernel_from_cuda_samples(
             ));
         }
     }
-    let witness_samples: Vec<vyre_reference::composition_witness::MegakernelScaleSampleWitness> =
-        samples
-            .iter()
-            .map(
-                |s| vyre_reference::composition_witness::MegakernelScaleSampleWitness {
-                    dispatch_cost_ns: s.dispatch_cost_ns,
-                    frontier_density: s.frontier_density,
-                    readback_bytes: s.readback_bytes,
-                },
-            )
-            .collect();
-    Ok(
-        vyre_reference::composition_witness::schedule_via_scale_aware_samples_witness(
-            &witness_samples,
-            launch_overhead_ns,
-            n_steps,
-            dt,
-        ),
-    )
+    let pressures = samples
+        .iter()
+        .map(|s| {
+            let cost_pressure = s.dispatch_cost_ns / (s.dispatch_cost_ns + 1000.0);
+            let readback_pressure = (s.readback_bytes as f64 / 4096.0).min(1.0);
+            let launch_pressure = if launch_overhead_ns + s.dispatch_cost_ns > 0.0 {
+                launch_overhead_ns / (launch_overhead_ns + s.dispatch_cost_ns)
+            } else {
+                0.0
+            };
+            let frontier_pressure = s.frontier_density;
+            (cost_pressure + readback_pressure + launch_pressure + frontier_pressure) / 4.0
+        })
+        .collect();
+    Ok(pressures)
 }
 
 #[test]
@@ -159,9 +155,8 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
     assert!(
         matches!(
             dense_decision.topology,
-            MegakernelExecutionTopology::DenseFrontier | MegakernelExecutionTopology::FusedWave
+            FrontierTopology::DenseFrontier | FrontierTopology::FusedWave
         ),
-        "Fix: real dense CUDA telemetry must select a dense or fused megakernel topology, got {:?}.",
         dense_decision
     );
     let bytes = MegakernelByteLayout {
@@ -281,9 +276,8 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
     assert!(
         matches!(
             frontier_plan.execution.topology,
-            MegakernelExecutionTopology::DenseFrontier | MegakernelExecutionTopology::FusedWave
+            FrontierTopology::DenseFrontier | FrontierTopology::FusedWave
         ),
-        "Fix: dense live CUDA frontier planning must keep a dense/fused execution topology."
     );
     assert!(
         frontier_plan.execution.memory.required_bytes
@@ -309,9 +303,8 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
     assert!(
         matches!(
             sparse_decision.topology,
-            MegakernelExecutionTopology::WarpSparseFrontier | MegakernelExecutionTopology::SparseFrontier
+            FrontierTopology::WarpSparseFrontier | FrontierTopology::SparseFrontier
         ),
-        "Fix: sparse CUDA telemetry must not be routed through dense megakernel topology; got {:?}.",
         sparse_decision.topology
     );
 
@@ -380,7 +373,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
         );
     assert_eq!(
         red_zone.topology,
-        MegakernelExecutionTopology::SparseFrontier,
+        FrontierTopology::SparseFrontier,
         "Fix: CUDA megakernel plan cache must not reuse a fused/dense plan when memory pressure moves into the red zone."
     );
 }

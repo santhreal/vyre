@@ -867,5 +867,5 @@ pub use super::math_amg::*;
 pub use super::math_analysis::*;
 pub use super::math_physics::*;
 pub use super::math_quant::*;
-pub use super::math_schedule::*;
+pub use super::math_sinkhorn::*;
 pub use super::math_tensor::*;

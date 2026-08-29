@@ -49,6 +49,342 @@ pub enum ResidentPartitionMode {
     /// Requires cooperative launch capability to ensure all resident blocks make progress without deadlock.
     BoundedWorkQueue,
 }
+/// Frontier-density traversal topology selected by the megakernel compiler.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FrontierTopology {
+    /// Ultra-low-density frontier expansion where one warp owns sparse active
+    /// nodes and avoids block-wide work distribution overhead.
+    WarpSparseFrontier,
+    /// Low-density frontier expansion with queue-like work distribution.
+    SparseFrontier,
+    /// Very high-density propagation where a block owns coalesced bitset lanes
+    /// and amortizes shared-memory scans across many active facts.
+    BlockDenseFrontier,
+    /// Dense bitset-style propagation with coalesced scans.
+    DenseFrontier,
+    /// Mixed sparse/dense execution when density is in the transition band.
+    HybridFrontier,
+    /// Fused adjacent waves when launch and readback pressure dominate.
+    FusedWave,
+}
+
+impl Default for FrontierTopology {
+    fn default() -> Self {
+        Self::SparseFrontier
+    }
+}
+
+impl FrontierTopology {
+    /// Baseline frontier topology with minimal scratch and memory pressure.
+    #[must_use]
+    pub const fn baseline() -> Self {
+        Self::SparseFrontier
+    }
+
+    /// Whether this topology is the baseline sparse topology.
+    #[must_use]
+    pub const fn is_baseline(self) -> bool {
+        matches!(self, Self::SparseFrontier)
+    }
+
+    /// Downgrade this topology to the baseline sparse topology.
+    #[must_use]
+    pub const fn fallback_baseline(self) -> Self {
+        Self::SparseFrontier
+    }
+}
+
+/// Constant density and pressure bands for frontier topology selection.
+pub(crate) const WARP_SPARSE_DENSITY: f64 = 0.03125;
+pub(crate) const SPARSE_DENSITY: f64 = 0.125;
+pub(crate) const DENSE_DENSITY: f64 = 0.70;
+pub(crate) const BLOCK_DENSE_DENSITY: f64 = 0.85;
+pub(crate) const FUSION_PRESSURE: f64 = 0.70;
+pub(crate) const FUSION_PRESSURE_HYSTERESIS: f64 = 0.10;
+pub(crate) const FRONTIER_HYSTERESIS: f64 = 0.025;
+pub(crate) const MEMORY_RED_ZONE_BPS: u32 = 9_000;
+pub(crate) const MEMORY_HYSTERESIS_BPS: u32 = 250;
+pub(crate) const LAUNCH_PRESSURE_BPS: u32 = 1_500;
+pub(crate) const LAUNCH_HYSTERESIS_BPS: u32 = 250;
+pub(crate) const FUSION_READBACK_BYTES: u64 = 4_096;
+pub(crate) const DENSE_AVERAGE_DEGREE_BPS: u64 = 20_000;
+pub(crate) const WARP_SPARSE_AVERAGE_DEGREE_BPS: u64 = 80_000;
+
+/// Telemetry sample facts for frontier traversal topology selection.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct FrontierExecutionSample {
+    /// Observed candidate dispatch cost in nanoseconds.
+    pub dispatch_cost_ns: f64,
+    /// Observed active-frontier density in `[0, 1]`.
+    pub frontier_density: f64,
+    /// Observed final readback byte volume.
+    pub readback_bytes: u64,
+}
+
+impl FrontierExecutionSample {
+    /// Name of the observed fact that lies outside its declared domain.
+    ///
+    /// Topology selection is total: it saturates a fact it cannot price so
+    /// ranking stays defined for every input. Saturation makes an unmeasurable
+    /// fact indistinguishable from a measured extreme, so a caller supplying
+    /// measured telemetry checks the domain first and reports the fact instead
+    /// of ranking against a substituted value.
+    #[must_use]
+    pub fn unrepresentable_fact(self) -> Option<&'static str> {
+        if !self.dispatch_cost_ns.is_finite() || self.dispatch_cost_ns < 0.0 {
+            return Some("dispatch_cost_ns");
+        }
+        if !self.frontier_density.is_finite()
+            || self.frontier_density < 0.0
+            || self.frontier_density > 1.0
+        {
+            return Some("frontier_density");
+        }
+        None
+    }
+}
+
+/// Static graph shape facts for frontier traversal topology selection.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct FrontierGraphShape {
+    /// Logical graph node count.
+    pub node_count: u64,
+    /// Logical graph edge count.
+    pub edge_count: u64,
+}
+
+/// Device memory budget facts for frontier traversal topology selection.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct FrontierMemoryBudget {
+    /// Estimated resident plus transient bytes required by candidate plan.
+    pub required_bytes: u64,
+    /// Caller-approved device-memory budget for the plan.
+    pub budget_bytes: u64,
+}
+
+/// Decision output for frontier traversal topology selection with pressure metrics.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct FrontierTopologyDecision {
+    /// Selected frontier topology.
+    pub topology: FrontierTopology,
+    /// Required/budget memory pressure in basis points.
+    pub memory_pressure_bps: u32,
+    /// Edge/node average degree proxy in basis points.
+    pub average_degree_bps: u64,
+    /// Launch overhead divided by observed dispatch cost in basis points.
+    pub launch_pressure_bps: u32,
+}
+
+impl FrontierTopologyDecision {
+    /// Stable single-line explanation for release logs and scheduler debugging.
+    #[must_use]
+    pub fn stable_explanation(&self) -> String {
+        format!(
+            "megakernel-topology-v1|topology={:?}|memory_pressure_bps={}|average_degree_bps={}|launch_pressure_bps={}|reason={}",
+            self.topology,
+            self.memory_pressure_bps,
+            self.average_degree_bps,
+            self.launch_pressure_bps,
+            self.reason_code()
+        )
+    }
+
+    fn reason_code(&self) -> &'static str {
+        match self.topology {
+            FrontierTopology::WarpSparseFrontier => "ultra_sparse_warp_specialized",
+            FrontierTopology::SparseFrontier if self.memory_pressure_bps >= 9_000 => {
+                "memory_pressure_sparse_safety"
+            }
+            FrontierTopology::SparseFrontier => "low_density_sparse_queue",
+            FrontierTopology::BlockDenseFrontier => "high_density_block_specialized",
+            FrontierTopology::DenseFrontier => "dense_coalesced_frontier",
+            FrontierTopology::HybridFrontier => "transition_band_hybrid",
+            FrontierTopology::FusedWave => "launch_and_readback_pressure_fused",
+        }
+    }
+}
+
+fn finite_unit(value: f64) -> f64 {
+    if value.is_finite() {
+        value.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+/// Select the frontier execution topology for one candidate wave.
+#[must_use]
+pub fn select_frontier_topology(
+    sample: FrontierExecutionSample,
+    graph: FrontierGraphShape,
+    memory: FrontierMemoryBudget,
+    launch_overhead_ns: f64,
+    fusion_pressure: f64,
+    supports_device_wide_barrier: bool,
+) -> FrontierTopologyDecision {
+    let memory_pressure_bps = if memory.budget_bytes == 0 {
+        10_000
+    } else {
+        u32::try_from(
+            (memory.required_bytes.min(memory.budget_bytes) * 10_000) / memory.budget_bytes,
+        )
+        .unwrap_or(10_000)
+    };
+    let average_degree_bps = if graph.node_count == 0 {
+        0
+    } else {
+        (graph.edge_count.saturating_mul(10_000)) / graph.node_count
+    };
+    let launch_pressure_bps =
+        if sample.dispatch_cost_ns <= 0.0 || !sample.dispatch_cost_ns.is_finite() {
+            0
+        } else {
+            let ratio = (launch_overhead_ns.max(0.0) / sample.dispatch_cost_ns) * 10_000.0;
+            if ratio.is_finite() {
+                (ratio.round() as u64).min(u32::MAX as u64) as u32
+            } else {
+                u32::MAX
+            }
+        };
+    let density = finite_unit(sample.frontier_density);
+    let effective_fusion_pressure = if supports_device_wide_barrier {
+        finite_unit(fusion_pressure)
+    } else {
+        0.0
+    };
+    let topology = if memory_pressure_bps >= MEMORY_RED_ZONE_BPS {
+        FrontierTopology::SparseFrontier
+    } else if effective_fusion_pressure >= FUSION_PRESSURE
+        && launch_pressure_bps >= LAUNCH_PRESSURE_BPS
+        && sample.readback_bytes >= FUSION_READBACK_BYTES
+        && memory_pressure_bps <= MEMORY_RED_ZONE_BPS.saturating_sub(500)
+    {
+        FrontierTopology::FusedWave
+    } else if density <= WARP_SPARSE_DENSITY && average_degree_bps <= WARP_SPARSE_AVERAGE_DEGREE_BPS
+    {
+        FrontierTopology::WarpSparseFrontier
+    } else if density <= SPARSE_DENSITY {
+        FrontierTopology::SparseFrontier
+    } else if density >= BLOCK_DENSE_DENSITY && average_degree_bps >= DENSE_AVERAGE_DEGREE_BPS {
+        FrontierTopology::BlockDenseFrontier
+    } else if density >= DENSE_DENSITY && average_degree_bps >= DENSE_AVERAGE_DEGREE_BPS {
+        FrontierTopology::DenseFrontier
+    } else {
+        FrontierTopology::HybridFrontier
+    };
+    FrontierTopologyDecision {
+        topology,
+        memory_pressure_bps,
+        average_degree_bps,
+        launch_pressure_bps,
+    }
+}
+
+/// Select frontier execution topology with previous-topology hysteresis.
+#[must_use]
+pub fn select_frontier_topology_stable(
+    sample: FrontierExecutionSample,
+    graph: FrontierGraphShape,
+    memory: FrontierMemoryBudget,
+    launch_overhead_ns: f64,
+    fusion_pressure: f64,
+    previous_topology: FrontierTopology,
+    supports_device_wide_barrier: bool,
+) -> FrontierTopologyDecision {
+    let mut decision = select_frontier_topology(
+        sample,
+        graph,
+        memory,
+        launch_overhead_ns,
+        fusion_pressure,
+        supports_device_wide_barrier,
+    );
+    let effective_fusion_pressure = if supports_device_wide_barrier {
+        finite_unit(fusion_pressure)
+    } else {
+        0.0
+    };
+    decision.topology = stabilize_frontier_topology(
+        decision,
+        sample,
+        effective_fusion_pressure,
+        previous_topology,
+    );
+    decision
+}
+
+fn stabilize_frontier_topology(
+    decision: FrontierTopologyDecision,
+    sample: FrontierExecutionSample,
+    fusion_pressure: f64,
+    previous_topology: FrontierTopology,
+) -> FrontierTopology {
+    if decision.memory_pressure_bps >= MEMORY_RED_ZONE_BPS {
+        return decision.topology;
+    }
+    let density = finite_unit(sample.frontier_density);
+    let fusion = finite_unit(fusion_pressure);
+    if matches!(
+        previous_topology,
+        FrontierTopology::SparseFrontier | FrontierTopology::WarpSparseFrontier
+    ) && decision.memory_pressure_bps
+        >= MEMORY_RED_ZONE_BPS.saturating_sub(MEMORY_HYSTERESIS_BPS)
+    {
+        return FrontierTopology::SparseFrontier;
+    }
+
+    match previous_topology {
+        FrontierTopology::WarpSparseFrontier
+            if density <= WARP_SPARSE_DENSITY + FRONTIER_HYSTERESIS
+                && decision.average_degree_bps <= WARP_SPARSE_AVERAGE_DEGREE_BPS =>
+        {
+            FrontierTopology::WarpSparseFrontier
+        }
+        FrontierTopology::SparseFrontier
+            if density <= SPARSE_DENSITY + FRONTIER_HYSTERESIS =>
+        {
+            FrontierTopology::SparseFrontier
+        }
+        FrontierTopology::HybridFrontier
+            if decision.topology == FrontierTopology::SparseFrontier
+                && density >= SPARSE_DENSITY - FRONTIER_HYSTERESIS =>
+        {
+            FrontierTopology::HybridFrontier
+        }
+        FrontierTopology::HybridFrontier
+            if matches!(
+                decision.topology,
+                FrontierTopology::DenseFrontier | FrontierTopology::BlockDenseFrontier
+            ) && density <= DENSE_DENSITY + FRONTIER_HYSTERESIS =>
+        {
+            FrontierTopology::HybridFrontier
+        }
+        FrontierTopology::DenseFrontier
+            if density >= DENSE_DENSITY - FRONTIER_HYSTERESIS
+                && decision.average_degree_bps >= DENSE_AVERAGE_DEGREE_BPS =>
+        {
+            FrontierTopology::DenseFrontier
+        }
+        FrontierTopology::BlockDenseFrontier
+            if density >= BLOCK_DENSE_DENSITY - FRONTIER_HYSTERESIS
+                && decision.average_degree_bps >= DENSE_AVERAGE_DEGREE_BPS =>
+        {
+            FrontierTopology::BlockDenseFrontier
+        }
+        FrontierTopology::FusedWave
+            if fusion >= FUSION_PRESSURE - FUSION_PRESSURE_HYSTERESIS
+                && decision.launch_pressure_bps
+                    >= LAUNCH_PRESSURE_BPS.saturating_sub(LAUNCH_HYSTERESIS_BPS)
+                && sample.readback_bytes >= FUSION_READBACK_BYTES
+                && decision.memory_pressure_bps
+                    <= MEMORY_RED_ZONE_BPS.saturating_sub(MEMORY_HYSTERESIS_BPS) =>
+        {
+            FrontierTopology::FusedWave
+        }
+        _ => decision.topology,
+    }
+}
 
 /// Cheap structural identity of one candidate plan.
 pub(crate) type CandidateKey = u64;
@@ -61,7 +397,10 @@ pub(crate) struct CandidatePlan {
     /// tolerate one, or `None` to launch every group at its declared width.
     pub(crate) workgroup_width: Option<u32>,
     /// Execution topology proposed for this candidate.
+    /// Execution topology proposed for this candidate.
     pub(crate) topology: ExecutionTopology,
+    /// Frontier-density traversal topology proposed for this candidate.
+    pub(crate) frontier_topology: FrontierTopology,
     /// Typed neutral schedule transformed by candidate search.
     pub(crate) schedule: SelectedSchedule,
     /// Fail-closed transform diagnostic retained until candidate rejection.
@@ -92,6 +431,7 @@ impl CandidatePlan {
             derivation: Vec::new(),
             workgroup_width: None,
             topology: ExecutionTopology::Sequential,
+            frontier_topology: FrontierTopology::SparseFrontier,
             schedule,
             schedule_error: None,
         }
@@ -111,6 +451,7 @@ impl CandidatePlan {
             derivation: Vec::new(),
             workgroup_width: None,
             topology: ExecutionTopology::Sequential,
+            frontier_topology: FrontierTopology::SparseFrontier,
             schedule,
             schedule_error,
         }
@@ -171,6 +512,7 @@ impl CandidatePlan {
             derivation: Vec::new(),
             workgroup_width: None,
             topology: ExecutionTopology::Sequential,
+            frontier_topology: FrontierTopology::SparseFrontier,
             schedule,
             schedule_error,
         }
@@ -231,6 +573,18 @@ impl CandidatePlan {
     #[must_use]
     pub(crate) fn topology(&self) -> ExecutionTopology {
         self.topology
+    }
+
+    #[must_use]
+    pub(crate) fn frontier_topology(&self) -> FrontierTopology {
+        self.frontier_topology
+    }
+
+    #[must_use]
+    pub(crate) fn with_frontier_topology(&self, frontier_topology: FrontierTopology) -> Self {
+        let mut candidate = self.clone();
+        candidate.frontier_topology = frontier_topology;
+        candidate
     }
 
     #[must_use]
@@ -404,6 +758,7 @@ impl CandidatePlan {
         self.node_groups.hash(&mut hasher);
         self.workgroup_width.hash(&mut hasher);
         self.topology.hash(&mut hasher);
+        self.frontier_topology.hash(&mut hasher);
         hasher.finish()
     }
 }

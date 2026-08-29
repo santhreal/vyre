@@ -22,6 +22,8 @@
 #[repr(u32)] pub enum vyre_libs::graph::state_index_frontier::StateIndexDuplicateRule
 #[repr(u32)] pub enum vyre_libs::graph::state_index_frontier::StateIndexFrontierDomain
 #[repr(u32)] pub enum vyre_libs::graph::state_index_frontier::StateIndexSpillDecision
+#[repr(u32)] pub enum vyre_libs::logical::Op
+#[repr(u32)] pub enum vyre_libs::logical::dialect::Op
 impl core::cmp::Eq for vyre_libs::rule::RuleCondition
 impl core::cmp::Ord for vyre_libs::pattern::RegionTriple
 impl core::cmp::PartialEq for vyre_libs::rule::RuleCondition
@@ -53,7 +55,6 @@ impl core::error::Error for vyre_libs::pattern::RegexCompileError
 impl core::error::Error for vyre_libs::pattern::RegexDfaError
 impl core::error::Error for vyre_libs::pattern::nfa::NfaCompileError
 impl core::error::Error for vyre_libs::scheduling::frontier_typed_ir::FrontierTypedPlanError
-impl core::error::Error for vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError
 impl core::error::Error for vyre_libs::visual::GaussianKernelError
 impl core::fmt::Debug for vyre_libs::gemm::ContractionEpilogue
 impl core::fmt::Debug for vyre_libs::gemm::ContractionSemiring
@@ -78,9 +79,10 @@ impl core::fmt::Display for vyre_libs::pattern::RegexCompileError
 impl core::fmt::Display for vyre_libs::pattern::RegexDfaError
 impl core::fmt::Display for vyre_libs::pattern::nfa::NfaCompileError
 impl core::fmt::Display for vyre_libs::scheduling::frontier_typed_ir::FrontierTypedPlanError
-impl core::fmt::Display for vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError
 impl core::fmt::Display for vyre_libs::visual::GaussianKernelError
 impl inventory::Collect for vyre_libs::operation_catalog::ConvergenceContract
+impl vyre_foundation::dialect::traits::Dialect for vyre_libs::logical::dialect::DialectMarker
+impl vyre_foundation::dialect::traits::DialectOp for vyre_libs::logical::dialect::Op
 impl vyre_libs::BufferDescriptor
 impl vyre_libs::BuildOptions
 impl vyre_libs::ProgramDescriptor
@@ -118,6 +120,7 @@ impl vyre_libs::graph::state_index_frontier::StateIndexFrontierItem
 impl vyre_libs::graph::state_index_frontier::StateIndexSpillDecision
 impl vyre_libs::graph::toposort::ToposortCsrDispatchPlan
 impl vyre_libs::llm::sampling::TokenSampler<'_>
+impl vyre_libs::logical::dialect::Op
 impl vyre_libs::math::bellman_shortest_path::BellmanBuffers<'static>
 impl vyre_libs::math::linalg::Dot
 impl vyre_libs::math::linalg::Matmul
@@ -282,6 +285,12 @@ pub const fn vyre_libs::hash::crc32::crc32_chunk_output_words(n: u32, chunk_size
 pub const fn vyre_libs::hash::crc32::crc32_pair_reduce_output_pairs(pair_count: u32) -> u32
 pub const fn vyre_libs::hash::fnv1a::fnv1a64_initial_state() -> u64
 pub const fn vyre_libs::hash::fnv1a::fnv1a64_update_byte(hash: u64, byte: u8) -> u64
+pub const fn vyre_libs::logical::dialect::Op::discriminant(self) -> u32
+pub const fn vyre_libs::logical::dialect::Op::from_discriminant(tag: u32) -> core::option::Option<Self>
+pub const fn vyre_libs::logical::dialect::Op::introduced_version(self) -> u32
+pub const fn vyre_libs::logical::dialect::Op::is_composable(self) -> bool
+pub const fn vyre_libs::logical::dialect::Op::op_id(self) -> &'static str
+pub const fn vyre_libs::logical::dialect::Op::op_name(self) -> &'static str
 pub const fn vyre_libs::math::sparse_selector::SparseKernelSelectedPath::as_str(self) -> &'static str
 pub const fn vyre_libs::math::sparse_selector::SparseKernelWorkloadClass::as_str(self) -> &'static str
 pub const fn vyre_libs::parsing::bytecode_dispatch_table_pack::packed_dispatch_table_len(entries_len: usize) -> usize
@@ -644,6 +653,11 @@ pub const vyre_libs::llm::paged_kv::PAGED_KV_GATHER_OP_ID: &str
 pub const vyre_libs::llm::sampling::LOGIT_ADJUST_OP_ID: &str
 pub const vyre_libs::llm::sampling::NUCLEUS_SELECT_OP_ID: &str
 pub const vyre_libs::llm::sampling::SAMPLE_TOKEN_OP_ID: &str
+pub const vyre_libs::logical::dialect::CATEGORY: &str
+pub const vyre_libs::logical::dialect::DIALECT_ID: &str
+pub const vyre_libs::logical::dialect::MIN_SUPPORTED_VERSION: u32
+pub const vyre_libs::logical::dialect::SCHEMA_VERSION: u32
+pub const vyre_libs::logical::dialect::SUMMARY: &str
 pub const vyre_libs::math::amg_v_cycle::OP_ID: &str
 pub const vyre_libs::math::bellman_shortest_path::BellmanBuffers<'static>::CANONICAL: Self
 pub const vyre_libs::math::bellman_shortest_path::BellmanBuffers<'static>::TERSE: Self
@@ -1098,7 +1112,6 @@ pub enum vyre_libs::reduce::workgroup_tree::WorkgroupReductionScope
 pub enum vyre_libs::rule::RuleBuildError
 pub enum vyre_libs::scheduling::frontier_typed_ir::FrontierDomain
 pub enum vyre_libs::scheduling::frontier_typed_ir::FrontierTypedPlanError
-pub enum vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError
 pub enum vyre_libs::security::SanitizedFlowExecutionMode
 pub fn vyre_libs::BufferDescriptor::new(name: alloc::string::String, access: vyre_spec::buffer_access::BufferAccess, dtype: vyre_spec::data_type::DataType, count: u32) -> Self
 pub fn vyre_libs::BuildOptions::new() -> Self
@@ -1736,6 +1749,33 @@ pub fn vyre_libs::llm::paged_kv::paged_kv_gather(spec: &vyre_libs::llm::paged_kv
 pub fn vyre_libs::llm::sampling::TokenSampler<'_>::program(&self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::llm::sampling::SamplingError>
 pub fn vyre_libs::llm::sampling::logit_adjust(logits: &str, counts: &str, adjusted: &str, vocabulary: u32, temperature: f32, penalty: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::llm::sampling::nucleus_select(selected: &str, weights: &str, uniform: &str, token: &str, candidates: u32, top_p: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::logical::LogicalVisitor::Nand(&mut self, args: &[vyre_foundation::ir_inner::model::generated::Expr]) -> Self::Output
+pub fn vyre_libs::logical::LogicalVisitor::Nor(&mut self, args: &[vyre_foundation::ir_inner::model::generated::Expr]) -> Self::Output
+pub fn vyre_libs::logical::call_nand(args: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Expr>) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::logical::call_nor(args: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Expr>) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::logical::dialect::DialectMarker::descriptor() -> &'static vyre_foundation::dialect::descriptor::DialectDescriptor
+pub fn vyre_libs::logical::dialect::DialectMarker::match_op_id(op_id: &str) -> core::option::Option<Self::Op>
+pub fn vyre_libs::logical::dialect::LogicalVisitor::Nand(&mut self, args: &[vyre_foundation::ir_inner::model::generated::Expr]) -> Self::Output
+pub fn vyre_libs::logical::dialect::LogicalVisitor::Nor(&mut self, args: &[vyre_foundation::ir_inner::model::generated::Expr]) -> Self::Output
+pub fn vyre_libs::logical::dialect::Op::declared_fields(self) -> &'static [vyre_foundation::dialect::schema::FieldContract]
+pub fn vyre_libs::logical::dialect::Op::descriptor(self) -> &'static vyre_foundation::dialect::descriptor::DialectOpDescriptor
+pub fn vyre_libs::logical::dialect::Op::introduced_version(self) -> u32
+pub fn vyre_libs::logical::dialect::Op::is_composable(self) -> bool
+pub fn vyre_libs::logical::dialect::Op::op_id(self) -> &'static str
+pub fn vyre_libs::logical::dialect::Op::op_name(self) -> &'static str
+pub fn vyre_libs::logical::dialect::Op::resource_abi(self) -> &'static vyre_foundation::dialect::schema::ResourceAbi
+pub fn vyre_libs::logical::dialect::call_nand(args: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Expr>) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::logical::dialect::call_nor(args: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Expr>) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::logical::dialect::decode_op<R: alloc::io::read::Read>(reader: &mut R) -> core::io::error::Result<core::option::Option<vyre_libs::logical::dialect::Op>>
+pub fn vyre_libs::logical::dialect::dispatch_visitor<V: vyre_libs::logical::dialect::LogicalVisitor>(op: vyre_libs::logical::dialect::Op, args: &[vyre_foundation::ir_inner::model::generated::Expr], visitor: &mut V) -> <V as vyre_libs::logical::dialect::LogicalVisitor>::Output
+pub fn vyre_libs::logical::dialect::encode_op<W: core::io::write::Write>(op: vyre_libs::logical::dialect::Op, writer: &mut W) -> core::io::error::Result<()>
+pub fn vyre_libs::logical::dialect::match_call<'a>(expr: &'a vyre_foundation::ir_inner::model::generated::Expr) -> core::option::Option<(vyre_libs::logical::dialect::Op, &'a [vyre_foundation::ir_inner::model::generated::Expr])>
+pub fn vyre_libs::logical::dialect::match_op_id(op_id: &str) -> core::option::Option<vyre_libs::logical::dialect::Op>
+pub fn vyre_libs::logical::dialect::validate_call(op: vyre_libs::logical::dialect::Op, args: &[vyre_foundation::ir_inner::model::generated::Expr], target_version: u32, errors: &mut alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>)
+pub fn vyre_libs::logical::dialect::validate_external_node(node: &vyre_foundation::dialect::schema::ExternalSchemaNode) -> core::result::Result<vyre_libs::logical::dialect::Op, vyre_foundation::dialect::schema::SchemaTranslationError>
+pub fn vyre_libs::logical::dispatch_visitor<V: vyre_libs::logical::dialect::LogicalVisitor>(op: vyre_libs::logical::dialect::Op, args: &[vyre_foundation::ir_inner::model::generated::Expr], visitor: &mut V) -> <V as vyre_libs::logical::dialect::LogicalVisitor>::Output
+pub fn vyre_libs::logical::match_call<'a>(expr: &'a vyre_foundation::ir_inner::model::generated::Expr) -> core::option::Option<(vyre_libs::logical::dialect::Op, &'a [vyre_foundation::ir_inner::model::generated::Expr])>
+pub fn vyre_libs::logical::match_op_id(op_id: &str) -> core::option::Option<vyre_libs::logical::dialect::Op>
 pub fn vyre_libs::logical::nand(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::logical::nor(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::algebra::bool_semiring_matmul(a: &str, b: &str, out: &str, rows: u32, inner: u32, cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2372,10 +2412,6 @@ pub fn vyre_libs::rule::try_condition_expr(condition: &vyre_libs::rule::RuleCond
 pub fn vyre_libs::rule::try_formula_expr(formula: &vyre_libs::rule::RuleFormula, rule_id: u32) -> core::result::Result<vyre_foundation::ir_inner::model::generated::Expr, vyre_libs::rule::RuleBuildError>
 pub fn vyre_libs::rule::try_rule_nodes(rules: &[(vyre_libs::rule::RuleFormula, u32)]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, vyre_libs::rule::RuleBuildError>
 pub fn vyre_libs::scheduling::frontier_typed_ir::FrontierTypedPlanError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_libs::scheduling::megakernel_schedule::MegakernelScaleSample::dispatch_cost_ns(&self) -> f64
-pub fn vyre_libs::scheduling::megakernel_schedule::MegakernelScaleSample::frontier_density(&self) -> f64
-pub fn vyre_libs::scheduling::megakernel_schedule::MegakernelScaleSample::readback_bytes(&self) -> u64
-pub fn vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_libs::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, candidates: &[u32], h: u32, w: u32, k: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_libs::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via_into(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, candidates: &[u32], h: u32, w: u32, k: u32, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_libs::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via_with_scratch_into(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, candidates: &[u32], h: u32, w: u32, k: u32, scratch: &mut vyre_libs::scheduling::planar_rewrite_pass_scheduler::PlanarRewriteScheduleGpuScratch, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
@@ -2770,6 +2806,7 @@ pub mod vyre_libs::llm
 pub mod vyre_libs::llm::paged_kv
 pub mod vyre_libs::llm::sampling
 pub mod vyre_libs::logical
+pub mod vyre_libs::logical::dialect
 pub mod vyre_libs::math
 pub mod vyre_libs::math::algebra
 pub mod vyre_libs::math::amg_v_cycle
@@ -2943,7 +2980,6 @@ pub mod vyre_libs::rule::pattern_count_gte
 pub mod vyre_libs::rule::pattern_exists
 pub mod vyre_libs::scheduling
 pub mod vyre_libs::scheduling::frontier_typed_ir
-pub mod vyre_libs::scheduling::megakernel_schedule
 pub mod vyre_libs::scheduling::planar_rewrite_pass_scheduler
 pub mod vyre_libs::scheduling::spectral_schedule
 pub mod vyre_libs::scheduling::submodular_cache_eviction
@@ -3000,6 +3036,9 @@ pub static vyre_libs::analysis::decision_telemetry::FUSION_SELECTED_ZERO: core::
 pub static vyre_libs::analysis::decision_telemetry::PROVENANCE_EMPTY: core::sync::atomic::AtomicU64
 pub static vyre_libs::analysis::decision_telemetry::PROVENANCE_FULL: core::sync::atomic::AtomicU64
 pub static vyre_libs::analysis::decision_telemetry::PROVENANCE_PARTIAL: core::sync::atomic::AtomicU64
+pub static vyre_libs::logical::dialect::ALL_OP_IDS: &[&str]
+pub static vyre_libs::logical::dialect::DESCRIPTOR: vyre_foundation::dialect::descriptor::DialectDescriptor
+pub static vyre_libs::logical::dialect::OPERATIONS: &[vyre_foundation::dialect::descriptor::DialectOpDescriptor]
 pub static vyre_libs::parsing::lr_tables::ACTION_TABLE: &[u32]
 pub static vyre_libs::parsing::lr_tables::C11_EXPR: vyre_libs::parsing::lr_tables::LrTables
 pub static vyre_libs::parsing::lr_tables::GOTO_TABLE: &[u32]
@@ -3018,11 +3057,9 @@ pub static vyre_libs::telemetry::functorial_pass_composition_calls: core::sync::
 pub static vyre_libs::telemetry::graph_dispatch_calls: core::sync::atomic::AtomicU64
 pub static vyre_libs::telemetry::kfac_autotune_step_calls: core::sync::atomic::AtomicU64
 pub static vyre_libs::telemetry::knowledge_compile_pass_precondition_calls: core::sync::atomic::AtomicU64
-pub static vyre_libs::telemetry::level_wave_pass_calls: core::sync::atomic::AtomicU64
 pub static vyre_libs::telemetry::matching_diagnostic_compaction_calls: core::sync::atomic::AtomicU64
 pub static vyre_libs::telemetry::matroid_exact_megakernel_calls: core::sync::atomic::AtomicU64
 pub static vyre_libs::telemetry::matroid_megakernel_scheduler_calls: core::sync::atomic::AtomicU64
-pub static vyre_libs::telemetry::megakernel_schedule_calls: core::sync::atomic::AtomicU64
 pub static vyre_libs::telemetry::mori_zwanzig_region_coarsen_calls: core::sync::atomic::AtomicU64
 pub static vyre_libs::telemetry::multigrid_matroid_solver_calls: core::sync::atomic::AtomicU64
 pub static vyre_libs::telemetry::natural_gradient_autotuner_calls: core::sync::atomic::AtomicU64
@@ -3148,6 +3185,7 @@ pub struct vyre_libs::graph::union_find::UnionFindLayout
 pub struct vyre_libs::graph::vast_tree_walk::VastTreeWalkProgramPlan
 pub struct vyre_libs::llm::paged_kv::PagedKvCache<'a>
 pub struct vyre_libs::llm::sampling::TokenSampler<'a>
+pub struct vyre_libs::logical::dialect::DialectMarker
 pub struct vyre_libs::math::bellman_shortest_path::BellmanBuffers<'a>
 pub struct vyre_libs::math::bellman_shortest_path::BellmanExtents
 pub struct vyre_libs::math::linalg::Dot
@@ -3222,7 +3260,6 @@ pub struct vyre_libs::scheduling::frontier_typed_ir::FrontierDependency
 pub struct vyre_libs::scheduling::frontier_typed_ir::FrontierNode
 pub struct vyre_libs::scheduling::frontier_typed_ir::FrontierTypedPlan
 pub struct vyre_libs::scheduling::frontier_typed_ir::FrontierWave
-pub struct vyre_libs::scheduling::megakernel_schedule::MegakernelScaleTelemetry<'a>
 pub struct vyre_libs::scheduling::planar_rewrite_pass_scheduler::PlanarRewriteScheduleGpuScratch
 pub struct vyre_libs::scheduling::spectral_schedule::SpectralScheduleGpuScratch
 pub struct vyre_libs::scheduling::submodular_cache_eviction::SubmodularEvictionGpuScratch
@@ -3277,8 +3314,12 @@ pub struct vyre_libs::visual::GaussianKernel
 pub struct vyre_libs::visual::GaussianKernelError
 pub struct vyre_libs::visual::GlassParams
 pub struct vyre_libs::visual::GridShape
-pub trait vyre_libs::scheduling::megakernel_schedule::MegakernelScaleSample
+pub trait vyre_libs::logical::LogicalVisitor
+pub trait vyre_libs::logical::dialect::LogicalVisitor
 pub type vyre_libs::graph::vast_tree_walk::VastTreeWalkPlan = vyre_libs::graph::vast_tree_walk::VastTreeWalkProgramPlan
+pub type vyre_libs::logical::LogicalVisitor::Output
+pub type vyre_libs::logical::dialect::DialectMarker::Op = vyre_libs::logical::dialect::Op
+pub type vyre_libs::logical::dialect::LogicalVisitor::Output
 pub type vyre_libs::parsing::python::source_cache::Python312PipelineCache = vyre_libs::parsing::source_cache::ParsedSourceLru<vyre_libs::parsing::python::source_cache::Python312PipelinePrograms>
 pub use vyre_libs::dispatch_buffers::f32_slice_to_le_bytes
 pub use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes
@@ -4018,6 +4059,10 @@ pub vyre_libs::llm::sampling::TokenSampler::token: &'a str
 pub vyre_libs::llm::sampling::TokenSampler::top_p: f32
 pub vyre_libs::llm::sampling::TokenSampler::uniform: &'a str
 pub vyre_libs::llm::sampling::TokenSampler::vocabulary: u32
+pub vyre_libs::logical::Op::Nand = 0
+pub vyre_libs::logical::Op::Nor = 1
+pub vyre_libs::logical::dialect::Op::Nand = 0
+pub vyre_libs::logical::dialect::Op::Nor = 1
 pub vyre_libs::math::bellman_shortest_path::BellmanBuffers::changed: &'a str
 pub vyre_libs::math::bellman_shortest_path::BellmanBuffers::dist: &'a str
 pub vyre_libs::math::bellman_shortest_path::BellmanBuffers::dst: &'a str
@@ -4575,32 +4620,6 @@ pub vyre_libs::scheduling::frontier_typed_ir::FrontierWave::active_items: u64
 pub vyre_libs::scheduling::frontier_typed_ir::FrontierWave::domains: alloc::vec::Vec<vyre_libs::scheduling::frontier_typed_ir::FrontierDomain>
 pub vyre_libs::scheduling::frontier_typed_ir::FrontierWave::index: u32
 pub vyre_libs::scheduling::frontier_typed_ir::FrontierWave::node_ids: alloc::vec::Vec<u32>
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScaleTelemetry::frontier_density: &'a [f64]
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScaleTelemetry::launch_overhead_ns: f64
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScaleTelemetry::readback_bytes: &'a [u64]
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::CostLen
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::CostLen::actual: usize
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::CostLen::expected: usize
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::FrontierDensityLen
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::FrontierDensityLen::actual: usize
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::FrontierDensityLen::expected: usize
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::InvalidCost
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::InvalidCost::index: usize
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::InvalidCost::value: f64
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::InvalidFrontierDensity
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::InvalidFrontierDensity::index: usize
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::InvalidFrontierDensity::value: f64
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::InvalidLaunchOverhead
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::InvalidLaunchOverhead::value: f64
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::InvalidStep
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::InvalidStep::value: f64
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::OutputReserveFailed
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::OutputReserveFailed::capacity: usize
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::OutputReserveFailed::field: &'static str
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::OutputReserveFailed::message: alloc::string::String
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::ReadbackBytesLen
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::ReadbackBytesLen::actual: usize
-pub vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError::ReadbackBytesLen::expected: usize
 pub vyre_libs::security::SanitizedFlowContractViolation::fix: &'static str
 pub vyre_libs::security::SanitizedFlowContractViolation::mode: vyre_libs::security::SanitizedFlowExecutionMode
 pub vyre_libs::security::SanitizedFlowContractViolation::soundness: vyre_spec::soundness::Soundness

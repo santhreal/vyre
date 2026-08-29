@@ -26,6 +26,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   red. The rule lived in a test in an unrelated crate and shelled out to git;
   it now reads the tracked source set through the scanner, reports the file and
   line, and is exercised on 4511 files.
+- A `dialect-lowering` gate rejects a dialect operation that declares
+  `is_composable` while registering no program builder, a class the operation
+  registry cannot see because the dialect macro always emits a signature and so
+  never trips the missing-semantics check.
 - The CI registry keeps a row for every workflow path the tree carries or once
   carried, and the row says whether it runs, is paused with a way back, is
   superseded by the workflow and gate that run its checks, or leaves a
@@ -246,6 +250,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - `DataType::SCALAR_LEAVES` and `DataType::QUANTIZED_STORAGE` publish the
   variant tables that cast validation, wire round trips, and type sweeps
   enumerate.
+- Declarative versioned dialect definitions generate typed builders, schema
+  descriptors, visitor traversals, binary serialization, validation hooks,
+  rewrite matchers, and exhaustive compile-time closure rosters from a single
+  declaration.
 - The neural library now executes a reusable dense gated-MLP ProgramGraph with
   learned RMSNorm, checkpoint-native output-major gate and up projections, F32
   SwiGLU math, output-major down projection, and residual addition. F16, BF16,
@@ -1810,6 +1818,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   line, no header and no identity, and a merge that keeps both files keeps both
   fragments. A file in the retired shape is rejected by name rather than folded
   into its neighbour.
+- The frontier-density traversal dimension is owned and selected by
+  `vyre-megakernel` as `frontier_topology: FrontierTopology` on `SelectedPlan`,
+  with `ARTIFACT_SCHEMA_VERSION` bumped to 18 and driver/backend modules
+  reduced to fact providers.
 - Five shapes the gate crates repeated per gate have one owner each.
   `xtask::toml_text` renders a TOML basic string and a one-line string array,
   which four generators spelled with two different escapers. `xtask::tree_walk`
@@ -3709,6 +3721,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   counter are gone. The module was gated on `cfg(test)` with no non-test
   consumer, so the counter only ever incremented from the test suite and
   measured the tests rather than the compiler.
+- The composition-call counters `megakernel_schedule_calls` and
+  `level_wave_pass_calls` are dropped from `vyre-libs` telemetry because no
+  module increments them and neither owning composition ships.
 - The use-path classifier no longer special-cases a test_helpers file stem. No
   file in the tree carries that name, and the shape it described is one the
   tree rejects.
@@ -4305,6 +4320,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The cross-dialect reach-through audit asks whether the library source root
   carries Rust source instead of whether its directory exists, because a
   directory outlives the deletion of every file in it.
+- The `define_dialect!` expansion no longer emits an exhaustive-coverage check
+  over its own generated operation enum, which expanded from the same roster as
+  the match arms and could not fail.
 - Ten registered compositions read outside their input buffers. `Expr::select`
   evaluates both arms and `Expr::and` evaluates both operands, so a load whose
   value is discarded still performs the read, and a sentinel index such as the
@@ -4997,6 +5015,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   name declared at most once can be one item at two paths. The count of shared
   names is reported and left unpinned, because a module is what disambiguates
   two grammars naming the same bracket.
+- `graph::vast_tree_walk` and `solvers::persistent_homology_loop_signature`
+  increment their composition-call counters at the entry point every public
+  wrapper funnels through, so `total_calls` no longer reports zero for two
+  shipped compositions.
 - The exemption list shipped with vyre-lints drops 59 rows that named a file no
   longer in the tree, and a test now fails on any row that names nothing. An
   exemption keyed on a path silently exempts nothing after a rename or a split,
@@ -5078,6 +5100,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `#![cfg(target_os = "linux")]`, so the crate still carries a doc on a target
   the cfg strips. Written the other way round it compiled on Linux and failed
   the workspace `missing_docs` deny on macOS and Windows.
+- Megakernel execution planning rejects a telemetry fact outside its declared
+  domain through `MegakernelMemoryError::InvalidSample` instead of ranking a
+  non-finite or out-of-range measurement as a measured extreme.
 - The libs example template declared its result as a read-write storage buffer,
   so the rendered crate's own test asked the dispatcher for an input the caller
   never supplies. The template now declares it with `BufferDecl::output`, which

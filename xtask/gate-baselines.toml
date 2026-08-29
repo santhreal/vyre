@@ -120,6 +120,10 @@ name = "device-test-gating"
 findings = 0
 
 [[gate]]
+name = "dialect-lowering"
+findings = 0
+
+[[gate]]
 name = "doc-claims"
 findings = 0
 
@@ -478,6 +482,10 @@ findings = 0
 [[gate]]
 name = "test-material-placement"
 findings = 0
+
+[[gate]]
+name = "test-only-capability"
+findings = 6
 
 [[gate]]
 name = "testing-guides"

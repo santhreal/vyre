@@ -7,6 +7,7 @@
 #[non_exhaustive] pub enum vyre_megakernel::WorkloadAggregation
 #[non_exhaustive] pub enum vyre_megakernel::legality::FusionRejectionReason
 impl core::default::Default for vyre_megakernel::ExecutionTopology
+impl core::default::Default for vyre_megakernel::FrontierTopology
 impl core::default::Default for vyre_megakernel::MetricSequence
 impl core::default::Default for vyre_megakernel::ObjectiveBounds
 impl core::default::Default for vyre_megakernel::PortfolioPolicy
@@ -28,6 +29,9 @@ impl vyre_megakernel::CoveragePolicy
 impl vyre_megakernel::DeviceFacts
 impl vyre_megakernel::Digest
 impl vyre_megakernel::ExternalFacts
+impl vyre_megakernel::FrontierExecutionSample
+impl vyre_megakernel::FrontierTopology
+impl vyre_megakernel::FrontierTopologyDecision
 impl vyre_megakernel::GeometryRecord
 impl vyre_megakernel::MetricFigures
 impl vyre_megakernel::MetricSequence
@@ -158,6 +162,9 @@ pub const fn vyre_megakernel::DeviceFacts::with_spatial_partitioning(self, suppo
 pub const fn vyre_megakernel::DeviceFacts::with_subgroup_size(self, subgroup_size: u32) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_synchronization_costs(self, barrier_ns: u64, grid_sync_ns: u64) -> Self
 pub const fn vyre_megakernel::Digest::as_bytes(&self) -> &[u8; 32]
+pub const fn vyre_megakernel::FrontierTopology::baseline() -> Self
+pub const fn vyre_megakernel::FrontierTopology::fallback_baseline(self) -> Self
+pub const fn vyre_megakernel::FrontierTopology::is_baseline(self) -> bool
 pub const fn vyre_megakernel::MetricFigures::as_array(&self) -> &[core::option::Option<u64>; 9]
 pub const fn vyre_megakernel::MetricFigures::empty() -> Self
 pub const fn vyre_megakernel::MetricFigures::get(&self, metric: vyre_megakernel::ObjectiveMetric) -> core::option::Option<u64>
@@ -321,11 +328,13 @@ pub enum vyre_megakernel::DependencyKind
 pub enum vyre_megakernel::EntryPersistence
 pub enum vyre_megakernel::ExecutionMode
 pub enum vyre_megakernel::ExecutionTopology
+pub enum vyre_megakernel::FrontierTopology
 pub enum vyre_megakernel::MaterializationReason
 pub enum vyre_megakernel::PlanMeasurement
 pub enum vyre_megakernel::ResidentPartitionMode
 pub enum vyre_megakernel::ResourceLifetime
 pub enum vyre_megakernel::ScheduleProduction
+pub enum vyre_megakernel::SchemaFrontierTopology
 pub enum vyre_megakernel::SemanticExecutionError
 pub enum vyre_megakernel::TargetResourceAccess
 pub enum vyre_megakernel::TargetResourceMemory
@@ -389,6 +398,9 @@ pub fn vyre_megakernel::FinalistEvaluator::device_state(&self) -> vyre_megakerne
 pub fn vyre_megakernel::FinalistEvaluator::measure(&self, artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::TargetPayload) -> core::result::Result<u64, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::FinalistEvaluator::resources(&self, artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::TargetPayload) -> core::result::Result<alloc::vec::Vec<vyre_megakernel::EmittedResources>, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::FinalistEvaluator::target_compiler(&self) -> &dyn vyre_megakernel::TargetCompiler
+pub fn vyre_megakernel::FrontierExecutionSample::unrepresentable_fact(self) -> core::option::Option<&'static str>
+pub fn vyre_megakernel::FrontierTopology::default() -> Self
+pub fn vyre_megakernel::FrontierTopologyDecision::stable_explanation(&self) -> alloc::string::String
 pub fn vyre_megakernel::GeometryRecord::covering_grid(coverage: [u64; 3], workgroup: [u32; 3]) -> core::result::Result<[u32; 3], vyre_megakernel::CompileError>
 pub fn vyre_megakernel::GeometryRecord::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::MetricFigures::derive(cost: &vyre_megakernel::cost::CostBreakdown, device: vyre_megakernel::DeviceFacts, class: vyre_megakernel::WorkloadClass, amortization_launches: u32) -> Self
@@ -487,6 +499,8 @@ pub fn vyre_megakernel::mesh::MeshTopologyPlan::verify_capacity(&self, mesh: &vy
 pub fn vyre_megakernel::mesh::TransferOrigin::label(self) -> alloc::string::String
 pub fn vyre_megakernel::mesh::implied_width(partitions: &[vyre_megakernel::mesh::RegionPartition]) -> u32
 pub fn vyre_megakernel::registered_level_stage() -> vyre_spec::ir_level::IrLevel
+pub fn vyre_megakernel::select_frontier_topology(sample: vyre_megakernel::FrontierExecutionSample, graph: vyre_megakernel::FrontierGraphShape, memory: vyre_megakernel::FrontierMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, supports_device_wide_barrier: bool) -> vyre_megakernel::FrontierTopologyDecision
+pub fn vyre_megakernel::select_frontier_topology_stable(sample: vyre_megakernel::FrontierExecutionSample, graph: vyre_megakernel::FrontierGraphShape, memory: vyre_megakernel::FrontierMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, previous_topology: vyre_megakernel::FrontierTopology, supports_device_wide_barrier: bool) -> vyre_megakernel::FrontierTopologyDecision
 pub fn vyre_megakernel::specialization::AxisDomain::admits(&self, value: vyre_megakernel::specialization::AxisValue) -> bool
 pub fn vyre_megakernel::specialization::CoverageProof::first_gap(&self) -> core::option::Option<&str>
 pub fn vyre_megakernel::specialization::CoverageProof::served(&self) -> &[usize]
@@ -547,6 +561,10 @@ pub struct vyre_megakernel::EmittedTargetModule
 pub struct vyre_megakernel::EntryAbiRecord
 pub struct vyre_megakernel::EntryResourceBinding
 pub struct vyre_megakernel::ExternalFacts
+pub struct vyre_megakernel::FrontierExecutionSample
+pub struct vyre_megakernel::FrontierGraphShape
+pub struct vyre_megakernel::FrontierMemoryBudget
+pub struct vyre_megakernel::FrontierTopologyDecision
 pub struct vyre_megakernel::FusionGroupId(pub u32)
 pub struct vyre_megakernel::FusionRecord
 pub struct vyre_megakernel::FusionRejection
@@ -683,6 +701,23 @@ pub vyre_megakernel::ExternalFacts::configuration_digest: vyre_megakernel::Diges
 pub vyre_megakernel::ExternalFacts::constant_identities: alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, vyre_megakernel::Digest>
 pub vyre_megakernel::ExternalFacts::expected_launch_batch: u32
 pub vyre_megakernel::ExternalFacts::symbolic_bindings: alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>
+pub vyre_megakernel::FrontierExecutionSample::dispatch_cost_ns: f64
+pub vyre_megakernel::FrontierExecutionSample::frontier_density: f64
+pub vyre_megakernel::FrontierExecutionSample::readback_bytes: u64
+pub vyre_megakernel::FrontierGraphShape::edge_count: u64
+pub vyre_megakernel::FrontierGraphShape::node_count: u64
+pub vyre_megakernel::FrontierMemoryBudget::budget_bytes: u64
+pub vyre_megakernel::FrontierMemoryBudget::required_bytes: u64
+pub vyre_megakernel::FrontierTopology::BlockDenseFrontier
+pub vyre_megakernel::FrontierTopology::DenseFrontier
+pub vyre_megakernel::FrontierTopology::FusedWave
+pub vyre_megakernel::FrontierTopology::HybridFrontier
+pub vyre_megakernel::FrontierTopology::SparseFrontier
+pub vyre_megakernel::FrontierTopology::WarpSparseFrontier
+pub vyre_megakernel::FrontierTopologyDecision::average_degree_bps: u64
+pub vyre_megakernel::FrontierTopologyDecision::launch_pressure_bps: u32
+pub vyre_megakernel::FrontierTopologyDecision::memory_pressure_bps: u32
+pub vyre_megakernel::FrontierTopologyDecision::topology: vyre_megakernel::FrontierTopology
 pub vyre_megakernel::FusionRecord::id: vyre_megakernel::FusionGroupId
 pub vyre_megakernel::FusionRecord::legality: alloc::vec::Vec<vyre_megakernel::Digest>
 pub vyre_megakernel::FusionRecord::members: alloc::vec::Vec<vyre_megakernel::ArtifactNodeId>
@@ -809,6 +844,12 @@ pub vyre_megakernel::ScheduleProduction::SpatialPartition
 pub vyre_megakernel::ScheduleProduction::Synchronization
 pub vyre_megakernel::ScheduleProduction::Tiling
 pub vyre_megakernel::ScheduleProduction::Vectorization
+pub vyre_megakernel::SchemaFrontierTopology::BlockDenseFrontier
+pub vyre_megakernel::SchemaFrontierTopology::DenseFrontier
+pub vyre_megakernel::SchemaFrontierTopology::FusedWave
+pub vyre_megakernel::SchemaFrontierTopology::HybridFrontier
+pub vyre_megakernel::SchemaFrontierTopology::SparseFrontier
+pub vyre_megakernel::SchemaFrontierTopology::WarpSparseFrontier
 pub vyre_megakernel::SearchBudget::max_candidates: u32
 pub vyre_megakernel::SearchBudget::max_cpu_work: u64
 pub vyre_megakernel::SearchBudget::max_elapsed_ns: u64
@@ -827,6 +868,7 @@ pub vyre_megakernel::SearchWork::target_compilations: u32
 pub vyre_megakernel::SelectedLowering::abi: vyre_megakernel::ArtifactAbi
 pub vyre_megakernel::SelectedLowering::artifact: vyre_megakernel::Digest
 pub vyre_megakernel::SelectedLowering::canonical_bindings: alloc::vec::Vec<vyre_megakernel::TargetResourceBinding>
+pub vyre_megakernel::SelectedLowering::frontier_topology: vyre_megakernel::FrontierTopology
 pub vyre_megakernel::SelectedLowering::group: vyre_megakernel::FusionGroupId
 pub vyre_megakernel::SelectedLowering::logical_element_count: u32
 pub vyre_megakernel::SelectedLowering::nodes: alloc::vec::Vec<vyre_megakernel::ArtifactNodeId>
@@ -841,6 +883,7 @@ pub vyre_megakernel::SelectedPlan::candidates_explored: u32
 pub vyre_megakernel::SelectedPlan::certificate: vyre_megakernel::SearchCertificate
 pub vyre_megakernel::SelectedPlan::derivation: alloc::vec::Vec<vyre_megakernel::DerivationStep>
 pub vyre_megakernel::SelectedPlan::execution: vyre_megakernel::ExecutionMode
+pub vyre_megakernel::SelectedPlan::frontier_topology: vyre_megakernel::FrontierTopology
 pub vyre_megakernel::SelectedPlan::fusion: alloc::vec::Vec<vyre_megakernel::FusionRecord>
 pub vyre_megakernel::SelectedPlan::materializations: alloc::vec::Vec<vyre_megakernel::MaterializationRecord>
 pub vyre_megakernel::SelectedPlan::measurement: vyre_megakernel::PlanMeasurement

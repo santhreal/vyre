@@ -603,3 +603,23 @@ pub fn im2col_3x3_witness(input: &[f32], h: usize, w: usize) -> Vec<f32> {
     im2col_3x3_witness_into(input, h, w, &mut out);
     out
 }
+
+/// Sequential Euler predictor for one homotopy continuation step.
+#[must_use]
+pub fn homotopy_euler_predictor_witness(state: &[f64], velocity: &[f64], step: f64) -> Vec<f64> {
+    state
+        .iter()
+        .zip(velocity.iter())
+        .map(|(&s, &v)| s + step * v)
+        .collect()
+}
+
+/// Sequential linear homotopy between compatible vectors.
+#[must_use]
+pub fn linear_homotopy_witness(start: &[f64], end: &[f64], parameter: f64) -> Vec<f64> {
+    start
+        .iter()
+        .zip(end.iter())
+        .map(|(&s, &e)| (1.0 - parameter) * s + parameter * e)
+        .collect()
+}

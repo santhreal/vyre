@@ -547,7 +547,9 @@ struct FunctionRecord {
     returns_geometry: bool,
     /// Line the declaration sits on.
     line: u32,
-    /// Decision types this body constructs, with the line of the construction.
+    /// Decision enum variants this body mints, with the line of the mint.
+    mints: Vec<(String, u32)>,
+    /// Decision struct types this body constructs, with the line of the construction.
     constructs: Vec<(String, u32)>,
     /// Geometry field writes in this body, with their line.
     writes: Vec<(String, u32)>,
@@ -593,6 +595,7 @@ impl Walker<'_> {
             name,
             signature: text,
             line: line_of(signature),
+            mints: Vec::new(),
             constructs: Vec::new(),
             writes: Vec::new(),
             calls: BTreeSet::new(),
@@ -673,10 +676,13 @@ impl<'ast> syn::visit::Visit<'ast> for Walker<'_> {
 
     fn visit_expr_struct(&mut self, expr: &'ast syn::ExprStruct) {
         let line = line_of(expr);
-        if let Some(last) = expr.path.segments.last() {
-            let name = last.ident.to_string();
+        if let Some((type_name, mints_variant)) = classify_decision_path(&expr.path) {
             if let Some(record) = self.current.as_mut() {
-                record.constructs.push((name, line));
+                if mints_variant {
+                    record.mints.push((type_name, line));
+                } else {
+                    record.constructs.push((type_name, line));
+                }
             }
         }
         let decides = expr
@@ -713,12 +719,13 @@ impl<'ast> syn::visit::Visit<'ast> for Walker<'_> {
             syn::visit::visit_expr_path(self, expr);
             return;
         }
-        if let Some(first) = expr.path.segments.first() {
-            let name = first.ident.to_string();
-            if name.chars().next().is_some_and(char::is_uppercase) {
-                let line = line_of(expr);
-                if let Some(record) = self.current.as_mut() {
-                    record.constructs.push((name, line));
+        if let Some((type_name, mints_variant)) = classify_decision_path(&expr.path) {
+            let line = line_of(expr);
+            if let Some(record) = self.current.as_mut() {
+                if mints_variant {
+                    record.mints.push((type_name, line));
+                } else {
+                    record.constructs.push((type_name, line));
                 }
             }
         }
@@ -817,6 +824,34 @@ fn receiver_root(expr: &syn::Expr) -> Option<String> {
     }
 }
 
+/// The decision type a path names, and whether the path mints a variant of it.
+///
+/// A module prefix is skipped, so `candidate::Topology::Sparse` reads the same
+/// as `Topology::Sparse`. Reading only the first segment missed both, because a
+/// lowercase module name failed the uppercase test and the path was dropped
+/// whole. The type is the last uppercase-initial segment, or the one before it
+/// when that segment is itself uppercase-initial, which is what distinguishes
+/// minting `Topology::Sparse` from constructing `topology::Plan`.
+fn classify_decision_path(path: &syn::Path) -> Option<(String, bool)> {
+    let idents: Vec<String> = path
+        .segments
+        .iter()
+        .map(|segment| segment.ident.to_string())
+        .collect();
+    let last_upper = idents
+        .iter()
+        .rposition(|ident| ident.chars().next().is_some_and(char::is_uppercase))?;
+    if last_upper >= 1
+        && idents[last_upper - 1]
+            .chars()
+            .next()
+            .is_some_and(char::is_uppercase)
+    {
+        return Some((idents[last_upper - 1].clone(), true));
+    }
+    Some((idents[last_upper].clone(), false))
+}
+
 /// The line an expression starts on.
 fn line_of(node: &impl Spanned) -> u32 {
     u32::try_from(node.span().start().line).unwrap_or(0)
@@ -903,6 +938,24 @@ fn findings(
     let mut findings = Vec::new();
     for record in functions {
         let realizes = receives_within_depth(record, &by_name, rules, 0);
+        for (minted, line) in &record.mints {
+            if !rules.decisions.contains(minted) {
+                continue;
+            }
+            findings.push(Finding::at(
+                path.to_path_buf(),
+                *line,
+                format!(
+                    "`{crate_directory}` is in the `{layer}` layer and mints a `{minted}` \
+                     variant in `{}`, so it selects execution on a second route",
+                    record.name
+                ),
+                format!(
+                    "take the selected schedule as an input and realize it, or return a fact \
+                     `{owner}` consumes; selection is `{owner}`'s alone"
+                ),
+            ));
+        }
         for (constructed, line) in &record.constructs {
             if !rules.decisions.contains(constructed) || realizes {
                 continue;
@@ -1370,6 +1423,31 @@ mod tests {
                 .any(|f| f.message.contains("workgroup")),
             "geometry write in match guard must be reported: {}",
             Finding::messages(&guard_findings)
+        );
+    }
+
+    /// WHY: minting a decision variant is selection even when the function or its callers
+    /// receive a decision. Forwarding a received decision without naming a variant is realization.
+    #[test]
+    fn minting_a_decision_variant_is_reported_even_when_receiving_a_decision() {
+        let minting_receiver = judge(
+            "fn stabilize(previous: ExecutionMode, count: usize) -> ExecutionMode {\n    if count > 64 { ExecutionMode::Persistent } else { previous }\n}\n",
+        );
+        assert!(
+            minting_receiver
+                .iter()
+                .any(|f| f.message.contains("ExecutionMode")),
+            "minting a variant is selection even when receiving a decision: {}",
+            Finding::messages(&minting_receiver)
+        );
+
+        let forwarding_receiver = judge(
+            "fn forward(mode: ExecutionMode) -> ExecutionMode {\n    mode\n}\n",
+        );
+        assert!(
+            forwarding_receiver.is_empty(),
+            "forwarding a received decision without naming a variant is realization: {}",
+            Finding::messages(&forwarding_receiver)
         );
     }
 }

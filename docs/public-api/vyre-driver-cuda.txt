@@ -355,7 +355,7 @@ pub fn vyre_driver_cuda::CudaKernelLaunchEnvelopeError::fmt(&self, f: &mut core:
 pub fn vyre_driver_cuda::CudaMegakernelDeviceKey::from(caps: &vyre_driver_cuda::CudaDeviceCaps) -> Self
 pub fn vyre_driver_cuda::CudaMegakernelPlanCache::clear(&mut self)
 pub fn vyre_driver_cuda::CudaMegakernelPlanCache::default() -> Self
-pub fn vyre_driver_cuda::CudaMegakernelPlanCache::get_or_insert_with(&mut self, key: vyre_driver_cuda::CudaMegakernelPlanCacheKey, build: impl core::ops::function::FnOnce() -> vyre_driver::megakernel_execution::MegakernelTopologyDecision) -> core::result::Result<vyre_driver_cuda::CudaMegakernelCachedPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
+pub fn vyre_driver_cuda::CudaMegakernelPlanCache::get_or_insert_with(&mut self, key: vyre_driver_cuda::CudaMegakernelPlanCacheKey, build: impl core::ops::function::FnOnce() -> vyre_megakernel::candidate::FrontierTopologyDecision) -> core::result::Result<vyre_driver_cuda::CudaMegakernelCachedPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
 pub fn vyre_driver_cuda::CudaMegakernelPlanCache::get_or_plan_execution(&mut self, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::CudaMegakernelScheduleSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes: vyre_driver::megakernel_execution::MegakernelByteLayout, launch_overhead_ns: f64, fusion_pressure: f64) -> core::result::Result<vyre_driver::megakernel_execution::MegakernelExecutionPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
 pub fn vyre_driver_cuda::CudaMegakernelPlanCache::get_or_select_topology(&mut self, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::CudaMegakernelScheduleSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64) -> core::result::Result<vyre_driver_cuda::CudaMegakernelCachedPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
 pub fn vyre_driver_cuda::CudaMegakernelPlanCache::new() -> Self
@@ -436,8 +436,8 @@ pub fn vyre_driver_cuda::profiler::cuda_profiler_range(label: &'static [u8]) -> 
 pub fn vyre_driver_cuda::profiler::cuda_profiler_ranges_enabled() -> bool
 pub fn vyre_driver_cuda::registered_backend_id() -> core::option::Option<&'static str>
 pub fn vyre_driver_cuda::resident_graph_session_speedup_sample(evidence: vyre_driver_cuda::CudaResidentGraphSessionEvidence) -> core::result::Result<vyre_driver_cuda::CudaMegakernelSpeedupSample, vyre_driver_cuda::CudaResidentGraphSessionError>
-pub fn vyre_driver_cuda::select_cuda_megakernel_topology(sample: vyre_driver_cuda::CudaMegakernelScheduleSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64) -> vyre_driver::megakernel_execution::MegakernelTopologyDecision
-pub fn vyre_driver_cuda::select_cuda_megakernel_topology_stable(sample: vyre_driver_cuda::CudaMegakernelScheduleSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, previous_topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology) -> vyre_driver::megakernel_execution::MegakernelTopologyDecision
+pub fn vyre_driver_cuda::select_cuda_megakernel_topology(sample: vyre_driver_cuda::CudaMegakernelScheduleSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64) -> vyre_megakernel::candidate::FrontierTopologyDecision
+pub fn vyre_driver_cuda::select_cuda_megakernel_topology_stable(sample: vyre_driver_cuda::CudaMegakernelScheduleSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, previous_topology: vyre_megakernel::candidate::FrontierTopology) -> vyre_megakernel::candidate::FrontierTopologyDecision
 pub fn vyre_driver_cuda::synthetic_device_caps::synthetic_sm120_envelope(total_memory: u64) -> vyre_driver_cuda::CudaDeviceCaps
 pub fn vyre_driver_cuda::synthetic_device_caps::synthetic_sm120_envelope_default() -> vyre_driver_cuda::CudaDeviceCaps
 pub fn vyre_driver_cuda::validate_cuda_megakernel_speedup_evidence_csv(csv: &str, required_speedup_x: f64) -> core::result::Result<vyre_driver_cuda::CudaMegakernelSpeedupProof, vyre_driver_cuda::CudaMegakernelSpeedupGateError>
@@ -777,8 +777,8 @@ pub vyre_driver_cuda::CudaMegakernelAnalysisKind::Liveness
 pub vyre_driver_cuda::CudaMegakernelAnalysisKind::ParserFrontend
 pub vyre_driver_cuda::CudaMegakernelAnalysisKind::PointsTo
 pub vyre_driver_cuda::CudaMegakernelAnalysisKind::ReachingDefinitions
-pub vyre_driver_cuda::CudaMegakernelCachedPlan::decision: vyre_driver::megakernel_execution::MegakernelTopologyDecision
-pub vyre_driver_cuda::CudaMegakernelCachedPlan::topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology
+pub vyre_driver_cuda::CudaMegakernelCachedPlan::decision: vyre_megakernel::candidate::FrontierTopologyDecision
+pub vyre_driver_cuda::CudaMegakernelCachedPlan::topology: vyre_megakernel::candidate::FrontierTopology
 pub vyre_driver_cuda::CudaMegakernelDeviceKey::max_workgroup_size: u32
 pub vyre_driver_cuda::CudaMegakernelDeviceKey::sm_major: u16
 pub vyre_driver_cuda::CudaMegakernelDeviceKey::sm_minor: u16

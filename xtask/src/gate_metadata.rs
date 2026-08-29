@@ -423,6 +423,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "crate::gates::device_test_gating::tests::a_per_test_device_cfg_admits_that_test_and_not_its_neighbour",
     },
     GateDescriptor {
+        name: "dialect-lowering",
+        help: "Enforce that a declared composition registers a program builder",
+        package: "xtask-registry",
+        areas: &["lego-audit"],
+        subject: "registered dialect operations",
+        artifacts: &[],
+        prerequisites: &[],
+        proof: "xtask_registry::gates::dialect_lowering::tests::a_composable_operation_without_a_builder_is_reported",
+    },
+    GateDescriptor {
         name: "doc-claims",
         help: "Enforce doc-claims contracts",
         package: "xtask",
@@ -1370,6 +1380,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         artifacts: &[],
         prerequisites: &[],
         proof: "crate::gates::test_material::tests::only_a_crate_that_declares_an_edge_can_be_a_referrer",
+    },
+    GateDescriptor {
+        name: "test-only-capability",
+        help: "Enforce that production crates do not declare capability compiled only for test builds",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "rust sources",
+        artifacts: &[],
+        prerequisites: &[],
+        proof: "crate::gates::test_only_capability::tests::a_test_only_pub_mod_in_a_production_crate_is_reported",
     },
     GateDescriptor {
         name: "testing-guides",

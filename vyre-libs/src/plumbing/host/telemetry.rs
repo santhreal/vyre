@@ -58,7 +58,6 @@ macro_rules! counters {
 
 counters! {
     matroid_megakernel_scheduler_calls,
-    megakernel_schedule_calls,
     multigrid_matroid_solver_calls,
     sheaf_heterophilic_dispatch_calls,
     sheaf_spectral_clustering_calls,
@@ -97,7 +96,6 @@ counters! {
     graph_dispatch_calls,
     functorial_pass_composition_calls,
     scallop_provenance_wide_calls,
-    level_wave_pass_calls,
     vast_tree_walk_calls,
 }
 

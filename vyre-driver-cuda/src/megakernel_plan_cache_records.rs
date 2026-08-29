@@ -1,6 +1,6 @@
 //! Keys, cached plan, and counters the CUDA megakernel plan cache stores.
 
-use vyre_driver::megakernel_execution::{MegakernelExecutionTopology, MegakernelTopologyDecision};
+use vyre_driver::megakernel_execution::{FrontierTopology, FrontierTopologyDecision};
 
 use crate::device::CudaDeviceCaps;
 
@@ -124,9 +124,9 @@ pub(crate) struct CudaMegakernelPlanIdentityKey {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CudaMegakernelCachedPlan {
     /// Selected topology for this key.
-    pub topology: MegakernelExecutionTopology,
+    pub topology: FrontierTopology,
     /// Full decision telemetry used when the plan was inserted.
-    pub decision: MegakernelTopologyDecision,
+    pub decision: FrontierTopologyDecision,
 }
 
 /// Runtime counters for [`CudaMegakernelPlanCache`](crate::CudaMegakernelPlanCache).

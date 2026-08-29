@@ -24,7 +24,7 @@ mod math_amg;
 mod math_analysis;
 mod math_physics;
 mod math_quant;
-mod math_schedule;
+mod math_sinkhorn;
 mod math_tensor;
 mod parsing;
 mod pattern;
@@ -222,7 +222,7 @@ pub use math::{
     jacobi_solve_to_tolerance_witness, jacobi_solve_to_tolerance_witness_into,
     kernel_to_fixed_16_16_witness, kernel_to_fixed_16_16_witness_into, kfac_block_inverse_witness,
     kfac_block_inverse_witness_into, l2p_zeroth_all_witness, l2p_zeroth_eval_witness,
-    launch_dominance_witness, linear_homotopy_witness, m2l_zeroth_all_witness,
+    linear_homotopy_witness, m2l_zeroth_all_witness,
     m2l_zeroth_translate_witness, matmul_u32_witness, matmul_u32_witness_into,
     modified_gram_schmidt_witness, modified_gram_schmidt_witness_into,
     mori_zwanzig_coarsen_via_clustering_witness, mori_zwanzig_coarsen_via_clustering_witness_into,
@@ -238,12 +238,9 @@ pub use math::{
     qsvt_apply_witness, qsvt_apply_witness_into, qsvt_apply_witness_with_scratch_into,
     qsvt_block_encode_witness, qsvt_block_encode_witness_into, rdp_to_dp_witness,
     resolve_bigint_carry_chain_witness, resolve_bigint_carry_chain_witness_into, rk4_step_witness,
-    rk4_step_witness_into, rms_norm_linear_witness, scale_aware_pressure_witness,
+    rk4_step_witness_into, rms_norm_linear_witness,
     scallop_join_fixpoint_witness, scallop_join_fixpoint_witness_into,
-    schedule_via_homotopy_witness, schedule_via_homotopy_witness_into,
-    schedule_via_scale_aware_samples_witness, schedule_via_scale_aware_samples_witness_into,
-    schedule_via_scale_aware_telemetry_witness_into, score_denoise_step_witness,
-    score_denoise_step_witness_into, select_retention_set_witness,
+    score_denoise_step_witness, score_denoise_step_witness_into, select_retention_set_witness,
     select_retention_set_witness_into, semiring_gemm_witness, semiring_gemm_witness_into,
     should_fuse_chain_witness, simplicial_triangle_message_witness, sinkhorn_clustering_witness,
     sinkhorn_col_residual_witness, sinkhorn_iter_f64_in_place_witness_into,
@@ -274,7 +271,7 @@ pub use math::{
     try_tensor_train_full_chain_witness_into,
     try_tensor_train_fusion_pressure_witness_with_scratch, unpack_i4x8_witness,
     unpack_i4x8_witness_into, vietoris_rips_edge_filter_witness, vietoris_rips_edges_witness,
-    AmgSolveScratchWitness, AmgVcycleScratchWitness, MegakernelScaleSampleWitness,
+    AmgSolveScratchWitness, AmgVcycleScratchWitness,
     NewtonSchulzScratchWitness,
 };
 // Re-export sequential frontier scheduling witnesses

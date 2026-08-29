@@ -417,7 +417,6 @@ pub fn vyre_reference::composition_witness::kfac_block_inverse_witness(blocks: &
 pub fn vyre_reference::composition_witness::kfac_block_inverse_witness_into(blocks: &[f32], num_blocks: u32, n: u32, out: &mut alloc::vec::Vec<f32>, mat: &mut alloc::vec::Vec<f32>, inv: &mut alloc::vec::Vec<f32>)
 pub fn vyre_reference::composition_witness::knn_csr_witness(vectors: &[f32], dimension: usize, neighbor_k: usize) -> (alloc::vec::Vec<u32>, alloc::vec::Vec<u32>)
 pub fn vyre_reference::composition_witness::l2p_zeroth_all_witness(cell_local: &[f64], cell_assignment: &[u32], region_count: u32) -> alloc::vec::Vec<f64>
-pub fn vyre_reference::composition_witness::launch_dominance_witness(launch_overhead_ns: f64, candidate_cost_ns: f64) -> f64
 pub fn vyre_reference::composition_witness::level_wave_witness<F>(depths: &[u32], max_depth: u32, step_for_lane: F) where F: core::ops::function::FnMut(u32, u32)
 pub fn vyre_reference::composition_witness::line_index_witness(input: &[u8]) -> alloc::vec::Vec<u32>
 pub fn vyre_reference::composition_witness::line_splice_classify_witness(source: &[u8]) -> alloc::vec::Vec<u32>
@@ -522,17 +521,11 @@ pub fn vyre_reference::composition_witness::rle_segment_lengths_witness_into(pac
 pub fn vyre_reference::composition_witness::rle_segment_start_offsets_witness(lengths: &[u32]) -> (alloc::vec::Vec<u32>, u32)
 pub fn vyre_reference::composition_witness::rle_segment_start_offsets_witness_into(lengths: &[u32], offsets: &mut alloc::vec::Vec<u32>) -> u32
 pub fn vyre_reference::composition_witness::rms_norm_linear_witness(input: &[f32], normalized: &[f32], weights: &[f32], bias: &[f32], out_dim: u32, in_dim: u32, n: u32, eps: f32) -> alloc::vec::Vec<f32>
-pub fn vyre_reference::composition_witness::scale_aware_pressure_witness(cost_pressure: f64, readback_pressure: f64, launch_pressure: f64, frontier_pressure: f64) -> f64
 pub fn vyre_reference::composition_witness::scallop_join_fixpoint_witness(state: &[u32], join_rules: &[u32], n: u32, words_per_cell: u32, max_iterations: u32) -> (alloc::vec::Vec<u32>, u32)
 pub fn vyre_reference::composition_witness::scallop_join_fixpoint_witness_into(state: &[u32], join_rules: &[u32], n: u32, words_per_cell: u32, max_iterations: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> u32
 pub fn vyre_reference::composition_witness::scatter_witness(source: &[u32], indices: &[u32], destination_len: usize) -> alloc::vec::Vec<u32>
 pub fn vyre_reference::composition_witness::scatter_witness_into(source: &[u32], indices: &[u32], destination_len: usize, output: &mut alloc::vec::Vec<u32>)
 pub fn vyre_reference::composition_witness::scc_decompose_witness(node_count: u32, forward: &[u32], backward: &[u32], components: &[u32], pivot: u32) -> alloc::vec::Vec<u32>
-pub fn vyre_reference::composition_witness::schedule_via_homotopy_witness(costs: &[f64], n_steps: u32, dt: f64) -> alloc::vec::Vec<f64>
-pub fn vyre_reference::composition_witness::schedule_via_homotopy_witness_into(costs: &[f64], n_steps: u32, dt: f64, out: &mut alloc::vec::Vec<f64>)
-pub fn vyre_reference::composition_witness::schedule_via_scale_aware_samples_witness(samples: &[vyre_reference::composition_witness::MegakernelScaleSampleWitness], launch_overhead_ns: f64, n_steps: u32, dt: f64) -> alloc::vec::Vec<f64>
-pub fn vyre_reference::composition_witness::schedule_via_scale_aware_samples_witness_into(samples: &[vyre_reference::composition_witness::MegakernelScaleSampleWitness], launch_overhead_ns: f64, n_steps: u32, dt: f64, out: &mut alloc::vec::Vec<f64>)
-pub fn vyre_reference::composition_witness::schedule_via_scale_aware_telemetry_witness_into(costs: &[f64], frontier_density: &[f64], readback_bytes: &[u64], launch_overhead_ns: f64, n_steps: u32, dt: f64, out: &mut alloc::vec::Vec<f64>)
 pub fn vyre_reference::composition_witness::score_denoise_step_witness(x: &[f64], score: &[f64], noise: &[f64], alpha: f64, beta: f64, sigma: f64) -> alloc::vec::Vec<f64>
 pub fn vyre_reference::composition_witness::score_denoise_step_witness_into(x: &[f64], score: &[f64], noise: &[f64], alpha: f64, beta: f64, sigma: f64, out: &mut alloc::vec::Vec<f64>)
 pub fn vyre_reference::composition_witness::segment_reduce_sum_witness(input: &[u32], offsets: &[u32]) -> alloc::vec::Vec<u32>
@@ -911,7 +904,6 @@ pub struct vyre_reference::composition_witness::FrontierTypedPlanWitness
 pub struct vyre_reference::composition_witness::FrontierWaveWitness
 pub struct vyre_reference::composition_witness::InflateStoredWitness
 pub struct vyre_reference::composition_witness::LrProduction
-pub struct vyre_reference::composition_witness::MegakernelScaleSampleWitness
 pub struct vyre_reference::composition_witness::NewtonSchulzScratchWitness
 pub struct vyre_reference::composition_witness::WitnessPostProcessedMatch
 pub struct vyre_reference::composition_witness::ZiftsieveLiteralWitness
@@ -1065,9 +1057,6 @@ pub vyre_reference::composition_witness::LrAction::Reduce(u32)
 pub vyre_reference::composition_witness::LrAction::Shift(u32)
 pub vyre_reference::composition_witness::LrProduction::lhs: u32
 pub vyre_reference::composition_witness::LrProduction::rhs_len: u32
-pub vyre_reference::composition_witness::MegakernelScaleSampleWitness::dispatch_cost_ns: f64
-pub vyre_reference::composition_witness::MegakernelScaleSampleWitness::frontier_density: f64
-pub vyre_reference::composition_witness::MegakernelScaleSampleWitness::readback_bytes: u64
 pub vyre_reference::composition_witness::NewtonSchulzScratchWitness::three_i_minus_zy: alloc::vec::Vec<f64>
 pub vyre_reference::composition_witness::NewtonSchulzScratchWitness::y: alloc::vec::Vec<f64>
 pub vyre_reference::composition_witness::NewtonSchulzScratchWitness::z: alloc::vec::Vec<f64>

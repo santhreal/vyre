@@ -161,7 +161,7 @@ mod tests {
         CudaMegakernelAnalysisKind, CudaMegakernelDeviceKey, CudaMegakernelPlanCache,
     };
     use crate::megakernel_scheduler::CudaMegakernelScheduleSample;
-    use vyre_driver::megakernel_execution::MegakernelExecutionTopology;
+    use vyre_driver::megakernel_execution::FrontierTopology;
     use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
 
     const WAVES: &[MegakernelFrontierWave] = &[
@@ -192,7 +192,7 @@ mod tests {
         cache: &mut CudaMegakernelPlanCache,
         device: CudaMegakernelDeviceKey,
         frontier_density: f64,
-    ) -> MegakernelExecutionTopology {
+    ) -> FrontierTopology {
         plan_cuda_frontier_megakernel_execution(
             cache,
             42,
@@ -226,11 +226,11 @@ mod tests {
 
         assert_eq!(
             plan(&mut cache, device(true), 0.90),
-            MegakernelExecutionTopology::FusedWave
+            FrontierTopology::FusedWave
         );
         assert_eq!(
             plan(&mut cache, device(true), 0.91),
-            MegakernelExecutionTopology::FusedWave
+            FrontierTopology::FusedWave
         );
         assert_eq!(cache.stats().hits, 1);
     }
@@ -241,7 +241,7 @@ mod tests {
 
         assert_ne!(
             plan(&mut cache, device(false), 0.90),
-            MegakernelExecutionTopology::FusedWave,
+            FrontierTopology::FusedWave,
             "Fix: a fused wave crosses wave boundaries inside one launch and needs a \
              device-wide barrier; a device without cooperative grid sync cannot run it."
         );

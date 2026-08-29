@@ -92,7 +92,8 @@ pub use depth::{
     LimitState, DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_EXPR_DEPTH, DEFAULT_MAX_NESTING_DEPTH,
     DEFAULT_MAX_NODE_COUNT,
 };
-pub(crate) use err::err;
+/// Construct a structured validation error issue.
+pub use err::err;
 pub use options::{BackendCapabilities, BackendValidationCapabilities, ValidationOptions};
 pub use report::{ValidationReport, ValidationWarning};
 /// Re-export of the focused `Fma` f32-operand check emit backends run

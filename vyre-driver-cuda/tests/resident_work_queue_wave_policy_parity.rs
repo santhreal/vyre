@@ -11,9 +11,9 @@
 
 use vyre_driver::megakernel_barrier::MegakernelWaveDependency;
 use vyre_driver::megakernel_execution::{
-    plan_megakernel_execution, select_megakernel_topology, select_megakernel_topology_stable,
+    plan_megakernel_execution, select_frontier_topology, select_frontier_topology_stable,
     MegakernelByteLayout, MegakernelDeviceCapabilities, MegakernelExecutionSample,
-    MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
+    FrontierTopology, MegakernelGraphShape, MegakernelMemoryBudget,
     MegakernelMemoryError, NeutralMegakernelExecutionPlanner,
 };
 // The wave and dependency corpora are the neutral policy's own definitions,
@@ -47,7 +47,7 @@ struct FrontierDecision {
     peak_output_bytes: u64,
     amortized_readback_bytes: u64,
     max_group_width: usize,
-    topology: MegakernelExecutionTopology,
+    topology: FrontierTopology,
     downgraded_to_sparse: bool,
     graph_bytes: u64,
     scratch_bytes: u64,
@@ -66,7 +66,7 @@ enum FrontierRejection {
         field: &'static str,
     },
     OverBudget {
-        topology: MegakernelExecutionTopology,
+        topology: FrontierTopology,
         required_bytes: u64,
         budget_bytes: u64,
     },
@@ -226,6 +226,9 @@ impl From<MegakernelMemoryError> for FrontierRejection {
                 required_bytes,
                 budget_bytes,
             },
+            MegakernelMemoryError::InvalidSample { field } => {
+                panic!("fixture supplied an unrepresentable {field}")
+            }
         }
     }
 }
@@ -571,13 +574,13 @@ fn cuda_and_neutral_frontier_scheduling_agree_decision_for_decision() {
     );
 }
 
-const TOPOLOGIES: [MegakernelExecutionTopology; 6] = [
-    MegakernelExecutionTopology::WarpSparseFrontier,
-    MegakernelExecutionTopology::SparseFrontier,
-    MegakernelExecutionTopology::BlockDenseFrontier,
-    MegakernelExecutionTopology::DenseFrontier,
-    MegakernelExecutionTopology::HybridFrontier,
-    MegakernelExecutionTopology::FusedWave,
+const TOPOLOGIES: [FrontierTopology; 6] = [
+    FrontierTopology::WarpSparseFrontier,
+    FrontierTopology::SparseFrontier,
+    FrontierTopology::BlockDenseFrontier,
+    FrontierTopology::DenseFrontier,
+    FrontierTopology::HybridFrontier,
+    FrontierTopology::FusedWave,
 ];
 
 /// Density spread: every threshold, both sides of every threshold, and the
@@ -678,13 +681,14 @@ fn cuda_and_neutral_topology_selection_agree_decision_for_decision() {
                             launch_overhead_ns,
                             fusion_pressure,
                         ),
-                        select_megakernel_topology(
+                        select_frontier_topology(
                             sample,
                             graph,
                             memory,
                             launch_overhead_ns,
                             fusion_pressure,
-                            MegakernelDeviceCapabilities::FUSION_CAPABLE,
+                            MegakernelDeviceCapabilities::FUSION_CAPABLE
+                                .supports_device_wide_barrier,
                         ),
                         "Fix: CUDA topology selection diverged from the neutral policy for {label}."
                     );
@@ -698,14 +702,15 @@ fn cuda_and_neutral_topology_selection_agree_decision_for_decision() {
                                 fusion_pressure,
                                 previous,
                             ),
-                            select_megakernel_topology_stable(
+                            select_frontier_topology_stable(
                                 sample,
                                 graph,
                                 memory,
                                 launch_overhead_ns,
                                 fusion_pressure,
                                 previous,
-                                MegakernelDeviceCapabilities::FUSION_CAPABLE,
+                                MegakernelDeviceCapabilities::FUSION_CAPABLE
+                                    .supports_device_wide_barrier,
                             ),
                             "Fix: CUDA topology hysteresis diverged from the neutral policy for \
                              {label} previous={previous:?}."

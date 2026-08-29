@@ -115,6 +115,9 @@ pub mod graph_view;
 /// Callable operation signature types and identifier interning.
 pub mod dialect_lookup;
 
+/// Declarative, versioned dialect specification and registration framework.
+pub mod dialect;
+
 /// Inventory-registered extension hooks (`OpaqueExprResolver`, `OpaqueNodeResolver`).
 pub mod extension;
 

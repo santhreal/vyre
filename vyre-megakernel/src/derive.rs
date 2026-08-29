@@ -225,19 +225,38 @@ fn arrange(
     dependencies: &[DependencyEdge],
 ) -> CandidatePlan {
     let queues = constraint.device.concurrent_queues();
-    if queues < 2 || candidate.topology() != ExecutionTopology::Sequential {
-        return candidate;
-    }
-    let concurrent = candidate.with_topology(ExecutionTopology::ConcurrentQueue { queues });
-    match analyze_topology_legality(
-        &concurrent,
-        constraint.graph,
-        facts,
-        dependencies,
-        constraint.device,
-    ) {
-        TopologyDecision::Legal => concurrent,
-        TopologyDecision::Rejected(_) => candidate,
+    let candidate = if queues >= 2 && candidate.topology() == ExecutionTopology::Sequential {
+        let concurrent = candidate.with_topology(ExecutionTopology::ConcurrentQueue { queues });
+        match analyze_topology_legality(
+            &concurrent,
+            constraint.graph,
+            facts,
+            dependencies,
+            constraint.device,
+        ) {
+            TopologyDecision::Legal => concurrent,
+            TopologyDecision::Rejected(_) => candidate,
+        }
+    } else {
+        candidate
+    };
+
+    if candidate.group_count() < candidate.node_groups.len()
+        && constraint.device.supports_cooperative_launch()
+    {
+        let fused = candidate.with_frontier_topology(crate::candidate::FrontierTopology::FusedWave);
+        match analyze_topology_legality(
+            &fused,
+            constraint.graph,
+            facts,
+            dependencies,
+            constraint.device,
+        ) {
+            TopologyDecision::Legal => fused,
+            TopologyDecision::Rejected(_) => candidate,
+        }
+    } else {
+        candidate
     }
 }
 

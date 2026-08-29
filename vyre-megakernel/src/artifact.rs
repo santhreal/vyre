@@ -166,6 +166,7 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
     let numeric_budget = numeric_record(logical, facts, numeric, &schedule);
     let selected_plan = SelectedPlan {
         topology: candidate.topology(),
+        frontier_topology: candidate.frontier_topology(),
         schedule,
         derivation: candidate.derivation.clone(),
         certificate: certificate.clone(),

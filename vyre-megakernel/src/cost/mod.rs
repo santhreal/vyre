@@ -240,25 +240,29 @@ pub(crate) fn evaluate_reported(
         stage_groups[stage as usize].push(group as u32);
     }
 
-    let launches = match candidate.topology {
-        ExecutionTopology::Sequential => u64::try_from(group_count).unwrap_or(u64::MAX),
-        ExecutionTopology::ConcurrentQueue { queues } => {
-            let q = u64::from(queues.max(1));
-            let mut total_launches = 0_u64;
-            for groups in &stage_groups {
-                let count = u64::try_from(groups.len()).unwrap_or(1);
-                total_launches = total_launches.saturating_add(count.div_ceil(q));
+    let launches = if candidate.frontier_topology == crate::candidate::FrontierTopology::FusedWave {
+        u64::try_from(stage_groups.len()).unwrap_or(1).max(1)
+    } else {
+        match candidate.topology {
+            ExecutionTopology::Sequential => u64::try_from(group_count).unwrap_or(u64::MAX),
+            ExecutionTopology::ConcurrentQueue { queues } => {
+                let q = u64::from(queues.max(1));
+                let mut total_launches = 0_u64;
+                for groups in &stage_groups {
+                    let count = u64::try_from(groups.len()).unwrap_or(1);
+                    total_launches = total_launches.saturating_add(count.div_ceil(q));
+                }
+                total_launches.max(1)
             }
-            total_launches.max(1)
-        }
-        ExecutionTopology::ResidentPartition { partitions, .. } => {
-            let p = u64::from(partitions.max(1));
-            let mut total_launches = 0_u64;
-            for groups in &stage_groups {
-                let count = u64::try_from(groups.len()).unwrap_or(1);
-                total_launches = total_launches.saturating_add(count.div_ceil(p));
+            ExecutionTopology::ResidentPartition { partitions, .. } => {
+                let p = u64::from(partitions.max(1));
+                let mut total_launches = 0_u64;
+                for groups in &stage_groups {
+                    let count = u64::try_from(groups.len()).unwrap_or(1);
+                    total_launches = total_launches.saturating_add(count.div_ceil(p));
+                }
+                total_launches.max(1)
             }
-            total_launches.max(1)
         }
     };
     let crossing = dependencies.iter().filter(|edge| {

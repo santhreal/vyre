@@ -34,6 +34,7 @@ fn payload(resources: Vec<ResourceRecord>) -> ArtifactPayload {
         dependencies: Vec::new(),
         selected_plan: SelectedPlan {
             topology: crate::ExecutionTopology::Sequential,
+            frontier_topology: crate::FrontierTopology::SparseFrontier,
             schedule: vyre_test_support::selected_schedules::synthetic(1),
             derivation: Vec::new(),
             certificate: crate::SearchCertificate::new(crate::SCHEDULE_GRAMMAR_VERSION),
@@ -749,10 +750,23 @@ fn bytes_stamped_with_the_previous_schema_are_refused() {
     Artifact::from_bytes(&framed.bytes).expect("the current schema decodes");
 
     let mut stale = framed.bytes.clone();
-    stale[4..6].copy_from_slice(&(ARTIFACT_SCHEMA_VERSION - 1).to_le_bytes());
+    stale[4..6].copy_from_slice(&(17u16).to_le_bytes());
     let error = Artifact::from_bytes(&stale).expect_err("a stale schema must not decode");
     assert_eq!(
         error.diagnostic.code.as_str(),
         CompilerFailureKind::VersionSkew.as_str()
+    );
+    assert!(error.to_string().contains("schema 17 is unsupported; expected 18"));
+}
+
+#[test]
+fn frontier_topology_participates_in_artifact_identity() {
+    let canonical = encode_payload(&launchable()).expect("the fixture payload frames");
+    let mut mutated = launchable();
+    mutated.selected_plan.frontier_topology = crate::FrontierTopology::BlockDenseFrontier;
+    let framed = encode_payload(&mutated).expect("a mutated payload frames");
+    assert_ne!(
+        framed.digest, canonical.digest,
+        "frontier_topology must participate in artifact identity"
     );
 }

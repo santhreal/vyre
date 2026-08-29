@@ -538,7 +538,7 @@ mod tests {
     };
     use crate::megakernel_barrier::{MegakernelBarrierScratch, MegakernelWaveDependency};
     use crate::megakernel_execution::{
-        MegakernelDeviceCapabilities, MegakernelExecutionSample, MegakernelExecutionTopology,
+        FrontierTopology, MegakernelDeviceCapabilities, MegakernelExecutionSample,
         MegakernelGraphShape, NeutralMegakernelExecutionPlanner,
     };
     use crate::megakernel_fixtures::{
@@ -763,7 +763,7 @@ mod tests {
         assert_eq!(plan.max_group_width, 1);
         assert_eq!(
             plan.execution.topology,
-            MegakernelExecutionTopology::FusedWave
+            FrontierTopology::FusedWave
         );
         assert_eq!(plan.execution.memory.frontier_bytes, 2_048);
         assert_eq!(plan.execution.memory.scratch_bytes, 4_096);
@@ -782,7 +782,7 @@ mod tests {
         );
         assert_ne!(
             incapable.execution.topology,
-            MegakernelExecutionTopology::FusedWave,
+            FrontierTopology::FusedWave,
             "Fix: a fused wave crosses wave boundaries inside one launch and needs a barrier \
              across every resident block; a device without one cannot run the plan."
         );

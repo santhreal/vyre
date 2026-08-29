@@ -14,20 +14,10 @@
 //! unlaunchable plan. The check is a property of the device, not of one backend, so it
 //! is [`crate::megakernel_execution::MegakernelDeviceCapabilities`] here and every backend inherits it.
 
-const WARP_SPARSE_DENSITY: f64 = 0.03125;
-const SPARSE_DENSITY: f64 = 0.125;
-const DENSE_DENSITY: f64 = 0.70;
-const BLOCK_DENSE_DENSITY: f64 = 0.85;
-const FUSION_PRESSURE: f64 = 0.70;
-const FUSION_PRESSURE_HYSTERESIS: f64 = 0.10;
-const FRONTIER_HYSTERESIS: f64 = 0.025;
-const MEMORY_RED_ZONE_BPS: u32 = 9_000;
-const MEMORY_HYSTERESIS_BPS: u32 = 250;
-const LAUNCH_PRESSURE_BPS: u32 = 1_500;
-const LAUNCH_HYSTERESIS_BPS: u32 = 250;
-const FUSION_READBACK_BYTES: u64 = 4_096;
-const DENSE_AVERAGE_DEGREE_BPS: u64 = 20_000;
-const WARP_SPARSE_AVERAGE_DEGREE_BPS: u64 = 80_000;
+pub use vyre_megakernel::{
+    select_frontier_topology, select_frontier_topology_stable, FrontierExecutionSample,
+    FrontierGraphShape, FrontierMemoryBudget, FrontierTopology, FrontierTopologyDecision,
+};
 
 /// Device capabilities that constrain which wave topologies are launchable.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -71,26 +61,6 @@ pub struct MegakernelExecutionSample {
     pub readback_bytes: u64,
 }
 
-/// Device-side megakernel execution topology selected for a dataflow wave.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum MegakernelExecutionTopology {
-    /// Ultra-low-density frontier expansion where one warp owns sparse active
-    /// nodes and avoids block-wide work distribution overhead.
-    WarpSparseFrontier,
-    /// Low-density frontier expansion with queue-like work distribution.
-    SparseFrontier,
-    /// Very high-density propagation where a block owns coalesced bitset lanes
-    /// and amortizes shared-memory scans across many active facts.
-    BlockDenseFrontier,
-    /// Dense bitset-style propagation with coalesced scans.
-    DenseFrontier,
-    /// Mixed sparse/dense execution when density is in the transition band.
-    HybridFrontier,
-    /// Fused adjacent waves when launch/readback pressure dominates and memory
-    /// budget leaves room for the fused plan.
-    FusedWave,
-}
-
 /// Static graph shape used by topology selection.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct MegakernelGraphShape {
@@ -132,7 +102,7 @@ pub struct MegakernelMemoryPlan {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct MegakernelExecutionPlan {
     /// Final topology after memory-budget validation.
-    pub topology: MegakernelExecutionTopology,
+    pub topology: FrontierTopology,
     /// Memory plan for the final topology.
     pub memory: MegakernelMemoryPlan,
     /// Whether the planner downgraded a denser/fused topology to sparse to fit
@@ -151,7 +121,7 @@ pub enum MegakernelMemoryError {
     /// The candidate plan exceeds the caller-approved device-memory budget.
     OverBudget {
         /// Selected topology.
-        topology: MegakernelExecutionTopology,
+        topology: FrontierTopology,
         /// Required peak bytes.
         required_bytes: u64,
         /// Caller-approved budget bytes.
@@ -160,6 +130,11 @@ pub enum MegakernelMemoryError {
         node_count: u64,
         /// Graph edge count.
         edge_count: u64,
+    },
+    /// An observed telemetry fact lies outside the domain its type declares.
+    InvalidSample {
+        /// Observed fact that lies outside its declared domain.
+        field: &'static str,
     },
 }
 
@@ -180,220 +155,16 @@ impl std::fmt::Display for MegakernelMemoryError {
                 f,
                 "megakernel {topology:?} plan requires {required_bytes} bytes but budget allows {budget_bytes} bytes for graph nodes={node_count} edges={edge_count}. Fix: choose a sparse topology, reduce fusion pressure, shard the graph, or raise the explicit device-memory budget."
             ),
+            Self::InvalidSample { field } => write!(
+                f,
+                "megakernel execution sample states an unrepresentable {field}. Fix: supply measured finite telemetry inside the domain the sample type declares."
+            ),
         }
     }
 }
 
 impl std::error::Error for MegakernelMemoryError {}
 
-/// Topology decision with the pressure metrics that caused it.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct MegakernelTopologyDecision {
-    /// Selected execution topology.
-    pub topology: MegakernelExecutionTopology,
-    /// Required/budget memory pressure in basis points.
-    pub memory_pressure_bps: u32,
-    /// Edge/node average degree proxy in basis points.
-    pub average_degree_bps: u64,
-    /// Launch overhead divided by observed dispatch cost in basis points.
-    pub launch_pressure_bps: u32,
-}
-
-impl MegakernelTopologyDecision {
-    /// Stable single-line explanation for release logs and scheduler debugging.
-    #[must_use]
-    pub fn stable_explanation(&self) -> String {
-        format!(
-            "megakernel-topology-v1|topology={:?}|memory_pressure_bps={}|average_degree_bps={}|launch_pressure_bps={}|reason={}",
-            self.topology,
-            self.memory_pressure_bps,
-            self.average_degree_bps,
-            self.launch_pressure_bps,
-            self.reason_code()
-        )
-    }
-
-    fn reason_code(&self) -> &'static str {
-        match self.topology {
-            MegakernelExecutionTopology::WarpSparseFrontier => "ultra_sparse_warp_specialized",
-            MegakernelExecutionTopology::SparseFrontier if self.memory_pressure_bps >= 9_000 => {
-                "memory_pressure_sparse_safety"
-            }
-            MegakernelExecutionTopology::SparseFrontier => "low_density_sparse_queue",
-            MegakernelExecutionTopology::BlockDenseFrontier => "high_density_block_specialized",
-            MegakernelExecutionTopology::DenseFrontier => "dense_coalesced_frontier",
-            MegakernelExecutionTopology::HybridFrontier => "transition_band_hybrid",
-            MegakernelExecutionTopology::FusedWave => "launch_and_readback_pressure_fused",
-        }
-    }
-}
-
-/// Select the megakernel execution topology for one candidate wave.
-#[must_use]
-pub fn select_megakernel_topology(
-    sample: MegakernelExecutionSample,
-    graph: MegakernelGraphShape,
-    memory: MegakernelMemoryBudget,
-    launch_overhead_ns: f64,
-    fusion_pressure: f64,
-    capabilities: MegakernelDeviceCapabilities,
-) -> MegakernelTopologyDecision {
-    let memory_pressure_bps = pressure_bps(memory.required_bytes, memory.budget_bytes);
-    let average_degree_bps = pressure_bps_u64(graph.edge_count, graph.node_count);
-    let launch_pressure_bps =
-        if sample.dispatch_cost_ns <= 0.0 || !sample.dispatch_cost_ns.is_finite() {
-            0
-        } else {
-            finite_ratio_bps(
-                launch_overhead_ns.max(0.0),
-                sample.dispatch_cost_ns,
-                "launch overhead pressure",
-            )
-        };
-    let density = finite_unit(sample.frontier_density);
-    let fusion = finite_unit(capabilities.admissible_fusion_pressure(fusion_pressure));
-    let topology = if memory_pressure_bps >= MEMORY_RED_ZONE_BPS {
-        MegakernelExecutionTopology::SparseFrontier
-    } else if fusion >= FUSION_PRESSURE
-        && launch_pressure_bps >= LAUNCH_PRESSURE_BPS
-        && sample.readback_bytes >= FUSION_READBACK_BYTES
-        && memory_pressure_bps
-            <= checked_bps_sub(MEMORY_RED_ZONE_BPS, 500, "fusion memory red-zone margin")
-    {
-        MegakernelExecutionTopology::FusedWave
-    } else if density <= WARP_SPARSE_DENSITY && average_degree_bps <= WARP_SPARSE_AVERAGE_DEGREE_BPS
-    {
-        MegakernelExecutionTopology::WarpSparseFrontier
-    } else if density <= SPARSE_DENSITY {
-        MegakernelExecutionTopology::SparseFrontier
-    } else if density >= BLOCK_DENSE_DENSITY && average_degree_bps >= DENSE_AVERAGE_DEGREE_BPS {
-        MegakernelExecutionTopology::BlockDenseFrontier
-    } else if density >= DENSE_DENSITY && average_degree_bps >= DENSE_AVERAGE_DEGREE_BPS {
-        MegakernelExecutionTopology::DenseFrontier
-    } else {
-        MegakernelExecutionTopology::HybridFrontier
-    };
-    MegakernelTopologyDecision {
-        topology,
-        memory_pressure_bps,
-        average_degree_bps,
-        launch_pressure_bps,
-    }
-}
-
-/// Select megakernel topology with previous-topology hysteresis.
-#[must_use]
-pub fn select_megakernel_topology_stable(
-    sample: MegakernelExecutionSample,
-    graph: MegakernelGraphShape,
-    memory: MegakernelMemoryBudget,
-    launch_overhead_ns: f64,
-    fusion_pressure: f64,
-    previous_topology: MegakernelExecutionTopology,
-    capabilities: MegakernelDeviceCapabilities,
-) -> MegakernelTopologyDecision {
-    let mut decision = select_megakernel_topology(
-        sample,
-        graph,
-        memory,
-        launch_overhead_ns,
-        fusion_pressure,
-        capabilities,
-    );
-    decision.topology = stabilize_topology(
-        decision,
-        sample,
-        capabilities.admissible_fusion_pressure(fusion_pressure),
-        previous_topology,
-    );
-    decision
-}
-
-fn stabilize_topology(
-    decision: MegakernelTopologyDecision,
-    sample: MegakernelExecutionSample,
-    fusion_pressure: f64,
-    previous_topology: MegakernelExecutionTopology,
-) -> MegakernelExecutionTopology {
-    if decision.memory_pressure_bps >= MEMORY_RED_ZONE_BPS {
-        return decision.topology;
-    }
-    let density = finite_unit(sample.frontier_density);
-    let fusion = finite_unit(fusion_pressure);
-    if matches!(
-        previous_topology,
-        MegakernelExecutionTopology::SparseFrontier
-            | MegakernelExecutionTopology::WarpSparseFrontier
-    ) && decision.memory_pressure_bps
-        >= checked_bps_sub(
-            MEMORY_RED_ZONE_BPS,
-            MEMORY_HYSTERESIS_BPS,
-            "memory hysteresis floor",
-        )
-    {
-        return MegakernelExecutionTopology::SparseFrontier;
-    }
-
-    match previous_topology {
-        MegakernelExecutionTopology::WarpSparseFrontier
-            if density <= WARP_SPARSE_DENSITY + FRONTIER_HYSTERESIS
-                && decision.average_degree_bps <= WARP_SPARSE_AVERAGE_DEGREE_BPS =>
-        {
-            MegakernelExecutionTopology::WarpSparseFrontier
-        }
-        MegakernelExecutionTopology::SparseFrontier
-            if density <= SPARSE_DENSITY + FRONTIER_HYSTERESIS =>
-        {
-            MegakernelExecutionTopology::SparseFrontier
-        }
-        MegakernelExecutionTopology::HybridFrontier
-            if decision.topology == MegakernelExecutionTopology::SparseFrontier
-                && density >= SPARSE_DENSITY - FRONTIER_HYSTERESIS =>
-        {
-            MegakernelExecutionTopology::HybridFrontier
-        }
-        MegakernelExecutionTopology::HybridFrontier
-            if matches!(
-                decision.topology,
-                MegakernelExecutionTopology::DenseFrontier
-                    | MegakernelExecutionTopology::BlockDenseFrontier
-            ) && density <= DENSE_DENSITY + FRONTIER_HYSTERESIS =>
-        {
-            MegakernelExecutionTopology::HybridFrontier
-        }
-        MegakernelExecutionTopology::DenseFrontier
-            if density >= DENSE_DENSITY - FRONTIER_HYSTERESIS
-                && decision.average_degree_bps >= DENSE_AVERAGE_DEGREE_BPS =>
-        {
-            MegakernelExecutionTopology::DenseFrontier
-        }
-        MegakernelExecutionTopology::BlockDenseFrontier
-            if density >= BLOCK_DENSE_DENSITY - FRONTIER_HYSTERESIS
-                && decision.average_degree_bps >= DENSE_AVERAGE_DEGREE_BPS =>
-        {
-            MegakernelExecutionTopology::BlockDenseFrontier
-        }
-        MegakernelExecutionTopology::FusedWave
-            if fusion >= FUSION_PRESSURE - FUSION_PRESSURE_HYSTERESIS
-                && decision.launch_pressure_bps
-                    >= checked_bps_sub(
-                        LAUNCH_PRESSURE_BPS,
-                        LAUNCH_HYSTERESIS_BPS,
-                        "launch hysteresis floor",
-                    )
-                && sample.readback_bytes >= FUSION_READBACK_BYTES
-                && decision.memory_pressure_bps
-                    <= checked_bps_sub(
-                        MEMORY_RED_ZONE_BPS,
-                        MEMORY_HYSTERESIS_BPS,
-                        "memory hysteresis floor",
-                    ) =>
-        {
-            MegakernelExecutionTopology::FusedWave
-        }
-        _ => decision.topology,
-    }
-}
 
 /// Resident bytes a graph layout occupies before any wave state.
 ///
@@ -433,9 +204,34 @@ pub struct MegakernelByteLayout {
     pub budget_bytes: u64,
 }
 
+/// Resident bytes a wave needs before any topology scratch multiplier applies.
+///
+/// Topology selection needs a required-bytes figure before a topology exists.
+/// This prices the graph, the frontier state, the unmultiplied scratch and the
+/// compact output, so obtaining that figure names no topology.
+///
+/// # Errors
+///
+/// Returns [`MegakernelMemoryError::ByteCountOverflow`] when byte accounting
+/// overflows.
+pub fn megakernel_base_required_bytes(
+    graph: MegakernelGraphShape,
+    bytes: MegakernelByteLayout,
+) -> Result<u64, MegakernelMemoryError> {
+    let graph_bytes =
+        megakernel_resident_graph_bytes(graph, bytes.bytes_per_node, bytes.bytes_per_edge)?;
+    let without_output = checked_add(
+        graph_bytes,
+        bytes.frontier_bytes,
+        "graph plus frontier bytes",
+    )?;
+    let without_output = checked_add(without_output, bytes.scratch_bytes, "scratch bytes")?;
+    checked_add(without_output, bytes.output_bytes, "output bytes")
+}
+
 /// Compute and validate a megakernel device-memory plan.
 pub fn plan_megakernel_memory_budget(
-    topology: MegakernelExecutionTopology,
+    topology: FrontierTopology,
     graph: MegakernelGraphShape,
     bytes: MegakernelByteLayout,
 ) -> Result<MegakernelMemoryPlan, MegakernelMemoryError> {
@@ -474,6 +270,16 @@ pub fn plan_megakernel_memory_budget(
 }
 
 /// Select a megakernel topology and validate its device-memory plan.
+///
+/// Telemetry is checked before selection because selection saturates a fact it
+/// cannot price, which would rank a measurement defect as a measured extreme.
+///
+/// # Errors
+///
+/// Returns [`MegakernelMemoryError::InvalidSample`] when an observed fact lies
+/// outside its declared domain, [`MegakernelMemoryError::ByteCountOverflow`]
+/// when byte accounting overflows, and [`MegakernelMemoryError::OverBudget`]
+/// when no topology fits the approved budget.
 pub fn plan_megakernel_execution(
     sample: MegakernelExecutionSample,
     graph: MegakernelGraphShape,
@@ -482,18 +288,28 @@ pub fn plan_megakernel_execution(
     fusion_pressure: f64,
     capabilities: MegakernelDeviceCapabilities,
 ) -> Result<MegakernelExecutionPlan, MegakernelMemoryError> {
-    let sparse_memory =
-        plan_megakernel_memory_budget(MegakernelExecutionTopology::SparseFrontier, graph, bytes)?;
-    let decision = select_megakernel_topology(
-        sample,
-        graph,
-        MegakernelMemoryBudget {
-            required_bytes: sparse_memory.required_bytes,
+    let frontier_sample = FrontierExecutionSample {
+        dispatch_cost_ns: sample.dispatch_cost_ns,
+        frontier_density: sample.frontier_density,
+        readback_bytes: sample.readback_bytes,
+    };
+    if let Some(field) = frontier_sample.unrepresentable_fact() {
+        return Err(MegakernelMemoryError::InvalidSample { field });
+    }
+    let base_required_bytes = megakernel_base_required_bytes(graph, bytes)?;
+    let decision = select_frontier_topology(
+        frontier_sample,
+        FrontierGraphShape {
+            node_count: graph.node_count,
+            edge_count: graph.edge_count,
+        },
+        FrontierMemoryBudget {
+            required_bytes: base_required_bytes,
             budget_bytes: bytes.budget_bytes,
         },
         launch_overhead_ns,
         fusion_pressure,
-        capabilities,
+        capabilities.supports_device_wide_barrier,
     );
     match plan_megakernel_memory_budget(decision.topology, graph, bytes) {
         Ok(memory) => Ok(MegakernelExecutionPlan {
@@ -502,11 +318,12 @@ pub fn plan_megakernel_execution(
             downgraded_to_sparse: false,
         }),
         Err(MegakernelMemoryError::OverBudget { .. })
-            if decision.topology != MegakernelExecutionTopology::SparseFrontier =>
+            if !decision.topology.is_baseline() =>
         {
+            let baseline = decision.topology.fallback_baseline();
             Ok(MegakernelExecutionPlan {
-                topology: MegakernelExecutionTopology::SparseFrontier,
-                memory: sparse_memory,
+                memory: plan_megakernel_memory_budget(baseline, graph, bytes)?,
+                topology: baseline,
                 downgraded_to_sparse: true,
             })
         }
@@ -572,14 +389,6 @@ impl MegakernelExecutionPlanner for NeutralMegakernelExecutionPlanner {
     }
 }
 
-fn finite_unit(value: f64) -> f64 {
-    if value.is_finite() {
-        value.clamp(0.0, 1.0)
-    } else {
-        0.0
-    }
-}
-
 fn pressure_bps(numerator: u64, denominator: u64) -> u32 {
     let clamped = pressure_bps_u64(numerator, denominator).min(10_000);
     match u32::try_from(clamped) {
@@ -603,46 +412,25 @@ fn pressure_bps_u64(numerator: u64, denominator: u64) -> u64 {
     )
 }
 
-fn finite_ratio_bps(numerator: f64, denominator: f64, label: &'static str) -> u32 {
-    crate::numeric::finite_f64_ratio_basis_points_round(
-        numerator,
-        denominator,
-        u32::MAX,
-        u32::MAX,
-        label,
-        "megakernel execution",
-    )
-}
-
-fn checked_bps_sub(value: u32, margin: u32, label: &'static str) -> u32 {
-    if let Some(result) = value.checked_sub(margin) {
-        return result;
-    }
-    tracing::error!(
-        "megakernel {label} underflowed basis-point threshold. Fix: configure hysteresis below the threshold."
-    );
-    0
-}
-
 fn topology_scratch_bytes(
-    topology: MegakernelExecutionTopology,
+    topology: FrontierTopology,
     base_scratch_bytes: u64,
 ) -> Result<u64, MegakernelMemoryError> {
     match topology {
-        MegakernelExecutionTopology::WarpSparseFrontier => Ok(base_scratch_bytes.max(32)),
-        MegakernelExecutionTopology::SparseFrontier => Ok(base_scratch_bytes),
-        MegakernelExecutionTopology::BlockDenseFrontier => checked_mul(
+        FrontierTopology::WarpSparseFrontier => Ok(base_scratch_bytes.max(32)),
+        FrontierTopology::SparseFrontier => Ok(base_scratch_bytes),
+        FrontierTopology::BlockDenseFrontier => checked_mul(
             base_scratch_bytes.max(1024),
             2,
             "block dense topology scratch bytes",
         ),
-        MegakernelExecutionTopology::DenseFrontier => {
+        FrontierTopology::DenseFrontier => {
             checked_mul(base_scratch_bytes, 2, "dense topology scratch bytes")
         }
-        MegakernelExecutionTopology::HybridFrontier => {
+        FrontierTopology::HybridFrontier => {
             checked_mul(base_scratch_bytes, 3, "hybrid topology scratch bytes")
         }
-        MegakernelExecutionTopology::FusedWave => {
+        FrontierTopology::FusedWave => {
             checked_mul(base_scratch_bytes, 4, "fused topology scratch bytes")
         }
     }

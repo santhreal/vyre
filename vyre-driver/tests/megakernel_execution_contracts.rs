@@ -4,171 +4,11 @@
 //! a consumer does.
 
 use vyre_driver::megakernel_execution::{
-    plan_megakernel_execution, plan_megakernel_memory_budget, select_megakernel_topology,
-    select_megakernel_topology_stable, MegakernelByteLayout, MegakernelDeviceCapabilities,
-    MegakernelExecutionSample, MegakernelExecutionTopology, MegakernelGraphShape,
-    MegakernelMemoryBudget, MegakernelMemoryError,
+    plan_megakernel_execution, plan_megakernel_memory_budget, FrontierTopology,
+    MegakernelByteLayout, MegakernelDeviceCapabilities, MegakernelExecutionSample,
+    MegakernelGraphShape, MegakernelMemoryBudget, MegakernelMemoryError,
 };
 
-#[test]
-fn topology_selector_uses_sparse_dense_hybrid_and_fused_bands() {
-    let graph = MegakernelGraphShape {
-        node_count: 1_000,
-        edge_count: 4_000,
-    };
-    let memory = MegakernelMemoryBudget {
-        required_bytes: 1_000,
-        budget_bytes: 10_000,
-    };
-    let warp_sparse = select_megakernel_topology(
-        MegakernelExecutionSample {
-            dispatch_cost_ns: 1_000.0,
-            frontier_density: 0.01,
-            readback_bytes: 256,
-        },
-        graph,
-        memory,
-        100.0,
-        0.0,
-        MegakernelDeviceCapabilities::FUSION_CAPABLE,
-    );
-    assert_eq!(
-        warp_sparse.topology,
-        MegakernelExecutionTopology::WarpSparseFrontier
-    );
-    assert_eq!(
-        warp_sparse.stable_explanation(),
-        "megakernel-topology-v1|topology=WarpSparseFrontier|memory_pressure_bps=1000|average_degree_bps=40000|launch_pressure_bps=1000|reason=ultra_sparse_warp_specialized"
-    );
-
-    let block_dense = select_megakernel_topology(
-        MegakernelExecutionSample {
-            dispatch_cost_ns: 1_000.0,
-            frontier_density: 0.90,
-            readback_bytes: 512,
-        },
-        graph,
-        memory,
-        100.0,
-        0.0,
-        MegakernelDeviceCapabilities::FUSION_CAPABLE,
-    );
-    assert_eq!(
-        block_dense.topology,
-        MegakernelExecutionTopology::BlockDenseFrontier
-    );
-
-    let hybrid = select_megakernel_topology(
-        MegakernelExecutionSample {
-            dispatch_cost_ns: 1_000.0,
-            frontier_density: 0.35,
-            readback_bytes: 512,
-        },
-        graph,
-        memory,
-        100.0,
-        0.0,
-        MegakernelDeviceCapabilities::FUSION_CAPABLE,
-    );
-    assert_eq!(hybrid.topology, MegakernelExecutionTopology::HybridFrontier);
-
-    let fused = select_megakernel_topology(
-        MegakernelExecutionSample {
-            dispatch_cost_ns: 1_000.0,
-            frontier_density: 0.50,
-            readback_bytes: 1 << 20,
-        },
-        graph,
-        memory,
-        250.0,
-        0.90,
-        MegakernelDeviceCapabilities::FUSION_CAPABLE,
-    );
-    assert_eq!(fused.topology, MegakernelExecutionTopology::FusedWave);
-    assert_eq!(fused.launch_pressure_bps, 2_500);
-
-    let unfusable = select_megakernel_topology(
-        MegakernelExecutionSample {
-            dispatch_cost_ns: 1_000.0,
-            frontier_density: 0.50,
-            readback_bytes: 1 << 20,
-        },
-        graph,
-        memory,
-        250.0,
-        0.90,
-        MegakernelDeviceCapabilities::FUSION_INCAPABLE,
-    );
-    assert_eq!(
-        unfusable.topology,
-        MegakernelExecutionTopology::HybridFrontier,
-        "Fix: a fused wave crosses wave boundaries inside one launch, so a device without a \
-         device-wide barrier cannot run it however high the measured fusion pressure is."
-    );
-}
-
-#[test]
-fn stable_topology_selector_prevents_variant_flapping_near_thresholds() {
-    let graph = MegakernelGraphShape {
-        node_count: 1_000,
-        edge_count: 4_000,
-    };
-    let memory = MegakernelMemoryBudget {
-        required_bytes: 1_000,
-        budget_bytes: 10_000,
-    };
-    let sparse_to_hybrid = select_megakernel_topology_stable(
-        MegakernelExecutionSample {
-            dispatch_cost_ns: 1_000.0,
-            frontier_density: 0.14,
-            readback_bytes: 512,
-        },
-        graph,
-        memory,
-        100.0,
-        0.0,
-        MegakernelExecutionTopology::SparseFrontier,
-        MegakernelDeviceCapabilities::FUSION_CAPABLE,
-    );
-    assert_eq!(
-        sparse_to_hybrid.topology,
-        MegakernelExecutionTopology::SparseFrontier
-    );
-
-    let held_fusion = select_megakernel_topology_stable(
-        MegakernelExecutionSample {
-            dispatch_cost_ns: 1_000.0,
-            frontier_density: 0.50,
-            readback_bytes: 1 << 20,
-        },
-        graph,
-        memory,
-        250.0,
-        0.65,
-        MegakernelExecutionTopology::FusedWave,
-        MegakernelDeviceCapabilities::FUSION_CAPABLE,
-    );
-    assert_eq!(held_fusion.topology, MegakernelExecutionTopology::FusedWave);
-
-    let released_fusion = select_megakernel_topology_stable(
-        MegakernelExecutionSample {
-            dispatch_cost_ns: 1_000.0,
-            frontier_density: 0.50,
-            readback_bytes: 1 << 20,
-        },
-        graph,
-        memory,
-        250.0,
-        0.65,
-        MegakernelExecutionTopology::FusedWave,
-        MegakernelDeviceCapabilities::FUSION_INCAPABLE,
-    );
-    assert_ne!(
-        released_fusion.topology,
-        MegakernelExecutionTopology::FusedWave,
-        "Fix: hysteresis must not hold a fused wave on a device that cannot run one."
-    );
-}
 
 #[test]
 fn memory_planner_bounds_peak_bytes_by_topology() {
@@ -177,7 +17,7 @@ fn memory_planner_bounds_peak_bytes_by_topology() {
         edge_count: 4_000,
     };
     let plan = plan_megakernel_memory_budget(
-        MegakernelExecutionTopology::FusedWave,
+        FrontierTopology::FusedWave,
         graph,
         MegakernelByteLayout {
             bytes_per_node: 16,
@@ -203,7 +43,7 @@ fn memory_planner_rejects_budget_and_overflow_failures() {
         edge_count: 4_000,
     };
     let err = plan_megakernel_memory_budget(
-        MegakernelExecutionTopology::DenseFrontier,
+        FrontierTopology::DenseFrontier,
         graph,
         MegakernelByteLayout {
             bytes_per_node: 16,
@@ -218,14 +58,14 @@ fn memory_planner_rejects_budget_and_overflow_failures() {
     assert!(matches!(
         err,
         MegakernelMemoryError::OverBudget {
-            topology: MegakernelExecutionTopology::DenseFrontier,
+            topology: FrontierTopology::DenseFrontier,
             ..
         }
     ));
     assert!(err.to_string().contains("Fix: choose a sparse topology"));
 
     let overflow = plan_megakernel_memory_budget(
-        MegakernelExecutionTopology::SparseFrontier,
+        FrontierTopology::SparseFrontier,
         MegakernelGraphShape {
             node_count: u64::MAX,
             edge_count: 0,
@@ -295,6 +135,9 @@ fn generated_execution_plans_never_exceed_budget_or_hide_overflow() {
                 ..
             }) => assert!(required_bytes > budget_bytes, "case {case_index}"),
             Err(MegakernelMemoryError::ByteCountOverflow { .. }) => {}
+            Err(MegakernelMemoryError::InvalidSample { field }) => {
+                panic!("case {case_index} generated an unrepresentable {field}")
+            }
         }
     }
 }

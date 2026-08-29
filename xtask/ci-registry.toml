@@ -158,6 +158,11 @@ subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "dialect-lowering"
+subsets = ["lego-audit"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "doc-claims"
 subsets = ["docs"]
 workflows = ["gates.yml"]
@@ -604,6 +609,11 @@ workflows = ["gates.yml"]
 
 [[gate]]
 name = "test-material-placement"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "test-only-capability"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 

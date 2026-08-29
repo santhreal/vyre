@@ -5,8 +5,8 @@ use super::CudaMegakernelPlanCache;
 use crate::megakernel_scheduler::CudaMegakernelScheduleSample;
 use crate::synthetic_device_caps::synthetic_sm120_envelope_default;
 use vyre_driver::megakernel_execution::{
-    MegakernelByteLayout, MegakernelExecutionTopology, MegakernelGraphShape,
-    MegakernelTopologyDecision,
+    MegakernelByteLayout, FrontierTopology, MegakernelGraphShape,
+    FrontierTopologyDecision,
 };
 
 /// The byte layout every execution-plan case in this module shares, with the
@@ -51,8 +51,8 @@ fn key(
     )
 }
 
-fn decision(topology: MegakernelExecutionTopology) -> MegakernelTopologyDecision {
-    MegakernelTopologyDecision {
+fn decision(topology: FrontierTopology) -> FrontierTopologyDecision {
+    FrontierTopologyDecision {
         topology,
         memory_pressure_bps: 1_000,
         average_degree_bps: 20_000,
@@ -65,16 +65,16 @@ fn cache_reuses_plan_for_same_graph_analysis_device_and_pressure_bucket() {
     let mut cache = CudaMegakernelPlanCache::new();
     let key = key(42, CudaMegakernelAnalysisKind::Ifds, 0.52, 2_400);
     let first = cache
-        .get_or_insert_with(key, || decision(MegakernelExecutionTopology::FusedWave))
+        .get_or_insert_with(key, || decision(FrontierTopology::FusedWave))
         .expect("Fix: CUDA megakernel plan-cache insert should fit telemetry counters.");
     let second = cache
         .get_or_insert_with(key, || {
-            decision(MegakernelExecutionTopology::SparseFrontier)
+            decision(FrontierTopology::SparseFrontier)
         })
         .expect("Fix: CUDA megakernel plan-cache hit should fit telemetry counters.");
 
     assert_eq!(first, second);
-    assert_eq!(second.topology, MegakernelExecutionTopology::FusedWave);
+    assert_eq!(second.topology, FrontierTopology::FusedWave);
     let stats = cache.stats();
     assert_eq!(stats.hits, 1);
     assert_eq!(stats.misses, 1);
@@ -121,21 +121,21 @@ fn bounded_cache_evicts_lru_entry() {
 
     cache
         .get_or_insert_with(first, || {
-            decision(MegakernelExecutionTopology::SparseFrontier)
+            decision(FrontierTopology::SparseFrontier)
         })
         .expect("Fix: CUDA megakernel plan-cache insert should fit telemetry counters.");
     cache
         .get_or_insert_with(second, || {
-            decision(MegakernelExecutionTopology::HybridFrontier)
+            decision(FrontierTopology::HybridFrontier)
         })
         .expect("Fix: CUDA megakernel plan-cache insert should fit telemetry counters.");
     cache
         .get_or_insert_with(first, || {
-            decision(MegakernelExecutionTopology::DenseFrontier)
+            decision(FrontierTopology::DenseFrontier)
         })
         .expect("Fix: CUDA megakernel plan-cache hit should fit telemetry counters.");
     cache
-        .get_or_insert_with(third, || decision(MegakernelExecutionTopology::FusedWave))
+        .get_or_insert_with(third, || decision(FrontierTopology::FusedWave))
         .expect("Fix: CUDA megakernel plan-cache eviction should fit telemetry counters.");
 
     let stats = cache.stats();
@@ -145,12 +145,12 @@ fn bounded_cache_evicts_lru_entry() {
     assert_eq!(stats.entries, 2);
     let reloaded_second = cache
         .get_or_insert_with(second, || {
-            decision(MegakernelExecutionTopology::DenseFrontier)
+            decision(FrontierTopology::DenseFrontier)
         })
         .expect("Fix: CUDA megakernel plan-cache reload should fit telemetry counters.");
     assert_eq!(
         reloaded_second.topology,
-        MegakernelExecutionTopology::DenseFrontier
+        FrontierTopology::DenseFrontier
     );
 }
 
@@ -202,7 +202,7 @@ fn cache_selects_topology_and_reuses_pressure_bucket_plan() {
         .expect("Fix: CUDA megakernel topology cache hit should fit telemetry counters.");
 
     assert_eq!(first, second);
-    assert_eq!(first.topology, MegakernelExecutionTopology::FusedWave);
+    assert_eq!(first.topology, FrontierTopology::FusedWave);
     assert_eq!(cache.stats().hits, 1);
     assert_eq!(cache.stats().misses, 1);
 }
@@ -251,10 +251,10 @@ fn cache_stabilizes_topology_across_adjacent_pressure_buckets() {
         )
         .expect("Fix: CUDA megakernel topology stabilization should fit telemetry counters.");
 
-    assert_eq!(dense.topology, MegakernelExecutionTopology::DenseFrontier);
+    assert_eq!(dense.topology, FrontierTopology::DenseFrontier);
     assert_eq!(
         near_dense.topology,
-        MegakernelExecutionTopology::DenseFrontier
+        FrontierTopology::DenseFrontier
     );
     assert_eq!(cache.stats().hits, 0);
     assert_eq!(cache.stats().misses, 2);
@@ -305,11 +305,11 @@ fn cache_reselects_when_memory_pressure_bucket_changes() {
 
     assert_eq!(
         low_pressure.topology,
-        MegakernelExecutionTopology::FusedWave
+        FrontierTopology::FusedWave
     );
     assert_eq!(
         red_zone.topology,
-        MegakernelExecutionTopology::SparseFrontier
+        FrontierTopology::SparseFrontier
     );
     assert_eq!(cache.stats().hits, 0);
     assert_eq!(cache.stats().misses, 2);
@@ -388,11 +388,11 @@ fn cache_reselects_when_readback_launch_or_fusion_pressure_changes() {
 
     assert_ne!(
         low_pressure.topology,
-        MegakernelExecutionTopology::FusedWave
+        FrontierTopology::FusedWave
     );
     assert_eq!(
         high_pressure.topology,
-        MegakernelExecutionTopology::FusedWave
+        FrontierTopology::FusedWave
     );
     assert_eq!(cache.stats().hits, 0);
     assert_eq!(cache.stats().misses, 2);
@@ -429,7 +429,7 @@ fn cache_never_selects_fused_wave_without_grid_sync_support() {
 
     assert_ne!(
         plan.topology,
-        MegakernelExecutionTopology::FusedWave,
+        FrontierTopology::FusedWave,
         "Fix: CUDA megakernel planner must not select cooperative fused-wave topology when the device key says grid sync is unavailable."
     );
 }
@@ -474,8 +474,8 @@ fn cached_execution_plan_reuses_topology_bucket_and_validates_memory() {
         )
         .expect("Fix: equivalent CUDA execution pressure bucket should reuse the cached topology and still validate memory.");
 
-    assert_eq!(first.topology, MegakernelExecutionTopology::FusedWave);
-    assert_eq!(second.topology, MegakernelExecutionTopology::FusedWave);
+    assert_eq!(first.topology, FrontierTopology::FusedWave);
+    assert_eq!(second.topology, FrontierTopology::FusedWave);
     assert_eq!(second.memory.scratch_bytes, 8_192);
     assert!(!second.downgraded_to_sparse);
     assert_eq!(cache.stats().hits, 1);
@@ -507,7 +507,7 @@ fn cached_execution_plan_downgrades_non_sparse_topology_when_exact_budget_fails(
             "Fix: sparse CUDA downgrade must fit after cached fused topology exceeds exact budget.",
         );
 
-    assert_eq!(plan.topology, MegakernelExecutionTopology::SparseFrontier);
+    assert_eq!(plan.topology, FrontierTopology::SparseFrontier);
     assert!(plan.downgraded_to_sparse);
     assert_eq!(plan.memory.scratch_bytes, 10_000);
     assert_eq!(cache.stats().misses, 1);
@@ -521,18 +521,18 @@ fn cache_rebases_lru_serial_instead_of_failing_dispatch() {
     let second = key(2, CudaMegakernelAnalysisKind::Ifds, 0.20, 1_000);
     cache
         .get_or_insert_with(first, || {
-            decision(MegakernelExecutionTopology::SparseFrontier)
+            decision(FrontierTopology::SparseFrontier)
         })
         .expect("Fix: first plan insert should fit");
     cache
         .get_or_insert_with(second, || {
-            decision(MegakernelExecutionTopology::DenseFrontier)
+            decision(FrontierTopology::DenseFrontier)
         })
         .expect("Fix: second plan insert should fit");
     cache.serial = u64::MAX;
 
     cache
-        .get_or_insert_with(first, || decision(MegakernelExecutionTopology::FusedWave))
+        .get_or_insert_with(first, || decision(FrontierTopology::FusedWave))
         .expect("Fix: LRU serial exhaustion must rebase instead of failing the CUDA dispatch path");
 
     let first_seen = cache
@@ -555,13 +555,13 @@ fn cache_counters_pin_instead_of_failing_dispatch() {
     let key = key(3, CudaMegakernelAnalysisKind::Ifds, 0.10, 1_000);
     cache
         .get_or_insert_with(key, || {
-            decision(MegakernelExecutionTopology::SparseFrontier)
+            decision(FrontierTopology::SparseFrontier)
         })
         .expect("Fix: plan insert should fit");
     cache.hits = u64::MAX;
 
     cache
-        .get_or_insert_with(key, || decision(MegakernelExecutionTopology::DenseFrontier))
+        .get_or_insert_with(key, || decision(FrontierTopology::DenseFrontier))
         .expect("Fix: counter exhaustion must not fail the CUDA dispatch path");
 
     assert_eq!(cache.stats().hits, u64::MAX);
