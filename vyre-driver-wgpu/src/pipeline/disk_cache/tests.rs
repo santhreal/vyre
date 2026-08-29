@@ -15,6 +15,41 @@ use super::*;
 /// Serializes the tests that swap the process-wide disk-cache root.
 static ENV_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
+/// Holds the serialising lock and puts the cache root back on the way out.
+///
+/// The root is process-wide. A case that panicked between swapping it and
+/// restoring it left every later case reading a deleted temporary directory,
+/// which is why poisoning had to propagate: the lock was the only thing
+/// stopping the next case from reading a corrupted global. Restoring on unwind
+/// removes that reason, so the lock is recovered instead, one real failure
+/// stays one report, and the two neighbours that reported the poisoned lock
+/// report their own verdicts again.
+struct CacheRootGuard {
+    _lock: std::sync::MutexGuard<'static, ()>,
+    previous: Option<std::path::PathBuf>,
+}
+
+impl Drop for CacheRootGuard {
+    fn drop(&mut self) {
+        set_test_disk_pipeline_cache_root(self.previous.take());
+    }
+}
+
+/// Serialize against the other root-swapping cases and install `root`.
+///
+/// `None` selects the default root, which is the state a case that swaps
+/// nothing expects to find.
+fn env_lock(root: Option<std::path::PathBuf>) -> CacheRootGuard {
+    let lock = ENV_TEST_LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let previous = set_test_disk_pipeline_cache_root(root);
+    CacheRootGuard {
+        _lock: lock,
+        previous,
+    }
+}
+
 #[test]
 fn fixed_digest_hex_hash_is_lowercase_and_stack_encoded() {
     let mut digest = [0_u8; 32];
@@ -193,9 +228,7 @@ mod cache_key_contracts {
 
     #[test]
     fn cache_writes_are_durable_on_explicit_flush_not_insert() {
-        let _lock = ENV_TEST_LOCK
-            .lock()
-            .expect("Fix: test environment lock must not be poisoned");
+        let _lock = env_lock(None);
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("entry.wgsl");
         write_atomic(&path, b"shader", "test cache data")
@@ -246,11 +279,8 @@ mod cache_key_contracts {
 
     #[test]
     fn stale_compiled_pipeline_adapter_metadata_misses() {
-        let _lock = ENV_TEST_LOCK
-            .lock()
-            .expect("Fix: test environment lock must not be poisoned");
         let temp = tempfile::tempdir().unwrap();
-        let old_cache_root = set_test_disk_pipeline_cache_root(Some(temp.path().to_path_buf()));
+        let _lock = env_lock(Some(temp.path().to_path_buf()));
 
         let key = CompiledPipelineCacheKey {
             hash: [7u8; 32],
@@ -289,8 +319,6 @@ mod cache_key_contracts {
             result.is_none(),
             "Fix: compiled-pipeline cache must miss when adapter fingerprint metadata is stale"
         );
-
-        set_test_disk_pipeline_cache_root(old_cache_root);
     }
 
     #[test]
@@ -556,9 +584,8 @@ mod cache_miss_tracing {
 
     #[test]
     fn cache_misses_are_traced_on_fresh_temp_dir() {
-        let _lock = ENV_TEST_LOCK
-            .lock()
-            .expect("Fix: test environment lock must not be poisoned");
+        let dir = tempfile::tempdir().unwrap();
+        let _lock = env_lock(Some(dir.path().to_path_buf()));
 
         #[derive(Clone)]
         struct StringWriter(Arc<std::sync::Mutex<String>>);
@@ -582,9 +609,6 @@ mod cache_miss_tracing {
             .with_target(false)
             .finish();
         let _guard = tracing::subscriber::set_default(subscriber);
-
-        let dir = tempfile::tempdir().unwrap();
-        let old_cache_root = set_test_disk_pipeline_cache_root(Some(dir.path().to_path_buf()));
 
         let adapter_info = wgpu::AdapterInfo {
             name: "test-adapter".to_string(),
@@ -638,7 +662,5 @@ mod cache_miss_tracing {
             logs.contains("compiled-pipeline cache miss"),
             "expected compiled-pipeline cache miss warn log, got:\n{logs}"
         );
-
-        set_test_disk_pipeline_cache_root(old_cache_root);
     }
 }
