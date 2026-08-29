@@ -196,7 +196,7 @@ fn snapshot_includes_modules_reexports_and_feature_gated_surface() {
         .expect("Fix: fixture crate source directory must be creatable");
     fs::write(
         crate_dir.join("Cargo.toml"),
-        "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[features]\ndefault = []\ngated = []\n",
+        "[package]\nname = \"fixture_features\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[features]\ndefault = []\ngated = []\n",
     )
     .expect("Fix: fixture crate manifest must be writable");
     fs::write(
@@ -229,20 +229,20 @@ fn snapshot_includes_modules_reexports_and_feature_gated_surface() {
             vec![
                 "--write".to_string(),
                 "--crate".to_string(),
-                "fixture".to_string(),
+                "fixture_features".to_string(),
             ],
         ))
         .expect("Fix: the snapshot gate must be able to extract the fixture surface");
     assert_eq!(report.count(), 0, "{:?}", report.findings);
-    let snapshot = fs::read_to_string(root.join("docs/public-api/fixture.txt"))
+    let snapshot = fs::read_to_string(root.join("docs/public-api/fixture_features.txt"))
         .expect("Fix: fixture public API snapshot must be readable");
 
     for public_item in [
-        "pub mod fixture::public_module",
-        "pub struct fixture::PublicType",
-        "pub struct fixture::public_module::PublicType",
-        "pub mod fixture::gated_module",
-        "pub struct fixture::gated_module::GatedType",
+        "pub mod fixture_features::public_module",
+        "pub struct fixture_features::PublicType",
+        "pub struct fixture_features::public_module::PublicType",
+        "pub mod fixture_features::gated_module",
+        "pub struct fixture_features::gated_module::GatedType",
     ] {
         assert!(
             snapshot.lines().any(|line| line == public_item),
@@ -276,7 +276,7 @@ fn a_refreshed_snapshot_verifies_clean_against_the_same_tree() {
         .expect("Fix: fixture crate source directory must be creatable");
     fs::write(
         crate_dir.join("Cargo.toml"),
-        "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+        "[package]\nname = \"fixture_refresh\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
     )
     .expect("Fix: fixture crate manifest must be writable");
     fs::write(
@@ -292,7 +292,7 @@ fn a_refreshed_snapshot_verifies_clean_against_the_same_tree() {
     PublicApiSnapshot
         .run(&write)
         .expect("Fix: the snapshot gate must be able to write the fixture surface");
-    let installed = fs::read_to_string(root.join("docs/public-api/fixture.txt"))
+    let installed = fs::read_to_string(root.join("docs/public-api/fixture_refresh.txt"))
         .expect("Fix: fixture public API snapshot must be readable");
     let mut sorted: Vec<&str> = installed.lines().collect();
     sorted.sort_unstable();
@@ -327,7 +327,7 @@ fn stale_public_api_snapshot_is_reported_as_drift_finding() {
         .expect("Fix: fixture crate source directory must be creatable");
     fs::write(
         crate_dir.join("Cargo.toml"),
-        "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+        "[package]\nname = \"fixture_stale\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
     )
     .expect("Fix: fixture crate manifest must be writable");
     fs::write(
@@ -354,7 +354,7 @@ fn stale_public_api_snapshot_is_reported_as_drift_finding() {
     assert_eq!(verify.count(), 1, "stale snapshot must report 1 finding");
     let message = &verify.findings[0].message;
     assert!(
-        message.contains("the public API of `fixture` no longer matches its snapshot"),
+        message.contains("the public API of `fixture_stale` no longer matches its snapshot"),
         "unexpected finding message: {message}"
     );
     assert!(
@@ -362,7 +362,7 @@ fn stale_public_api_snapshot_is_reported_as_drift_finding() {
         "finding must record 1 removed item: {message}"
     );
     assert!(
-        message.contains("-pub fn fixture::removed_item()"),
+        message.contains("-pub fn fixture_stale::removed_item()"),
         "finding must name the removed item: {message}"
     );
 }
