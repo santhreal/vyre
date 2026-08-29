@@ -116,7 +116,7 @@ The `bench-regression.yml` workflow runs on every PR and push to `main`:
 2. Runs smoke and honest suites with 30 measured samples
 3. Compares against the baseline snapshot (if available)
 4. Comments the comparison on the PR
-5. Fails if any case regresses by > 1σ
+5. Fails if any case loses significantly outside the band the comparison artifact records
 
 ## Schema
 

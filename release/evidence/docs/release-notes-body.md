@@ -5570,6 +5570,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   and stays where it is. `case_declaration_contracts` derives its coverage from
   the case registry and a walk of the crate source, so a new case or a
   reintroduced narrowing fails by name rather than going uncovered.
+- Benchmark comparison records the delta, significance and sample band every
+  verdict was judged against, states no verdict for a pair the band cannot
+  decide, counts the undecided cases, and fails on the loss its own verdict
+  names rather than on a one-standard-deviation mean comparison.
 - The bench-release gate now rejects the unsupported --write flag and describes
   its comparison-only contract; release-benchmarks remains the sole owner of
   measured artifacts.

@@ -254,7 +254,7 @@ fn compare_writes_structured_profile_artifact() {
         &["foundation.elementwise.add.1m".to_string()],
     )
     .expect("Fix: comparison artifact must validate profile backend and case evidence.");
-    assert_eq!(artifact.schema, "vyre-bench.compare.v1");
+    assert_eq!(artifact.schema, "vyre-bench.compare.v2");
     assert_eq!(artifact.baseline.profile_backend, "wgpu");
     assert_eq!(artifact.candidate.profile_backend, "metal");
     assert_eq!(artifact.cases[0].baseline_p50_ns, 100);
@@ -818,4 +818,153 @@ fn dashboard_counts_pass_status_evidence_not_legacy_passed_string() {
             && html.contains("<td class=\"status-pass\">pass</td>"),
         "Fix: dashboard HTML must render generated `pass` status with pass styling: {html}"
     );
+}
+
+/// A pair of reports over one case, each side stating its own wall statistics.
+fn banded_reports(
+    baseline: (u64, f64, f64, u32),
+    candidate: (u64, f64, f64, u32),
+) -> (ReportSchema, ReportSchema) {
+    let case_id = "foundation.elementwise.add.1m";
+    let side = |backend: &str, (p50, mean, stddev, samples): (u64, f64, f64, u32)| {
+        let mut case = case_report(case_id, "pass", true);
+        case.metrics.insert(
+            "wall_ns".to_string(),
+            wall_stats(p50, mean, stddev, samples),
+        );
+        let mut report = report(vec![case], 1, 0);
+        report.suite = "smoke".to_string();
+        report.selected_backend = Some(backend.to_string());
+        report.backend_profile = Some(backend_profile(backend, "host_enqueue_wait"));
+        report
+    };
+    (side("wgpu", baseline), side("metal", candidate))
+}
+
+fn verdict_of(baseline: (u64, f64, f64, u32), candidate: (u64, f64, f64, u32)) -> String {
+    let (baseline, candidate) = banded_reports(baseline, candidate);
+    let artifact = build_comparison_artifact(&baseline, &candidate)
+        .expect("Fix: a comparison over one shared case must build.");
+    artifact.cases[0].verdict.clone()
+}
+
+/// WHY: equivalence is a claim, and a pair the significance test cannot be
+/// applied to carries no evidence for it. Reporting such a pair as flat is how
+/// a comparison of two single samples states that a workload did not change,
+/// which is the one reading of the evidence that averages an unmeasured case
+/// into the measured ones.
+#[test]
+fn a_pair_with_too_few_samples_carries_no_verdict() {
+    let band = super::compare::ComparisonBand::CURRENT;
+    let short = band.min_samples - 1;
+    assert_eq!(
+        verdict_of((100, 100.0, 1.0, short), (100, 100.0, 1.0, short)),
+        super::compare::VERDICT_UNMEASURED,
+        "Fix: a pair below the sample floor must carry no verdict, not a flat one."
+    );
+    assert_eq!(
+        verdict_of(
+            (100, 100.0, 1.0, band.min_samples),
+            (100, 100.0, 1.0, short)
+        ),
+        super::compare::VERDICT_UNMEASURED,
+        "Fix: one side below the sample floor is still no measurement."
+    );
+    assert_eq!(
+        verdict_of(
+            (100, 100.0, 1.0, band.min_samples),
+            (100, 100.0, 1.0, band.min_samples)
+        ),
+        super::compare::VERDICT_FLAT,
+        "Fix: a pair at the sample floor inside the band is a measured flat result."
+    );
+}
+
+/// WHY: the verdict and the exit status used to be two unrelated rules. The
+/// verdict read the band and the significance test; the failure read whether the
+/// candidate mean cleared one baseline standard deviation. A workload that lost
+/// 20 percent with high variance was therefore reported as a regression and
+/// passed the gate, which is the exact shape of a loss averaged away.
+#[test]
+fn a_significant_loss_under_a_wide_baseline_fails_the_comparison() {
+    let (baseline, candidate) = banded_reports((100, 100.0, 30.0, 100), (120, 120.0, 30.0, 100));
+    let artifact = build_comparison_artifact(&baseline, &candidate)
+        .expect("Fix: a comparison over one shared case must build.");
+    assert_eq!(
+        artifact.cases[0].verdict,
+        super::compare::VERDICT_REGRESS,
+        "Fix: a 20 percent loss at p below the band alpha is a regression."
+    );
+    assert!(
+        artifact.regressed,
+        "Fix: the recorded loss must be the verdict the band states."
+    );
+    assert!(
+        compare_reports(&baseline, &candidate, None).is_err(),
+        "Fix: a comparison carrying a significant loss must fail."
+    );
+}
+
+/// WHY: `flat` means nothing without the band that produced it. The artifact
+/// records the band so a reader resolves every verdict against it, and evidence
+/// judged under another band is rejected rather than read under this one.
+#[test]
+fn a_comparison_judged_under_another_band_is_rejected() {
+    let (baseline, candidate) = comparison_reports();
+    let artifact = build_comparison_artifact(&baseline, &candidate)
+        .expect("Fix: a comparison over one shared case must build.");
+    let case_ids = ["foundation.elementwise.add.1m".to_string()];
+    validate_comparison_expectations(&artifact, "wgpu", "metal", &case_ids)
+        .expect("Fix: an artifact judged under the current band must validate.");
+
+    let mutations: Vec<(&str, fn(&mut super::compare::ComparisonArtifact), &str)> = vec![
+        (
+            "another delta threshold",
+            |artifact| artifact.band.delta_threshold = 0.25,
+            "and this build judges against",
+        ),
+        (
+            "another significance level",
+            |artifact| artifact.band.alpha = 0.5,
+            "and this build judges against",
+        ),
+        (
+            "another sample floor",
+            |artifact| artifact.band.min_samples = 1,
+            "and this build judges against",
+        ),
+        (
+            "the retired schema",
+            |artifact| artifact.schema = "vyre-bench.compare.v1".to_string(),
+            "is not `vyre-bench.compare.v2`",
+        ),
+        (
+            "a verdict this build does not state",
+            |artifact| artifact.cases[0].verdict = "faster".to_string(),
+            "which this build does not state",
+        ),
+        (
+            "a loss the verdict contradicts",
+            |artifact| artifact.cases[0].regressed = true,
+            "Fix: regenerate comparison so the recorded loss is the verdict",
+        ),
+        (
+            "an understated undecided count",
+            |artifact| {
+                artifact.cases[0].verdict = super::compare::VERDICT_NOISY.to_string();
+            },
+            "carry no verdict",
+        ),
+    ];
+    for (what, mutate, expected) in mutations {
+        let mut mutated = artifact.clone();
+        mutate(&mut mutated);
+        let error = validate_comparison_expectations(&mutated, "wgpu", "metal", &case_ids)
+            .expect_err(what)
+            .to_string();
+        assert!(
+            error.contains(expected),
+            "Fix: {what} must be refused naming the band or verdict: {error}"
+        );
+    }
 }
