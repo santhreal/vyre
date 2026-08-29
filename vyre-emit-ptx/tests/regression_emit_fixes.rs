@@ -7,7 +7,7 @@ use vyre_foundation::ir::{BinOp, DataType, MemoryOrdering};
 use vyre_lower::descriptor_builder::{
     binop, body, descriptor, effect, global_rw, lit, load_global, op, shared_rw, store_global,
 };
-use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
+use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue, WORKGROUP_SLOT_BASE};
 
 /// Verify then emit, reporting `what` if either step rejects the descriptor.
 fn emit(desc: &KernelDescriptor, what: &str) -> String {
@@ -183,12 +183,26 @@ fn f16_store_of_u64_value_uses_direct_cvt_rn_f32_u64() {
     );
 }
 
+/// The shared declaration the emitter writes for the tile binding at `bytes`.
+///
+/// The symbol carries the binding's slot, and the tile sits at the base of the
+/// workgroup slot range, so the expected line is derived from that constant
+/// rather than restated.
+fn shared_declaration(bytes: u32) -> String {
+    format!(".shared .align 4 .b8 shared_buf_{WORKGROUP_SLOT_BASE}[{bytes}];")
+}
+
 /// A column walk over a tile of `element_count` U32 elements: lane `t`
 /// addresses element `t * 32`, so every lane lands in the same bank.
 fn column_walk_tile(element_count: u32) -> KernelDescriptor {
     descriptor("column_walk_tile")
         .slot(global_rw(0, DataType::U32, "out"))
-        .slot(shared_rw(1, DataType::U32, element_count, "tile"))
+        .slot(shared_rw(
+            WORKGROUP_SLOT_BASE,
+            DataType::U32,
+            element_count,
+            "tile",
+        ))
         .dispatch(32, 1, 1)
         .body(
             body()
@@ -196,14 +210,17 @@ fn column_walk_tile(element_count: u32) -> KernelDescriptor {
                 .op(thread_id(0))
                 .op(lit(0, 1))
                 .op(binop(BinOp::Mul, 0, 1, 2))
-                .op(effect(KernelOpKind::StoreShared, [1, 2, 0]))
+                .op(effect(
+                    KernelOpKind::StoreShared,
+                    [WORKGROUP_SLOT_BASE, 2, 0],
+                ))
                 .op(effect(
                     KernelOpKind::Barrier {
                         ordering: MemoryOrdering::SeqCst,
                     },
                     [],
                 ))
-                .op(op(KernelOpKind::LoadShared, [1, 2], 3))
+                .op(op(KernelOpKind::LoadShared, [WORKGROUP_SLOT_BASE, 2], 3))
                 .op(store_global(0, 0, 3)),
         )
         .build()
@@ -220,10 +237,11 @@ fn column_walk_tile(element_count: u32) -> KernelDescriptor {
 fn a_permutable_shared_tile_is_padded_and_its_index_rewritten() {
     let ptx = emit(&column_walk_tile(1024), "column walk over a padded tile");
 
+    let padded = shared_declaration(4224);
     assert!(
-        ptx.contains(".shared .align 4 .b8 shared_buf_1[4224];"),
+        ptx.contains(&padded),
         "a padded tile is declared at its grown extent: 32 rows of 33 four-byte \
-         elements is 4224 bytes, not 4096. PTX emitted:\n{ptx}"
+         elements is 4224 bytes, not 4096. Expected `{padded}`. PTX emitted:\n{ptx}"
     );
     for instruction in ["shr.u32", "and.b32", "mul.lo.u32", "add.u32"] {
         assert!(
@@ -252,9 +270,11 @@ fn a_permutable_shared_tile_is_padded_and_its_index_rewritten() {
 fn a_tile_that_is_not_a_whole_number_of_rows_is_not_padded() {
     let ptx = emit(&column_walk_tile(1000), "column walk over an unpadded tile");
 
+    let declared = shared_declaration(4000);
     assert!(
-        ptx.contains(".shared .align 4 .b8 shared_buf_1[4000];"),
-        "a refused strategy leaves the declared extent alone. PTX emitted:\n{ptx}"
+        ptx.contains(&declared),
+        "a refused strategy leaves the declared extent alone. Expected \
+         `{declared}`. PTX emitted:\n{ptx}"
     );
     assert!(
         !ptx.contains(", 33;"),

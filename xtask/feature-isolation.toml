@@ -800,6 +800,10 @@ member = "xtask"
 feature = "(none)"
 
 [[pair]]
+member = "xtask"
+feature = "public-api-tool"
+
+[[pair]]
 member = "xtask-evidence"
 feature = "(default)"
 

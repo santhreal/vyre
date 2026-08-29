@@ -547,10 +547,13 @@
     {
       "name": "xtask",
       "manifest": "xtask/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
+      "feature_count": 2,
+      "has_default_feature": true,
       "default_feature_members": [],
-      "features": [],
+      "features": [
+        "default",
+        "public-api-tool"
+      ],
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"

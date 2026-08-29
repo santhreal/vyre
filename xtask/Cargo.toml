@@ -20,6 +20,14 @@ default-run = "xtask"
 [lints]
 workspace = true
 
+# `public_api_snapshot_inventory` drives `cargo public-api` under the pinned
+# nightly whose item paths the committed snapshots record. `public-api.yml`
+# installs both and turns this on. The general test matrix carries neither, and
+# there those tests report the absent tool instead of a public-surface defect.
+[features]
+default = []
+public-api-tool = []
+
 # No vyre crate appears here, and none may be added. A subcommand that needs to
 # observe the live operation registry or a measured benchmark probe belongs in
 # `xtask-registry` or `xtask-evidence`, which this crate builds on demand. Every

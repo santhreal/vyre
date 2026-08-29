@@ -40,7 +40,9 @@ bincode = { workspace = true }
 # which the shipped surface gates behind `test-fixtures`.
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
 vyre-megakernel.workspace = true
-vyre-test-support.workspace = true
+# `artifact_report` builds its fixture graphs from the shared IR shape helpers,
+# which the support crate gates behind `ir-fixtures`.
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 assert_cmd = { workspace = true }
 predicates = { workspace = true }
 tempfile = { workspace = true }

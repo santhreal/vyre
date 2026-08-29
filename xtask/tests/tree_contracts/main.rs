@@ -32,6 +32,7 @@ mod feature_isolation;
 mod manifest_dependency_tables;
 mod msrv_toolchain;
 mod nested_byte_rows;
+#[cfg(feature = "public-api-tool")]
 mod public_api_snapshot_inventory;
 mod relation_import_certificates;
 mod subcommand_dispatch;
