@@ -28,5 +28,7 @@ jobs:
         run: ./cargo_full run -q -p xtask --bin xtask -- public-api-snapshot
       - name: One public path per published item
         run: ./cargo_full run -p xtask --bin xtask -- public-api-paths
-      - name: Snapshot gate contracts that drive the tool
-        run: ./cargo_full test -p xtask --features public-api-tool --test tree_contracts
+      # Only the cases that drive `cargo public-api`; the rest of this harness
+      # runs on every lane and one of them rebuilds every workspace binary.
+      - name: Snapshot inventory the tool backs
+        run: ./cargo_full test -p xtask --features public-api-tool --test tree_contracts public_api_snapshot_inventory
