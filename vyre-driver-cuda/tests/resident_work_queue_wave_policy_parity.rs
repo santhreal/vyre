@@ -12,9 +12,10 @@
 use vyre_driver::megakernel_barrier::MegakernelWaveDependency;
 use vyre_driver::megakernel_execution::{
     plan_megakernel_execution, select_frontier_topology, select_frontier_topology_stable,
+    FrontierExecutionSample, FrontierGraphShape, FrontierMemoryBudget, FrontierTopology,
     MegakernelByteLayout, MegakernelDeviceCapabilities, MegakernelExecutionSample,
-    FrontierTopology, MegakernelGraphShape, MegakernelMemoryBudget,
-    MegakernelMemoryError, NeutralMegakernelExecutionPlanner,
+    MegakernelGraphShape, MegakernelMemoryBudget, MegakernelMemoryError,
+    NeutralMegakernelExecutionPlanner,
 };
 // The wave and dependency corpora are the neutral policy's own definitions,
 // imported rather than restated: a table copied into this suite would let the
@@ -670,6 +671,22 @@ fn cuda_and_neutral_topology_selection_agree_decision_for_decision() {
                         frontier_density: sample.frontier_density,
                         readback_bytes: sample.readback_bytes,
                     };
+                    // Both entry points receive the same corpus facts, converted
+                    // the way each wrapper converts them, so a divergence is a
+                    // policy difference and never a difference in the inputs.
+                    let frontier_sample = FrontierExecutionSample {
+                        dispatch_cost_ns: sample.dispatch_cost_ns,
+                        frontier_density: sample.frontier_density,
+                        readback_bytes: sample.readback_bytes,
+                    };
+                    let frontier_graph = FrontierGraphShape {
+                        node_count: graph.node_count,
+                        edge_count: graph.edge_count,
+                    };
+                    let frontier_memory = FrontierMemoryBudget {
+                        required_bytes: memory.required_bytes,
+                        budget_bytes: memory.budget_bytes,
+                    };
                     let label = format!(
                         "density={density} graph={graph:?} memory={memory:?} readback={readback_bytes} fusion={fusion_pressure} launch={launch_overhead_ns}"
                     );
@@ -682,9 +699,9 @@ fn cuda_and_neutral_topology_selection_agree_decision_for_decision() {
                             fusion_pressure,
                         ),
                         select_frontier_topology(
-                            sample,
-                            graph,
-                            memory,
+                            frontier_sample,
+                            frontier_graph,
+                            frontier_memory,
                             launch_overhead_ns,
                             fusion_pressure,
                             MegakernelDeviceCapabilities::FUSION_CAPABLE
@@ -703,9 +720,9 @@ fn cuda_and_neutral_topology_selection_agree_decision_for_decision() {
                                 previous,
                             ),
                             select_frontier_topology_stable(
-                                sample,
-                                graph,
-                                memory,
+                                frontier_sample,
+                                frontier_graph,
+                                frontier_memory,
                                 launch_overhead_ns,
                                 fusion_pressure,
                                 previous,
