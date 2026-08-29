@@ -648,8 +648,7 @@ mod tests {
 
     #[test]
     fn cse_rejects_extra_hash_outputs() {
-        let executor =
-            CseMockExecutor::with_extra_hash_output(vec![u32_slice_to_le_bytes(&[123])]);
+        let executor = CseMockExecutor::with_extra_hash_output(vec![u32_slice_to_le_bytes(&[123])]);
         let mut canonical = Vec::new();
         let err = run_cse_kernels_into(
             &one_expr_arena(),

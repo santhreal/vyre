@@ -29,8 +29,7 @@ pub use crate::megakernel_plan_cache_records::*;
 #[derive(Debug)]
 pub struct CudaMegakernelPlanCache {
     pub(crate) entries: FxHashMap<CudaMegakernelPlanCacheKey, CudaMegakernelPlanCacheEntry>,
-    latest_by_identity:
-        FxHashMap<CudaMegakernelPlanIdentityKey, (u64, FrontierTopology)>,
+    latest_by_identity: FxHashMap<CudaMegakernelPlanIdentityKey, (u64, FrontierTopology)>,
     eviction_queue: BinaryHeap<Reverse<(u64, CudaMegakernelPlanCacheKey)>>,
     max_entries: usize,
     pub(crate) serial: u64,
@@ -220,9 +219,7 @@ impl CudaMegakernelPlanCache {
                 memory,
                 downgraded_to_sparse: false,
             }),
-            Err(MegakernelMemoryError::OverBudget { .. })
-                if !cached.topology.is_baseline() =>
-            {
+            Err(MegakernelMemoryError::OverBudget { .. }) if !cached.topology.is_baseline() => {
                 let memory = plan_megakernel_memory_budget(
                     cached.topology.fallback_baseline(),
                     graph,

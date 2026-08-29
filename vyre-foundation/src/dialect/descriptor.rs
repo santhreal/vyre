@@ -71,8 +71,8 @@ inventory::collect!(DialectDescriptorRegistration);
 /// Global registry of declarative dialects.
 pub struct DialectRegistry;
 
-static REGISTRY: LazyLock<BTreeMap<&'static str, &'static DialectDescriptor>> =
-    LazyLock::new(|| {
+static REGISTRY: LazyLock<BTreeMap<&'static str, &'static DialectDescriptor>> = LazyLock::new(
+    || {
         let mut map = BTreeMap::new();
         for registration in inventory::iter::<DialectDescriptorRegistration> {
             let desc = registration.descriptor;
@@ -83,7 +83,8 @@ static REGISTRY: LazyLock<BTreeMap<&'static str, &'static DialectDescriptor>> =
             );
         }
         map
-    });
+    },
+);
 
 impl DialectRegistry {
     /// Get the global dialect descriptor map.

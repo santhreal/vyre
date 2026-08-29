@@ -78,9 +78,9 @@ impl crate::gate::GateBehavior for TestOnlyCapability {
             if scan::is_test_tree(path) {
                 continue;
             }
-            let is_exempt_crate = member_packages.iter().any(|(member_path, _, is_exempt)| {
-                scan::under(path, member_path) && *is_exempt
-            });
+            let is_exempt_crate = member_packages
+                .iter()
+                .any(|(member_path, _, is_exempt)| scan::under(path, member_path) && *is_exempt);
             if !is_exempt_crate {
                 production_files.push(path.clone());
             }
@@ -399,10 +399,17 @@ pub(crate) mod tests {
         let file = syn::parse_file(code).expect("Fix: parse test code");
         let mut findings = Vec::new();
         let submodules = BTreeSet::new();
-        inspect_file(Path::new("vyre-libs/src/encoding/mod.rs"), &file, &submodules, &mut findings);
+        inspect_file(
+            Path::new("vyre-libs/src/encoding/mod.rs"),
+            &file,
+            &submodules,
+            &mut findings,
+        );
         assert_eq!(findings.len(), 1);
         assert!(findings[0].message.contains("test_gated_submodule"));
-        assert!(findings[0].message.contains("compiled only for test builds"));
+        assert!(findings[0]
+            .message
+            .contains("compiled only for test builds"));
     }
 
     #[test]
@@ -422,8 +429,16 @@ pub(crate) mod tests {
         let file = syn::parse_file(code).expect("Fix: parse test code");
         let mut findings = Vec::new();
         let submodules = BTreeSet::new();
-        inspect_file(Path::new("vyre-libs/src/encoding/mod.rs"), &file, &submodules, &mut findings);
-        assert!(findings.is_empty(), "feature-gated modules must not produce findings");
+        inspect_file(
+            Path::new("vyre-libs/src/encoding/mod.rs"),
+            &file,
+            &submodules,
+            &mut findings,
+        );
+        assert!(
+            findings.is_empty(),
+            "feature-gated modules must not produce findings"
+        );
     }
 
     #[test]
@@ -444,7 +459,12 @@ pub(crate) mod tests {
         let file = syn::parse_file(code).expect("Fix: parse test code");
         let mut findings = Vec::new();
         let submodules = BTreeSet::new();
-        inspect_file(Path::new("vyre-foundation/src/transform/parallelism.rs"), &file, &submodules, &mut findings);
+        inspect_file(
+            Path::new("vyre-foundation/src/transform/parallelism.rs"),
+            &file,
+            &submodules,
+            &mut findings,
+        );
         assert!(findings.is_empty(), "inline test modules must be exempt");
     }
 
@@ -480,7 +500,9 @@ pub(crate) mod tests {
         );
         assert_eq!(findings.len(), 1);
         assert!(findings[0].message.contains("megakernel_schedule"));
-        assert!(findings[0].message.contains("public functions are compiled only for test builds"));
+        assert!(findings[0]
+            .message
+            .contains("public functions are compiled only for test builds"));
     }
 
     #[test]
@@ -493,7 +515,12 @@ pub(crate) mod tests {
         let file = syn::parse_file(code).expect("Fix: parse test code");
         let mut findings = Vec::new();
         let submodules = BTreeSet::new();
-        inspect_file(Path::new("vyre-libs/src/scheduling/pipeline.rs"), &file, &submodules, &mut findings);
+        inspect_file(
+            Path::new("vyre-libs/src/scheduling/pipeline.rs"),
+            &file,
+            &submodules,
+            &mut findings,
+        );
         assert!(findings.is_empty());
     }
 }

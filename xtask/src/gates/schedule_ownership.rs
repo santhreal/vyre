@@ -1441,9 +1441,8 @@ mod tests {
             Finding::messages(&minting_receiver)
         );
 
-        let forwarding_receiver = judge(
-            "fn forward(mode: ExecutionMode) -> ExecutionMode {\n    mode\n}\n",
-        );
+        let forwarding_receiver =
+            judge("fn forward(mode: ExecutionMode) -> ExecutionMode {\n    mode\n}\n");
         assert!(
             forwarding_receiver.is_empty(),
             "forwarding a received decision without naming a variant is realization: {}",

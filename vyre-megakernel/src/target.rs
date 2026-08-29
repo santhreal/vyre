@@ -514,8 +514,8 @@ pub fn compile_selected_modules(
             bytes: emitted.bytes,
         });
     }
-    let bytes = TargetModuleBundle::with_topology(artifact.selected_plan().topology, images)
-        .to_bytes()?;
+    let bytes =
+        TargetModuleBundle::with_topology(artifact.selected_plan().topology, images).to_bytes()?;
     TargetPayload::new(artifact, format, profile, entries, bytes).map_err(Into::into)
 }
 

@@ -12,9 +12,8 @@ use crate::grammar::{DerivationStep, ScheduleProduction, SCHEDULE_GRAMMAR_VERSIO
 use crate::measure::{MeasurementRecord, MEASUREMENT_PROTOCOL_VERSION};
 use crate::request::{SearchBudget, SearchWork};
 
-
-pub use crate::candidate::FrontierTopology;
 use super::records::{BarrierRecord, FusionRecord, FusionRejection, MaterializationRecord};
+pub use crate::candidate::FrontierTopology;
 
 /// How the runtime executes one compiled artifact.
 ///

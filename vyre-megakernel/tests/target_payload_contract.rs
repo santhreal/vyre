@@ -1093,14 +1093,10 @@ fn concurrent_topology_records_overlapping_arms_and_keeps_dependent_stages_order
         vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION
     );
 
-    let sequential = TargetModuleBundle::new(topology_fixture_images(&[
-        (0, 0),
-        (0, 1),
-        (0, 2),
-        (1, 3),
-    ]))
-    .to_bytes()
-    .expect("baseline bundle must encode");
+    let sequential =
+        TargetModuleBundle::new(topology_fixture_images(&[(0, 0), (0, 1), (0, 2), (1, 3)]))
+            .to_bytes()
+            .expect("baseline bundle must encode");
     assert_ne!(
         sequential, bytes,
         "the selected topology must change the bundle digest"

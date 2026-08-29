@@ -761,10 +761,7 @@ mod tests {
         assert_eq!(plan.peak_output_bytes, 512);
         assert_eq!(plan.amortized_readback_bytes, 1 << 20);
         assert_eq!(plan.max_group_width, 1);
-        assert_eq!(
-            plan.execution.topology,
-            FrontierTopology::FusedWave
-        );
+        assert_eq!(plan.execution.topology, FrontierTopology::FusedWave);
         assert_eq!(plan.execution.memory.frontier_bytes, 2_048);
         assert_eq!(plan.execution.memory.scratch_bytes, 4_096);
     }

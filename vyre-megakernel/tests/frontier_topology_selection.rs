@@ -192,4 +192,3 @@ fn stable_frontier_topology_selector_prevents_variant_flapping_near_thresholds()
         "Fix: hysteresis must not hold a fused wave on a device that lacks barriers."
     );
 }
-

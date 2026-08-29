@@ -756,7 +756,9 @@ fn bytes_stamped_with_the_previous_schema_are_refused() {
         error.diagnostic.code.as_str(),
         CompilerFailureKind::VersionSkew.as_str()
     );
-    assert!(error.to_string().contains("schema 17 is unsupported; expected 18"));
+    assert!(error
+        .to_string()
+        .contains("schema 17 is unsupported; expected 18"));
 }
 
 #[test]

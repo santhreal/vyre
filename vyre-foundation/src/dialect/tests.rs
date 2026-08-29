@@ -258,8 +258,8 @@ fn test_external_schema_adversarial_rejections() {
         ],
         bound_resources: vec!["scratch_buf".to_string()],
     };
-    let err = validate_external_node(&unknown_field_node)
-        .expect_err("unknown field must be rejected");
+    let err =
+        validate_external_node(&unknown_field_node).expect_err("unknown field must be rejected");
     assert!(matches!(err, SchemaTranslationError::UnknownField { .. }));
     assert!(err.to_string().contains("Fix:"));
 
@@ -311,8 +311,7 @@ fn test_external_schema_adversarial_rejections() {
         raw_fields: vec![],
         bound_resources: vec![],
     };
-    let err = validate_external_node(&unmapped_node)
-        .expect_err("unmapped node must fail closed");
+    let err = validate_external_node(&unmapped_node).expect_err("unmapped node must fail closed");
     assert!(matches!(err, SchemaTranslationError::UnmappedNode { .. }));
     assert!(err.to_string().contains("Fix:"));
 

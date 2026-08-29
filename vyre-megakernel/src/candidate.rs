@@ -369,9 +369,7 @@ fn stabilize_frontier_topology(
         {
             FrontierTopology::WarpSparseFrontier
         }
-        FrontierTopology::SparseFrontier
-            if density <= SPARSE_DENSITY + FRONTIER_HYSTERESIS =>
-        {
+        FrontierTopology::SparseFrontier if density <= SPARSE_DENSITY + FRONTIER_HYSTERESIS => {
             FrontierTopology::SparseFrontier
         }
         FrontierTopology::HybridFrontier

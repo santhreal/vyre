@@ -273,12 +273,10 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
         vec![1, 2],
         "Fix: independent live CUDA frontier waves must fuse into one barrier-free phase."
     );
-    assert!(
-        matches!(
-            frontier_plan.execution.topology,
-            FrontierTopology::DenseFrontier | FrontierTopology::FusedWave
-        ),
-    );
+    assert!(matches!(
+        frontier_plan.execution.topology,
+        FrontierTopology::DenseFrontier | FrontierTopology::FusedWave
+    ),);
     assert!(
         frontier_plan.execution.memory.required_bytes
             <= frontier_plan.execution.memory.budget_bytes,
@@ -305,7 +303,8 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
             sparse_decision.topology,
             FrontierTopology::WarpSparseFrontier | FrontierTopology::SparseFrontier
         ),
-        "{:?}", sparse_decision.topology
+        "{:?}",
+        sparse_decision.topology
     );
 
     let mut plan_cache = CudaMegakernelPlanCache::new();

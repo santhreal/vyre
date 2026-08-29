@@ -178,8 +178,7 @@ pub fn validate_node_fields(
     declared_fields: &[FieldContract],
 ) -> Result<(), SchemaTranslationError> {
     let mut seen_fields = BTreeSet::new();
-    let declared_names: BTreeSet<&'static str> =
-        declared_fields.iter().map(|f| f.name).collect();
+    let declared_names: BTreeSet<&'static str> = declared_fields.iter().map(|f| f.name).collect();
 
     for (field_name, _) in raw_fields {
         if !declared_names.contains(field_name.as_str()) {

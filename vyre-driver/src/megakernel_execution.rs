@@ -165,7 +165,6 @@ impl std::fmt::Display for MegakernelMemoryError {
 
 impl std::error::Error for MegakernelMemoryError {}
 
-
 /// Resident bytes a graph layout occupies before any wave state.
 ///
 /// # Errors
@@ -317,9 +316,7 @@ pub fn plan_megakernel_execution(
             memory,
             downgraded_to_sparse: false,
         }),
-        Err(MegakernelMemoryError::OverBudget { .. })
-            if !decision.topology.is_baseline() =>
-        {
+        Err(MegakernelMemoryError::OverBudget { .. }) if !decision.topology.is_baseline() => {
             let baseline = decision.topology.fallback_baseline();
             Ok(MegakernelExecutionPlan {
                 memory: plan_megakernel_memory_budget(baseline, graph, bytes)?,

@@ -14,8 +14,8 @@
 use vyre_foundation::define_dialect;
 use vyre_foundation::dialect::{
     validate_dialect_version, validate_schema_identity, Dialect, DialectRegistry,
-    DialectVersionError, ExternalSchemaNode, FieldContract, FieldType, ResourceAbi, ResourceBinding,
-    SchemaTranslationError,
+    DialectVersionError, ExternalSchemaNode, FieldContract, FieldType, ResourceAbi,
+    ResourceBinding, SchemaTranslationError,
 };
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{BufferAccess, DataType, Expr};
@@ -383,8 +383,8 @@ fn dialect_external_schema_translation_and_adversarial_rejections() {
         raw_fields: vec![("extraneous_field".to_string(), "1".to_string())],
         bound_resources: vec![],
     };
-    let err = validate_external_node(&unknown_field_node)
-        .expect_err("unknown field must be rejected");
+    let err =
+        validate_external_node(&unknown_field_node).expect_err("unknown field must be rejected");
     assert!(matches!(err, SchemaTranslationError::UnknownField { .. }));
     assert!(err.to_string().contains("Fix:"));
 
@@ -408,20 +408,14 @@ fn dialect_external_schema_translation_and_adversarial_rejections() {
         raw_fields: vec![],
         bound_resources: vec![],
     };
-    let err = validate_external_node(&unmapped)
-        .expect_err("unmapped node must fail closed");
+    let err = validate_external_node(&unmapped).expect_err("unmapped node must fail closed");
     assert!(matches!(err, SchemaTranslationError::UnmappedNode { .. }));
     assert!(err.to_string().contains("Fix:"));
 
     // Adversarial Case 5: Incompatible schema identity
-    let id_err = validate_schema_identity(
-        "vyre-test::demo",
-        "wrong::dialect",
-        2,
-        "vyre-test::demo",
-        2,
-    )
-    .expect_err("incompatible schema identity must fail");
+    let id_err =
+        validate_schema_identity("vyre-test::demo", "wrong::dialect", 2, "vyre-test::demo", 2)
+            .expect_err("incompatible schema identity must fail");
     assert!(matches!(
         id_err,
         SchemaTranslationError::IncompatibleIdentity { .. }

@@ -37,21 +37,18 @@ pub fn nand(a: &str, b: &str, out: &str, size: u32) -> Program {
         b,
         out,
         size,
-        |left, right| vyre_foundation::ir::Expr::bitnot(vyre_foundation::ir::Expr::bitand(left, right)),
+        |left, right| {
+            vyre_foundation::ir::Expr::bitnot(vyre_foundation::ir::Expr::bitand(left, right))
+        },
     )
 }
 
 /// Build the synthesized bitwise NOR operation.
 #[must_use]
 pub fn nor(a: &str, b: &str, out: &str, size: u32) -> Program {
-    u32_elementwise_binary(
-        "vyre-libs::logical::nor",
-        a,
-        b,
-        out,
-        size,
-        |left, right| vyre_foundation::ir::Expr::bitnot(vyre_foundation::ir::Expr::bitor(left, right)),
-    )
+    u32_elementwise_binary("vyre-libs::logical::nor", a, b, out, size, |left, right| {
+        vyre_foundation::ir::Expr::bitnot(vyre_foundation::ir::Expr::bitor(left, right))
+    })
 }
 
 fn nand_test_inputs() -> Vec<Vec<Vec<u8>>> {
