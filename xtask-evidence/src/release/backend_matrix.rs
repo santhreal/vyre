@@ -323,17 +323,6 @@ pub fn wgpu_feature_marker_ids() -> Vec<&'static str> {
         .collect()
 }
 
-const UNRESOLVED_MARKERS: &[&str] = &[
-    "todo",
-    "fixme",
-    "placeholder",
-    "stub",
-    "todo!",
-    "unimplemented!",
-    "panic!(\"not implemented",
-    "tbd",
-];
-
 const BACKEND_PRODUCTION_SCAN_ROOTS: &[&str] = &[
     "vyre-driver/src",
     "vyre-driver-cuda/src",
@@ -590,10 +579,10 @@ fn collect_feature_markers(
             .copied()
             .filter(|token| !code_lowered.contains(&token.to_ascii_lowercase()))
             .collect::<Vec<_>>();
-        let unresolved_markers = UNRESOLVED_MARKERS
-            .iter()
-            .copied()
-            .filter(|marker| lowered.contains(marker))
+        let unresolved_markers = xtask::gates::hygiene_matrix::unresolved_marker_pattern_texts()
+            .into_iter()
+            .filter(|(_, marker)| lowered.contains(&marker.to_ascii_lowercase()))
+            .map(|(_, marker)| marker)
             .collect::<Vec<_>>();
         if !exists {
             blockers.push(format!(
@@ -1687,6 +1676,65 @@ mod artifact_ownership_tests {
         assert_eq!(
             actual, expected,
             "Fix: backend-matrix gate descriptor must declare exactly the canonical backend evidence artifact (`{ARTIFACT}`)"
+        );
+    }
+}
+
+#[cfg(test)]
+mod unresolved_marker_tests {
+    use super::*;
+
+    const FIXTURE_MARKERS: &[BackendFeatureRequirement] = &[BackendFeatureRequirement {
+        id: "unresolved-marker-fixture",
+        relative: "vyre-driver-cuda/src/backend/unresolved_probe.rs",
+        role: "fixture",
+        tokens: &[],
+    }];
+
+    /// WHY: this scan carried its own eight unresolved markers, and neither
+    /// that list nor the hygiene family's was a subset of the other, so each
+    /// surface was scanned for markers the other already recorded. The
+    /// expectation is derived from the owning family at run time, so a marker
+    /// added there fails here until this scan reads it. What it does not catch
+    /// is a marker the family detects structurally rather than by text.
+    #[test]
+    fn every_declared_unresolved_marker_is_read_on_the_backend_surface() {
+        let workspace =
+            tempfile::tempdir().expect("Fix: create a temporary workspace for the scan.");
+        let root = workspace.path();
+        let texts = xtask::gates::hygiene_matrix::unresolved_marker_pattern_texts();
+        assert!(
+            texts.len() > 5,
+            "Fix: the unresolved-work family must publish its markers; got {texts:?}"
+        );
+        let path = root.join(FIXTURE_MARKERS[0].relative);
+        fs::create_dir_all(path.parent().expect("Fix: the fixture path has a parent."))
+            .expect("Fix: create the fixture marker directory.");
+        let mut body = String::from("pub fn dispatch() {\n");
+        for (_, text) in &texts {
+            body.push_str("    // ");
+            body.push_str(text);
+            body.push('\n');
+        }
+        body.push_str("}\n");
+        fs::write(&path, body).expect("Fix: write the fixture source.");
+
+        let mut blockers = Vec::new();
+        let markers = collect_feature_markers(root, FIXTURE_MARKERS, &mut blockers);
+
+        let read: std::collections::BTreeSet<&str> =
+            markers[0].unresolved_markers.iter().copied().collect();
+        let declared: std::collections::BTreeSet<&str> =
+            texts.iter().map(|(_, text)| *text).collect();
+        assert_eq!(
+            read, declared,
+            "Fix: the backend scan must read every marker the unresolved-work family declares"
+        );
+        assert_eq!(
+            blockers.len(),
+            declared.len(),
+            "Fix: each unresolved marker read must be reported as a blocker; \
+             blockers={blockers:?}"
         );
     }
 }

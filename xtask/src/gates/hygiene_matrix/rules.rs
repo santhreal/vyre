@@ -287,6 +287,25 @@ pub(crate) fn is_hidden_fallback_pattern(name: &str) -> bool {
     )
 }
 
+/// Whether `name` states unfinished work rather than a call or an excuse.
+///
+/// The family covers an unfinished item, a placeholder, and the macros and
+/// prose that stand in for an implementation. It overlaps the code-call
+/// family, which decides whether a literal-only occurrence is exempt: the two
+/// answer different questions about the same row.
+pub(crate) fn is_unresolved_marker_pattern(name: &str) -> bool {
+    matches!(
+        name,
+        "TODO"
+            | "FIXME"
+            | "placeholder_text"
+            | "stub_text"
+            | "not_implemented_text"
+            | "todo_macro"
+            | "unimplemented_macro"
+    )
+}
+
 pub(crate) fn is_negated_hidden_fallback_statement(lower: &str) -> bool {
     lower.contains("no cpu fallback")
         || lower.contains("no hidden fallback")

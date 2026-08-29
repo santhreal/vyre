@@ -87,6 +87,27 @@ pub fn hidden_fallback_pattern_texts() -> Vec<(&'static str, &'static str)> {
         .collect()
 }
 
+/// The unresolved-work family as `(pattern name, matched text)`.
+///
+/// A scan outside this gate reads the same markers over a narrower surface,
+/// and the backend matrix carried eight of its own. Neither list was a subset
+/// of the other: `not implemented` prose reached the tree-wide scan alone, and
+/// `tbd` reached the production driver surface alone, so each gate certified a
+/// vocabulary the other had already extended. The vocabulary has one owner and
+/// one accessor. `tbd` is absent from it because this scan reads every crate
+/// and `tbd` is a schema token in the conformance certificates, where it
+/// records a field state rather than unfinished work. The texts carry the case
+/// they are declared with, so a caller matching lowercased source lowercases
+/// them.
+#[must_use]
+pub fn unresolved_marker_pattern_texts() -> Vec<(&'static str, &'static str)> {
+    records::BLOCKED_PATTERNS
+        .iter()
+        .copied()
+        .filter(|(name, _)| rules::is_unresolved_marker_pattern(name))
+        .collect()
+}
+
 /// Scans the release surface for hidden fallbacks, unbounded reads, missing
 /// panic contracts and undeclared thresholds, and owns the evidence artifacts.
 pub struct HygieneMatrix;
