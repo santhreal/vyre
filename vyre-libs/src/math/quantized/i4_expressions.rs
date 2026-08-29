@@ -1,8 +1,9 @@
 //! Shared IR-expression helpers for quantized program builders.
 
-use super::I4_LANES_PER_WORD;
+use super::i4_packed_contract;
 
-use vyre_foundation::ir::{DataType, Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
+use vyre_foundation::numeric::FieldTarget;
 
 pub(super) fn i4_matvec_scaled_body(
     weights_packed: &str,
@@ -26,32 +27,17 @@ pub(super) fn i4_matvec_scaled_body(
             Expr::u32(cols),
             vec![
                 Node::let_bind(
-                    "i4_matvec_word_index",
-                    Expr::add(
-                        Expr::mul(Expr::var("i4_matvec_row"), Expr::u32(words_per_row)),
-                        Expr::div(Expr::var("i4_matvec_col"), Expr::u32(I4_LANES_PER_WORD)),
-                    ),
-                ),
-                Node::let_bind(
-                    "i4_matvec_shift",
-                    Expr::mul(
-                        Expr::rem(Expr::var("i4_matvec_col"), Expr::u32(I4_LANES_PER_WORD)),
-                        Expr::u32(4),
-                    ),
-                ),
-                Node::let_bind(
                     "i4_matvec_nibble",
-                    Expr::bitand(
-                        Expr::shr(
-                            Expr::load(weights_packed, Expr::var("i4_matvec_word_index")),
-                            Expr::var("i4_matvec_shift"),
-                        ),
-                        Expr::u32(0xF),
+                    i4_packed_contract().load_row_field(
+                        weights_packed,
+                        Expr::mul(Expr::var("i4_matvec_row"), Expr::u32(words_per_row)),
+                        Expr::var("i4_matvec_col"),
                     ),
                 ),
                 Node::let_bind(
                     "i4_matvec_weight",
-                    signed_i4_nibble_f32_expr(Expr::var("i4_matvec_nibble")),
+                    i4_packed_contract()
+                        .decode_field(Expr::var("i4_matvec_nibble"), FieldTarget::Float32),
                 ),
                 Node::let_bind(
                     "i4_matvec_x_index",
@@ -85,7 +71,7 @@ pub(super) fn i4_dot_accumulation_body(
     rhs_packed: &str,
     lane_count: u32,
     accumulator_zero: Expr,
-    lane_value: fn(Expr) -> Expr,
+    lane_target: FieldTarget,
     final_store: Node,
 ) -> Vec<Node> {
     vec![Node::if_then(
@@ -98,38 +84,23 @@ pub(super) fn i4_dot_accumulation_body(
                 Expr::u32(lane_count),
                 vec![
                     Node::let_bind(
-                        "i4_dot_word_index",
-                        Expr::div(Expr::var("i4_dot_lane"), Expr::u32(I4_LANES_PER_WORD)),
-                    ),
-                    Node::let_bind(
-                        "i4_dot_shift",
-                        Expr::mul(
-                            Expr::rem(Expr::var("i4_dot_lane"), Expr::u32(I4_LANES_PER_WORD)),
-                            Expr::u32(4),
-                        ),
-                    ),
-                    Node::let_bind(
                         "i4_dot_lhs_nibble",
-                        Expr::bitand(
-                            Expr::shr(
-                                Expr::load(lhs_packed, Expr::var("i4_dot_word_index")),
-                                Expr::var("i4_dot_shift"),
-                            ),
-                            Expr::u32(0xF),
-                        ),
+                        i4_packed_contract().load_field(lhs_packed, Expr::var("i4_dot_lane")),
                     ),
                     Node::let_bind(
                         "i4_dot_rhs_nibble",
-                        Expr::bitand(
-                            Expr::shr(
-                                Expr::load(rhs_packed, Expr::var("i4_dot_word_index")),
-                                Expr::var("i4_dot_shift"),
-                            ),
-                            Expr::u32(0xF),
-                        ),
+                        i4_packed_contract().load_field(rhs_packed, Expr::var("i4_dot_lane")),
                     ),
-                    Node::let_bind("i4_dot_lhs", lane_value(Expr::var("i4_dot_lhs_nibble"))),
-                    Node::let_bind("i4_dot_rhs", lane_value(Expr::var("i4_dot_rhs_nibble"))),
+                    Node::let_bind(
+                        "i4_dot_lhs",
+                        i4_packed_contract()
+                            .decode_field(Expr::var("i4_dot_lhs_nibble"), lane_target),
+                    ),
+                    Node::let_bind(
+                        "i4_dot_rhs",
+                        i4_packed_contract()
+                            .decode_field(Expr::var("i4_dot_rhs_nibble"), lane_target),
+                    ),
                     Node::assign(
                         "i4_dot_acc",
                         Expr::add(
@@ -144,27 +115,11 @@ pub(super) fn i4_dot_accumulation_body(
     )]
 }
 
-pub(super) fn signed_i4_nibble_expr(nibble: Expr) -> Expr {
-    Expr::select(
-        Expr::eq(Expr::bitand(nibble.clone(), Expr::u32(0x8)), Expr::u32(0)),
-        Expr::cast(DataType::I32, nibble.clone()),
-        Expr::sub(Expr::cast(DataType::I32, nibble), Expr::i32(16)),
-    )
-}
-
-pub(super) fn signed_i4_nibble_f32_expr(nibble: Expr) -> Expr {
-    Expr::select(
-        Expr::eq(Expr::bitand(nibble.clone(), Expr::u32(0x8)), Expr::u32(0)),
-        Expr::cast(DataType::F32, nibble.clone()),
-        Expr::sub(Expr::cast(DataType::F32, nibble), Expr::f32(16.0)),
-    )
-}
-
 /// The packed-activation INT4 inner product over `cols`, accumulating into the
 /// binding `{prefix}_acc`.
 ///
 /// Reads the weight row named by `{prefix}_row` and the activation row named by
-/// `{prefix}_batch`, both packed [`I4_LANES_PER_WORD`] lanes per word with
+/// `{prefix}_batch`, both packed under the module's INT4 contract with
 /// `words_per_row` words per row. `prefix` names every binding the loop opens
 /// so a schedule that nests this inside a row scan keeps its own accumulator.
 pub(super) fn i4_packed_dot_loop(
@@ -178,9 +133,6 @@ pub(super) fn i4_packed_dot_loop(
     let batch = format!("{prefix}_batch");
     let col = format!("{prefix}_col");
     let acc = format!("{prefix}_acc");
-    let weight_word = format!("{prefix}_weight_word");
-    let activation_word = format!("{prefix}_activation_word");
-    let shift = format!("{prefix}_shift");
     let weight_nibble = format!("{prefix}_weight_nibble");
     let activation_nibble = format!("{prefix}_activation_nibble");
     let weight = format!("{prefix}_weight");
@@ -191,53 +143,29 @@ pub(super) fn i4_packed_dot_loop(
         Expr::u32(cols),
         vec![
             Node::let_bind(
-                weight_word.clone(),
-                Expr::add(
-                    Expr::mul(Expr::var(row), Expr::u32(words_per_row)),
-                    Expr::div(Expr::var(col.clone()), Expr::u32(I4_LANES_PER_WORD)),
-                ),
-            ),
-            Node::let_bind(
-                activation_word.clone(),
-                Expr::add(
-                    Expr::mul(Expr::var(batch), Expr::u32(words_per_row)),
-                    Expr::div(Expr::var(col.clone()), Expr::u32(I4_LANES_PER_WORD)),
-                ),
-            ),
-            Node::let_bind(
-                shift.clone(),
-                Expr::mul(
-                    Expr::rem(Expr::var(col), Expr::u32(I4_LANES_PER_WORD)),
-                    Expr::u32(4),
-                ),
-            ),
-            Node::let_bind(
                 weight_nibble.clone(),
-                Expr::bitand(
-                    Expr::shr(
-                        Expr::load(weights_packed, Expr::var(weight_word)),
-                        Expr::var(shift.clone()),
-                    ),
-                    Expr::u32(0xF),
+                i4_packed_contract().load_row_field(
+                    weights_packed,
+                    Expr::mul(Expr::var(row), Expr::u32(words_per_row)),
+                    Expr::var(col.clone()),
                 ),
             ),
             Node::let_bind(
                 activation_nibble.clone(),
-                Expr::bitand(
-                    Expr::shr(
-                        Expr::load(activation_batches_packed, Expr::var(activation_word)),
-                        Expr::var(shift),
-                    ),
-                    Expr::u32(0xF),
+                i4_packed_contract().load_row_field(
+                    activation_batches_packed,
+                    Expr::mul(Expr::var(batch), Expr::u32(words_per_row)),
+                    Expr::var(col),
                 ),
             ),
             Node::let_bind(
                 weight.clone(),
-                signed_i4_nibble_f32_expr(Expr::var(weight_nibble)),
+                i4_packed_contract().decode_field(Expr::var(weight_nibble), FieldTarget::Float32),
             ),
             Node::let_bind(
                 activation.clone(),
-                signed_i4_nibble_f32_expr(Expr::var(activation_nibble)),
+                i4_packed_contract()
+                    .decode_field(Expr::var(activation_nibble), FieldTarget::Float32),
             ),
             Node::assign(
                 acc.clone(),

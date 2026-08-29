@@ -148,6 +148,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `program_soa_facts` | `vyre-foundation/tests/program_soa_facts.rs` | None | `./cargo_full test -p vyre-foundation --test program_soa_facts` |
 | `test` | `program_stats_proptest` | `vyre-foundation/tests/program_stats_proptest.rs` | None | `./cargo_full test -p vyre-foundation --test program_stats_proptest` |
 | `test` | `program_wire_property_contracts` | `vyre-foundation/tests/program_wire_property_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test program_wire_property_contracts` |
+| `test` | `quantized_contract` | `vyre-foundation/tests/quantized_contract.rs` | None | `./cargo_full test -p vyre-foundation --test quantized_contract` |
 | `test` | `quantized_datatype_wire` | `vyre-foundation/tests/quantized_datatype_wire.rs` | None | `./cargo_full test -p vyre-foundation --test quantized_datatype_wire` |
 | `test` | `read_only_load_hoist_scope` | `vyre-foundation/tests/read_only_load_hoist_scope.rs` | None | `./cargo_full test -p vyre-foundation --test read_only_load_hoist_scope` |
 | `test` | `region_chain_adversarial` | `vyre-foundation/tests/region_chain_adversarial.rs` | None | `./cargo_full test -p vyre-foundation --test region_chain_adversarial` |

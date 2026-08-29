@@ -11,6 +11,7 @@
 
 mod contract;
 mod format;
+mod quantized;
 mod range;
 mod region;
 
@@ -19,6 +20,11 @@ pub use contract::{
     NumericContract, Reassociation, NUMERIC_CONTRACT_VERSION,
 };
 pub use format::ScalarFormat;
+pub use quantized::{
+    CalibrationIdentity, FieldTarget, GroupAxis, PackedField, PackingOrder, QuantizedContract,
+    QuantizedConversion, QuantizedRefusal, CALIBRATION_IDENTITY_VERSION,
+    QUANTIZED_CONTRACT_VERSION,
+};
 pub use range::{prove, MagnitudeRange, NumericChoice, RangeProof};
 pub use region::{
     budget_admits, graph_budget, region_contract, reordering_admitted, RegionArithmetic,

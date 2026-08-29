@@ -5,7 +5,7 @@
 #[cfg(feature = "math")]
 #[test]
 fn generated_i4_cpu_oracle_matrix_preserves_packing_and_top1_semantics() {
-    use vyre_libs::math::quantized::{i4_packed_words, I4_LANES_PER_WORD};
+    use vyre_libs::math::quantized::{i4_packed_contract, i4_packed_words};
     use vyre_reference::composition_witness::{
         i4x8_batched_matmul_f32_scaled_witness as i4x8_batched_matmul_f32_scaled_cpu,
         i4x8_batched_matmul_top1_f32_scaled_witness as i4x8_batched_matmul_top1_f32_scaled_cpu,
@@ -13,6 +13,7 @@ fn generated_i4_cpu_oracle_matrix_preserves_packing_and_top1_semantics() {
         unpack_i4x8_witness as unpack_i4x8_cpu,
     };
 
+    let lanes_per_word = i4_packed_contract().fields_per_container();
     let lane_cases = [0usize, 1, 2, 7, 8, 9, 15, 16, 17, 31, 32, 33, 63, 64, 65];
     let pattern = [-8, -7, -3, -1, 0, 1, 2, 3, 4, 7];
     for lane_count in lane_cases {
@@ -26,7 +27,7 @@ fn generated_i4_cpu_oracle_matrix_preserves_packing_and_top1_semantics() {
         assert_eq!(
             packed.len() as u32,
             i4_packed_words(lane_count as u32),
-            "Fix: i4 packed word count must be ceil(lanes / {I4_LANES_PER_WORD})."
+            "Fix: i4 packed word count must be ceil(lanes / {lanes_per_word})."
         );
         assert_eq!(
             unpack_i4x8_cpu(&packed, lane_count as u32),

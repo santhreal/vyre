@@ -4,16 +4,16 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use super::i4_expressions::{
     i4_dot_accumulation_body, i4_matvec_scaled_body, i4_packed_dot_loop, i4_packed_scaled_score,
-    signed_i4_nibble_expr, signed_i4_nibble_f32_expr,
 };
 
 use super::{
-    i4_packed_words, I4_BATCHED_MATMUL_F32_SCALED_OP_ID, I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID,
-    I4_BATCHED_MATVEC_F32_SCALED_OP_ID, I4_DOT_F32_SCALED_OP_ID, I4_DOT_I32_OP_ID,
-    I4_LANES_PER_WORD, I4_MATVEC_F32_SCALED_OP_ID, UNPACK_I4_OP_ID,
+    i4_packed_contract, i4_packed_words, I4_BATCHED_MATMUL_F32_SCALED_OP_ID,
+    I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID, I4_BATCHED_MATVEC_F32_SCALED_OP_ID,
+    I4_DOT_F32_SCALED_OP_ID, I4_DOT_I32_OP_ID, I4_MATVEC_F32_SCALED_OP_ID, UNPACK_I4_OP_ID,
 };
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::numeric::FieldTarget;
 
 /// Build a Program that unpacks packed signed INT4 lanes into i32 lanes.
 pub fn unpack_i4x8(packed_words: &str, out_lanes: &str, lane_count: u32) -> Program {
@@ -29,28 +29,13 @@ pub fn unpack_i4x8(packed_words: &str, out_lanes: &str, lane_count: u32) -> Prog
     let word_count = i4_packed_words(lane_count);
     let body = vec![
         Node::let_bind(
-            "i4_word_index",
-            Expr::div(t.clone(), Expr::u32(I4_LANES_PER_WORD)),
-        ),
-        Node::let_bind(
-            "i4_lane_in_word",
-            Expr::rem(t.clone(), Expr::u32(I4_LANES_PER_WORD)),
-        ),
-        Node::let_bind(
-            "i4_shift",
-            Expr::mul(Expr::var("i4_lane_in_word"), Expr::u32(4)),
-        ),
-        Node::let_bind(
             "i4_nibble",
-            Expr::bitand(
-                Expr::shr(
-                    Expr::load(packed_words, Expr::var("i4_word_index")),
-                    Expr::var("i4_shift"),
-                ),
-                Expr::u32(0xF),
-            ),
+            i4_packed_contract().load_field(packed_words, t.clone()),
         ),
-        Node::let_bind("i4_signed", signed_i4_nibble_expr(Expr::var("i4_nibble"))),
+        Node::let_bind(
+            "i4_signed",
+            i4_packed_contract().decode_field(Expr::var("i4_nibble"), FieldTarget::SignedInt32),
+        ),
         Node::store(out_lanes, t.clone(), Expr::var("i4_signed")),
     ];
 
@@ -90,7 +75,7 @@ pub fn i4x8_dot_i32(lhs_packed: &str, rhs_packed: &str, out: &str, lane_count: u
         rhs_packed,
         lane_count,
         Expr::i32(0),
-        signed_i4_nibble_expr,
+        FieldTarget::SignedInt32,
         Node::store(out, Expr::u32(0), Expr::var("i4_dot_acc")),
     );
 
@@ -138,7 +123,7 @@ pub fn i4x8_dot_f32_scaled(
         rhs_packed,
         lane_count,
         Expr::f32(0.0),
-        signed_i4_nibble_f32_expr,
+        FieldTarget::Float32,
         Node::store(out, Expr::u32(0), scaled_dot),
     );
 

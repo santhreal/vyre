@@ -17,7 +17,8 @@ use crate::ir::{
     BufferAccess, GraphNodeId, GraphValueId, ProgramGraph, ShapeDim, ValueLifetime,
 };
 use crate::numeric::{
-    region_contract, NumericContract, RegionArithmetic, RegionNumericFacts, ScalarFormat,
+    graph_budget, region_contract, NumericContract, QuantizedContract, QuantizedRefusal,
+    RegionArithmetic, RegionNumericFacts, ScalarFormat,
 };
 use crate::operation::OperationEffects;
 
@@ -406,7 +407,12 @@ impl<'a> LogicalProgramGraph<'a> {
             );
             let written_bytes = crate::logical_partition::value_bytes(graph, bindings, &writes)
                 .map_err(LogicalProgramError::Exchange)?;
-            let numeric = region_contract(&RegionNumericFacts {
+            let quantized = quantized_input(node.inputs.iter().map(|input| &input.contract.dtype))
+                .map_err(|refusal| LogicalProgramError::Numeric {
+                    node: node.id,
+                    reason: refusal.to_string(),
+                })?;
+            let region = region_contract(&RegionNumericFacts {
                 input: promoted_format(node.inputs.iter().map(|input| &input.contract.dtype)),
                 output: promoted_format(node.output_ports.iter().map(|port| &port.contract.dtype)),
                 arithmetic: match kind {
@@ -425,6 +431,18 @@ impl<'a> LogicalProgramGraph<'a> {
             .map_err(|refusal| LogicalProgramError::Numeric {
                 node: node.id,
                 reason: refusal.to_string(),
+            })?;
+            let requantized =
+                quantized_input(node.output_ports.iter().map(|port| &port.contract.dtype))
+                    .map_err(|refusal| LogicalProgramError::Numeric {
+                        node: node.id,
+                        reason: refusal.to_string(),
+                    })?;
+            let numeric = numeric_budget(&quantized, &requantized, region).map_err(|refusal| {
+                LogicalProgramError::Numeric {
+                    node: node.id,
+                    reason: refusal.to_string(),
+                }
             })?;
             regions.push(LogicalRegion {
                 node: node.id,
@@ -659,21 +677,87 @@ impl<'a> LogicalProgramGraph<'a> {
 ///
 /// A rounding format wins over an exact one because that is the promotion an
 /// operation performs, and among rounding formats the finest wins because a
-/// value held in it is not made coarser by being read.
+/// value held in it is not made coarser by being read. A quantized value is
+/// stored packed and computed dequantized, so it answers the logical format its
+/// contract states: reading it through the storage format would price an INT4
+/// region as exact arithmetic.
 fn promoted_format<'b>(
     types: impl Iterator<Item = &'b crate::ir::DataType>,
 ) -> Option<ScalarFormat> {
-    types.filter_map(ScalarFormat::of).fold(None, |best, next| {
-        let Some(best) = best else {
-            return Some(next);
-        };
-        Some(match (best.ulp_fraction(), next.ulp_fraction()) {
-            (None, Some(_)) => next,
-            (Some(_), None) => best,
-            (Some(left), Some(right)) if right < left => next,
-            _ => best,
+    types
+        .filter_map(arithmetic_format)
+        .fold(None, |best, next| {
+            let Some(best) = best else {
+                return Some(next);
+            };
+            Some(match (best.ulp_fraction(), next.ulp_fraction()) {
+                (None, Some(_)) => next,
+                (Some(_), None) => best,
+                (Some(left), Some(right)) if right < left => next,
+                _ => best,
+            })
         })
-    })
+}
+
+/// The scalar format one value is computed in.
+fn arithmetic_format(dtype: &crate::ir::DataType) -> Option<ScalarFormat> {
+    QuantizedContract::of(dtype).map_or_else(
+        || ScalarFormat::of(dtype),
+        |contract| Some(contract.logical),
+    )
+}
+
+/// The quantized contract every quantized input of one region states.
+///
+/// A region reading two quantized values packed differently cannot read both
+/// with one lane law, so it is refused here rather than reinterpreting the
+/// bytes of one of them.
+fn quantized_input<'b>(
+    types: impl Iterator<Item = &'b crate::ir::DataType>,
+) -> Result<Option<QuantizedContract>, QuantizedRefusal> {
+    let mut stated: Option<QuantizedContract> = None;
+    for contract in types.filter_map(QuantizedContract::of) {
+        contract.check()?;
+        match &stated {
+            None => stated = Some(contract),
+            Some(first) if first.propagates_to(&contract) => {}
+            Some(first) => {
+                return Err(QuantizedRefusal::LayoutsDisagree {
+                    first: first.to_string(),
+                    second: contract.to_string(),
+                })
+            }
+        }
+    }
+    Ok(stated)
+}
+
+/// What one region computes, given what it reads and what it writes.
+///
+/// Reading a quantized value costs the step of the grid it was placed on, and
+/// writing one places it on a grid: onto a new one when the region read nothing
+/// quantized, and onto another one when the region read a different grid. A
+/// conversion that only moves fields inside their container or reads a different
+/// sidecar changes no value, so it is priced at what it is: nothing. The composed
+/// budget is what a stated ceiling is checked against, which is how a caller
+/// learns that a quantizing chain is wider than the compute inside it.
+fn numeric_budget(
+    read: &Option<QuantizedContract>,
+    written: &Option<QuantizedContract>,
+    region: NumericContract,
+) -> Result<NumericContract, crate::numeric::ContractRefusal> {
+    let mut composed = match read {
+        None => region,
+        Some(contract) => graph_budget([&contract.numeric(), &region])?,
+    };
+    if let Some(target) = written {
+        let measure = read.as_ref().map_or_else(
+            || target.dequantization_measure(),
+            |source| source.conversion(target).measure(target),
+        );
+        composed = graph_budget([&composed, &region.with_measure(measure)])?;
+    }
+    Ok(composed)
 }
 
 /// The number of points one reduction combines into a single output point.

@@ -5,6 +5,8 @@
 //! GPU kernels operate on u32 storage words so each word carries eight signed
 //! 4-bit values.
 
+use vyre_foundation::numeric::{QuantizedContract, ScalarFormat};
+
 mod i4_expressions;
 mod programs;
 #[cfg(test)]
@@ -104,13 +106,22 @@ pub const I4_BATCHED_MATMUL_F32_SCALED_OP_ID: &str =
 pub const I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID: &str =
     "vyre-libs::math::quantized::i4x8_batched_matmul_top1_f32_scaled";
 
-/// Number of signed 4-bit lanes per packed u32 word.
-pub const I4_LANES_PER_WORD: u32 = 8;
+/// The packed signed INT4 layout every INT4 composition here reads.
+///
+/// Signed nibbles in u32 containers, element zero in the low field,
+/// dequantized to binary32. Every builder reads the container index, the shift
+/// and the sign extension off this contract, so a producer that packs the same
+/// bytes differently states a different contract and is refused where the two
+/// meet instead of being read as this one.
+#[must_use]
+pub fn i4_packed_contract() -> QuantizedContract {
+    QuantizedContract::symmetric(ScalarFormat::I4, ScalarFormat::F32, ScalarFormat::U32)
+}
 
 /// Number of packed signed INT4 words required for `lane_count` lanes.
 #[must_use]
-pub const fn i4_packed_words(lane_count: u32) -> u32 {
-    lane_count.div_ceil(I4_LANES_PER_WORD)
+pub fn i4_packed_words(lane_count: u32) -> u32 {
+    u32::try_from(i4_packed_contract().container_words(u64::from(lane_count))).unwrap_or(u32::MAX)
 }
 
 fn u32s(words: &[u32]) -> Vec<u8> {

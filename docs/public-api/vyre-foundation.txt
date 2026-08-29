@@ -103,6 +103,7 @@ impl core::error::Error for vyre_foundation::graph_view::GraphValidateError
 impl core::error::Error for vyre_foundation::ir::EvalError
 impl core::error::Error for vyre_foundation::lower::LoweringError
 impl core::error::Error for vyre_foundation::numeric::ContractRefusal
+impl core::error::Error for vyre_foundation::numeric::QuantizedRefusal
 impl core::error::Error for vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated
 impl core::error::Error for vyre_foundation::optimizer::eqsat::EGraphError
 impl core::error::Error for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
@@ -135,6 +136,8 @@ impl core::fmt::Display for vyre_foundation::ir::Ident
 impl core::fmt::Display for vyre_foundation::lower::LoweringError
 impl core::fmt::Display for vyre_foundation::numeric::ContractRefusal
 impl core::fmt::Display for vyre_foundation::numeric::MagnitudeRange
+impl core::fmt::Display for vyre_foundation::numeric::QuantizedContract
+impl core::fmt::Display for vyre_foundation::numeric::QuantizedRefusal
 impl core::fmt::Display for vyre_foundation::numeric::ScalarFormat
 impl core::fmt::Display for vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated
 impl core::fmt::Display for vyre_foundation::operation::TargetId
@@ -208,9 +211,13 @@ impl vyre_foundation::logical::LogicalExchangeKind
 impl vyre_foundation::lower::LoweringError
 impl vyre_foundation::lower::ProgramEffects
 impl vyre_foundation::match_result::ByteRange
+impl vyre_foundation::numeric::CalibrationIdentity
 impl vyre_foundation::numeric::ErrorMeasure
+impl vyre_foundation::numeric::FieldTarget
 impl vyre_foundation::numeric::MagnitudeRange
 impl vyre_foundation::numeric::NumericContract
+impl vyre_foundation::numeric::QuantizedContract
+impl vyre_foundation::numeric::QuantizedConversion
 impl vyre_foundation::numeric::RegionNumericFacts
 impl vyre_foundation::numeric::ScalarFormat
 impl vyre_foundation::opaque_payload::endian::LeBytesWriter
@@ -455,6 +462,7 @@ pub const fn vyre_foundation::match_result::ByteRange::new(tag: u32, start: u32,
 pub const fn vyre_foundation::numeric::ErrorMeasure::absolute(distance: f64) -> Self
 pub const fn vyre_foundation::numeric::ErrorMeasure::is_exact(self) -> bool
 pub const fn vyre_foundation::numeric::ErrorMeasure::relative(fraction: f64) -> Self
+pub const fn vyre_foundation::numeric::FieldTarget::data_type(self) -> vyre_spec::data_type::DataType
 pub const fn vyre_foundation::numeric::NumericContract::accumulating_in(self, accumulator: vyre_foundation::numeric::ScalarFormat) -> Self
 pub const fn vyre_foundation::numeric::NumericContract::approximating(self, approximation: vyre_foundation::numeric::Approximation) -> Self
 pub const fn vyre_foundation::numeric::NumericContract::computing_in(self, intermediate: vyre_foundation::numeric::ScalarFormat) -> Self
@@ -466,7 +474,10 @@ pub const fn vyre_foundation::numeric::NumericContract::sensitive_to(self, sensi
 pub const fn vyre_foundation::numeric::NumericContract::under(self, determinism: vyre_foundation::numeric::Determinism) -> Self
 pub const fn vyre_foundation::numeric::NumericContract::with_measure(self, measure: vyre_foundation::numeric::ErrorMeasure) -> Self
 pub const fn vyre_foundation::numeric::NumericContract::within_ulp(self, count: u32) -> Self
+pub const fn vyre_foundation::numeric::QuantizedConversion::is_free(&self) -> bool
+pub const fn vyre_foundation::numeric::QuantizedConversion::steps(&self) -> u32
 pub const fn vyre_foundation::numeric::RegionNumericFacts::opaque() -> Self
+pub const fn vyre_foundation::numeric::ScalarFormat::bit_width(self) -> u32
 pub const fn vyre_foundation::operation::OperationEffects::union(self, other: Self) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::category(&self) -> core::option::Option<&'static str>
 pub const fn vyre_foundation::operation::OperationRegistration::declared_schedule_constraints(&self) -> vyre_foundation::GeometryRequirements
@@ -585,8 +596,10 @@ pub const vyre_foundation::lower::ProgramEffects::BUFFER_WRITE: Self
 pub const vyre_foundation::lower::ProgramEffects::GPU_DISPATCH: Self
 pub const vyre_foundation::lower::ProgramEffects::HOST_IO: Self
 pub const vyre_foundation::lower::ProgramEffects::TRAP: Self
+pub const vyre_foundation::numeric::CALIBRATION_IDENTITY_VERSION: u32
 pub const vyre_foundation::numeric::NUMERIC_CONTRACT_VERSION: u32
 pub const vyre_foundation::numeric::NumericContract::EXACT: Self
+pub const vyre_foundation::numeric::QUANTIZED_CONTRACT_VERSION: u32
 pub const vyre_foundation::numeric::ScalarFormat::ALL: [Self; 17]
 pub const vyre_foundation::operation::OperationEffects::ALL: Self
 pub const vyre_foundation::operation::OperationEffects::NONE: Self
@@ -693,7 +706,10 @@ pub enum vyre_foundation::numeric::AtomicOrderSensitivity
 pub enum vyre_foundation::numeric::ContractRefusal
 pub enum vyre_foundation::numeric::Determinism
 pub enum vyre_foundation::numeric::ErrorMeasure
+pub enum vyre_foundation::numeric::FieldTarget
 pub enum vyre_foundation::numeric::NumericChoice
+pub enum vyre_foundation::numeric::PackingOrder
+pub enum vyre_foundation::numeric::QuantizedRefusal
 pub enum vyre_foundation::numeric::Reassociation
 pub enum vyre_foundation::numeric::RegionArithmetic
 pub enum vyre_foundation::numeric::ScalarFormat
@@ -1232,6 +1248,9 @@ pub fn vyre_foundation::lower::ProgramEffects::bitor(self, rhs: Self) -> Self
 pub fn vyre_foundation::lower::ProgramEffects::bitor_assign(&mut self, rhs: Self)
 pub fn vyre_foundation::lower::compute_program_effects(program: &vyre_foundation::ir::Program) -> vyre_foundation::lower::ProgramEffects
 pub fn vyre_foundation::lower::lower_subgroup_reductions(program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::ir::Program
+pub fn vyre_foundation::numeric::CalibrationIdentity::authenticates(&self, payload: &[u8]) -> bool
+pub fn vyre_foundation::numeric::CalibrationIdentity::hex(&self) -> alloc::string::String
+pub fn vyre_foundation::numeric::CalibrationIdentity::of(payload: &[u8]) -> Self
 pub fn vyre_foundation::numeric::ContractRefusal::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::numeric::ErrorMeasure::magnitude(self) -> f64
 pub fn vyre_foundation::numeric::MagnitudeRange::affine_recurrence(self, gain: f64, offset: f64, steps: u32) -> core::option::Option<Self>
@@ -1260,6 +1279,37 @@ pub fn vyre_foundation::numeric::NumericContract::permits_reassociation(&self) -
 pub fn vyre_foundation::numeric::NumericContract::relative_error(&self) -> core::result::Result<f64, vyre_foundation::numeric::ContractRefusal>
 pub fn vyre_foundation::numeric::NumericContract::ulp_budget(&self) -> core::option::Option<u32>
 pub fn vyre_foundation::numeric::NumericContract::ulp_fraction(format: vyre_foundation::numeric::ScalarFormat) -> core::option::Option<f64>
+pub fn vyre_foundation::numeric::QuantizedContract::accumulating_in(self, accumulator: vyre_foundation::numeric::ScalarFormat) -> Self
+pub fn vyre_foundation::numeric::QuantizedContract::affine(self) -> Self
+pub fn vyre_foundation::numeric::QuantizedContract::aligned_to(self, alignment_bytes: u32) -> Self
+pub fn vyre_foundation::numeric::QuantizedContract::calibrated_by(self, calibration: vyre_foundation::numeric::CalibrationIdentity) -> Self
+pub fn vyre_foundation::numeric::QuantizedContract::check(&self) -> core::result::Result<(), vyre_foundation::numeric::QuantizedRefusal>
+pub fn vyre_foundation::numeric::QuantizedContract::container_words(&self, elements: u64) -> u64
+pub fn vyre_foundation::numeric::QuantizedContract::conversion(&self, target: &Self) -> vyre_foundation::numeric::QuantizedConversion
+pub fn vyre_foundation::numeric::QuantizedContract::decode_field(&self, code: vyre_foundation::ir::Expr, target: vyre_foundation::numeric::FieldTarget) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::numeric::QuantizedContract::dequantization_measure(&self) -> vyre_foundation::numeric::ErrorMeasure
+pub fn vyre_foundation::numeric::QuantizedContract::extract_field(&self, word: vyre_foundation::ir::Expr, shift: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::numeric::QuantizedContract::field(&self, index: u64) -> vyre_foundation::numeric::PackedField
+pub fn vyre_foundation::numeric::QuantizedContract::field_mask(&self) -> u64
+pub fn vyre_foundation::numeric::QuantizedContract::field_shift(&self, index: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::numeric::QuantizedContract::field_word(&self, index: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::numeric::QuantizedContract::fields_per_container(&self) -> u32
+pub fn vyre_foundation::numeric::QuantizedContract::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::numeric::QuantizedContract::group_elements(&self) -> u64
+pub fn vyre_foundation::numeric::QuantizedContract::grouped_by(self, axes: alloc::vec::Vec<vyre_foundation::numeric::GroupAxis>) -> Self
+pub fn vyre_foundation::numeric::QuantizedContract::groups_over(&self, extent: u64) -> u64
+pub fn vyre_foundation::numeric::QuantizedContract::load_field(&self, buffer: &str, index: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::numeric::QuantizedContract::load_row_field(&self, buffer: &str, word_base: vyre_foundation::ir::Expr, index: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::numeric::QuantizedContract::numeric(&self) -> vyre_foundation::numeric::NumericContract
+pub fn vyre_foundation::numeric::QuantizedContract::of(dtype: &vyre_spec::data_type::DataType) -> core::option::Option<Self>
+pub fn vyre_foundation::numeric::QuantizedContract::packed(self, packing: vyre_foundation::numeric::PackingOrder) -> Self
+pub fn vyre_foundation::numeric::QuantizedContract::per_channel(self, axis: u32) -> Self
+pub fn vyre_foundation::numeric::QuantizedContract::propagates_to(&self, other: &Self) -> bool
+pub fn vyre_foundation::numeric::QuantizedContract::step_fraction(&self) -> f64
+pub fn vyre_foundation::numeric::QuantizedContract::symmetric(storage: vyre_foundation::numeric::ScalarFormat, logical: vyre_foundation::numeric::ScalarFormat, container: vyre_foundation::numeric::ScalarFormat) -> Self
+pub fn vyre_foundation::numeric::QuantizedContract::tail_elements(&self, extent: u64) -> u64
+pub fn vyre_foundation::numeric::QuantizedConversion::measure(&self, target: &vyre_foundation::numeric::QuantizedContract) -> vyre_foundation::numeric::ErrorMeasure
+pub fn vyre_foundation::numeric::QuantizedRefusal::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::numeric::ScalarFormat::data_type(self) -> vyre_spec::data_type::DataType
 pub fn vyre_foundation::numeric::ScalarFormat::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::numeric::ScalarFormat::is_exact(self) -> bool
@@ -2884,8 +2934,13 @@ pub struct vyre_foundation::logical::LogicalProgramGraph<'a>
 pub struct vyre_foundation::logical::LogicalRegion
 pub struct vyre_foundation::lower::LoweringError
 pub struct vyre_foundation::lower::ProgramEffects(_)
+pub struct vyre_foundation::numeric::CalibrationIdentity
+pub struct vyre_foundation::numeric::GroupAxis
 pub struct vyre_foundation::numeric::MagnitudeRange
 pub struct vyre_foundation::numeric::NumericContract
+pub struct vyre_foundation::numeric::PackedField
+pub struct vyre_foundation::numeric::QuantizedContract
+pub struct vyre_foundation::numeric::QuantizedConversion
 pub struct vyre_foundation::numeric::RangeProof
 pub struct vyre_foundation::numeric::RegionNumericFacts
 pub struct vyre_foundation::opaque_payload::endian::LeBytesWriter
@@ -3846,6 +3901,8 @@ pub vyre_foundation::numeric::Approximation::Native::measure: vyre_foundation::n
 pub vyre_foundation::numeric::Approximation::Refused
 pub vyre_foundation::numeric::AtomicOrderSensitivity::Insensitive
 pub vyre_foundation::numeric::AtomicOrderSensitivity::Sensitive
+pub vyre_foundation::numeric::CalibrationIdentity::digest: [u8; 32]
+pub vyre_foundation::numeric::CalibrationIdentity::version: u32
 pub vyre_foundation::numeric::ContractRefusal::ApproximationRefused
 pub vyre_foundation::numeric::ContractRefusal::BudgetExceeded
 pub vyre_foundation::numeric::ContractRefusal::BudgetExceeded::composed: vyre_foundation::numeric::ErrorMeasure
@@ -3873,6 +3930,10 @@ pub vyre_foundation::numeric::ErrorMeasure::Relative
 pub vyre_foundation::numeric::ErrorMeasure::Relative::bits: u64
 pub vyre_foundation::numeric::ErrorMeasure::Ulp
 pub vyre_foundation::numeric::ErrorMeasure::Ulp::count: u32
+pub vyre_foundation::numeric::FieldTarget::Float32
+pub vyre_foundation::numeric::FieldTarget::SignedInt32
+pub vyre_foundation::numeric::GroupAxis::axis: u32
+pub vyre_foundation::numeric::GroupAxis::extent: u32
 pub vyre_foundation::numeric::NumericChoice::AccumulateIn
 pub vyre_foundation::numeric::NumericChoice::AccumulateIn::format: vyre_foundation::numeric::ScalarFormat
 pub vyre_foundation::numeric::NumericChoice::AccumulateIn::terms: u32
@@ -3897,6 +3958,66 @@ pub vyre_foundation::numeric::NumericContract::reassociation: vyre_foundation::n
 pub vyre_foundation::numeric::NumericContract::rounding: vyre_spec::numeric_semantics::RoundingMode
 pub vyre_foundation::numeric::NumericContract::storage: vyre_foundation::numeric::ScalarFormat
 pub vyre_foundation::numeric::NumericContract::subnormal: vyre_spec::numeric_semantics::SubnormalBehavior
+pub vyre_foundation::numeric::PackedField::mask: u64
+pub vyre_foundation::numeric::PackedField::shift_bits: u32
+pub vyre_foundation::numeric::PackedField::word: u64
+pub vyre_foundation::numeric::PackingOrder::HighFieldFirst
+pub vyre_foundation::numeric::PackingOrder::LowFieldFirst
+pub vyre_foundation::numeric::QuantizedContract::accumulator: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedContract::alignment_bytes: u32
+pub vyre_foundation::numeric::QuantizedContract::calibration: core::option::Option<vyre_foundation::numeric::CalibrationIdentity>
+pub vyre_foundation::numeric::QuantizedContract::container: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedContract::grouping: alloc::vec::Vec<vyre_foundation::numeric::GroupAxis>
+pub vyre_foundation::numeric::QuantizedContract::logical: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedContract::packing: vyre_foundation::numeric::PackingOrder
+pub vyre_foundation::numeric::QuantizedContract::rounding: vyre_spec::numeric_semantics::RoundingMode
+pub vyre_foundation::numeric::QuantizedContract::saturation: vyre_spec::numeric_semantics::SaturationBehavior
+pub vyre_foundation::numeric::QuantizedContract::scale: vyre_spec::data_type::QuantizationScale
+pub vyre_foundation::numeric::QuantizedContract::signed: bool
+pub vyre_foundation::numeric::QuantizedContract::storage: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedContract::version: u32
+pub vyre_foundation::numeric::QuantizedContract::zero_point: vyre_spec::data_type::QuantizationZeroPoint
+pub vyre_foundation::numeric::QuantizedConversion::repacks: bool
+pub vyre_foundation::numeric::QuantizedConversion::requantizes: bool
+pub vyre_foundation::numeric::QuantizedConversion::rescales: bool
+pub vyre_foundation::numeric::QuantizedRefusal::AccumulatorNarrowerThanLogical
+pub vyre_foundation::numeric::QuantizedRefusal::AccumulatorNarrowerThanLogical::accumulator: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedRefusal::AccumulatorNarrowerThanLogical::logical: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedRefusal::AlignmentNotContainerMultiple
+pub vyre_foundation::numeric::QuantizedRefusal::AlignmentNotContainerMultiple::alignment_bytes: u32
+pub vyre_foundation::numeric::QuantizedRefusal::AlignmentNotContainerMultiple::container_bytes: u32
+pub vyre_foundation::numeric::QuantizedRefusal::ContainerNotUnsigned
+pub vyre_foundation::numeric::QuantizedRefusal::ContainerNotUnsigned::container: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedRefusal::ContainerNotWhole
+pub vyre_foundation::numeric::QuantizedRefusal::ContainerNotWhole::container: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedRefusal::ContainerNotWhole::storage: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedRefusal::GroupAxisRepeated
+pub vyre_foundation::numeric::QuantizedRefusal::GroupAxisRepeated::axis: u32
+pub vyre_foundation::numeric::QuantizedRefusal::GroupExtentZero
+pub vyre_foundation::numeric::QuantizedRefusal::GroupExtentZero::axis: u32
+pub vyre_foundation::numeric::QuantizedRefusal::GroupingDisagreesWithScale
+pub vyre_foundation::numeric::QuantizedRefusal::GroupingDisagreesWithScale::grouped_elements: u64
+pub vyre_foundation::numeric::QuantizedRefusal::GroupingDisagreesWithScale::scale: alloc::string::String
+pub vyre_foundation::numeric::QuantizedRefusal::LayoutsDisagree
+pub vyre_foundation::numeric::QuantizedRefusal::LayoutsDisagree::first: alloc::string::String
+pub vyre_foundation::numeric::QuantizedRefusal::LayoutsDisagree::second: alloc::string::String
+pub vyre_foundation::numeric::QuantizedRefusal::LogicalNotWider
+pub vyre_foundation::numeric::QuantizedRefusal::LogicalNotWider::logical: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedRefusal::LogicalNotWider::storage: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedRefusal::RoundingDisagrees
+pub vyre_foundation::numeric::QuantizedRefusal::RoundingDisagrees::stated: vyre_spec::numeric_semantics::RoundingMode
+pub vyre_foundation::numeric::QuantizedRefusal::RoundingDisagrees::storage: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedRefusal::SaturationDisagrees
+pub vyre_foundation::numeric::QuantizedRefusal::SaturationDisagrees::stated: vyre_spec::numeric_semantics::SaturationBehavior
+pub vyre_foundation::numeric::QuantizedRefusal::SaturationDisagrees::storage: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedRefusal::SignednessDisagrees
+pub vyre_foundation::numeric::QuantizedRefusal::SignednessDisagrees::stated: bool
+pub vyre_foundation::numeric::QuantizedRefusal::SignednessDisagrees::storage: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedRefusal::StorageNotPacked
+pub vyre_foundation::numeric::QuantizedRefusal::StorageNotPacked::storage: vyre_foundation::numeric::ScalarFormat
+pub vyre_foundation::numeric::QuantizedRefusal::ZeroPointDisagreesWithScale
+pub vyre_foundation::numeric::QuantizedRefusal::ZeroPointDisagreesWithScale::scale: alloc::string::String
+pub vyre_foundation::numeric::QuantizedRefusal::ZeroPointDisagreesWithScale::zero_point: alloc::string::String
 pub vyre_foundation::numeric::RangeProof::choice: vyre_foundation::numeric::NumericChoice
 pub vyre_foundation::numeric::RangeProof::measure: vyre_foundation::numeric::ErrorMeasure
 pub vyre_foundation::numeric::RangeProof::range: vyre_foundation::numeric::MagnitudeRange

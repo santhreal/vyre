@@ -79,6 +79,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   tests all read it from there.
 - Every emitted target module records the storage formats, conversions,
   approximable operations, and chunk width it was lowered under.
+- A quantized value states one contract: storage and logical format,
+  signedness, scale and zero-point source, grouping axes and extents, packing
+  order, container, alignment, saturation, rounding, accumulator, and the
+  versioned identity of the data it was calibrated from.
 - The `ci-required` gate holds the required status contexts to the workflows
   that define them: every context resolves to a job by display name or job id,
   every workflow carrying one runs on pull requests and on pushes to the
@@ -189,6 +193,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   tables by the one shared stride at several row counts, and every pass must
   carry every VAST field it does not declare that it writes, checked by running
   each program on a table whose carried fields all differ per row.
+- Calibration data has an authenticated versioned identity, so two contracts
+  naming different calibration payloads are two layouts and do not propagate
+  into one another.
 - Candidate generation derives plans from a versioned schedule grammar whose
   seventeen productions cover every schedule transform, so one semantic graph
   produces structurally different kernel organizations for different device
@@ -3341,6 +3348,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   previous example called a vyre-primitives builder and executed it on the
   reference interpreter, so it demonstrated neither a libs composition nor the
   compiler.
+- Where a packed field sits is answered by the contract that states the layout,
+  so the four-bit library paths build their reads from `load_field`,
+  `load_row_field` and `decode_field` instead of their own lane arithmetic and
+  sign-extension helpers.
 - The generated optimizer pass reference declares schema 2 and carries the
   level, witness, expansion bound, and search admission of every executable
   pass.
@@ -4772,6 +4783,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   refuses to measure the release suite from an unoptimized build, and every
   release benchmark artifact records the build profile that measured it, so a
   debug-build CPU baseline can no longer inflate a published speedup.
+- A region reading a quantized value is priced at its logical format and
+  carries the step of the grid the value was placed on, a region reading two
+  layouts that do not propagate is refused where they meet, and a region
+  writing its value onto a different grid is priced for the second
+  quantization.
 - The Newton-Schulz quintic evaluated its polynomial as five multiplies and two
   adds per step, so five chained steps accumulated a rounding difference
   wherever a backend contracted a pair the reference did not. A composed

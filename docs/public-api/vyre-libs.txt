@@ -282,7 +282,6 @@ pub const fn vyre_libs::hash::crc32::crc32_chunk_output_words(n: u32, chunk_size
 pub const fn vyre_libs::hash::crc32::crc32_pair_reduce_output_pairs(pair_count: u32) -> u32
 pub const fn vyre_libs::hash::fnv1a::fnv1a64_initial_state() -> u64
 pub const fn vyre_libs::hash::fnv1a::fnv1a64_update_byte(hash: u64, byte: u8) -> u64
-pub const fn vyre_libs::math::quantized::i4_packed_words(lane_count: u32) -> u32
 pub const fn vyre_libs::math::sparse_selector::SparseKernelSelectedPath::as_str(self) -> &'static str
 pub const fn vyre_libs::math::sparse_selector::SparseKernelWorkloadClass::as_str(self) -> &'static str
 pub const fn vyre_libs::parsing::bytecode_dispatch_table_pack::packed_dispatch_table_len(entries_len: usize) -> usize
@@ -697,7 +696,6 @@ pub const vyre_libs::math::quantized::I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID: &
 pub const vyre_libs::math::quantized::I4_BATCHED_MATVEC_F32_SCALED_OP_ID: &str
 pub const vyre_libs::math::quantized::I4_DOT_F32_SCALED_OP_ID: &str
 pub const vyre_libs::math::quantized::I4_DOT_I32_OP_ID: &str
-pub const vyre_libs::math::quantized::I4_LANES_PER_WORD: u32
 pub const vyre_libs::math::quantized::I4_MATVEC_F32_SCALED_OP_ID: &str
 pub const vyre_libs::math::quantized::UNPACK_I4_OP_ID: &str
 pub const vyre_libs::math::randomized_svd::OP_ID: &str
@@ -1845,6 +1843,8 @@ pub fn vyre_libs::math::prefix_scan::prefix_scan(in_buf: &str, out_buf: &str, n:
 pub fn vyre_libs::math::prefix_scan::prefix_scan_with_op_id(in_buf: &str, out_buf: &str, n: u32, kind: vyre_libs::math::prefix_scan::ScanKind, op_id: &'static str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::qsvt::qsvt_block_encode(a: &str, norm: &str, a_scaled: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::qsvt::try_qsvt_block_encode(a: &str, norm: &str, a_scaled: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs::math::quantized::i4_packed_contract() -> vyre_foundation::numeric::quantized::QuantizedContract
+pub fn vyre_libs::math::quantized::i4_packed_words(lane_count: u32) -> u32
 pub fn vyre_libs::math::quantized::i4x8_batched_matmul_f32_scaled(weights_packed: &str, activation_batches_packed: &str, row_scales: &str, batch_scales: &str, out: &str, batch: u32, rows: u32, cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::quantized::i4x8_batched_matmul_top1_f32_scaled(weights_packed: &str, activation_batches_packed: &str, row_scales: &str, batch_scales: &str, out: &str, batch: u32, rows: u32, cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::quantized::i4x8_batched_matvec_f32_scaled(weights_packed: &str, x_batches: &str, row_scales: &str, out: &str, batch: u32, rows: u32, cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program

@@ -144,6 +144,22 @@ impl ScalarFormat {
         numeric_semantics_for(&self.data_type())
     }
 
+    /// The width one value of this format occupies.
+    ///
+    /// The match is exhaustive, so a new format states its own width at
+    /// compile time instead of inheriting one. `numeric_semantics_for` is the
+    /// authority for the value, and a test holds the two equal.
+    #[must_use]
+    pub const fn bit_width(self) -> u32 {
+        match self {
+            Self::I4 | Self::FP4 | Self::NF4 => 4,
+            Self::U8 | Self::I8 | Self::F8E4M3 | Self::F8E5M2 => 8,
+            Self::U16 | Self::I16 | Self::F16 | Self::BF16 => 16,
+            Self::U32 | Self::I32 | Self::F32 => 32,
+            Self::U64 | Self::I64 | Self::F64 => 64,
+        }
+    }
+
     /// Whether arithmetic in this format is exact.
     #[must_use]
     pub fn is_exact(self) -> bool {
