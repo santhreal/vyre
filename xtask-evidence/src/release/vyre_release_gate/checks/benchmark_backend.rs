@@ -52,10 +52,11 @@ pub(crate) fn check_release_bench_targets(
     }
     if text.matches("baseline_class_values").count() != 1
         || !text.contains("\"cpu_sota\"")
-        || !text.contains("min_speedup_over_cpu_sota")
+        || !text.contains("baseline_class = ")
+        || !text.contains("min_speedup_over_baseline")
     {
         failures.push(format!(
-            "requirement `{}` benchmark target table must declare CPU-SOTA baseline classes and speedup thresholds",
+            "requirement `{}` benchmark target table must declare the baseline class vocabulary, a class per target, and speedup thresholds over the named baseline",
             requirement.id
         ));
     }

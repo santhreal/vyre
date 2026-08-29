@@ -1712,6 +1712,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   documents that already were.
 - Equality saturation rejects a rewrite rule whose recorded witness carries no
   proof, before any rule in the set runs.
+- Every benchmark target declares the baseline class it compares against, and
+  the target keys no longer assume a host baseline.
 - Selection cost prices instruction, matrix-engine, rendezvous and idle-lane
   work from reported device facts, records every term's unit and provenance,
   and rejects a register allocation only above the architectural ceiling.

@@ -1,8 +1,14 @@
 # Canonical benchmark targets.
 # Benchmark files may expose metadata, but target thresholds and baseline
 # classes belong here.
+#
+# Every target names its comparison rather than assuming a host one:
+# `baseline_class` states which class was timed, `baseline` names the
+# implementation, and `min_speedup_over_baseline` is the floor over it. A
+# target naming a `bench_case_id` must declare the class that case's
+# performance contract declares.
 
-schema = 1
+schema = 2
 
 # The set `vyre_bench::api::case::BaselineClass` defines, by its registry key.
 baseline_class_values = [
@@ -23,8 +29,9 @@ primitive = "f32 elementwise add"
 suite = "smoke"
 backend_focus = "cuda"
 metric = "dispatch_ns_p50"
-min_speedup_over_cpu_sota = 100.0
-cpu_baseline = "wide/rayon-class SIMD CPU vector baseline"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
+baseline = "wide/rayon-class SIMD CPU vector baseline"
 gpu_competitor = "none_recorded"
 notes = "Use active backend time when available; wall_ns remains recorded separately."
 
@@ -36,8 +43,9 @@ suite = "smoke"
 backend_focus = "cuda"
 metric = "dispatch_ns_p50"
 timing_quality = "device_timestamps"
-min_speedup_over_cpu_sota = 1.1
-cpu_baseline = "Rayon parallel u32 wrapping sum"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 1.1
+baseline = "Rayon parallel u32 wrapping sum"
 gpu_competitor = "same-device atomic scalar and workgroup-memory tree routes"
 notes = "Measures both routes at 32 and 1,048,576 elements, verifies both outputs exactly, selects the faster route independently for each size, and records global contention updates plus tree barrier rounds."
 [[target]]
@@ -46,8 +54,9 @@ primitive = "integer strength-reduced arithmetic"
 suite = "micro"
 backend_focus = "all"
 metric = "dispatch_ns_p50"
-min_speedup_over_cpu_sota = 100.0
-cpu_baseline = "best available scalar/SIMD Rust-native arithmetic baseline for the primitive"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
+baseline = "best available scalar/SIMD Rust-native arithmetic baseline for the primitive"
 gpu_competitor = "none_recorded"
 notes = "Layer-1 rewrite target: backend should not see reducible div/mod/mul patterns."
 
@@ -57,8 +66,9 @@ primitive = "persistent megakernel dispatch"
 suite = "runtime"
 backend_focus = "cuda"
 metric = "dispatch_ns_p50"
-min_speedup_over_cpu_sota = 1.0
-cpu_baseline = "not applicable; compare against non-persistent GPU redispatch"
+baseline_class = "self_unoptimized"
+min_speedup_over_baseline = 1.0
+baseline = "the same program on the same device dispatched without the persistent megakernel schedule"
 gpu_competitor = "non_megakernel_vyre_dispatch"
 notes = "Primary target is launch amortization and queue throughput, not CPU comparison."
 
@@ -74,8 +84,9 @@ shape_skew = "branchy_predicate_slots"
 fact_width = "u32_condition_slots"
 frontier_density = "dense_condition_bitmap"
 transfer_pressure = "low_resident_inputs"
-min_speedup_over_cpu_sota = 100.0
-cpu_baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
+baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
 gpu_competitor = "wgpu_vyre_condition_eval"
 notes = "Core Vyre proof: conventional CPU rule condition evaluation must be beaten by the CUDA path."
 
@@ -91,8 +102,9 @@ shape_skew = "literal_hit_skew"
 fact_width = "u32_bitmap_words"
 frontier_density = "sparse_to_dense_scatter"
 transfer_pressure = "medium_match_bitmap_write"
-min_speedup_over_cpu_sota = 25.0
-cpu_baseline = "single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words)"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 25.0
+baseline = "single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words)"
 gpu_competitor = "wgpu_vyre_scatter"
 notes = "Measures the scatter stage feeding condition evaluation; host copies are tracked separately. Bandwidth-bound at both ends: 8.65 MB moved, a 30 GB/s scalar CPU reference and a 1792 GB/s device cap the honest ratio near 60x, so this is not one of the ten 100x release workloads."
 
@@ -102,8 +114,9 @@ primitive = "packed-byte Aho-Corasick irregular literal scan"
 suite = "smoke"
 backend_focus = "cuda"
 metric = "dispatch_ns_p50"
-min_speedup_over_cpu_sota = 1.0
-cpu_baseline = "aho-corasick crate overlapping multi-pattern CPU scan"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 1.0
+baseline = "aho-corasick crate overlapping multi-pattern CPU scan"
 gpu_competitor = "none_recorded"
 notes = "Tracks real unaligned security/parser literal scanning with output-only match triples kept resident between samples."
 
@@ -113,8 +126,9 @@ primitive = "packed-byte Aho-Corasick irregular count preflight"
 suite = "smoke"
 backend_focus = "cuda"
 metric = "dispatch_ns_p50"
-min_speedup_over_cpu_sota = 1.0
-cpu_baseline = "aho-corasick crate overlapping multi-pattern CPU cardinality"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 1.0
+baseline = "aho-corasick crate overlapping multi-pattern CPU cardinality"
 gpu_competitor = "none_recorded"
 notes = "Tracks resident count-only irregular literal scan with byte, suffix2, and hashed suffix3 replay filters plus four-byte cardinality readback."
 
@@ -130,8 +144,9 @@ shape_skew = "sorted_match_stream"
 fact_width = "u32_offsets_counts_lengths"
 frontier_density = "dense_match_metadata"
 transfer_pressure = "medium_metadata_readback"
-min_speedup_over_cpu_sota = 100.0
-cpu_baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
+baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
 gpu_competitor = "wgpu_vyre_aggregation"
 notes = "Must prove string metadata operators do not force CPU-side post-processing."
 
@@ -147,8 +162,9 @@ shape_skew = "header_field_skew"
 fact_width = "u32_metadata_fields"
 frontier_density = "dense_file_headers"
 transfer_pressure = "low_resident_metadata"
-min_speedup_over_cpu_sota = 50.0
-cpu_baseline = "optimized CPU PE-header predicate evaluator"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 50.0
+baseline = "optimized CPU PE-header predicate evaluator"
 gpu_competitor = "wgpu_vyre_pe_metadata"
 notes = "Metadata predicates must remain GPU-resident after the parse/extract stage."
 
@@ -164,8 +180,9 @@ shape_skew = "sliding_window_byte_distribution"
 fact_width = "u32_histogram_bins"
 frontier_density = "dense_window_frontier"
 transfer_pressure = "medium_window_buffer"
-min_speedup_over_cpu_sota = 100.0
-cpu_baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
+baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
 gpu_competitor = "wgpu_vyre_entropy"
 notes = "Conventional CPU-heavy byte statistics workload."
 
@@ -181,8 +198,9 @@ shape_skew = "divergent_loop_bounds"
 fact_width = "u32_condition_slots"
 frontier_density = "mixed_quantifier_frontier"
 transfer_pressure = "low_resident_inputs"
-min_speedup_over_cpu_sota = 100.0
-cpu_baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
+baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
 gpu_competitor = "wgpu_vyre_quantifiers"
 notes = "Captures divergence and predication quality for FOR-ANY, FOR-ALL, and FOR-N."
 
@@ -198,8 +216,9 @@ shape_skew = "grouped_channel_blocks"
 fact_width = "int4_weight_u32_groups"
 frontier_density = "dense_matrix_tiles"
 transfer_pressure = "high_weight_resident"
-min_speedup_over_cpu_sota = 100.0
-cpu_baseline = "Rayon-parallel packed INT4 affine dequantization and dot-product oracle"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
+baseline = "Rayon-parallel packed INT4 affine dequantization and dot-product oracle"
 gpu_competitor = "none_recorded"
 notes = "Measures packed 4-bit weights with per-group scale/zero-point applied inside the accumulation loop; separate dequantize materialization must not be required."
 
@@ -215,8 +234,9 @@ shape_skew = "skewed_alias_relation"
 fact_width = "tuple_u32_definition_facts"
 frontier_density = "sparse_dataflow_frontier"
 transfer_pressure = "low_resident_fact_tables"
-min_speedup_over_cpu_sota = 100.0
-cpu_baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
+baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
 gpu_competitor = "wgpu_vyre_dataflow_reaching_def"
 notes = "Links consumer dataflow analysis to more aggressive Vyre lowering passes."
 
@@ -232,8 +252,9 @@ shape_skew = "skewed_interprocedural_graph"
 fact_width = "tuple_u32_ifds_facts"
 frontier_density = "sparse_ifds_frontier"
 transfer_pressure = "medium_witness_readback"
-min_speedup_over_cpu_sota = 100.0
-cpu_baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
+baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
 gpu_competitor = "wgpu_dataflow_ifds"
 notes = "Consumer release workload for IFDS proof extraction."
 
@@ -249,8 +270,9 @@ shape_skew = "power_law_callgraph"
 fact_width = "u32_csr_edges"
 frontier_density = "sparse_graph_frontier"
 transfer_pressure = "low_resident_csr"
-min_speedup_over_cpu_sota = 25.0
-cpu_baseline = "optimized CPU graph reachability and callgraph traversal baseline"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 25.0
+baseline = "optimized CPU graph reachability and callgraph traversal baseline"
 gpu_competitor = "wgpu_dataflow_callgraph"
 notes = "Graph traversal proof workload; sparse frontier behavior must remain GPU-resident."
 
@@ -260,8 +282,9 @@ primitive = "queue-materialized CSR frontier traversal"
 suite = "release"
 backend_focus = "cuda"
 metric = "dispatch_ns_p50"
-min_speedup_over_cpu_sota = 1.0
-cpu_baseline = "optimized CPU CSR sparse-frontier traversal oracle"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 1.0
+baseline = "optimized CPU CSR sparse-frontier traversal oracle"
 gpu_competitor = "none_recorded"
 bench_case_id = "primitives.graph.csr_skewed_queue_materialize.1m"
 notes = "Tracks sparse active-source queue materialization plus queue-driven traversal over skewed CSR rows."
@@ -272,8 +295,9 @@ primitive = "queue-driven CSR reachability closure"
 suite = "release"
 backend_focus = "cuda"
 metric = "dispatch_ns_p50"
-min_speedup_over_cpu_sota = 1.0
-cpu_baseline = "optimized CPU sparse-queue CSR reachability oracle"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 1.0
+baseline = "optimized CPU sparse-queue CSR reachability oracle"
 gpu_competitor = "none_recorded"
 bench_case_id = "primitives.graph.csr_skewed_queue_closure.1m"
 notes = "Tracks resident ping-pong queue waves for sparse reachability over skewed CSR rows."
@@ -290,8 +314,9 @@ shape_skew = "heterogeneous_ast_nodes"
 fact_width = "u32_vast_nodes_edges"
 frontier_density = "dense_ast_traversal"
 transfer_pressure = "medium_ast_buffer"
-min_speedup_over_cpu_sota = 100.0
-cpu_baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
+baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
 gpu_competitor = "wgpu_vyre_ast_traversal"
 notes = "Generated node-kind, depth and motif mask columns; no parser runs. Measures the traversal predicate stage a parser front end would feed."
 
@@ -307,8 +332,9 @@ shape_skew = "queued_condition_batches"
 fact_width = "u32_opcode_slots"
 frontier_density = "dense_batch_queue"
 transfer_pressure = "low_persistent_queue"
-min_speedup_over_cpu_sota = 100.0
-cpu_baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
+baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
 gpu_competitor = "non_persistent_cuda_dispatch"
 notes = "Primary release-speed differentiator: amortized dispatch under repeated workloads."
 
@@ -324,8 +350,9 @@ shape_skew = "mixed_rewrite_classes"
 fact_width = "u32_opcode_and_class_ids"
 frontier_density = "dense_rewrite_candidates"
 transfer_pressure = "low_count_readback"
-min_speedup_over_cpu_sota = 100.0
-cpu_baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
+baseline = "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
 gpu_competitor = "wgpu_vyre_rewrite_saturation"
 notes = "Rewrite-equivalence predicate stage for optimization saturation evidence."
 
@@ -342,8 +369,9 @@ shape_skew = "sparse_fired_rules"
 fact_width = "u32_output_indices"
 frontier_density = "sparse_output_frontier"
 transfer_pressure = "high_if_dense_fallback"
-min_speedup_over_cpu_sota = 100.0
-cpu_baseline = "optimized CPU fired-rule collection over predicate masks"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
+baseline = "optimized CPU fired-rule collection over predicate masks"
 gpu_competitor = "wgpu_vyre_sparse_readback"
 notes = "Readback must stay sparse; dense host transfers are release blockers."
 
@@ -359,8 +387,9 @@ shape_skew = "mixed_predicate_pipeline"
 fact_width = "tuple_u32_filter_facts"
 frontier_density = "sparse_resident_filter"
 transfer_pressure = "low_resident_fused"
-min_speedup_over_cpu_sota = 10.0
-cpu_baseline = "Rayon-parallel staged CPU filter with equivalent predicates"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 10.0
+baseline = "Rayon-parallel staged CPU filter with equivalent predicates"
 gpu_competitor = "none_recorded"
 notes = "Compound resident filtering must keep literal, dataflow, score, and taint predicates fused in one GPU pass."
 
@@ -376,8 +405,9 @@ shape_skew = "scheduler_load_skew"
 fact_width = "u32_work_item_metadata"
 frontier_density = "mixed_routing_frontier"
 transfer_pressure = "low_resident_scheduler"
-min_speedup_over_cpu_sota = 10.0
-cpu_baseline = "Rayon-parallel CPU scheduler over equivalent routing predicates"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 10.0
+baseline = "Rayon-parallel CPU scheduler over equivalent routing predicates"
 gpu_competitor = "none_recorded"
 notes = "Adaptive routing must classify resident work items without CPU orchestration."
 
@@ -393,8 +423,9 @@ shape_skew = "redundant_expression_graph"
 fact_width = "mixed_u32_f32_program"
 frontier_density = "not_applicable_semantic_program"
 transfer_pressure = "low_precompiled_artifact"
-min_speedup_over_cpu_sota = 1.0
-cpu_baseline = "the same Program submitted without semantic optimization"
+baseline_class = "self_unoptimized"
+min_speedup_over_baseline = 1.0
+baseline = "the same Program submitted without semantic optimization"
 gpu_competitor = "wgpu_optimizer_impact"
 bench_case_id = "foundation.optimizer.impact"
 notes = "Proves exact output parity and positive node elimination through the production semantic optimizer."

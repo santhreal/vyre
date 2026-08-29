@@ -78,7 +78,20 @@ struct ReleaseWorkloadFamily {
 struct ReleaseBenchTarget {
     id: String,
     bench_case_id: String,
-    min_speedup_over_cpu_sota: f64,
+    baseline_class: String,
+    min_speedup_over_baseline: f64,
+}
+
+impl ReleaseBenchTarget {
+    /// Whether this target declares a host-baseline floor of at least `floor`.
+    ///
+    /// The class is half the claim. A floor over the same program without a
+    /// transformation is not a host comparison however large the number is, so
+    /// reading the threshold alone counted a self-comparison as CPU-SOTA.
+    fn declares_cpu_sota_floor(&self, floor: f64) -> bool {
+        self.baseline_class == BaselineClass::CpuSota.registry_key()
+            && self.min_speedup_over_baseline >= floor
+    }
 }
 
 const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
@@ -608,8 +621,8 @@ fn build_family_report(
         family.release_plan_workload, family.id
     );
     let bench_target = target_by_id.get(family.bench_target_id).copied();
-    let requires_release_defining_cpu_sota = family.required
-        && bench_target.is_some_and(|target| target.min_speedup_over_cpu_sota >= 100.0);
+    let requires_release_defining_cpu_sota =
+        family.required && bench_target.is_some_and(|target| target.declares_cpu_sota_floor(100.0));
     let benchmark_case = preferred_release_case(
         &matched_cases,
         &cpu_sota_100x_cases,
@@ -725,7 +738,8 @@ fn release_bench_targets_from_manifest(text: &str) -> Result<Vec<ReleaseBenchTar
         rows.push(ReleaseBenchTarget {
             id,
             bench_case_id: release_target_string(target, "bench_case_id")?,
-            min_speedup_over_cpu_sota: release_target_number(target, "min_speedup_over_cpu_sota")?,
+            baseline_class: release_target_string(target, "baseline_class")?,
+            min_speedup_over_baseline: release_target_number(target, "min_speedup_over_baseline")?,
         });
     }
     if rows.is_empty() {
@@ -801,7 +815,7 @@ fn required_cpu_sota_100x_family_ids(
         .filter(|family| {
             target_by_id
                 .get(family.bench_target_id)
-                .is_some_and(|target| target.min_speedup_over_cpu_sota >= 100.0)
+                .is_some_and(|target| target.declares_cpu_sota_floor(100.0))
         })
         .map(|family| family.id)
         .collect()
@@ -958,22 +972,24 @@ mod tests {
     #[test]
     fn required_cpu_sota_100x_families_follow_bench_target_data() {
         let low_manifest = r#"
-schema = 1
+schema = 2
 
 [[target]]
 id = "release.workload.condition_eval"
 bench_case_id = "release.condition_eval.1m"
 suite = "release-workload"
-min_speedup_over_cpu_sota = 50.0
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 50.0
 "#;
         let high_manifest = r#"
-schema = 1
+schema = 2
 
 [[target]]
 id = "release.workload.condition_eval"
 bench_case_id = "release.condition_eval.1m"
 suite = "release-workload"
-min_speedup_over_cpu_sota = 100.0
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 100.0
 "#;
         let low_targets = release_bench_targets_from_manifest(low_manifest)
             .expect("Fix: low-speedup target fixture must parse.");

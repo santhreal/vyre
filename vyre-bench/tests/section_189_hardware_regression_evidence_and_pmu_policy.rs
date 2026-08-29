@@ -130,11 +130,15 @@ fn test_189_2_statistical_policy_per_benchmark_target() {
             .expect("target must have metric");
         assert!(!metric.is_empty(), "target {id} must have non-empty metric");
 
-        let cpu_base = t.get("cpu_baseline").and_then(TomlValue::as_str);
-        let gpu_base = t.get("gpu_baseline").and_then(TomlValue::as_str);
+        let baseline = t.get("baseline").and_then(TomlValue::as_str);
         assert!(
-            cpu_base.is_some() || gpu_base.is_some(),
-            "target {id} must define a paired baseline (cpu_baseline or gpu_baseline)"
+            baseline.is_some_and(|baseline| !baseline.is_empty()),
+            "target {id} must name the baseline it is measured against"
+        );
+        let class = t.get("baseline_class").and_then(TomlValue::as_str);
+        assert!(
+            class.is_some_and(|class| !class.is_empty()),
+            "target {id} must declare the class of that baseline"
         );
     }
 
