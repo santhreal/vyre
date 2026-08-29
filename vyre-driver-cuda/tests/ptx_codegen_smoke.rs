@@ -81,3 +81,54 @@ mod ptx_codegen_smoke_base64_decode_ptx_compiles_with_ptxas;
 mod ptx_codegen_smoke_ptx_emits_bitwise_ops;
 #[path = "contract_cases/ptx_codegen_smoke__ptx_emits_select.rs"]
 mod ptx_codegen_smoke_ptx_emits_select;
+
+/// A column walk over a 32-row tile staged in workgroup memory.
+///
+/// Lane `t` writes and reads element `t * 32`, so on 32 four-byte banks every
+/// lane addresses the same bank: the classifier's 32-way case. The tile is
+/// reached only by scalar loads and stores under one barrier, so the whole
+/// binding is permutable and the mitigation the strategy selects is applied at
+/// the shared address site.
+fn column_walk_tile_program() -> Program {
+    let column = || Expr::mul(Expr::gid_x(), Expr::u32(32));
+    Program::wrapped(
+        vec![
+            BufferDecl::workgroup("tile", 1024, DataType::U32),
+            BufferDecl::output("out", 0, DataType::U32).with_count(32),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::store("tile", column(), Expr::gid_x()),
+            Node::Barrier {
+                ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
+            },
+            Node::store("out", Expr::gid_x(), Expr::load("tile", column())),
+        ],
+    )
+}
+
+/// The mitigation reaches the emitted kernel through the production route, not
+/// only through the selector that ranks it.
+///
+/// One element of padding per 32-element row is the cheapest accepted candidate
+/// for this geometry, so the tile is declared at 32 rows of 33 four-byte
+/// elements and every access scales its row by the padded length. A rewrite
+/// applied at one of the two sites would read back a different element than it
+/// wrote, so both are counted.
+#[test]
+fn a_column_walk_over_workgroup_memory_is_padded_in_emitted_ptx() {
+    let secondary_text = program_to_ptx(&column_walk_tile_program(), &default_config())
+        .expect("Fix: a workgroup column walk must lower to PTX.");
+    assert!(
+        secondary_text.contains(".shared .align 4 .b8 shared_buf_")
+            && secondary_text.contains("[4224];"),
+        "Fix: a padded tile is declared at its grown extent, 32 rows of 33 \
+         four-byte elements; got:\n{secondary_text}"
+    );
+    assert_eq!(
+        secondary_text.matches(", 33;").count(),
+        2,
+        "Fix: both the store and the load scale their row by the padded row \
+         length; got:\n{secondary_text}"
+    );
+}

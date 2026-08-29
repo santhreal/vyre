@@ -4206,6 +4206,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the CUDA driver profile, the external-operation contract page, the hot-path
   and benchmark target policies, and the optimization ownership data in the
   documentation evidence map.
+- The bank-conflict classifier states a stride for a constant left shift, so an
+  access that strength reduction already rewrote out of its multiply form is
+  classified rather than left unknown.
 - Concurrent wgpu backend acquisition deadlocked on teardown. Every instance
   enabled the GL backend, whose EGL runtime registers a thread-local destructor
   that takes an EGL lock at thread exit, and `vkDestroyDevice` joins threads

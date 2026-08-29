@@ -155,6 +155,13 @@ pub(super) fn classify_index(
         KernelOpKind::BinOpKind(BinOp::Mul) => {
             classify_mul(body, producers, &producer.operands, bank_count)
         }
+        // `x << c` is `x * 2^c`. The optimizer decomposes a constant multiply
+        // into a shift before any backend sees it, so a classifier that only
+        // reads the multiply form states no stride for the very access a
+        // strength reduction just rewrote.
+        KernelOpKind::BinOpKind(BinOp::Shl) => {
+            classify_shl(body, producers, &producer.operands, bank_count)
+        }
         _ => IndexPattern::unknown(),
     }
 }
@@ -222,6 +229,45 @@ fn classify_mul(
     }
 }
 
+/// `x << c` for a lane-varying `x` and a constant `c`.
+///
+/// Only the shift amount may be constant: a lane-varying shift amount is not a
+/// stride, and a constant shifted by a lane-varying amount is not lane-varying
+/// by a fixed step either.
+fn classify_shl(
+    body: &KernelBody,
+    producers: &ProducerMap<'_>,
+    operands: &[u32],
+    bank_count: u32,
+) -> IndexPattern {
+    if operands.len() != 2 {
+        return IndexPattern::unknown();
+    }
+    let base = classify_index(body, producers, operands[0], bank_count);
+    if !matches!(base.conflict, BankConflictKind::NoConflict) {
+        return IndexPattern::unknown();
+    }
+    let Some(shift) = constant_u32_operand(body, producers, operands[1]) else {
+        return IndexPattern::unknown();
+    };
+    // A shift at or past the word width is not a stride this analysis states.
+    if shift >= 32 {
+        return IndexPattern::unknown();
+    }
+    let Some(stride) = base.stride_elements.and_then(|s| s.checked_shl(shift)) else {
+        return IndexPattern::unknown();
+    };
+    if stride == 0 {
+        return IndexPattern::broadcast();
+    }
+    let g = gcd_u32(stride, bank_count);
+    if g == 1 {
+        IndexPattern::new(BankConflictKind::NoConflict, stride)
+    } else {
+        IndexPattern::new(BankConflictKind::Conflict { way_count: g }, stride)
+    }
+}
+
 // Inline: covers the crate-private `analyze` and `gcd_u32`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
@@ -272,6 +318,20 @@ mod tests {
                 .op(binop(BinOp::Mul, 0, 1, 2))
                 .op(op(KernelOpKind::LoadShared, [0, 2], 3))
                 .literal(LiteralValue::U32(stride)),
+        )
+    }
+
+    /// `shared[tid << shift]`, the form a constant multiply is decomposed into
+    /// before any backend reads the descriptor.
+    fn shifted_load(shift: u32) -> KernelDescriptor {
+        k(
+            vec![shared_binding(0)],
+            body()
+                .op(tid([], 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Shl, 0, 1, 2))
+                .op(op(KernelOpKind::LoadShared, [0, 2], 3))
+                .literal(LiteralValue::U32(shift)),
         )
     }
 
@@ -522,5 +582,54 @@ mod tests {
         assert_eq!(super::gcd_u32(0, 5), 5);
         assert_eq!(super::gcd_u32(5, 0), 5);
         assert_eq!(super::gcd_u32(12, 18), 6);
+    }
+
+    // Shift form of a constant multiply
+
+    /// Strength reduction rewrites `tid * 2^c` into `tid << c` in the neutral
+    /// optimizer, so the two forms have to classify identically. Reading only
+    /// the multiply form states no stride for the access a pass just rewrote,
+    /// and the mitigation it authorizes is refused for the wrong reason.
+    #[test]
+    fn a_constant_shift_classifies_as_the_multiply_it_replaces() {
+        for shift in 0..6_u32 {
+            let stride = 1_u32 << shift;
+            assert_eq!(
+                analyze(&shifted_load(shift), BANKS).sites[0].conflict,
+                conflict_of(stride),
+                "shared[tid << {shift}] must classify as shared[tid * {stride}]"
+            );
+        }
+    }
+
+    /// A lane-varying shift amount is not a stride. `tid << tid` moves every
+    /// lane by a different power of two, so no fixed step describes it.
+    #[test]
+    fn a_lane_varying_shift_amount_is_not_a_stride() {
+        let kk = k(
+            vec![shared_binding(0)],
+            body().op(tid([], 0)).op(binop(BinOp::Shl, 0, 0, 1)).op(op(
+                KernelOpKind::LoadShared,
+                [0, 1],
+                2,
+            )),
+        );
+        assert_eq!(
+            analyze(&kk, BANKS).sites[0].conflict,
+            BankConflictKind::Unknown
+        );
+    }
+
+    /// A shift at or past the word width leaves the element range, so no
+    /// stride is stated for it rather than a wrapped one.
+    #[test]
+    fn a_shift_past_the_word_width_states_no_stride() {
+        for shift in [32_u32, 33, 64] {
+            assert_eq!(
+                analyze(&shifted_load(shift), BANKS).sites[0].conflict,
+                BankConflictKind::Unknown,
+                "shared[tid << {shift}] states no stride"
+            );
+        }
     }
 }
