@@ -6,9 +6,8 @@
 use vyre_driver::megakernel_execution::{
     plan_megakernel_execution, plan_megakernel_memory_budget, FrontierTopology,
     MegakernelByteLayout, MegakernelDeviceCapabilities, MegakernelExecutionSample,
-    MegakernelGraphShape, MegakernelMemoryBudget, MegakernelMemoryError,
+    MegakernelGraphShape, MegakernelMemoryError,
 };
-
 
 #[test]
 fn memory_planner_bounds_peak_bytes_by_topology() {
