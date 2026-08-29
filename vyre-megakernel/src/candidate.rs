@@ -423,7 +423,6 @@ pub(crate) struct CandidatePlan {
     /// tolerate one, or `None` to launch every group at its declared width.
     pub(crate) workgroup_width: Option<u32>,
     /// Execution topology proposed for this candidate.
-    /// Execution topology proposed for this candidate.
     pub(crate) topology: ExecutionTopology,
     /// Frontier-density traversal topology proposed for this candidate.
     pub(crate) frontier_topology: FrontierTopology,
