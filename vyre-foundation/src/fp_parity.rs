@@ -9,7 +9,7 @@ use std::collections::BTreeSet;
 
 use crate::ir::{DataType, Expr, Program, UnOp};
 use crate::operation::OperationRegistry;
-use crate::visit::try_for_each_expr;
+use crate::visit::{for_each_expr, try_for_each_expr};
 
 /// Maximum accepted reference-oracle error against correctly-rounded f32
 /// transcendentals.
@@ -96,13 +96,12 @@ pub fn effective_tolerance(op_id: &str, program: &Program) -> u32 {
 #[must_use]
 pub fn approximable_operations(program: &Program) -> Vec<String> {
     let mut named = BTreeSet::new();
-    try_for_each_expr(program.entry(), |expr| {
+    for_each_expr(program.entry(), |expr| {
         if let Expr::UnOp { op, .. } = expr {
             if is_transcendental_op(expr) {
                 named.insert(format!("{op:?}"));
             }
         }
-        ControlFlow::<()>::Continue(())
     });
     named.into_iter().collect()
 }
