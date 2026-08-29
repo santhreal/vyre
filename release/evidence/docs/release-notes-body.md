@@ -5473,6 +5473,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   a node without exactly one executable entry.
 - Artifact decode refuses a barrier record set that the recorded fusion stages
   and dependency edges contradict.
+- Artifact decode refuses a mutated launch extent whose recorded grid no longer
+  exactly covers the recorded logical points.
 - Artifact materialization now maps target resources to Program inputs by
   canonical identity instead of backend descriptor position, excludes
   backend-allocated read-write outputs from prior host inputs, and rejects

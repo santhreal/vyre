@@ -1020,3 +1020,61 @@ fn decode_refuses_a_resource_and_entry_mapping_no_consumer_could_share() {
         );
     }
 }
+
+/// WHY: a consumer submits the recorded extents verbatim. A grid that no longer
+/// exactly covers the recorded logical points either leaves points uncomputed or
+/// launches a whole workgroup past the end of the data, and a zero extent or
+/// vector width is a launch no consumer can issue at all. Each mutation moves
+/// one boundary of that relation, so decode has to refuse the bytes and name the
+/// field that moved.
+#[test]
+fn decode_refuses_an_extent_boundary_the_recorded_grid_no_longer_covers() {
+    decode_payload(launchable()).expect("the covering extents decode");
+
+    let cases: Vec<(&str, fn(&mut ArtifactPayload), &str)> = vec![
+        (
+            "one more logical point than the grid covers",
+            |payload| payload.geometry[0].logical_coverage[0] += 1,
+            "artifact.geometry[0].grid",
+        ),
+        (
+            "a whole workgroup fewer points than the grid covers",
+            |payload| payload.geometry[0].logical_coverage[0] -= 32,
+            "artifact.geometry[0].grid",
+        ),
+        (
+            "a wider workgroup under the same grid",
+            |payload| payload.geometry[0].workgroup_size[0] = 64,
+            "artifact.geometry[0].grid",
+        ),
+        (
+            "one more workgroup than the points need",
+            |payload| payload.geometry[0].grid[0] += 1,
+            "artifact.geometry[0].grid",
+        ),
+        (
+            "an axis covering no logical point",
+            |payload| payload.geometry[0].logical_coverage[1] = 0,
+            "artifact.geometry.axis[1]",
+        ),
+        (
+            "an axis with no lanes",
+            |payload| payload.geometry[0].workgroup_size[2] = 0,
+            "artifact.geometry.axis[2]",
+        ),
+        (
+            "a vector width of zero",
+            |payload| payload.geometry[0].vector_width = 0,
+            "artifact.geometry[0].vector_width",
+        ),
+    ];
+    for (what, mutate, path) in cases {
+        let mut payload = launchable();
+        mutate(&mut payload);
+        assert_eq!(
+            rejection_path(payload, what),
+            path,
+            "{what} must be refused at the extent field that moved"
+        );
+    }
+}

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Artifact decode refuses a mutated launch extent whose recorded grid no longer exactly covers the recorded logical points."
