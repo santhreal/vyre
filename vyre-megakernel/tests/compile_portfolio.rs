@@ -20,15 +20,15 @@
 use vyre_megakernel::{
     compile, compile_measured, compile_portfolio, compile_portfolio_measured, Artifact,
     ArtifactPortfolio, CompileObjective, CoveragePolicy, EmittedResources, FinalistEvaluator,
-    ObjectiveMetric, PortfolioPolicy, SearchBudget, TargetCompileError, TargetCompiler,
-    TargetPayload, TargetPayloadFormat, TargetProfile, ValidatedCompileRequest,
-    WorkloadAggregation, WorkloadClass, WorkloadProfile,
+    ObjectiveMetric, PortfolioPolicy, PruneReason, RequiredSchedule, SearchBudget,
+    TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat, TargetProfile,
+    ValidatedCompileRequest, WorkloadAggregation, WorkloadClass, WorkloadProfile,
 };
 
 #[path = "support/search_fixtures.rs"]
 mod search_fixtures;
 
-use search_fixtures::{budget, launch_bound_device, validated, ARTIFACT_BYTES};
+use search_fixtures::{budget, fixture_request, launch_bound_device, validated, ARTIFACT_BYTES};
 
 /// An interactive submission: one launch, one stream, half the workload.
 fn interactive() -> WorkloadClass {
@@ -483,4 +483,49 @@ fn a_measured_portfolio_reports_the_target_failure_it_hit() {
     let error = compile_portfolio_measured(&request, &evaluator)
         .expect_err("a target that builds nothing cannot produce a retained set");
     assert_eq!(error.diagnostic.code.as_str(), "MKC026_FINALIST_EVALUATION");
+}
+
+/// WHY: a partitioned compile restates the request once per part, and a part is
+/// where a caller constraint is cheapest to lose: the whole request validated
+/// with the requirement, so nothing downstream re-reads it. Dropping the
+/// requirement from the restatement still compiles and still retains a set of
+/// the ordered size, and the only visible difference is that a part selects a
+/// family the caller forbade. Both assertions here are red against a
+/// restatement that carries `None`: the selected plans stop being baseline
+/// plans, and no part reports eliminating anything for the requirement.
+#[test]
+fn every_part_of_a_partitioned_compile_keeps_the_required_family() {
+    let profile = WorkloadProfile::of(WorkloadClass::new(1, 1, 0))
+        .pushed(WorkloadClass::new(512, 2, 0))
+        .with_aggregation(WorkloadAggregation::WorstCase);
+    let request = fixture_request(
+        launch_bound_device(),
+        budget(),
+        objective(profile, CoveragePolicy::EveryWorkloadClass, 2),
+    )
+    .requiring_schedule(RequiredSchedule::Baseline)
+    .validate()
+    .expect("Fix: the fixture request must validate under a required family");
+
+    let portfolio =
+        compile_portfolio(&request).expect("the baseline is always in the candidate set");
+    assert_eq!(portfolio.variants(), 2);
+
+    let mut eliminated = 0_u32;
+    for artifact in portfolio.artifacts() {
+        let plan = artifact.selected_plan();
+        assert!(
+            plan.derivation.is_empty(),
+            "a part selected under a required baseline applied {} production(s)",
+            plan.derivation.len()
+        );
+        eliminated += plan
+            .certificate
+            .pruned_for(PruneReason::ScheduleRequirement);
+    }
+    assert!(
+        eliminated > 0,
+        "no part eliminated a candidate for the requirement, so the empty \
+         derivations above prove nothing about the requirement reaching a part"
+    );
 }

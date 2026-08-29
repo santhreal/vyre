@@ -18,12 +18,18 @@ The crate lives at `xtask`. The `release-tooling` owner maintains its
 ```
 
 ```console
+./cargo_full test -p xtask --all-features
+```
+
+```console
 ./cargo_full run --bin xtask -- vyre-release-gate
 ```
 
 ## Feature sets
 
-This crate declares no Cargo features.
+- Default feature members: None
+- Available manifest features: `default`, `public-api-tool`
+- Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
 

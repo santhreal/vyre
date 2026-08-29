@@ -127,7 +127,7 @@ Run the checked-in behavior from `xtask/src/main.rs`:
 
 ### Features
 
-- Manifest features: None
+- Manifest features: `default`, `public-api-tool`
 - Default feature members: None
 
 ### Errors and unsupported behavior

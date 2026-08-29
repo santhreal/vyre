@@ -27,8 +27,8 @@ use vyre_megakernel::specialization::{
 };
 use vyre_megakernel::{
     target_identity, Artifact, ArtifactEnvelope, CompileObjective, CompileRequest, CoveragePolicy,
-    DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, PortfolioPolicy, SearchBudget,
-    ValidatedCompileRequest,
+    DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, PortfolioPolicy, PruneReason,
+    RequiredSchedule, SearchBudget, ValidatedCompileRequest,
 };
 
 #[path = "support/search_fixtures.rs"]
@@ -655,5 +655,69 @@ fn facts_that_do_not_state_the_declared_axes_are_refused() {
             .and_then(|at| at.path.clone()),
         Some(SpecializationAxis::LaunchBatch.field()),
         "Fix: the refusal must name the undeclared axis the facts stated."
+    );
+}
+
+/// The fixture request under one required schedule family.
+fn requiring(seed: u8, required: RequiredSchedule) -> ValidatedCompileRequest {
+    let stated = request(4, seed);
+    CompileRequest::new(
+        stated.graph().clone(),
+        stated.facts().clone(),
+        stated.device(),
+        SearchBudget::new(32, 100_000, 4, 0, 1_000_000_000),
+        objective(4),
+    )
+    .requiring_schedule(required)
+    .validate()
+    .expect("Fix: the fixture request must validate under a required family.")
+}
+
+/// WHY: a variant is compiled from the request restated over narrowed facts, and
+/// the narrowing rewrites facts alone. A restatement that carried the facts and
+/// dropped the caller's schedule requirement still compiles, still retains a
+/// set, and still seals: the only visible difference is that a sealed member
+/// runs a family the caller forbade, which is the case conformance relies on
+/// this requirement to pin. The eliminated count is asserted so a fixture that
+/// derives nothing outside the required family fails here instead of passing
+/// vacuously.
+#[test]
+fn every_retained_variant_keeps_the_required_family() {
+    let stated = requiring(9, RequiredSchedule::Baseline);
+    let portfolio = compile_specialized_portfolio(
+        &stated,
+        &contract(),
+        &[in_range(1, 256, 0), in_range(257, 1024, 0)],
+        RemainderKind::Generic,
+    )
+    .expect("Fix: the baseline is always in the candidate set.");
+
+    let mut eliminated = 0_u32;
+    let mut compiled = 0_u32;
+    let artifacts = portfolio
+        .variants()
+        .iter()
+        .map(PortfolioVariant::artifact)
+        .chain(portfolio.remainder().artifact());
+    for artifact in artifacts {
+        let plan = artifact.selected_plan();
+        assert!(
+            plan.derivation.is_empty(),
+            "Fix: a member selected under a required baseline applied {} production(s)",
+            plan.derivation.len()
+        );
+        eliminated += plan
+            .certificate
+            .pruned_for(PruneReason::ScheduleRequirement);
+        compiled += 1;
+    }
+    assert!(
+        compiled > 0,
+        "Fix: a set that compiled no member proves nothing about the requirement"
+    );
+    assert!(
+        eliminated > 0,
+        "Fix: no member eliminated a candidate for the requirement, so the empty \
+         derivations above prove nothing about the requirement reaching a variant"
     );
 }

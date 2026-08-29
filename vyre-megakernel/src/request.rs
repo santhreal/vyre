@@ -529,6 +529,7 @@ impl ValidatedCompileRequest {
             recorded_measurement: self.recorded_measurement.clone(),
             mesh: self.mesh.clone(),
             numeric: self.numeric,
+            required_schedule: self.required_schedule,
         }
     }
 
@@ -566,6 +567,7 @@ impl ValidatedCompileRequest {
             recorded_measurement: self.recorded_measurement.clone(),
             mesh: self.mesh.clone(),
             numeric: self.numeric,
+            required_schedule: self.required_schedule,
         })
     }
 }
