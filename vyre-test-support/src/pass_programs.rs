@@ -76,6 +76,29 @@ pub fn logical_copy_program() -> Program {
     )
 }
 
+/// A program declaring workgroup-scoped scratch and nothing else that could be
+/// refused.
+///
+/// The shared-memory capability arm of the admission gate is the only reason
+/// this shape exists, and the compiler boundary and the ahead-of-time path each
+/// isolate that arm with it. Two spellings of it isolate two different programs
+/// while reading as one shape, and a capability arm proven on one says nothing
+/// about the other.
+#[must_use]
+pub fn workgroup_scratch_program() -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read_write("out", 0, DataType::U32).with_count(1),
+            BufferDecl::workgroup("tile", 8, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::store("tile", Expr::u32(0), Expr::u32(1)),
+            Node::store("out", Expr::u32(0), Expr::u32(2)),
+        ],
+    )
+}
+
 /// A program that adds single-element u32 values from `left` and `right` into `output`.
 #[must_use]
 pub fn add_program(left: &str, right: &str, output: &str) -> Program {

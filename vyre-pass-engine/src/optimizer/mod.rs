@@ -128,14 +128,7 @@ fn execute_retained_program(
                 "{stage} logical graph validation failed: {error}"
             ))
         })?;
-    let request = SemanticExecutionRequest::new(
-        &logical,
-        request_inputs,
-        policy.external_facts().clone(),
-        policy.target_facts(),
-        *policy.objective(),
-        policy.budget(),
-    )?;
+    let request = SemanticExecutionRequest::new(&logical, request_inputs, policy.clone())?;
     let SemanticExecutionOutput { mut outputs, .. } = executor.execute(&request)?;
     let mut ordered = Vec::with_capacity(output_order.len());
     for value in output_order {

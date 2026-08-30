@@ -23,23 +23,20 @@ use std::collections::BTreeSet;
 
 use vyre_foundation::algebraic_reordering::every_declared_type_is_exact;
 use vyre_foundation::ir::{
-    BinOp, BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program,
-    ProgramGraph, SubgroupReduceOp, ValueLifetime,
+    BinOp, BufferAccess, DataType, Expr, Program, ProgramGraph, ValueLifetime,
 };
-use vyre_foundation::numeric::{Approximation, ErrorMeasure, NumericContract, Reassociation};
+use vyre_foundation::numeric::{ErrorMeasure, NumericContract, Reassociation};
 use vyre_foundation::optimizer::law_saturation::{derive_program_alternative, LawSaturationBudget};
 use vyre_foundation::optimizer::region_law::{
     derive_region_alternatives, law_numerical_contract, RegionDerivationBudget, REGION_LAWS,
 };
 use vyre_foundation::optimizer::rewrite_contract::NumericalContract;
-use vyre_megakernel::{compile, Artifact, CompileRequest, SearchCertificate};
+use vyre_megakernel::{Artifact, SearchCertificate};
 
 #[path = "support/search_fixtures.rs"]
 mod search_fixtures;
 
-use search_fixtures::{
-    budget, contract, facts, invocation, latency_objective, reduce_program, rich_device,
-};
+use search_fixtures::{artifact_of, contract, invocation, reduce_program, reduction_over, stage};
 
 /// The element every graph here combines.
 ///
@@ -105,25 +102,6 @@ fn foldable_program(input: &str, output: &str, element: &DataType) -> Program {
     )
 }
 
-/// One subgroup reduction of `value`, stored to `output`.
-fn reduction_over(input: &str, output: &str, element: &DataType, value: Expr) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::read_write(input, 0, element.clone()),
-            BufferDecl::read_write(output, 1, element.clone()),
-        ],
-        [32, 1, 1],
-        vec![Node::store(
-            output,
-            Expr::LocalId { axis: 0 },
-            Expr::SubgroupReduce {
-                op: SubgroupReduceOp::Add,
-                value: Box::new(value),
-            },
-        )],
-    )
-}
-
 /// A three-stage chain whose stages the two law tables reach.
 ///
 /// One stage per shape: a right identity for the value-level derivation, a
@@ -156,69 +134,31 @@ fn chain_of(element: &DataType, stages: [Stage; 3]) -> ProgramGraph {
     let source = graph
         .add_external_value("in_a", invocation(element))
         .expect("Fix: the external input must be admitted");
-    let (_, first) = graph
-        .add_node(
-            "n0",
-            stages[0]("in_a", "mid_a", element),
-            vec![GraphInput {
-                buffer: "in_a".into(),
-                value: source,
-                contract: invocation(element),
-            }],
-            vec![GraphOutput {
-                buffer: "mid_a".into(),
-                name: "mid_a".into(),
-                contract: invocation(element),
-                retained_successor_of: None,
-            }],
-        )
-        .expect("Fix: the first stage must be admitted");
-    let (_, second) = graph
-        .add_node(
-            "n1",
-            stages[1]("mid_a", "mid_b", element),
-            vec![GraphInput {
-                buffer: "mid_a".into(),
-                value: first[0],
-                contract: invocation(element),
-            }],
-            vec![GraphOutput {
-                buffer: "mid_b".into(),
-                name: "mid_b".into(),
-                contract: invocation(element),
-                retained_successor_of: None,
-            }],
-        )
-        .expect("Fix: the second stage must be admitted");
+    let first = stage(
+        &mut graph,
+        "n0",
+        stages[0]("in_a", "mid_a", element),
+        ("in_a", source),
+        ("mid_a", invocation(element)),
+    );
+    let second = stage(
+        &mut graph,
+        "n1",
+        stages[1]("mid_a", "mid_b", element),
+        ("mid_a", first),
+        ("mid_b", invocation(element)),
+    );
+    stage(
+        &mut graph,
+        "n2",
+        stages[2]("mid_b", "out", element),
+        ("mid_b", second),
+        (
+            "out",
+            contract(element, BufferAccess::ReadWrite, ValueLifetime::Output),
+        ),
+    );
     graph
-        .add_node(
-            "n2",
-            stages[2]("mid_b", "out", element),
-            vec![GraphInput {
-                buffer: "mid_b".into(),
-                value: second[0],
-                contract: invocation(element),
-            }],
-            vec![GraphOutput {
-                buffer: "out".into(),
-                name: "out".into(),
-                contract: contract(element, BufferAccess::ReadWrite, ValueLifetime::Output),
-                retained_successor_of: None,
-            }],
-        )
-        .expect("Fix: the third stage must be admitted");
-    graph
-}
-
-/// Compile `graph` under `numeric` and hand back the artifact.
-fn compiled(graph: ProgramGraph, numeric: Option<NumericContract>) -> Artifact {
-    let mut request =
-        CompileRequest::new(graph, facts(), rich_device(), budget(), latency_objective());
-    if let Some(numeric) = numeric {
-        request = request.with_numeric_budget(numeric);
-    }
-    compile(&request.validate().expect("Fix: the request must validate"))
-        .expect("Fix: the compile must succeed")
 }
 
 /// A contract that grants reassociation within a stated error budget.
@@ -230,31 +170,32 @@ fn permissive() -> NumericContract {
     }
 }
 
-/// The numerical contracts `numeric` grants, as candidate construction derives
-/// them.
-fn grants(numeric: Option<NumericContract>) -> Vec<NumericalContract> {
-    let mut grants = vec![NumericalContract::IntegerWrapping];
-    if let Some(numeric) = numeric {
-        if matches!(numeric.reassociation, Reassociation::WithinBudget) {
-            grants.push(NumericalContract::FloatReassociation);
-        }
-        if !matches!(numeric.measure, ErrorMeasure::Exact) {
-            grants.push(NumericalContract::FloatContraction);
-        }
-        if matches!(numeric.approximation, Approximation::Native { .. }) {
-            grants.push(NumericalContract::ReducedPrecision);
-        }
-    }
-    grants
-}
+/// The contracts a request that asks for the exact result grants a law.
+///
+/// Stated here rather than recomputed from the request, so this side of the
+/// comparison is an independent claim about what a bit-exact caller admits.
+/// Integer results are identical wrapping included, which is why an exact
+/// request still admits `IntegerWrapping`.
+const EXACT_GRANTS: [NumericalContract; 2] = [
+    NumericalContract::BitExact,
+    NumericalContract::IntegerWrapping,
+];
+
+/// The contracts a request that grants everything a law may declare.
+const EVERY_GRANT: [NumericalContract; 5] = [
+    NumericalContract::BitExact,
+    NumericalContract::IntegerWrapping,
+    NumericalContract::FloatReassociation,
+    NumericalContract::FloatContraction,
+    NumericalContract::ReducedPrecision,
+];
 
 /// Region law names the derivation reports for every node program of `graph`.
-fn region_names(graph: &ProgramGraph, numeric: Option<NumericContract>) -> BTreeSet<String> {
-    let grants = grants(numeric);
+fn region_names(graph: &ProgramGraph, grants: &[NumericalContract]) -> BTreeSet<String> {
     let mut names = BTreeSet::new();
     for node in graph.nodes() {
         let derived =
-            derive_region_alternatives(&node.program, &grants, RegionDerivationBudget::default())
+            derive_region_alternatives(&node.program, grants, RegionDerivationBudget::default())
                 .expect("Fix: the registered pass set the region laws cite must be orderable");
         for alternative in &derived.alternatives {
             names.extend(alternative.chain.iter().map(|name| (*name).to_owned()));
@@ -264,20 +205,16 @@ fn region_names(graph: &ProgramGraph, numeric: Option<NumericContract>) -> BTree
 }
 
 /// Value-level rewrite names the derivation reports for every node program.
-fn value_names(graph: &ProgramGraph, numeric: Option<NumericContract>) -> BTreeSet<String> {
-    let exact = |program: &Program| {
-        every_declared_type_is_exact(program)
-            || numeric
-                .is_some_and(|numeric| matches!(numeric.reassociation, Reassociation::WithinBudget))
-    };
+///
+/// `reassociates` states whether the request grants reordering a rounding
+/// combine. An exact element type reads the exact laws either way.
+fn value_names(graph: &ProgramGraph, reassociates: bool) -> BTreeSet<String> {
     let mut names = BTreeSet::new();
     for node in graph.nodes() {
-        let derived = derive_program_alternative(
-            &node.program,
-            exact(&node.program),
-            LawSaturationBudget::default(),
-        )
-        .expect("Fix: the expression mirror must build for a fixture program");
+        let exact = reassociates || every_declared_type_is_exact(&node.program);
+        let derived =
+            derive_program_alternative(&node.program, exact, LawSaturationBudget::default())
+                .expect("Fix: the expression mirror must build for a fixture program");
         if let Some(derived) = derived {
             names.extend(derived.chain.iter().map(|name| (*name).to_owned()));
         }
@@ -314,14 +251,14 @@ fn certificate_of(artifact: &Artifact) -> &SearchCertificate {
 #[test]
 fn region_laws_reach_candidate_construction() {
     let element = element();
-    let expected = region_names(&law_reachable_graph(&element), None);
+    let expected = region_names(&law_reachable_graph(&element), &EXACT_GRANTS);
     assert!(
         !expected.is_empty(),
         "no region law matches the fixture graph, so this contract proves nothing; give it a \
          program the law table reaches"
     );
 
-    let artifact = compiled(law_reachable_graph(&element), None);
+    let artifact = artifact_of(law_reachable_graph(&element), None);
     let accounted = accounted_names(certificate_of(&artifact));
     let missing: Vec<&String> = expected.difference(&accounted).collect();
     assert!(
@@ -336,13 +273,13 @@ fn region_laws_reach_candidate_construction() {
 #[test]
 fn value_laws_reach_candidate_construction() {
     let element = element();
-    let expected = value_names(&law_reachable_graph(&element), None);
+    let expected = value_names(&law_reachable_graph(&element), false);
     assert!(
         !expected.is_empty(),
         "no declared combine law rewrites the fixture graph, so this contract proves nothing"
     );
 
-    let artifact = compiled(law_reachable_graph(&element), None);
+    let artifact = artifact_of(law_reachable_graph(&element), None);
     let accounted = accounted_names(certificate_of(&artifact));
     let missing: Vec<&String> = expected.difference(&accounted).collect();
     assert!(
@@ -357,7 +294,7 @@ fn value_laws_reach_candidate_construction() {
 #[test]
 fn every_law_derived_candidate_carries_a_chain() {
     let element = element();
-    let artifact = compiled(law_reachable_graph(&element), None);
+    let artifact = artifact_of(law_reachable_graph(&element), None);
     let certificate = certificate_of(&artifact);
     let node_count = u32::try_from(law_reachable_graph(&element).nodes().len())
         .expect("Fix: the fixture graph must have a representable node count");
@@ -396,7 +333,7 @@ fn a_law_the_request_did_not_grant_is_absent() {
     );
 
     let element = element();
-    let exact = compiled(law_reachable_graph(&element), Some(NumericContract::EXACT));
+    let exact = artifact_of(law_reachable_graph(&element), Some(NumericContract::EXACT));
     let accounted = accounted_names(certificate_of(&exact));
     for name in &accounted {
         let Some(law) = REGION_LAWS.iter().find(|law| law.name == *name) else {
@@ -420,7 +357,7 @@ fn a_law_the_request_did_not_grant_is_absent() {
 #[test]
 fn the_selected_plan_names_only_admitted_laws() {
     let element = element();
-    let artifact = compiled(law_reachable_graph(&element), None);
+    let artifact = artifact_of(law_reachable_graph(&element), None);
     let plan = artifact.selected_plan();
 
     plan.validate()
@@ -432,9 +369,9 @@ fn the_selected_plan_names_only_admitted_laws() {
         );
     }
 
-    let exact = compiled(law_reachable_graph(&element), Some(NumericContract::EXACT));
+    let exact = artifact_of(law_reachable_graph(&element), Some(NumericContract::EXACT));
     let exact_names = accounted_names(certificate_of(&exact));
-    let permissive_names = accounted_names(certificate_of(&compiled(
+    let permissive_names = accounted_names(certificate_of(&artifact_of(
         law_reachable_graph(&element),
         Some(permissive()),
     )));
@@ -452,8 +389,8 @@ fn the_selected_plan_names_only_admitted_laws() {
 #[test]
 fn the_law_record_is_canonical() {
     let element = element();
-    let first = compiled(law_reachable_graph(&element), None);
-    let second = compiled(law_reachable_graph(&element), None);
+    let first = artifact_of(law_reachable_graph(&element), None);
+    let second = artifact_of(law_reachable_graph(&element), None);
 
     let left = certificate_of(&first);
     let right = certificate_of(&second);
@@ -484,15 +421,15 @@ fn the_law_record_is_canonical() {
 fn a_matching_law_changes_the_candidate_set() {
     let element = element();
     let inert = law_inert_graph(&element);
-    let mut inert_expected = region_names(&inert, None);
-    inert_expected.extend(value_names(&inert, None));
+    let mut inert_expected = region_names(&inert, &EVERY_GRANT);
+    inert_expected.extend(value_names(&inert, true));
     assert!(
         inert_expected.is_empty(),
         "the control chain now matches laws {inert_expected:?}; state a control the law tables \
          do not reach, or this contract compares two reachable graphs"
     );
 
-    let inert_artifact = compiled(law_inert_graph(&element), None);
+    let inert_artifact = artifact_of(law_inert_graph(&element), None);
     let inert_certificate = certificate_of(&inert_artifact);
     assert!(
         inert_certificate.law_derived.is_empty() && inert_certificate.law_pruned.is_empty(),
@@ -505,7 +442,7 @@ fn a_matching_law_changes_the_candidate_set() {
         "the plan for a graph no law reaches names a law chain"
     );
 
-    let reachable = accounted_names(certificate_of(&compiled(
+    let reachable = accounted_names(certificate_of(&artifact_of(
         law_reachable_graph(&element),
         None,
     )));

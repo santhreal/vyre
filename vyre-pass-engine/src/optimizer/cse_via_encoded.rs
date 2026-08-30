@@ -421,65 +421,19 @@ impl<C: CanonicalLookup + ?Sized> NodeRewrite for LetDedupeWalker<'_, C> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::BTreeMap;
-    use vyre_foundation::ir::GraphValueId;
     use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_megakernel::{Digest, SemanticExecutionOutput, SemanticExecutionRequest};
 
     use super::super::arena_kernel::{
-        semantic_test_policy, single_lit_u32_arena as one_expr_arena,
+        semantic_test_policy, single_lit_u32_arena as one_expr_arena, ScriptedExecutor,
     };
 
-    struct CseMockExecutor {
-        structural_hash_outputs: Vec<Vec<u8>>,
-        canonical_id_outputs: Vec<Vec<u8>>,
-        extra_hash_output: bool,
-    }
+    /// The two stages the CSE dispatch runs, in the order it runs them.
+    const HASH_STAGE: &str = "cse-structural-hash";
+    const CANONICAL_STAGE: &str = "cse-canonical-id";
 
-    impl CseMockExecutor {
-        fn new(structural_hash_outputs: Vec<Vec<u8>>, canonical_id_outputs: Vec<Vec<u8>>) -> Self {
-            Self {
-                structural_hash_outputs,
-                canonical_id_outputs,
-                extra_hash_output: false,
-            }
-        }
-
-        fn with_extra_hash_output(outputs: Vec<Vec<u8>>) -> Self {
-            Self {
-                structural_hash_outputs: outputs,
-                canonical_id_outputs: Vec::new(),
-                extra_hash_output: true,
-            }
-        }
-    }
-
-    impl SemanticExecutor for CseMockExecutor {
-        fn execute(
-            &self,
-            request: &SemanticExecutionRequest<'_>,
-        ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
-            let stage = request.logical().regions()[0].name.as_str();
-            let node = &request.logical().graph().nodes()[0];
-            let written = vyre_megakernel::writable_graph_values(node);
-            let mut outputs = BTreeMap::new();
-            let src = match stage {
-                "cse-structural-hash" => &self.structural_hash_outputs,
-                "cse-canonical-id" => &self.canonical_id_outputs,
-                other => panic!("unexpected cse stage: {other}"),
-            };
-            for (val, bytes) in written.into_iter().zip(src.iter()) {
-                outputs.insert(val, bytes.clone());
-            }
-            if self.extra_hash_output && stage == "cse-structural-hash" {
-                outputs.insert(GraphValueId(u32::MAX), vec![0u8; 4]);
-            }
-            Ok(SemanticExecutionOutput {
-                artifact: Digest([0; 32]),
-                payload: Digest([1; 32]),
-                outputs,
-            })
-        }
+    /// An executor answering both CSE stages with stated bytes.
+    fn cse_executor(hash: Vec<Vec<u8>>, canonical: Vec<Vec<u8>>) -> ScriptedExecutor {
+        ScriptedExecutor::per_stage(vec![(HASH_STAGE, hash), (CANONICAL_STAGE, canonical)])
     }
 
     #[test]
@@ -567,7 +521,7 @@ mod tests {
 
     #[test]
     fn cse_kernels_decode_exact_canonical_into_reused_buffer() {
-        let executor = CseMockExecutor::new(
+        let executor = cse_executor(
             vec![u32_slice_to_le_bytes(&[123])],
             vec![u32_slice_to_le_bytes(&[0])],
         );
@@ -586,7 +540,7 @@ mod tests {
 
     #[test]
     fn cse_kernels_with_scratch_reuse_dispatch_decode_and_output_storage() {
-        let executor = CseMockExecutor::new(
+        let executor = cse_executor(
             vec![u32_slice_to_le_bytes(&[123])],
             vec![u32_slice_to_le_bytes(&[0])],
         );
@@ -648,7 +602,8 @@ mod tests {
 
     #[test]
     fn cse_rejects_extra_hash_outputs() {
-        let executor = CseMockExecutor::with_extra_hash_output(vec![u32_slice_to_le_bytes(&[123])]);
+        let executor = cse_executor(vec![u32_slice_to_le_bytes(&[123])], Vec::new())
+            .writing_undeclared_output(HASH_STAGE);
         let mut canonical = Vec::new();
         let err = run_cse_kernels_into(
             &one_expr_arena(),
@@ -670,7 +625,7 @@ mod tests {
 
     #[test]
     fn cse_rejects_trailing_canonical_bytes() {
-        let executor = CseMockExecutor::new(
+        let executor = cse_executor(
             vec![u32_slice_to_le_bytes(&[123])],
             vec![vec![0, 0, 0, 0, 1]],
         );

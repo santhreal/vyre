@@ -17,8 +17,9 @@ use vyre_foundation::schedule::{
 };
 use vyre_megakernel::{
     compile, is_required_schedule_unreachable, is_semantic_version_skew, CompileObjective,
-    CompileRequest, ObjectiveMetric, PruneReason, RequiredSchedule, ScheduleProduction,
-    SearchBudget, REQUIRED_SCHEDULE_UNREACHABLE, SCHEDULE_GRAMMAR_VERSION, SEMANTIC_VERSION_SKEW,
+    CompileRequest, DeclaredConstraints, ObjectiveMetric, PruneReason, RequiredSchedule,
+    ScheduleProduction, SearchBudget, REQUIRED_SCHEDULE_UNREACHABLE, SCHEDULE_GRAMMAR_VERSION,
+    SEMANTIC_VERSION_SKEW,
 };
 
 #[path = "support/search_fixtures.rs"]
@@ -382,7 +383,7 @@ fn compiled_requiring(
         budget(),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 4_000_000),
     )
-    .requiring_schedule(required)
+    .with_constraints(DeclaredConstraints::new().requiring_schedule(required))
     .validate()
     .expect("request must validate");
     compile(&request)
@@ -469,7 +470,10 @@ fn a_required_family_no_legal_plan_reaches_is_refused_and_not_replaced() {
         budget(),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 4_000_000),
     )
-    .requiring_schedule(RequiredSchedule::Production(ScheduleProduction::Fusion))
+    .with_constraints(
+        DeclaredConstraints::new()
+            .requiring_schedule(RequiredSchedule::Production(ScheduleProduction::Fusion)),
+    )
     .validate()
     .expect("request must validate");
 
@@ -520,8 +524,9 @@ fn a_requirement_narrows_selection_without_narrowing_the_search() {
 /// derived, so the diagnostic names the declaration rather than a plan.
 #[test]
 fn a_declared_dialect_no_crate_registers_is_refused_before_planning() {
-    let request = fixture_request(rich_device(), budget(), latency_objective())
-        .declaring_dialect_version("vyre::absent-dialect", 1);
+    let request = fixture_request(rich_device(), budget(), latency_objective()).with_constraints(
+        DeclaredConstraints::new().declaring_dialect_version("vyre::absent-dialect", 1),
+    );
     let Err(error) = request.validate() else {
         panic!("a declaration naming no registered dialect must be refused");
     };

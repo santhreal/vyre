@@ -44,6 +44,7 @@ use std::path::{Path, PathBuf};
 use syn::spanned::Spanned;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
+use crate::gates::crate_registry;
 use crate::gates::scan::{self, Tree};
 
 /// Crate layers from `docs/CRATE_OWNERSHIP.toml` exempt from production capability rules.
@@ -124,27 +125,10 @@ struct CrateLayerRegistry {
 impl CrateLayerRegistry {
     /// Read layer mappings from `docs/CRATE_OWNERSHIP.toml`.
     fn read(tree: &Tree) -> Result<Self, GateError> {
-        let table = tree.read_toml("docs/CRATE_OWNERSHIP.toml")?;
-        let crates = table
-            .get("crate")
-            .and_then(toml::Value::as_array)
-            .ok_or_else(|| {
-                GateError::new(
-                    "docs/CRATE_OWNERSHIP.toml declares no [[crate]] entries",
-                    "Fix: record crate layer declarations in docs/CRATE_OWNERSHIP.toml",
-                )
-            })?;
-
-        let mut layers = BTreeMap::new();
-        for entry in crates {
-            if let (Some(package), Some(layer)) = (
-                entry.get("package").and_then(toml::Value::as_str),
-                entry.get("layer").and_then(toml::Value::as_str),
-            ) {
-                layers.insert(package.to_string(), layer.to_string());
-            }
-        }
-
+        let layers = crate_registry::declared_crates(tree)?
+            .into_iter()
+            .map(|declared| (declared.package, declared.layer))
+            .collect();
         Ok(Self { layers })
     }
 

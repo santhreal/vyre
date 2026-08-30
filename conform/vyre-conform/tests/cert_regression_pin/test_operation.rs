@@ -16,17 +16,9 @@ fn identity_u32_cpu_ref(input: &[u8], output: &mut Vec<u8>) {
     output.extend_from_slice(input.get(..4).unwrap_or(&[0, 0, 0, 0]));
 }
 
-const TEST_IDENTITY_U32_SIGNATURE: Signature = Signature {
-    inputs: &[TypedParam {
-        name: "value",
-        ty: "u32",
-    }],
-    outputs: &[TypedParam {
-        name: "out",
-        ty: "u32",
-    }],
-    attrs: &[],
-    bytes_extraction: false,
+const TEST_IDENTITY_U32_SIGNATURE: Signature = vyre_test_support::u32_signature! {
+    inputs: ["value"],
+    output: "out",
 };
 
 inventory::submit! {

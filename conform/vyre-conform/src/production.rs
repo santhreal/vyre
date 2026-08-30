@@ -194,7 +194,12 @@ impl ProductionSession {
     pub fn requiring_schedule(&self, required: RequiredSchedule) -> Self {
         Self {
             executor: Arc::clone(&self.executor),
-            policy: self.policy.clone().requiring_schedule(required),
+            policy: self.policy.clone().with_constraints(
+                self.policy
+                    .constraints()
+                    .clone()
+                    .requiring_schedule(required),
+            ),
             program: Arc::clone(&self.program),
             op_id: self.op_id.clone(),
             backend: self.backend,
@@ -212,10 +217,12 @@ impl ProductionSession {
     pub fn declaring_dialect_version(&self, dialect_id: &str, version: u32) -> Self {
         Self {
             executor: Arc::clone(&self.executor),
-            policy: self
-                .policy
-                .clone()
-                .declaring_dialect_version(dialect_id, version),
+            policy: self.policy.clone().with_constraints(
+                self.policy
+                    .constraints()
+                    .clone()
+                    .declaring_dialect_version(dialect_id, version),
+            ),
             program: Arc::clone(&self.program),
             op_id: self.op_id.clone(),
             backend: self.backend,
@@ -637,20 +644,7 @@ fn execute_program(
         .zip(inputs)
         .map(|(port, bytes)| (port.value, bytes.as_slice()))
         .collect::<BTreeMap<GraphValueId, &[u8]>>();
-    let mut request = SemanticExecutionRequest::new(
-        &logical,
-        request_inputs,
-        policy.external_facts().clone(),
-        policy.target_facts(),
-        *policy.objective(),
-        policy.budget(),
-    )?;
-    if let Some(required) = policy.required_schedule() {
-        request = request.requiring_schedule(required);
-    }
-    for (dialect, version) in policy.declared_dialects() {
-        request = request.declaring_dialect_version(dialect, *version);
-    }
+    let request = SemanticExecutionRequest::new(&logical, request_inputs, policy.clone())?;
     let SemanticExecutionOutput {
         artifact,
         payload,

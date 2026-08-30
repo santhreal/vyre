@@ -122,10 +122,12 @@ pub fn request<'a>(
     SemanticExecutionRequest::new(
         logical,
         inputs,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        target_facts,
-        latency_within(max_artifact_bytes),
-        budget,
+        SemanticExecutionPolicy::new(
+            ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+            target_facts,
+            latency_within(max_artifact_bytes),
+            budget,
+        ),
     )
 }
 

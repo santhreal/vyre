@@ -133,8 +133,8 @@ total_lines = 112689
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 5283
-total_lines = 208249
+duplicate_lines = 5273
+total_lines = 207740
 
 [[crate]]
 name = "vyre-lints"
@@ -168,13 +168,13 @@ total_lines = 30891
 
 [[crate]]
 name = "vyre-runtime"
-duplicate_lines = 139
-total_lines = 32917
+duplicate_lines = 123
+total_lines = 33773
 
 [[crate]]
 name = "vyre-pass-engine"
-duplicate_lines = 164
-total_lines = 6165
+duplicate_lines = 154
+total_lines = 6630
 
 [[crate]]
 name = "vyre-test-support"

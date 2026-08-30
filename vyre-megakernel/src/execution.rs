@@ -8,7 +8,7 @@ use vyre_foundation::logical::LogicalProgramGraph;
 
 use crate::error::CompileError;
 use crate::objective::CompileObjective;
-use crate::request::{CompileRequest, RequiredSchedule};
+use crate::request::{CompileRequest, DeclaredConstraints};
 use crate::target::TargetCompileError;
 use crate::{DeviceFacts, Digest, ExternalFacts, SearchBudget};
 
@@ -19,8 +19,7 @@ pub struct SemanticExecutionPolicy {
     target_facts: DeviceFacts,
     objective: CompileObjective,
     budget: SearchBudget,
-    required_schedule: Option<RequiredSchedule>,
-    declared_dialects: BTreeMap<String, u32>,
+    constraints: DeclaredConstraints,
 }
 
 impl SemanticExecutionPolicy {
@@ -37,46 +36,21 @@ impl SemanticExecutionPolicy {
             target_facts,
             objective,
             budget,
-            required_schedule: None,
-            declared_dialects: BTreeMap::new(),
+            constraints: DeclaredConstraints::new(),
         }
     }
 
-    /// Require the selected plan to exercise one schedule family.
-    ///
-    /// Conformance states one so the same semantic graph can be executed under
-    /// every legal schedule and checked against one declared contract. A family
-    /// no legal plan reaches fails the compile instead of being served by
-    /// whichever family ranked next.
+    /// State the selection constraints this policy declares.
     #[must_use]
-    pub const fn requiring_schedule(mut self, required: RequiredSchedule) -> Self {
-        self.required_schedule = Some(required);
+    pub fn with_constraints(mut self, constraints: DeclaredConstraints) -> Self {
+        self.constraints = constraints;
         self
     }
 
-    /// The schedule family this policy requires, when it states one.
+    /// The selection constraints this policy declares.
     #[must_use]
-    pub const fn required_schedule(&self) -> Option<RequiredSchedule> {
-        self.required_schedule
-    }
-
-    /// State the dialect schema version the graph was built against.
-    ///
-    /// A declared version outside the dialect's supported window, and a call to
-    /// an operation introduced after it, are refused before any plan is
-    /// derived. A dialect left undeclared is compiled at its registered
-    /// version.
-    #[must_use]
-    pub fn declaring_dialect_version(mut self, dialect_id: &str, version: u32) -> Self {
-        self.declared_dialects
-            .insert(dialect_id.to_owned(), version);
-        self
-    }
-
-    /// Dialect schema versions this policy declares.
-    #[must_use]
-    pub const fn declared_dialects(&self) -> &BTreeMap<String, u32> {
-        &self.declared_dialects
+    pub const fn constraints(&self) -> &DeclaredConstraints {
+        &self.constraints
     }
 
     /// Borrow immutable semantic facts outside graph topology.
@@ -109,12 +83,7 @@ impl SemanticExecutionPolicy {
 pub struct SemanticExecutionRequest<'a> {
     logical: &'a LogicalProgramGraph<'a>,
     inputs: BTreeMap<GraphValueId, &'a [u8]>,
-    external_facts: ExternalFacts,
-    target_facts: DeviceFacts,
-    objective: CompileObjective,
-    budget: SearchBudget,
-    required_schedule: Option<RequiredSchedule>,
-    declared_dialects: BTreeMap<String, u32>,
+    policy: SemanticExecutionPolicy,
 }
 
 impl<'a> SemanticExecutionRequest<'a> {
@@ -127,10 +96,7 @@ impl<'a> SemanticExecutionRequest<'a> {
     pub fn new(
         logical: &'a LogicalProgramGraph<'a>,
         inputs: BTreeMap<GraphValueId, &'a [u8]>,
-        external_facts: ExternalFacts,
-        target_facts: DeviceFacts,
-        objective: CompileObjective,
-        budget: SearchBudget,
+        policy: SemanticExecutionPolicy,
     ) -> Result<Self, SemanticExecutionError> {
         let expected = logical
             .graph()
@@ -158,40 +124,14 @@ impl<'a> SemanticExecutionRequest<'a> {
         Ok(Self {
             logical,
             inputs,
-            external_facts,
-            target_facts,
-            objective,
-            budget,
-            required_schedule: None,
-            declared_dialects: BTreeMap::new(),
+            policy,
         })
     }
 
-    /// Require the selected plan to exercise one schedule family.
+    /// Borrow the policy this request is compiled under.
     #[must_use]
-    pub fn requiring_schedule(mut self, required: RequiredSchedule) -> Self {
-        self.required_schedule = Some(required);
-        self
-    }
-
-    /// The schedule family this request requires, when it states one.
-    #[must_use]
-    pub const fn required_schedule(&self) -> Option<RequiredSchedule> {
-        self.required_schedule
-    }
-
-    /// State the dialect schema version the graph was built against.
-    #[must_use]
-    pub fn declaring_dialect_version(mut self, dialect_id: &str, version: u32) -> Self {
-        self.declared_dialects
-            .insert(dialect_id.to_owned(), version);
-        self
-    }
-
-    /// Dialect schema versions this request declares.
-    #[must_use]
-    pub const fn declared_dialects(&self) -> &BTreeMap<String, u32> {
-        &self.declared_dialects
+    pub const fn policy(&self) -> &SemanticExecutionPolicy {
+        &self.policy
     }
 
     /// Borrow the validated schedule-free graph.
@@ -206,50 +146,22 @@ impl<'a> SemanticExecutionRequest<'a> {
         &self.inputs
     }
 
-    /// Borrow immutable semantic facts outside graph topology.
-    #[must_use]
-    pub const fn external_facts(&self) -> &ExternalFacts {
-        &self.external_facts
-    }
-
-    /// Return the live target facts used for legality and ranking.
-    #[must_use]
-    pub const fn target_facts(&self) -> DeviceFacts {
-        self.target_facts
-    }
-
-    /// Borrow the stated compile objective.
-    #[must_use]
-    pub const fn objective(&self) -> &CompileObjective {
-        &self.objective
-    }
-
-    /// Return the bounded compiler search budget.
-    #[must_use]
-    pub const fn budget(&self) -> SearchBudget {
-        self.budget
-    }
-
     /// Project the semantic request into the canonical neutral compiler request.
     ///
     /// Representative inputs are copied only when the explicit measurement
     /// budget permits device measurement.
     #[must_use]
     pub fn compile_request(&self) -> CompileRequest {
+        let budget = self.policy.budget();
         let mut request = CompileRequest::new(
             self.logical.graph().clone(),
-            self.external_facts.clone(),
-            self.target_facts,
-            self.budget,
-            self.objective,
-        );
-        if let Some(required) = self.required_schedule {
-            request = request.requiring_schedule(required);
-        }
-        for (dialect, version) in &self.declared_dialects {
-            request = request.declaring_dialect_version(dialect, *version);
-        }
-        if self.budget.max_measurements > 0 {
+            self.policy.external_facts().clone(),
+            self.policy.target_facts(),
+            budget,
+            *self.policy.objective(),
+        )
+        .with_constraints(self.policy.constraints().clone());
+        if budget.max_measurements > 0 {
             let representative_inputs = self
                 .inputs
                 .iter()
@@ -405,14 +317,7 @@ pub fn execute_single_program(
         .zip(inputs)
         .map(|(port, bytes)| (port.value, bytes.as_slice()))
         .collect();
-    let request = SemanticExecutionRequest::new(
-        &logical,
-        inputs,
-        policy.external_facts.clone(),
-        policy.target_facts,
-        policy.objective,
-        policy.budget,
-    )?;
+    let request = SemanticExecutionRequest::new(&logical, inputs, policy.clone())?;
     let output = executor.execute(&request)?;
     let SemanticExecutionOutput {
         artifact,
@@ -493,9 +398,9 @@ mod tests {
             request: &SemanticExecutionRequest<'_>,
         ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
             self.calls.fetch_add(1, Ordering::Relaxed);
-            assert_eq!(*request.objective(), OBJECTIVE);
-            assert_eq!(request.budget(), BUDGET);
-            assert_eq!(request.target_facts(), DeviceFacts::unknown());
+            assert_eq!(*request.policy().objective(), OBJECTIVE);
+            assert_eq!(request.policy().budget(), BUDGET);
+            assert_eq!(request.policy().target_facts(), DeviceFacts::unknown());
             let projected = request
                 .compile_request()
                 .validate()

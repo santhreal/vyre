@@ -13,8 +13,8 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{
-    BinOp, BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program,
-    ProgramGraph, ShapeDim, SubgroupReduceOp, ValueContract, ValueLifetime,
+    BinOp, BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, GraphValueId, Node,
+    Program, ProgramGraph, ShapeDim, SubgroupReduceOp, ValueContract, ValueLifetime,
 };
 use vyre_foundation::numeric::NumericContract;
 use vyre_foundation::validate::BackendCapabilities;
@@ -45,8 +45,17 @@ pub(crate) fn invocation(element: &DataType) -> ValueContract {
     contract(element, BufferAccess::ReadWrite, ValueLifetime::Invocation)
 }
 
-/// One subgroup reduction of a loaded element, stored back.
-pub(crate) fn reduce_program(input: &str, output: &str, element: &DataType) -> Program {
+/// One subgroup reduction of `value`, stored to `output`.
+///
+/// The buffer pair and the reduction shell are the same for every reducing
+/// fixture, so a suite that needs a particular combine states only the
+/// expression that combine applies.
+pub(crate) fn reduction_over(
+    input: &str,
+    output: &str,
+    element: &DataType,
+    value: Expr,
+) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::read_write(input, 0, element.clone()),
@@ -58,9 +67,19 @@ pub(crate) fn reduce_program(input: &str, output: &str, element: &DataType) -> P
             Expr::LocalId { axis: 0 },
             Expr::SubgroupReduce {
                 op: SubgroupReduceOp::Add,
-                value: Box::new(Expr::load(input, Expr::LocalId { axis: 0 })),
+                value: Box::new(value),
             },
         )],
+    )
+}
+
+/// One subgroup reduction of a loaded element, stored back.
+pub(crate) fn reduce_program(input: &str, output: &str, element: &DataType) -> Program {
+    reduction_over(
+        input,
+        output,
+        element,
+        Expr::load(input, Expr::LocalId { axis: 0 }),
     )
 }
 
@@ -88,6 +107,45 @@ pub(crate) fn join_program(left: &str, right: &str, output: &str, element: &Data
     )
 }
 
+/// Append one single-input, single-output stage to `graph`.
+///
+/// Every chained fixture graph here is stages wired in sequence over one value
+/// contract, so the wiring is stated once. Returns the value the stage writes,
+/// which is the next stage's input.
+pub(crate) fn stage(
+    graph: &mut ProgramGraph,
+    name: &str,
+    program: Program,
+    input: (&str, GraphValueId),
+    output: (&str, ValueContract),
+) -> GraphValueId {
+    let (buffer, value) = input;
+    let (written, produced) = output;
+    let (_, ids) = graph
+        .add_node(
+            name,
+            program,
+            vec![GraphInput {
+                buffer: buffer.into(),
+                value,
+                contract: graph
+                    .values()
+                    .iter()
+                    .find(|held| held.id == value)
+                    .map(|held| held.contract.clone())
+                    .expect("Fix: state a stage input the graph already declares"),
+            }],
+            vec![GraphOutput {
+                buffer: written.into(),
+                name: written.into(),
+                contract: produced,
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap_or_else(|error| panic!("Fix: stage `{name}` must be admitted: {error}"));
+    ids[0]
+}
+
 /// A chain, an independent arm, and a fan-in, every stage reducing.
 ///
 /// The independent arm is what gives the concurrency productions an operand, and
@@ -101,57 +159,27 @@ pub(crate) fn reducing_graph(element: &DataType) -> ProgramGraph {
     let in_b = graph
         .add_external_value("in_b", invocation(element))
         .expect("external input");
-    let (_, mid_a) = graph
-        .add_node(
-            "n0",
-            reduce_program("in_a", "mid_a", element),
-            vec![GraphInput {
-                buffer: "in_a".into(),
-                value: in_a,
-                contract: invocation(element),
-            }],
-            vec![GraphOutput {
-                buffer: "mid_a".into(),
-                name: "mid_a".into(),
-                contract: invocation(element),
-                retained_successor_of: None,
-            }],
-        )
-        .expect("first stage");
-    let (_, mid_b) = graph
-        .add_node(
-            "n1",
-            reduce_program("mid_a", "mid_b", element),
-            vec![GraphInput {
-                buffer: "mid_a".into(),
-                value: mid_a[0],
-                contract: invocation(element),
-            }],
-            vec![GraphOutput {
-                buffer: "mid_b".into(),
-                name: "mid_b".into(),
-                contract: invocation(element),
-                retained_successor_of: None,
-            }],
-        )
-        .expect("second stage");
-    let (_, mid_c) = graph
-        .add_node(
-            "n2",
-            reduce_program("in_b", "mid_c", element),
-            vec![GraphInput {
-                buffer: "in_b".into(),
-                value: in_b,
-                contract: invocation(element),
-            }],
-            vec![GraphOutput {
-                buffer: "mid_c".into(),
-                name: "mid_c".into(),
-                contract: invocation(element),
-                retained_successor_of: None,
-            }],
-        )
-        .expect("independent arm");
+    let mid_a = stage(
+        &mut graph,
+        "n0",
+        reduce_program("in_a", "mid_a", element),
+        ("in_a", in_a),
+        ("mid_a", invocation(element)),
+    );
+    let mid_b = stage(
+        &mut graph,
+        "n1",
+        reduce_program("mid_a", "mid_b", element),
+        ("mid_a", mid_a),
+        ("mid_b", invocation(element)),
+    );
+    let mid_c = stage(
+        &mut graph,
+        "n2",
+        reduce_program("in_b", "mid_c", element),
+        ("in_b", in_b),
+        ("mid_c", invocation(element)),
+    );
     graph
         .add_node(
             "n3",
@@ -159,12 +187,12 @@ pub(crate) fn reducing_graph(element: &DataType) -> ProgramGraph {
             vec![
                 GraphInput {
                     buffer: "mid_b".into(),
-                    value: mid_b[0],
+                    value: mid_b,
                     contract: invocation(element),
                 },
                 GraphInput {
                     buffer: "mid_c".into(),
-                    value: mid_c[0],
+                    value: mid_c,
                     contract: invocation(element),
                 },
             ],
@@ -437,19 +465,23 @@ pub(crate) const REORDERING_PRODUCTIONS: [ScheduleProduction; 5] = [
     ScheduleProduction::AxisReorder,
 ];
 
-/// The reducing graph over `element`, compiled under `numeric` when stated.
-pub(crate) fn reducing_artifact(element: &DataType, numeric: Option<NumericContract>) -> Artifact {
-    let mut request = CompileRequest::new(
-        reducing_graph(element),
-        facts(),
-        rich_device(),
-        budget(),
-        latency_objective(),
-    );
+/// `graph` compiled on the rich device under `numeric` when stated.
+///
+/// Every suite here compiles a fixture graph under the same external facts,
+/// device, budget and objective, and differs only in the graph and the numeric
+/// contract, so the request is built once.
+pub(crate) fn artifact_of(graph: ProgramGraph, numeric: Option<NumericContract>) -> Artifact {
+    let mut request =
+        CompileRequest::new(graph, facts(), rich_device(), budget(), latency_objective());
     if let Some(numeric) = numeric {
         request = request.with_numeric_budget(numeric);
     }
     compile(&request.validate().expect("request must validate")).expect("compilation must succeed")
+}
+
+/// The reducing graph over `element`, compiled under `numeric` when stated.
+pub(crate) fn reducing_artifact(element: &DataType, numeric: Option<NumericContract>) -> Artifact {
+    artifact_of(reducing_graph(element), numeric)
 }
 
 /// Candidates of one production the search eliminated as numerically illegal.

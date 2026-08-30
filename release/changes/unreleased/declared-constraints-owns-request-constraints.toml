@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`DeclaredConstraints` states a required schedule family and declared dialect versions once, and `CompileRequest::with_constraints`, `SemanticExecutionPolicy::with_constraints` and `SemanticExecutionRequest::new` take it in place of the removed `requiring_schedule` and `declaring_dialect_version` builders and the six restated request fields."

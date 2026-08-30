@@ -41,9 +41,9 @@ impl SemanticExecutor for RecordingExecutor {
             .collect();
         *self.observed.lock().expect("recording executor lock") = Some(ObservedRequest {
             inputs,
-            objective: *request.objective(),
-            budget: request.budget(),
-            target_facts: request.target_facts(),
+            objective: *request.policy().objective(),
+            budget: request.policy().budget(),
+            target_facts: request.policy().target_facts(),
         });
         let terminal_values = request
             .logical()
@@ -140,7 +140,7 @@ impl SemanticExecutor for ScheduleRecordingExecutor {
         self.seen
             .lock()
             .expect("schedule recording executor lock")
-            .push(request.required_schedule());
+            .push(request.policy().constraints().required_schedule());
         let outputs = request
             .logical()
             .graph()

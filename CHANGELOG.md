@@ -1580,6 +1580,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   function it forwards to. The forwarders are gone and every caller names the
   owner. What remains is the one thing this crate adds, the call counter, in a
   file named for it.
+- `DeclaredConstraints` states a required schedule family and declared dialect
+  versions once, and `CompileRequest::with_constraints`,
+  `SemanticExecutionPolicy::with_constraints` and
+  `SemanticExecutionRequest::new` take it in place of the removed
+  `requiring_schedule` and `declaring_dialect_version` builders and the six
+  restated request fields.
 - The decode-scan fusion pass takes its workgroup promotion budget from the
   caller's capability record instead of a fixed constant. `run`,
   `count_opportunities` and `candidate_handoffs` take an `AdapterCaps`, and

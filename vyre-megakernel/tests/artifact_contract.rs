@@ -21,7 +21,7 @@ use vyre_megakernel::{
 
 use vyre_test_support::graph_values::{graph_output, u32_symbolic};
 
-use vyre_test_support::pass_programs::{add_program, copy_program};
+use vyre_test_support::pass_programs::{add_program, copy_program, workgroup_scratch_program};
 
 #[path = "graph_fixtures/mod.rs"]
 mod graph_fixtures;
@@ -1260,21 +1260,9 @@ fn resource_record_retained_predecessor_round_trips() {
     );
 }
 
-/// A program declaring workgroup-scoped scratch and nothing else that could be
-/// refused, so a compile of it isolates the shared-memory capability arm.
+/// A graph of the one program that isolates the shared-memory capability arm.
 fn workgroup_scratch_graph() -> ProgramGraph {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read_write("out", 0, DataType::U32).with_count(1),
-            BufferDecl::workgroup("tile", 8, DataType::U32),
-        ],
-        [32, 1, 1],
-        vec![
-            Node::store("tile", Expr::u32(0), Expr::u32(1)),
-            Node::store("out", Expr::u32(0), Expr::u32(2)),
-        ],
-    );
-    ProgramGraph::from_program("scratch", program).unwrap()
+    ProgramGraph::from_program("scratch", workgroup_scratch_program()).unwrap()
 }
 
 /// WHY: 130. A capability the facts do not state is absent knowledge, not a

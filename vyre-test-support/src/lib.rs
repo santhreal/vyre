@@ -147,6 +147,34 @@ macro_rules! test_node_extension {
     };
 }
 
+/// Declare a test operation signature over `u32` values.
+///
+/// A dialect or operation fixture that only needs "some registered operation"
+/// states one signature: named `u32` inputs and one named `u32` output, no
+/// attributes, no bytes extraction. Only the parameter names differ, so those
+/// are the arguments, and the shape stays one value across the crates that
+/// register such an operation.
+///
+/// Expands to a `Signature` expression usable in a `const`, so `Signature` and
+/// `TypedParam` must both be in scope at the call site.
+#[macro_export]
+macro_rules! u32_signature {
+    (inputs: [$($input:expr),+ $(,)?], output: $output:expr $(,)?) => {
+        Signature {
+            inputs: &[$(TypedParam {
+                name: $input,
+                ty: "u32",
+            }),+],
+            outputs: &[TypedParam {
+                name: $output,
+                ty: "u32",
+            }],
+            attrs: &[],
+            bytes_extraction: false,
+        }
+    };
+}
+
 #[cfg(feature = "ir-fixtures")]
 pub mod adversarial_generators;
 #[cfg(feature = "ir-fixtures")]

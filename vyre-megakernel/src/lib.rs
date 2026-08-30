@@ -111,7 +111,7 @@ pub use objective::{
 };
 pub use portfolio::{compile_portfolio, compile_portfolio_measured, ArtifactPortfolio};
 pub use request::{
-    CompileRequest, ExternalFacts, RequiredSchedule, SearchBudget, SearchWork,
+    CompileRequest, DeclaredConstraints, ExternalFacts, RequiredSchedule, SearchBudget, SearchWork,
     ValidatedCompileRequest,
 };
 pub use request_identity::target_identity;

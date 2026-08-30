@@ -4,6 +4,7 @@ mod fixture_target;
 
 use vyre_aot::{compile, emit_launcher_rust, CompileError, LauncherError, LauncherOpts, TargetId};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_test_support::pass_programs::workgroup_scratch_program;
 
 fn trivial_xor_program() -> Program {
     Program::wrapped(
@@ -54,22 +55,6 @@ fn launcher_requires_linked_target_emitter() {
 
 fn minimal_ptx_artifact_for_template_test() -> vyre_aot::ArtifactEnvelope {
     fixture_target::compiled_artifact()
-}
-
-/// A program declaring workgroup-scoped scratch, which the shared-memory
-/// capability arm of the admission gate reads.
-fn workgroup_scratch_program() -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::read_write("out", 0, DataType::U32).with_count(1),
-            BufferDecl::workgroup("tile", 8, DataType::U32),
-        ],
-        [32, 1, 1],
-        vec![
-            Node::store("tile", Expr::u32(0), Expr::u32(1)),
-            Node::store("out", Expr::u32(0), Expr::u32(2)),
-        ],
-    )
 }
 
 /// WHY: 130. The neutral half of every artifact is compiled against

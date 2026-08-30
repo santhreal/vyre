@@ -22,36 +22,14 @@ use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{BufferAccess, DataType, Expr};
 use vyre_foundation::operation::OperationTier;
 
-const TEST_UNARY_SIG: Signature = Signature {
-    inputs: &[TypedParam {
-        name: "x",
-        ty: "u32",
-    }],
-    outputs: &[TypedParam {
-        name: "out",
-        ty: "u32",
-    }],
-    attrs: &[],
-    bytes_extraction: false,
+const TEST_UNARY_SIG: Signature = vyre_test_support::u32_signature! {
+    inputs: ["x"],
+    output: "out",
 };
 
-const TEST_BINARY_SIG: Signature = Signature {
-    inputs: &[
-        TypedParam {
-            name: "a",
-            ty: "u32",
-        },
-        TypedParam {
-            name: "b",
-            ty: "u32",
-        },
-    ],
-    outputs: &[TypedParam {
-        name: "out",
-        ty: "u32",
-    }],
-    attrs: &[],
-    bytes_extraction: false,
+const TEST_BINARY_SIG: Signature = vyre_test_support::u32_signature! {
+    inputs: ["a", "b"],
+    output: "out",
 };
 
 static INVERT_FIELDS: &[FieldContract] = &[FieldContract {

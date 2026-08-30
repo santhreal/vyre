@@ -27,8 +27,8 @@ use vyre_megakernel::specialization::{
 };
 use vyre_megakernel::{
     target_identity, Artifact, ArtifactEnvelope, CompileObjective, CompileRequest, CoveragePolicy,
-    DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, PortfolioPolicy, PruneReason,
-    RequiredSchedule, SearchBudget, ValidatedCompileRequest,
+    DeclaredConstraints, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, PortfolioPolicy,
+    PruneReason, RequiredSchedule, SearchBudget, ValidatedCompileRequest,
 };
 
 #[path = "support/search_fixtures.rs"]
@@ -668,7 +668,7 @@ fn requiring(seed: u8, required: RequiredSchedule) -> ValidatedCompileRequest {
         SearchBudget::new(32, 100_000, 4, 0, 1_000_000_000),
         objective(4),
     )
-    .requiring_schedule(required)
+    .with_constraints(DeclaredConstraints::new().requiring_schedule(required))
     .validate()
     .expect("Fix: the fixture request must validate under a required family.")
 }

@@ -2,65 +2,16 @@
 
 use std::collections::BTreeSet;
 
+mod measurement_registry;
+
+use measurement_registry::Registry;
+
 const COMPARATORS: &str = include_str!("../../docs/optimization/APPLE_MATH_COMPARATORS.toml");
 const SCHEMA: &str = "vyre.metal.apple_math_comparator.v1";
 const DIGEST_PREFIX: &str = "sha256:";
 
-fn registry() -> toml::Table {
-    toml::from_str::<toml::Table>(COMPARATORS)
-        .expect("Fix: APPLE_MATH_COMPARATORS.toml must parse as TOML.")
-}
-
-fn roster<'reg>(registry: &'reg toml::Table, key: &str) -> BTreeSet<&'reg str> {
-    let values = registry
-        .get(key)
-        .and_then(toml::Value::as_array)
-        .unwrap_or_else(|| panic!("Fix: the comparator registry must declare `{key}`."));
-    assert!(
-        !values.is_empty(),
-        "Fix: `{key}` must state at least one entry."
-    );
-    values
-        .iter()
-        .map(|value| {
-            value
-                .as_str()
-                .unwrap_or_else(|| panic!("Fix: every `{key}` entry must be a string."))
-        })
-        .collect()
-}
-
-fn cases(registry: &toml::Table) -> Vec<&toml::Table> {
-    let rows = registry
-        .get("case")
-        .and_then(toml::Value::as_array)
-        .expect("Fix: the comparator registry must declare [[case]] rows.");
-    rows.iter()
-        .map(|row| {
-            row.as_table()
-                .expect("Fix: every [[case]] row must be a table.")
-        })
-        .collect()
-}
-
-fn text<'row>(row: &'row toml::Table, key: &str, id: &str) -> &'row str {
-    row.get(key)
-        .and_then(toml::Value::as_str)
-        .unwrap_or_else(|| panic!("Fix: comparator case `{id}` must declare `{key}` as a string."))
-}
-
-fn nanos(row: &toml::Table, key: &str, id: &str) -> i64 {
-    let value = row
-        .get(key)
-        .and_then(toml::Value::as_integer)
-        .unwrap_or_else(|| {
-            panic!("Fix: comparator case `{id}` must declare `{key}` as an integer.")
-        });
-    assert!(
-        value > 0,
-        "Fix: comparator case `{id}` must record `{key}` > 0."
-    );
-    value
+fn registry() -> Registry {
+    Registry::parse(COMPARATORS, "comparator")
 }
 
 /// A comparator case records a selection reason that states one declared route.
@@ -78,19 +29,15 @@ fn nanos(row: &toml::Table, key: &str, id: &str) -> i64 {
 #[test]
 fn a_comparator_case_states_one_declared_route_in_its_selection_reason() {
     let registry = registry();
-    assert_eq!(
-        registry.get("schema").and_then(toml::Value::as_str),
-        Some(SCHEMA),
-        "Fix: a comparator registry schema change must be recorded in this case."
-    );
-    let routes = roster(&registry, "routes");
+    registry.declares("schema", SCHEMA);
+    let routes = registry.roster("routes");
     assert!(
         routes.len() >= 2,
         "Fix: a comparator needs two routes to choose between; got {routes:?}"
     );
-    let mut required = roster(&registry, "required_metrics");
+    let mut required = registry.roster("required_metrics");
     required.insert("id");
-    let rows = cases(&registry);
+    let rows = registry.rows("case", "id");
     assert!(
         rows.len() >= 2,
         "Fix: the registry must compare at least two cases; got {} row(s).",
@@ -100,40 +47,20 @@ fn a_comparator_case_states_one_declared_route_in_its_selection_reason() {
     let mut counters = BTreeSet::new();
     let mut digests = BTreeSet::new();
     for row in &rows {
-        let id = text(row, "id", "<unnamed>");
-        let declared: BTreeSet<&str> = row.keys().map(String::as_str).collect();
-        assert_eq!(
-            declared, required,
-            "Fix: comparator case `{id}` must record exactly the required metrics."
-        );
-        let digest = text(row, "output_digest", id);
-        assert!(
-            digest.starts_with(DIGEST_PREFIX),
-            "Fix: comparator case `{id}` must record `output_digest` as a `{DIGEST_PREFIX}` digest."
-        );
-        assert!(
-            digests.insert(digest),
-            "Fix: comparator case `{id}` repeats output digest `{digest}`, so two cases cannot \
-             disagree."
-        );
-        let counter = text(row, "counter_evidence", id);
-        assert!(
-            !counter.is_empty(),
-            "Fix: comparator case `{id}` must record counter evidence."
-        );
+        row.declares_exactly(&required);
+        row.digest("output_digest", DIGEST_PREFIX, &mut digests);
+        let counter = row.stated("counter_evidence");
         assert!(
             counters.insert(counter),
-            "Fix: comparator case `{id}` repeats counter evidence `{counter}`, which cannot \
-             measure two kernels."
+            "Fix: comparator case `{}` repeats counter evidence `{counter}`, which cannot \
+             measure two kernels.",
+            row.id()
         );
-        assert!(
-            !text(row, "kernel_family", id).is_empty(),
-            "Fix: comparator case `{id}` must state the kernel family it compares."
-        );
-        nanos(row, "compile_ns", id);
-        nanos(row, "gpu_ns", id);
+        row.stated("kernel_family");
+        row.nanos("compile_ns");
+        row.nanos("gpu_ns");
 
-        let reason = text(row, "selected_backend_reason", id);
+        let reason = row.text("selected_backend_reason");
         let stated: Vec<&str> = routes
             .iter()
             .copied()
@@ -142,8 +69,9 @@ fn a_comparator_case_states_one_declared_route_in_its_selection_reason() {
         assert_eq!(
             stated.len(),
             1,
-            "Fix: comparator case `{id}` records reason `{reason}`, which states {} of the \
+            "Fix: comparator case `{}` records reason `{reason}`, which states {} of the \
              declared routes {routes:?}.",
+            row.id(),
             stated.len()
         );
     }

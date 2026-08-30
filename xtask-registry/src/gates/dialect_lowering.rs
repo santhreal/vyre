@@ -22,7 +22,7 @@
 
 use std::collections::BTreeMap;
 
-use xtask::gate::{Finding, GateCtx, GateError, Report};
+use xtask::gate::{GateCtx, GateError, Report};
 
 /// One dialect operation's declared composability and its registered lowering.
 pub struct DeclaredOp {
@@ -73,18 +73,20 @@ pub struct DialectLowering;
 
 impl xtask::gate::GateBehavior for DialectLowering {
     fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
-        let mut report = Report::clean();
         let ops = collect_declared_ops();
+        let mut report = Report::from_messages(
+            unlowered_compositions(&ops)
+                .into_iter()
+                .map(|op| {
+                    format!(
+                        "dialect operation `{}` in `{}` declares `is_composable` and registers no program builder",
+                        op.id, op.dialect
+                    )
+                })
+                .collect(),
+            "register a neutral builder that lowers it into canonical logical IR, or declare it uncomposable and add its reference and backend emitter arms",
+        );
         report.cover_complete("registered dialect operations", ops.len());
-        for op in unlowered_compositions(&ops) {
-            report.find(Finding::new(
-                format!(
-                    "dialect operation `{}` in `{}` declares `is_composable` and registers no program builder",
-                    op.id, op.dialect
-                ),
-                "register a neutral builder that lowers it into canonical logical IR, or declare it uncomposable and add its reference and backend emitter arms",
-            ));
-        }
         Ok(report)
     }
 }

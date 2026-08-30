@@ -375,6 +375,53 @@ pub fn load_registry(tree: &Tree, report: &mut Report) -> Result<Vec<CrateRecord
     Ok(records)
 }
 
+/// One `[[crate]]` row as a gate that judges something else reads it.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DeclaredCrate {
+    /// Package name.
+    pub package: String,
+    /// Member directory, relative to the workspace root.
+    pub path: String,
+    /// Layer the crate sits in.
+    pub layer: String,
+}
+
+/// Every crate the ownership registry declares, by package, directory and layer.
+///
+/// [`load_registry`] judges the registry's own contract and reports every way
+/// it disagrees with the manifests. A gate that needs a crate's layer or
+/// directory to decide something else must not report those defects a second
+/// time under its own name, so it reads the rows here. A row missing any of the
+/// three keys is skipped: the finding for it belongs to the gate that owns the
+/// registry.
+pub fn declared_crates(tree: &Tree) -> Result<Vec<DeclaredCrate>, GateError> {
+    let table = tree.read_toml(REGISTRY)?;
+    let rows = table
+        .get("crate")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            GateError::new(
+                format!("{REGISTRY} declares no [[crate]] entries"),
+                "declare every workspace member with its path and layer",
+            )
+        })?;
+    let mut declared = Vec::new();
+    for row in rows {
+        let read = |key: &str| row.get(key).and_then(Value::as_str);
+        let (Some(package), Some(path), Some(layer)) =
+            (read("package"), read("path"), read("layer"))
+        else {
+            continue;
+        };
+        declared.push(DeclaredCrate {
+            package: package.to_owned(),
+            path: path.to_owned(),
+            layer: layer.to_owned(),
+        });
+    }
+    Ok(declared)
+}
+
 /// The dependency tables of one manifest, with the kind and condition each is
 /// declared under.
 fn dependency_tables(manifest: &toml::Table) -> Vec<(&toml::Table, &'static str, String)> {

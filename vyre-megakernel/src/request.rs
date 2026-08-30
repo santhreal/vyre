@@ -109,6 +109,69 @@ pub struct SearchWork {
     pub elapsed_ns: u64,
 }
 
+/// Selection constraints a caller states, enforced before any plan is derived.
+///
+/// A required schedule family narrows what may be selected and never what may
+/// be considered; a declared dialect schema version is enforced against the
+/// dialect's supported window before any candidate exists. Every entry point
+/// that accepts them accepts the same pair: the neutral compile request states
+/// it alongside a graph, and the semantic policy states it alongside the facts a
+/// validated logical graph is compiled under.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct DeclaredConstraints {
+    required_schedule: Option<RequiredSchedule>,
+    declared_dialects: BTreeMap<String, u32>,
+}
+
+impl DeclaredConstraints {
+    /// State no constraint.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            required_schedule: None,
+            declared_dialects: BTreeMap::new(),
+        }
+    }
+
+    /// Require the selected plan to exercise one schedule family.
+    ///
+    /// Every candidate the grammar derives is still derived and every legality
+    /// decision is still made, so a family no legal candidate satisfies fails
+    /// the compile with the family it could not reach rather than being served
+    /// by whichever family ranked next.
+    #[must_use]
+    pub const fn requiring_schedule(mut self, required: RequiredSchedule) -> Self {
+        self.required_schedule = Some(required);
+        self
+    }
+
+    /// State the dialect schema version the program was built against.
+    ///
+    /// A dialect no version is declared for is compiled at its registered
+    /// version, which is what a caller rebuilding against the current schema
+    /// has already migrated to. A declared version is enforced: one below the
+    /// dialect's supported floor, one above its schema version, and a call to an
+    /// operation introduced after it are all refused before any plan is derived.
+    #[must_use]
+    pub fn declaring_dialect_version(mut self, dialect_id: &str, version: u32) -> Self {
+        self.declared_dialects
+            .insert(dialect_id.to_owned(), version);
+        self
+    }
+
+    /// The schedule family stated, when one is.
+    #[must_use]
+    pub const fn required_schedule(&self) -> Option<RequiredSchedule> {
+        self.required_schedule
+    }
+
+    /// Dialect schema versions stated.
+    #[must_use]
+    pub const fn declared_dialects(&self) -> &BTreeMap<String, u32> {
+        &self.declared_dialects
+    }
+}
+
 /// Stable external semantic facts not encoded by graph topology.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExternalFacts {
@@ -157,8 +220,7 @@ pub struct CompileRequest {
     recorded_measurement: Option<MeasurementRecord>,
     mesh: Option<MeshFacts>,
     numeric: Option<NumericContract>,
-    required_schedule: Option<RequiredSchedule>,
-    declared_dialects: BTreeMap<String, u32>,
+    pub(crate) constraints: DeclaredConstraints,
 }
 
 impl CompileRequest {
@@ -186,8 +248,7 @@ impl CompileRequest {
             recorded_measurement: None,
             mesh: None,
             numeric: None,
-            required_schedule: None,
-            declared_dialects: BTreeMap::new(),
+            constraints: DeclaredConstraints::new(),
         }
     }
 
@@ -205,30 +266,10 @@ impl CompileRequest {
         self
     }
 
-    /// Require the selected plan to exercise one schedule family.
-    ///
-    /// Every candidate the grammar derives is still derived and every legality
-    /// decision is still made, so the requirement narrows what may be selected
-    /// and never what may be considered. A requirement no legal candidate
-    /// satisfies fails the compile with the family it could not reach.
+    /// State the selection constraints the caller declares.
     #[must_use]
-    pub const fn requiring_schedule(mut self, required: RequiredSchedule) -> Self {
-        self.required_schedule = Some(required);
-        self
-    }
-
-    /// State the dialect schema version this program was built against.
-    ///
-    /// A dialect the caller declares no version for is compiled at its
-    /// registered version, which is what a caller rebuilding against the
-    /// current schema has already migrated to. A declared version is enforced:
-    /// one below the dialect's supported floor, one above its schema version,
-    /// and a call to an operation introduced after it are all refused before
-    /// any plan is derived.
-    #[must_use]
-    pub fn declaring_dialect_version(mut self, dialect_id: &str, version: u32) -> Self {
-        self.declared_dialects
-            .insert(dialect_id.to_owned(), version);
+    pub fn with_constraints(mut self, constraints: DeclaredConstraints) -> Self {
+        self.constraints = constraints;
         self
     }
 
@@ -309,7 +350,7 @@ impl CompileRequest {
                 "supply a structurally valid acyclic ProgramGraph",
             )
         })?;
-        admit_declared_dialects(&self.graph, &self.declared_dialects)?;
+        admit_declared_dialects(&self.graph, self.constraints.declared_dialects())?;
         // A device without cooperative launch needs every hoistable grid fence
         // lowered to launch boundaries before capability admission. A cooperative
         // device keeps the original fenced node: cutting it would manufacture a
@@ -352,7 +393,7 @@ impl CompileRequest {
             search_budget: self.search_budget,
             mesh,
             numeric: self.numeric,
-            required_schedule: self.required_schedule,
+            required_schedule: self.constraints.required_schedule(),
         })
     }
 }

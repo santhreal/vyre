@@ -302,7 +302,8 @@ resident queue reachable over floating point. See
 
 ## A caller may require one schedule family
 
-`CompileRequest::requiring_schedule` states the family the selected plan must
+`DeclaredConstraints::requiring_schedule`, attached to a request with
+`CompileRequest::with_constraints`, states the family the selected plan must
 exercise: `RequiredSchedule::Baseline` for a plan that applies no production, or
 `RequiredSchedule::Production(p)` for a plan whose derivation applies `p` at
 least once. Every candidate is still derived and every legality decision is
@@ -332,7 +333,8 @@ other family is promoted to reference.
 
 ## A declared dialect schema version is enforced
 
-`CompileRequest::declaring_dialect_version` states the dialect schema version a
+`DeclaredConstraints::declaring_dialect_version`, attached with
+`CompileRequest::with_constraints`, states the dialect schema version a
 program was built against. A dialect left undeclared is compiled at its
 registered version, which is what a caller rebuilding against the current
 schema has migrated to. A declared version is held to: below the dialect's

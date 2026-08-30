@@ -184,6 +184,102 @@ impl vyre_megakernel::SemanticExecutor for FixedOutputExecutor {
     }
 }
 
+/// The stage key that answers whichever stage a request names.
+#[cfg(test)]
+pub(super) const ANY_STAGE: &str = "";
+
+/// A semantic executor that answers each stage with stated bytes and can break
+/// one output rule.
+///
+/// The malformed-output contracts of the encoded passes each need an executor
+/// that returns bytes for the values a node writes and then violates one rule:
+/// writes a graph value the request never declared, or leaves a declared one
+/// unwritten. Written per pass, every copy restates the whole `execute` body to
+/// vary one line of it, and the two that shipped had already drifted on how a
+/// stage with no stated bytes is reported.
+///
+/// [`ANY_STAGE`] answers whichever stage the request names, which is what a
+/// single-stage pass states.
+#[cfg(test)]
+pub(super) struct ScriptedExecutor {
+    stages: std::collections::BTreeMap<&'static str, Vec<Vec<u8>>>,
+    undeclared_for: Option<&'static str>,
+    omitted: Option<usize>,
+}
+
+#[cfg(test)]
+impl ScriptedExecutor {
+    /// Answer every stage with one list of bytes.
+    pub(super) fn answering(outputs: Vec<Vec<u8>>) -> Self {
+        Self::per_stage(vec![(ANY_STAGE, outputs)])
+    }
+
+    /// Answer each named stage with its own list of bytes.
+    pub(super) fn per_stage(stages: Vec<(&'static str, Vec<Vec<u8>>)>) -> Self {
+        Self {
+            stages: stages.into_iter().collect(),
+            undeclared_for: None,
+            omitted: None,
+        }
+    }
+
+    /// Also write one graph value the request never declared, on `stage`.
+    pub(super) fn writing_undeclared_output(mut self, stage: &'static str) -> Self {
+        self.undeclared_for = Some(stage);
+        self
+    }
+
+    /// Leave the written value at `index` unwritten.
+    pub(super) const fn omitting(mut self, index: usize) -> Self {
+        self.omitted = Some(index);
+        self
+    }
+
+    /// Whether this execution writes its undeclared value on `stage`.
+    fn writes_undeclared(&self, stage: &str) -> bool {
+        self.undeclared_for
+            .is_some_and(|wanted| wanted == ANY_STAGE || wanted == stage)
+    }
+}
+
+#[cfg(test)]
+impl vyre_megakernel::SemanticExecutor for ScriptedExecutor {
+    fn execute(
+        &self,
+        request: &vyre_megakernel::SemanticExecutionRequest<'_>,
+    ) -> Result<vyre_megakernel::SemanticExecutionOutput, vyre_megakernel::SemanticExecutionError>
+    {
+        let stage = request.logical().regions()[0].name.as_str();
+        let scripted = self
+            .stages
+            .get(stage)
+            .or_else(|| self.stages.get(ANY_STAGE))
+            .unwrap_or_else(|| {
+                panic!("Fix: state the bytes this executor answers `{stage}` with.")
+            });
+        let node = &request.logical().graph().nodes()[0];
+        let written = vyre_megakernel::writable_graph_values(node);
+        let mut outputs = std::collections::BTreeMap::new();
+        for (index, (value, bytes)) in written.into_iter().zip(scripted.iter()).enumerate() {
+            if self.omitted == Some(index) {
+                continue;
+            }
+            outputs.insert(value, bytes.clone());
+        }
+        if self.writes_undeclared(stage) {
+            outputs.insert(
+                vyre_foundation::ir::GraphValueId(u32::MAX),
+                vec![0u8; std::mem::size_of::<u32>()],
+            );
+        }
+        Ok(vyre_megakernel::SemanticExecutionOutput {
+            artifact: vyre_megakernel::Digest([0; 32]),
+            payload: vyre_megakernel::Digest([1; 32]),
+            outputs,
+        })
+    }
+}
+
 #[cfg(test)]
 pub(super) fn semantic_test_policy() -> vyre_megakernel::SemanticExecutionPolicy {
     vyre_megakernel::SemanticExecutionPolicy::new(

@@ -53,6 +53,7 @@ use quote::ToTokens;
 use syn::spanned::Spanned;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
+use crate::gates::crate_registry;
 use crate::gates::scan::Tree;
 
 /// How many caller levels a realization route may pass a decision down.
@@ -227,29 +228,13 @@ struct Registry {
 impl Registry {
     /// Read the declared layers, failing closed when no crate owns selection.
     fn read(tree: &Tree) -> Result<Self, GateError> {
-        let table = tree.read_toml("docs/CRATE_OWNERSHIP.toml")?;
-        let crates = table
-            .get("crate")
-            .and_then(toml::Value::as_array)
-            .ok_or_else(|| {
-                GateError::new(
-                    "docs/CRATE_OWNERSHIP.toml declares no [[crate]] entries",
-                    "declare every workspace member with its path and layer",
-                )
-            })?;
         let mut layers = BTreeMap::new();
         let mut owner = None;
-        for entry in crates {
-            let read = |key: &str| entry.get(key).and_then(toml::Value::as_str);
-            let (Some(package), Some(path), Some(layer)) =
-                (read("package"), read("path"), read("layer"))
-            else {
-                continue;
-            };
-            if layer == OWNER_LAYER {
-                owner = Some((package.to_string(), path.to_string()));
+        for declared in crate_registry::declared_crates(tree)? {
+            if declared.layer == OWNER_LAYER {
+                owner = Some((declared.package, declared.path.clone()));
             }
-            layers.insert(path.to_string(), layer.to_string());
+            layers.insert(declared.path, declared.layer);
         }
         let (owner_package, owner_directory) = owner.ok_or_else(|| {
             GateError::new(

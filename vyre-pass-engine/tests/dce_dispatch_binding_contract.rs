@@ -65,10 +65,10 @@ impl SemanticExecutor for RecordingExecutor {
                     .iter()
                     .map(|(id, bytes)| (*id, bytes.len()))
                     .collect(),
-                external_facts: request.external_facts().clone(),
-                target_facts: request.target_facts(),
-                objective: *request.objective(),
-                budget: request.budget(),
+                external_facts: request.policy().external_facts().clone(),
+                target_facts: request.policy().target_facts(),
+                objective: *request.policy().objective(),
+                budget: request.policy().budget(),
             });
         if self.fail_stage == Some(stage) {
             return Err(SemanticExecutionError::Backend(format!(

@@ -63,13 +63,13 @@ impl SemanticExecutor for ReferenceSemanticExecutor {
         &self,
         request: &SemanticExecutionRequest<'_>,
     ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
-        if request.objective().primary() != ObjectiveMetric::Latency {
+        if request.policy().objective().primary() != ObjectiveMetric::Latency {
             return Err(SemanticExecutionError::InvalidRequest(format!(
                 "reference parity execution ranks nothing, so it cannot honour a `{}` objective. Fix: state a latency objective for the reference oracle",
-                request.objective().primary().name()
+                request.policy().objective().primary().name()
             )));
         }
-        if request.budget().max_measurements != 0 {
+        if request.policy().budget().max_measurements != 0 {
             return Err(SemanticExecutionError::InvalidRequest(
                 "reference parity execution cannot satisfy a device-measurement budget. Fix: use a zero-measurement policy for the reference oracle".to_string(),
             ));

@@ -26,6 +26,7 @@ impl vyre_megakernel::BoundViolation
 impl vyre_megakernel::CompileObjective
 impl vyre_megakernel::CompileRequest
 impl vyre_megakernel::CoveragePolicy
+impl vyre_megakernel::DeclaredConstraints
 impl vyre_megakernel::DeviceFacts
 impl vyre_megakernel::Digest
 impl vyre_megakernel::ExecutionTopology
@@ -122,10 +123,13 @@ pub const fn vyre_megakernel::CompileObjective::with_tie_breaker(self, metric: v
 pub const fn vyre_megakernel::CompileObjective::with_workload(self, workload: vyre_megakernel::WorkloadProfile) -> Self
 pub const fn vyre_megakernel::CompileObjective::workload(&self) -> &vyre_megakernel::WorkloadProfile
 pub const fn vyre_megakernel::CompileRequest::new(graph: vyre_foundation::ir_inner::model::program_graph::ProgramGraph, facts: vyre_megakernel::ExternalFacts, device: vyre_megakernel::DeviceFacts, search_budget: vyre_megakernel::SearchBudget, objective: vyre_megakernel::CompileObjective) -> Self
-pub const fn vyre_megakernel::CompileRequest::requiring_schedule(self, required: vyre_megakernel::RequiredSchedule) -> Self
 pub const fn vyre_megakernel::CompileRequest::with_numeric_budget(self, numeric: vyre_foundation::numeric::contract::NumericContract) -> Self
 pub const fn vyre_megakernel::CoveragePolicy::minimum_variants(self, classes: usize) -> usize
 pub const fn vyre_megakernel::CoveragePolicy::name(self) -> &'static str
+pub const fn vyre_megakernel::DeclaredConstraints::declared_dialects(&self) -> &alloc::collections::btree::map::BTreeMap<alloc::string::String, u32>
+pub const fn vyre_megakernel::DeclaredConstraints::new() -> Self
+pub const fn vyre_megakernel::DeclaredConstraints::required_schedule(&self) -> core::option::Option<vyre_megakernel::RequiredSchedule>
+pub const fn vyre_megakernel::DeclaredConstraints::requiring_schedule(self, required: vyre_megakernel::RequiredSchedule) -> Self
 pub const fn vyre_megakernel::DeviceFacts::architectural_registers_per_invocation(&self) -> u32
 pub const fn vyre_megakernel::DeviceFacts::barrier_ns(&self) -> u64
 pub const fn vyre_megakernel::DeviceFacts::cache_capacity_bytes(&self) -> u64
@@ -203,21 +207,14 @@ pub const fn vyre_megakernel::ScheduleProduction::code(self) -> &'static str
 pub const fn vyre_megakernel::SearchBudget::new(max_candidates: u32, max_cpu_work: u64, max_target_compilations: u32, max_measurements: u32, max_elapsed_ns: u64) -> Self
 pub const fn vyre_megakernel::SelectedLowering::descriptor(&self) -> &vyre_lower::descriptor::KernelDescriptor
 pub const fn vyre_megakernel::SemanticExecutionPolicy::budget(&self) -> vyre_megakernel::SearchBudget
-pub const fn vyre_megakernel::SemanticExecutionPolicy::declared_dialects(&self) -> &alloc::collections::btree::map::BTreeMap<alloc::string::String, u32>
+pub const fn vyre_megakernel::SemanticExecutionPolicy::constraints(&self) -> &vyre_megakernel::DeclaredConstraints
 pub const fn vyre_megakernel::SemanticExecutionPolicy::external_facts(&self) -> &vyre_megakernel::ExternalFacts
 pub const fn vyre_megakernel::SemanticExecutionPolicy::new(external_facts: vyre_megakernel::ExternalFacts, target_facts: vyre_megakernel::DeviceFacts, objective: vyre_megakernel::CompileObjective, budget: vyre_megakernel::SearchBudget) -> Self
 pub const fn vyre_megakernel::SemanticExecutionPolicy::objective(&self) -> &vyre_megakernel::CompileObjective
-pub const fn vyre_megakernel::SemanticExecutionPolicy::required_schedule(&self) -> core::option::Option<vyre_megakernel::RequiredSchedule>
-pub const fn vyre_megakernel::SemanticExecutionPolicy::requiring_schedule(self, required: vyre_megakernel::RequiredSchedule) -> Self
 pub const fn vyre_megakernel::SemanticExecutionPolicy::target_facts(&self) -> vyre_megakernel::DeviceFacts
-pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::budget(&self) -> vyre_megakernel::SearchBudget
-pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::declared_dialects(&self) -> &alloc::collections::btree::map::BTreeMap<alloc::string::String, u32>
-pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::external_facts(&self) -> &vyre_megakernel::ExternalFacts
 pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::inputs(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, &'a [u8]>
 pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::logical(&self) -> &vyre_foundation::logical::LogicalProgramGraph<'a>
-pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::objective(&self) -> &vyre_megakernel::CompileObjective
-pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::required_schedule(&self) -> core::option::Option<vyre_megakernel::RequiredSchedule>
-pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::target_facts(&self) -> vyre_megakernel::DeviceFacts
+pub const fn vyre_megakernel::SemanticExecutionRequest<'a>::policy(&self) -> &vyre_megakernel::SemanticExecutionPolicy
 pub const fn vyre_megakernel::TargetPayload::device(&self) -> vyre_megakernel::allocation::DeviceSlot
 pub const fn vyre_megakernel::TargetPayload::digest(&self) -> vyre_megakernel::Digest
 pub const fn vyre_megakernel::TargetPayload::format(&self) -> &vyre_megakernel::TargetPayloadFormat
@@ -398,11 +395,12 @@ pub fn vyre_megakernel::BoundViolation::statement(&self) -> alloc::string::Strin
 pub fn vyre_megakernel::CompileObjective::aggregate(&self, per_class: &[vyre_megakernel::MetricFigures]) -> vyre_megakernel::MetricFigures
 pub fn vyre_megakernel::CompileObjective::ordering_metrics(&self) -> alloc::vec::Vec<vyre_megakernel::ObjectiveMetric>
 pub fn vyre_megakernel::CompileObjective::validate(&self, device: vyre_megakernel::DeviceFacts) -> core::result::Result<(), vyre_megakernel::CompileError>
-pub fn vyre_megakernel::CompileRequest::declaring_dialect_version(self, dialect_id: &str, version: u32) -> Self
 pub fn vyre_megakernel::CompileRequest::validate(self) -> core::result::Result<vyre_megakernel::ValidatedCompileRequest, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::CompileRequest::with_constraints(self, constraints: vyre_megakernel::DeclaredConstraints) -> Self
 pub fn vyre_megakernel::CompileRequest::with_mesh(self, mesh: vyre_megakernel::mesh::MeshFacts) -> Self
 pub fn vyre_megakernel::CompileRequest::with_recorded_measurement(self, recorded_measurement: vyre_megakernel::measure::MeasurementRecord) -> Self
 pub fn vyre_megakernel::CompileRequest::with_representative_inputs(self, representative_inputs: alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, alloc::vec::Vec<u8>>) -> Self
+pub fn vyre_megakernel::DeclaredConstraints::declaring_dialect_version(self, dialect_id: &str, version: u32) -> Self
 pub fn vyre_megakernel::Digest::deserialize<D: serde_core::de::Deserializer<'de>>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
 pub fn vyre_megakernel::Digest::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_megakernel::Digest::serialize<S: serde_core::ser::Serializer>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
@@ -442,11 +440,9 @@ pub fn vyre_megakernel::SearchCertificate::derived_by(&self, production: vyre_me
 pub fn vyre_megakernel::SearchCertificate::derived_total(&self) -> u32
 pub fn vyre_megakernel::SearchCertificate::pruned_for(&self, reason: vyre_megakernel::PruneReason) -> u32
 pub fn vyre_megakernel::SelectedPlan::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
-pub fn vyre_megakernel::SemanticExecutionPolicy::declaring_dialect_version(self, dialect_id: &str, version: u32) -> Self
+pub fn vyre_megakernel::SemanticExecutionPolicy::with_constraints(self, constraints: vyre_megakernel::DeclaredConstraints) -> Self
 pub fn vyre_megakernel::SemanticExecutionRequest<'a>::compile_request(&self) -> vyre_megakernel::CompileRequest
-pub fn vyre_megakernel::SemanticExecutionRequest<'a>::declaring_dialect_version(self, dialect_id: &str, version: u32) -> Self
-pub fn vyre_megakernel::SemanticExecutionRequest<'a>::new(logical: &'a vyre_foundation::logical::LogicalProgramGraph<'a>, inputs: alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, &'a [u8]>, external_facts: vyre_megakernel::ExternalFacts, target_facts: vyre_megakernel::DeviceFacts, objective: vyre_megakernel::CompileObjective, budget: vyre_megakernel::SearchBudget) -> core::result::Result<Self, vyre_megakernel::SemanticExecutionError>
-pub fn vyre_megakernel::SemanticExecutionRequest<'a>::requiring_schedule(self, required: vyre_megakernel::RequiredSchedule) -> Self
+pub fn vyre_megakernel::SemanticExecutionRequest<'a>::new(logical: &'a vyre_foundation::logical::LogicalProgramGraph<'a>, inputs: alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, &'a [u8]>, policy: vyre_megakernel::SemanticExecutionPolicy) -> core::result::Result<Self, vyre_megakernel::SemanticExecutionError>
 pub fn vyre_megakernel::SemanticExecutor::execute(&self, request: &vyre_megakernel::SemanticExecutionRequest<'_>) -> core::result::Result<vyre_megakernel::SemanticExecutionOutput, vyre_megakernel::SemanticExecutionError>
 pub fn vyre_megakernel::SingleProgramExecutionOutput::buffer(&self, name: &str) -> core::option::Option<&[u8]>
 pub fn vyre_megakernel::TargetCompiler::compile(&self, artifact: &vyre_megakernel::Artifact) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::TargetCompileError>
@@ -575,6 +571,7 @@ pub struct vyre_megakernel::BoundViolation
 pub struct vyre_megakernel::CompileError
 pub struct vyre_megakernel::CompileObjective
 pub struct vyre_megakernel::CompileRequest
+pub struct vyre_megakernel::DeclaredConstraints
 pub struct vyre_megakernel::DependencyEdge
 pub struct vyre_megakernel::DerivationStep
 pub struct vyre_megakernel::DerivedFamily

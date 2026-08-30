@@ -19,10 +19,10 @@
 
 use vyre_megakernel::{
     compile, compile_measured, compile_portfolio, compile_portfolio_measured, Artifact,
-    ArtifactPortfolio, CompileObjective, CoveragePolicy, EmittedResources, FinalistEvaluator,
-    ObjectiveMetric, PortfolioPolicy, PruneReason, RequiredSchedule, SearchBudget,
-    TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat, TargetProfile,
-    ValidatedCompileRequest, WorkloadAggregation, WorkloadClass, WorkloadProfile,
+    ArtifactPortfolio, CompileObjective, CoveragePolicy, DeclaredConstraints, EmittedResources,
+    FinalistEvaluator, ObjectiveMetric, PortfolioPolicy, PruneReason, RequiredSchedule,
+    SearchBudget, TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat,
+    TargetProfile, ValidatedCompileRequest, WorkloadAggregation, WorkloadClass, WorkloadProfile,
 };
 
 #[path = "support/search_fixtures.rs"]
@@ -503,7 +503,7 @@ fn every_part_of_a_partitioned_compile_keeps_the_required_family() {
         budget(),
         objective(profile, CoveragePolicy::EveryWorkloadClass, 2),
     )
-    .requiring_schedule(RequiredSchedule::Baseline)
+    .with_constraints(DeclaredConstraints::new().requiring_schedule(RequiredSchedule::Baseline))
     .validate()
     .expect("Fix: the fixture request must validate under a required family");
 

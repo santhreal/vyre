@@ -155,85 +155,28 @@ fn write_padded_one_u32_bytes(out: &mut Vec<u8>, buf: &[u32]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::BTreeMap;
-    use vyre_foundation::ir::{Expr, GraphValueId, Node, Program};
+    use vyre_foundation::ir::{Expr, Node, Program};
     use vyre_libs::bitset::bitset_words;
     use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_megakernel::{
-        Digest, SemanticExecutionOutput, SemanticExecutionRequest, SemanticExecutor,
-    };
 
-    use super::super::arena_kernel::semantic_test_policy;
+    use super::super::arena_kernel::{semantic_test_policy, ScriptedExecutor, ANY_STAGE};
+
+    /// The written value a dispatch omits to state a missing converged output.
+    const CONVERGED_OUTPUT: usize = 2;
 
     fn wrapped_program(entry: Vec<Node>) -> Program {
         Program::wrapped(Vec::new(), [1, 1, 1], entry)
     }
 
-    struct MalformedExecutor {
-        outputs: Vec<Vec<u8>>,
-        extra_output: bool,
-        omit_output: bool,
-    }
-
-    impl MalformedExecutor {
-        fn new(outputs: Vec<Vec<u8>>) -> Self {
-            Self {
-                outputs,
-                extra_output: false,
-                omit_output: false,
-            }
-        }
-
-        fn with_extra_output(outputs: Vec<Vec<u8>>) -> Self {
-            Self {
-                outputs,
-                extra_output: true,
-                omit_output: false,
-            }
-        }
-
-        fn with_omitted_output(outputs: Vec<Vec<u8>>) -> Self {
-            Self {
-                outputs,
-                extra_output: false,
-                omit_output: true,
-            }
-        }
-    }
-
-    impl SemanticExecutor for MalformedExecutor {
-        fn execute(
-            &self,
-            request: &SemanticExecutionRequest<'_>,
-        ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
-            let node = &request.logical().graph().nodes()[0];
-            let written = vyre_megakernel::writable_graph_values(node);
-            let mut outputs = BTreeMap::new();
-            for (idx, (val, bytes)) in written.into_iter().zip(self.outputs.iter()).enumerate() {
-                if self.omit_output && idx == 2 {
-                    // Omit converged output
-                    continue;
-                }
-                outputs.insert(val, bytes.clone());
-            }
-            if self.extra_output {
-                outputs.insert(GraphValueId(u32::MAX), vec![0u8; 4]);
-            }
-            Ok(SemanticExecutionOutput {
-                artifact: Digest([0; 32]),
-                payload: Digest([1; 32]),
-                outputs,
-            })
-        }
-    }
     #[test]
     fn dce_rejects_extra_dispatch_outputs() {
         let program = wrapped_program(vec![Node::store("buf", Expr::u32(0), Expr::u32(1))]);
-        let executor = MalformedExecutor::with_extra_output(vec![
+        let executor = ScriptedExecutor::answering(vec![
             u32_slice_to_le_bytes(&[1]),
             u32_slice_to_le_bytes(&[0]),
             u32_slice_to_le_bytes(&[1]),
-        ]);
+        ])
+        .writing_undeclared_output(ANY_STAGE);
         let err = gpu_dce(program, &executor, &semantic_test_policy())
             .expect_err("extra outputs must be rejected");
         assert!(
@@ -252,11 +195,12 @@ mod tests {
         let program = wrapped_program(vec![Node::store("buf", Expr::u32(0), Expr::u32(1))]);
         let encoded = encode_program(&program).expect("Fix: encoder accepts store");
         let words = bitset_words(encoded.node_count) as usize;
-        let executor = MalformedExecutor::with_omitted_output(vec![
+        let executor = ScriptedExecutor::answering(vec![
             u32_slice_to_le_bytes(&vec![1; words]),
             u32_slice_to_le_bytes(&[0]),
             u32_slice_to_le_bytes(&[1]),
-        ]);
+        ])
+        .omitting(CONVERGED_OUTPUT);
         let err = gpu_dce(program, &executor, &semantic_test_policy())
             .expect_err("missing converged must be rejected");
         assert!(
@@ -274,7 +218,7 @@ mod tests {
         let program = wrapped_program(vec![Node::store("buf", Expr::u32(0), Expr::u32(1))]);
         let encoded = encode_program(&program).expect("Fix: encoder accepts store");
         let words = bitset_words(encoded.node_count) as usize;
-        let executor = MalformedExecutor::new(vec![
+        let executor = ScriptedExecutor::answering(vec![
             u32_slice_to_le_bytes(&vec![1; words]),
             u32_slice_to_le_bytes(&[1]),
             u32_slice_to_le_bytes(&[0]),
@@ -295,7 +239,7 @@ mod tests {
         let program = wrapped_program(vec![Node::store("buf", Expr::u32(0), Expr::u32(1))]);
         let encoded = encode_program(&program).expect("Fix: encoder accepts store");
         let words = bitset_words(encoded.node_count) as usize;
-        let executor = MalformedExecutor::new(vec![
+        let executor = ScriptedExecutor::answering(vec![
             u32_slice_to_le_bytes(&vec![1; words]),
             u32_slice_to_le_bytes(&[0]),
             u32_slice_to_le_bytes(&[7]),
@@ -317,7 +261,7 @@ mod tests {
         let program = wrapped_program(vec![Node::store("buf", Expr::u32(0), Expr::u32(1))]);
         let encoded = encode_program(&program).expect("Fix: encoder accepts store");
         let words = bitset_words(encoded.node_count) as usize;
-        let executor = MalformedExecutor::new(vec![
+        let executor = ScriptedExecutor::answering(vec![
             u32_slice_to_le_bytes(&vec![1; words]),
             vec![0, 0, 0, 0, 1],
             u32_slice_to_le_bytes(&[1]),
@@ -339,7 +283,7 @@ mod tests {
         let program = wrapped_program(vec![Node::store("buf", Expr::u32(0), Expr::u32(1))]);
         let encoded = encode_program(&program).expect("Fix: encoder accepts store");
         let words = bitset_words(encoded.node_count) as usize;
-        let executor = MalformedExecutor::new(vec![
+        let executor = ScriptedExecutor::answering(vec![
             u32_slice_to_le_bytes(&vec![u32::MAX; words]),
             vec![0, 0, 0, 0],
             u32_slice_to_le_bytes(&[1]),
