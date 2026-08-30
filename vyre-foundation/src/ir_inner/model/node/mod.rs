@@ -146,4 +146,62 @@ pub(crate) mod tests {
 
         assert_eq!(decoded, program);
     }
+
+    /// WHY: `node_op_id` is exhaustive with no catch-all, so the compiler
+    /// already forces a new variant to state an id. It does not force that id
+    /// to be new. Two arms returning one string make the wire decoder route a
+    /// decoded node to the wrong variant, and make a backend that admits one
+    /// variant silently admit the other, because
+    /// `vyre-driver`'s program validation keys admission on this string. The
+    /// arm roster is read from this file at run time rather than restated, so
+    /// a copied arm is caught instead of a stale list.
+    #[test]
+    fn every_node_op_id_arm_states_a_distinct_id() {
+        let source = include_str!("mod.rs");
+        let body = source
+            .split_once("pub fn node_op_id(node: &Node) -> &'static str {")
+            .expect("Fix: node_op_id must remain declared in this file")
+            .1
+            .split_once("\n}\n")
+            .expect("Fix: node_op_id must remain a closed function body")
+            .0;
+
+        let mut arms = 0_usize;
+        let mut ids = std::collections::BTreeSet::new();
+        for line in body.lines() {
+            let Some((pattern, result)) = line.split_once("=>") else {
+                continue;
+            };
+            if !pattern.trim_start().starts_with("Node::") {
+                continue;
+            }
+            arms += 1;
+            // The extension arm defers to the extension's own kind, so it
+            // states no literal here and cannot collide with one.
+            if let Some(id) = result.trim().strip_prefix('"') {
+                let id = id
+                    .strip_suffix("\",")
+                    .expect("Fix: a literal node op id must end the match arm");
+                assert!(
+                    id.starts_with("vyre.node."),
+                    "Fix: node op id `{id}` must stay in the `vyre.node.` namespace"
+                );
+                assert!(
+                    ids.insert(id),
+                    "Fix: node op id `{id}` is stated by more than one arm; wire decode and backend admission both key on it"
+                );
+            }
+        }
+
+        assert!(
+            arms > 25,
+            "Fix: only {arms} node_op_id arms were read; the parse no longer sees the match"
+        );
+        assert_eq!(
+            ids.len() + 1,
+            arms,
+            "Fix: {arms} arms produced {} distinct literal ids; every arm but the extension arm must state its own",
+            ids.len()
+        );
+    }
 }

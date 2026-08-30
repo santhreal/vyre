@@ -173,12 +173,6 @@ fn node_op_id_collectives_are_stable() {
 }
 
 #[test]
-fn node_op_id_is_deterministic_for_same_node() {
-    let node = Node::barrier();
-    assert_eq!(node_op_id(&node), node_op_id(&node));
-}
-
-#[test]
 fn default_supported_ops_is_non_empty() {
     let ops = default_supported_ops();
     assert!(
