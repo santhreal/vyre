@@ -175,20 +175,42 @@ fn admission_rejects_a_payload_built_for_another_profile() {
     expect_invalid_program(error, "profile does not match");
 }
 
-/// WHY: this is the check two of four backends were missing. A module whose
-/// entry point is not `main` was executable on half the fleet.
+/// WHY: this is the check two of four backends were missing, and it used to
+/// demand the literal name `main`. That is one dialect's spelling: `main` is
+/// reserved in the Metal shading language, so its translator renames the entry
+/// point and every Metal payload was refused by a neutral rule no Metal module
+/// can satisfy. A module with no entry point at all is the state nothing can
+/// look up, and it is rejected whatever the dialect. A renamed entry point that
+/// the payload metadata also names is admitted, which is the pair
+/// `admission_rejects_entry_metadata_that_names_another_entry` holds apart.
 #[test]
-fn admission_rejects_a_module_whose_entry_point_is_not_main() {
+fn admission_rejects_a_module_that_states_no_entry_point() {
     let (artifact, payload) = compiled();
     let mut bundle = bundle_of(&payload);
-    bundle.modules[0].entry_point = "not_main".to_string();
+    bundle.modules[0].entry_point = String::new();
     let mut entries = payload.entries().to_vec();
-    entries[0].name = "not_main".to_string();
+    entries[0].name = String::new();
     let perturbed = repack(&artifact, &payload, &bundle, entries);
 
     let error = materialize::admit(&artifact, &perturbed, target(&perturbed))
-        .expect_err("non-main entry point must be rejected");
-    expect_invalid_program(error, "entry point must be `main`");
+        .expect_err("a module with no entry point must be rejected");
+    expect_invalid_program(error, "states no entry point");
+}
+
+/// WHY: a dialect that renames its entry point must still materialize. The
+/// neutral rule reads the name the payload states, so a translated name is
+/// admitted exactly when the metadata names the same one.
+#[test]
+fn admission_admits_a_renamed_entry_point_the_metadata_names() {
+    let (artifact, payload) = compiled();
+    let mut bundle = bundle_of(&payload);
+    bundle.modules[0].entry_point = "main0".to_string();
+    let mut entries = payload.entries().to_vec();
+    entries[0].name = "main0".to_string();
+    let perturbed = repack(&artifact, &payload, &bundle, entries);
+
+    materialize::admit(&artifact, &perturbed, target(&perturbed))
+        .expect("a renamed entry point the metadata names must be admitted");
 }
 
 /// WHY: entry metadata and the emitted module must name the same entry, or the

@@ -158,12 +158,14 @@ impl MetalBackend {
         &self,
         artifact: vyre_emit_metal::MetalArtifact,
     ) -> Result<MetalTargetModule, BackendError> {
-        if artifact.entry_point != "main" {
+        // `main` is reserved in the Metal shading language, so the translator
+        // renames the entry point it emits. The name is authenticated with the
+        // rest of the artifact and looked up below, which reports a name the
+        // library does not define; a name the artifact never stated is what
+        // cannot be looked up at all.
+        if artifact.entry_point.is_empty() {
             return Err(BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: authenticated Metal target entry point must be `main`, found `{}`.",
-                    artifact.entry_point
-                ),
+                fix: "Fix: authenticated Metal target states no entry point. Recompile the target payload from the neutral artifact.".to_string(),
             });
         }
         let options = metal::CompileOptions::new();

@@ -6079,6 +6079,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The registered encodex operation now records the exact ASCII, UTF-8,
   UTF-16LE, and ISO-8859-1 classifier identifiers produced by its canonical
   fixtures.
+- Target module admission requires an entry point that the payload metadata
+  names instead of the literal name `main`, so a payload whose dialect renames
+  its entry point materializes.
 - The async rule roster derives its covered set from the validation catalog and
   the suite sources at run time, which closed a gap where the empty-tag rule
   V128 had no test case in the tree.
