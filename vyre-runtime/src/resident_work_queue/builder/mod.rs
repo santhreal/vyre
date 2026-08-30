@@ -776,12 +776,27 @@ mod tests {
             }
         }
 
+        /// The generated public-API snapshot is the registry of what this
+        /// crate exports. A new production builder appears in it as soon as
+        /// the public-api gate regenerates it, and fails the case below until
+        /// it is called.
+        const PUBLIC_API_SNAPSHOT: &str =
+            include_str!("../../../../docs/public-api/vyre-runtime.txt");
+
+        /// Re-exported under `#[cfg(test)]`, so it is absent from a snapshot
+        /// taken of the public surface and is named here instead.
+        const TEST_ONLY_BUILDER: &str = "build_program_with_self_loading_miss_handler";
+
         #[test]
         fn every_exported_program_builder_is_covered() {
-            let mut exported: Vec<&str> = include_str!("../mod.rs")
-                .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-                .filter(|token| token.starts_with("build_program"))
+            const PREFIX: &str = "pub fn vyre_runtime::resident_work_queue::";
+            let mut exported: Vec<&str> = PUBLIC_API_SNAPSHOT
+                .lines()
+                .filter_map(|line| line.strip_prefix(PREFIX))
+                .filter_map(|item| item.split('(').next())
+                .filter(|name| name.starts_with("build_program"))
                 .collect();
+            exported.push(TEST_ONLY_BUILDER);
             exported.sort_unstable();
             exported.dedup();
 
@@ -791,7 +806,7 @@ mod tests {
 
             assert_eq!(
                 exported, covered,
-                "Fix: call every re-exported `build_program*` builder in built_programs; an uncalled one has no validation or device-transfer coverage."
+                "Fix: call every exported `build_program*` builder in built_programs; an uncalled one has no validation or device-transfer coverage."
             );
         }
 
