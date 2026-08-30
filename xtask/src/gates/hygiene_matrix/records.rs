@@ -194,6 +194,15 @@ pub(crate) const BLOCKED_PATTERNS: &[(&str, &str)] = &[
     ("fake_gpu_timing_formula", "cpu_ms * 0.01"),
 ];
 
+/// Unresolved-work markers only a narrower surface can read.
+///
+/// `tbd` cannot join `BLOCKED_PATTERNS`. The conformance certificate schema
+/// states `TBD` as a field value, so a tree-wide scan reads those schema
+/// tokens as unfinished work. The production driver surface states no such
+/// token, and `tbd` there is unfinished work. The term stays owned beside the
+/// tree-wide table so neither scan carries a list of its own.
+pub(crate) const DRIVER_SURFACE_ONLY_MARKERS: &[(&str, &str)] = &[("tbd_text", "tbd")];
+
 pub(crate) const MAX_HYGIENE_SCAN_FILE_BYTES: u64 = 4_194_304;
 pub(crate) const THRESHOLD_POLICY_SCHEMA_VERSION: u32 = 1;
 pub(crate) const THRESHOLD_POLICY_SOURCE: &str = "docs/optimization/THRESHOLD_POLICY.toml";

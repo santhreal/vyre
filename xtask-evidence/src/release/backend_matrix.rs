@@ -579,11 +579,12 @@ fn collect_feature_markers(
             .copied()
             .filter(|token| !code_lowered.contains(&token.to_ascii_lowercase()))
             .collect::<Vec<_>>();
-        let unresolved_markers = xtask::gates::hygiene_matrix::unresolved_marker_pattern_texts()
-            .into_iter()
-            .filter(|(_, marker)| lowered.contains(&marker.to_ascii_lowercase()))
-            .map(|(_, marker)| marker)
-            .collect::<Vec<_>>();
+        let unresolved_markers =
+            xtask::gates::hygiene_matrix::driver_surface_unresolved_marker_texts()
+                .into_iter()
+                .filter(|(_, marker)| lowered.contains(&marker.to_ascii_lowercase()))
+                .map(|(_, marker)| marker)
+                .collect::<Vec<_>>();
         if !exists {
             blockers.push(format!(
                 "backend feature marker `{}` is missing at {}",
@@ -1695,14 +1696,16 @@ mod unresolved_marker_tests {
     /// that list nor the hygiene family's was a subset of the other, so each
     /// surface was scanned for markers the other already recorded. The
     /// expectation is derived from the owning family at run time, so a marker
-    /// added there fails here until this scan reads it. What it does not catch
-    /// is a marker the family detects structurally rather than by text.
+    /// added there fails here until this scan reads it. It derives from the
+    /// driver-surface union, so a term that only this surface can carry is
+    /// covered too. What it does not catch is a marker the family detects
+    /// structurally rather than by text.
     #[test]
     fn every_declared_unresolved_marker_is_read_on_the_backend_surface() {
         let workspace =
             tempfile::tempdir().expect("Fix: create a temporary workspace for the scan.");
         let root = workspace.path();
-        let texts = xtask::gates::hygiene_matrix::unresolved_marker_pattern_texts();
+        let texts = xtask::gates::hygiene_matrix::driver_surface_unresolved_marker_texts();
         assert!(
             texts.len() > 5,
             "Fix: the unresolved-work family must publish its markers; got {texts:?}"
@@ -1735,6 +1738,62 @@ mod unresolved_marker_tests {
             declared.len(),
             "Fix: each unresolved marker read must be reported as a blocker; \
              blockers={blockers:?}"
+        );
+    }
+
+    /// WHY: the backend scan carried `tbd` and the tree-wide family could not
+    /// take it, because the conformance certificate schema states `TBD` as a
+    /// field value and a tree-wide scan would read those tokens as unfinished
+    /// work. Dropping the term instead would have narrowed a release blocker in
+    /// silence, so it is owned beside the tree-wide table and reaches this
+    /// surface alone. Both directions are asserted: absent tree-wide, present
+    /// here, and the union is pinned so a term dropped from either table fails
+    /// instead of narrowing the blocker in silence.
+    #[test]
+    fn tbd_reaches_the_driver_surface_and_not_the_tree_wide_family() {
+        let tree_wide: std::collections::BTreeSet<&str> =
+            xtask::gates::hygiene_matrix::unresolved_marker_pattern_texts()
+                .into_iter()
+                .map(|(_, text)| text)
+                .collect();
+        let driver_surface: std::collections::BTreeSet<&str> =
+            xtask::gates::hygiene_matrix::driver_surface_unresolved_marker_texts()
+                .into_iter()
+                .map(|(_, text)| text)
+                .collect();
+        assert!(
+            !tree_wide.contains("tbd"),
+            "Fix: `tbd` tree-wide reads the certificate schema token as unfinished work."
+        );
+        assert!(
+            driver_surface.contains("tbd"),
+            "Fix: the driver-surface union must read `tbd`; got {driver_surface:?}"
+        );
+        assert!(
+            tree_wide.is_subset(&driver_surface),
+            "Fix: the driver-surface union must read every tree-wide marker."
+        );
+        assert_eq!(
+            driver_surface.len(),
+            tree_wide.len() + 1,
+            "Fix: a term added to either table needs a decision recorded here; \
+             tree_wide={tree_wide:?} driver_surface={driver_surface:?}"
+        );
+        let required = [
+            "FIXME",
+            "TODO",
+            "not implemented",
+            "placeholder",
+            "stub",
+            "tbd",
+            "todo!(",
+            "unimplemented!(",
+        ];
+        let pinned: std::collections::BTreeSet<&str> = required.into_iter().collect();
+        assert_eq!(
+            driver_surface, pinned,
+            "Fix: the driver-surface union is pinned; a term dropped from either table \
+             narrows a release blocker and a term added needs a row here."
         );
     }
 }

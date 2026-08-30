@@ -6047,6 +6047,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the seven-variant list that checked it against a nine-variant enum, are gone.
 - The driver error-code catalog now has a registered `error-codes --write`
   producer backed directly by the exhaustive runtime inventory.
+- The backend feature-marker release blocker reads `tbd` again through the one
+  owned unresolved-work vocabulary, which the tree-wide hygiene scan cannot
+  carry because the conformance certificate schema states `TBD` as a field
+  value.
 - The test guides for `vyre-driver` and `vyre-driver-wgpu` describe what the
   crates contain. Both previously pointed at a category contract file that does
   not exist, listed bench and fuzz targets for directories neither crate has,

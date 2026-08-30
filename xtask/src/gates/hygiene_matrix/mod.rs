@@ -94,11 +94,12 @@ pub fn hidden_fallback_pattern_texts() -> Vec<(&'static str, &'static str)> {
 /// of the other: `not implemented` prose reached the tree-wide scan alone, and
 /// `tbd` reached the production driver surface alone, so each gate certified a
 /// vocabulary the other had already extended. The vocabulary has one owner and
-/// one accessor. `tbd` is absent from it because this scan reads every crate
-/// and `tbd` is a schema token in the conformance certificates, where it
-/// records a field state rather than unfinished work. The texts carry the case
-/// they are declared with, so a caller matching lowercased source lowercases
-/// them.
+/// one accessor. `tbd` is absent from this family because this scan reads every
+/// crate and `tbd` is a schema token in the conformance certificates, where it
+/// records a field state rather than unfinished work; a scan whose surface has
+/// no such token reads it through
+/// [`driver_surface_unresolved_marker_texts`]. The texts carry the case they
+/// are declared with, so a caller matching lowercased source lowercases them.
 #[must_use]
 pub fn unresolved_marker_pattern_texts() -> Vec<(&'static str, &'static str)> {
     records::BLOCKED_PATTERNS
@@ -106,6 +107,18 @@ pub fn unresolved_marker_pattern_texts() -> Vec<(&'static str, &'static str)> {
         .copied()
         .filter(|(name, _)| rules::is_unresolved_marker_pattern(name))
         .collect()
+}
+
+/// The unresolved-work family a production driver surface reads.
+///
+/// The tree-wide family plus the markers only a narrower surface can carry. A
+/// scan over the driver surface reads this one, so a term added to either table
+/// reaches it without a second list existing anywhere.
+#[must_use]
+pub fn driver_surface_unresolved_marker_texts() -> Vec<(&'static str, &'static str)> {
+    let mut texts = unresolved_marker_pattern_texts();
+    texts.extend(records::DRIVER_SURFACE_ONLY_MARKERS.iter().copied());
+    texts
 }
 
 /// The release-surface coverage flags the hygiene scan records.
