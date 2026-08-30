@@ -128,11 +128,11 @@ pub fn admit(
                 "target entry node identity must match the first member node of a selected fusion group",
             )
         })?;
-        // A dialect states its own entry-point spelling: a Metal shading
-        // language kernel cannot be called `main`, because that name is
-        // reserved, and its translator renames it. What every backend needs is
-        // an entry point it can look up and metadata that names the same one, so
-        // the neutral rule is that the name exists and the two agree.
+        // A dialect states its own entry-point spelling: a language that
+        // reserves `main` cannot emit it, and its writer states a renamed entry
+        // point instead. What every backend needs is an entry point it can look
+        // up and metadata that names the same one, so the neutral rule is that
+        // the name exists and the two agree.
         if image.entry_point.is_empty() {
             return Err(invalid_module("target module states no entry point"));
         }
