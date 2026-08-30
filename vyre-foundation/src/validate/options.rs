@@ -28,8 +28,8 @@ pub struct BackendCapabilities {
     pub has_tensor_core_int: bool,
     /// Backend supports native f16 arithmetic at useful throughput.
     pub has_native_f16: bool,
-    /// Backend supports warp-level shuffle primitives.
-    pub has_warp_shuffle: bool,
+    /// Backend supports subgroup-level shuffle primitives.
+    pub has_subgroup_shuffle: bool,
     /// Backend supports shared memory with explicit barriers.
     pub has_shared_memory: bool,
     /// Backend can emit bounded polynomial approximations for selected transcendentals.
@@ -61,7 +61,7 @@ impl BackendCapabilities {
         has_dual_issue_fp32_int32: false,
         has_tensor_core_int: false,
         has_native_f16: false,
-        has_warp_shuffle: false,
+        has_subgroup_shuffle: false,
         has_shared_memory: false,
         has_transcendental_polynomial_emit: false,
         max_native_int_width: 0,

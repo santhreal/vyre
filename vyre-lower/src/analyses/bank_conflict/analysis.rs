@@ -7,7 +7,7 @@
 //! relationship to `LocalInvocationId.x` / `GlobalInvocationId.x`:
 //!
 //! 1. Index = `tid`                        → addresses are
-//!    `0, 1, 2, ..., warp_size-1`. They map to banks
+//!    `0, 1, 2, ..., subgroup_size-1`. They map to banks
 //!    `0 % B, 1 % B, ...`. Distinct banks since `gcd(1, B) == 1`.
 //!    Result: **NoConflict**.
 //! 2. Index = `tid + const`                → same as above with shift.

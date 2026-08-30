@@ -203,7 +203,7 @@ pub mod union_find;
 #[cfg(feature = "graph")]
 pub mod vast_tree_walk;
 
-/// 3D sub-warp dataflow tensors.
+/// 3D dataflow tensors below subgroup granularity.
 #[cfg(feature = "graph")]
 pub mod tensor_flow_forward;
 #[cfg(all(test, feature = "graph"))]

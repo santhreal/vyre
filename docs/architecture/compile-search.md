@@ -229,6 +229,41 @@ that reports eight compute units and four queues admits partitioned and
 concurrent organizations of the same graph. A device that pays for every launch
 selects fewer, larger generated kernels than one that pays for resident state.
 
+## Frontier topology is selected from a measured sample
+
+A traversal phase also states how its active set is walked.
+`select_frontier_topology` reads one measured sample (frontier density, dispatch
+cost, readback bytes), the graph shape, the memory budget, the launch overhead,
+the fusion pressure the caller measured, and whether the target grants a
+device-wide barrier. It returns one `FrontierTopology` together with the three
+basis-point figures the selection was made from.
+
+The bands are read in one order: memory red zone, fused wave, subgroup-sparse,
+sparse, block-dense, dense, and hybrid for the band that remains.
+
+| Topology | Selected when |
+|---|---|
+| `SparseFrontier` | memory pressure reaches the red zone, whatever the density; otherwise density at or below 0.125 |
+| `FusedWave` | fusion pressure, launch pressure and readback bytes are each at or above their bound, and memory pressure is clear of the red zone |
+| `SubgroupSparseFrontier` | density at or below 0.03125 and average degree at or below the sparse degree bound, so one subgroup owns the active nodes |
+| `BlockDenseFrontier` | density at or above 0.85 with a dense average degree |
+| `DenseFrontier` | density at or above 0.70 with a dense average degree |
+| `HybridFrontier` | the transition band no other row admits |
+
+`SparseFrontier` is the baseline: `FrontierTopology::baseline` states it,
+`fallback_baseline` returns to it, and a memory budget in the red zone selects it
+before any density band is read. A target that grants no device-wide barrier
+contributes a fusion pressure of zero, so `FusedWave` is unreachable there rather
+than selected and rejected later.
+
+`select_frontier_topology_stable` applies hysteresis against the previous
+topology, so a density sitting on a band edge does not alternate between two
+topologies across waves.
+
+`FrontierTopologyDecision::stable_explanation` renders the selection as one
+`megakernel-topology-v1` line carrying the topology, the three figures, and one
+stable reason code per topology.
+
 ## Constraint propagation before code generation
 
 Every derived candidate is eliminated or admitted before anything is generated

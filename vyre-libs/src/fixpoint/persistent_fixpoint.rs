@@ -179,8 +179,8 @@ pub const PERSISTENT_FIXPOINT_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// The LOOP BACK EDGE is a separate ordering obligation, and enumerating
 /// one iteration hides it. The read at step 5 and the NEXT iteration's
 /// clear at step 1 touch the same word, so a barrier is required
-/// BETWEEN them or the warp that takes the back edge first clears the
-/// flag while a sibling warp has not yet read it. The sibling then reads
+/// BETWEEN them or the subgroup that takes the back edge first clears the
+/// flag while a sibling subgroup has not yet read it. The sibling then reads
 /// 0 and returns while the rest keep iterating, which is a PARTIAL exit
 /// and yields a partially-transferred state that reads as converged.
 /// That barrier is emitted as the last node of the loop body. This
@@ -303,10 +303,10 @@ pub fn persistent_fixpoint(
             // correctness at ANY group count including one.
             //
             // Without it, the read above and the NEXT iteration's clear
-            // of the same word are unordered. Nothing stops the warp
+            // of the same word are unordered. Nothing stops the subgroup
             // holding invocation 0 from taking the back edge and
-            // clearing `changed[0]` while another warp of the same
-            // workgroup has not yet executed the read. That warp then
+            // clearing `changed[0]` while another subgroup of the same
+            // workgroup has not yet executed the read. That subgroup then
             // reads 0, takes the `Return`, and leaves the kernel while
             // the rest keep iterating: a PARTIAL exit. The invocations
             // that left stop contributing to `transfer_body`, so the

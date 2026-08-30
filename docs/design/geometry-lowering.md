@@ -97,6 +97,14 @@ workgroup width the profile admits for one requirement set, ascending, and an
 empty list when no width satisfies it. A shared crate never learns a concrete
 limit, and a backend never raises a profile limit to admit a geometry.
 
+`DeviceProfile::validation_capabilities` projects the same profile into the
+`BackendCapabilities` the neutral validator reads. The projection states each
+capability in substrate-neutral terms: `supports_subgroup_ops`,
+`has_subgroup_shuffle`, `has_shared_memory`, `has_mul_high` and `subgroup_size`
+state the concept rather than one vendor's word for it. Two facts change name
+across the boundary: `has_tensor_core_int` comes from `supports_tensor_cores`,
+and `has_native_f16` from `supports_f16`.
+
 `vyre-megakernel` is the single schedule-selection owner. It receives admitted
 widths as facts, builds the candidate geometries, and orders them under the
 compile objective. The `schedule-ownership` gate rejects a second route.

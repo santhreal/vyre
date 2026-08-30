@@ -106,8 +106,8 @@ mod tests {
 
     #[test]
     fn unsupported_op_message() {
-        let err = LoweringError::unsupported_op("warp_shuffle");
-        assert!(err.message().contains("warp_shuffle"));
+        let err = LoweringError::unsupported_op("unsupported_shuffle");
+        assert!(err.message().contains("unsupported_shuffle"));
         assert!(err.message().contains("Fix:"));
     }
 

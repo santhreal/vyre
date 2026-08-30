@@ -8,7 +8,7 @@
 //! hash-cons table becomes the bottleneck. This module ships the
 //! GPU-resident representation: a flattened, columnar mirror of
 //! the EGraph that can be uploaded to a GPU buffer and walked in
-//! parallel by warp-cooperative passes.
+//! parallel by subgroup-cooperative passes.
 //!
 //! The mirror is additive: CPU passes keep using `EGraph::saturate`,
 //! while GPU-aware passes use `GpuEGraphSnapshot::from_egraph_with`
@@ -25,9 +25,9 @@
 //! Each row of the snapshot is `(eclass_id, language_op_id,
 //! children_offset, children_len)`. The children indices live in
 //! a separate `children: Vec<u32>` column. This layout fits a
-//! GPU's coalesced-memory access pattern: a warp reading 32
+//! GPU's coalesced-memory access pattern: a subgroup reading 32
 //! consecutive rows touches one cache line per column (4 columns
-//! × 4 bytes × 32 lanes = 512 bytes per warp).
+//! × 4 bytes × 32 lanes = 512 bytes per subgroup).
 
 mod apply;
 mod bridge;

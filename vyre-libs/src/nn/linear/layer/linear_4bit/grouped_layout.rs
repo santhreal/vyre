@@ -5,9 +5,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
 
 pub(super) const AFFINE_GROUPED_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub(super) const AFFINE_GROUPED_LANES_PER_OUTPUT: u32 = 32;
-pub(super) const AFFINE_GROUPED_WARPS_PER_WORKGROUP: u32 =
+pub(super) const AFFINE_GROUPED_SUBGROUPS_PER_WORKGROUP: u32 =
     AFFINE_GROUPED_WORKGROUP_SIZE[0] / AFFINE_GROUPED_LANES_PER_OUTPUT;
-pub(super) const AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP: u32 = AFFINE_GROUPED_WARPS_PER_WORKGROUP;
+pub(super) const AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP: u32 = AFFINE_GROUPED_SUBGROUPS_PER_WORKGROUP;
 pub(super) const AFFINE_GROUPED_OP_ID: &str = "vyre-libs::nn::linear_4bit_affine_grouped";
 pub(super) const AFFINE_GROUPED_WEIGHT_TILE: &str = "linear_4bit_weight_tile";
 
@@ -162,7 +162,7 @@ pub(super) fn push_lane0_sidecar_loads(
 ///
 /// `scale_value` and `zero_point_value` bind the group's sidecar values: a
 /// broadcast path passes a lane-0 shuffle of [`push_lane0_sidecar_loads`], a
-/// warp-uniform path passes the load directly. Negation is folded into an FMA so
+/// subgroup-uniform path passes the load directly. Negation is folded into an FMA so
 /// dequantization costs two FMAs per group and none per multiply-accumulate.
 pub(super) fn push_group_affine_terms(
     nodes: &mut Vec<Node>,
@@ -198,7 +198,7 @@ pub(super) fn lane_decomposition() -> Vec<Node> {
     vec![
         Node::let_bind("local", Expr::LogicalWithinTileId { axis: 0 }),
         Node::let_bind(
-            "warp",
+            "subgroup",
             Expr::div(
                 Expr::var("local"),
                 Expr::u32(AFFINE_GROUPED_LANES_PER_OUTPUT),
@@ -248,9 +248,9 @@ pub(super) fn dequantized_weight() -> Expr {
     )
 }
 
-/// The warp reduction and the lane-0 biased store that ends every grouped INT4
+/// The subgroup reduction and the lane-0 biased store that ends every grouped INT4
 /// lowering.
-pub(super) fn push_warp_reduction_store(
+pub(super) fn push_subgroup_reduction_store(
     nodes: &mut Vec<Node>,
     lane: Expr,
     b: &str,
@@ -258,13 +258,13 @@ pub(super) fn push_warp_reduction_store(
     out_idx: Expr,
 ) {
     nodes.extend([
-        Node::let_bind("warp_sum", Expr::subgroup_add(Expr::var("local_acc"))),
+        Node::let_bind("subgroup_sum", Expr::subgroup_add(Expr::var("local_acc"))),
         Node::if_then(
             Expr::eq(lane, Expr::u32(0)),
             vec![Node::store(
                 out,
                 Expr::var("linear_out_idx"),
-                Expr::add(Expr::load(b, out_idx), Expr::var("warp_sum")),
+                Expr::add(Expr::load(b, out_idx), Expr::var("subgroup_sum")),
             )],
         ),
     ]);

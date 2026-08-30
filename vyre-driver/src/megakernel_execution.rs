@@ -414,7 +414,7 @@ fn topology_scratch_bytes(
     base_scratch_bytes: u64,
 ) -> Result<u64, MegakernelMemoryError> {
     match topology {
-        FrontierTopology::WarpSparseFrontier => Ok(base_scratch_bytes.max(32)),
+        FrontierTopology::SubgroupSparseFrontier => Ok(base_scratch_bytes.max(32)),
         FrontierTopology::SparseFrontier => Ok(base_scratch_bytes),
         FrontierTopology::BlockDenseFrontier => checked_mul(
             base_scratch_bytes.max(1024),

@@ -96,7 +96,7 @@ impl AtomicOrdering {
 /// barrier scope in `vyre-foundation::memory_model`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum SyncScope {
-    /// Subgroup-scope barrier (a single warp / wavefront).
+    /// Subgroup-scope barrier.
     Subgroup,
     /// Workgroup-scope barrier (one hardware workgroup/thread block).
     Workgroup,

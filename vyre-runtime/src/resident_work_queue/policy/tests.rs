@@ -655,7 +655,7 @@ mod recommendation_contracts {
     }
 
     #[test]
-    fn sparse_frontier_density_sheds_worker_pressure_without_losing_warp_floor() {
+    fn sparse_frontier_density_sheds_worker_pressure_without_losing_subgroup_floor() {
         let policy = ResidentLaunchPolicy::standard();
         let rec = policy
             .recommend(ResidentLaunchRequest {
@@ -676,7 +676,7 @@ mod recommendation_contracts {
     }
 
     #[test]
-    fn sparse_frontier_worker_shedding_preserves_warp_floor_for_tiny_density() {
+    fn sparse_frontier_worker_shedding_preserves_subgroup_floor_for_tiny_density() {
         let policy = ResidentLaunchPolicy::standard();
         let rec = policy
             .recommend(ResidentLaunchRequest {

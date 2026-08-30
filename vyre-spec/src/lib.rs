@@ -133,7 +133,7 @@ mod region_law;
 mod semiring;
 /// Soundness markers and precision contracts for cross-engine analysis data.
 pub mod soundness;
-/// Subgroup (warp) reduction operator enum  -  add/mul/min/max/and/or/xor.
+/// Subgroup reduction operator enum  -  add/mul/min/max/and/or/xor.
 /// Specification element.
 mod subgroup_reduce_op;
 /// Ternary operator enum  -  select, FMA, mask-merge.

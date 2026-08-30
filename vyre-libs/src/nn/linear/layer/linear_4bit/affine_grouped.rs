@@ -8,9 +8,10 @@ use super::affine_grouped_weight_reuse::linear_4bit_affine_grouped_weight_reuse;
 use super::grouped_layout::{
     affine_grouped_buffers, affine_grouped_output_extent, bounded_index, broadcast_from_lane0,
     dequantized_weight, lane_decomposition, packed_column_index, push_group_affine_terms,
-    push_lane0_sidecar_loads, push_packed_word_fetch, push_warp_reduction_store,
+    push_lane0_sidecar_loads, push_packed_word_fetch, push_subgroup_reduction_store,
     AFFINE_GROUPED_LANES_PER_OUTPUT, AFFINE_GROUPED_OP_ID, AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP,
-    AFFINE_GROUPED_WARPS_PER_WORKGROUP, AFFINE_GROUPED_WEIGHT_TILE, AFFINE_GROUPED_WORKGROUP_SIZE,
+    AFFINE_GROUPED_SUBGROUPS_PER_WORKGROUP, AFFINE_GROUPED_WEIGHT_TILE,
+    AFFINE_GROUPED_WORKGROUP_SIZE,
 };
 
 /// Build a fused affine INT4 linear Program:
@@ -132,8 +133,8 @@ fn linear_4bit_affine_grouped_batch_impl(
         "Fix: linear_4bit_affine_grouped group_count*out_dim overflows u32; reduce dimensions."
             .to_string()
     })?;
-    if batch_size >= AFFINE_GROUPED_WARPS_PER_WORKGROUP
-        && batch_size % AFFINE_GROUPED_WARPS_PER_WORKGROUP == 0
+    if batch_size >= AFFINE_GROUPED_SUBGROUPS_PER_WORKGROUP
+        && batch_size % AFFINE_GROUPED_SUBGROUPS_PER_WORKGROUP == 0
         && in_dim == AFFINE_GROUPED_WORKGROUP_SIZE[0]
         && group_size >= AFFINE_GROUPED_LANES_PER_OUTPUT
         && group_size % AFFINE_GROUPED_LANES_PER_OUTPUT == 0
@@ -294,7 +295,7 @@ fn linear_4bit_affine_grouped_batch_impl(
             chunk,
         ));
     }
-    push_warp_reduction_store(&mut per_output, lane.clone(), b, out, out_idx.clone());
+    push_subgroup_reduction_store(&mut per_output, lane.clone(), b, out, out_idx.clone());
 
     let mut body = lane_decomposition();
     body.extend([
@@ -305,7 +306,7 @@ fn linear_4bit_affine_grouped_batch_impl(
                     Expr::LogicalTileId { axis: 0 },
                     Expr::u32(AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP),
                 ),
-                Expr::var("warp"),
+                Expr::var("subgroup"),
             ),
         ),
         Node::let_bind(

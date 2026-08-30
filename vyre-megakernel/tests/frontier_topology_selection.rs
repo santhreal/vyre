@@ -16,7 +16,7 @@ fn frontier_topology_selector_uses_sparse_dense_hybrid_and_fused_bands() {
         budget_bytes: 10_000,
     };
 
-    let warp_sparse = select_frontier_topology(
+    let subgroup_sparse = select_frontier_topology(
         FrontierExecutionSample {
             dispatch_cost_ns: 1_000.0,
             frontier_density: 0.01,
@@ -28,10 +28,13 @@ fn frontier_topology_selector_uses_sparse_dense_hybrid_and_fused_bands() {
         0.0,
         true,
     );
-    assert_eq!(warp_sparse.topology, FrontierTopology::WarpSparseFrontier);
     assert_eq!(
-        warp_sparse.stable_explanation(),
-        "megakernel-topology-v1|topology=WarpSparseFrontier|memory_pressure_bps=1000|average_degree_bps=40000|launch_pressure_bps=1000|reason=ultra_sparse_warp_specialized"
+        subgroup_sparse.topology,
+        FrontierTopology::SubgroupSparseFrontier
+    );
+    assert_eq!(
+        subgroup_sparse.stable_explanation(),
+        "megakernel-topology-v1|topology=SubgroupSparseFrontier|memory_pressure_bps=1000|average_degree_bps=40000|launch_pressure_bps=1000|reason=ultra_sparse_subgroup_specialized"
     );
 
     let block_dense = select_frontier_topology(

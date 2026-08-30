@@ -67,15 +67,15 @@ pub mod ast_ops;
 
 /// Pack an opcode to handler dispatch table into one u32 per entry for fast
 /// GPU-side bytecode interpretation. Foundational primitive for
-/// warp-specialized interpreter loops where every thread executes the same
-/// opcode in the same warp.
+/// subgroup-specialized interpreter loops where every thread executes the same
+/// opcode in the same subgroup.
 #[cfg(feature = "parsing-kernels")]
 pub mod bytecode_dispatch_table_pack;
 
 /// Word-at-a-time whitespace classification (#P-PRIM-WS-CLASSIFY).
 /// Foundational primitive for structural parsers (JSON, CSV, HTTP, INI):
 /// loads 4 bytes per u32, emits a 4-bit per-word "is-whitespace" mask
-/// using pure arithmetic (no per-byte branches, so no warp divergence).
+/// using pure arithmetic (no per-byte branches, so no subgroup divergence).
 /// Composes with `stream_compact` for the canonical simdjson-style
 /// whitespace-skip pipeline.
 #[cfg(feature = "parsing-kernels")]

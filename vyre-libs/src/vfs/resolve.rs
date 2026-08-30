@@ -17,7 +17,7 @@ pub const VFS_RESOLVE_OP_ID: &str = "vyre-libs::vfs::resolve";
 ///
 /// Resolves one `#include` directive string identifier into an asynchronous
 /// block load from High-Bandwidth Memory / Persistent Storage directly into the
-/// L1 Warp-Arena.
+/// L1 subgroup arena.
 ///
 /// One dispatch resolves one request. An async transfer names a source offset
 /// and a length, and lands at the head of its destination, so a second
@@ -60,7 +60,7 @@ pub fn vfs_resolve_dma(include_hashes: &str, out_file_buffers: &str, block_words
             BufferDecl::storage("global_dma_pool", 2, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(1024),
         ],
-        [256, 1, 1], // Warp aligned
+        [256, 1, 1], // Subgroup aligned
         body,
     )
 }

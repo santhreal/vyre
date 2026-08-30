@@ -4,7 +4,7 @@
 //! directly into a Subgroup bitset operation over bounds:
 //! `[Nodes : u32] x [ContextId : u8] x [FieldIdx : u8]`
 //!
-//! Sub-warps concurrently execute field-sensitive flow checks on an execution graph,
+//! Lane groups concurrently execute field-sensitive flow checks on an execution graph,
 //! tracking nested dependencies efficiently.
 
 use crate::graph::csr_frontier_step::edge_scan_body;

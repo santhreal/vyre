@@ -737,7 +737,7 @@ pub vyre_megakernel::FrontierTopology::DenseFrontier
 pub vyre_megakernel::FrontierTopology::FusedWave
 pub vyre_megakernel::FrontierTopology::HybridFrontier
 pub vyre_megakernel::FrontierTopology::SparseFrontier
-pub vyre_megakernel::FrontierTopology::WarpSparseFrontier
+pub vyre_megakernel::FrontierTopology::SubgroupSparseFrontier
 pub vyre_megakernel::FrontierTopologyDecision::average_degree_bps: u64
 pub vyre_megakernel::FrontierTopologyDecision::launch_pressure_bps: u32
 pub vyre_megakernel::FrontierTopologyDecision::memory_pressure_bps: u32
@@ -876,7 +876,7 @@ pub vyre_megakernel::SchemaFrontierTopology::DenseFrontier
 pub vyre_megakernel::SchemaFrontierTopology::FusedWave
 pub vyre_megakernel::SchemaFrontierTopology::HybridFrontier
 pub vyre_megakernel::SchemaFrontierTopology::SparseFrontier
-pub vyre_megakernel::SchemaFrontierTopology::WarpSparseFrontier
+pub vyre_megakernel::SchemaFrontierTopology::SubgroupSparseFrontier
 pub vyre_megakernel::SearchBudget::max_candidates: u32
 pub vyre_megakernel::SearchBudget::max_cpu_work: u64
 pub vyre_megakernel::SearchBudget::max_elapsed_ns: u64
@@ -1201,10 +1201,10 @@ pub vyre_megakernel::specialization::TargetCapabilityAxis::SharedMemory
 pub vyre_megakernel::specialization::TargetCapabilityAxis::SpatialPartitioning
 pub vyre_megakernel::specialization::TargetCapabilityAxis::SpecializationConstants
 pub vyre_megakernel::specialization::TargetCapabilityAxis::SubgroupOps
+pub vyre_megakernel::specialization::TargetCapabilityAxis::SubgroupShuffle
 pub vyre_megakernel::specialization::TargetCapabilityAxis::TensorCoreInt
 pub vyre_megakernel::specialization::TargetCapabilityAxis::TensorCores
 pub vyre_megakernel::specialization::TargetCapabilityAxis::TranscendentalPolynomialEmit
-pub vyre_megakernel::specialization::TargetCapabilityAxis::WarpShuffle
 pub vyre_megakernel::specialization::TargetResourceAxis::CacheCapacityBytes
 pub vyre_megakernel::specialization::TargetResourceAxis::ComputeUnits
 pub vyre_megakernel::specialization::TargetResourceAxis::ConcurrentQueues

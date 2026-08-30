@@ -178,7 +178,7 @@ pub fn workgroup_max_f32(values: &str, out: &str, count: u32, tile: u32) -> Prog
 /// sum-has-both-types / max-has-only-f32 asymmetry. `0` (`u32::MIN`) is the
 /// neutral for an unsigned max, and the subgroup-first lowering already
 /// recognizes the `workgroup_max_` prefix with a u32 value type, so this gets
-/// the fast warp-reduction path on subgroup-capable backends for free.
+/// the fast subgroup-reduction path on subgroup-capable backends for free.
 #[must_use]
 pub fn workgroup_max_u32(values: &str, out: &str, count: u32, tile: u32) -> Program {
     WorkgroupReductionBuilder::new(
@@ -197,7 +197,7 @@ pub fn workgroup_max_u32(values: &str, out: &str, count: u32, tile: u32) -> Prog
 ///
 /// `f32::MAX` is the neutral for a minimum (any real value is smaller). The
 /// subgroup-first lowering recognizes the `workgroup_min_` prefix, so this gets
-/// the native warp `subgroupMin` / `redux.sync.min` path on capable backends.
+/// the native subgroup `subgroupMin` / `redux.sync.min` path on capable backends.
 #[must_use]
 pub fn workgroup_min_f32(values: &str, out: &str, count: u32, tile: u32) -> Program {
     WorkgroupReductionBuilder::new(

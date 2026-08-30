@@ -140,9 +140,9 @@ pub fn try_aliases_dataflow(
     // get inserted between writers and later readers (e.g. seed_x
     // writes reach_x_buf, hop_x_step then reads it; without a
     // SeqCst barrier between those two arms threads from a later
-    // warp would observe the pre-seed reach_x_buf state and the
+    // subgroup would observe the pre-seed reach_x_buf state and the
     // BFS frontier propagation would silently drop nodes whose
-    // gid lives past the warp boundary). Per-arm composition via
+    // gid lives past the subgroup boundary). Per-arm composition via
     // a flat name-dedup `merge_programs` skipped this and was the
     // headline-blocker on every aliases-using rule.
     let fused = fuse_programs(&[
@@ -301,9 +301,9 @@ mod tests {
 
     /// RAW-hazard regression. seed_x writes reach_x_buf; hop_x_step
     /// then reads it. The fused entry MUST contain a Barrier between
-    /// those arms, otherwise threads in later warps observe the pre-
+    /// those arms, otherwise threads in later subgroups observe the pre-
     /// seed state of reach_x_buf and the BFS frontier silently drops
-    /// nodes past the warp boundary. The pre-fix local merge_programs
+    /// nodes past the subgroup boundary. The pre-fix local merge_programs
     /// produced a flat unbarriered entry  -  this test catches that
     /// regression.
     #[test]

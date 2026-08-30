@@ -241,7 +241,7 @@ fn fuse_programs_multi_with(
         // writer arm's threads have completed their store, yielding
         // stale data and silently dropping rule findings (recall=0
         // mode previously observed on `stack_overflow_gets` for
-        // node ids past the warp boundary).
+        // node ids past the subgroup boundary).
         for read_buf in &arm_reads {
             if let Some(write_arms) = write_arms_per_buffer.get(read_buf) {
                 for &write_arm in write_arms {

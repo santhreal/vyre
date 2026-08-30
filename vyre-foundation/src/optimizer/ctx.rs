@@ -54,7 +54,7 @@ pub struct AdapterCaps {
     pub max_shared_memory_bytes: u32,
     /// Maximum compute storage buffer binding size, in bytes.
     pub max_storage_buffer_binding_size: u64,
-    /// Subgroup size (warp / wavefront). `0` when unknown.
+    /// Subgroup size. `0` when unknown.
     pub subgroup_size: u32,
     /// Physical compute-unit count. `0` when unknown.
     pub compute_units: u32,

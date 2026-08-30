@@ -96,7 +96,7 @@ same-body producers. Semantic optimization remains in `vyre-foundation`.
 
 11 substrate-neutral analyses in `vyre_lower::analyses`:
 
-- `coalesce`: memory-access coalescence per warp/workgroup.
+- `coalesce`: memory-access coalescence per subgroup/workgroup.
 - `shared_mem_promote`: global → shared-memory tile candidates against a
   per-workgroup capacity the caller states.
 - `bank_conflict`: shared-memory bank conflict detection for a bank count the

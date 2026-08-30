@@ -114,7 +114,7 @@ mod tests {
     #[test]
     fn publish_slot_writes_with_tenant_id_and_bumps_counter() {
         let reg = TenantRegistry::new();
-        let t = reg.register("warpscan").unwrap();
+        let t = reg.register("subgroupscan").unwrap();
         let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
 
         t.publish_slot(

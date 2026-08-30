@@ -1,7 +1,7 @@
 //! The columnar mirror of an e-graph.
 //!
 //! One row per e-node, `(eclass_id, language_op_id, children_offset,
-//! children_len)`, with the child indices in a column of their own. A warp
+//! children_len)`, with the child indices in a column of their own. A subgroup
 //! reading thirty-two consecutive rows touches one cache line per column, which
 //! is the whole reason the mirror exists.
 

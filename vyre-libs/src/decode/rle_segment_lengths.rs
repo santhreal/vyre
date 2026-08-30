@@ -43,7 +43,7 @@
 //! is a tree-reduction with logarithmic-depth communication. Different
 //! launch-grid shapes, different optimization trade-offs. Fusing them
 //! would force the prefix-sum to wait on the unpack inside the same
-//! warp's lifetime  -  strictly worse occupancy.
+//! subgroup's lifetime  -  strictly worse occupancy.
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 

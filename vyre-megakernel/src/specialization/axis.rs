@@ -132,8 +132,8 @@ pub enum TargetCapabilityAxis {
     TensorCoreInt,
     /// Native half-precision arithmetic runs at useful throughput.
     NativeF16,
-    /// Warp-level shuffle exists.
-    WarpShuffle,
+    /// Subgroup-level shuffle exists.
+    SubgroupShuffle,
     /// Shared memory with explicit barriers exists.
     SharedMemory,
     /// Bounded polynomial transcendentals are emittable.
@@ -159,7 +159,7 @@ impl TargetCapabilityAxis {
         Self::DualIssueFp32Int32,
         Self::TensorCoreInt,
         Self::NativeF16,
-        Self::WarpShuffle,
+        Self::SubgroupShuffle,
         Self::SharedMemory,
         Self::TranscendentalPolynomialEmit,
         Self::TensorCores,
@@ -180,7 +180,7 @@ impl TargetCapabilityAxis {
             Self::DualIssueFp32Int32 => "dual_issue_fp32_int32",
             Self::TensorCoreInt => "tensor_core_int",
             Self::NativeF16 => "native_f16",
-            Self::WarpShuffle => "warp_shuffle",
+            Self::SubgroupShuffle => "subgroup_shuffle",
             Self::SharedMemory => "shared_memory",
             Self::TranscendentalPolynomialEmit => "transcendental_polynomial_emit",
             Self::TensorCores => "tensor_cores",
@@ -209,7 +209,7 @@ impl TargetCapabilityAxis {
             Self::DualIssueFp32Int32 => capabilities.has_dual_issue_fp32_int32,
             Self::TensorCoreInt => capabilities.has_tensor_core_int,
             Self::NativeF16 => capabilities.has_native_f16,
-            Self::WarpShuffle => capabilities.has_warp_shuffle,
+            Self::SubgroupShuffle => capabilities.has_subgroup_shuffle,
             Self::SharedMemory => capabilities.has_shared_memory,
             Self::TranscendentalPolynomialEmit => capabilities.has_transcendental_polynomial_emit,
             Self::TensorCores => capabilities.supports_tensor_cores,

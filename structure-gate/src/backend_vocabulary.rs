@@ -173,6 +173,12 @@ impl Neutrality {
     /// Substring matching would need an allowance for every unrelated identifier
     /// that happens to carry a vendor's letters, and camel case is where a backend
     /// type name hides from a whole-word rule.
+    ///
+    /// The final segment also matches its own plural, because a plural is the same
+    /// word and a wordlist that reads `warp` but not `warps` covers whichever
+    /// spelling the author happened not to use. Closing that in the matcher covers
+    /// every term at once, where a plural row per term covers one and goes stale on
+    /// the next term added.
     #[must_use]
     pub fn words_in(&self, line: &str) -> Vec<&Term> {
         let segments = segments_of(line);
@@ -184,7 +190,7 @@ impl Neutrality {
                 !wanted.is_empty()
                     && segments
                         .windows(wanted.len())
-                        .any(|run| run == wanted.as_slice())
+                        .any(|run| run_states(run, &wanted))
             })
             .collect()
     }
@@ -363,6 +369,27 @@ pub fn segments_of(text: &str) -> Vec<String> {
         segments.push(current);
     }
     segments
+}
+
+/// Whether a run of segments states the term `wanted` spells.
+///
+/// Every segment but the last matches exactly. The last matches exactly or as its
+/// own plural, so `warps` states `warp` and `SubgroupWarps` states it too. Only a
+/// trailing `s` counts: a longer suffix would make `warping` and `warped` state a
+/// noun, and neither names the hardware unit the term replaces.
+#[must_use]
+pub fn run_states(run: &[String], wanted: &[String]) -> bool {
+    let Some((run_last, run_head)) = run.split_last() else {
+        return false;
+    };
+    let Some((wanted_last, wanted_head)) = wanted.split_last() else {
+        return false;
+    };
+    run_head == wanted_head
+        && (run_last == wanted_last
+            || run_last
+                .strip_suffix('s')
+                .is_some_and(|stem| stem == wanted_last))
 }
 
 /// Whether the tree reaches `file` only as test support.

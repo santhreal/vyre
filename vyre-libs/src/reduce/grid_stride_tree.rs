@@ -3,7 +3,7 @@
 //! Two-pass reduction:
 //! 1. Level 1: Multi-block grid-stride reduction. Each workgroup loads a strided slice
 //!    of the input in a coalesced loop, reduces it locally within workgroup scratch
-//!    via warp shuffles / tree reduction, and writes its block total to `partials[block_id]`
+//!    via subgroup shuffles / tree reduction, and writes its block total to `partials[block_id]`
 //!    (independent, contention-free writes).
 //! 2. Level 2: Single-block reduction summing `partials[0..num_blocks]` into `out[0]`
 //!    with zero atomics.

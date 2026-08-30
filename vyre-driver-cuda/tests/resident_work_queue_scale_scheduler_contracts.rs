@@ -301,7 +301,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
     assert!(
         matches!(
             sparse_decision.topology,
-            FrontierTopology::WarpSparseFrontier | FrontierTopology::SparseFrontier
+            FrontierTopology::SubgroupSparseFrontier | FrontierTopology::SparseFrontier
         ),
         "{:?}",
         sparse_decision.topology

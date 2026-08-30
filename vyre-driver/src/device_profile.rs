@@ -238,7 +238,7 @@ impl DeviceProfile {
             has_dual_issue_fp32_int32: self.has_dual_issue_fp32_int32,
             has_tensor_core_int: self.supports_tensor_cores,
             has_native_f16: self.supports_f16,
-            has_warp_shuffle: self.has_subgroup_shuffle,
+            has_subgroup_shuffle: self.has_subgroup_shuffle,
             has_shared_memory: self.has_shared_memory,
             has_transcendental_polynomial_emit: true,
             supports_distributed_collectives: self.supports_distributed_collectives,
@@ -550,7 +550,7 @@ mod tests {
         assert!(validation.supports_subgroup_ops);
         assert!(validation.supports_distributed_collectives);
         assert!(adapter.supports_subgroup_ops);
-        assert!(strategy.has_warp_shuffle);
+        assert!(strategy.has_subgroup_shuffle);
         assert_eq!(adapter.max_invocations_per_workgroup, 256);
         assert_eq!(adapter.ideal_unroll_depth, 8);
         assert_eq!(adapter.ideal_vector_pack_bits, 128);

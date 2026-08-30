@@ -81,9 +81,9 @@ pub enum ResidentPartitionMode {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FrontierTopology {
-    /// Ultra-low-density frontier expansion where one warp owns sparse active
+    /// Ultra-low-density frontier expansion where one subgroup owns sparse active
     /// nodes and avoids block-wide work distribution overhead.
-    WarpSparseFrontier,
+    SubgroupSparseFrontier,
     /// Low-density frontier expansion with queue-like work distribution.
     SparseFrontier,
     /// Very high-density propagation where a block owns coalesced bitset lanes
@@ -124,7 +124,7 @@ impl FrontierTopology {
 }
 
 /// Constant density and pressure bands for frontier topology selection.
-pub(crate) const WARP_SPARSE_DENSITY: f64 = 0.03125;
+pub(crate) const SUBGROUP_SPARSE_DENSITY: f64 = 0.03125;
 pub(crate) const SPARSE_DENSITY: f64 = 0.125;
 pub(crate) const DENSE_DENSITY: f64 = 0.70;
 pub(crate) const BLOCK_DENSE_DENSITY: f64 = 0.85;
@@ -137,7 +137,7 @@ pub(crate) const LAUNCH_PRESSURE_BPS: u32 = 1_500;
 pub(crate) const LAUNCH_HYSTERESIS_BPS: u32 = 250;
 pub(crate) const FUSION_READBACK_BYTES: u64 = 4_096;
 pub(crate) const DENSE_AVERAGE_DEGREE_BPS: u64 = 20_000;
-pub(crate) const WARP_SPARSE_AVERAGE_DEGREE_BPS: u64 = 80_000;
+pub(crate) const SUBGROUP_SPARSE_AVERAGE_DEGREE_BPS: u64 = 80_000;
 
 /// Telemetry sample facts for frontier traversal topology selection.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -220,7 +220,7 @@ impl FrontierTopologyDecision {
 
     fn reason_code(&self) -> &'static str {
         match self.topology {
-            FrontierTopology::WarpSparseFrontier => "ultra_sparse_warp_specialized",
+            FrontierTopology::SubgroupSparseFrontier => "ultra_sparse_subgroup_specialized",
             FrontierTopology::SparseFrontier if self.memory_pressure_bps >= 9_000 => {
                 "memory_pressure_sparse_safety"
             }
@@ -289,9 +289,10 @@ pub fn select_frontier_topology(
         && memory_pressure_bps <= MEMORY_RED_ZONE_BPS.saturating_sub(500)
     {
         FrontierTopology::FusedWave
-    } else if density <= WARP_SPARSE_DENSITY && average_degree_bps <= WARP_SPARSE_AVERAGE_DEGREE_BPS
+    } else if density <= SUBGROUP_SPARSE_DENSITY
+        && average_degree_bps <= SUBGROUP_SPARSE_AVERAGE_DEGREE_BPS
     {
-        FrontierTopology::WarpSparseFrontier
+        FrontierTopology::SubgroupSparseFrontier
     } else if density <= SPARSE_DENSITY {
         FrontierTopology::SparseFrontier
     } else if density >= BLOCK_DENSE_DENSITY && average_degree_bps >= DENSE_AVERAGE_DEGREE_BPS {
@@ -355,7 +356,7 @@ fn stabilize_frontier_topology(
     let fusion = finite_unit(fusion_pressure);
     if matches!(
         previous_topology,
-        FrontierTopology::SparseFrontier | FrontierTopology::WarpSparseFrontier
+        FrontierTopology::SparseFrontier | FrontierTopology::SubgroupSparseFrontier
     ) && decision.memory_pressure_bps
         >= MEMORY_RED_ZONE_BPS.saturating_sub(MEMORY_HYSTERESIS_BPS)
     {
@@ -363,11 +364,11 @@ fn stabilize_frontier_topology(
     }
 
     match previous_topology {
-        FrontierTopology::WarpSparseFrontier
-            if density <= WARP_SPARSE_DENSITY + FRONTIER_HYSTERESIS
-                && decision.average_degree_bps <= WARP_SPARSE_AVERAGE_DEGREE_BPS =>
+        FrontierTopology::SubgroupSparseFrontier
+            if density <= SUBGROUP_SPARSE_DENSITY + FRONTIER_HYSTERESIS
+                && decision.average_degree_bps <= SUBGROUP_SPARSE_AVERAGE_DEGREE_BPS =>
         {
-            FrontierTopology::WarpSparseFrontier
+            FrontierTopology::SubgroupSparseFrontier
         }
         FrontierTopology::SparseFrontier if density <= SPARSE_DENSITY + FRONTIER_HYSTERESIS => {
             FrontierTopology::SparseFrontier

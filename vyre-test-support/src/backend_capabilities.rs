@@ -23,7 +23,7 @@ pub fn all_granted() -> BackendCapabilities {
         has_dual_issue_fp32_int32: true,
         has_tensor_core_int: true,
         has_native_f16: true,
-        has_warp_shuffle: true,
+        has_subgroup_shuffle: true,
         has_shared_memory: true,
         has_transcendental_polynomial_emit: true,
         max_native_int_width: 64,

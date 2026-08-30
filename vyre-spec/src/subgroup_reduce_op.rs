@@ -1,8 +1,8 @@
-//! Frozen subgroup (warp) reduction-operation contracts.
+//! Frozen subgroup reduction-operation contracts.
 //!
-//! Warp-scoped collective reductions across the active subgroup lanes. Distinct
+//! Subgroup-scoped collective reductions across the active lanes. Distinct
 //! from [`crate::collective_op::CollectiveOp`], which is distributed-scoped
-//! (NCCL/MPI) and lacks the multiplicative reduction the warp ISA exposes.
+//! (NCCL/MPI) and lacks the multiplicative reduction the subgroup ISA exposes.
 //! This is the complete set the hardware and the emitter subgroup surface
 //! supports.
 // TAG RESERVATIONS: Add=0x01, Mul=0x02, Min=0x03, Max=0x04, And=0x05,

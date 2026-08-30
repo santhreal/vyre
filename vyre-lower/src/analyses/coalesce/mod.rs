@@ -3,7 +3,7 @@
 //!
 //! On every GPU substrate, global-memory reads and writes are
 //! dramatically faster  -  up to 32x  -  when adjacent threads in a
-//! warp/subgroup access adjacent memory addresses (a
+//! subgroup access adjacent memory addresses (a
 //! "coalesced" access pattern). When they don't, each thread's access
 //! becomes its own memory transaction and throughput collapses.
 //!

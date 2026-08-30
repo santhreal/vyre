@@ -13,7 +13,7 @@
 //! text-format, INI, YAML) starts with a whitespace-skip pass that compresses
 //! N input bytes down to N/k structural bytes. The bottleneck on GPU is the
 //! per-byte branch  -  naive `if (c == ' ' || c == '\t' || ...) skip` collapses
-//! warp efficiency the moment the input has mixed structure.
+//! subgroup efficiency the moment the input has mixed structure.
 //!
 //! The fix is the simdjson trick: load a whole word (4 bytes per u32 here),
 //! compare every lane to every whitespace value in parallel using bitmask
@@ -39,7 +39,7 @@
 //!
 //! ## Why the bitmask and not a per-byte branch
 //!
-//! Per-byte branches force the warp into 4-way divergence on every word.
+//! Per-byte branches force the subgroup into 4-way divergence on every word.
 //! The bitmask approach uses pure arithmetic  -  no branches, every lane
 //! does the same work, GPU throughput stays at peak.
 

@@ -5309,9 +5309,9 @@ pub vyre_foundation::validate::BackendCapabilities::has_dual_issue_fp32_int32: b
 pub vyre_foundation::validate::BackendCapabilities::has_mul_high: bool
 pub vyre_foundation::validate::BackendCapabilities::has_native_f16: bool
 pub vyre_foundation::validate::BackendCapabilities::has_shared_memory: bool
+pub vyre_foundation::validate::BackendCapabilities::has_subgroup_shuffle: bool
 pub vyre_foundation::validate::BackendCapabilities::has_tensor_core_int: bool
 pub vyre_foundation::validate::BackendCapabilities::has_transcendental_polynomial_emit: bool
-pub vyre_foundation::validate::BackendCapabilities::has_warp_shuffle: bool
 pub vyre_foundation::validate::BackendCapabilities::max_native_int_width: u32
 pub vyre_foundation::validate::BackendCapabilities::max_shared_memory_bytes: u32
 pub vyre_foundation::validate::BackendCapabilities::regs_per_thread_max: u32

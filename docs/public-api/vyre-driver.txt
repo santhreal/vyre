@@ -1602,9 +1602,9 @@ pub vyre_driver::DeviceSignature::max_sm: u32
 pub vyre_driver::DeviceSignature::mem_bw_gbps: u32
 pub vyre_driver::DeviceSignature::regs_per_thread_max: u32
 pub vyre_driver::DeviceSignature::shared_mem_per_sm_kb: u32
+pub vyre_driver::DeviceSignature::subgroup_size: u32
 pub vyre_driver::DeviceSignature::tensor_core_dtypes: alloc::vec::Vec<alloc::string::String>
 pub vyre_driver::DeviceSignature::tensor_core_supported: bool
-pub vyre_driver::DeviceSignature::warp_size: u32
 pub vyre_driver::DeviceTimingQuality::DeviceTimestamps
 pub vyre_driver::DeviceTimingQuality::HardwareCounters
 pub vyre_driver::DeviceTimingQuality::HostEnqueueWait

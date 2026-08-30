@@ -15,7 +15,7 @@
 //! "GPU loses to CPU" workload (CPU has branch predictor + huge L1; GPU
 //! has neither). The fix: pack the dispatch table into a constant-buffer
 //! that resides in shared memory + use uniform-control-flow patterns where
-//! every thread executes the same handler in the same warp (warp-specialized
+//! every thread executes the same handler in the same subgroup (subgroup-specialized
 //! interpretation).
 //!
 //! This module ships the *packing* part. Interpreter loops read the packed

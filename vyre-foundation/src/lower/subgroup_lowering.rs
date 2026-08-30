@@ -1,7 +1,7 @@
 //! Subgroup-first lowering pass (Phase 2.3).
 //!
 //! Converts workgroup-tree reductions over shared memory into
-//! `subgroup_add` / `subgroup_shuffle` warp operations when the backend
+//! `subgroup_add` / `subgroup_shuffle` operations when the backend
 //! reports native subgroup support and the workgroup shape fits the
 //! subgroup size.
 
@@ -661,7 +661,7 @@ mod tests {
     fn lowers_workgroup_max_u32_to_subgroup_reduce_max() {
         // The u32 twin: workgroup_max_u32 must ALSO lower to subgroup_reduce(Max).
         // The lowering recognizes the `workgroup_max_` prefix with a u32 value
-        // type, so the new primitive gets the fast warp-reduction path for free.
+        // type, so the new primitive gets the fast subgroup-reduction path for free.
         let Node::Region { body, .. } =
             workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
         else {
@@ -701,7 +701,7 @@ mod tests {
 
     #[test]
     fn lowers_workgroup_min_f32_to_subgroup_reduce_min() {
-        // workgroup_min_f32 must lower to subgroup_reduce(Min), the warp-reduce
+        // workgroup_min_f32 must lower to subgroup_reduce(Min), the subgroup-reduce
         // fast path. A missing Min prefix arm would leave the slow shared-memory
         // tree in place (correct, but pessimal. Law 7).
         let Node::Region { body, .. } =
@@ -858,7 +858,7 @@ mod tests {
         assert_eq!(
             body.len(),
             6,
-            "Fix: two-level subgroup lowering should emit first-level subgroup work, a barrier, full-warp second-level subgroup work, and a final barrier."
+            "Fix: two-level subgroup lowering should emit first-level subgroup work, a barrier, full-subgroup second-level subgroup work, and a final barrier."
         );
         assert!(
             nodes_contain_subgroup_add(&body[0..1]) && nodes_contain_subgroup_add(&body[3..4]),

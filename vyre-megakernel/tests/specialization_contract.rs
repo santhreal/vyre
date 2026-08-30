@@ -418,7 +418,7 @@ fn grant(axis: TargetCapabilityAxis, base: DeviceFacts) -> DeviceFacts {
         TargetCapabilityAxis::DualIssueFp32Int32 => capabilities.has_dual_issue_fp32_int32 = true,
         TargetCapabilityAxis::TensorCoreInt => capabilities.has_tensor_core_int = true,
         TargetCapabilityAxis::NativeF16 => capabilities.has_native_f16 = true,
-        TargetCapabilityAxis::WarpShuffle => capabilities.has_warp_shuffle = true,
+        TargetCapabilityAxis::SubgroupShuffle => capabilities.has_subgroup_shuffle = true,
         TargetCapabilityAxis::SharedMemory => capabilities.has_shared_memory = true,
         TargetCapabilityAxis::TranscendentalPolynomialEmit => {
             capabilities.has_transcendental_polynomial_emit = true;

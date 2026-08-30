@@ -35,6 +35,7 @@ This crate declares no Cargo features.
 | `test` | `device_only_routing` | `structure-gate/tests/device_only_routing.rs` | None | `./cargo_full test -p structure-gate --test device_only_routing` |
 | `test` | `materializer_admission` | `structure-gate/tests/materializer_admission.rs` | None | `./cargo_full test -p structure-gate --test materializer_admission` |
 | `test` | `module_routes` | `structure-gate/tests/module_routes.rs` | None | `./cargo_full test -p structure-gate --test module_routes` |
+| `test` | `neutral_vocabulary_contract` | `structure-gate/tests/neutral_vocabulary_contract.rs` | None | `./cargo_full test -p structure-gate --test neutral_vocabulary_contract` |
 | `test` | `node_child_descent_owner` | `structure-gate/tests/node_child_descent_owner.rs` | None | `./cargo_full test -p structure-gate --test node_child_descent_owner` |
 | `test` | `source_directory_placement` | `structure-gate/tests/source_directory_placement.rs` | None | `./cargo_full test -p structure-gate --test source_directory_placement` |
 | `test` | `string_literals` | `structure-gate/tests/string_literals.rs` | None | `./cargo_full test -p structure-gate --test string_literals` |

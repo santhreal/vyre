@@ -4155,11 +4155,11 @@ pub vyre_libs::nn::attention::FlashAttentionWorkPlan::score_scratch_elements: u3
 pub vyre_libs::nn::attention::FlashAttentionWorkPlan::seq_len: u32
 pub vyre_libs::nn::attention::FlashAttentionWorkPlan::sequence_splits: u32
 pub vyre_libs::nn::attention::FlashAttentionWorkPlan::split_reduce_scratch_elements: u32
+pub vyre_libs::nn::attention::FlashAttentionWorkPlan::subgroup_lanes: u32
+pub vyre_libs::nn::attention::FlashAttentionWorkPlan::subgroups_per_block: u32
 pub vyre_libs::nn::attention::FlashAttentionWorkPlan::tile_count: u32
 pub vyre_libs::nn::attention::FlashAttentionWorkPlan::tile_size: u32
 pub vyre_libs::nn::attention::FlashAttentionWorkPlan::tiles_per_sequence_split: u32
-pub vyre_libs::nn::attention::FlashAttentionWorkPlan::warp_lanes: u32
-pub vyre_libs::nn::attention::FlashAttentionWorkPlan::warps_per_block: u32
 pub vyre_libs::nn::attention::FlashAttentionWorkPlan::workgroup_lanes: u32
 pub vyre_libs::nn::attention::GatedDeltaSpec::batch: u32
 pub vyre_libs::nn::attention::GatedDeltaSpec::beta_logits: &'a str

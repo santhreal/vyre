@@ -58,6 +58,19 @@ path, timestamp or which frontend asked.
 order. It parallelizes the cache lookups over a corpus. It does not
 execute IR on the host.
 
+## Classification is branchless
+
+A byte or word classifier states its result with arithmetic rather than a branch
+per byte. A per-byte branch diverges the lanes of one subgroup, and the stage
+then costs as many passes as the input has distinct byte shapes, so the branchy
+form loses its advantage the moment the input has mixed structure.
+
+`whitespace_classify_word` classifies a whole word per lane this way.
+`bytecode_dispatch_table_pack` packs the dispatch table so every lane of one
+subgroup runs the same handler, which is what keeps an interpreter loop
+convergent. Neither states a device: the property is subgroup divergence, and a
+target that reports no subgroup at all still runs the same arithmetic.
+
 ## Why the stages are separate registered operations
 
 A lexer that is one registered operation and an extractor that is another

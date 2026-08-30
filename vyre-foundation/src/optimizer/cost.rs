@@ -39,7 +39,7 @@
 //! | `control_flow_count` | `ProgramStats::control_flow_count` | branches + loops (divergence-cost proxy) |
 //! | `register_pressure_estimate` | `ProgramStats::register_pressure_estimate` | concurrent live SSA-ish values (occupancy-cap proxy) |
 //! | `static_storage_bytes` | `ProgramStats::static_storage_bytes` | sum of statically-known buffer byte sizes |
-//! | `divergence_score` | local walker | count of `if invocation_id == K { ... }` patterns (warp-divergence proxy) |
+//! | `divergence_score` | local walker | count of `if invocation_id == K { ... }` patterns (subgroup-divergence proxy) |
 //!
 //! Capability bits are NOT compared  -  passes are allowed to add OR remove
 //! capability requirements; cost-direction is orthogonal.
@@ -72,7 +72,7 @@ pub struct CostCertificate {
     /// Sum of statically-known buffer byte sizes.
     pub static_storage_bytes: u64,
     /// Count of `if invocation_id == K { ... }` patterns at any nesting
-    /// depth  -  warp-divergence proxy. Programs that lift divergent stores
+    /// depth  -  subgroup-divergence proxy. Programs that lift divergent stores
     /// out of an `if invocation_id == K` block reduce this dimension; programs
     /// that introduce one increase it.
     pub divergence_score: u64,
@@ -229,9 +229,9 @@ impl CostCertificate {
 
 /// Walk a node tree and add 1 to `score` for every `if invocation_id == K { ... }`
 /// pattern encountered, recursively. The shape `if invocation_id == K { ... }`
-/// (or `if K == invocation_id { ... }`) is the canonical warp-divergent
+/// (or `if K == invocation_id { ... }`) is the canonical subgroup-divergent
 /// pattern this dimension tracks. Other branchy patterns (e.g. `if x < y`) are
-/// not divergent in the same warp-cost sense and are NOT counted here  -  they
+/// not divergent in the same subgroup-cost sense and are NOT counted here  -  they
 /// land in `control_flow_count`, which is also tracked.
 ///
 /// The descent is [`for_each_descendant`], the exhaustive owner, and not

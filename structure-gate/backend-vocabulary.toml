@@ -241,3 +241,18 @@ neutral = "subgroup"
 prefix = "vyre-runtime/src/uring/"
 name = "nvidia-fs"
 reason = "the Linux kernel module, and the /proc path it exports, that the GPUDirect probe reads"
+
+[[interface]]
+prefix = "vyre/src/"
+name = "cuda"
+reason = "the Cargo feature and the driver crate the facade links a backend registration from, both named by that crate's own package identity"
+
+[[interface]]
+prefix = "vyre/src/"
+name = "wgpu"
+reason = "the Cargo feature and the driver crate the facade links a backend registration from, both named by that crate's own package identity"
+
+[[interface]]
+prefix = "vyre-foundation/src/ir_inner/model/program/stats/"
+name = "warp"
+reason = "one vendor spelling of a subgroup intrinsic op id, recognized so a program authored outside this tree still classifies as subgroup work"

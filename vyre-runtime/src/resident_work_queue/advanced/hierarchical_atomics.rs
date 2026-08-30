@@ -1,4 +1,4 @@
-//! Warp-Aggregated Hierarchical Atomics using Subgroup Primitives
+//! Subgroup-aggregated hierarchical atomics.
 //!
 //! Replaces $O(N)$ sequential `atomic_add` congestion with $O(1)$ batch
 //! allocation using `Expr::SubgroupBallot` and `Expr::SubgroupAdd`.

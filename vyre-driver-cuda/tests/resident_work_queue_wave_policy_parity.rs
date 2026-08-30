@@ -463,7 +463,7 @@ fn scenarios() -> Vec<Scenario> {
         },
         Scenario {
             name: "ultra sparse frontier",
-            expects: "groups=[0][1,2][3] barriers=2 peak=8192/4096/2048 readback=4096 width=2 topology=WarpSparseFrontier downgraded=false graph=98304 scratch=4096 required=112640 pressure=8593",
+            expects: "groups=[0][1,2][3] barriers=2 peak=8192/4096/2048 readback=4096 width=2 topology=SubgroupSparseFrontier downgraded=false graph=98304 scratch=4096 required=112640 pressure=8593",
             frontier_density: 0.01,
             graph: MegakernelGraphShape {
                 node_count: 4_096,
@@ -576,7 +576,7 @@ fn cuda_and_neutral_frontier_scheduling_agree_decision_for_decision() {
 }
 
 const TOPOLOGIES: [FrontierTopology; 6] = [
-    FrontierTopology::WarpSparseFrontier,
+    FrontierTopology::SubgroupSparseFrontier,
     FrontierTopology::SparseFrontier,
     FrontierTopology::BlockDenseFrontier,
     FrontierTopology::DenseFrontier,
@@ -605,7 +605,7 @@ const DENSITIES: [f64; 16] = [
     f64::NAN,
 ];
 
-/// Degree spread straddling the dense (2.0) and warp-sparse (8.0) proxies.
+/// Degree spread straddling the dense (2.0) and subgroup-sparse (8.0) proxies.
 const GRAPHS: [MegakernelGraphShape; 5] = [
     MegakernelGraphShape {
         node_count: 1,

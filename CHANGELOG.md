@@ -2698,10 +2698,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The two grouped INT4 linear lowerings, the lane-predicated one and the
   weight-tile-reuse one, shared five stages by copy: the workgroup lane
   decomposition, the packed-column index, the nibble select, the affine
-  dequantization, and the warp reduction with its lane-zero biased store. Each
-  is now built once in the grouped layout module and used by both, so a change
-  to the packed weight layout or the reduction cannot land in one strategy and
-  miss the other. Both emitted programs are unchanged.
+  dequantization, and the subgroup reduction with its lane-zero biased store.
+  Each is now built once in the grouped layout module and used by both, so a
+  change to the packed weight layout or the reduction cannot land in one
+  strategy and miss the other. Both emitted programs are unchanged.
 - The host-side IR rewrites the resident pipeline runs are declared once in
   vyre_foundation::transform::HOST_REWRITES, in pipeline order, and the
   pipeline walks that table instead of naming each function. A rewrite absent
@@ -3308,6 +3308,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   from `vyre_foundation::visit::walk_exprs` instead of a hand-rolled counter
   over `#[non_exhaustive]` enums whose catch-all arm read an unlisted variant
   as a leaf, so a tree that grew through a new variant counted as small.
+- Substrate-neutral crates state `subgroup` where they stated one vendor's word
+  for it: `BackendCapabilities::has_warp_shuffle` is `has_subgroup_shuffle`,
+  `DeviceSignature::warp_size` and its device-signature TOML key are
+  `subgroup_size`, `FrontierTopology::WarpSparseFrontier` is
+  `SubgroupSparseFrontier`, `TargetCapabilityAxis::WarpShuffle` is
+  `SubgroupShuffle`, the attention plan's `warp_lanes` and `warps_per_block`
+  are `subgroup_lanes` and `subgroups_per_block`, and the frontier topology
+  reason reads `ultra_sparse_subgroup_specialized`.
 - `TargetModuleBundle` schema version 5 serializes the selected
   `ExecutionTopology` and a per-module `TargetArmAssignment`, both covered by
   the bundle digest, and admission rejects a bundle whose arm records are not

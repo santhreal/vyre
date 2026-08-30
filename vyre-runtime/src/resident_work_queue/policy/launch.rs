@@ -492,14 +492,14 @@ impl ResidentLaunchPolicy {
                     )
                 })?
                 / u64::from(sparse_span);
-            let warp_floor = request.requested_worker_groups.min(32);
+            let subgroup_floor = request.requested_worker_groups.min(32);
             request.requested_worker_groups = u32::try_from(scaled)
                 .map_err(|error| {
                     BackendError::new(format!(
                         "megakernel sparse-frontier worker count cannot fit u32: {error}. Fix: reduce requested worker groups."
                     ))
                 })?
-                .max(warp_floor)
+                .max(subgroup_floor)
                 .min(request.requested_worker_groups);
         }
         Ok(request)

@@ -8,7 +8,7 @@ pub const FLASH_ATTENTION_SEQUENCE_PARALLEL_TARGET_TILES_PER_SPLIT: u32 = 4;
 
 const SCALAR_ONLINE_WORKGROUP_LANES: u32 = 128;
 const COOPERATIVE_TILED_WORKGROUP_LANES: u32 = 64;
-const WARP_LANES: u32 = 32;
+const SUBGROUP_LANES: u32 = 32;
 const F32_BYTES: u64 = core::mem::size_of::<f32>() as u64;
 
 /// Flash-attention kernel family selected by the planner.
@@ -69,10 +69,10 @@ pub struct FlashAttentionWorkPlan {
     pub parallel_workgroups_per_row: u32,
     /// Threads/lanes per workgroup block.
     pub workgroup_lanes: u32,
-    /// Logical warp width.
-    pub warp_lanes: u32,
-    /// Warps assigned to one workgroup block.
-    pub warps_per_block: u32,
+    /// Logical subgroup width.
+    pub subgroup_lanes: u32,
+    /// Subgroups assigned to one workgroup block.
+    pub subgroups_per_block: u32,
     /// Logical tensor elements in each q/k/v/out matrix.
     pub logical_elements: u32,
     /// Query scratch elements.
@@ -129,8 +129,8 @@ pub fn plan_flash_attention_scalar(
         rows_per_block: 1,
         parallel_workgroups_per_row: 1,
         workgroup_lanes: SCALAR_ONLINE_WORKGROUP_LANES,
-        warp_lanes: WARP_LANES,
-        warps_per_block: SCALAR_ONLINE_WORKGROUP_LANES / WARP_LANES,
+        subgroup_lanes: SUBGROUP_LANES,
+        subgroups_per_block: SCALAR_ONLINE_WORKGROUP_LANES / SUBGROUP_LANES,
         logical_elements,
         q_scratch_elements,
         score_scratch_elements,
@@ -209,8 +209,8 @@ pub fn plan_flash_attention_tiled(
         rows_per_block: 1,
         parallel_workgroups_per_row: sequence_splits,
         workgroup_lanes: COOPERATIVE_TILED_WORKGROUP_LANES,
-        warp_lanes: WARP_LANES,
-        warps_per_block: COOPERATIVE_TILED_WORKGROUP_LANES / WARP_LANES,
+        subgroup_lanes: SUBGROUP_LANES,
+        subgroups_per_block: COOPERATIVE_TILED_WORKGROUP_LANES / SUBGROUP_LANES,
         logical_elements,
         q_scratch_elements,
         score_scratch_elements,
@@ -353,8 +353,8 @@ mod tests {
         assert_eq!(scalar.kernel, FlashAttentionKernelKind::ScalarOnline);
         assert_eq!(tiled.kernel, FlashAttentionKernelKind::CooperativeTiled);
         assert_eq!(tiled.workgroup_lanes, 64);
-        assert_eq!(tiled.warp_lanes, 32);
-        assert_eq!(tiled.warps_per_block, 2);
+        assert_eq!(tiled.subgroup_lanes, 32);
+        assert_eq!(tiled.subgroups_per_block, 2);
         assert_eq!(tiled.tile_count, 2);
         assert_eq!(tiled.sequence_splits, 1);
         assert_eq!(tiled.parallel_workgroups_per_row, 1);

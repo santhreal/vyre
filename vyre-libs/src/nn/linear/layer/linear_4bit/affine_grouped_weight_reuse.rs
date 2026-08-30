@@ -7,8 +7,8 @@ use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use super::grouped_layout::{
     affine_grouped_buffers, affine_grouped_output_extent, broadcast_from_lane0, dequantized_weight,
     lane_decomposition, packed_column_index, push_group_affine_terms, push_lane0_sidecar_loads,
-    push_packed_word_fetch, push_warp_reduction_store, AFFINE_GROUPED_LANES_PER_OUTPUT,
-    AFFINE_GROUPED_OP_ID, AFFINE_GROUPED_WARPS_PER_WORKGROUP, AFFINE_GROUPED_WEIGHT_TILE,
+    push_packed_word_fetch, push_subgroup_reduction_store, AFFINE_GROUPED_LANES_PER_OUTPUT,
+    AFFINE_GROUPED_OP_ID, AFFINE_GROUPED_SUBGROUPS_PER_WORKGROUP, AFFINE_GROUPED_WEIGHT_TILE,
     AFFINE_GROUPED_WORKGROUP_SIZE,
 };
 
@@ -29,7 +29,7 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
     sidecar_count: u32,
     logical_output_count: u32,
 ) -> Result<Program, String> {
-    let batch_tiles = batch_size / AFFINE_GROUPED_WARPS_PER_WORKGROUP;
+    let batch_tiles = batch_size / AFFINE_GROUPED_SUBGROUPS_PER_WORKGROUP;
     let output_workgroups = batch_tiles.checked_mul(out_dim).ok_or_else(|| {
         "Fix: linear_4bit_affine_grouped output workgroups overflow u32; reduce dimensions."
             .to_string()
@@ -64,9 +64,9 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
             Expr::add(
                 Expr::mul(
                     Expr::var("batch_tile"),
-                    Expr::u32(AFFINE_GROUPED_WARPS_PER_WORKGROUP),
+                    Expr::u32(AFFINE_GROUPED_SUBGROUPS_PER_WORKGROUP),
                 ),
-                Expr::var("warp"),
+                Expr::var("subgroup"),
             ),
         ),
         Node::let_bind(
@@ -129,7 +129,7 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
             ],
         ),
     ]);
-    push_warp_reduction_store(&mut body, lane, b, out, out_idx);
+    push_subgroup_reduction_store(&mut body, lane, b, out, out_idx);
 
     let mut buffers = affine_grouped_buffers(
         [x, w_packed, scale, zero_point, b, out],
