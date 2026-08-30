@@ -2,7 +2,7 @@
 
 /// Undirected conflict edge between two update targets.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct FrontierConflictEdge {
+pub(crate) struct FrontierConflictEdge {
     /// First target node.
     pub a: u32,
     /// Second target node.
@@ -11,7 +11,7 @@ pub struct FrontierConflictEdge {
 
 /// Color assignment for one target node.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct FrontierColor {
+pub(crate) struct FrontierColor {
     /// Target node id.
     pub node: u32,
     /// Assigned color.
@@ -20,7 +20,7 @@ pub struct FrontierColor {
 
 /// Contention-reducing color plan.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct FrontierColorPlan {
+pub(crate) struct FrontierColorPlan {
     /// Color assignment sorted by node id.
     pub colors: Vec<FrontierColor>,
     /// Number of colors used.
@@ -29,7 +29,7 @@ pub struct FrontierColorPlan {
 
 /// Frontier coloring errors.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum FrontierColorError {
+pub(crate) enum FrontierColorError {
     /// An edge references a node outside `0..node_count`.
     InvalidNode {
         /// Invalid node id.
@@ -53,7 +53,7 @@ impl std::fmt::Display for FrontierColorError {
 impl std::error::Error for FrontierColorError {}
 
 /// Greedy deterministic coloring for frontier update conflict graphs.
-pub fn color_frontier_conflicts(
+pub(crate) fn color_frontier_conflicts(
     node_count: u32,
     conflict_edges: &[FrontierConflictEdge],
 ) -> Result<FrontierColorPlan, FrontierColorError> {

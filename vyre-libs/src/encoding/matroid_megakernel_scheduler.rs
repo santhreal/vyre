@@ -71,7 +71,7 @@
 
 /// Input-shape error from megakernel matroid scheduling.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum MatroidScheduleError {
+pub(crate) enum MatroidScheduleError {
     /// `n * n` overflowed `usize`.
     AdjacencySizeOverflow {
         /// Requested graph dimension.
@@ -149,7 +149,7 @@ fn validate_inputs(
 /// capped at `max_iters` augmenting paths.
 ///
 #[must_use]
-pub fn max_fusion_subset(
+pub(crate) fn max_fusion_subset(
     seed: &[u32],
     exchange_adj: &[u32],
     n: usize,
@@ -171,7 +171,7 @@ pub fn max_fusion_subset(
 }
 
 /// Compute a maximum fusion subset into caller-owned storage.
-pub fn max_fusion_subset_into(
+pub(crate) fn max_fusion_subset_into(
     seed: &[u32],
     exchange_adj: &[u32],
     n: usize,

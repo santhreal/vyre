@@ -13,7 +13,7 @@ use vyre_foundation::pass_substrate::polyhedral_fusion as foundation_polyhedral;
 /// Reusable buffers for polyhedral fusion analysis.
 #[cfg(test)]
 #[derive(Debug, Default)]
-pub struct PolyhedralFusionScratch {
+pub(crate) struct PolyhedralFusionScratch {
     closure: Vec<u32>,
     next: Vec<u32>,
     mask: Vec<u32>,
@@ -23,7 +23,7 @@ pub struct PolyhedralFusionScratch {
 impl PolyhedralFusionScratch {
     /// Create empty reusable fusion-analysis scratch.
     #[must_use]
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
 
@@ -38,7 +38,7 @@ impl PolyhedralFusionScratch {
 /// means "fusable" and `0` means "ordering matters."
 #[cfg(test)]
 #[must_use]
-pub fn fusable_pairs(adj: &[u32], n: u32, max_iters: u32) -> Vec<u32> {
+pub(crate) fn fusable_pairs(adj: &[u32], n: u32, max_iters: u32) -> Vec<u32> {
     let mut scratch = PolyhedralFusionScratch::new();
     fusable_pairs_into(adj, n, max_iters, &mut scratch).to_vec()
 }
@@ -46,7 +46,7 @@ pub fn fusable_pairs(adj: &[u32], n: u32, max_iters: u32) -> Vec<u32> {
 /// Identify fusable Region pairs using caller-owned scratch.
 #[cfg(test)]
 #[must_use]
-pub fn fusable_pairs_into<'a>(
+pub(crate) fn fusable_pairs_into<'a>(
     adj: &[u32],
     n: u32,
     max_iters: u32,
@@ -69,7 +69,7 @@ pub fn fusable_pairs_into<'a>(
 /// fusable. Higher score = more fusion opportunities.
 #[cfg(test)]
 #[must_use]
-pub fn fusion_score(adj: &[u32], n: u32, max_iters: u32) -> u32 {
+pub(crate) fn fusion_score(adj: &[u32], n: u32, max_iters: u32) -> u32 {
     let mut scratch = PolyhedralFusionScratch::new();
     fusion_score_into(adj, n, max_iters, &mut scratch)
 }
@@ -77,7 +77,7 @@ pub fn fusion_score(adj: &[u32], n: u32, max_iters: u32) -> u32 {
 /// Score a fusion using caller-owned scratch.
 #[cfg(test)]
 #[must_use]
-pub fn fusion_score_into(
+pub(crate) fn fusion_score_into(
     adj: &[u32],
     n: u32,
     max_iters: u32,

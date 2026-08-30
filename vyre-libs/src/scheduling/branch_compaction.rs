@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 
 /// One branch candidate before launch compaction.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct BranchArm {
+pub(crate) struct BranchArm {
     /// Stable branch id from the producer IR.
     pub id: u32,
     /// Predicate-lane count that will execute this arm.
@@ -17,7 +17,7 @@ pub struct BranchArm {
 
 /// One retained branch arm after compaction.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct CompactedBranchArm {
+pub(crate) struct CompactedBranchArm {
     /// Stable branch id from the producer IR.
     pub id: u32,
     /// Predicate-lane count that will execute this arm.
@@ -32,7 +32,7 @@ pub struct CompactedBranchArm {
 
 /// Deterministic branch-compaction plan.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct BranchCompactionPlan {
+pub(crate) struct BranchCompactionPlan {
     /// Non-empty arms in execution order.
     pub arms: Vec<CompactedBranchArm>,
     /// Total active predicate lanes retained.
@@ -45,7 +45,7 @@ pub struct BranchCompactionPlan {
 
 /// Branch compaction errors.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum BranchCompactionError {
+pub(crate) enum BranchCompactionError {
     /// Duplicate branch id.
     DuplicateBranch {
         /// Duplicate id.
@@ -90,7 +90,7 @@ impl std::fmt::Display for BranchCompactionError {
 impl std::error::Error for BranchCompactionError {}
 
 /// Plan branch compaction by dropping zero-lane arms and packing parameters.
-pub fn plan_branch_compaction(
+pub(crate) fn plan_branch_compaction(
     branches: &[BranchArm],
 ) -> Result<BranchCompactionPlan, BranchCompactionError> {
     let mut ids = BTreeSet::new();

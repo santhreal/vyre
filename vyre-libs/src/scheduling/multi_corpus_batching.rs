@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 /// Stable batching key for frontend translation-unit reuse.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct TranslationUnitBatchKey {
+pub(crate) struct TranslationUnitBatchKey {
     /// Include-graph cache key.
     pub include_graph_hash: u64,
     /// Preprocessor environment key.
@@ -15,7 +15,7 @@ pub struct TranslationUnitBatchKey {
 
 /// One translation unit candidate for corpus batching.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TranslationUnitBatchItem {
+pub(crate) struct TranslationUnitBatchItem {
     /// Stable translation unit id.
     pub translation_unit_id: u32,
     /// Reuse key.
@@ -26,7 +26,7 @@ pub struct TranslationUnitBatchItem {
 
 /// One batch of translation units sharing frontend residency.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TranslationUnitBatch {
+pub(crate) struct TranslationUnitBatch {
     /// Shared key for all translation units in this batch.
     pub key: TranslationUnitBatchKey,
     /// Translation unit ids in stable order.
@@ -37,7 +37,7 @@ pub struct TranslationUnitBatch {
 
 /// Corpus batch plan.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MultiCorpusBatchPlan {
+pub(crate) struct MultiCorpusBatchPlan {
     /// Batches sorted by largest source byte weight first.
     pub batches: Vec<TranslationUnitBatch>,
     /// Number of distinct include/preprocessor/semantic uploads required.
@@ -48,7 +48,7 @@ pub struct MultiCorpusBatchPlan {
 
 /// Multi-corpus batching errors.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum MultiCorpusBatchError {
+pub(crate) enum MultiCorpusBatchError {
     /// Duplicate translation unit id.
     DuplicateTranslationUnit {
         /// Duplicated translation-unit identifier.
@@ -76,7 +76,7 @@ impl std::error::Error for MultiCorpusBatchError {}
 
 /// Plan frontend batches that share include cache and semantic graph residency.
 #[cfg(test)]
-pub fn plan_multi_corpus_batches(
+pub(crate) fn plan_multi_corpus_batches(
     items: &[TranslationUnitBatchItem],
 ) -> Result<MultiCorpusBatchPlan, MultiCorpusBatchError> {
     let mut seen_ids = std::collections::BTreeSet::new();

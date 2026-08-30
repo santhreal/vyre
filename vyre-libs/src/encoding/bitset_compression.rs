@@ -2,7 +2,7 @@
 
 /// Runtime bitset representation selected for a dataflow fact set.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum BitsetCompressionEncoding {
+pub(crate) enum BitsetCompressionEncoding {
     /// Dense fixed-width words.
     DenseWords,
     /// Sorted active-bit indices.
@@ -11,7 +11,7 @@ pub enum BitsetCompressionEncoding {
 
 /// Input profile for one fact bitset.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct BitsetCompressionProfile {
+pub(crate) struct BitsetCompressionProfile {
     /// Universe size in bits.
     pub universe_bits: u64,
     /// Active bits in the universe.
@@ -24,7 +24,7 @@ pub struct BitsetCompressionProfile {
 
 /// Selected bitset compression plan.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct BitsetCompressionPlan {
+pub(crate) struct BitsetCompressionPlan {
     /// Selected runtime representation.
     pub encoding: BitsetCompressionEncoding,
     /// Dense byte count for the bitset.
@@ -41,7 +41,7 @@ pub struct BitsetCompressionPlan {
 
 /// Bitset compression planning errors.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum BitsetCompressionError {
+pub(crate) enum BitsetCompressionError {
     /// Active bit count exceeds the universe.
     ActiveExceedsUniverse {
         /// Universe size in bits.
@@ -83,7 +83,7 @@ impl std::fmt::Display for BitsetCompressionError {
 impl std::error::Error for BitsetCompressionError {}
 
 /// Select a bitset representation from density and byte cost.
-pub fn plan_bitset_compression(
+pub(crate) fn plan_bitset_compression(
     profile: BitsetCompressionProfile,
 ) -> Result<BitsetCompressionPlan, BitsetCompressionError> {
     if profile.index_bytes == 0 {
