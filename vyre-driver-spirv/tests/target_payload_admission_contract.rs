@@ -183,13 +183,15 @@ fn admission_rejects_a_payload_built_for_another_profile() {
 /// look up, and it is rejected whatever the dialect. A renamed entry point that
 /// the payload metadata also names is admitted, which is the pair
 /// `admission_rejects_entry_metadata_that_names_another_entry` holds apart.
+/// The payload metadata keeps its name. An empty entry name is refused when
+/// the payload seals, so emptying it here would test that refusal instead of
+/// this one and admission would never run.
 #[test]
 fn admission_rejects_a_module_that_states_no_entry_point() {
     let (artifact, payload) = compiled();
     let mut bundle = bundle_of(&payload);
     bundle.modules[0].entry_point = String::new();
-    let mut entries = payload.entries().to_vec();
-    entries[0].name = String::new();
+    let entries = payload.entries().to_vec();
     let perturbed = repack(&artifact, &payload, &bundle, entries);
 
     let error = materialize::admit(&artifact, &perturbed, target(&perturbed))
