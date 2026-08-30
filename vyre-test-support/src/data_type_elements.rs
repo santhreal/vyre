@@ -2,7 +2,7 @@
 //!
 //! # Why this is its own module
 //!
-//! The fixture tables in [`crate::data_type_variants`] need `vyre-foundation`
+//! The fixture tables in `data_type_variants` need `vyre-foundation`
 //! and `smallvec` to build nested payloads, so they sit behind `ir-fixtures`.
 //! This list needs neither: a flat form is a bare discriminant plus, for
 //! `Array`, an element size. Keeping it out of that feature is what lets
