@@ -1,7 +1,5 @@
 //! Apple math comparators test suite.
 
-#![cfg(feature = "device-tests")]
-
 use std::collections::BTreeSet;
 
 const COMPARATORS: &str = include_str!("../../docs/optimization/APPLE_MATH_COMPARATORS.toml");

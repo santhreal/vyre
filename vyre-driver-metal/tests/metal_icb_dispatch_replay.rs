@@ -1,7 +1,5 @@
 //! Metal icb dispatch replay test suite.
 
-#![cfg(feature = "device-tests")]
-
 use std::collections::BTreeSet;
 
 const REPLAY: &str = include_str!("../../docs/optimization/METAL_ICB_DISPATCH_REPLAY.toml");

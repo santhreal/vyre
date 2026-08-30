@@ -40,6 +40,11 @@ inventory.workspace = true
 tracing.workspace = true
 serde_json.workspace = true
 
+# The registry contract tests read committed TOML and acquire no device, so this
+# dependency is not target-gated.
+[dev-dependencies]
+toml = { workspace = true }
+
 # Every module that names the Metal artifact types is gated on an Apple target,
 # so the emitter is a dependency only where those modules compile.
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
@@ -49,4 +54,3 @@ metal.workspace = true
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dev-dependencies]
 vyre-driver-wgpu = { path = "../vyre-driver-wgpu" }
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
-toml = { workspace = true }

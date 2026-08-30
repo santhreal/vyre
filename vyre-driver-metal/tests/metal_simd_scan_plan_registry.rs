@@ -1,7 +1,5 @@
 //! Metal simd scan plan registry test suite.
 
-#![cfg(feature = "device-tests")]
-
 use std::collections::{BTreeMap, BTreeSet};
 
 const PLANS: &str = include_str!("../../docs/optimization/METAL_SIMD_SCAN_PLANS.toml");

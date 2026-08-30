@@ -1,7 +1,5 @@
 //! Metal hazard certificates test suite.
 
-#![cfg(feature = "device-tests")]
-
 use std::collections::BTreeSet;
 
 const CERTIFICATES: &str = include_str!("../../docs/optimization/METAL_HAZARD_CERTIFICATES.toml");
