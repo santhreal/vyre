@@ -176,22 +176,22 @@ impl DeviceFacts {
     /// Facts for a caller that has no device.
     ///
     /// Every capability is absent and every budget is zero. An absent fact
-    /// decides nothing: the capability arms of the admission gate are skipped
-    /// for these facts exactly as a zero budget skips its size gate, so a
-    /// device-neutral compile produces an artifact and legality is decided
-    /// again against the live snapshot a target attaches with. Use this only
-    /// where no backend is reachable; a caller holding a backend passes its
-    /// live facts.
+    /// constrains nothing: the capability arms of the admission gate are
+    /// skipped for these facts exactly as a zero budget skips its size gate, so
+    /// a device-neutral compile produces an artifact and those arms are
+    /// evaluated again against the live snapshot a target attaches with. Use
+    /// this only where no backend is reachable; a caller holding a backend
+    /// passes its live facts.
     #[must_use]
     pub const fn unknown() -> Self {
         Self::new(BackendCapabilities::NONE, 0)
     }
 
-    /// Whether these facts carry a live capability snapshot.
+    /// Whether these facts state a live capability snapshot.
     ///
     /// [`Self::unknown`] states [`BackendCapabilities::NONE`], which is absence
-    /// rather than a device granting nothing: no shipping device reports an
-    /// empty snapshot, and a compile reading one has selected no target yet.
+    /// rather than a target that grants nothing: no shipping device reports an
+    /// empty snapshot, and a compile reading one has selected no target.
     fn states_a_capability_snapshot(self) -> bool {
         self.capabilities != BackendCapabilities::NONE
     }
@@ -537,8 +537,8 @@ impl DeviceFacts {
 /// Facts with no capability snapshot state absence, not a device that grants
 /// nothing, so every capability arm here is skipped for them exactly as a zero
 /// budget skips its size gate. A device-neutral compile therefore produces an
-/// artifact, and the arms decide again once a target attaches with a live
-/// snapshot.
+/// artifact, and those arms are evaluated again once a target attaches with a
+/// live snapshot.
 pub(crate) fn validate_device_support(
     graph: &ProgramGraph,
     device: DeviceFacts,

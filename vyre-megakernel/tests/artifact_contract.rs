@@ -1287,12 +1287,12 @@ fn workgroup_scratch_graph() -> ProgramGraph {
 /// programs.
 ///
 /// This pair closes the class rather than the one arm: the first test proves an
-/// absent snapshot decides nothing, the second proves the arm still fires for a
+/// absent snapshot constrains nothing, the second proves the arm still fires for a
 /// device that reports the fact. Against the previous behaviour the first test
 /// failed with `MKC001_INVALID_PROGRAM`, and the second passed unchanged, so the
 /// refusal moved from absence to evidence and did not disappear.
 #[test]
-fn absent_device_facts_admit_workgroup_scratch_no_target_has_ruled_on() {
+fn absent_device_facts_admit_workgroup_scratch_when_no_snapshot_is_stated() {
     let validated = CompileRequest::new(
         workgroup_scratch_graph(),
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),

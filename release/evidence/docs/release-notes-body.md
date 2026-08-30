@@ -5292,10 +5292,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   at compile time, so a unit reused across checkouts that share a target
   directory no longer inspects whichever tree built last.
 - A compile that states no device capability snapshot no longer refuses a
-  program for a capability no target has ruled on, so `vyre-aot` and the
-  registry compile produce a device-neutral artifact for programs declaring
-  workgroup scratch, tensor operands, binary16 arithmetic, indirect dispatch,
-  or a whole-grid fence.
+  program for an unstated capability, so `vyre-aot` and the registry compile
+  produce a device-neutral artifact for programs declaring workgroup scratch,
+  tensor operands, binary16 arithmetic, indirect dispatch, or a whole-grid
+  fence.
 - The adaptive sparse traversal branch now tests source activity in the input
   frontier while writing discovered vertices to the output frontier. The
   previous composer used the zero-initialized output as both probe and

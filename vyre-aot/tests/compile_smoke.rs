@@ -56,8 +56,8 @@ fn minimal_ptx_artifact_for_template_test() -> vyre_aot::ArtifactEnvelope {
     fixture_target::compiled_artifact()
 }
 
-/// A program declaring workgroup-scoped scratch, which no target has ruled on
-/// when the neutral half of the artifact is compiled.
+/// A program declaring workgroup-scoped scratch, which the shared-memory
+/// capability arm of the admission gate reads.
 fn workgroup_scratch_program() -> Program {
     Program::wrapped(
         vec![
@@ -77,16 +77,16 @@ fn workgroup_scratch_program() -> Program {
 /// absence as a device that grants nothing refused every program declaring
 /// workgroup scratch here with `MKC001_INVALID_PROGRAM`, before any target had
 /// been selected, while the artifact identity this path produces must stay
-/// device-neutral and so cannot carry a real device's facts instead.
+/// device-neutral and so cannot hold a real device's facts instead.
 ///
 /// Against the previous behaviour this failed at the `neutral-request` stage.
 #[test]
-fn a_neutral_compile_admits_workgroup_scratch_no_target_has_ruled_on() {
+fn a_neutral_compile_admits_workgroup_scratch_when_no_snapshot_is_stated() {
     compile(
         &workgroup_scratch_program(),
         fixture_target::fixture_target(),
     )
-    .expect("Fix: a device-neutral compile must not judge a capability no target has stated");
+    .expect("Fix: a device-neutral compile must not judge an unstated capability");
 }
 
 /// The same program against a target that is not linked, so the neutral stage is
