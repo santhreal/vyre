@@ -108,9 +108,14 @@ fn cli_default_production_roots_are_vyre_owned_only() {
     let mut members = String::new();
     for root in &roots {
         fs::create_dir_all(dir.path().join(root)).expect("create default production root");
-        let member = root
-            .strip_suffix("/src")
-            .expect("a default root is a member `src` directory");
+        // A printed root uses the host separator, and a manifest member always
+        // uses `/`, so the member is taken through path semantics and spelled
+        // back the one way Cargo reads.
+        let member = std::path::Path::new(root)
+            .parent()
+            .expect("a default root is a member `src` directory")
+            .to_string_lossy()
+            .replace('\\', "/");
         members.push_str(&format!("    \"{member}\",\n"));
     }
     fs::write(
