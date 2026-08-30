@@ -3537,6 +3537,7 @@ dependencies = [
  "inventory",
  "metal",
  "serde_json",
+ "toml",
  "tracing",
  "vyre-driver",
  "vyre-driver-wgpu",
