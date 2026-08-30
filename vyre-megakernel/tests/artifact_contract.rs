@@ -1259,3 +1259,92 @@ fn resource_record_retained_predecessor_round_trips() {
         Some(ArtifactValueId(state_init.0))
     );
 }
+
+/// A program declaring workgroup-scoped scratch and nothing else that could be
+/// refused, so a compile of it isolates the shared-memory capability arm.
+fn workgroup_scratch_graph() -> ProgramGraph {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read_write("out", 0, DataType::U32).with_count(1),
+            BufferDecl::workgroup("tile", 8, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::store("tile", Expr::u32(0), Expr::u32(1)),
+            Node::store("out", Expr::u32(0), Expr::u32(2)),
+        ],
+    );
+    ProgramGraph::from_program("scratch", program).unwrap()
+}
+
+/// WHY: 130. A capability the facts do not state is absent knowledge, not a
+/// device that grants nothing. `DeviceFacts::unknown` is what every
+/// device-neutral compile passes, and the numeric arms of the admission gate
+/// already skip themselves for it: a zero invocation budget is unknown, not a
+/// limit of zero. The capability arms did not, so a program declaring workgroup
+/// scratch was refused before any target had been selected, which made a
+/// device-neutral artifact impossible to produce for a whole class of legal
+/// programs.
+///
+/// This pair closes the class rather than the one arm: the first test proves an
+/// absent snapshot decides nothing, the second proves the arm still fires for a
+/// device that reports the fact. Against the previous behaviour the first test
+/// failed with `MKC001_INVALID_PROGRAM`, and the second passed unchanged, so the
+/// refusal moved from absence to evidence and did not disappear.
+#[test]
+fn absent_device_facts_admit_workgroup_scratch_no_target_has_ruled_on() {
+    let validated = CompileRequest::new(
+        workgroup_scratch_graph(),
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        budget(),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
+    )
+    .validate()
+    .expect("Fix: a compile with no device selected must not judge device capabilities");
+    assert_eq!(
+        validated.graph().nodes().len(),
+        1,
+        "the neutral compile must keep the program it was given"
+    );
+}
+
+/// The same graph on a device that reports no shared memory, so the capability
+/// arm is proven to read the device fact rather than to have been deleted.
+#[test]
+fn a_device_reporting_no_shared_memory_refuses_workgroup_scratch() {
+    let error = CompileRequest::new(
+        workgroup_scratch_graph(),
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|capabilities| capabilities.has_shared_memory = false),
+        budget(),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
+    )
+    .validate()
+    .err()
+    .expect("a device without shared memory must refuse workgroup-scoped scratch");
+    assert_eq!(error.diagnostic.code.as_str(), "MKC001_INVALID_PROGRAM");
+    assert!(
+        error
+            .diagnostic
+            .message
+            .contains("reports no shared memory"),
+        "Fix: the refusal must name the device fact it read: {}",
+        error.diagnostic.message
+    );
+}
+
+/// The same graph on a device that reports shared memory, so the refusal above
+/// is the flipped fact and not the fixture.
+#[test]
+fn a_device_reporting_shared_memory_admits_workgroup_scratch() {
+    CompileRequest::new(
+        workgroup_scratch_graph(),
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|_| ()),
+        budget(),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, LIMIT),
+    )
+    .validate()
+    .expect("Fix: a device reporting shared memory must admit workgroup scratch");
+}

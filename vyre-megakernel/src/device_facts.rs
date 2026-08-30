@@ -175,15 +175,25 @@ impl From<DeviceFacts> for DeviceIdentity {
 impl DeviceFacts {
     /// Facts for a caller that has no device.
     ///
-    /// Every capability is absent and every budget is zero, so validation grants
-    /// nothing: a program that needs a gated capability is rejected instead of
-    /// being compiled against an assumed device. A zero budget is unknown rather
-    /// than a limit of zero, so no size gate fires and no cost term is charged.
-    /// Use this only where no backend is reachable; a caller holding a backend
-    /// passes its live facts.
+    /// Every capability is absent and every budget is zero. An absent fact
+    /// decides nothing: the capability arms of the admission gate are skipped
+    /// for these facts exactly as a zero budget skips its size gate, so a
+    /// device-neutral compile produces an artifact and legality is decided
+    /// again against the live snapshot a target attaches with. Use this only
+    /// where no backend is reachable; a caller holding a backend passes its
+    /// live facts.
     #[must_use]
     pub const fn unknown() -> Self {
         Self::new(BackendCapabilities::NONE, 0)
+    }
+
+    /// Whether these facts carry a live capability snapshot.
+    ///
+    /// [`Self::unknown`] states [`BackendCapabilities::NONE`], which is absence
+    /// rather than a device granting nothing: no shipping device reports an
+    /// empty snapshot, and a compile reading one has selected no target yet.
+    fn states_a_capability_snapshot(self) -> bool {
+        self.capabilities != BackendCapabilities::NONE
     }
 
     /// Construct facts from the live capability snapshot and invocation limit.
@@ -523,57 +533,66 @@ impl DeviceFacts {
 /// dispatch. The declared workgroup is checked against the live invocation and
 /// shared-scratch limits for the same reason: a group the device will not accept
 /// is a compile-time fact, not a dispatch failure.
+///
+/// Facts with no capability snapshot state absence, not a device that grants
+/// nothing, so every capability arm here is skipped for them exactly as a zero
+/// budget skips its size gate. A device-neutral compile therefore produces an
+/// artifact, and the arms decide again once a target attaches with a live
+/// snapshot.
 pub(crate) fn validate_device_support(
     graph: &ProgramGraph,
     device: DeviceFacts,
 ) -> Result<(), CompileError> {
     let capabilities = device.capabilities;
+    let snapshot_is_live = device.states_a_capability_snapshot();
     for node in graph.nodes() {
         let path = format!("request.graph.nodes[{}].program", node.id.0);
-        if grid_sync::requires_grid_sync(&node.program) && !device.supports_cooperative_launch {
-            return Err(failure(
-                CompilerFailureKind::InvalidProgram,
-                path,
-                "program fences the whole grid but the device cannot launch a cooperative grid",
-                "split the program at the grid fence into one node per segment, or compile for a device that reports cooperative launch",
-            ));
-        }
-        let required = program_caps::scan(&node.program);
         let shared_scratch_bytes = workgroup_scratch_bytes(&node.program);
-        let unmet = [
-            (
-                required.tensor_ops && !capabilities.has_tensor_core_int,
-                "program uses tensor-core operands but the device reports no tensor-core integer support",
-                "lower the tensor operation to scalar arithmetic, or compile for a device with tensor cores",
-            ),
-            (
-                required.f16 && !capabilities.has_native_f16,
-                "program uses binary16 operands but the device reports no native f16 arithmetic",
-                "widen the f16 operands to f32, or compile for a device with native f16",
-            ),
-            (
-                required.subgroup_ops && !capabilities.has_warp_shuffle,
-                "program uses subgroup operations but the device reports no warp shuffle",
-                "remove the subgroup operation, or compile for a device with warp-level shuffle",
-            ),
-            (
-                required.indirect_dispatch && !capabilities.supports_indirect_dispatch,
-                "program dispatches indirectly but the device reports no indirect dispatch",
-                "resolve the dispatch extent on the host, or compile for a device with indirect dispatch",
-            ),
-            (
-                shared_scratch_bytes > 0 && !capabilities.has_shared_memory,
-                "program declares workgroup-scoped scratch but the device reports no shared memory",
-                "move the scratch buffer to global memory, or compile for a device with shared memory",
-            ),
-        ];
-        if let Some((_, message, fix)) = unmet.into_iter().find(|(unmet, _, _)| *unmet) {
-            return Err(failure(
-                CompilerFailureKind::InvalidProgram,
-                path,
-                message,
-                fix,
-            ));
+        if snapshot_is_live {
+            if grid_sync::requires_grid_sync(&node.program) && !device.supports_cooperative_launch {
+                return Err(failure(
+                    CompilerFailureKind::InvalidProgram,
+                    path,
+                    "program fences the whole grid but the device cannot launch a cooperative grid",
+                    "split the program at the grid fence into one node per segment, or compile for a device that reports cooperative launch",
+                ));
+            }
+            let required = program_caps::scan(&node.program);
+            let unmet = [
+                (
+                    required.tensor_ops && !capabilities.has_tensor_core_int,
+                    "program uses tensor-core operands but the device reports no tensor-core integer support",
+                    "lower the tensor operation to scalar arithmetic, or compile for a device with tensor cores",
+                ),
+                (
+                    required.f16 && !capabilities.has_native_f16,
+                    "program uses binary16 operands but the device reports no native f16 arithmetic",
+                    "widen the f16 operands to f32, or compile for a device with native f16",
+                ),
+                (
+                    required.subgroup_ops && !capabilities.has_warp_shuffle,
+                    "program uses subgroup operations but the device reports no warp shuffle",
+                    "remove the subgroup operation, or compile for a device with warp-level shuffle",
+                ),
+                (
+                    required.indirect_dispatch && !capabilities.supports_indirect_dispatch,
+                    "program dispatches indirectly but the device reports no indirect dispatch",
+                    "resolve the dispatch extent on the host, or compile for a device with indirect dispatch",
+                ),
+                (
+                    shared_scratch_bytes > 0 && !capabilities.has_shared_memory,
+                    "program declares workgroup-scoped scratch but the device reports no shared memory",
+                    "move the scratch buffer to global memory, or compile for a device with shared memory",
+                ),
+            ];
+            if let Some((_, message, fix)) = unmet.into_iter().find(|(unmet, _, _)| *unmet) {
+                return Err(failure(
+                    CompilerFailureKind::InvalidProgram,
+                    path,
+                    message,
+                    fix,
+                ));
+            }
         }
         let declared = node.program.workgroup_size;
         let invocations = u64::from(declared[0])

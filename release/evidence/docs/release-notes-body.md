@@ -5291,6 +5291,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `structure_gate::workspace_root` instead of the manifest directory baked in
   at compile time, so a unit reused across checkouts that share a target
   directory no longer inspects whichever tree built last.
+- A compile that states no device capability snapshot no longer refuses a
+  program for a capability no target has ruled on, so a device-neutral artifact
+  can be produced for programs that declare workgroup scratch, tensor operands,
+  subgroup operations, indirect dispatch, or a whole-grid fence.
 - The adaptive sparse traversal branch now tests source activity in the input
   frontier while writing discovered vertices to the output frontier. The
   previous composer used the zero-initialized output as both probe and

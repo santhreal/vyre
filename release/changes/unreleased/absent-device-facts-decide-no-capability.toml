@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A compile that states no device capability snapshot no longer refuses a program for a capability no target has ruled on, so a device-neutral artifact can be produced for programs that declare workgroup scratch, tensor operands, subgroup operations, indirect dispatch, or a whole-grid fence."
