@@ -6,11 +6,12 @@
 //! `is_test_gated` skips test-gated code explicitly, which means an execution
 //! route or capability stays unjudged for as long as it is test-gated.
 //!
-//! None of the six current test-gated modules in `vyre-libs` hides a selection
-//! route. `polyhedral_fusion.rs` operates on primitive slices and returns
-//! `Vec<u32>` and `u32`, minting no decision variant and writing no geometry.
-//! The would-be selectors behind test gates construct test fixture inputs.
-//! The class this gate enforces is unshipped capability, not concealed selection.
+//! The class this gate enforces is unshipped capability, not concealed
+//! selection. A test-only module states no capability once its declaration is
+//! restricted to the crate: `pub(crate) mod` under `cfg(test)` is the form the
+//! test fixtures in `vyre-libs` use, and `syn::Visibility::Public` does not
+//! match it. Bare `pub` on a `cfg(test)` module declares a public path no
+//! production build can compile, which is the finding.
 //!
 //! Two forms constitute this defect class:
 //! 1. A public module declaration (`pub mod`) gated behind `cfg(test)` or

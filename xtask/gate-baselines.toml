@@ -485,7 +485,7 @@ findings = 0
 
 [[gate]]
 name = "test-only-capability"
-findings = 6
+findings = 0
 
 [[gate]]
 name = "testing-guides"

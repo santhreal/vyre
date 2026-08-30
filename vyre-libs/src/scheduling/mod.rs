@@ -1,15 +1,15 @@
 //! Scheduling, fusion, batching, and dispatch-strategy compositions.
 
 #[cfg(test)]
-pub mod branch_compaction;
+pub(crate) mod branch_compaction;
 #[cfg(test)]
-pub mod frontier_partitioning;
+pub(crate) mod frontier_partitioning;
 pub mod frontier_typed_ir;
 #[cfg(test)]
-pub mod multi_corpus_batching;
+pub(crate) mod multi_corpus_batching;
 pub mod planar_rewrite_pass_scheduler;
 #[cfg(test)]
-pub mod polyhedral_fusion;
+pub(crate) mod polyhedral_fusion;
 pub mod spectral_schedule;
 pub mod submodular_cache_eviction;
 
