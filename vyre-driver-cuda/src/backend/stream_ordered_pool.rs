@@ -16,10 +16,9 @@
 //! no `Drop` ordering hazard against the context teardown. The only state we own
 //! is the release-threshold policy, which we set on construction.
 //!
-//! This is a self-contained, hardware-tested allocator surface. It is **not** wired
-//! into the current hot dispatch path, and that is a deliberate, measured decision
-//! rather than a pending TODO: on the warm steady state the
-//! `DeviceAllocationPool` free list
+//! This is a self-contained, hardware-tested allocator surface. It is not wired
+//! into the current hot dispatch path, and measurement is the reason: on the
+//! warm steady state the `DeviceAllocationPool` free list
 //! serves an acquire from a lock-free `ArrayQueue::pop` and a release from a
 //! `queue.push`: **zero** CUDA driver calls per dispatch, and the release is
 //! already correctly stream-ordered because the owning `CudaPendingDispatch` holds
