@@ -55,3 +55,50 @@ fn launcher_requires_linked_target_emitter() {
 fn minimal_ptx_artifact_for_template_test() -> vyre_aot::ArtifactEnvelope {
     fixture_target::compiled_artifact()
 }
+
+/// A program declaring workgroup-scoped scratch, which no target has ruled on
+/// when the neutral half of the artifact is compiled.
+fn workgroup_scratch_program() -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read_write("out", 0, DataType::U32).with_count(1),
+            BufferDecl::workgroup("tile", 8, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::store("tile", Expr::u32(0), Expr::u32(1)),
+            Node::store("out", Expr::u32(0), Expr::u32(2)),
+        ],
+    )
+}
+
+/// WHY: 130. The neutral half of every artifact is compiled against
+/// `DeviceFacts::unknown`, which states no capability snapshot. Reading that
+/// absence as a device that grants nothing refused every program declaring
+/// workgroup scratch here with `MKC001_INVALID_PROGRAM`, before any target had
+/// been selected, while the artifact identity this path produces must stay
+/// device-neutral and so cannot carry a real device's facts instead.
+///
+/// Against the previous behaviour this failed at the `neutral-request` stage.
+#[test]
+fn a_neutral_compile_admits_workgroup_scratch_no_target_has_ruled_on() {
+    compile(
+        &workgroup_scratch_program(),
+        fixture_target::fixture_target(),
+    )
+    .expect("Fix: a device-neutral compile must not judge a capability no target has stated");
+}
+
+/// The same program against a target that is not linked, so the neutral stage is
+/// isolated from every target decision: the only refusal left is the missing
+/// target compiler, which `compile` reaches only after the neutral artifact.
+#[test]
+fn the_neutral_stage_admits_workgroup_scratch_before_any_target_is_resolved() {
+    let target = TargetId::expect_valid("unlinked-fixture-target");
+    let error = compile(&workgroup_scratch_program(), target.clone())
+        .expect_err("an unlinked target cannot emit bytes");
+    assert!(
+        matches!(&error, CompileError::TargetNotEnabled(id) if id == &target),
+        "Fix: the neutral artifact must be built before the target is resolved, got {error:?}."
+    );
+}
