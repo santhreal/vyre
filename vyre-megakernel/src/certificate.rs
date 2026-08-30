@@ -122,6 +122,32 @@ pub struct DerivedFamily {
     pub admitted: u32,
 }
 
+/// One node's program derived through a chain of declared laws.
+///
+/// The chain is what makes a derived candidate a derivation rather than a
+/// recipe: a ranked alternative that cannot name the laws it came from is
+/// indistinguishable from a shape somebody wrote down.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct LawCitation {
+    /// Graph node whose program the laws rewrote.
+    pub node: u32,
+    /// Law and rewrite names in application order.
+    pub laws: Vec<String>,
+}
+
+/// One law-derived candidate eliminated, and why.
+///
+/// Held apart from [`PrunedFamily`] because a law states an equality between
+/// programs and is not a schedule production: charging its refusal to a
+/// production would report a family the search never proposed.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct PrunedLaw {
+    /// Law chain whose candidate was eliminated.
+    pub citation: LawCitation,
+    /// Stable reason the candidate was eliminated.
+    pub reason: PruneReason,
+}
+
 /// Reproducible record of one bounded candidate search.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SearchCertificate {
@@ -135,6 +161,20 @@ pub struct SearchCertificate {
     pub pruned: Vec<PrunedFamily>,
     /// Whether a bound stopped the search before the grammar was exhausted.
     pub budget_exhausted: bool,
+    /// Law chains the admitted candidate set was derived through, in canonical
+    /// order.
+    ///
+    /// Defaulted on read so a certificate recorded before law derivation
+    /// existed deserializes as one that cited no law, which is what it was.
+    #[serde(default)]
+    pub law_derived: Vec<LawCitation>,
+    /// Law-derived candidates the constraints eliminated, in canonical order.
+    #[serde(default)]
+    pub law_pruned: Vec<PrunedLaw>,
+    /// Whether a bound stopped a law derivation before its laws were
+    /// exhausted.
+    #[serde(default)]
+    pub law_budget_reached: bool,
 }
 
 impl SearchCertificate {
@@ -203,10 +243,45 @@ impl SearchCertificate {
         self.budget_exhausted = true;
     }
 
+    /// Record one law chain the admitted candidate set was derived through.
+    pub(crate) fn cite_law(&mut self, citation: LawCitation) {
+        if !self.law_derived.contains(&citation) {
+            self.law_derived.push(citation);
+        }
+    }
+
+    /// Record that a bound stopped a law derivation.
+    pub(crate) fn reached_law_budget(&mut self) {
+        self.law_budget_reached = true;
+    }
+
+    /// Record one law-derived candidate the constraints eliminated.
+    pub(crate) fn prune_law(&mut self, citation: LawCitation, reason: PruneReason) {
+        let pruned = PrunedLaw { citation, reason };
+        if !self.law_pruned.contains(&pruned) {
+            self.law_pruned.push(pruned);
+        }
+    }
+
+    /// Every law name the admitted candidate set cites, once each, sorted.
+    #[must_use]
+    pub fn cited_laws(&self) -> Vec<&str> {
+        let mut cited: Vec<&str> = self
+            .law_derived
+            .iter()
+            .flat_map(|citation| citation.laws.iter().map(String::as_str))
+            .collect();
+        cited.sort_unstable();
+        cited.dedup();
+        cited
+    }
+
     /// Order every recorded family so one search records one certificate.
     pub(crate) fn canonicalize(&mut self) {
         self.derived.sort_unstable();
         self.pruned.sort_unstable();
+        self.law_derived.sort_unstable();
+        self.law_pruned.sort_unstable();
     }
 
     /// Candidates one production derived.

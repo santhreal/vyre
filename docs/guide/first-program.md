@@ -86,6 +86,12 @@ resource records, the whole-program ABI, the selected plan, and a
 provenance record. Compiling the same validated request twice produces the
 same digest, which is what makes an artifact cache sound.
 
+The selected plan states the declared laws the search derived it through.
+`selected_plan().law_derivation` is empty for a plan that computes the programs
+as written, and otherwise names one law chain per rewritten node. The numeric
+contract governs which laws apply: a bit-exact request derives only alternatives
+that produce identical bits.
+
 ## What this does not do
 
 It does not run. An artifact is device-neutral by construction; running it

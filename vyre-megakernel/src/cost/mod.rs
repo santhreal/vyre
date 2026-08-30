@@ -220,6 +220,7 @@ pub(crate) fn evaluate_reported(
     device: DeviceFacts,
     reported: &[ReportedGroup],
 ) -> CostBreakdown {
+    let facts = candidate.priced_against(facts);
     let semantic_work = facts
         .node_work
         .iter()

@@ -32,6 +32,7 @@ This crate declares no Cargo features.
 | `test` | `compile_objective` | `vyre-megakernel/tests/compile_objective.rs` | None | `./cargo_full test -p vyre-megakernel --test compile_objective` |
 | `test` | `compile_portfolio` | `vyre-megakernel/tests/compile_portfolio.rs` | None | `./cargo_full test -p vyre-megakernel --test compile_portfolio` |
 | `test` | `frontier_topology_selection` | `vyre-megakernel/tests/frontier_topology_selection.rs` | None | `./cargo_full test -p vyre-megakernel --test frontier_topology_selection` |
+| `test` | `law_derived_candidates` | `vyre-megakernel/tests/law_derived_candidates.rs` | None | `./cargo_full test -p vyre-megakernel --test law_derived_candidates` |
 | `test` | `level_stage_verdict` | `vyre-megakernel/tests/level_stage_verdict.rs` | None | `./cargo_full test -p vyre-megakernel --test level_stage_verdict` |
 | `test` | `measurement_protocol` | `vyre-megakernel/tests/measurement_protocol.rs` | None | `./cargo_full test -p vyre-megakernel --test measurement_protocol` |
 | `test` | `mesh_topology_contract` | `vyre-megakernel/tests/mesh_topology_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test mesh_topology_contract` |

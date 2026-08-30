@@ -9,6 +9,7 @@ use crate::error::{failure, overflow, serialization_failure, CompileError, Compi
 use crate::grammar::ScheduleProduction;
 use crate::identity::domain_digest;
 use crate::identity::{ArtifactNodeId, DependencyEdge, Digest};
+use crate::law_candidates::LawDerivationError;
 use crate::measure::{
     self, CandidateMeasurement, MeasurementEnvironment, MeasurementProtocol, MeasurementRecord,
     ReplacementVerdict, SampleEstimate,
@@ -104,7 +105,19 @@ fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext<'_>, Comp
         request.device,
         &request.objective,
         request.numeric,
-    );
+    )
+    .map_err(|error| {
+        let (site, detail) = match error {
+            LawDerivationError::Value(detail) => ("request.graph.nodes[].program", detail),
+            LawDerivationError::Region(detail) => ("optimizer.registered_passes", detail),
+        };
+        failure(
+            CompilerFailureKind::LawDerivationFailed,
+            site,
+            detail,
+            "lower the law derivation budget, or repair the registered pass set the region laws cite",
+        )
+    })?;
     let mut certificate = search.certificate;
     let ranked = select::rank(
         search.candidates,

@@ -41,8 +41,9 @@ pub use law_rule::{
     LawDerivation,
 };
 
-use crate::ir::Expr;
+use crate::ir::{Expr, Program};
 use crate::optimizer::eqsat::EGraphError;
+use crate::optimizer::rewrite::rewrite_program;
 
 /// Bounds one derivation run stays inside.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -101,4 +102,72 @@ pub fn derive_alternatives(
         mirror,
         report,
     })
+}
+
+/// One value-level alternative of a whole program.
+#[derive(Debug, Clone)]
+pub struct ProgramLawAlternative {
+    /// The equivalent program.
+    pub program: Program,
+    /// Rewrite names the laws authorized, in first-application order.
+    ///
+    /// This is the derivation evidence a candidate carries. A ranked
+    /// alternative that cannot name the laws it came from is indistinguishable
+    /// from a hand-written recipe.
+    pub chain: Vec<&'static str>,
+}
+
+/// Derive the value-level alternative the declared laws admit for `program`.
+///
+/// Every expression the program states is offered to
+/// [`derive_alternatives`](crate::optimizer::law_saturation::derive_alternatives),
+/// and an expression whose derived term is smaller than the one written is
+/// replaced by it. `None` when no expression changed, so a caller ranks an
+/// alternative only where one exists.
+///
+/// `exact` states whether the element type the program combines is exact, and
+/// is the numerical permission: a rounding element derives no reassociation
+/// because the law registry declines to declare it.
+///
+/// # Errors
+///
+/// Returns the substrate's allocation and class-id errors from the first
+/// expression whose mirror could not be built.
+pub fn derive_program_alternative(
+    program: &Program,
+    exact: bool,
+    budget: LawSaturationBudget,
+) -> Result<Option<ProgramLawAlternative>, EGraphError> {
+    let mut chain: Vec<&'static str> = Vec::new();
+    let mut failure: Option<EGraphError> = None;
+    let (rewritten, changed) = rewrite_program(program.clone(), |expr| {
+        if failure.is_some() {
+            return None;
+        }
+        match derive_alternatives(expr, exact, budget) {
+            Ok(alternatives) => {
+                let best = alternatives.best.filter(|best| best != expr)?;
+                for name in alternatives.report.applied_rewrites {
+                    if !chain.contains(&name) {
+                        chain.push(name);
+                    }
+                }
+                Some(best)
+            }
+            Err(error) => {
+                failure = Some(error);
+                None
+            }
+        }
+    });
+    if let Some(error) = failure {
+        return Err(error);
+    }
+    if !changed {
+        return Ok(None);
+    }
+    Ok(Some(ProgramLawAlternative {
+        program: rewritten,
+        chain,
+    }))
 }

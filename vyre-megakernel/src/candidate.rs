@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 use vyre_foundation::{
     logical::LogicalProgramGraph,
     schedule::{
@@ -9,6 +10,7 @@ use vyre_foundation::{
     },
 };
 
+use crate::certificate::LawCitation;
 use crate::facts::{DataflowEdge, PlanningFacts};
 use crate::grammar::{DerivationStep, ScheduleProduction};
 
@@ -433,6 +435,18 @@ pub(crate) struct CandidatePlan {
     pub(crate) schedule_error: Option<ScheduleLegalityError>,
     /// Grammar productions applied to the baseline, in application order.
     pub(crate) derivation: Vec<DerivationStep>,
+    /// Node programs a declared law rewrote, and the laws that authorized each.
+    ///
+    /// Empty for a candidate the schedule grammar alone derived.
+    pub(crate) law_derivation: Vec<LawCitation>,
+    /// Measurements this candidate is priced and judged against.
+    ///
+    /// A law-derived candidate runs a rewritten program, so pricing it against
+    /// the graph's measurements would rank a program nobody emits. Shared
+    /// rather than cloned per descendant: the grammar expands a law-derived
+    /// candidate like any other, and every descendant runs the same rewritten
+    /// node.
+    pub(crate) law_facts: Option<Arc<PlanningFacts>>,
 }
 
 impl CandidatePlan {
@@ -460,6 +474,8 @@ impl CandidatePlan {
             frontier_topology: FrontierTopology::SparseFrontier,
             schedule,
             schedule_error: None,
+            law_derivation: Vec::new(),
+            law_facts: None,
         }
     }
 
@@ -480,6 +496,8 @@ impl CandidatePlan {
             frontier_topology: FrontierTopology::SparseFrontier,
             schedule,
             schedule_error,
+            law_derivation: Vec::new(),
+            law_facts: None,
         }
     }
 
@@ -541,6 +559,8 @@ impl CandidatePlan {
             frontier_topology: FrontierTopology::SparseFrontier,
             schedule,
             schedule_error,
+            law_derivation: Vec::new(),
+            law_facts: None,
         }
     }
 
@@ -785,7 +805,37 @@ impl CandidatePlan {
         self.workgroup_width.hash(&mut hasher);
         self.topology.hash(&mut hasher);
         self.frontier_topology.hash(&mut hasher);
+        self.law_derivation.hash(&mut hasher);
         hasher.finish()
+    }
+
+    /// This candidate with one node's program replaced by a law-derived one.
+    ///
+    /// The grouping, the launch width and the topology are untouched: a law
+    /// states an equality between programs, not a schedule. The candidate is
+    /// then expanded by the grammar like any other, so a law-derived program
+    /// reaches every schedule the grammar can propose for it.
+    #[must_use]
+    pub(crate) fn with_law_derivation(
+        &self,
+        citation: LawCitation,
+        facts: Arc<PlanningFacts>,
+    ) -> Self {
+        let mut candidate = self.clone();
+        candidate.law_derivation.push(citation);
+        candidate.law_facts = Some(facts);
+        candidate
+    }
+
+    /// The measurements this candidate is priced and judged against.
+    ///
+    /// `graph` for every candidate the grammar derived, and the rewritten
+    /// node's measurements for one a law derived. Pricing a law-derived
+    /// candidate against the graph's measurements would rank a program nobody
+    /// emits.
+    #[must_use]
+    pub(crate) fn priced_against<'a>(&'a self, graph: &'a PlanningFacts) -> &'a PlanningFacts {
+        self.law_facts.as_deref().unwrap_or(graph)
     }
 }
 

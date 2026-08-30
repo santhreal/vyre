@@ -6,6 +6,7 @@ use crate::{
     certificate::SearchCertificate,
     derive,
     facts::{DataflowEdge, PlanningFacts},
+    law_candidates::LawDerivationError,
     legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason},
     objective::CompileObjective,
     DependencyEdge, DeviceFacts, SearchBudget, SearchWork,
@@ -38,7 +39,7 @@ pub(crate) fn explore(
     device: DeviceFacts,
     objective: &CompileObjective,
     numeric: Option<NumericContract>,
-) -> SearchResult {
+) -> Result<SearchResult, LawDerivationError> {
     let graph = logical.graph();
     let mut rejected = Vec::new();
     let mut cpu_work = 0_u64;
@@ -65,13 +66,13 @@ pub(crate) fn explore(
         device,
         objective,
         numeric,
-    );
+    )?;
     let cpu_work = cpu_work
         .saturating_add(derived.cpu_work)
         .min(budget.max_cpu_work);
     let candidates = derived.candidates;
 
-    SearchResult {
+    Ok(SearchResult {
         work: SearchWork {
             candidates_explored: u32::try_from(candidates.len()).unwrap_or(u32::MAX),
             cpu_work,
@@ -82,7 +83,7 @@ pub(crate) fn explore(
         candidates,
         rejected,
         certificate: derived.certificate,
-    }
+    })
 }
 
 fn can_spend(cpu_work: u64, budget: SearchBudget) -> bool {

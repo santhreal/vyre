@@ -3,7 +3,8 @@ use std::collections::BTreeMap;
 use vyre_foundation::{
     algebraic_reordering::{reordering_class, ReorderingClass},
     ir::Ident,
-    logical::LogicalProgramGraph,
+    ir::Program,
+    logical::{LogicalProgramGraph, LogicalRegion},
     numeric::NumericContract,
     optimizer::cost::CostCertificate,
 };
@@ -26,7 +27,7 @@ pub(crate) struct DataflowEdge {
 /// Per-node and per-value measurements the cost model and the workgroup search
 /// read. Every field is derived from the graph, never from a candidate, so one
 /// derivation serves every candidate the search scores.
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct PlanningFacts {
     /// Semantic IR nodes in each node's program.
     pub(crate) node_work: Vec<u64>,
@@ -98,6 +99,85 @@ pub(crate) struct PlanningFacts {
     pub(crate) value_liveness: Vec<ValueLiveness>,
 }
 
+/// Everything one node's program contributes to the facts.
+///
+/// Held as one record so the walk over the graph and a law-derived rewrite of
+/// one node are measured by the same code. A second measurement site is how a
+/// derived alternative gets priced by a rule the baseline never saw.
+pub(crate) struct NodeMeasurement {
+    pub(crate) work: u64,
+    pub(crate) live_values: u64,
+    pub(crate) workgroup_scratch: Vec<(Ident, u64)>,
+    pub(crate) declared_invocations: u64,
+    pub(crate) declared_workgroup: [u32; 3],
+    pub(crate) accepts_width: bool,
+    pub(crate) reordering: ReorderingClass,
+    pub(crate) numeric: NumericContract,
+    pub(crate) reduction_terms: u32,
+    pub(crate) instructions: u64,
+    pub(crate) barriers: u64,
+    pub(crate) grid_syncs: u64,
+    pub(crate) tensor_ops: u64,
+    pub(crate) divergent_regions: u64,
+}
+
+/// Measure one node's program against the logical region it states.
+pub(crate) fn measure_node(program: &Program, region: Option<&LogicalRegion>) -> NodeMeasurement {
+    let stats = program.stats();
+    let declared = program.workgroup_size;
+    let invocations = u64::from(declared[0])
+        .saturating_mul(u64::from(declared[1]))
+        .saturating_mul(u64::from(declared[2]));
+    NodeMeasurement {
+        work: u64::try_from(stats.node_count).unwrap_or(u64::MAX),
+        live_values: u64::from(stats.register_pressure_estimate),
+        workgroup_scratch: workgroup_scratch_declarations(program).collect(),
+        declared_invocations: invocations.max(1),
+        declared_workgroup: declared,
+        // Only a schedule-only width may vary. The semantic IR owner classifies
+        // geometry observability once so search and logical identity cannot
+        // disagree about whether the declaration affects behavior.
+        accepts_width: program.workgroup_size_is_schedule_only(),
+        reordering: reordering_class(program),
+        numeric: region.map_or(NumericContract::EXACT, |region| region.numeric),
+        reduction_terms: region.map_or(1, |region| {
+            u32::try_from(region.max_points).unwrap_or(u32::MAX)
+        }),
+        instructions: stats.instruction_count,
+        barriers: stats.barrier_count,
+        grid_syncs: stats.grid_sync_count,
+        tensor_ops: stats.tensor_op_count,
+        divergent_regions: CostCertificate::for_program(program).divergence_score,
+    }
+}
+
+impl PlanningFacts {
+    /// These facts with one node measured from a rewritten program.
+    ///
+    /// A law-derived alternative differs from the baseline in one node's
+    /// program, so every other measurement is the one already derived and the
+    /// graph-level totals do not move: a rewrite inside a node changes neither
+    /// the connected values nor their packed bytes.
+    pub(crate) fn with_node_measurement(&self, node: usize, measured: NodeMeasurement) -> Self {
+        let mut facts = self.clone();
+        facts.node_work[node] = measured.work;
+        facts.node_live_values[node] = measured.live_values;
+        facts.node_workgroup_scratch[node] = measured.workgroup_scratch;
+        facts.node_declared_invocations[node] = measured.declared_invocations;
+        facts.node_declared_workgroup[node] = measured.declared_workgroup;
+        facts.node_accepts_width[node] = measured.accepts_width;
+        facts.node_reordering[node] = measured.reordering;
+        facts.node_numeric[node] = measured.numeric;
+        facts.node_reduction_terms[node] = measured.reduction_terms;
+        facts.node_instructions[node] = measured.instructions;
+        facts.node_barriers[node] = measured.barriers;
+        facts.node_grid_syncs[node] = measured.grid_syncs;
+        facts.node_tensor_ops[node] = measured.tensor_ops;
+        facts.node_divergent_regions[node] = measured.divergent_regions;
+        facts
+    }
+}
+
 pub(crate) fn derive(
     logical: &LogicalProgramGraph<'_>,
     dependencies: &[DependencyEdge],
@@ -120,34 +200,21 @@ pub(crate) fn derive(
     let mut node_tensor_ops = Vec::with_capacity(node_count);
     let mut node_divergent_regions = Vec::with_capacity(node_count);
     for node in graph.nodes() {
-        let program = &node.program;
-        let stats = program.stats();
-        node_work.push(u64::try_from(stats.node_count).unwrap_or(u64::MAX));
-        node_live_values.push(u64::from(stats.register_pressure_estimate));
-        let scratch: Vec<(Ident, u64)> = workgroup_scratch_declarations(program).collect();
-        let declared = program.workgroup_size;
-        let invocations = u64::from(declared[0])
-            .saturating_mul(u64::from(declared[1]))
-            .saturating_mul(u64::from(declared[2]));
-        // Only a schedule-only width may vary. The semantic IR owner classifies
-        // geometry observability once so search and logical identity cannot
-        // disagree about whether the declaration affects behavior.
-        let accepts_width = program.workgroup_size_is_schedule_only();
-        node_workgroup_scratch.push(scratch);
-        node_declared_invocations.push(invocations.max(1));
-        node_declared_workgroup.push(declared);
-        node_accepts_width.push(accepts_width);
-        node_reordering.push(reordering_class(program));
-        let region = logical.region(node.id);
-        node_numeric.push(region.map_or(NumericContract::EXACT, |region| region.numeric));
-        node_reduction_terms.push(region.map_or(1, |region| {
-            u32::try_from(region.max_points).unwrap_or(u32::MAX)
-        }));
-        node_instructions.push(stats.instruction_count);
-        node_barriers.push(stats.barrier_count);
-        node_grid_syncs.push(stats.grid_sync_count);
-        node_tensor_ops.push(stats.tensor_op_count);
-        node_divergent_regions.push(CostCertificate::for_program(program).divergence_score);
+        let measured = measure_node(&node.program, logical.region(node.id));
+        node_work.push(measured.work);
+        node_live_values.push(measured.live_values);
+        node_workgroup_scratch.push(measured.workgroup_scratch);
+        node_declared_invocations.push(measured.declared_invocations);
+        node_declared_workgroup.push(measured.declared_workgroup);
+        node_accepts_width.push(measured.accepts_width);
+        node_reordering.push(measured.reordering);
+        node_numeric.push(measured.numeric);
+        node_reduction_terms.push(measured.reduction_terms);
+        node_instructions.push(measured.instructions);
+        node_barriers.push(measured.barriers);
+        node_grid_syncs.push(measured.grid_syncs);
+        node_tensor_ops.push(measured.tensor_ops);
+        node_divergent_regions.push(measured.divergent_regions);
     }
     let dataflow = dependencies
         .iter()

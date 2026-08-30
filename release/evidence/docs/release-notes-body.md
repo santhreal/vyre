@@ -208,6 +208,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   produces structurally different kernel organizations for different device
   facts instead of the baseline, one fused edge, one greedy grouping and four
   launch widths.
+- Candidate search derives alternatives from the declared algebraic and region
+  laws, prices each one on its own measurements, and records the law chain it
+  was derived through in the selected plan and the search certificate.
 - `c_frontend::parity_matrix::assert_case_table_covers_fixture_file` reads a
   fixture family's own source at run time, collects the fixture builders it
   declares, and fails when the family's `CASES` table does not name one of

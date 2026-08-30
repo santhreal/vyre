@@ -9,17 +9,19 @@
 //! recognized by its canonical identity rather than re-explored.
 
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
 use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_foundation::numeric::NumericContract;
 
 use crate::{
     candidate::{CandidateKey, CandidatePlan, ExecutionTopology},
-    certificate::{PruneReason, SearchCertificate},
+    certificate::{LawCitation, PruneReason, SearchCertificate},
     constraints::{self, ConstraintContext},
     cost,
     facts::PlanningFacts,
     grammar::{self, GrammarContext, ScheduleProduction, SCHEDULE_GRAMMAR_VERSION},
+    law_candidates::{self, LawDerivationError},
     legality::{analyze_topology_legality, TopologyDecision},
     objective::{CompileObjective, MetricFigures},
     DependencyEdge, DeviceFacts, SearchBudget,
@@ -52,7 +54,7 @@ pub(crate) fn derive(
     device: DeviceFacts,
     objective: &CompileObjective,
     numeric: Option<NumericContract>,
-) -> Derivation {
+) -> Result<Derivation, LawDerivationError> {
     let grammar = GrammarContext { facts };
     let constraint = ConstraintContext {
         graph: logical.graph(),
@@ -76,8 +78,55 @@ pub(crate) fn derive(
         objective,
     );
     let mut candidates = vec![baseline.clone()];
-    let mut frontier = vec![baseline];
+    let mut frontier = vec![baseline.clone()];
     let mut cpu_work = 0_u64;
+
+    // The unfused, unspecialized baseline is already in the set and stays in
+    // it: a law-derived alternative is an addition to what search ranks, never
+    // a replacement for the program as written.
+    let law = law_candidates::derive_law_alternatives(
+        logical,
+        numeric,
+        law_candidates::LawDerivationBudget::default(),
+    )?;
+    if law.budget_reached {
+        certificate.reached_law_budget();
+    }
+    for alternative in law.alternatives {
+        let citation = LawCitation {
+            node: u32::try_from(alternative.node).unwrap_or(u32::MAX),
+            laws: alternative.chain,
+        };
+        let derived_facts =
+            Arc::new(facts.with_node_measurement(alternative.node, alternative.measured));
+        let candidate = baseline.with_law_derivation(citation.clone(), Arc::clone(&derived_facts));
+        let candidate = arrange(candidate, &constraint, &derived_facts, dependencies);
+        if !seen.insert(candidate.canonical_key()) {
+            continue;
+        }
+        let law_constraint = ConstraintContext {
+            graph: logical.graph(),
+            facts: &derived_facts,
+            dependencies,
+            device,
+            numeric,
+        };
+        if let Err(reason) = constraints::admit(&candidate, &law_constraint) {
+            certificate.prune_law(citation, reason);
+            continue;
+        }
+        let scored = cost::evaluate(&candidate, facts, dependencies, device);
+        incumbent = incumbent.min(primary_figure(&scored, device, objective));
+        certificate.cite_law(citation);
+        // Expansion below propagates constraints against the graph's own
+        // measurements. A law-derived node is equal or more permissive than the
+        // one it replaced, because a rewrite removes combines or keeps the
+        // operator, so a schedule the baseline facts admit is admitted for the
+        // rewritten program too. Pricing still reads the derived measurements
+        // through `CandidatePlan::priced_against`.
+        candidates.push(candidate.clone());
+        frontier.push(candidate);
+    }
 
     for depth in 1..=MAX_DEPTH {
         if frontier.is_empty() {
@@ -115,11 +164,11 @@ pub(crate) fn derive(
         }
     }
     certificate.canonicalize();
-    Derivation {
+    Ok(Derivation {
         candidates,
         certificate,
         cpu_work,
-    }
+    })
 }
 
 /// Everything one expansion reads.

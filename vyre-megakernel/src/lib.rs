@@ -47,6 +47,7 @@ mod graph_fixtures;
 /// Whole-grid fence detection, and the planner cut that removes it.
 pub mod grid_sync;
 mod identity;
+mod law_candidates;
 /// Stable semantic legality decisions for whole-program fusion.
 pub mod legality;
 mod level_stage;
@@ -78,7 +79,9 @@ pub use candidate::{
     FrontierExecutionSample, FrontierGraphShape, FrontierMemoryBudget, FrontierTopology,
     FrontierTopologyDecision, ResidentPartitionMode,
 };
-pub use certificate::{DerivedFamily, PruneReason, PrunedFamily, SearchCertificate};
+pub use certificate::{
+    DerivedFamily, LawCitation, PruneReason, PrunedFamily, PrunedLaw, SearchCertificate,
+};
 pub use compile::{compile, compile_measured, EmittedResources, FinalistEvaluator};
 pub use device_facts::DeviceFacts;
 pub use envelope::{

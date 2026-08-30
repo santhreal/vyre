@@ -437,6 +437,7 @@ pub fn vyre_megakernel::RiskStatistic::read(self, ordered: &[u64], trimmed_mean:
 pub fn vyre_megakernel::ScheduleProduction::deriving(transform: &vyre_foundation::schedule::ScheduleTransform) -> Self
 pub fn vyre_megakernel::SearchCertificate::admitted_by(&self, production: vyre_megakernel::ScheduleProduction) -> u32
 pub fn vyre_megakernel::SearchCertificate::admitted_total(&self) -> u32
+pub fn vyre_megakernel::SearchCertificate::cited_laws(&self) -> alloc::vec::Vec<&str>
 pub fn vyre_megakernel::SearchCertificate::derived_by(&self, production: vyre_megakernel::ScheduleProduction) -> u32
 pub fn vyre_megakernel::SearchCertificate::derived_total(&self) -> u32
 pub fn vyre_megakernel::SearchCertificate::pruned_for(&self, reason: vyre_megakernel::PruneReason) -> u32
@@ -593,6 +594,7 @@ pub struct vyre_megakernel::FusionRecord
 pub struct vyre_megakernel::FusionRejection
 pub struct vyre_megakernel::GeometryRecord
 pub struct vyre_megakernel::LaunchResourceIntent
+pub struct vyre_megakernel::LawCitation
 pub struct vyre_megakernel::MaterializationRecord
 pub struct vyre_megakernel::MetricFigures
 pub struct vyre_megakernel::MetricSequence
@@ -604,6 +606,7 @@ pub struct vyre_megakernel::PayloadAttachment
 pub struct vyre_megakernel::PortfolioPolicy
 pub struct vyre_megakernel::Provenance
 pub struct vyre_megakernel::PrunedFamily
+pub struct vyre_megakernel::PrunedLaw
 pub struct vyre_megakernel::ResourceAbiRecord
 pub struct vyre_megakernel::ResourceEnvelope
 pub struct vyre_megakernel::ResourceNameCollision
@@ -765,6 +768,8 @@ pub vyre_megakernel::GeometryRecord::vector_width: u32
 pub vyre_megakernel::GeometryRecord::workgroup_size: [u32; 3]
 pub vyre_megakernel::LaunchResourceIntent::private_bytes: u64
 pub vyre_megakernel::LaunchResourceIntent::registers_per_invocation: u32
+pub vyre_megakernel::LawCitation::laws: alloc::vec::Vec<alloc::string::String>
+pub vyre_megakernel::LawCitation::node: u32
 pub vyre_megakernel::MaterializationReason::CrossGroupUse
 pub vyre_megakernel::MaterializationReason::Output
 pub vyre_megakernel::MaterializationReason::Retained
@@ -823,6 +828,8 @@ pub vyre_megakernel::PruneReason::Workspace
 pub vyre_megakernel::PrunedFamily::count: u32
 pub vyre_megakernel::PrunedFamily::production: vyre_megakernel::ScheduleProduction
 pub vyre_megakernel::PrunedFamily::reason: vyre_megakernel::PruneReason
+pub vyre_megakernel::PrunedLaw::citation: vyre_megakernel::LawCitation
+pub vyre_megakernel::PrunedLaw::reason: vyre_megakernel::PruneReason
 pub vyre_megakernel::RequiredFact::EnergyRate
 pub vyre_megakernel::RequiredFact::PersistentSetup
 pub vyre_megakernel::RequiredSchedule::Baseline
@@ -886,6 +893,9 @@ pub vyre_megakernel::SearchCertificate::budget_exhausted: bool
 pub vyre_megakernel::SearchCertificate::depth: u32
 pub vyre_megakernel::SearchCertificate::derived: alloc::vec::Vec<vyre_megakernel::DerivedFamily>
 pub vyre_megakernel::SearchCertificate::grammar_version: u32
+pub vyre_megakernel::SearchCertificate::law_budget_reached: bool
+pub vyre_megakernel::SearchCertificate::law_derived: alloc::vec::Vec<vyre_megakernel::LawCitation>
+pub vyre_megakernel::SearchCertificate::law_pruned: alloc::vec::Vec<vyre_megakernel::PrunedLaw>
 pub vyre_megakernel::SearchCertificate::pruned: alloc::vec::Vec<vyre_megakernel::PrunedFamily>
 pub vyre_megakernel::SearchWork::candidates_explored: u32
 pub vyre_megakernel::SearchWork::cpu_work: u64
@@ -912,6 +922,7 @@ pub vyre_megakernel::SelectedPlan::derivation: alloc::vec::Vec<vyre_megakernel::
 pub vyre_megakernel::SelectedPlan::execution: vyre_megakernel::ExecutionMode
 pub vyre_megakernel::SelectedPlan::frontier_topology: vyre_megakernel::FrontierTopology
 pub vyre_megakernel::SelectedPlan::fusion: alloc::vec::Vec<vyre_megakernel::FusionRecord>
+pub vyre_megakernel::SelectedPlan::law_derivation: alloc::vec::Vec<vyre_megakernel::LawCitation>
 pub vyre_megakernel::SelectedPlan::materializations: alloc::vec::Vec<vyre_megakernel::MaterializationRecord>
 pub vyre_megakernel::SelectedPlan::measurement: vyre_megakernel::PlanMeasurement
 pub vyre_megakernel::SelectedPlan::numeric_budget: vyre_megakernel::NumericRecord

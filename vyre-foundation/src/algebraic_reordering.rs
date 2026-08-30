@@ -168,7 +168,13 @@ fn buffer_is_exact(program: &Program, buffer: &Ident) -> bool {
 }
 
 /// Whether every element type the program declares is exact.
-fn every_declared_type_is_exact(program: &Program) -> bool {
+///
+/// Exactness is a property of the element type and not of what a caller asks
+/// for: an integer combine produces the same value whatever error budget is
+/// stated over it. A consumer that also holds a caller's permission composes
+/// the two rather than substituting one for the other.
+#[must_use]
+pub fn every_declared_type_is_exact(program: &Program) -> bool {
     program
         .buffers
         .iter()

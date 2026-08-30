@@ -39,6 +39,7 @@ fn payload(resources: Vec<ResourceRecord>) -> ArtifactPayload {
             frontier_topology: crate::FrontierTopology::SparseFrontier,
             schedule: vyre_test_support::selected_schedules::synthetic(1),
             derivation: Vec::new(),
+            law_derivation: Vec::new(),
             certificate: crate::SearchCertificate::new(crate::SCHEDULE_GRAMMAR_VERSION),
             fusion: Vec::new(),
             barriers: Vec::new(),

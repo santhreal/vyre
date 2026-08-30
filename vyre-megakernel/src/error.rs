@@ -95,6 +95,10 @@ pub(crate) enum CompilerFailureKind {
     /// A declared dialect schema version is outside the window the compiler
     /// supports, or the program calls an operation that version predates.
     SemanticVersionSkew,
+    /// A law derivation could not run: the expression substrate exhausted its
+    /// class ids, or the registered pass set the region laws cite cannot be
+    /// ordered.
+    LawDerivationFailed,
 }
 
 impl CompilerFailureKind {
@@ -144,6 +148,7 @@ impl CompilerFailureKind {
             Self::MeshCapacityExceeded => "MKC044_MESH_CAPACITY_EXCEEDED",
             Self::RequiredScheduleUnreachable => REQUIRED_SCHEDULE_UNREACHABLE,
             Self::SemanticVersionSkew => SEMANTIC_VERSION_SKEW,
+            Self::LawDerivationFailed => "MKC045_LAW_DERIVATION_FAILED",
         }
     }
 }
@@ -175,6 +180,7 @@ const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
         | CompilerFailureKind::InvalidMeshTopology
         | CompilerFailureKind::MeshCapacityExceeded
         | CompilerFailureKind::RequiredScheduleUnreachable
+        | CompilerFailureKind::LawDerivationFailed
         | CompilerFailureKind::UnreconciledResidentBytes => DiagnosticStage::Plan,
         CompilerFailureKind::ResourceOverflow | CompilerFailureKind::UnsizedResource => {
             DiagnosticStage::Lower

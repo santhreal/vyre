@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use vyre_foundation::numeric::{NumericContract, NUMERIC_CONTRACT_VERSION};
 use vyre_foundation::schedule::SelectedSchedule;
 
-use crate::certificate::SearchCertificate;
+use crate::certificate::{LawCitation, SearchCertificate};
 use crate::cost;
 use crate::error::{failure, CompileError, CompilerFailureKind};
 use crate::grammar::{DerivationStep, ScheduleProduction, SCHEDULE_GRAMMAR_VERSION};
@@ -105,6 +105,17 @@ pub struct SelectedPlan {
     pub schedule: SelectedSchedule,
     /// Grammar productions the search applied to the unfused baseline, in order.
     pub derivation: Vec<DerivationStep>,
+    /// Declared laws this plan's node programs were derived through.
+    ///
+    /// Empty means the plan states the programs as written. A non-empty record
+    /// is the evidence a law-derived plan carries: the laws it was derived
+    /// through are named here, and the search that admitted it cited the same
+    /// chains.
+    ///
+    /// Defaulted on read so a plan recorded before law derivation existed
+    /// decodes as one derived through no law, which is what it was.
+    #[serde(default)]
+    pub law_derivation: Vec<LawCitation>,
     /// Reproducible record of the bounded search that selected this plan.
     pub certificate: SearchCertificate,
     /// Selected fusion groups.
@@ -201,6 +212,18 @@ impl SelectedPlan {
                         "record only the derivation the persisted schedule replays",
                     ));
                 }
+            }
+        }
+        for citation in &self.law_derivation {
+            if !self.certificate.law_derived.contains(citation) {
+                return Err(invalid(
+                    "law_derivation",
+                    format!(
+                        "the plan names a law chain for node {} the search never cited",
+                        citation.node
+                    ),
+                    "record only the law chains the search certificate admitted",
+                ));
             }
         }
         for family in &self.certificate.derived {

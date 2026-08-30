@@ -420,6 +420,41 @@ earn its place against that baseline on the objective's metric vector, and a tie
 on every ordering metric is broken toward the shorter derivation, so an accepted transform is one that paid for itself. An
 exhausted budget degrades to the best proved candidate instead of to nothing.
 
+## A declared law derives candidates of its own
+
+The grammar derives schedules. The declared laws derive programs, and both feed
+the same candidate set.
+
+`law_candidates::derive_law_alternatives` runs once per graph node before any
+expansion. `optimizer::law_saturation::derive_program_alternative` offers every
+expression of the node's program to the combine laws and keeps the smaller
+derived term; `optimizer::region_law::derive_region_alternatives` composes the
+region law families and returns each equivalent program with the chain of law
+names it was reached through. Both run under `LawDerivationBudget`, two law
+chains deep and eight alternatives wide by default, so the derivation is bounded
+before the search is.
+
+An alternative replaces one node's program, so it changes that node's measured
+work and nothing about grouping, launch width or topology. The candidate carries
+the derived measurements in `CandidatePlan::law_facts`, and `cost::evaluate`
+prices it against those rather than against the baseline's, so a law that removes
+work is charged for the program it produced.
+
+Permission has two halves. Region-law grants come from the request: a law whose
+pass declares a numerical contract the caller did not grant is never applied, so
+a bit-exact request derives only bit-exact alternatives. The combine law set
+composes the request with the element type, because exactness is a property of
+the type: an integer combine reads the exact laws under any error budget, and a
+rounding combine reads them only where the request grants reassociation within a
+budget.
+
+`SearchCertificate::law_derived` names the chain behind every admitted
+law-derived candidate, `law_pruned` names the chains constraint propagation
+eliminated and why, and `law_budget_reached` states whether a derivation stopped
+with laws still to compose. `SelectedPlan::law_derivation` names the chains of
+the plan that was selected, and is empty for a plan that states the programs as
+written.
+
 ## The budget bounds the search, not the answer
 
 `SearchBudget` carries `max_candidates`, `max_cpu_work`,

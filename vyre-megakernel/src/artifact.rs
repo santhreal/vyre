@@ -169,6 +169,7 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
         frontier_topology: candidate.frontier_topology(),
         schedule,
         derivation: candidate.derivation.clone(),
+        law_derivation: candidate.law_derivation.clone(),
         certificate: certificate.clone(),
         fusion,
         barriers,

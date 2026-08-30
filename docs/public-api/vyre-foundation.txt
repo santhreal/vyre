@@ -794,6 +794,7 @@ pub fn vyre_foundation::algebraic_law_registry::has_law<F>(op_id: &str, predicat
 pub fn vyre_foundation::algebraic_law_registry::is_associative(op_id: &str) -> bool
 pub fn vyre_foundation::algebraic_law_registry::is_commutative(op_id: &str) -> bool
 pub fn vyre_foundation::algebraic_law_registry::laws_for_op(op_id: &str) -> &'static [&'static vyre_spec::algebraic_law::AlgebraicLaw]
+pub fn vyre_foundation::algebraic_reordering::every_declared_type_is_exact(program: &vyre_foundation::ir::Program) -> bool
 pub fn vyre_foundation::algebraic_reordering::reordering_class(program: &vyre_foundation::ir::Program) -> vyre_foundation::algebraic_reordering::ReorderingClass
 pub fn vyre_foundation::allocation::reserve_exact_cleared<T>(buf: &mut alloc::vec::Vec<T>, target: usize) -> core::result::Result<(), alloc::collections::TryReserveError>
 pub fn vyre_foundation::allocation::try_reserve_binary_heap_to_capacity<T>(heap: &mut alloc::collections::binary_heap::BinaryHeap<T>, target_capacity: usize) -> core::result::Result<(), alloc::collections::TryReserveError>
@@ -1713,6 +1714,7 @@ pub fn vyre_foundation::optimizer::law_saturation::ExprMirror::of(expr: &vyre_fo
 pub fn vyre_foundation::optimizer::law_saturation::ExprMirror::root(&self) -> vyre_foundation::optimizer::eqsat::EClassId
 pub fn vyre_foundation::optimizer::law_saturation::LawSaturationBudget::default() -> Self
 pub fn vyre_foundation::optimizer::law_saturation::derive_alternatives(expr: &vyre_foundation::ir::Expr, exact: bool, budget: vyre_foundation::optimizer::law_saturation::LawSaturationBudget) -> core::result::Result<vyre_foundation::optimizer::law_saturation::LawAlternatives, vyre_foundation::optimizer::eqsat::EGraphError>
+pub fn vyre_foundation::optimizer::law_saturation::derive_program_alternative(program: &vyre_foundation::ir::Program, exact: bool, budget: vyre_foundation::optimizer::law_saturation::LawSaturationBudget) -> core::result::Result<core::option::Option<vyre_foundation::optimizer::law_saturation::ProgramLawAlternative>, vyre_foundation::optimizer::eqsat::EGraphError>
 pub fn vyre_foundation::optimizer::law_saturation::derived_rewrites(exact: bool) -> alloc::vec::Vec<vyre_foundation::optimizer::law_saturation::DerivedRewrite>
 pub fn vyre_foundation::optimizer::law_saturation::law_derivation(law: &vyre_spec::algebraic_law::AlgebraicLaw) -> vyre_foundation::optimizer::law_saturation::LawDerivation
 pub fn vyre_foundation::optimizer::law_saturation::saturate_laws(mirror: &mut vyre_foundation::optimizer::law_saturation::ExprMirror, rewrites: &[vyre_foundation::optimizer::law_saturation::DerivedRewrite], iteration_budget: usize, class_budget: usize) -> core::result::Result<vyre_foundation::optimizer::law_saturation::LawSaturationReport, vyre_foundation::optimizer::eqsat::EGraphError>
@@ -3067,6 +3069,7 @@ pub struct vyre_foundation::optimizer::law_saturation::ExprMirror
 pub struct vyre_foundation::optimizer::law_saturation::LawAlternatives
 pub struct vyre_foundation::optimizer::law_saturation::LawSaturationBudget
 pub struct vyre_foundation::optimizer::law_saturation::LawSaturationReport
+pub struct vyre_foundation::optimizer::law_saturation::ProgramLawAlternative
 pub struct vyre_foundation::optimizer::level_contract::GraphComposition
 pub struct vyre_foundation::optimizer::level_contract::LevelAnalysis
 pub struct vyre_foundation::optimizer::level_contract::LevelStageRegistration
@@ -4728,6 +4731,7 @@ pub vyre_foundation::optimizer::law_saturation::LawSaturationBudget::classes: us
 pub vyre_foundation::optimizer::law_saturation::LawSaturationBudget::extraction_depth: usize
 pub vyre_foundation::optimizer::law_saturation::LawSaturationBudget::iterations: usize
 pub vyre_foundation::optimizer::law_saturation::LawSaturationReport::applied_equivalences: usize
+pub vyre_foundation::optimizer::law_saturation::LawSaturationReport::applied_rewrites: alloc::vec::Vec<&'static str>
 pub vyre_foundation::optimizer::law_saturation::LawSaturationReport::budget: usize
 pub vyre_foundation::optimizer::law_saturation::LawSaturationReport::class_count_after: usize
 pub vyre_foundation::optimizer::law_saturation::LawSaturationReport::class_count_before: usize
@@ -4740,6 +4744,8 @@ pub vyre_foundation::optimizer::law_saturation::LawSaturationStop::FixedPoint
 pub vyre_foundation::optimizer::law_saturation::LawSaturationStop::IterationBudget
 pub vyre_foundation::optimizer::law_saturation::LawSaturationStop::NoRewrites
 pub vyre_foundation::optimizer::law_saturation::LawSaturationStop::ZeroBudget
+pub vyre_foundation::optimizer::law_saturation::ProgramLawAlternative::chain: alloc::vec::Vec<&'static str>
+pub vyre_foundation::optimizer::law_saturation::ProgramLawAlternative::program: vyre_foundation::ir::Program
 pub vyre_foundation::optimizer::level_contract::GraphComposition::graph: vyre_foundation::ir::ProgramGraph
 pub vyre_foundation::optimizer::level_contract::GraphComposition::provenance: vyre_foundation::ir::ProgramGraphIdentityContext
 pub vyre_foundation::optimizer::level_contract::LevelAnalysis::invalidated_by_rewrite: bool

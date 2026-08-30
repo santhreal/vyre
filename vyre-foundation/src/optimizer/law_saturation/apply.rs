@@ -51,6 +51,14 @@ pub struct LawSaturationReport {
     pub class_count_after: usize,
     /// Why the run stopped.
     pub stop_reason: LawSaturationStop,
+    /// Rewrites that changed the graph, in first-application order, once each.
+    ///
+    /// `applied_equivalences` counts how many equalities landed and cannot say
+    /// which law authorized them. A caller that carries a derivation as
+    /// evidence needs the names, and recomputing them from the mirror after the
+    /// run would be a second implementation of the match this loop already
+    /// performed.
+    pub applied_rewrites: Vec<&'static str>,
 }
 
 /// Apply `rewrites` to `mirror` until a fixed point or a bound.
@@ -73,6 +81,7 @@ pub fn saturate_laws(
         rebuild_unions: 0,
         class_count_before,
         class_count_after: class_count_before,
+        applied_rewrites: Vec::new(),
         stop_reason: LawSaturationStop::FixedPoint,
     };
     if rewrites.is_empty() {
@@ -92,7 +101,11 @@ pub fn saturate_laws(
         report.iters_used += 1;
         let mut derived = 0;
         for rewrite in rewrites {
-            derived += apply_rewrite(mirror, rewrite, class_budget)?;
+            let landed = apply_rewrite(mirror, rewrite, class_budget)?;
+            if landed > 0 && !report.applied_rewrites.contains(&rewrite.name) {
+                report.applied_rewrites.push(rewrite.name);
+            }
+            derived += landed;
         }
         report.applied_equivalences += derived;
         report.rebuild_unions += mirror.egraph_mut().try_rebuild()?;

@@ -44,6 +44,12 @@ the caller declared, the budget the graph composes to, the contract of every
 region, and the regions this plan combines in an order the program did not
 state. See [numeric contracts](../reference/numeric-contracts.md).
 
+`SelectedPlan::law_derivation` names the declared laws the plan's node programs
+were derived through, one entry per rewritten node, in the order the search
+admitted them. An empty record states the programs as written. Every chain here
+also appears in `SelectedPlan::certificate.law_derived`, and a plan naming a
+chain the search never cited is rejected as a malformed artifact.
+
 ## Identity is neutral; payloads are not
 
 The same semantic plan digests the same everywhere. A `TargetPayload`
