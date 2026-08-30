@@ -503,8 +503,14 @@ pub(crate) fn line_contains_heredoc(line: &str) -> bool {
     trimmed.contains("<<") && !trimmed.contains("<<<")
 }
 
+/// Whether a line is a data row spelling text rather than a marker using it.
+///
+/// A row that spells what a rule forbids is the rule's own vocabulary or a
+/// scanner corpus entry. The byte-string form is that same row with a `b`
+/// prefix, and a marker comment never takes either shape.
 pub(crate) fn is_release_rule_text(trimmed: &str) -> bool {
     trimmed.starts_with('"')
+        || trimmed.starts_with("b\"")
         || trimmed.starts_with("(\"")
         || trimmed.starts_with("&[")
         || trimmed.contains("no-stubs")

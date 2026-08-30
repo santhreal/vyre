@@ -1751,3 +1751,35 @@ fn every_serialized_coverage_flag_is_declared() {
         "Fix: every boolean field of the coverage record must be a declared flag"
     );
 }
+
+/// WHY: the marker rule matches a bare substring and, unlike the code-call
+/// family, exempts neither a doc comment nor a literal. A scanner corpus
+/// spells its needles as byte strings, so the row `b"TODO:",` reported the
+/// benchmark that searches for the marker as though it carried one. The
+/// data-row guard already exempted the plain literal form and missed the `b`
+/// prefix. A marker comment takes neither shape and must still block.
+#[test]
+fn a_marker_named_in_a_byte_string_row_is_not_a_marker() {
+    let corpus_row = "    b\"TODO:\",";
+    assert!(
+        !line_contains_blocked_pattern(
+            Path::new("/w/vyre-bench/src/cases/scan_ac_irregular/mod.rs"),
+            "TODO",
+            "TODO",
+            corpus_row,
+            &corpus_row.to_ascii_lowercase()
+        ),
+        "Fix: a scanner corpus row is data, not an unresolved marker."
+    );
+    let marker = "    // TODO: wire the pool into dispatch";
+    assert!(
+        line_contains_blocked_pattern(
+            Path::new("/w/vyre-driver-cuda/src/backend/stream_ordered_pool.rs"),
+            "TODO",
+            "TODO",
+            marker,
+            &marker.to_ascii_lowercase()
+        ),
+        "Fix: a real marker comment must still block the release."
+    );
+}
