@@ -27,6 +27,7 @@ pub mod doc_contract;
 pub mod docs_references;
 pub mod dup_scan;
 pub mod evidence_paths;
+pub mod evidence_provenance;
 pub mod example_capability;
 pub mod feature_isolation;
 pub mod feature_msrv;
@@ -127,6 +128,10 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("dup-scan", &dup_scan::DupScan),
     ("evidence-paths", &evidence_paths::EvidencePaths),
     ("invariant-paths", &evidence_paths::InvariantPaths),
+    (
+        "evidence-provenance",
+        &evidence_provenance::EvidenceProvenance,
+    ),
     ("example-capability", &example_capability::ExampleCapability),
     ("feature-isolation", &feature_isolation::FeatureIsolation),
     ("feature-msrv", &feature_msrv::FeatureMsrv),

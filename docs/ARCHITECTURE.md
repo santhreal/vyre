@@ -44,13 +44,15 @@ interpreter arm.
   validated `LogicalProgramGraph` plus device and external facts, an objective
   and a budget; the compiler selects the schedule and the launch. The seam
   accepts no grid, workgroup, persistence or route, so `vyre-libs`,
-  `vyre-pass-engine` and `vyre-driver-reference` declare a dependency on it and
-  `docs/CRATE_OWNERSHIP.toml` records those edges.
+  `vyre-pass-engine`, `vyre-driver-reference` and `vyre-bench` declare a
+  dependency on it and `docs/CRATE_OWNERSHIP.toml` records those edges.
 - `vyre-driver` is backend-agnostic machinery. Concrete drivers own names,
   dialects, and device quirks.
 - `vyre-runtime` executes the artifact's selected persistence. It does not
   decide whether to be persistent.
-- `vyre-pass-engine` runs the optimizer's passes as vyre Programs.
+- `vyre-pass-engine` runs the optimizer's passes as vyre Programs. `vyre-bench`
+  measures that pipeline against the host optimizer on a device, so it declares
+  an edge to the pass engine as well as to the compiler.
 - `vyre-reference` is the oracle, not a backend and not a fallback.
 
 ## Production route

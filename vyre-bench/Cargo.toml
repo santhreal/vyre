@@ -13,7 +13,7 @@ publish = false
 [dependencies]
 vyre = { workspace = true }
 vyre-foundation = { workspace = true }
-vyre-driver = { workspace = true }
+vyre-driver = { workspace = true, features = ["test-fixtures"] }
 vyre-driver-wgpu = { workspace = true }
 # Every driver crate is linked through this owner, which asserts that each one
 # reached the backend registry. Benchmarks report the linked dispatch set, so a
@@ -38,6 +38,8 @@ vyre-libs = { workspace = true, features = [
 ] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-lower = { workspace = true }
+vyre-pass-engine = { workspace = true }
+vyre-megakernel = { workspace = true }
 vyre-emit-ptx = { workspace = true }
 vyre-spec = { workspace = true }
 # The source fingerprint every recorded artifact names its tree with has one

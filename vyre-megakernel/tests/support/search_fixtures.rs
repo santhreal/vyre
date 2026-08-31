@@ -471,8 +471,20 @@ pub(crate) const REORDERING_PRODUCTIONS: [ScheduleProduction; 5] = [
 /// device, budget and objective, and differs only in the graph and the numeric
 /// contract, so the request is built once.
 pub(crate) fn artifact_of(graph: ProgramGraph, numeric: Option<NumericContract>) -> Artifact {
+    artifact_of_within(graph, numeric, budget())
+}
+
+/// `graph` compiled on the rich device under `numeric` within `budget`.
+///
+/// A suite that asks what a bound does to the derived set states the bound and
+/// reads the same request every other suite compiles.
+pub(crate) fn artifact_of_within(
+    graph: ProgramGraph,
+    numeric: Option<NumericContract>,
+    budget: SearchBudget,
+) -> Artifact {
     let mut request =
-        CompileRequest::new(graph, facts(), rich_device(), budget(), latency_objective());
+        CompileRequest::new(graph, facts(), rich_device(), budget, latency_objective());
     if let Some(numeric) = numeric {
         request = request.with_numeric_budget(numeric);
     }

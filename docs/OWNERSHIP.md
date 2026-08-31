@@ -61,7 +61,7 @@ Own reproducible workload benchmarks against the best available native baseline 
 - Path: `vyre-bench`
 - Owner: `benchmarks`
 - Layer: `tooling`
-- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`, `xtask`
+- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`, `xtask`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -74,6 +74,8 @@ Own reproducible workload benchmarks against the best available native baseline 
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
 | `vyre-libs` | product operation builders | `private` | `product-libraries` |
 | `vyre-lower` | verified backend-neutral representation lowering | `private` | `lowering` |
+| `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `private` | `megakernel-compiler` |
+| `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | `private` | `pass-engine` |
 | `vyre-primitives` | reusable semantic Program builders | `private` | `primitive-library` |
 | `vyre-reference` | independent semantic oracle execution | `private` | `reference-semantics` |
 | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `private` | `registry-link` |

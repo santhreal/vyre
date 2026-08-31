@@ -516,6 +516,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "crate::gates::evidence_paths::tests::a_citation_that_does_not_resolve_is_reported",
     },
     GateDescriptor {
+        name: "evidence-provenance",
+        help: "Enforce evidence-provenance contracts",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "committed release evidence",
+        artifacts: &[],
+        prerequisites: &[],
+        proof: "crate::gates::evidence_provenance::tests::an_artifact_recorded_before_a_source_change_its_own_commit_carries_is_a_finding",
+    },
+    GateDescriptor {
         name: "example-capability",
         help: "Enforce example-capability contracts",
         package: "xtask",

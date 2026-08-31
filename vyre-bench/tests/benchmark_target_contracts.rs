@@ -584,3 +584,71 @@ fn every_target_declares_the_class_its_benchmark_case_declares() {
     );
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
+
+/// Every manifest row's floor equals the floor its registered case enforces.
+///
+/// The release-workload roster is cross-checked above through its macro program
+/// specs, which covers one suite. A row in any other suite carried a second copy
+/// of the number that nothing compared, so a manifest floor and the contract the
+/// harness fails a case against could disagree, and the release gate would read
+/// the looser of the two. The case registry is enumerated at run time, so a case
+/// registered later is judged without editing this test.
+///
+/// Does not catch a threshold that is wrong on both sides; that is what
+/// re-measuring the baseline is for.
+#[test]
+fn every_target_floor_equals_the_floor_its_case_enforces() {
+    let manifest = toml::from_str::<toml::Value>(BENCH_TARGETS)
+        .expect("Fix: BENCH_TARGETS.toml must parse as TOML.");
+    let targets = manifest
+        .get("target")
+        .and_then(toml::Value::as_array)
+        .expect("Fix: BENCH_TARGETS.toml must contain [[target]] rows.");
+    let registry = vyre_bench::registry::collect_all();
+    let mut enforced = BTreeMap::<String, BTreeMap<&'static str, f64>>::new();
+    for case in registry.iter() {
+        let Some(contract) = case.performance_contract() else {
+            continue;
+        };
+        let floors = enforced.entry(case.id().0.to_string()).or_default();
+        for baseline in &contract.baselines {
+            floors.insert(baseline.class.registry_key(), baseline.min_speedup_x);
+        }
+    }
+    let mut checked = 0usize;
+    let mut failures = Vec::new();
+    for target in targets {
+        let id = target
+            .get("id")
+            .and_then(toml::Value::as_str)
+            .unwrap_or_default();
+        let Some(case_id) = target.get("bench_case_id").and_then(toml::Value::as_str) else {
+            continue;
+        };
+        let class = target
+            .get("baseline_class")
+            .and_then(toml::Value::as_str)
+            .unwrap_or_default();
+        let Some(floor) = enforced
+            .get(case_id)
+            .and_then(|floors| floors.get(class).copied())
+        else {
+            continue;
+        };
+        let declared = target
+            .get("min_speedup_over_baseline")
+            .and_then(toml::Value::as_float)
+            .unwrap_or_default();
+        checked += 1;
+        if declared != floor {
+            failures.push(format!(
+                "Fix: BENCH_TARGETS target `{id}` declares {declared}x over the `{class}` baseline where case `{case_id}` enforces {floor}x."
+            ));
+        }
+    }
+    assert!(
+        checked >= 10,
+        "Fix: only {checked} target(s) matched a case contract floor; the manifest and the case registry are no longer linked."
+    );
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}

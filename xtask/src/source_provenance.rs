@@ -3,24 +3,32 @@
 //! Evidence is only evidence if it is attributable to a tree. A fingerprint is
 //! either `git:<commit>:dirty=false`, which a reader can check out and
 //! reproduce, or `git:<commit>:dirty=true:worktree=<digest>`, which names a
-//! commit plus a digest of everything the worktree changed on top of it.
+//! commit plus a digest of the content every non-evidence path differs from it
+//! by.
 //!
-//! Both halves of the contract live here. [`capture`] is the only producer in
+//! The digest covers content, never how git reported it. A status line, a
+//! rename classification and the tracked/untracked distinction all disappear
+//! the moment a change is committed, so a digest over any of them names a state
+//! no commit can carry. A digest over the differing content is what
+//! [`resolves_against`] recomputes from the commit an artifact is committed in:
+//! the artifact records the tree it was generated from, and that tree is the one
+//! the next commit captures.
+//!
+//! Three parts of the contract live here. [`capture`] is the only producer in
 //! this crate and it refuses rather than emit a fingerprint with an unknown
-//! dirty state or an unknown worktree digest. [`issues`] is the judge every
-//! reader of a recorded fingerprint uses. A recorder runs the judge over what
-//! it is about to write, so the imprecisions a reader used to discover months
-//! later are refused at the moment of recording.
+//! dirty state or an unknown worktree digest. [`issues`] judges the shape of a
+//! recorded fingerprint. [`resolves_against`] judges it against a commit, which
+//! is what makes the recorded value checkable rather than merely well-formed.
 //!
-//! `release/evidence/**` is excluded from the dirty scan. Writing evidence is
-//! what a generator does, so counting the artifact it just wrote as a change to
-//! the tree it describes would make every recorded fingerprint dirty by
+//! `release/evidence/**` is excluded throughout. Writing evidence is what a
+//! generator does, so counting the artifact it just wrote as a change to the
+//! tree it describes would make every recorded fingerprint dirty by
 //! construction.
 
 use std::path::Path;
 use std::process::Command;
 
-/// Largest file this module reads whole while digesting an untracked path.
+/// Largest file this module digests whole.
 const MAX_UNTRACKED_FILE_BYTES: u64 = 64 * 1024 * 1024;
 
 /// The predicate every stale-source verdict is written with.
@@ -137,15 +145,25 @@ pub fn is_blake3_hex_digest(value: &str) -> bool {
     value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
+/// The commit a `git:` fingerprint names, when it names one.
+#[must_use]
+pub fn recorded_commit(source_fingerprint: &str) -> Option<&str> {
+    source_fingerprint
+        .strip_prefix("git:")?
+        .split(':')
+        .next()
+        .filter(|commit| !commit.is_empty())
+}
+
 /// Build the fingerprint of the tree rooted at `root`, or say why there is none.
 ///
 /// # Errors
 ///
 /// Returns the sentence a gate reports when the tree cannot be identified: git
-/// names no commit, the dirty scan failed, or the tree is dirty and the
-/// worktree digest could not be taken. Every one of those used to be recorded
-/// as `unknown` inside an otherwise well-formed fingerprint, which is a claim
-/// about a tree that identifies no tree.
+/// names no commit, or git could not state what the worktree differs from that
+/// commit by. Every one of those used to be recorded as `unknown` inside an
+/// otherwise well-formed fingerprint, which is a claim about a tree that
+/// identifies no tree.
 pub fn capture(root: &Path) -> Result<String, String> {
     let commit = git_text(root, &["rev-parse", "HEAD"])
         .map_err(|error| format!("git names no commit for `{}`: {error}", root.display()))?;
@@ -155,51 +173,96 @@ pub fn capture(root: &Path) -> Result<String, String> {
             root.display()
         ));
     }
-    let status = git_bytes(root, DIRTY_STATUS_ARGS).map_err(|error| {
+    let changed = changed_in_worktree(root).ok_or_else(|| {
         format!(
-            "git cannot tell whether `{}` is dirty: {error}",
+            "git cannot state what `{}` differs from `{commit}` by",
             root.display()
         )
     })?;
-    if status.is_empty() {
-        return Ok(format!("git:{commit}:dirty=false"));
-    }
-    let worktree = dirty_worktree_digest(root, &status).ok_or_else(|| {
-        format!(
-            "`{}` is dirty and git could not produce the worktree diff that digests it",
-            root.display()
-        )
-    })?;
-    Ok(format!("git:{commit}:dirty=true:worktree={worktree}"))
+    Ok(fingerprint_of(&commit, &changed))
 }
 
-/// The dirty scan, spelled once because the digest hashes its exact output.
-const DIRTY_STATUS_ARGS: &[&str] = &[
-    "status",
-    "--porcelain=v1",
-    "-z",
-    "--untracked-files=all",
-    "--",
-    ".",
-    ":!release/evidence/**",
-];
-
-/// Digest everything the worktree changed on top of `HEAD`.
+/// Whether `source_fingerprint` names the source the commit `carrier` carries.
 ///
-/// Two dirty checkouts of the same commit are different trees, so the digest
-/// covers the status lines, the tracked diff and the content of every untracked
-/// file. An untracked file too large to read whole contributes its cap instead
-/// of its bytes, so the digest stays bounded without silently ignoring it.
-fn dirty_worktree_digest(root: &Path, status: &[u8]) -> Option<String> {
-    let diff = git_bytes(
+/// The recorded commit is the one the generator ran against, so the source it
+/// names is that commit plus whatever was uncommitted at the time. A commit that
+/// captures those changes carries exactly that source, and a reader recomputes
+/// the same value from the two commits alone.
+///
+/// # Errors
+///
+/// Returns the sentence a gate reports when the fingerprint names no commit,
+/// when git cannot compare the two commits, or when the recorded value is not
+/// the one the carrier's source produces.
+pub fn resolves_against(
+    root: &Path,
+    source_fingerprint: &str,
+    carrier: &str,
+) -> Result<(), String> {
+    let Some(base) = recorded_commit(source_fingerprint) else {
+        return Err(format!(
+            "source_fingerprint `{source_fingerprint}` names no commit"
+        ));
+    };
+    let changed = changed_between(root, base, carrier)?;
+    let expected = fingerprint_of(base, &changed);
+    if expected == source_fingerprint {
+        return Ok(());
+    }
+    Err(format!(
+        "source_fingerprint `{source_fingerprint}` does not name the source `{carrier}` carries, \
+         which is `{expected}`"
+    ))
+}
+
+/// The fingerprint text for a base commit and what the source differs from it by.
+fn fingerprint_of(commit: &str, changed: &[ChangedPath]) -> String {
+    if changed.is_empty() {
+        return format!("git:{commit}:dirty=false");
+    }
+    format!("git:{commit}:dirty=true:worktree={}", digest_of(changed))
+}
+
+/// Paths no source digest covers, because writing them is what a generator does.
+const EXCLUDE_EVIDENCE: &str = ":!release/evidence/**";
+
+/// The label the source-difference digest is taken under.
+const SOURCE_DIFF_FORMAT: &[u8] = b"vyre-source-diff-v2";
+
+/// One non-evidence path whose content differs from the base commit.
+struct ChangedPath {
+    /// Repository-relative path.
+    path: String,
+    /// What the path holds now, or `None` when it holds nothing.
+    content: Option<Content>,
+}
+
+/// What a changed path holds, bounded.
+enum Content {
+    /// The bytes at the path.
+    Bytes(Vec<u8>),
+    /// The path exceeds [`MAX_UNTRACKED_FILE_BYTES`] and contributes its cap.
+    Oversized,
+}
+
+/// Every non-evidence path the worktree differs from `HEAD` by.
+///
+/// Rename detection is off on both sides of the contract: a rename reported as
+/// one new path and a rename reported as a deletion plus an addition digest
+/// differently, and which one git reports depends on its own similarity
+/// heuristic rather than on the source.
+fn changed_in_worktree(root: &Path) -> Option<Vec<ChangedPath>> {
+    let tracked = git_bytes(
         root,
         &[
             "diff",
-            "--binary",
+            "--name-only",
+            "--no-renames",
+            "-z",
             "HEAD",
             "--",
             ".",
-            ":!release/evidence/**",
+            EXCLUDE_EVIDENCE,
         ],
     )
     .ok()?;
@@ -212,33 +275,94 @@ fn dirty_worktree_digest(root: &Path, status: &[u8]) -> Option<String> {
             "-z",
             "--",
             ".",
-            ":!release/evidence/**",
+            EXCLUDE_EVIDENCE,
         ],
     )
     .unwrap_or_default();
-    Some(dirty_worktree_digest_of(root, status, &diff, &untracked))
+    Some(
+        ordered_paths(&[&tracked, &untracked])
+            .into_iter()
+            .map(|path| {
+                let content = match read_bounded(&root.join(&path)) {
+                    Ok(Some(bytes)) => Some(Content::Bytes(bytes)),
+                    Ok(None) => Some(Content::Oversized),
+                    Err(_) => None,
+                };
+                ChangedPath { path, content }
+            })
+            .collect(),
+    )
 }
 
-/// The digest itself, separated from the four git calls that feed it.
-fn dirty_worktree_digest_of(root: &Path, status: &[u8], diff: &[u8], untracked: &[u8]) -> String {
-    let mut hasher = blake3::Hasher::new();
-    hash_field(&mut hasher, b"format", b"vyre-bench-dirty-source-v1");
-    hash_field(&mut hasher, b"status", status);
-    hash_field(&mut hasher, b"diff", diff);
-    for path in untracked
-        .split(|byte| *byte == 0)
+/// Every non-evidence path two commits differ by, as `carrier` holds it.
+fn changed_between(root: &Path, base: &str, carrier: &str) -> Result<Vec<ChangedPath>, String> {
+    let names = git_bytes(
+        root,
+        &[
+            "diff",
+            "--name-only",
+            "--no-renames",
+            "-z",
+            base,
+            carrier,
+            "--",
+            ".",
+            EXCLUDE_EVIDENCE,
+        ],
+    )
+    .map_err(|error| format!("git cannot compare `{base}` with `{carrier}`: {error}"))?;
+    Ok(ordered_paths(&[&names])
+        .into_iter()
+        .map(|path| {
+            let content = committed_content(root, carrier, &path);
+            ChangedPath { path, content }
+        })
+        .collect())
+}
+
+/// What `carrier` holds at `path`, or `None` when it holds nothing there.
+fn committed_content(root: &Path, carrier: &str, path: &str) -> Option<Content> {
+    let object = format!("{carrier}:{path}");
+    let size: u64 = git_text(root, &["cat-file", "-s", &object])
+        .ok()?
+        .trim()
+        .parse()
+        .ok()?;
+    if size > MAX_UNTRACKED_FILE_BYTES {
+        return Some(Content::Oversized);
+    }
+    git_bytes(root, &["cat-file", "blob", &object])
+        .ok()
+        .map(Content::Bytes)
+}
+
+/// Sort and deduplicate the NUL-separated path lists, so order is the source's.
+fn ordered_paths(lists: &[&[u8]]) -> Vec<String> {
+    let mut paths = lists
+        .iter()
+        .flat_map(|list| list.split(|byte| *byte == 0))
         .filter(|path| !path.is_empty())
-    {
-        hash_field(&mut hasher, b"untracked-path", path);
-        let path = String::from_utf8_lossy(path);
-        match read_bounded(&root.join(path.as_ref())) {
-            Ok(Some(bytes)) => hash_field(&mut hasher, b"untracked-content", &bytes),
-            Ok(None) => hash_field(
+        .map(|path| String::from_utf8_lossy(path).into_owned())
+        .collect::<Vec<_>>();
+    paths.sort_unstable();
+    paths.dedup();
+    paths
+}
+
+/// Digest the content of every changed path, in path order.
+fn digest_of(changed: &[ChangedPath]) -> String {
+    let mut hasher = blake3::Hasher::new();
+    hash_field(&mut hasher, b"format", SOURCE_DIFF_FORMAT);
+    for entry in changed {
+        hash_field(&mut hasher, b"path", entry.path.as_bytes());
+        match &entry.content {
+            Some(Content::Bytes(bytes)) => hash_field(&mut hasher, b"content", bytes),
+            Some(Content::Oversized) => hash_field(
                 &mut hasher,
-                b"untracked-content-oversized",
+                b"content-oversized",
                 MAX_UNTRACKED_FILE_BYTES.to_string().as_bytes(),
             ),
-            Err(_) => {}
+            None => hash_field(&mut hasher, b"absent", b""),
         }
     }
     hasher.finalize().to_hex().to_string()

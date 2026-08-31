@@ -429,3 +429,16 @@ baseline = "the same Program submitted without semantic optimization"
 gpu_competitor = "wgpu_optimizer_impact"
 bench_case_id = "foundation.optimizer.impact"
 notes = "Proves exact output parity and positive node elimination through the production semantic optimizer."
+
+[[target]]
+id = "release.optimizer.resident_pipeline"
+primitive = "semantic Program optimization pipeline"
+suite = "release"
+backend_focus = "cuda"
+metric = "wall_ns_p50"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 0.22
+baseline = "the registered host optimizer pipeline on an expanded-stack worker"
+gpu_competitor = "none_recorded"
+bench_case_id = "release.optimizer.resident_pipeline"
+notes = "Times canonicalization, constant folding, dead-code elimination and algebraic identities as device programs against the same passes on the host over a 50000-binding independent-let fixture, and admits the measurement only when both optimized programs dispatch to the same output. The floor is a measured ratio below one: the device arm re-encodes, compiles and dispatches every stage while the host arm walks the tree once per pass, so the resident pipeline is slower at this size and the floor detects a regression in the device arm relative to the host arm. The recorded benchmark artifact carries the device identity and the sample count the floor was taken from."

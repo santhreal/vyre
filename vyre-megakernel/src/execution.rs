@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use thiserror::Error;
-use vyre_foundation::ir::{BufferAccess, GraphValueId, Program, ProgramGraph};
+use vyre_foundation::ir::{BufferAccess, GraphValueId, Program, ProgramGraph, ValueLifetime};
 use vyre_foundation::logical::LogicalProgramGraph;
 
 use crate::error::CompileError;
@@ -271,6 +271,31 @@ pub fn writable_graph_values(node: &vyre_foundation::ir::ProgramGraphNode) -> Ve
     writable_graph_value_buffers(node)
         .into_iter()
         .map(|(value, _)| value)
+        .collect()
+}
+
+/// Graph values a completed execution returns to the caller.
+///
+/// A caller-visible result is either a value some node produces and the graph
+/// declares as an output, or retained state the caller seeded and the artifact
+/// wrote back. Read-only inputs, constants, and invocation-scoped intermediates
+/// return nothing.
+///
+/// This is the one answer to "which graph values does a completion carry".
+/// Every executor collects its result map over exactly this set, because a
+/// second derivation is how a retained read-write value came to be rejected as
+/// undeclared by the executor that had just written it.
+#[must_use]
+pub fn returned_graph_values(graph: &ProgramGraph) -> BTreeSet<GraphValueId> {
+    graph
+        .values()
+        .iter()
+        .filter(|value| match value.contract.lifetime {
+            ValueLifetime::Retained => true,
+            ValueLifetime::Output => value.producer.is_some(),
+            ValueLifetime::Constant | ValueLifetime::Invocation => false,
+        })
+        .map(|value| value.id)
         .collect()
 }
 

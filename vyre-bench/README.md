@@ -226,7 +226,7 @@ Own reproducible workload benchmarks against the best available native baseline 
 ### Boundaries
 
 The `benchmarks` owner maintains this `tooling` crate at `vyre-bench`.
-Its allowed internal production dependencies are: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`, `xtask`.
+Its allowed internal production dependencies are: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`, `xtask`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

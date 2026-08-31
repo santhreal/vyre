@@ -203,6 +203,11 @@ subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "evidence-provenance"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "example-capability"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]

@@ -1,6 +1,6 @@
 //! Registered artifact-backed implementation of semantic execution.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use vyre_driver::{BackendRegistration, BindingSet, BoundResource};
 use vyre_megakernel::{
@@ -62,14 +62,7 @@ impl SemanticExecutor for RegisteredSemanticExecutor {
         let completion = session
             .submit_and_wait(bindings)
             .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
-        let expected_outputs = request
-            .logical()
-            .graph()
-            .values()
-            .iter()
-            .filter(|value| value.producer.is_some() && value.consumers.is_empty())
-            .map(|value| value.id)
-            .collect::<BTreeSet<_>>();
+        let expected_outputs = vyre_megakernel::returned_graph_values(request.logical().graph());
         let mut completion_outputs = completion.outputs;
         let mut completion_retained = completion.retained;
         let mut outputs = BTreeMap::new();

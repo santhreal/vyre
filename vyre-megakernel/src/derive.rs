@@ -92,7 +92,18 @@ pub(crate) fn derive(
     if law.budget_reached {
         certificate.reached_law_budget();
     }
+    let limit = candidate_limit(budget);
     for alternative in law.alternatives {
+        // The candidate budget bounds the whole derived set, law-derived
+        // alternatives included. An artifact recording more explored candidates
+        // than the request authenticated is refused at admission, so a bound
+        // reached here stops the derivation instead of pricing a set the plan
+        // cannot record.
+        if candidates.len() >= limit {
+            certificate.reached_law_budget();
+            certificate.exhausted();
+            break;
+        }
         let citation = LawCitation {
             node: u32::try_from(alternative.node).unwrap_or(u32::MAX),
             laws: alternative.chain,
@@ -205,7 +216,7 @@ fn expand(
         for production in ScheduleProduction::ALL {
             for step in grammar::propose(*production, &parent.schedule, expansion.grammar) {
                 if !can_spend(*into.cpu_work, expansion.budget)
-                    || into.candidates.len() >= expansion.budget.max_candidates as usize
+                    || into.candidates.len() >= candidate_limit(expansion.budget)
                 {
                     return true;
                 }
@@ -257,6 +268,15 @@ fn expand(
         }
     }
     false
+}
+
+/// The candidate count `budget` authenticates, as a set bound.
+///
+/// Every step that admits a candidate reads this one conversion, so the
+/// law-derived and grammar-derived halves of the set cannot disagree about what
+/// the request granted.
+fn candidate_limit(budget: SearchBudget) -> usize {
+    usize::try_from(budget.max_candidates).unwrap_or(usize::MAX)
 }
 
 /// The widest submission arrangement the device grants and the graph allows.

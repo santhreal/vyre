@@ -1436,7 +1436,7 @@ seam = "public-facade"
 [[crate.dependency]]
 package = "vyre-driver"
 purpose = "backend-neutral target, materialization, submission, and completion contracts"
-features = []
+features = ["test-fixtures"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
@@ -1520,6 +1520,28 @@ optional = false
 default_features = true
 boundary = "private"
 seam = "lowering"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "whole-graph compilation and immutable artifact contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-pass-engine"
+purpose = "optimizer pass execution as dispatched Vyre Programs"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "pass-engine"
 
 [[crate.dependency]]
 package = "vyre-primitives"

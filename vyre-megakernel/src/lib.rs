@@ -94,9 +94,10 @@ pub use error::{
     REQUIRED_SCHEDULE_UNREACHABLE, SEMANTIC_VERSION_SKEW,
 };
 pub use execution::{
-    execute_single_program, writable_graph_value_buffers, writable_graph_values,
-    SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
-    SemanticExecutionRequest, SemanticExecutor, SingleProgramExecutionOutput,
+    execute_single_program, returned_graph_values, writable_graph_value_buffers,
+    writable_graph_values, SemanticExecutionError, SemanticExecutionOutput,
+    SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
+    SingleProgramExecutionOutput,
 };
 pub use grammar::{DerivationStep, ScheduleProduction, SCHEDULE_GRAMMAR_VERSION};
 pub use identity::{

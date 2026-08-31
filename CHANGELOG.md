@@ -6198,6 +6198,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   still listed `vyre-frontend-rust` after the workspace evicted it. An artifact
   naming a crate the workspace does not have shifts every row after it, so one
   deleted member reports as a whole tail of drift.
+- A recorded `source_fingerprint` names source a reader can rebuild from the
+  commit that carries the artifact: the worktree digest covers the content of
+  every non-evidence path the tree differs from the recorded commit by, instead
+  of `git status` output and a rename classification that no longer exist once
+  those changes are committed. The `evidence-provenance` gate recomputes each
+  committed artifact's fingerprint from the recorded commit and the commit
+  carrying it, so an artifact recorded against a tree its own commit does not
+  hold is a finding rather than an unverifiable claim.
 - The release-evidence path gate reads every citation in a document rather than
   one key. It matched the key `path`, which named 629 of the 3418 filesystem
   paths those artifacts cite; the rest sit under `manifest`, `artifact`,
@@ -6517,6 +6525,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   overhead and traffic at the recorded 3788 bytes per nanosecond, so a fusion
   is ranked against what a launch costs on the target host instead of against a
   rate a thousand times below the one the benchmark recorded.
+- Law-derived candidates are bounded by the request's candidate budget, so a
+  graph the law tables reach at more nodes than the budget grants candidates no
+  longer compiles to an artifact that admission refuses for exceeding its
+  authenticated search work.
 - `cargo xtask check-tier-deps` judges every production dependency in the
   workspace, derived from the layer each crate already declares in
   `docs/CRATE_OWNERSHIP.toml`. It carried its own hardcoded table of crate
@@ -7306,6 +7318,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Resident value-returning dispatch helpers now preserve backend upload,
   kernel, and readback fusion instead of adding separate host synchronization
   boundaries.
+- `vyre_megakernel::returned_graph_values` is the single derivation of the
+  values an artifact returns, so a retained read-write value the artifact wrote
+  is no longer dropped from a registered executor's result list.
 - Ring occupancy sums report an overflowing slot count instead of saturating to
   a plausible total, so a launch recommendation over an impossible decoded ring
   now fails with that reason instead of running on ratios derived from a

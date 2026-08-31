@@ -421,26 +421,17 @@ fn records_provenance(path: &Path) -> bool {
 
 /// Put one artifact on disk, reporting a write failure as a finding.
 ///
-/// A recorded artifact is stamped with `fingerprint` unless the committed copy
-/// already holds the same body under a sound fingerprint, in which case it is
-/// the same recording and keeps the tree it was recorded from. Regenerating
-/// therefore leaves an unchanged artifact untouched instead of re-attributing
-/// it to whatever tree happened to run the gate.
+/// A recorded artifact is stamped with `fingerprint` every time it is written,
+/// including when the body is unchanged. The stamp states the tree the record
+/// was taken from, and that is the tree the commit carrying it captures, so
+/// keeping an older stamp on an unchanged body records a tree the artifact is
+/// no longer committed alongside and leaves no way to correct one.
 fn write_artifact(
     root: &Path,
     artifact: &Generated,
     fingerprint: Result<&str, &String>,
 ) -> Vec<Finding> {
     let content = if records_provenance(&artifact.path) {
-        let committed = read_committed(root, &artifact.path).ok();
-        let recorded = committed.as_deref().map(split_provenance);
-        if let Some((Some(recorded_fingerprint), body)) = recorded.as_ref() {
-            if *body == artifact.content
-                && crate::source_provenance::issues(recorded_fingerprint).is_empty()
-            {
-                return Vec::new();
-            }
-        }
         match stamp_provenance(&artifact.path, &artifact.content, fingerprint) {
             Ok(content) => content,
             Err(finding) => return vec![finding],
@@ -703,7 +694,7 @@ mod tests {
     }
 
     #[test]
-    fn recording_stamps_the_tree_and_regenerating_the_same_body_changes_nothing() {
+    fn re_recording_an_unchanged_body_restamps_the_tree_that_produced_it() {
         let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
         init_repository(dir.path());
         let body = "{\n  \"schema_version\": 1\n}\n";
@@ -738,10 +729,11 @@ mod tests {
             "Fix: re-recording an unchanged body must find nothing."
         );
 
-        assert_eq!(
+        assert_ne!(
             std::fs::read_to_string(dir.path().join(ARTIFACT)).expect("Fix: read the artifact."),
             recorded,
-            "Fix: an unchanged body is the same recording and keeps the tree it was recorded from."
+            "Fix: a stamp kept across a moved tree names a tree the artifact is no longer \
+             committed alongside, and nothing could then correct it."
         );
     }
 

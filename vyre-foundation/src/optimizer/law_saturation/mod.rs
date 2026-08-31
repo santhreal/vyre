@@ -120,10 +120,9 @@ pub struct ProgramLawAlternative {
 /// Derive the value-level alternative the declared laws admit for `program`.
 ///
 /// Every expression the program states is offered to
-/// [`derive_alternatives`](crate::optimizer::law_saturation::derive_alternatives),
-/// and an expression whose derived term is smaller than the one written is
-/// replaced by it. `None` when no expression changed, so a caller ranks an
-/// alternative only where one exists.
+/// [`derive_alternatives`], and an expression whose derived term is smaller
+/// than the one written is replaced by it. `None` when no expression changed,
+/// so a caller ranks an alternative only where one exists.
 ///
 /// `exact` states whether the element type the program combines is exact, and
 /// is the numerical permission: a rounding element derives no reassociation

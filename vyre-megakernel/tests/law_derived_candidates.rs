@@ -31,12 +31,14 @@ use vyre_foundation::optimizer::region_law::{
     derive_region_alternatives, law_numerical_contract, RegionDerivationBudget, REGION_LAWS,
 };
 use vyre_foundation::optimizer::rewrite_contract::NumericalContract;
-use vyre_megakernel::{Artifact, SearchCertificate};
+use vyre_megakernel::{Artifact, SearchBudget, SearchCertificate};
 
 #[path = "support/search_fixtures.rs"]
 mod search_fixtures;
 
-use search_fixtures::{artifact_of, contract, invocation, reduce_program, reduction_over, stage};
+use search_fixtures::{
+    artifact_of, artifact_of_within, contract, invocation, reduce_program, reduction_over, stage,
+};
 
 /// The element every graph here combines.
 ///
@@ -450,4 +452,51 @@ fn a_matching_law_changes_the_candidate_set() {
         !reachable.is_empty(),
         "the reachable chain recorded no law, so the two chains produced the same candidate set"
     );
+}
+
+/// WHY: the candidate budget is the count an artifact authenticates, and law
+/// derivation seeded the set outside it. Every law-derived alternative was
+/// pushed before the first bound was consulted, so a graph the law tables reach
+/// at more nodes than the budget grants candidates recorded more explored
+/// candidates than the request authorized, and admission refused the artifact
+/// with `MKC014_MALFORMED_ARTIFACT` at
+/// `selected_plan.search_work.candidates_explored`. The count the fixture can
+/// reach is recomputed from the certificate at run time, so a law row added to
+/// either table widens the range this ranges over instead of leaving the
+/// interesting caps untested.
+#[test]
+fn a_law_derived_candidate_stays_inside_the_authenticated_budget() {
+    let element = element();
+    let accounted = {
+        let artifact = artifact_of(law_reachable_graph(&element), None);
+        let certificate = certificate_of(&artifact);
+        certificate.law_derived.len() + certificate.law_pruned.len()
+    };
+    assert!(
+        accounted >= 2,
+        "the fixture chain accounted for {accounted} law-derived candidates, so no cap below the \
+         law-derived count is reachable and this contract proves nothing"
+    );
+
+    for max_candidates in 1..=u32::try_from(accounted).expect("law count must fit a budget") + 1 {
+        let artifact = artifact_of_within(
+            law_reachable_graph(&element),
+            None,
+            SearchBudget::new(max_candidates, 200_000, 4, 0, 1_000_000_000),
+        );
+        let plan = artifact.selected_plan();
+        assert!(
+            plan.candidates_explored <= max_candidates,
+            "a budget of {max_candidates} candidates recorded {} explored",
+            plan.candidates_explored
+        );
+        assert_eq!(
+            plan.candidates_explored, plan.search_work.candidates_explored,
+            "the plan and its search work disagree about the bounded set"
+        );
+        assert!(
+            plan.candidates_explored >= 1,
+            "a bounded search dropped the baseline the program was written as"
+        );
+    }
 }

@@ -7,7 +7,9 @@ use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_megakernel::{
     DeviceFacts, Digest, SearchBudget, SemanticExecutionError, SemanticExecutor,
 };
-use vyre_test_support::semantic_requests::{add_bindings, add_graph, request};
+use vyre_test_support::semantic_requests::{
+    add_bindings, add_graph, assert_executes_retained_accumulate, request,
+};
 
 /// The reference target ranks with the open cost model and measures nothing.
 const BUDGET: SearchBudget = SearchBudget::new(8, 64, 0, 0, 1_000);
@@ -77,4 +79,13 @@ fn reference_rejects_hostile_policy_and_graph_value_inputs() {
         .execute(&request_without_budget)
         .expect_err("zero artifact byte ceiling must fail");
     assert!(matches!(error, SemanticExecutionError::Compile(_)));
+}
+
+#[test]
+fn reference_returns_retained_state_the_graph_carried() {
+    assert_executes_retained_accumulate(
+        &ReferenceSemanticExecutor,
+        DeviceFacts::unknown(),
+        "accumulate",
+    );
 }

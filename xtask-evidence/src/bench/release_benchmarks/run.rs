@@ -345,6 +345,10 @@ fn measure(root: &Path, config: &Config, report: &mut Report) {
                     "cuda.ptx.patterns.release.corpus",
                     "release/evidence/benchmarks/cuda-ptx-patterns.json",
                 ),
+                (
+                    "release.optimizer.resident_pipeline",
+                    "release/evidence/benchmarks/resident-optimizer-pipeline.json",
+                ),
             ] {
                 recorded(
                     report,
@@ -1135,6 +1139,7 @@ mod tests {
             "release/evidence/benchmarks/megakernel-condition-100x-proof.json",
             "release/evidence/benchmarks/megakernel-condition-cuda.json",
             "release/evidence/benchmarks/megakernel-latency-cuda.json",
+            "release/evidence/benchmarks/resident-optimizer-pipeline.json",
             "release/evidence/optimization/optimizer-impact-cuda.json",
             "release/evidence/optimization/pass-family-benchmark-manifest.json",
         ];

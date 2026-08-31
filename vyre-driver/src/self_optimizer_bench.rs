@@ -20,7 +20,7 @@
 
 use std::time::Instant;
 
-use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_megakernel::{SemanticExecutionPolicy, SemanticExecutor};
 
 /// Stack for the CPU oracle worker.
@@ -72,7 +72,7 @@ pub fn chain_program(count: usize) -> Program {
         };
         entry.push(Node::let_bind(format!("v{index}"), value));
     }
-    Program::wrapped(Vec::new(), [1, 1, 1], terminated(entry, count))
+    Program::wrapped(fixture_buffers(), [1, 1, 1], terminated(entry, count))
 }
 
 /// `count` independent `lets` over literals only.
@@ -92,7 +92,16 @@ pub fn wide_program(count: usize) -> Program {
         );
         entry.push(Node::let_bind(format!("v{index}"), value));
     }
-    Program::wrapped(Vec::new(), [1, 1, 1], terminated(entry, count))
+    Program::wrapped(fixture_buffers(), [1, 1, 1], terminated(entry, count))
+}
+
+/// The one output buffer every fixture's store writes.
+///
+/// Declared so an optimized fixture is dispatchable: a caller that compares two
+/// optimizer pipelines proves they agree by running both results, and a store to
+/// an undeclared buffer has no launch.
+fn fixture_buffers() -> Vec<BufferDecl> {
+    vec![BufferDecl::output("buf", 0, DataType::U32).with_count(1)]
 }
 
 /// Append the store that keeps the last binding live.

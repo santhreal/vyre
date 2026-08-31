@@ -519,6 +519,7 @@ pub fn vyre_megakernel::mesh::MeshTopologyPlan::verify_capacity(&self, mesh: &vy
 pub fn vyre_megakernel::mesh::TransferOrigin::label(self) -> alloc::string::String
 pub fn vyre_megakernel::mesh::implied_width(partitions: &[vyre_megakernel::mesh::RegionPartition]) -> u32
 pub fn vyre_megakernel::registered_level_stage() -> vyre_spec::ir_level::IrLevel
+pub fn vyre_megakernel::returned_graph_values(graph: &vyre_foundation::ir_inner::model::program_graph::ProgramGraph) -> alloc::collections::btree::set::BTreeSet<vyre_foundation::ir_inner::model::program_graph::GraphValueId>
 pub fn vyre_megakernel::select_frontier_topology(sample: vyre_megakernel::FrontierExecutionSample, graph: vyre_megakernel::FrontierGraphShape, memory: vyre_megakernel::FrontierMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, supports_device_wide_barrier: bool) -> vyre_megakernel::FrontierTopologyDecision
 pub fn vyre_megakernel::select_frontier_topology_stable(sample: vyre_megakernel::FrontierExecutionSample, graph: vyre_megakernel::FrontierGraphShape, memory: vyre_megakernel::FrontierMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, previous_topology: vyre_megakernel::FrontierTopology, supports_device_wide_barrier: bool) -> vyre_megakernel::FrontierTopologyDecision
 pub fn vyre_megakernel::specialization::AxisDomain::admits(&self, value: vyre_megakernel::specialization::AxisValue) -> bool

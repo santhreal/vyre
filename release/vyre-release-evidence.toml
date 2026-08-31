@@ -39,6 +39,7 @@ evidence = [
   "evidence/benchmarks/megakernel-condition-100x-proof.json",
   "evidence/benchmarks/megakernel-condition-cuda.json",
   "evidence/benchmarks/megakernel-latency-cuda.json",
+  "evidence/benchmarks/resident-optimizer-pipeline.json",
   "evidence/benchmarks/workload-01-condition-eval.json",
   "evidence/benchmarks/workload-02-string-bitmap-scatter.json",
   "evidence/benchmarks/workload-03-offset-count-aggregation.json",

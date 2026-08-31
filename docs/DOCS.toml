@@ -672,7 +672,7 @@ kind = "guide"
 section = "User workflows"
 authority = "self"
 generation = "manual"
-covers = ["vyre/tests/artifact_workflow.rs", "vyre-megakernel/src/lib.rs"]
+covers = ["vyre/tests/artifact_workflow.rs", "vyre/src/lib.rs"]
 nav = true
 
 [[page]]

@@ -229,3 +229,64 @@ pub fn assert_refuses_zero_artifact_limit(
 
     assert!(matches!(error, SemanticExecutionError::Compile(_)));
 }
+
+/// The word a retained accumulate contract seeds its state with.
+pub const SEED: u32 = 5;
+
+/// One `u32` of retained state, incremented in place by [`RHS`].
+///
+/// The add program declares a backend-allocated output, which is the shape a
+/// completion returns under `outputs`. A read-write buffer the caller seeds
+/// returns under `retained` instead, and an executor that collects only the
+/// first shape drops it, so the seam needs a program of this shape to prove
+/// what it returns.
+pub fn accumulate_program() -> Program {
+    Program::wrapped(
+        vec![BufferDecl::read_write("state", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store(
+            "state",
+            Expr::u32(0),
+            Expr::add(Expr::load("state", Expr::u32(0)), Expr::u32(RHS)),
+        )],
+    )
+}
+
+/// The accumulate program as a graph named `name`.
+pub fn accumulate_graph(name: &str) -> ProgramGraph {
+    ProgramGraph::from_program(name, accumulate_program())
+        .expect("valid graph. Fix: keep accumulate_program() a single-node program a graph admits.")
+}
+
+/// Asserts `executor` returns retained state the artifact wrote, not just outputs.
+///
+/// # Panics
+///
+/// Panics when the executor rejects the request or reports a value other than
+/// the seeded state advanced by [`RHS`], which is what a result derivation that
+/// omits retained values looks like from the caller's side.
+pub fn assert_executes_retained_accumulate(
+    executor: &impl SemanticExecutor,
+    target_facts: DeviceFacts,
+    name: &str,
+) {
+    let graph = accumulate_graph(name);
+    let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
+        .expect("logical graph. Fix: bind every external value the graph reads, or none.");
+    let state = SEED.to_le_bytes();
+    let value = graph.nodes()[0].inputs[0].value;
+    let inputs = BTreeMap::from([(value, state.as_slice())]);
+
+    let request = request(&logical, inputs, target_facts, DEVICE_BUDGET, 60_000).expect(
+        "complete graph bindings form a valid semantic request. Fix: bind the retained state \
+         value the graph declares.",
+    );
+    let output = executor
+        .execute(&request)
+        .expect("semantic execution. Fix: return every retained graph value the artifact wrote.");
+
+    assert_eq!(
+        output.outputs.get(&value).map(Vec::as_slice),
+        Some((SEED + RHS).to_le_bytes().as_slice())
+    );
+}

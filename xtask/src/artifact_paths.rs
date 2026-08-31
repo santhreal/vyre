@@ -25,6 +25,7 @@ pub const RELEASE_BENCHMARKS_ARTIFACTS: &[&str] = &[
     "release/evidence/benchmarks/megakernel-condition-100x-proof.json",
     "release/evidence/benchmarks/megakernel-condition-cuda.json",
     "release/evidence/benchmarks/megakernel-latency-cuda.json",
+    "release/evidence/benchmarks/resident-optimizer-pipeline.json",
     "release/evidence/benchmarks/workload-01-condition-eval.json",
     "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
     "release/evidence/benchmarks/workload-03-offset-count-aggregation.json",

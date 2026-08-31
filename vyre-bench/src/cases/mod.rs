@@ -97,6 +97,7 @@ pub mod reduce_sum;
 pub(crate) mod reference_sample;
 pub mod regex_bt;
 pub mod release_workloads;
+pub mod resident_optimizer_pipeline;
 pub(crate) mod resident_queue;
 pub mod scan_ac_irregular;
 pub(crate) mod skewed_graph;

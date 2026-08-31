@@ -61,6 +61,58 @@ pub(crate) fn check_release_bench_targets(
         ));
     }
 }
+
+/// The speedup floor `docs/optimization/BENCH_TARGETS.toml` declares for the
+/// row that names `case_id`.
+///
+/// The manifest is the single owner of a release floor, so a gate reads the
+/// number from it rather than restating it. A registered case enforcing a
+/// different floor than its row declares is rejected by the benchmark target
+/// contracts, so a floor read here is the one the harness fails a case against.
+pub(crate) fn declared_case_min_speedup(
+    base_dir: &Path,
+    case_id: &str,
+    failures: &mut Vec<String>,
+) -> Option<f64> {
+    let path = base_dir.join("../docs/optimization/BENCH_TARGETS.toml");
+    let text = match read_text_bounded(&path) {
+        Ok(text) => text,
+        Err(error) => {
+            failures.push(format!(
+                "failed to read canonical benchmark targets `{}`: {error}",
+                path.display()
+            ));
+            return None;
+        }
+    };
+    let manifest = match toml::from_str::<toml::Value>(&text) {
+        Ok(manifest) => manifest,
+        Err(error) => {
+            failures.push(format!(
+                "canonical benchmark targets `{}` is not valid TOML: {error}",
+                path.display()
+            ));
+            return None;
+        }
+    };
+    let floor = manifest
+        .get("target")
+        .and_then(toml::Value::as_array)
+        .into_iter()
+        .flatten()
+        .find(|target| target.get("bench_case_id").and_then(toml::Value::as_str) == Some(case_id))
+        .and_then(|target| {
+            target
+                .get("min_speedup_over_baseline")
+                .and_then(toml::Value::as_float)
+        });
+    if floor.is_none() {
+        failures.push(format!(
+            "canonical benchmark targets declare no numeric `min_speedup_over_baseline` for case `{case_id}`"
+        ));
+    }
+    floor
+}
 pub(crate) fn check_benchmark_evidence_reports(
     requirement: &Requirement,
     base_dir: &Path,

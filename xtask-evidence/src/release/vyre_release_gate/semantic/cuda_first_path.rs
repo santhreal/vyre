@@ -5,6 +5,10 @@ use crate::bench::benchmark_evidence_semantics::cuda_release_axes_source_artifac
 use super::super::checks::*;
 use super::super::gate_inputs::Requirement;
 
+/// The registered case whose recorded artifact carries the resident optimizer
+/// pipeline's speedup over the host optimizer pipeline.
+const RESIDENT_OPTIMIZER_CASE: &str = "release.optimizer.resident_pipeline";
+
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     let Some(matrix) = first_json_evidence(requirement, base_dir, "backend-matrix.json", failures)
     else {
@@ -36,6 +40,15 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     check_backend_suite_report(requirement, base_dir, "cuda-release-suite.json", failures);
     check_benchmark_report_has_cases(requirement, base_dir, "cuda-ptx-patterns.json", failures);
     check_json_evidence_has_no_blockers(requirement, base_dir, "bench-release-axes.json", failures);
+    let resident_floor = declared_case_min_speedup(base_dir, RESIDENT_OPTIMIZER_CASE, failures);
+    check_benchmark_evidence_reports(
+        requirement,
+        base_dir,
+        "resident-optimizer-pipeline.json",
+        true,
+        resident_floor,
+        failures,
+    );
     if let (Some(axes), Some(cuda_suite)) = (
         first_json_evidence(requirement, base_dir, "bench-release-axes.json", failures),
         first_json_evidence(requirement, base_dir, "cuda-release-suite.json", failures),

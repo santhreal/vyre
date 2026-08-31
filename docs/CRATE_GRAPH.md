@@ -64,6 +64,8 @@ graph TD
   C3 --> C17
   C3 --> C18
   C3 --> C20
+  C3 --> C22
+  C3 --> C23
   C3 --> C24
   C3 --> C25
   C3 --> C26
@@ -205,7 +207,7 @@ graph TD
 | `vyre-aot` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-aot` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
 | `vyre-bench` | `vyre` | public lifecycle facade | None | `always` | `normal` | `false` | `false` | `private` | `public-facade` |
-| `vyre-bench` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
+| `vyre-bench` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `test-fixtures` | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
 | `vyre-bench` | `vyre-driver-cuda` | native accelerator backend execution | None | `cfg(not(target_os = "macos"))` | `normal` | `false` | `true` | `private` | `cuda-driver` |
 | `vyre-bench` | `vyre-driver-reference` | reference backend adaptation | None | `always` | `normal` | `false` | `true` | `private` | `reference-driver` |
 | `vyre-bench` | `vyre-driver-wgpu` | portable backend execution | None | `always` | `normal` | `false` | `true` | `private` | `portable-driver` |
@@ -213,6 +215,8 @@ graph TD
 | `vyre-bench` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `vyre-bench` | `vyre-libs` | product operation builders | `bitset`, `graph`, `math-scan`, `nn-linear-4bit`, `predicate` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre-bench` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
+| `vyre-bench` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
+| `vyre-bench` | `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | None | `always` | `normal` | `false` | `true` | `private` | `pass-engine` |
 | `vyre-bench` | `vyre-primitives` | reusable semantic Program builders | `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-bench` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
 | `vyre-bench` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `metal`, `reference`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |

@@ -252,15 +252,6 @@ no source of its own and is declared nowhere.
 """
 
 [[gate]]
-file = "vyre-runtime/src/resident_work_queue/builder/mod.rs"
-tests = ["every_exported_program_builder_is_covered"]
-reason = """
-Derives exported Program builders from Rust items and compares them with the
-coverage table. Rust provides no run-time enumeration of exports, so only the
-source can expose a newly exported builder without a coverage decision.
-"""
-
-[[gate]]
 file = "xtask/tests/tree_contracts/cargo_invocation_resolution.rs"
 tests = ["every_cargo_run_in_a_workflow_or_script_resolves_to_one_binary"]
 reason = """

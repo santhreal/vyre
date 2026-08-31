@@ -127,21 +127,31 @@ pub fn encode_program(program: &Program) -> Result<EncodedProgram, EncodeError> 
     let node_count = ctx.next_graph_id;
     let nodes = ctx.nodes;
     let node_tags = ctx.node_tags;
-    let edges_by_source = ctx.edges_by_source;
 
-    // Flatten edges into CSR.
-    let mut edge_offsets = Vec::with_capacity(node_count as usize + 1);
-    let mut edge_targets = Vec::new();
-    let mut edge_kind_mask = Vec::new();
-    edge_offsets.push(0u32);
-    for source in 0..node_count {
-        for &(target, kind) in &edges_by_source[source as usize] {
-            edge_targets.push(target);
-            edge_kind_mask.push(kind);
-        }
-        edge_offsets.push(edge_targets.len() as u32);
+    // Flatten edges into CSR by counting sort. Edges are recorded in one flat
+    // list rather than a vector per source, so encoding a program allocates a
+    // bounded number of buffers instead of one per graph node. The placement
+    // pass walks the flat list in insertion order and each source's cursor
+    // advances monotonically, so the column order within a row is the order the
+    // encoder added the edges, which is what the kernels and the decoder read.
+    let row_count = node_count as usize + 1;
+    let mut edge_offsets = vec![0u32; row_count];
+    for &(source, _, _) in &ctx.edges {
+        edge_offsets[source as usize + 1] += 1;
     }
-    let edge_count = edge_targets.len() as u32;
+    for index in 1..row_count {
+        edge_offsets[index] += edge_offsets[index - 1];
+    }
+    let edge_count = u32::try_from(ctx.edges.len()).unwrap_or(u32::MAX);
+    let mut edge_targets = vec![0u32; ctx.edges.len()];
+    let mut edge_kind_mask = vec![0u32; ctx.edges.len()];
+    let mut cursors = edge_offsets.clone();
+    for &(source, target, kind) in &ctx.edges {
+        let slot = cursors[source as usize] as usize;
+        cursors[source as usize] += 1;
+        edge_targets[slot] = target;
+        edge_kind_mask[slot] = kind;
+    }
 
     Ok(EncodedProgram {
         node_count,
@@ -216,8 +226,11 @@ where
 struct EncoderCtx {
     nodes: Vec<u32>,
     node_tags: Vec<u32>,
-    edges_by_source: Vec<Vec<(u32, u32)>>,
+    /// Every edge as `(source, target, kind)` in insertion order.
+    edges: Vec<(u32, u32, u32)>,
     scope_stack: Vec<FxHashMap<Ident, u32>>,
+    /// Variable references of the node being encoded, reused across nodes.
+    var_buf: Vec<Ident>,
     next_graph_id: u32,
 }
 
@@ -226,8 +239,9 @@ impl EncoderCtx {
         let mut ctx = Self {
             nodes: Vec::new(),
             node_tags: Vec::new(),
-            edges_by_source: Vec::new(),
+            edges: Vec::new(),
             scope_stack: Vec::new(),
+            var_buf: Vec::new(),
             next_graph_id: 0,
         };
         // Allocate ROOT (id 0).
@@ -241,12 +255,11 @@ impl EncoderCtx {
         self.next_graph_id += 1;
         self.nodes.push(tag);
         self.node_tags.push(tag);
-        self.edges_by_source.push(Vec::new());
         id
     }
 
     fn add_edge(&mut self, source: u32, target: u32, kind: u32) {
-        self.edges_by_source[source as usize].push((target, kind));
+        self.edges.push((source, target, kind));
     }
 
     fn lookup(&self, name: &Ident) -> Option<u32> {
@@ -292,13 +305,19 @@ impl EncoderCtx {
 
         // Collect Var refs from this Node's *own* expressions (excluding
         // any nested-scope bodies, which are walked by recursion below).
-        let mut var_buf: Vec<Ident> = Vec::new();
+        // One buffer serves every node: the references are consumed before the
+        // next node is encoded, so a per-node allocation would be pure churn on
+        // a program with many bindings.
+        let mut var_buf = std::mem::take(&mut self.var_buf);
+        var_buf.clear();
         collect_node_own_var_refs(node, &mut var_buf);
         for name in &var_buf {
             if let Some(definer) = self.lookup(name) {
                 self.add_edge(my_id, definer, edge_kind::USE_DEF);
             }
         }
+        var_buf.clear();
+        self.var_buf = var_buf;
 
         // Register this Node as a definer of its name (Let/Assign).
         if let Some(name) = node_definition_name(node) {

@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use vyre_driver::target_dialect::{EmittedDialectModule, TargetDialect};
-use vyre_foundation::ir::{GraphValueId, ValueLifetime};
+use vyre_foundation::ir::GraphValueId;
 use vyre_megakernel::{
     ObjectiveMetric, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
     SemanticExecutor, TargetCompileError, TargetCompiler, TargetProfile,
@@ -153,17 +153,14 @@ impl SemanticExecutor for ReferenceSemanticExecutor {
         }
 
         let mut outputs = BTreeMap::new();
-        for value in graph.values().iter().filter(|value| {
-            matches!(value.contract.lifetime, ValueLifetime::Output) && value.producer.is_some()
-                || matches!(value.contract.lifetime, ValueLifetime::Retained)
-        }) {
-            let bytes = values.remove(&value.id).ok_or_else(|| {
+        for value in vyre_megakernel::returned_graph_values(graph) {
+            let bytes = values.remove(&value).ok_or_else(|| {
                 SemanticExecutionError::Backend(format!(
                     "reference graph omitted declared result value {}. Fix: execute every logical graph node before collecting outputs",
-                    value.id.0
+                    value.0
                 ))
             })?;
-            outputs.insert(GraphValueId(value.id.0), bytes);
+            outputs.insert(GraphValueId(value.0), bytes);
         }
 
         Ok(SemanticExecutionOutput {

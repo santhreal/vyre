@@ -44,6 +44,14 @@ use vyre_bench::api::case::BenchCase;
 /// device. It open-codes the case trait because it compiles and caches a CUB
 /// translation unit at measurement time, so it names no declaration owner and
 /// joins no clone family.
+///
+/// `release.optimizer.resident_pipeline` joined when the compiler's own
+/// optimizer pipeline became a release claim. It is the only case whose
+/// baseline is another vyre pipeline rather than an external library: both arms
+/// run the same four passes, one as dispatched device programs over a resident
+/// IR image and one on the host, so the ratio it records is a compiler
+/// architecture measurement and its floor is a recorded ratio rather than a
+/// speedup target.
 const EXPECTED_CASE_IDS: &[&str] = &[
     "adversarial.register_exhaustion.u32_1024",
     "bigint.modexp.4096",
@@ -86,6 +94,7 @@ const EXPECTED_CASE_IDS: &[&str] = &[
     "release.ifds_witness.1m",
     "release.megakernel_queue.1m",
     "release.offset_count_aggregation.1m",
+    "release.optimizer.resident_pipeline",
     "release.quantified_condition_loops.1m",
     "release.string_bitmap_scatter.1m",
     "runtime.adaptive_routing.gpu_resident.1m",

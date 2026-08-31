@@ -53,6 +53,39 @@ pub fn empty(directory: &Path) {
     run(directory, &["init", "--quiet"]);
 }
 
+/// Commit everything the fixture worktree holds, as one commit.
+///
+/// A contract about what a commit carries needs more than one commit to judge,
+/// and staging by name would make every such test restate the fixture's own
+/// file list.
+///
+/// # Panics
+///
+/// When a `git` invocation fails, for the reason [`seeded`] documents.
+pub fn commit_worktree(directory: &Path, message: &str) {
+    run(directory, &["add", "--all", "."]);
+    run(directory, &["commit", "--quiet", "-m", message]);
+}
+
+/// The commit the fixture's `HEAD` names.
+///
+/// # Panics
+///
+/// When `git rev-parse` fails or names nothing.
+#[must_use]
+pub fn head(directory: &Path) -> String {
+    let output = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(directory)
+        .output()
+        .expect("Fix: run git to read the fixture head.");
+    assert!(
+        output.status.success(),
+        "Fix: the fixture must have a head."
+    );
+    String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
 /// Create the fixture directory, because a caller may name one that a
 /// temporary root does not hold yet.
 ///
