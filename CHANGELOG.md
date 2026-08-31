@@ -6198,14 +6198,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   still listed `vyre-frontend-rust` after the workspace evicted it. An artifact
   naming a crate the workspace does not have shifts every row after it, so one
   deleted member reports as a whole tail of drift.
-- A recorded `source_fingerprint` names source a reader can rebuild from the
-  commit that carries the artifact: the worktree digest covers the content of
-  every non-evidence path the tree differs from the recorded commit by, instead
-  of `git status` output and a rename classification that no longer exist once
-  those changes are committed. The `evidence-provenance` gate recomputes each
-  committed artifact's fingerprint from the recorded commit and the commit
-  carrying it, so an artifact recorded against a tree its own commit does not
-  hold is a finding rather than an unverifiable claim.
+- A recorded `source_fingerprint` is the content digest of every non-evidence
+  path the tree differs from the recorded commit by, so the
+  `evidence-provenance` gate recomputes it from the commit carrying the
+  artifact instead of trusting `git status` text that no longer exists once
+  those changes are committed.
 - The release-evidence path gate reads every citation in a document rather than
   one key. It matched the key `path`, which named 629 of the 3418 filesystem
   paths those artifacts cite; the rest sit under `manifest`, `artifact`,
