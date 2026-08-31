@@ -24,7 +24,6 @@ fn run_binop(op: BinOp, left: u32, right: u32) -> u32 {
     let inputs = vec![
         Value::Bytes(left.to_le_bytes().to_vec().into()),
         Value::Bytes(right.to_le_bytes().to_vec().into()),
-        Value::Bytes(vec![0u8; 4].into()),
     ];
     let outputs = vyre_reference::reference_eval(&program, &inputs)
         .expect("Fix: reference interpreter must evaluate saturating integer binops");

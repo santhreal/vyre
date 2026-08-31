@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Validation now propagates nested-loop exit uniformity to a fixed point, applies subgroup capability decisions consistently, accepts IEEE-754 floating division by zero, rejects ordered Boolean comparisons and invalid wrapping or multiply-high operands, preserves same-scope duplicate-binding errors under nested shadowing, reports specialized expression errors at the current node, and publishes the emitted V020–V022 meanings."

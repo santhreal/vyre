@@ -29,9 +29,9 @@
 //!     downstream pass that sees `Loop` may emit a barrier/sync conservatively;
 //!     dropping the loop first lets the downstream pass take a faster path.
 
-use crate::ir::{Expr, Node, Program};
+use crate::ir::{Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Drop loops whose `from..to` range is empty at compile time.
 #[derive(Debug, Default)]
@@ -46,58 +46,33 @@ impl LoopTripZeroEliminatePass {
     /// Skip programs without any compile-time-empty loop.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if !program.stats().has_node_loop() {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_empty_loop))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_LOOP],
+            &mut is_empty_loop,
+        )
     }
 
     /// Walk the entry tree; replace every `Node::Loop` with empty trip
-    /// count by `Node::Block(vec![])`. Recurses into bodies so nested
-    /// empty loops are also caught.
+    /// count by `Node::Block(vec![])`. The driver recurses into bodies, so a
+    /// nested empty loop is caught in the same run.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .map(|node| eliminate_node(node, &mut changed))
-                .collect()
-        });
-        PassResult { program, changed }
-    }
-}
-
-/// Recurse into `node`'s descendants. After recursion, if `node` itself
-/// is a literal-bounded empty Loop, replace it with `Block(vec![])`.
-fn eliminate_node(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| eliminate_node(child, changed));
-    if is_empty_loop(&recursed) {
-        *changed = true;
-        Node::Block(Vec::new())
-    } else {
-        recursed
+        driver::rewrite_entry_nodes(program, &mut |node| {
+            is_empty_loop(node).then(|| vec![Node::Block(Vec::new())])
+        })
     }
 }
 
 /// True iff `node` is a `Loop` whose `from..to` range is empty at compile time.
+///
+/// [`loop_entry`](super::loop_entry) is the one reader of what a loop header
+/// proves; `loop_licm` reads the other half of the same answer.
 fn is_empty_loop(node: &Node) -> bool {
-    if let Node::Loop { from, to, .. } = node {
-        match (from, to) {
-            (Expr::LitU32(a), Expr::LitU32(b)) => return *a >= *b,
-            (Expr::LitI32(a), Expr::LitI32(b)) => return *a >= *b,
-            _ => {}
-        }
+    match node {
+        Node::Loop { from, to, .. } => super::loop_entry(from, to) == super::LoopEntry::Never,
+        _ => false,
     }
-    false
 }
 
 #[cfg(test)]
@@ -115,18 +90,9 @@ mod tests {
 
     /// Count `Node::Loop` occurrences anywhere in the program tree.
     fn count_loops(node: &Node) -> usize {
-        match node {
-            Node::Loop { body, .. } => 1 + body.iter().map(count_loops).sum::<usize>(),
-            Node::If {
-                then, otherwise, ..
-            } => {
-                then.iter().map(count_loops).sum::<usize>()
-                    + otherwise.iter().map(count_loops).sum::<usize>()
-            }
-            Node::Block(body) => body.iter().map(count_loops).sum(),
-            Node::Region { body, .. } => body.iter().map(count_loops).sum(),
-            _ => 0,
-        }
+        crate::test_ir_inspect::count_nodes(std::slice::from_ref(node), |candidate| {
+            matches!(candidate, Node::Loop { .. })
+        })
     }
 
     fn make_loop(from: u32, to: u32, body: Vec<Node>) -> Node {

@@ -1,12 +1,11 @@
-//! Release gap #1: the aspirational bitwise transcendental contract.
+//! The aspirational bitwise transcendental contract.
 //!
 //! Every test in this file is `#[ignore]`d, deliberately and with a stated
 //! reason. They are not dead: they are the exact assertions that must pass the
-//! day gap #1 closes, kept compiling and runnable (`cargo test -- --ignored`)
+//! day it closes, kept compiling and runnable (`cargo test -- --ignored`)
 //! so the contract cannot rot while it waits.
 //!
-//! Two independent blockers stand between here and a green run, both recorded
-//! in BACKLOG.md under R65:
+//! Two independent blockers stand between here and a green run:
 //!
 //! 1. WGSL hardware transcendentals are not correctly rounded. The spec defers
 //!    to the hardware, which uses an approximation ROM good to a few ulps.
@@ -23,6 +22,7 @@
 //! exponent fields at all. Until then the shipped contract is the bounded
 //! envelope in `transcendentals_parity.rs`, which is enforced on every run.
 
+#![cfg(feature = "device-tests")]
 #![cfg(feature = "parity-testing")]
 
 use proptest::prelude::*;
@@ -66,7 +66,7 @@ fn assert_bitwise_parity(op: UnOp, x: f32, gpu: f32) {
         cpu.to_bits(),
         gpu.to_bits(),
         "gap_transcendentals_parity: {op:?}({x}) cpu={cpu} ({:#010x}) vs gpu={gpu} ({:#010x}) \
-         must be byte-identical per contracts/release.md gap #1",
+         must be byte-identical; see this file's header for the two blockers",
         cpu.to_bits(),
         gpu.to_bits()
     );
@@ -79,7 +79,7 @@ proptest! {
     })]
 
     #[test]
-    #[ignore = "release gap #1: WGSL transcendentals are not correctly rounded and the backend contracts multiply-add. See BACKLOG.md R65 and f32_no_contraction_contract.rs."]
+    #[ignore = "the bitwise contract needs strict-IEEE lowering that blocks multiply-add contraction and f32/u32 bitcast ops in the IR; this module's header states both blockers"]
     fn sin_bitwise_parity(xs in prop::collection::vec(-10.0f32..10.0f32, 1..=8)) {
         let gpu = gpu_unary_many(backend(), UnOp::Sin, &xs);
         for (x, gpu) in xs.into_iter().zip(gpu) {
@@ -88,7 +88,7 @@ proptest! {
     }
 
     #[test]
-    #[ignore = "release gap #1: WGSL transcendentals are not correctly rounded and the backend contracts multiply-add. See BACKLOG.md R65 and f32_no_contraction_contract.rs."]
+    #[ignore = "the bitwise contract needs strict-IEEE lowering that blocks multiply-add contraction and f32/u32 bitcast ops in the IR; this module's header states both blockers"]
     fn cos_bitwise_parity(xs in prop::collection::vec(-10.0f32..10.0f32, 1..=8)) {
         let gpu = gpu_unary_many(backend(), UnOp::Cos, &xs);
         for (x, gpu) in xs.into_iter().zip(gpu) {
@@ -97,7 +97,7 @@ proptest! {
     }
 
     #[test]
-    #[ignore = "release gap #1: WGSL transcendentals are not correctly rounded and the backend contracts multiply-add. See BACKLOG.md R65 and f32_no_contraction_contract.rs."]
+    #[ignore = "the bitwise contract needs strict-IEEE lowering that blocks multiply-add contraction and f32/u32 bitcast ops in the IR; this module's header states both blockers"]
     fn sqrt_bitwise_parity(xs in prop::collection::vec(0.0f32..10.0f32, 1..=8)) {
         let gpu = gpu_unary_many(backend(), UnOp::Sqrt, &xs);
         for (x, gpu) in xs.into_iter().zip(gpu) {
@@ -106,7 +106,7 @@ proptest! {
     }
 
     #[test]
-    #[ignore = "release gap #1: WGSL transcendentals are not correctly rounded and the backend contracts multiply-add. See BACKLOG.md R65 and f32_no_contraction_contract.rs."]
+    #[ignore = "the bitwise contract needs strict-IEEE lowering that blocks multiply-add contraction and f32/u32 bitcast ops in the IR; this module's header states both blockers"]
     fn exp_bitwise_parity(xs in prop::collection::vec(-10.0f32..10.0f32, 1..=8)) {
         let gpu = gpu_unary_many(backend(), UnOp::Exp, &xs);
         for (x, gpu) in xs.into_iter().zip(gpu) {
@@ -115,7 +115,7 @@ proptest! {
     }
 
     #[test]
-    #[ignore = "release gap #1: WGSL transcendentals are not correctly rounded and the backend contracts multiply-add. See BACKLOG.md R65 and f32_no_contraction_contract.rs."]
+    #[ignore = "the bitwise contract needs strict-IEEE lowering that blocks multiply-add contraction and f32/u32 bitcast ops in the IR; this module's header states both blockers"]
     fn log_bitwise_parity(xs in prop::collection::vec(0.000_001f32..10.0f32, 1..=8)) {
         let gpu = gpu_unary_many(backend(), UnOp::Log, &xs);
         for (x, gpu) in xs.into_iter().zip(gpu) {

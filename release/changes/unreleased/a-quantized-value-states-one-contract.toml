@@ -1,0 +1,2 @@
+category = "Added"
+text = "A quantized value states one contract: storage and logical format, signedness, scale and zero-point source, grouping axes and extents, packing order, container, alignment, saturation, rounding, accumulator, and the versioned identity of the data it was calibrated from."

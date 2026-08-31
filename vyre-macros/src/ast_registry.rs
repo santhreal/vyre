@@ -186,6 +186,38 @@ pub(crate) fn vyre_ast_registry_impl(item: TokenStream) -> TokenStream {
             proc_macro2::Span::call_site(),
         );
 
+        // Run-time enumeration of the declared variants.
+        //
+        // The variant list is only knowable at the declaration site, and a
+        // downstream crate cannot recover it: these enums are
+        // `#[non_exhaustive]`, so no match outside the defining crate is
+        // exhaustive and no test outside it can notice a variant it was never
+        // told about. Emitting the names here makes "did anyone record a
+        // decision for every variant" a checkable property instead of a
+        // hand-maintained list that goes stale silently.
+        let variant_name_strings = ast_enum
+            .variants
+            .iter()
+            .map(|v| v.ident.to_string())
+            .collect::<Vec<_>>();
+        let variant_names_const = syn::Ident::new(
+            &format!("{}_VARIANT_NAMES", enum_name.to_string().to_uppercase()),
+            proc_macro2::Span::call_site(),
+        );
+        let variant_name_fn = syn::Ident::new(
+            &format!("{}_variant_name", enum_name.to_string().to_lowercase()),
+            proc_macro2::Span::call_site(),
+        );
+        let variant_name_arms = ast_enum.variants.iter().map(|v| {
+            let ident = &v.ident;
+            let name = ident.to_string();
+            match &v.data {
+                VariantData::Unit => quote! { #enum_name::#ident => #name },
+                VariantData::Unnamed(_) => quote! { #enum_name::#ident ( .. ) => #name },
+                VariantData::Named(_) => quote! { #enum_name::#ident { .. } => #name },
+            }
+        });
+
         // PartialEq implementations
         let partial_eq_arms = ast_enum.variants.iter().map(|v| {
             let ident = &v.ident;
@@ -248,6 +280,17 @@ pub(crate) fn vyre_ast_registry_impl(item: TokenStream) -> TokenStream {
                     #(#op_ids,)*
                 }
             }
+
+            /// Every declared variant name, in declaration order.
+            pub const #variant_names_const: &[&str] = &[#(#variant_name_strings),*];
+
+            /// The declared name of the variant `item` holds.
+            #[must_use]
+            pub fn #variant_name_fn(item: &#enum_name) -> &'static str {
+                match item {
+                    #(#variant_name_arms,)*
+                }
+            }
         });
     }
 
@@ -255,6 +298,12 @@ pub(crate) fn vyre_ast_registry_impl(item: TokenStream) -> TokenStream {
     out.into()
 }
 
+/// WHY: `AstManifest` and its validation are `pub(crate)` in a proc-macro
+/// crate, which exports macros and nothing else, so no integration test under
+/// `tests/` can name them. `tests/ui` pins the compile errors a malformed
+/// manifest produces; this module pins the parse and the validation those
+/// errors come from, including the accepted shapes that produce no error at
+/// all and so leave no diagnostic for a UI test to read.
 #[cfg(test)]
 mod tests {
     use super::*;

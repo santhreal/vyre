@@ -1,23 +1,43 @@
 #[non_exhaustive] pub enum vyre_reference::value::Value
 #[non_exhaustive] pub enum vyre_reference::workgroup::Frame<'a>
+impl core::cmp::Eq for vyre_reference::composition_witness::RuleConditionWitness
 impl core::cmp::Eq for vyre_reference::value::Value
+impl core::cmp::PartialEq for vyre_reference::composition_witness::RuleConditionWitness
 impl core::cmp::PartialEq for vyre_reference::value::Value
 impl core::convert::From<&[u8]> for vyre_reference::value::Value
 impl core::convert::From<alloc::vec::Vec<u8>> for vyre_reference::value::Value
 impl core::convert::From<vyre_foundation::validate::validation_error::ValidationError> for vyre_reference::ReferenceError
 impl core::default::Default for vyre_reference::subgroup::SubgroupSimulator
 impl core::error::Error for vyre_reference::ReferenceError
-impl core::error::Error for vyre_reference::dual_impls::common::EvalError
+impl core::error::Error for vyre_reference::composition_witness::Base64DecodeWitnessError
+impl core::error::Error for vyre_reference::composition_witness::FrontierTypedPlanWitnessError
+impl core::error::Error for vyre_reference::composition_witness::ParseLrWitnessError
+impl core::error::Error for vyre_reference::composition_witness::WitnessPostProcessError
+impl core::error::Error for vyre_reference::dual_impls::EvalError
 impl core::fmt::Display for vyre_reference::ReferenceError
-impl core::fmt::Display for vyre_reference::dual_impls::common::EvalError
+impl core::fmt::Display for vyre_reference::composition_witness::Base64DecodeWitnessError
+impl core::fmt::Display for vyre_reference::composition_witness::FrontierTypedPlanWitnessError
+impl core::fmt::Display for vyre_reference::composition_witness::ParseLrWitnessError
+impl core::fmt::Display for vyre_reference::composition_witness::WitnessPostProcessError
+impl core::fmt::Display for vyre_reference::dual_impls::EvalError
 impl inventory::Collect for vyre_reference::DualReferenceFacet
 impl inventory::Collect for vyre_reference::ReferenceFacet
-impl vyre_foundation::visit::expr::ExprVisitor for vyre_reference::workgroup::LocalSlots
-impl vyre_foundation::visit::traits::NodeVisitor for vyre_reference::workgroup::LocalSlots
+impl vyre_foundation::visit::expr_visitor::ExprVisitor for vyre_reference::workgroup::LocalSlots
+impl vyre_foundation::visit::node_visitor::NodeVisitor for vyre_reference::workgroup::LocalSlots
 impl vyre_reference::DualReferenceFacet
 impl vyre_reference::OobReport
 impl vyre_reference::ReferenceError
 impl vyre_reference::ReferenceFacet
+impl vyre_reference::composition_witness::AmgSolveScratchWitness
+impl vyre_reference::composition_witness::AmgVcycleScratchWitness
+impl vyre_reference::composition_witness::DnnfDag
+impl vyre_reference::composition_witness::ExplodedIfdsScratchWitness
+impl vyre_reference::composition_witness::FiniteCategory
+impl vyre_reference::composition_witness::FiniteFunctor
+impl vyre_reference::composition_witness::LrAction
+impl vyre_reference::composition_witness::NewtonSchulzScratchWitness
+impl vyre_reference::composition_witness::ZiftsieveLiteralWitness
+impl vyre_reference::composition_witness::ZxColor
 impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::arith::add::AddDualReference
 impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::arith::mul::MulDualReference
 impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::bitwise::and::AndDualReference
@@ -26,26 +46,26 @@ impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::bitwise
 impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::bitwise::xor::XorDualReference
 impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::compare::eq::EqDualReference
 impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::compare::lt::LtDualReference
-impl vyre_reference::dual_impls::common::EvalError
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::ArithAdd
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::ArithMul
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Clz
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::CompareEq
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::CompareLt
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Gather
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::HashBlake3
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::HashFnv1a
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::PatternMatchDfa
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::PatternMatchLiteral
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Popcount
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Reduce
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Scan
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Scatter
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::ShiftLeft
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::ShiftRight
-impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Shuffle
-impl vyre_reference::execution::expr::Buffer
-impl vyre_reference::execution::sequential::SequentialWorkgroup
+impl vyre_reference::dual_impls::EvalError
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::ArithAdd
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::ArithMul
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::Clz
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::CompareEq
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::CompareLt
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::Gather
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::HashBlake3
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::HashFnv1a
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::PatternMatchDfa
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::PatternMatchLiteral
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::Popcount
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::Reduce
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::Scan
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::Scatter
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::ShiftLeft
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::ShiftRight
+impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::Shuffle
+impl vyre_reference::expr::Buffer
+impl vyre_reference::sequential::SequentialWorkgroup
 impl vyre_reference::subgroup::SubgroupSimulator
 impl vyre_reference::value::Value
 impl vyre_reference::workgroup::BufferMap
@@ -55,7 +75,29 @@ impl vyre_reference::workgroup::Memory
 impl<'a> vyre_reference::workgroup::Invocation<'a>
 pub const fn vyre_reference::DualReferenceFacet::new(operation_id: &'static str, reference_a: vyre_reference::dual::ReferenceFn, reference_b: vyre_reference::dual::ReferenceFn) -> Self
 pub const fn vyre_reference::ReferenceFacet::new(operation_id: &'static str, execute: vyre_spec::intrinsic_descriptor::CpuFn) -> Self
+pub const fn vyre_reference::composition_witness::ZxColor::flip(self) -> Self
+pub const fn vyre_reference::composition_witness::adler32_finalize_witness(a: u32, b: u32) -> u32
+pub const fn vyre_reference::composition_witness::adler32_initial_a_witness() -> u32
+pub const fn vyre_reference::composition_witness::adler32_initial_b_witness() -> u32
+pub const fn vyre_reference::composition_witness::adler32_update_byte_witness(a: u32, b: u32, byte: u8) -> (u32, u32)
+pub const fn vyre_reference::composition_witness::crc32_finalize_witness(crc: u32) -> u32
+pub const fn vyre_reference::composition_witness::crc32_initial_state_witness() -> u32
+pub const fn vyre_reference::composition_witness::fnv1a32_initial_state_witness() -> u32
+pub const fn vyre_reference::composition_witness::fnv1a32_mul_xor_word_witness(hash: u32, word: u32) -> u32
+pub const fn vyre_reference::composition_witness::fnv1a32_update_byte_witness(hash: u32, byte: u8) -> u32
+pub const fn vyre_reference::composition_witness::fnv1a64_initial_state_witness() -> u64
+pub const fn vyre_reference::composition_witness::fnv1a64_update_byte_witness(hash: u64, byte: u8) -> u64
+pub const fn vyre_reference::composition_witness::is_structural_whitespace_witness(byte: u8) -> bool
+pub const fn vyre_reference::composition_witness::l2p_zeroth_eval_witness(local_moment: f64) -> f64
+pub const fn vyre_reference::composition_witness::tensor_bit_index_witness(node: u32, ctx: u32, fld: u32, context_limit: u32, field_limit: u32) -> u32
 pub const fn vyre_reference::subgroup::SubgroupSimulator::width(&self) -> usize
+pub const vyre_reference::composition_witness::ADLER32_MOD_WITNESS: u32
+pub const vyre_reference::composition_witness::CRC32_INIT_WITNESS: u32
+pub const vyre_reference::composition_witness::CRC32_POLY_WITNESS: u32
+pub const vyre_reference::composition_witness::FNV1A32_OFFSET_WITNESS: u32
+pub const vyre_reference::composition_witness::FNV1A32_PRIME_WITNESS: u32
+pub const vyre_reference::composition_witness::FNV1A64_OFFSET_WITNESS: u64
+pub const vyre_reference::composition_witness::FNV1A64_PRIME_WITNESS: u64
 pub const vyre_reference::dual_impls::arith::add::OP_ID: &str
 pub const vyre_reference::dual_impls::arith::mul::OP_ID: &str
 pub const vyre_reference::dual_impls::bitwise::and::OP_ID: &str
@@ -68,29 +110,41 @@ pub const vyre_reference::dual_impls::bitwise::shift_right::OP_ID: &str
 pub const vyre_reference::dual_impls::bitwise::xor::OP_ID: &str
 pub const vyre_reference::dual_impls::compare::eq::OP_ID: &str
 pub const vyre_reference::dual_impls::compare::lt::OP_ID: &str
-pub const vyre_reference::execution::sequential::MAX_SHARED_BYTES: usize
 pub const vyre_reference::ieee754::BACKEND_ELEMENTARY_F32_ULP_BUDGET: u32
 pub const vyre_reference::ieee754::BACKEND_TRANSCENDENTAL_ULP_BUDGET: u32
 pub const vyre_reference::ieee754::REFERENCE_TRANSCENDENTAL_ULP_BUDGET: u32
+pub const vyre_reference::sequential::MAX_SHARED_BYTES: usize
 pub const vyre_reference::workgroup::InvocationIds::ZERO: Self
 pub const vyre_reference::workgroup::MAX_WORKGROUP_BYTES: usize
-pub fn vyre_primitives::markers::ArithAdd::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::ArithMul::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::Clz::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::CompareEq::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::CompareLt::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::Gather::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::HashBlake3::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::HashFnv1a::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::PatternMatchDfa::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::PatternMatchLiteral::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::Popcount::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::Reduce::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::Scan::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::Scatter::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::ShiftLeft::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::ShiftRight::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
-pub fn vyre_primitives::markers::Shuffle::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub enum vyre_reference::composition_witness::Base64DecodeWitnessError
+pub enum vyre_reference::composition_witness::Crc32MapReduceStepKindWitness
+pub enum vyre_reference::composition_witness::DnnfGate
+pub enum vyre_reference::composition_witness::FrontierDomainWitness
+pub enum vyre_reference::composition_witness::FrontierTypedPlanWitnessError
+pub enum vyre_reference::composition_witness::KanDirection
+pub enum vyre_reference::composition_witness::LrAction
+pub enum vyre_reference::composition_witness::ParseLrWitnessError
+pub enum vyre_reference::composition_witness::RuleConditionWitness
+pub enum vyre_reference::composition_witness::RuleFormulaWitness
+pub enum vyre_reference::composition_witness::WitnessPostProcessError
+pub enum vyre_reference::composition_witness::ZxColor
+pub fn vyre_primitives::markers::ArithAdd::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::ArithMul::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::Clz::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::CompareEq::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::CompareLt::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::Gather::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::HashBlake3::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::HashFnv1a::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::PatternMatchDfa::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::PatternMatchLiteral::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::Popcount::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::Reduce::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::Scan::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::Scatter::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::ShiftLeft::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::ShiftRight::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
+pub fn vyre_primitives::markers::Shuffle::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
 pub fn vyre_reference::OobReport::total(&self) -> u64
 pub fn vyre_reference::ReferenceError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_reference::ReferenceError::from(source: vyre_foundation::validate::validation_error::ValidationError) -> Self
@@ -108,11 +162,515 @@ pub fn vyre_reference::atomics::atomic_max(old: u32, value: u32) -> (u32, u32)
 pub fn vyre_reference::atomics::atomic_min(old: u32, value: u32) -> (u32, u32)
 pub fn vyre_reference::atomics::atomic_or(old: u32, value: u32) -> (u32, u32)
 pub fn vyre_reference::atomics::atomic_xor(old: u32, value: u32) -> (u32, u32)
-pub fn vyre_reference::count_ops<R>(f: impl core::ops::function::FnOnce() -> R) -> (R, u64)
+pub fn vyre_reference::composition_witness::AmgSolveScratchWitness::new() -> Self
+pub fn vyre_reference::composition_witness::AmgSolveScratchWitness::reserve(&mut self, fine_count: usize, coarse_count: usize)
+pub fn vyre_reference::composition_witness::AmgVcycleScratchWitness::new() -> Self
+pub fn vyre_reference::composition_witness::AmgVcycleScratchWitness::reserve(&mut self, fine_count: usize, coarse_count: usize)
+pub fn vyre_reference::composition_witness::Base64DecodeWitnessError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_reference::composition_witness::DnnfDag::root(&self) -> u32
+pub fn vyre_reference::composition_witness::ExplodedIfdsScratchWitness::new() -> Self
+pub fn vyre_reference::composition_witness::FiniteCategory::discrete(n: u32) -> Self
+pub fn vyre_reference::composition_witness::FiniteCategory::hom(&self, source: u32, target: u32) -> u32
+pub fn vyre_reference::composition_witness::FiniteFunctor::apply(&self, c: u32) -> u32
+pub fn vyre_reference::composition_witness::FiniteFunctor::identity(n: u32) -> Self
+pub fn vyre_reference::composition_witness::FrontierTypedPlanWitnessError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_reference::composition_witness::LrAction::unpack(packed: u32) -> Self
+pub fn vyre_reference::composition_witness::NewtonSchulzScratchWitness::new() -> Self
+pub fn vyre_reference::composition_witness::ParseLrWitnessError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_reference::composition_witness::RuleConditionWitness::eq(&self, other: &Self) -> bool
+pub fn vyre_reference::composition_witness::RuleEvaluationContextWitness::field_value(&self, _name: &str) -> core::option::Option<&str>
+pub fn vyre_reference::composition_witness::RuleEvaluationContextWitness::file_size(&self) -> u64
+pub fn vyre_reference::composition_witness::RuleEvaluationContextWitness::pattern_count(&self, _pattern_id: u32) -> u32
+pub fn vyre_reference::composition_witness::WitnessPostProcessError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_reference::composition_witness::ZiftsieveLiteralWitness::truncated(&self) -> bool
+pub fn vyre_reference::composition_witness::adjoint_pair_witness(c_cat: &vyre_reference::composition_witness::FiniteCategory, d_cat: &vyre_reference::composition_witness::FiniteCategory, f: &vyre_reference::composition_witness::FiniteFunctor, g: &vyre_reference::composition_witness::FiniteFunctor) -> vyre_reference::composition_witness::AdjointPair
+pub fn vyre_reference::composition_witness::adjustment_set_ordering_is_safe_witness(adj: &[u32], treatment: u32, outcome: u32, n: u32) -> bool
+pub fn vyre_reference::composition_witness::adjustment_set_pass_descendants_witness(adj: &[u32], n: u32) -> alloc::vec::Vec<alloc::vec::Vec<u32>>
+pub fn vyre_reference::composition_witness::adler32_chunk_witness(bytes: &[u8]) -> vyre_reference::composition_witness::Adler32ChunkWitness
+pub fn vyre_reference::composition_witness::adler32_combine_chunks_witness(left: vyre_reference::composition_witness::Adler32ChunkWitness, right: vyre_reference::composition_witness::Adler32ChunkWitness) -> vyre_reference::composition_witness::Adler32ChunkWitness
+pub fn vyre_reference::composition_witness::adler32_combine_state_witness(a: u32, b: u32, chunk: vyre_reference::composition_witness::Adler32ChunkWitness) -> (u32, u32)
+pub fn vyre_reference::composition_witness::adler32_witness(bytes: &[u8]) -> u32
+pub fn vyre_reference::composition_witness::amari_alpha_step_witness(p: &[f64], q: &[f64], alpha: f64, t: f64) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::amari_alpha_step_witness_into(p: &[f64], q: &[f64], alpha: f64, t: f64, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::amg_residual_witness_into(matrix: &[f64], rhs: &[f64], solution: &[f64], n: u32, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::amg_solve_to_tolerance_witness(fine_matrix: &[f64], fine_rhs: &[f64], initial: &[f64], restriction: &[f64], prolongation: &[f64], coarse_matrix: &[f64], omega: f64, fine_count: u32, coarse_count: u32, tolerance: f64, max_cycles: u32) -> (alloc::vec::Vec<f64>, u32)
+pub fn vyre_reference::composition_witness::amg_solve_to_tolerance_witness_into(fine_matrix: &[f64], fine_rhs: &[f64], initial: &[f64], restriction: &[f64], prolongation: &[f64], coarse_matrix: &[f64], omega: f64, fine_count: u32, coarse_count: u32, tolerance: f64, max_cycles: u32, out: &mut alloc::vec::Vec<f64>, scratch: &mut alloc::vec::Vec<f64>) -> u32
+pub fn vyre_reference::composition_witness::amg_solve_to_tolerance_witness_with_scratch_into(fine_matrix: &[f64], fine_rhs: &[f64], initial: &[f64], restriction: &[f64], prolongation: &[f64], coarse_matrix: &[f64], omega: f64, fine_count: u32, coarse_count: u32, tolerance: f64, max_cycles: u32, scratch: &mut vyre_reference::composition_witness::AmgSolveScratchWitness, out: &mut alloc::vec::Vec<f64>) -> u32
+pub fn vyre_reference::composition_witness::amg_v_cycle_witness(fine_matrix: &[f64], fine_rhs: &[f64], initial: &[f64], restriction: &[f64], prolongation: &[f64], coarse_matrix: &[f64], omega: f64, fine_count: u32, coarse_count: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::amg_v_cycle_witness_into(fine_matrix: &[f64], fine_rhs: &[f64], initial: &[f64], restriction: &[f64], prolongation: &[f64], coarse_matrix: &[f64], omega: f64, fine_count: u32, coarse_count: u32, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::amg_v_cycle_witness_with_scratch_into(fine_matrix: &[f64], fine_rhs: &[f64], initial: &[f64], restriction: &[f64], prolongation: &[f64], coarse_matrix: &[f64], omega: f64, fine_count: u32, coarse_count: u32, scratch: &mut vyre_reference::composition_witness::AmgVcycleScratchWitness, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::argmax_of_marginals_witness(gains: &[u32], picked: &[u32]) -> (u32, u32)
+pub fn vyre_reference::composition_witness::argmin_cost_witness(costs: &[f64]) -> usize
+pub fn vyre_reference::composition_witness::ascii_case_variants_witness(byte: u8, case_insensitive: bool) -> ([u8; 2], usize)
+pub fn vyre_reference::composition_witness::backdoor_descendants_check_witness(candidate_adjustment: &[u32], treatment_descendants: &[u32]) -> bool
+pub fn vyre_reference::composition_witness::base64_decode_bytes_witness(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::composition_witness::base64_decode_packed_witness(input: &[u8]) -> (alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::base64_decode_packed_witness_into(input: &[u8], out: &mut alloc::vec::Vec<u32>) -> u32
+pub fn vyre_reference::composition_witness::bellman_shortest_path_witness(sources: &[u32], destinations: &[u32], weights: &[u32], initial: &[u32], node_count: u32, max_iterations: u32) -> (alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::betti_persistence_witness(mask: &[u32], n: u32) -> (u32, u32, u32)
+pub fn vyre_reference::composition_witness::bhattacharyya_coefficient_witness(p: &[f64], q: &[f64]) -> f64
+pub fn vyre_reference::composition_witness::bigint_add_carry_witness(left: &[u32], right: &[u32]) -> core::result::Result<(alloc::vec::Vec<u32>, alloc::vec::Vec<u32>), alloc::string::String>
+pub fn vyre_reference::composition_witness::bigint_add_carry_witness_into(left: &[u32], right: &[u32], sums: &mut alloc::vec::Vec<u32>, carries: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::bitset_and_inplace_witness(target: &mut [u32], operand: &[u32])
+pub fn vyre_reference::composition_witness::bitset_and_not_inplace_witness(target: &mut [u32], operand: &[u32])
+pub fn vyre_reference::composition_witness::bitset_and_not_witness(lhs: &[u32], rhs: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::bitset_and_not_witness_into(lhs: &[u32], rhs: &[u32], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::bitset_and_witness(lhs: &[u32], rhs: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::bitset_and_witness_into(lhs: &[u32], rhs: &[u32], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::bitset_clear_bit_inplace_witness(target: &mut [u32], index: u32)
+pub fn vyre_reference::composition_witness::bitset_clear_bit_witness(target: &[u32], bit_idx: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::bitset_contains_witness(input: &[u32], bit_idx: u32) -> bool
+pub fn vyre_reference::composition_witness::bitset_copy_witness(target: &mut [u32], source: &[u32])
+pub fn vyre_reference::composition_witness::bitset_difference_flag_witness(current: &[u32], next: &[u32]) -> u32
+pub fn vyre_reference::composition_witness::bitset_equal_witness(lhs: &[u32], rhs: &[u32]) -> bool
+pub fn vyre_reference::composition_witness::bitset_not_witness(input: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::bitset_not_witness_into(input: &[u32], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::bitset_or_inplace_witness(target: &mut [u32], operand: &[u32])
+pub fn vyre_reference::composition_witness::bitset_or_witness(lhs: &[u32], rhs: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::bitset_or_witness_into(lhs: &[u32], rhs: &[u32], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::bitset_popcount_witness(input: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::bitset_popcount_witness_into(input: &[u32], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::bitset_saturation_ratio_witness(words: &[u32]) -> f64
+pub fn vyre_reference::composition_witness::bitset_set_bit_inplace_witness(target: &mut [u32], index: u32)
+pub fn vyre_reference::composition_witness::bitset_set_bit_witness(target: &[u32], bit_idx: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::bitset_subset_of_witness(lhs: &[u32], rhs: &[u32]) -> bool
+pub fn vyre_reference::composition_witness::bitset_test_bit_witness(input: &[u32], bit_idx: u32) -> u32
+pub fn vyre_reference::composition_witness::bitset_warm_start_witness(current: &[u32], next: &[u32], seed: &[u32]) -> (alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::bitset_xor_inplace_witness(target: &mut [u32], operand: &[u32])
+pub fn vyre_reference::composition_witness::bitset_xor_witness(lhs: &[u32], rhs: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::bitset_xor_witness_into(lhs: &[u32], rhs: &[u32], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::bitset_zero_inplace_witness(target: &mut [u32])
+pub fn vyre_reference::composition_witness::bitset_zero_witness(input: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::blake3_g_witness(state: &mut [u32; 16], a: usize, b: usize, c: usize, d: usize, x: u32, y: u32)
+pub fn vyre_reference::composition_witness::blake3_round_witness(state: &mut [u32; 16], message: &[u32; 16], permutation: &[usize; 16])
+pub fn vyre_reference::composition_witness::bracket_match_witness(kinds: &[u32], max_depth: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::bracket_match_witness_into(kinds: &[u32], max_depth: u32, output: &mut alloc::vec::Vec<u32>, stack: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::byte_histogram_witness(input: &[u8]) -> [u32; 256]
+pub fn vyre_reference::composition_witness::canonicalize_union_find_witness(parents: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::cap_regions_per_pattern_survivors_witness(pattern_ids: &[u32], limit: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::char_class_witness(input: &[u8], table: &[u32; 256]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::chebyshev_filter_witness(laplacian: &[f32], signal: &[f32], coefficients: &[f32], n: u32, k_steps: u32) -> alloc::vec::Vec<f32>
+pub fn vyre_reference::composition_witness::chebyshev_filter_witness_into(laplacian: &[f32], signal: &[f32], coefficients: &[f32], n: u32, k_steps: u32, out: &mut alloc::vec::Vec<f32>, t_prev: &mut alloc::vec::Vec<f32>, t_curr: &mut alloc::vec::Vec<f32>, t_next: &mut alloc::vec::Vec<f32>)
+pub fn vyre_reference::composition_witness::classic_ac_bounded_ranges_scan_witness(transitions: &[u32], output_offsets: &[u32], output_records: &[u32], pattern_lengths: &[u32], haystack: &[u8]) -> alloc::vec::Vec<(u32, u32, u32)>
+pub fn vyre_reference::composition_witness::classic_ac_candidate_end_byte_mask_words_witness(transitions: &[u32], output_offsets: &[u32], state_count: u32) -> [u32; 8]
+pub fn vyre_reference::composition_witness::classic_ac_candidate_suffix2_mask_words_witness(transitions: &[u32], output_offsets: &[u32], state_count: u32) -> [u32; 2048]
+pub fn vyre_reference::composition_witness::classic_ac_candidate_suffix3_bloom_words_ci_witness(patterns: &[&[u8]], case_insensitive: bool) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::classic_ac_candidate_suffix3_bloom_words_witness(patterns: &[&[u8]]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::classic_ac_scan_counts_witness(transitions: &[u32], output_offsets: &[u32], haystack: &[u8]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::classic_ac_scan_witness(transitions: &[u32], output_offsets: &[u32], output_records: &[u32], haystack: &[u8]) -> alloc::vec::Vec<(u32, u32)>
+pub fn vyre_reference::composition_witness::classic_ac_suffix3_bloom_contains_witness(mask: &[u32], previous2: u8, previous: u8, current: u8) -> bool
+pub fn vyre_reference::composition_witness::clifford2_product_witness(a: [f64; 4], b: [f64; 4]) -> [f64; 4]
+pub fn vyre_reference::composition_witness::cluster_projection_matrix_witness(assignments: &[u32], n: u32, k: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::cluster_projection_matrix_witness_into(assignments: &[u32], n: u32, k: u32, cluster_sizes: &mut alloc::vec::Vec<u32>, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::compact_first_per_region_pattern_survivors_witness(regions: &[u32], pattern_ids: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::compile_dnnf_witness(clauses: &[alloc::vec::Vec<(u32, bool)>], num_vars: u32, max_depth: u32) -> vyre_reference::composition_witness::DnnfDag
+pub fn vyre_reference::composition_witness::compose_ir_arrows_witness(first: &[f64], second: &[f64], a: u32, b: u32, c: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::compose_passes_witness(view_in: &[u32], mapping_g: &[u32], n_mid: u32, mapping_f: &[u32], n_out: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::compose_passes_witness_into(view_in: &[u32], mapping_g: &[u32], n_mid: u32, mapping_f: &[u32], n_out: u32, combined: &mut alloc::vec::Vec<u32>, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::composition_associates_witness(first: &[f64], second: &[f64], third: &[f64], a: u32, b: u32, c: u32, d: u32) -> bool
+pub fn vyre_reference::composition_witness::conformal_rank_witness(n: u32, alpha: f64) -> u32
+pub fn vyre_reference::composition_witness::conformal_threshold_witness(scores: &[u32], alpha: f64) -> u32
+pub fn vyre_reference::composition_witness::conv1d_witness(input: &[u32], weights: &[u32], stride: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::conv1d_witness_into(input: &[u32], weights: &[u32], stride: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::count_sketch_query_into_witness(table: &[u32], hashes: &[u32], signs: &[i32], d: u32, w: u32, estimates: &mut alloc::vec::Vec<i32>) -> i32
+pub fn vyre_reference::composition_witness::count_sketch_query_witness(table: &[u32], hashes: &[u32], signs: &[i32], d: u32, w: u32) -> i32
+pub fn vyre_reference::composition_witness::count_sketch_table_len(d: u32, w: u32) -> core::result::Result<usize, alloc::string::String>
+pub fn vyre_reference::composition_witness::count_sketch_update_witness(table: &mut [u32], hashes: &[u32], signs: &[i32], d: u32, w: u32)
+pub fn vyre_reference::composition_witness::crc32_combine_chunks_witness(left: vyre_reference::composition_witness::Crc32ChunkWitness, right: vyre_reference::composition_witness::Crc32ChunkWitness) -> core::option::Option<vyre_reference::composition_witness::Crc32ChunkWitness>
+pub fn vyre_reference::composition_witness::crc32_combine_witness(left_crc: u32, right_crc: u32, right_len: u64) -> u32
+pub fn vyre_reference::composition_witness::crc32_map_reduce_plan_witness(input_len: u32, chunk_size: core::num::nonzero::NonZeroU32) -> core::option::Option<vyre_reference::composition_witness::Crc32MapReducePlanWitness>
+pub fn vyre_reference::composition_witness::crc32_pack_chunks_witness(chunks: &[vyre_reference::composition_witness::Crc32ChunkWitness]) -> core::option::Option<alloc::vec::Vec<u32>>
+pub fn vyre_reference::composition_witness::crc32_pair_reduce_chunk_words_witness(words: &[u32]) -> core::option::Option<alloc::vec::Vec<u32>>
+pub fn vyre_reference::composition_witness::crc32_pair_reduce_chunks_witness(chunks: &[vyre_reference::composition_witness::Crc32ChunkWitness]) -> core::option::Option<alloc::vec::Vec<vyre_reference::composition_witness::Crc32ChunkWitness>>
+pub fn vyre_reference::composition_witness::crc32_table_witness() -> [u32; 256]
+pub fn vyre_reference::composition_witness::crc32_unpack_chunks_witness(words: &[u32]) -> core::option::Option<alloc::vec::Vec<vyre_reference::composition_witness::Crc32ChunkWitness>>
+pub fn vyre_reference::composition_witness::crc32_update_byte_witness(crc: u32, table: &[u32; 256], byte: u8) -> u32
+pub fn vyre_reference::composition_witness::crc32_witness(bytes: &[u8]) -> u32
+pub fn vyre_reference::composition_witness::csr_backward_closure_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_masks: &[u32], seed: &[u32], allow_mask: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::csr_backward_step_with_change_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_masks: &[u32], seed: &[u32], allow_mask: u32) -> (alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::csr_backward_traverse_witness(node_count: u32, row_offsets: &[u32], col_indices: &[u32], edge_kind_mask: &[u32], frontier: &[u32], allow_mask: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::csr_backward_traverse_witness_into(node_count: u32, row_offsets: &[u32], col_indices: &[u32], edge_kind_mask: &[u32], frontier: &[u32], allow_mask: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::csr_bfs_witness(node_count: usize, row_offsets: &[u32], col_indices: &[u32], source: usize) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::csr_bidirectional_closure_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_masks: &[u32], seed: &[u32], allow_mask: u32, max_iters: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::csr_bidirectional_closure_witness_into(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_masks: &[u32], seed: &[u32], allow_mask: u32, max_iters: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::csr_bidirectional_step_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_masks: &[u32], frontier: &[u32], allow_mask: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::csr_bidirectional_step_witness_into(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_masks: &[u32], frontier: &[u32], allow_mask: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::csr_closure_with_step_hook_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], allow_mask: u32, max_iters: u32, seed_frontier: &[u32], step_hook: impl core::ops::function::FnMut(&[u32])) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::csr_forward_or_changed_closure_with_step_hook_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], seed: &[u32], allow_mask: u32, max_iterations: u32, on_step: impl core::ops::function::FnMut(u32)) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::csr_forward_or_changed_closure_with_step_hook_witness_into(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], seed: &[u32], allow_mask: u32, max_iterations: u32, on_step: impl core::ops::function::FnMut(u32), current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::csr_forward_or_changed_closure_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], seed: &[u32], allow_mask: u32, max_iterations: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::csr_forward_or_changed_closure_witness_into(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], seed: &[u32], allow_mask: u32, max_iterations: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::csr_forward_or_changed_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], frontier: &[u32], allow_mask: u32) -> (alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::csr_forward_or_changed_witness_into(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], frontier: &[u32], allow_mask: u32, output: &mut alloc::vec::Vec<u32>) -> u32
+pub fn vyre_reference::composition_witness::csr_forward_step_with_change_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_masks: &[u32], frontier: &[u32], allow_mask: u32) -> (alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::csr_forward_traverse_witness(node_count: u32, row_offsets: &[u32], col_indices: &[u32], edge_kind_mask: &[u32], frontier: &[u32], allow_mask: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::csr_forward_traverse_witness_into(node_count: u32, row_offsets: &[u32], col_indices: &[u32], edge_kind_mask: &[u32], frontier: &[u32], allow_mask: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::csr_frontier_degree_sum_witness(frontier: &[u32], edge_offsets: &[u32], node_count: u32) -> u32
+pub fn vyre_reference::composition_witness::csr_persistent_closure_detailed_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], seed: &[u32], allow_mask: u32, max_iterations: u32) -> vyre_reference::composition_witness::CsrPersistentClosureWitness
+pub fn vyre_reference::composition_witness::csr_persistent_closure_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], frontier: &[u32], allow_mask: u32, max_iterations: u32) -> (alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::csr_persistent_closure_witness_with_scratch_into(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], frontier_in: &[u32], allow_mask: u32, max_iterations: u32, frontier_out: &mut alloc::vec::Vec<u32>, step_scratch: &mut alloc::vec::Vec<u32>) -> u32
+pub fn vyre_reference::composition_witness::csr_queue_split_low_forward_witness(active_queue: &[u32], queue_len: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_masks: &[u32], frontier_seed: &[u32], node_count: u32, high_queue_capacity: usize, high_degree_threshold: u32, allow_mask: u32) -> (alloc::vec::Vec<u32>, alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::csr_queue_strided_forward_witness(active_queue: &[u32], queue_len: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], node_count: u32, allow_mask: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::csr_queue_strided_forward_witness_into(active_queue: &[u32], queue_len: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], node_count: u32, allow_mask: u32, frontier: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::ddnnf_evaluate_witness(nodes: &[(u32, u32, u32)], node_variables: &[u32], children: &[u32], variable_assignments: &[u32], topological_order: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::dedup_regions_survivor_flags_witness(sorted: &[(u32, u32, u32)]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::dedup_regions_witness(regions: alloc::vec::Vec<(u32, u32, u32)>) -> alloc::vec::Vec<(u32, u32, u32)>
+pub fn vyre_reference::composition_witness::dedup_regions_witness_in_place(regions: &mut alloc::vec::Vec<(u32, u32, u32)>)
+pub fn vyre_reference::composition_witness::dense_bitmatrix_step_witness(frontier_in: &[u32], adj_rows_dense: &[u32], node_count: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::dense_bitmatrix_step_witness_into(frontier_in: &[u32], adj_rows_dense: &[u32], node_count: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::dense_boolean_matvec_witness(frontier: &[u32], lut: &[u32], tile_count: u32, destination_words: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::dense_matrix_multiply_witness(a: &[f64], b: &[f64], m: usize, k: usize, n: usize) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::dense_matrix_multiply_witness_into(a: &[f64], b: &[f64], m: usize, k: usize, n: usize, c: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::dense_reachability_bitsets_witness(adjacency: &[u32], pivot: u32, node_count: u32) -> (alloc::vec::Vec<u32>, alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::dense_scc_components_witness(adjacency: &[u32], node_count: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::dfa_scan_accept_witness(transitions: &[u32], accept: &[u32], haystack: &[u8]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::differentiable_argmax_witness(input: &[f64], temperature: f64) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::differentiable_argmax_witness_into(input: &[f64], temperature: f64, scaled: &mut alloc::vec::Vec<f64>, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::differentiable_autotune_gradient_witness(costs: &[f64], temperature: f64) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::differentiable_autotune_gradient_witness_into(costs: &[f64], temperature: f64, neg_costs: &mut alloc::vec::Vec<f64>, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::differentiable_autotune_pick_config_witness(costs: &[f64], temperature: f64) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::differentiable_autotune_pick_config_witness_into(costs: &[f64], temperature: f64, neg_costs: &mut alloc::vec::Vec<f64>, scaled: &mut alloc::vec::Vec<f64>, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::dnnf_is_satisfiable_witness(dag: &vyre_reference::composition_witness::DnnfDag) -> bool
+pub fn vyre_reference::composition_witness::dnnf_is_tautology_witness(dag: &vyre_reference::composition_witness::DnnfDag, num_vars: u32) -> bool
+pub fn vyre_reference::composition_witness::dnnf_model_count_witness(dag: &vyre_reference::composition_witness::DnnfDag) -> u64
+pub fn vyre_reference::composition_witness::do_intervention_delete_incoming_witness(adjacency: &[u32], intervention_mask: &[u32], n: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::do_intervention_delete_incoming_witness_into(adjacency: &[u32], intervention_mask: &[u32], n: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::do_rule2_reverse_incoming_witness(adjacency: &[u32], treatment_mask: &[u32], n: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::do_rule2_reverse_incoming_witness_into(adjacency: &[u32], treatment_mask: &[u32], n: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::do_rule3_subgraph_witness(adjacency: &[u32], keep_mask: &[u32], n: u32) -> (alloc::vec::Vec<u32>, alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::do_rule3_subgraph_witness_into(adjacency: &[u32], keep_mask: &[u32], n: u32, reduced: &mut alloc::vec::Vec<u32>, kept: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::dominator_frontier_witness(node_count: u32, dominator_offsets: &[u32], dominator_targets: &[u32], predecessor_offsets: &[u32], predecessor_targets: &[u32], seed: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::dominator_frontier_witness_into(node_count: u32, dominator_offsets: &[u32], dominator_targets: &[u32], predecessor_offsets: &[u32], predecessor_targets: &[u32], seed: &[u32], output: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::dominator_idoms_witness(node_count: u32, root: u32, edges: &[(u32, u32)]) -> alloc::vec::Vec<core::option::Option<u32>>
+pub fn vyre_reference::composition_witness::dominator_sets_idoms_witness(node_count: u32, root: u32, edges: &[(u32, u32)]) -> alloc::vec::Vec<core::option::Option<u32>>
+pub fn vyre_reference::composition_witness::dominator_tree_witness(node_count: u32, root: u32, edges: &[(u32, u32)]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::dp_clip_per_sample_witness(gradients: &[f64], norms: &[f64], clip_norm: f64, batch: u32, dimensions: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::dp_clip_per_sample_witness_into(gradients: &[f64], norms: &[f64], clip_norm: f64, batch: u32, dimensions: u32, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::encoding_classify_histogram_witness(histogram: &[u32; 256], count: u32) -> u32
+pub fn vyre_reference::composition_witness::evaluate_condition_witness<C: vyre_reference::composition_witness::RuleEvaluationContextWitness + ?core::marker::Sized>(condition: &vyre_reference::composition_witness::RuleConditionWitness, ctx: &C) -> bool
+pub fn vyre_reference::composition_witness::evaluate_formula_witness<C: vyre_reference::composition_witness::RuleEvaluationContextWitness + ?core::marker::Sized>(formula: &vyre_reference::composition_witness::RuleFormulaWitness, ctx: &C) -> bool
+pub fn vyre_reference::composition_witness::exclusive_prefix_sum_witness(input: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::exploded_ifds_csr_witness(procedure_count: u32, blocks_per_procedure: u32, facts_per_procedure: u32, intra_edges: &[(u32, u32, u32)], inter_edges: &[(u32, u32, u32, u32)], generated_facts: &[(u32, u32, u32)], killed_facts: &[(u32, u32, u32)]) -> (alloc::vec::Vec<u32>, alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::fisher_rao_distance_witness(p: &[f64], q: &[f64]) -> f64
+pub fn vyre_reference::composition_witness::fnv1a32_witness(bytes: &[u8]) -> u32
+pub fn vyre_reference::composition_witness::fnv1a64_witness(bytes: &[u8]) -> u64
+pub fn vyre_reference::composition_witness::four_russians_binary_witness(lhs: &[u32], rhs: &[u32], lut: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::four_russians_binary_witness_into(lhs: &[u32], rhs: &[u32], lut: &[u32], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::four_russians_dense_matvec_witness(frontier: &[u32], tile_lut: &[u32], tile_count: u32, destination_words: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::four_russians_dense_matvec_witness_into(frontier: &[u32], tile_lut: &[u32], tile_count: u32, destination_words: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::fractional_derivative_witness(f: &[f64], alpha: f64, step: f64) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::frontier_absorb_witness(visited: &mut [u32], neighbors: &[u32], node_count: u32, next_wave: &mut alloc::vec::Vec<u32>) -> (bool, u32)
+pub fn vyre_reference::composition_witness::frontier_domain_popcount_witness(frontier: &[u32], node_count: u32) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_reference::composition_witness::frontier_popcount_witness(frontier: &[u32]) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_reference::composition_witness::frontier_step_sharded_witness(frontier_in: &[u32], node_count: u32, shard_count: usize, expand: impl core::ops::function::FnMut(usize, &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
+pub fn vyre_reference::composition_witness::frontier_to_queue_witness(frontier: &[u32], node_count: u32, queue_capacity: usize) -> (alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::frontier_to_queue_witness_into(frontier: &[u32], node_count: u32, queue_capacity: usize, queue: &mut alloc::vec::Vec<u32>) -> u32
+pub fn vyre_reference::composition_witness::functor_apply_witness(source_row: &[u32], mapping: &[u32], target_size: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::functor_apply_witness_into(source_row: &[u32], mapping: &[u32], target_size: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::fusion_affinity_witness(transport_residual: &[f64]) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::fusion_affinity_witness_into(transport_residual: &[f64], out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::gather_witness(source: &[u32], indices: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::gather_witness_into(source: &[u32], indices: &[u32], output: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::gaussian_rdp_step_witness(alpha: &[f64], sigma_squared: &[f64]) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::gaussian_rdp_step_witness_into(alpha: &[f64], sigma_squared: &[f64], out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::greedy_tensor_contract_order_witness(dims: &[u32]) -> alloc::vec::Vec<usize>
+pub fn vyre_reference::composition_witness::grunwald_letnikov_kernel_witness(alpha: f64, n: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::hamming_similarity_witness(a: &[u32], b: &[u32]) -> f32
+pub fn vyre_reference::composition_witness::hensel_lift_step_witness(x: f64, f_x: f64, inv_f_prime: f64) -> f64
+pub fn vyre_reference::composition_witness::hex_decode_packed_witness(input: &[u8]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::histogram_witness(input: &[u32], bin_count: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::histogram_witness_into(input: &[u32], bin_count: u32, output: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::homotopy_euler_predictor_witness(state: &[f64], velocity: &[f64], step: f64) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::hypervector_majority_bundle_into_witness(hvs: &[alloc::vec::Vec<u32>], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::hypervector_majority_bundle_witness(hvs: &[alloc::vec::Vec<u32>]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::hypervector_xor_bind_into_witness(a: &[u32], b: &[u32], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::hypervector_xor_bind_witness(a: &[u32], b: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::i4x8_batched_matmul_f32_scaled_witness(weights: &[u32], activations: &[u32], row_scales: &[f32], batch_scales: &[f32], batch_count: u32, row_count: u32, lane_count: u32) -> alloc::vec::Vec<f32>
+pub fn vyre_reference::composition_witness::i4x8_batched_matmul_top1_f32_scaled_witness(weights: &[u32], activations: &[u32], row_scales: &[f32], batch_scales: &[f32], batch_count: u32, row_count: u32, lane_count: u32) -> (alloc::vec::Vec<f32>, alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::i4x8_batched_matvec_f32_scaled_witness(weights: &[u32], vectors: &[f32], row_scales: &[f32], batch_count: u32, row_count: u32, lane_count: u32) -> alloc::vec::Vec<f32>
+pub fn vyre_reference::composition_witness::i4x8_dot_f32_scaled_witness(lhs: &[u32], rhs: &[u32], lhs_scale: f32, rhs_scale: f32, lane_count: u32) -> f32
+pub fn vyre_reference::composition_witness::i4x8_dot_i32_witness(lhs: &[u32], rhs: &[u32], lane_count: u32) -> i32
+pub fn vyre_reference::composition_witness::i4x8_matvec_f32_scaled_witness(weights: &[u32], vector: &[f32], row_scales: &[f32], row_count: u32, lane_count: u32) -> alloc::vec::Vec<f32>
+pub fn vyre_reference::composition_witness::identity_arrow_witness(size: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::identity_functor_witness(n_cols: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::identity_functor_witness_into(n_cols: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::identity_matrix_witness(n: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::identity_matrix_witness_into(n: u32, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::idoms_to_dominator_sets_witness(idoms: &[core::option::Option<u32>], node_count: u32) -> alloc::vec::Vec<alloc::vec::Vec<u32>>
+pub fn vyre_reference::composition_witness::iht_top_k_witness(values: &[f64], k: usize) -> (alloc::vec::Vec<f64>, f64)
+pub fn vyre_reference::composition_witness::iht_top_k_witness_into(values: &[f64], k: usize, out: &mut alloc::vec::Vec<f64>, order_scratch: &mut alloc::vec::Vec<usize>) -> f64
+pub fn vyre_reference::composition_witness::im2col_3x3_witness(input: &[f32], h: usize, w: usize) -> alloc::vec::Vec<f32>
+pub fn vyre_reference::composition_witness::im2col_3x3_witness_into(input: &[f32], h: usize, w: usize, out: &mut alloc::vec::Vec<f32>)
+pub fn vyre_reference::composition_witness::impact_from_surgery_witness_into(surgery: &[u32], intervention_mask: &[u32], n: usize, closure_scratch: &mut alloc::vec::Vec<u32>, impact: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::inclusive_prefix_sum_witness(input: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::inclusive_prefix_sum_witness_into(input: &[u32], output: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::inflate_stored_witness(input: &[u32]) -> core::result::Result<vyre_reference::composition_witness::InflateStoredWitness, alloc::string::String>
+pub fn vyre_reference::composition_witness::interval_merge_witness(mins_a: &[u32], maxs_a: &[u32], mins_b: &[u32], maxs_b: &[u32]) -> (alloc::vec::Vec<u32>, alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::is_psd_matrix_witness(matrix: &[f64], n: u32) -> bool
+pub fn vyre_reference::composition_witness::jacobi_solve_to_tolerance_witness(matrix: &[f64], rhs: &[f64], initial: &[f64], omega: f64, n: u32, tolerance: f64, max_iters: u32) -> (alloc::vec::Vec<f64>, u32)
+pub fn vyre_reference::composition_witness::jacobi_solve_to_tolerance_witness_into(matrix: &[f64], rhs: &[f64], initial: &[f64], omega: f64, n: u32, tolerance: f64, max_iters: u32, out: &mut alloc::vec::Vec<f64>, scratch: &mut alloc::vec::Vec<f64>) -> u32
+pub fn vyre_reference::composition_witness::kan_extension_at_witness(direction: vyre_reference::composition_witness::KanDirection, k: &vyre_reference::composition_witness::FiniteFunctor, f_image: &[u32], c: u32) -> u32
+pub fn vyre_reference::composition_witness::kan_extension_table_witness(direction: vyre_reference::composition_witness::KanDirection, k: &vyre_reference::composition_witness::FiniteFunctor, f_image: &[u32], c_n: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::kernel_to_fixed_16_16_witness(kernel: &[f64], step: f64, alpha: f64) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::kernel_to_fixed_16_16_witness_into(kernel: &[f64], step: f64, alpha: f64, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::kfac_block_inverse_witness(blocks: &[f32], num_blocks: u32, n: u32) -> alloc::vec::Vec<f32>
+pub fn vyre_reference::composition_witness::kfac_block_inverse_witness_into(blocks: &[f32], num_blocks: u32, n: u32, out: &mut alloc::vec::Vec<f32>, mat: &mut alloc::vec::Vec<f32>, inv: &mut alloc::vec::Vec<f32>)
+pub fn vyre_reference::composition_witness::knn_csr_witness(vectors: &[f32], dimension: usize, neighbor_k: usize) -> (alloc::vec::Vec<u32>, alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::l2p_zeroth_all_witness(cell_local: &[f64], cell_assignment: &[u32], region_count: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::level_wave_witness<F>(depths: &[u32], max_depth: u32, step_for_lane: F) where F: core::ops::function::FnMut(u32, u32)
+pub fn vyre_reference::composition_witness::line_index_witness(input: &[u8]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::line_splice_classify_witness(source: &[u8]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::line_splice_classify_witness_into(source: &[u8], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::linear_homotopy_witness(start: &[f64], end: &[f64], parameter: f64) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::m2l_zeroth_all_witness(cell_moments: &[f64], cell_distances: &[f64]) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::m2l_zeroth_translate_witness(source_moment: f64, distance: f64) -> f64
+pub fn vyre_reference::composition_witness::match_post_process_witness(matches: &[vyre_foundation::match_result::ByteRange], haystack: &[u8]) -> alloc::vec::Vec<vyre_reference::composition_witness::WitnessPostProcessedMatch>
+pub fn vyre_reference::composition_witness::matmul_u32_witness(a: &[u32], b: &[u32], bias: core::option::Option<&[u32]>, m: usize, k: usize, n: usize) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::matmul_u32_witness_into(a: &[u32], b: &[u32], bias: core::option::Option<&[u32]>, m: usize, k: usize, n: usize, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::matroid_exchange_bfs_step_witness(frontier: &[u32], exchange_adjacency: &[u32], visited: &[u32], element_count: usize) -> (alloc::vec::Vec<u32>, bool)
+pub fn vyre_reference::composition_witness::matroid_exchange_bfs_step_witness_into(frontier: &[u32], exchange_adjacency: &[u32], visited: &[u32], element_count: usize, out: &mut alloc::vec::Vec<u32>) -> bool
+pub fn vyre_reference::composition_witness::matroid_intersection_augmentation_witness(exchange_adjacency: &[u32], sources: &[u32], sinks: &[u32], set_x: &[u32], n: usize) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::matroid_intersection_augmentation_witness_into(exchange_adjacency: &[u32], sources: &[u32], sinks: &[u32], set_x: &[u32], n: usize, output: &mut alloc::vec::Vec<u32>, parent: &mut alloc::vec::Vec<u32>, visited: &mut alloc::vec::Vec<u32>, frontier: &mut alloc::vec::Vec<u32>, next_frontier: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::matroid_select_optimal_subset_witness(exchange_adjacency: &[u32], sources: &[u32], sinks: &[u32], seed: &[u32], n: usize, max_augmentations: u32) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
+pub fn vyre_reference::composition_witness::matroid_select_optimal_subset_witness_into(exchange_adjacency: &[u32], sources: &[u32], sinks: &[u32], seed: &[u32], n: usize, max_augmentations: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::merge_frontier_out_witness(shards: &[alloc::vec::Vec<u32>], words: usize) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
+pub fn vyre_reference::composition_witness::merge_frontier_out_witness_into(shards: &[alloc::vec::Vec<u32>], words: usize, merged_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::modified_gram_schmidt_witness(y: &[f64], m: u32, l: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::modified_gram_schmidt_witness_into(y: &[f64], m: u32, l: u32, q: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::mori_zwanzig_coarsen_via_clustering_witness(state: &[f64], assignments: &[u32], n: u32, k: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::mori_zwanzig_coarsen_via_clustering_witness_into(state: &[f64], assignments: &[u32], n: u32, k: u32, cluster_sizes: &mut alloc::vec::Vec<u32>, projection: &mut alloc::vec::Vec<f64>, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::mori_zwanzig_project_witness(projector: &[f64], forcing: &[f64], dimension: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::mori_zwanzig_project_witness_into(projector: &[f64], forcing: &[f64], dimension: u32, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::motif_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_masks: &[u32], motif_edges: &[(u32, u32, u32)]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::motif_witness_into(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_masks: &[u32], motif_edges: &[(u32, u32, u32)], output: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::mp_edge_clip_witness(values: &[f64], upper_edge: f64) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::mp_edge_clip_witness_into(values: &[f64], upper_edge: f64, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::multi_hash_witness(bytes: &[u8]) -> (u32, u32, u32)
+pub fn vyre_reference::composition_witness::natural_gradient_autotune_step_witness(m_inv_sqrt: &[f64], grad: &[f64], n: u32, learning_rate: f64) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::natural_gradient_autotune_step_witness_into(m_inv_sqrt: &[f64], grad: &[f64], n: u32, learning_rate: f64, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::natural_gradient_block_apply_witness(matrix: &[f64], gradient: &[f64], n: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::natural_gradient_block_apply_witness_into(matrix: &[f64], gradient: &[f64], n: u32, output: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::natural_transformation_count_witness(_category: &vyre_reference::composition_witness::FiniteCategory, _x: u32, f_at_x: u32) -> u32
+pub fn vyre_reference::composition_witness::negative_truncator_coeffs_witness(k_steps: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::negative_truncator_coeffs_witness_into(k_steps: u32, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::newton_schulz_inverse_sqrt_witness(m: &[f64], n: usize, iters: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::newton_schulz_inverse_sqrt_witness_into(m: &[f64], n: usize, iters: u32, out: &mut alloc::vec::Vec<f64>, scratch: &mut vyre_reference::composition_witness::NewtonSchulzScratchWitness)
+pub fn vyre_reference::composition_witness::newton_schulz_y_step_witness(y_curr: &[f64], yzy: &[f64]) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::newton_schulz_y_step_witness_into(y_curr: &[f64], yzy: &[f64], out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::node_kind_eq_witness(nodes: &[u32], kind: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::node_kind_eq_witness_into(nodes: &[u32], kind: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::ntt_bit_reverse_witness<T: core::marker::Copy>(a: &mut [T])
+pub fn vyre_reference::composition_witness::ntt_forward_witness(a: &mut [u32])
+pub fn vyre_reference::composition_witness::ntt_inverse_witness(a: &mut [u32])
+pub fn vyre_reference::composition_witness::ntt_mod_add_witness(a: u32, b: u32) -> u32
+pub fn vyre_reference::composition_witness::ntt_mod_mul_witness(a: u32, b: u32) -> u32
+pub fn vyre_reference::composition_witness::ntt_mod_pow_witness(base: u32, exp: u32) -> u32
+pub fn vyre_reference::composition_witness::ntt_mod_sub_witness(a: u32, b: u32) -> u32
+pub fn vyre_reference::composition_witness::p2m_zeroth_moment_truncating_witness(charges: &[f64], cell_assignment: &[u32]) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::p2m_zeroth_moment_truncating_witness_into(charges: &[f64], cell_assignment: &[u32], moments: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::p2m_zeroth_moment_witness(charges: &[f64], cell_assignment: &[u32]) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::pack_i4x8_witness(lanes: &[i32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::pack_i4x8_witness_into(lanes: &[i32], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::parse_lr_witness(action_table: &[u32], goto_table: &[u32], productions: &[vyre_reference::composition_witness::LrProduction], num_tokens: u32, num_nonterminals: u32, tokens: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_reference::composition_witness::ParseLrWitnessError>
+pub fn vyre_reference::composition_witness::partition_frontier_by_vertex_witness(frontier_in: &[u32], node_count: u32, shard_count: usize) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u32>>, alloc::string::String>
+pub fn vyre_reference::composition_witness::partition_frontier_by_vertex_witness_into(frontier_in: &[u32], node_count: u32, shard_count: usize, shards_out: &mut alloc::vec::Vec<alloc::vec::Vec<u32>>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::passes_commute_on_witness(view_in: &[u32], mapping_a: &[u32], n_mid_a: u32, mapping_b_after_a: &[u32], mapping_b: &[u32], n_mid_b: u32, mapping_a_after_b: &[u32], n_out: u32) -> bool
+pub fn vyre_reference::composition_witness::path_reconstruct_witness(parents: &[u32], target: u32, max_depth: u32) -> (alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::path_reconstruct_witness_into(parents: &[u32], target: u32, max_depth: u32, path: &mut alloc::vec::Vec<u32>) -> u32
+pub fn vyre_reference::composition_witness::persistent_fixpoint_into_witness<F>(seed: &[u32], max_iterations: u32, step: F, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> u32 where F: core::ops::function::FnMut(&[u32], &mut [u32])
+pub fn vyre_reference::composition_witness::persistent_fixpoint_witness<F>(seed: &[u32], max_iterations: u32, step: F) -> (alloc::vec::Vec<u32>, u32) where F: core::ops::function::FnMut(&[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::plan_frontier_typed_ir_witness(nodes: &[vyre_reference::composition_witness::FrontierNodeWitness], dependencies: &[vyre_reference::composition_witness::FrontierDependencyWitness]) -> core::result::Result<vyre_reference::composition_witness::FrontierTypedPlanWitness, vyre_reference::composition_witness::FrontierTypedPlanWitnessError>
+pub fn vyre_reference::composition_witness::planar_rewrite_schedule_witness(candidates: &[u32], height: u32, width: u32, exclusion: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::predict_impact_observation_form_witness(adjacency: &[u32], observation_mask: &[u32], n: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::predict_impact_observation_form_witness_into(adjacency: &[u32], observation_mask: &[u32], n: u32, surgery_scratch: &mut alloc::vec::Vec<u32>, closure_scratch: &mut alloc::vec::Vec<u32>, impact: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::predict_impact_witness(adjacency: &[u32], intervention_mask: &[u32], n: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::predict_impact_witness_into(adjacency: &[u32], intervention_mask: &[u32], n: u32, surgery_scratch: &mut alloc::vec::Vec<u32>, closure_scratch: &mut alloc::vec::Vec<u32>, impact: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::predict_interval_witness(y: u32, q_hat: u32) -> (u32, u32)
+pub fn vyre_reference::composition_witness::prefix_scan_witness(input: &[u32], inclusive: bool, combine_op: impl core::ops::function::Fn(u32, u32) -> u32, identity: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::prefix_scan_witness_into(input: &[u32], inclusive: bool, combine_op: impl core::ops::function::Fn(u32, u32) -> u32, identity: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::privacy_epsilon_from_rdp_witness(rdp: f64, alpha: f64, delta: f64) -> f64
+pub fn vyre_reference::composition_witness::qsvt_apply_witness(matrix: &[f64], vector: &[f64], coefficients: &[f64], dimension: u32) -> core::result::Result<alloc::vec::Vec<f64>, alloc::string::String>
+pub fn vyre_reference::composition_witness::qsvt_apply_witness_into(matrix: &[f64], vector: &[f64], coefficients: &[f64], dimension: u32, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::qsvt_apply_witness_with_scratch_into(matrix: &[f64], vector: &[f64], coefficients: &[f64], dimension: u32, out: &mut alloc::vec::Vec<f64>, previous: &mut alloc::vec::Vec<f64>, current: &mut alloc::vec::Vec<f64>, next: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::qsvt_block_encode_witness(matrix: &[f64], dimension: u32) -> (alloc::vec::Vec<f64>, f64)
+pub fn vyre_reference::composition_witness::qsvt_block_encode_witness_into(matrix: &[f64], dimension: u32, out: &mut alloc::vec::Vec<f64>) -> f64
+pub fn vyre_reference::composition_witness::radix_sort_masked_witness(input: &[u32], bits: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::range_counts_witness(input: &[u32], start: u32, end: u32) -> u32
+pub fn vyre_reference::composition_witness::rdp_to_dp_witness(rdp: f64, alpha: f64, delta: f64) -> f64
+pub fn vyre_reference::composition_witness::reachability_closure_witness_into(adjacency: &[u32], n: usize, closure: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::reachable_witness(node_count: u32, edges: &[(u32, u32)], sources: &[u32]) -> core::result::Result<std::collections::hash::set::HashSet<u32>, alloc::string::String>
+pub fn vyre_reference::composition_witness::reduce_all_witness(input: &[u32]) -> u32
+pub fn vyre_reference::composition_witness::reduce_any_witness(input: &[u32]) -> u32
+pub fn vyre_reference::composition_witness::reduce_count_non_zero_witness(input: &[u32]) -> u32
+pub fn vyre_reference::composition_witness::reduce_count_witness(input: &[u32]) -> u32
+pub fn vyre_reference::composition_witness::reduce_max_f32_witness(values: &[f32]) -> f32
+pub fn vyre_reference::composition_witness::reduce_max_witness(input: &[u32]) -> u32
+pub fn vyre_reference::composition_witness::reduce_min_witness(input: &[u32]) -> u32
+pub fn vyre_reference::composition_witness::reduce_sum_f32_witness(values: &[f32]) -> f32
+pub fn vyre_reference::composition_witness::reduce_workgroup_any_witness(input: &[u32]) -> u32
+pub fn vyre_reference::composition_witness::region_of_witness(position: u32, region_starts: &[u32]) -> usize
+pub fn vyre_reference::composition_witness::resolve_bigint_carry_chain_witness(partial_sums: &[u32], partial_carries: &[u32]) -> core::result::Result<(alloc::vec::Vec<u32>, u32), alloc::string::String>
+pub fn vyre_reference::composition_witness::resolve_bigint_carry_chain_witness_into(partial_sums: &[u32], partial_carries: &[u32], output: &mut alloc::vec::Vec<u32>) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_reference::composition_witness::resolve_family_witness(node_tags: &[u32], family_mask: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::rk4_step_witness(y_prev: &[f64], k1: &[f64], k2: &[f64], k3: &[f64], k4: &[f64], h: f64) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::rk4_step_witness_into(y_prev: &[f64], k1: &[f64], k2: &[f64], k3: &[f64], k4: &[f64], h: f64, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::rle_decode_witness(packed: &[u32]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::composition_witness::rle_decode_witness_into(packed: &[u32], decoded: &mut alloc::vec::Vec<u8>)
+pub fn vyre_reference::composition_witness::rle_segment_lengths_witness(packed: &[u32]) -> (alloc::vec::Vec<u32>, alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::rle_segment_lengths_witness_into(packed: &[u32], lengths: &mut alloc::vec::Vec<u32>, values: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::rle_segment_start_offsets_witness(lengths: &[u32]) -> (alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::rle_segment_start_offsets_witness_into(lengths: &[u32], offsets: &mut alloc::vec::Vec<u32>) -> u32
+pub fn vyre_reference::composition_witness::rms_norm_linear_witness(input: &[f32], normalized: &[f32], weights: &[f32], bias: &[f32], out_dim: u32, in_dim: u32, n: u32, eps: f32) -> alloc::vec::Vec<f32>
+pub fn vyre_reference::composition_witness::scallop_join_fixpoint_witness(state: &[u32], join_rules: &[u32], n: u32, words_per_cell: u32, max_iterations: u32) -> (alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::scallop_join_fixpoint_witness_into(state: &[u32], join_rules: &[u32], n: u32, words_per_cell: u32, max_iterations: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> u32
+pub fn vyre_reference::composition_witness::scatter_witness(source: &[u32], indices: &[u32], destination_len: usize) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::scatter_witness_into(source: &[u32], indices: &[u32], destination_len: usize, output: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::scc_decompose_witness(node_count: u32, forward: &[u32], backward: &[u32], components: &[u32], pivot: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::score_denoise_step_witness(x: &[f64], score: &[f64], noise: &[f64], alpha: f64, beta: f64, sigma: f64) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::score_denoise_step_witness_into(x: &[f64], score: &[f64], noise: &[f64], alpha: f64, beta: f64, sigma: f64, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::segment_reduce_sum_witness(input: &[u32], offsets: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::segment_reduce_sum_witness_into(input: &[u32], offsets: &[u32], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::select_retention_set_witness(gains: &mut [u32], n: u32, k: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::select_retention_set_witness_into(gains: &mut [u32], n: u32, k: u32, picked: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::semiring_gemm_witness(a: &[u32], b: &[u32], m: usize, n: usize, k: usize, semiring: vyre_spec::semiring::Semiring) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::semiring_gemm_witness_into(a: &[u32], b: &[u32], m: usize, n: usize, k: usize, semiring: vyre_spec::semiring::Semiring, c: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::shannon_entropy_bits_per_byte_witness(bytes: &[u8]) -> f32
+pub fn vyre_reference::composition_witness::sheaf_diffusion_equilibrium_witness_into(initial_stalks: &[f64], restriction_diagonal: &[f64], damping: f64, tolerance: f64, max_iterations: u32, out: &mut alloc::vec::Vec<f64>, scratch: &mut alloc::vec::Vec<f64>) -> u32
+pub fn vyre_reference::composition_witness::sheaf_diffusion_step_witness(stalks: &[f64], restriction_diagonal: &[f64], damping: f64) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::sheaf_diffusion_step_witness_into(stalks: &[f64], restriction_diagonal: &[f64], damping: f64, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::sheaf_dominant_spectrum_witness(restriction_diag: &[f64], iterations: u32) -> (f64, alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::sheaf_dominant_spectrum_witness_into(restriction_diag: &[f64], _iterations: u32, v_out: &mut alloc::vec::Vec<f64>) -> f64
+pub fn vyre_reference::composition_witness::sheaf_fusion_incompatible_witness(initial_stalks: &[f64], diffused_stalks: &[f64], divergence_threshold: f64) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::sheaf_fusion_incompatible_witness_into(initial_stalks: &[f64], diffused_stalks: &[f64], divergence_threshold: f64, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::sheaf_spectral_gap_witness(restriction_diag: &[f64], iterations: u32) -> f64
+pub fn vyre_reference::composition_witness::sheaf_spectral_gap_witness_into(restriction_diag: &[f64], iterations: u32, v_scratch: &mut alloc::vec::Vec<f64>) -> f64
+pub fn vyre_reference::composition_witness::sheaf_suggested_cluster_count_witness(eigenvector: &[f64]) -> u32
+pub fn vyre_reference::composition_witness::should_fuse_chain_witness(shared_buffer_ranks: &[u32], threshold_per_link: f64) -> bool
+pub fn vyre_reference::composition_witness::simplicial_triangle_message_witness(edge_features: &[f64], triangle_edges: &[u32], edge_count: u32, triangle_count: u32, dimensions: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::sinkhorn_clustering_witness(region_features: &[f32], cluster_centroids: &[f32], region_weights: &[f32], cluster_capacities: &[f32], m: u32, n: u32, d: u32, iterations: u32, epsilon: f32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::sinkhorn_col_residual_witness(k: &[f64], u: &[f64], v: &[f64], b: &[f64]) -> f64
+pub fn vyre_reference::composition_witness::sinkhorn_iter_f64_in_place_witness_into(k: &[f64], a: &[f64], b: &[f64], u: &mut [f64], v: &mut [f64], m: u32, n: u32, kv: &mut alloc::vec::Vec<f64>, ktu: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::sinkhorn_iter_f64_step_witness(k: &[f64], a: &[f64], b: &[f64], _u_in: &[f64], v_in: &[f64], m: u32, n: u32) -> (alloc::vec::Vec<f64>, alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::sinkhorn_iter_f64_step_witness_into(k: &[f64], a: &[f64], b: &[f64], v_in: &[f64], m: u32, n: u32, u_out: &mut alloc::vec::Vec<f64>, v_out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::sinkhorn_iterate_f64_witness(k: &[f64], a: &[f64], b: &[f64], tolerance: f64, max_iterations: u32) -> (alloc::vec::Vec<f64>, alloc::vec::Vec<f64>, u32)
+pub fn vyre_reference::composition_witness::sinkhorn_iterate_witness(k: &[u32], k_t: &[u32], a: &[u32], b: &[u32], u_init: &[u32], v_init: &[u32], m: u32, n: u32, max_iterations: u32) -> (alloc::vec::Vec<u32>, alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::sinkhorn_row_residual_witness(k: &[f64], u: &[f64], v: &[f64], a: &[f64]) -> f64
+pub fn vyre_reference::composition_witness::softmax_witness(input: &[f64]) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::softmax_witness_into(input: &[f64], out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::sort_regions_witness(regions: alloc::vec::Vec<(u32, u32, u32)>) -> alloc::vec::Vec<(u32, u32, u32)>
+pub fn vyre_reference::composition_witness::sort_regions_witness_in_place(regions: &mut [(u32, u32, u32)])
+pub fn vyre_reference::composition_witness::sos_gram_construct_witness(monomial_pairs: &[u32], polynomial_coefficients: &[u32], matrix_size: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::sos_gram_construct_witness_into(monomial_pairs: &[u32], polynomial_coefficients: &[u32], matrix_size: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::sparse_fft_bin_hash_into_witness(signal: &[u32], a: u32, c: u32, b: u32, bins: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::sparse_fft_bin_hash_witness(signal: &[u32], a: u32, c: u32, b: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::sparse_fft_voting_recovery_into_witness(binnings: &[(u32, u32, alloc::vec::Vec<u32>)], threshold: u32, n: u32, b: u32, votes: &mut alloc::vec::Vec<u32>, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::sparse_fft_voting_recovery_witness(binnings: &[(u32, u32, alloc::vec::Vec<u32>)], threshold: u32, n: u32, b: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::stochastic_decode_witness(bitstream: &[u32], len_bits: usize) -> f64
+pub fn vyre_reference::composition_witness::stochastic_encode_witness(p: f64, len_bits: usize, seed: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::stream_compact_witness(payloads: &[u32], flags: &[u32]) -> (alloc::vec::Vec<u32>, u32)
+pub fn vyre_reference::composition_witness::stream_compact_witness_into(payloads: &[u32], flags: &[u32], out: &mut alloc::vec::Vec<u32>) -> u32
+pub fn vyre_reference::composition_witness::subgroup_nfa_step_witness(state: &[u32], byte: u8, transitions: &[u32], epsilon: &[u32], num_states: usize) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::subgroup_nfa_step_witness_into(state: &[u32], byte: u8, transitions: &[u32], epsilon: &[u32], num_states: usize, output: &mut alloc::vec::Vec<u32>, scratch: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::sum_product_evaluate_witness(kinds: &[u32], child_offsets: &[u32], child_counts: &[u32], children: &[u32], weights: &[f64], leaf_values: &[f64], topological_order: &[u32]) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::sum_product_evaluate_witness_into(kinds: &[u32], child_offsets: &[u32], child_counts: &[u32], children: &[u32], weights: &[f64], leaf_values: &[f64], topological_order: &[u32], output: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::tensor_flow_forward_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], tensor_in: &[u32], context_limit: u32, field_limit: u32, allow_mask: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::tensor_scc_witness(matrix_rows: &[u32], seed: u32, group_mask: u32, iteration_limit: u32) -> u32
+pub fn vyre_reference::composition_witness::tensor_train_contract_step_witness(accumulator: &[f64], core: &[f64], previous_rank: u32, next_rank: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::tensor_train_contract_step_witness_into(accumulator: &[f64], core: &[f64], previous_rank: u32, next_rank: u32, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_reference::composition_witness::tensor_train_full_chain_witness(cores: &[alloc::vec::Vec<f64>], ranks: &[u32], mode_dims: &[u32], indices: &[u32]) -> f64
+pub fn vyre_reference::composition_witness::tensor_train_full_chain_witness_into(cores: &[alloc::vec::Vec<f64>], ranks: &[u32], mode_dims: &[u32], indices: &[u32], acc: &mut alloc::vec::Vec<f64>, next: &mut alloc::vec::Vec<f64>) -> f64
+pub fn vyre_reference::composition_witness::tensor_train_fusion_pressure_witness(shared_buffer_ranks: &[u32]) -> f64
+pub fn vyre_reference::composition_witness::tensor_train_fusion_pressure_witness_with_scratch(shared_buffer_ranks: &[u32], acc: &mut alloc::vec::Vec<f64>, next: &mut alloc::vec::Vec<f64>) -> f64
+pub fn vyre_reference::composition_witness::tfn_scalar_mix_witness(features: &[f64], weights: &[f64], n_nodes: u32, c_in: u32, c_out: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_reference::composition_witness::toposort_csr_into_witness(node_count: u32, offsets: &[u32], targets: &[u32], order: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::toposort_csr_with_scratch_into_witness(node_count: u32, offsets: &[u32], targets: &[u32], order: &mut alloc::vec::Vec<u32>, indegree: &mut alloc::vec::Vec<u32>, queue: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::toposort_csr_witness(node_count: u32, offsets: &[u32], targets: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
+pub fn vyre_reference::composition_witness::toposort_witness(node_count: u32, edges: &[(u32, u32)]) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_amg_solve_to_tolerance_witness_into(fine_matrix: &[f64], fine_rhs: &[f64], initial: &[f64], restriction: &[f64], prolongation: &[f64], coarse_matrix: &[f64], omega: f64, fine_count: u32, coarse_count: u32, tolerance: f64, max_cycles: u32, out: &mut alloc::vec::Vec<f64>, scratch: &mut alloc::vec::Vec<f64>) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_amg_solve_to_tolerance_witness_with_scratch_into(fine_matrix: &[f64], fine_rhs: &[f64], initial: &[f64], restriction: &[f64], prolongation: &[f64], coarse_matrix: &[f64], omega: f64, fine_count: u32, coarse_count: u32, tolerance: f64, max_cycles: u32, scratch: &mut vyre_reference::composition_witness::AmgSolveScratchWitness, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_amg_v_cycle_witness_into(fine_matrix: &[f64], fine_rhs: &[f64], initial: &[f64], restriction: &[f64], prolongation: &[f64], coarse_matrix: &[f64], omega: f64, fine_count: u32, coarse_count: u32, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_amg_v_cycle_witness_with_scratch_into(fine_matrix: &[f64], fine_rhs: &[f64], initial: &[f64], restriction: &[f64], prolongation: &[f64], coarse_matrix: &[f64], omega: f64, fine_count: u32, coarse_count: u32, scratch: &mut vyre_reference::composition_witness::AmgVcycleScratchWitness, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_argmin_cost_witness(costs: &[f64]) -> core::result::Result<usize, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_base64_decode_packed_witness(input: &[u8]) -> core::result::Result<(alloc::vec::Vec<u32>, u32), vyre_reference::composition_witness::Base64DecodeWitnessError>
+pub fn vyre_reference::composition_witness::try_base64_decode_packed_witness_into(input: &[u8], out: &mut alloc::vec::Vec<u32>) -> core::result::Result<u32, vyre_reference::composition_witness::Base64DecodeWitnessError>
+pub fn vyre_reference::composition_witness::try_chebyshev_filter_witness(laplacian: &[f32], signal: &[f32], coefficients: &[f32], n: u32, k_steps: u32) -> core::result::Result<alloc::vec::Vec<f32>, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_chebyshev_filter_witness_into(laplacian: &[f32], signal: &[f32], coefficients: &[f32], n: u32, k_steps: u32, out: &mut alloc::vec::Vec<f32>, t_prev: &mut alloc::vec::Vec<f32>, t_curr: &mut alloc::vec::Vec<f32>, t_next: &mut alloc::vec::Vec<f32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_cluster_projection_matrix_witness_into(assignments: &[u32], n: u32, k: u32, cluster_sizes: &mut alloc::vec::Vec<u32>, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_count_sketch_query_into_witness(table: &[u32], hashes: &[u32], signs: &[i32], d: u32, w: u32, estimates: &mut alloc::vec::Vec<i32>) -> core::result::Result<i32, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_ddnnf_evaluate_witness(nodes: &[(u32, u32, u32)], node_variables: &[u32], children: &[u32], variable_assignments: &[u32], topological_order: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_ddnnf_evaluate_witness_into(nodes: &[(u32, u32, u32)], node_variables: &[u32], children: &[u32], variable_assignments: &[u32], topological_order: &[u32], values: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_differentiable_autotune_gradient_witness_into(costs: &[f64], temperature: f64, neg_costs: &mut alloc::vec::Vec<f64>, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_differentiable_autotune_pick_config_witness_into(costs: &[f64], temperature: f64, neg_costs: &mut alloc::vec::Vec<f64>, scaled: &mut alloc::vec::Vec<f64>, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_exploded_ifds_csr_witness_into(procedure_count: u32, blocks_per_procedure: u32, facts_per_procedure: u32, intra_edges: &[(u32, u32, u32)], inter_edges: &[(u32, u32, u32, u32)], generated_facts: &[(u32, u32, u32)], killed_facts: &[(u32, u32, u32)], row_offsets: &mut alloc::vec::Vec<u32>, columns: &mut alloc::vec::Vec<u32>, scratch: &mut vyre_reference::composition_witness::ExplodedIfdsScratchWitness) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_fractional_derivative_witness(f: &[f64], alpha: f64, step: f64) -> core::result::Result<alloc::vec::Vec<f64>, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_fractional_derivative_witness_into(f: &[f64], alpha: f64, step: f64, kernel: &mut alloc::vec::Vec<f64>, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_frontier_absorb_witness_into(visited: &mut [u32], neighbors: &[u32], node_count: u32, next_wave: &mut alloc::vec::Vec<u32>) -> core::result::Result<(bool, u32), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_gaussian_rdp_step_witness_into(alpha: &[f64], sigma_squared: &[f64], out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_grunwald_letnikov_kernel_witness(alpha: f64, n: u32) -> core::result::Result<alloc::vec::Vec<f64>, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_grunwald_letnikov_kernel_witness_into(alpha: f64, n: u32, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_hypervector_majority_bundle_into_witness(hvs: &[alloc::vec::Vec<u32>], out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_hypervector_xor_bind_into_witness(a: &[u32], b: &[u32], out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_identity_matrix_witness_into(n: u32, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_jacobi_solve_to_tolerance_witness_into(matrix: &[f64], rhs: &[f64], initial: &[f64], omega: f64, n: u32, tolerance: f64, max_iters: u32, out: &mut alloc::vec::Vec<f64>, scratch: &mut alloc::vec::Vec<f64>) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_kernel_to_fixed_16_16_witness_into(kernel: &[f64], step: f64, alpha: f64, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_l2p_zeroth_all_witness_into(cell_local: &[f64], cell_assignment: &[u32], region_count: u32, output: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_m2l_zeroth_all_witness_into(cell_moments: &[f64], cell_distances: &[f64], local: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_match_post_process_records_into(matches: &[vyre_foundation::match_result::ByteRange], haystack: &[u8], on_record: impl core::ops::function::FnMut(u32, u32, u32, f32, f32)) -> core::result::Result<(), vyre_reference::composition_witness::WitnessPostProcessError>
+pub fn vyre_reference::composition_witness::try_match_post_process_witness(matches: &[vyre_foundation::match_result::ByteRange], haystack: &[u8]) -> core::result::Result<alloc::vec::Vec<vyre_reference::composition_witness::WitnessPostProcessedMatch>, vyre_reference::composition_witness::WitnessPostProcessError>
+pub fn vyre_reference::composition_witness::try_match_post_process_witness_into(matches: &[vyre_foundation::match_result::ByteRange], haystack: &[u8], triples: &mut alloc::vec::Vec<(u32, u32, u32)>, output: &mut alloc::vec::Vec<vyre_reference::composition_witness::WitnessPostProcessedMatch>) -> core::result::Result<(), vyre_reference::composition_witness::WitnessPostProcessError>
+pub fn vyre_reference::composition_witness::try_mori_zwanzig_coarsen_via_clustering_witness_into(state: &[f64], assignments: &[u32], n: u32, k: u32, cluster_sizes: &mut alloc::vec::Vec<u32>, projection: &mut alloc::vec::Vec<f64>, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_natural_gradient_autotune_step_witness_into(m_inv_sqrt: &[f64], grad: &[f64], n: u32, learning_rate: f64, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_natural_gradient_block_apply_witness_into(matrix: &[f64], gradient: &[f64], n: u32, output: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_p2m_zeroth_moment_truncating_witness_into(charges: &[f64], cell_assignment: &[u32], moments: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_p2m_zeroth_moment_witness_into(charges: &[f64], cell_assignment: &[u32], moments: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_path_reconstruct_batch_witness_into(parents: &[u32], targets: &[u32], max_depth: u32, paths: &mut alloc::vec::Vec<u32>, lengths: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_persistent_fixpoint_into_witness<F>(seed: &[u32], max_iterations: u32, step: F, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> core::result::Result<u32, alloc::string::String> where F: core::ops::function::FnMut(&[u32], &mut [u32])
+pub fn vyre_reference::composition_witness::try_rle_decode_witness_into(packed: &[u32], decoded: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_rle_segment_lengths_witness_into(packed: &[u32], lengths: &mut alloc::vec::Vec<u32>, values: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_rle_segment_start_offsets_witness_into(lengths: &[u32], offsets: &mut alloc::vec::Vec<u32>) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_segment_reduce_sum_witness_into(input: &[u32], offsets: &[u32], out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_sinkhorn_iter_f64_in_place_witness_into(k: &[f64], a: &[f64], b: &[f64], u: &mut [f64], v: &mut [f64], m: u32, n: u32, kv: &mut alloc::vec::Vec<f64>, ktu: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_sinkhorn_iterate_f64_witness(k: &[f64], a: &[f64], b: &[f64], tolerance: f64, max_iterations: u32) -> core::result::Result<(alloc::vec::Vec<f64>, alloc::vec::Vec<f64>, u32), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_sinkhorn_iterate_f64_witness_into(k: &[f64], a: &[f64], b: &[f64], tolerance: f64, max_iterations: u32, u_out: &mut alloc::vec::Vec<f64>, v_out: &mut alloc::vec::Vec<f64>, u_old: &mut alloc::vec::Vec<f64>) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_sinkhorn_iterate_witness(k: &[u32], k_t: &[u32], a: &[u32], b: &[u32], u_init: &[u32], v_init: &[u32], m: u32, n: u32, max_iterations: u32) -> core::result::Result<(alloc::vec::Vec<u32>, alloc::vec::Vec<u32>, u32), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_sinkhorn_iterate_witness_into(k: &[u32], k_t: &[u32], a: &[u32], b: &[u32], u_init: &[u32], v_init: &[u32], m: u32, n: u32, max_iterations: u32, u_out: &mut alloc::vec::Vec<u32>, v_out: &mut alloc::vec::Vec<u32>, u_old: &mut alloc::vec::Vec<u32>) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_sparse_fft_bin_hash_into_witness(signal: &[u32], a: u32, c: u32, b: u32, bins: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_sparse_fft_voting_recovery_into_witness(binnings: &[(u32, u32, alloc::vec::Vec<u32>)], threshold: u32, n: u32, b: u32, votes: &mut alloc::vec::Vec<u32>, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_stochastic_encode_witness_into(p: f64, len_bits: usize, seed: u32, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_tensor_flow_forward_witness(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], tensor_in: &[u32], context_limit: u32, field_limit: u32, allow_mask: u32) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_tensor_flow_forward_witness_into(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], tensor_in: &[u32], context_limit: u32, field_limit: u32, allow_mask: u32, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_tensor_train_contract_step_witness(accumulator: &[f64], core: &[f64], previous_rank: u32, next_rank: u32) -> core::result::Result<alloc::vec::Vec<f64>, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_tensor_train_contract_step_witness_into(accumulator: &[f64], core: &[f64], previous_rank: u32, next_rank: u32, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_reference::composition_witness::try_tensor_train_full_chain_witness(cores: &[alloc::vec::Vec<f64>], ranks: &[u32], mode_dims: &[u32], indices: &[u32]) -> core::result::Result<f64, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_tensor_train_full_chain_witness_into(cores: &[alloc::vec::Vec<f64>], ranks: &[u32], mode_dims: &[u32], indices: &[u32], acc: &mut alloc::vec::Vec<f64>, next: &mut alloc::vec::Vec<f64>) -> core::result::Result<f64, alloc::string::String>
+pub fn vyre_reference::composition_witness::try_tensor_train_fusion_pressure_witness_with_scratch(shared_buffer_ranks: &[u32], acc: &mut alloc::vec::Vec<f64>, next: &mut alloc::vec::Vec<f64>) -> core::result::Result<f64, alloc::string::String>
+pub fn vyre_reference::composition_witness::union_find_alias_witness(parent_init: &[u32], edge_a: &[u32], edge_b: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::unpack_i4x8_witness(words: &[u32], lane_count: u32) -> alloc::vec::Vec<i32>
+pub fn vyre_reference::composition_witness::unpack_i4x8_witness_into(words: &[u32], lane_count: u32, out: &mut alloc::vec::Vec<i32>)
+pub fn vyre_reference::composition_witness::utf8_histogram_shape_counts_witness(histogram: &[u32; 256]) -> (u32, u32)
+pub fn vyre_reference::composition_witness::utf8_shape_counts_witness(input: &[u8]) -> [u32; 4]
+pub fn vyre_reference::composition_witness::utf8_validate_witness(source: &[u8]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::vector_graph_traverse_from_seed_witness(seed: usize, node_count: usize, csr_offsets: &[u32], csr_targets: &[u32]) -> alloc::vec::Vec<bool>
+pub fn vyre_reference::composition_witness::vector_squared_l2_witness(left: &[f32], right: &[f32]) -> f32
+pub fn vyre_reference::composition_witness::vector_top_k_witness<I>(vectors: &[f32], dimension: usize, query: &[f32], nodes: I, rank_k: usize) -> alloc::vec::Vec<(usize, f32)> where I: core::iter::traits::collect::IntoIterator<Item = usize>
+pub fn vyre_reference::composition_witness::vietoris_rips_edge_filter_witness(distances: &[f64], epsilon: f64, point_count: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::vietoris_rips_edges_witness(mask: &[u32], point_count: u32) -> alloc::vec::Vec<(u32, u32)>
+pub fn vyre_reference::composition_witness::vsa_fingerprint_witness(kind_hv: &[u32], signature_hv: &[u32], region_hv: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::whitespace_classify_word_witness(words_in: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::whitespace_classify_word_witness_into(words_in: &[u32], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::wrapping_sum_witness(values: &[u32]) -> u32
+pub fn vyre_reference::composition_witness::yoneda_embedding_witness(category: &vyre_reference::composition_witness::FiniteCategory, x: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::composition_witness::ziftsieve_extract_literals_witness(input: &[u8], max_output: usize) -> core::result::Result<vyre_reference::composition_witness::ZiftsieveLiteralWitness, alloc::string::String>
+pub fn vyre_reference::composition_witness::zx_color_change_witness(diagram: &mut vyre_reference::composition_witness::ZxDiagram, v: u32)
+pub fn vyre_reference::composition_witness::zx_identity_removal_witness(diagram: vyre_reference::composition_witness::ZxDiagram) -> vyre_reference::composition_witness::ZxDiagram
+pub fn vyre_reference::composition_witness::zx_simplified_diagram_witness(diagram: vyre_reference::composition_witness::ZxDiagram) -> vyre_reference::composition_witness::ZxDiagram
+pub fn vyre_reference::composition_witness::zx_spider_fusion_witness(diagram: vyre_reference::composition_witness::ZxDiagram) -> vyre_reference::composition_witness::ZxDiagram
 pub fn vyre_reference::dialect_dispatch::dispatch_op(op_id: &str, input: &[u8], output: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_reference::ReferenceError>
 pub fn vyre_reference::dual::DualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual::DualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
-pub fn vyre_reference::dual_impls::ReferenceEvaluator::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_reference::dual_impls::EvalError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_reference::dual_impls::EvalError::new(diagnostic: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_reference::dual_impls::ReferenceEvaluator::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
 pub fn vyre_reference::dual_impls::arith::add::AddDualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::arith::add::AddDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::arith::add::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
@@ -145,9 +703,6 @@ pub fn vyre_reference::dual_impls::bitwise::xor::XorDualReference::reference_a(i
 pub fn vyre_reference::dual_impls::bitwise::xor::XorDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::bitwise::xor::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::bitwise::xor::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
-pub fn vyre_reference::dual_impls::common::EvalError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_reference::dual_impls::common::EvalError::new(message: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_reference::dual_impls::common::ReferenceEvaluator::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
 pub fn vyre_reference::dual_impls::compare::eq::EqDualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::compare::eq::EqDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::compare::eq::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
@@ -157,28 +712,12 @@ pub fn vyre_reference::dual_impls::compare::lt::LtDualReference::reference_b(inp
 pub fn vyre_reference::dual_impls::compare::lt::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::compare::lt::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_op_ids() -> &'static [&'static str]
-pub fn vyre_reference::execution::expr::Buffer::into_value(self) -> vyre_reference::value::Value
-pub fn vyre_reference::execution::expr::Buffer::new(bytes: alloc::vec::Vec<u8>, element: vyre_spec::data_type::DataType) -> Self
-pub fn vyre_reference::execution::expr::buffer_mut<'a>(memory: &'a mut vyre_reference::workgroup::Memory, program: &vyre_foundation::ir_inner::model::program::core::Program, name: &str) -> core::result::Result<&'a mut vyre_reference::execution::expr::Buffer, vyre_reference::ReferenceError>
-pub fn vyre_reference::execution::expr::eval(expr: &vyre_foundation::ir_inner::model::generated::Expr, invocation: &mut vyre_reference::workgroup::Invocation<'_>, memory: &mut vyre_reference::workgroup::Memory, program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_reference::value::Value, vyre_reference::ReferenceError>
-pub fn vyre_reference::execution::is_reference_input(decl: &vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl) -> bool
-pub fn vyre_reference::execution::is_reference_output(decl: &vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl) -> bool
-pub fn vyre_reference::execution::node::step<'a>(invocation: &mut vyre_reference::workgroup::Invocation<'a>, memory: &mut vyre_reference::workgroup::Memory, program: &'a vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<(), vyre_reference::ReferenceError>
-pub fn vyre_reference::execution::op_count::count_ops<R>(f: impl core::ops::function::FnOnce() -> R) -> (R, u64)
-pub fn vyre_reference::execution::output_index(program: &vyre_foundation::ir_inner::model::program::core::Program, name: &str) -> core::option::Option<usize>
-pub fn vyre_reference::execution::reference_eval(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::execution::reference_eval_lane_reversed(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::execution::reference_eval_oob_report(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
-pub fn vyre_reference::execution::reference_eval_with_dispatch(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::execution::reference_eval_with_dispatch_oob_report(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
-pub fn vyre_reference::execution::reference_eval_with_grid(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], grid: [u32; 3]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::execution::run_arena_reference(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::execution::run_arena_reference_with_dispatch(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::execution::run_storage_graph(nodes: &[(vyre_foundation::ir_inner::model::node_kind::NodeId, vyre_foundation::ir_inner::model::node_kind::NodeStorage)], outputs: &[vyre_foundation::ir_inner::model::node_kind::NodeId]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::node_kind::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::execution::sequential::SequentialWorkgroup::for_program(program: &vyre_foundation::ir_inner::model::program::core::Program) -> Self
-pub fn vyre_reference::execution::sequential::SequentialWorkgroup::invocation_count(&self) -> u32
-pub fn vyre_reference::execution::sequential::SequentialWorkgroup::invocations(&self, workgroup_id: [u32; 3]) -> impl core::iter::traits::iterator::Iterator<Item = vyre_reference::workgroup::InvocationIds>
-pub fn vyre_reference::flat_cpu::run_flat(program: &vyre_foundation::ir_inner::model::program::core::Program, input: &[u8], output: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_reference::ReferenceError>
+pub fn vyre_reference::expr::Buffer::into_value(self) -> vyre_reference::value::Value
+pub fn vyre_reference::expr::Buffer::new(bytes: alloc::vec::Vec<u8>, element: vyre_spec::data_type::DataType) -> Self
+pub fn vyre_reference::expr::buffer<'a>(memory: &'a vyre_reference::workgroup::Memory, program: &vyre_foundation::ir_inner::model::program::definition::Program, name: &str) -> core::result::Result<&'a vyre_reference::expr::Buffer, vyre_reference::ReferenceError>
+pub fn vyre_reference::expr::buffer_mut<'a>(memory: &'a mut vyre_reference::workgroup::Memory, program: &vyre_foundation::ir_inner::model::program::definition::Program, name: &str) -> core::result::Result<&'a mut vyre_reference::expr::Buffer, vyre_reference::ReferenceError>
+pub fn vyre_reference::expr::eval(expr: &vyre_foundation::ir_inner::model::generated::Expr, invocation: &mut vyre_reference::workgroup::Invocation<'_>, memory: &mut vyre_reference::workgroup::Memory, program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_reference::value::Value, vyre_reference::ReferenceError>
+pub fn vyre_reference::flat_cpu::run_flat(program: &vyre_foundation::ir_inner::model::program::definition::Program, input: &[u8], output: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_reference::ReferenceError>
 pub fn vyre_reference::ieee754::canonical_acos(x: f32) -> f32
 pub fn vyre_reference::ieee754::canonical_asin(x: f32) -> f32
 pub fn vyre_reference::ieee754::canonical_atan(x: f32) -> f32
@@ -200,19 +739,26 @@ pub fn vyre_reference::ieee754::canonical_ulp_distance(left: f32, right: f32) ->
 pub fn vyre_reference::ieee754::pending_float_types() -> vyre_reference::ReferenceError
 pub fn vyre_reference::is_reference_input(decl: &vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl) -> bool
 pub fn vyre_reference::is_reference_output(decl: &vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl) -> bool
-pub fn vyre_reference::output_index(program: &vyre_foundation::ir_inner::model::program::core::Program, name: &str) -> core::option::Option<usize>
-pub fn vyre_reference::reference_eval(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::reference_eval_lane_reversed(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::reference_eval_oob_report(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
-pub fn vyre_reference::reference_eval_with_dispatch(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::reference_eval_with_dispatch_oob_report(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
-pub fn vyre_reference::reference_eval_with_grid(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], grid: [u32; 3]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::node::step<'a>(invocation: &mut vyre_reference::workgroup::Invocation<'a>, memory: &mut vyre_reference::workgroup::Memory, program: &'a vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<(), vyre_reference::ReferenceError>
+pub fn vyre_reference::op_count::count_ops<R>(f: impl core::ops::function::FnOnce() -> R) -> (R, u64)
+pub fn vyre_reference::output_index(program: &vyre_foundation::ir_inner::model::program::definition::Program, name: &str) -> core::option::Option<usize>
+pub fn vyre_reference::reference_eval(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::reference_eval_lane_reversed(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::reference_eval_lane_rotated(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], by: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::reference_eval_oob_report(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
+pub fn vyre_reference::reference_eval_with_dispatch(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::reference_eval_with_dispatch_oob_report(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
+pub fn vyre_reference::reference_eval_with_grid(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], grid: [u32; 3]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
 pub fn vyre_reference::reference_facets() -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &'static vyre_reference::ReferenceFacet>
 pub fn vyre_reference::reference_fn(operation_id: &str) -> core::option::Option<vyre_spec::intrinsic_descriptor::CpuFn>
+pub fn vyre_reference::reference_inputs(program: &vyre_foundation::ir_inner::model::program::definition::Program, buffers: alloc::vec::Vec<alloc::vec::Vec<u8>>) -> alloc::vec::Vec<vyre_reference::value::Value>
 pub fn vyre_reference::resolve_dual(operation_id: &str) -> core::option::Option<(vyre_reference::dual::ReferenceFn, vyre_reference::dual::ReferenceFn)>
-pub fn vyre_reference::run_arena_reference(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::run_arena_reference_with_dispatch(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::run_arena_reference(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::run_arena_reference_with_dispatch(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
 pub fn vyre_reference::run_storage_graph(nodes: &[(vyre_foundation::ir_inner::model::node_kind::NodeId, vyre_foundation::ir_inner::model::node_kind::NodeStorage)], outputs: &[vyre_foundation::ir_inner::model::node_kind::NodeId]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::node_kind::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::sequential::SequentialWorkgroup::for_program(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> Self
+pub fn vyre_reference::sequential::SequentialWorkgroup::invocation_count(&self) -> u32
+pub fn vyre_reference::sequential::SequentialWorkgroup::invocations(&self, workgroup_id: [u32; 3]) -> impl core::iter::traits::iterator::Iterator<Item = vyre_reference::workgroup::InvocationIds>
 pub fn vyre_reference::subgroup::SubgroupSimulator::add(&self, values: &[u32]) -> u32
 pub fn vyre_reference::subgroup::SubgroupSimulator::ballot<const N: usize>(&self, mask: &[bool; N]) -> u32
 pub fn vyre_reference::subgroup::SubgroupSimulator::ballot_slice(&self, mask: &[bool]) -> u32
@@ -231,18 +777,19 @@ pub fn vyre_reference::value::Value::to_bytes(&self) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::value::Value::to_bytes_width(&self, declared_width: usize) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::value::Value::truthy(&self) -> bool
 pub fn vyre_reference::value::Value::try_as_f32(&self) -> core::option::Option<f32>
+pub fn vyre_reference::value::Value::try_as_f64(&self) -> core::option::Option<f64>
 pub fn vyre_reference::value::Value::try_as_u32(&self) -> core::option::Option<u32>
 pub fn vyre_reference::value::Value::try_as_u64(&self) -> core::option::Option<u64>
 pub fn vyre_reference::value::Value::try_zero_for(ty: vyre_spec::data_type::DataType) -> core::option::Option<Self>
 pub fn vyre_reference::value::Value::wide_bytes(&self) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::value::Value::write_bytes_width_into(&self, target: &mut [u8])
 pub fn vyre_reference::value::Value::zero_for(ty: vyre_spec::data_type::DataType) -> Self
-pub fn vyre_reference::workgroup::BufferMap::get(&self, name: &str) -> core::option::Option<&vyre_reference::execution::expr::Buffer>
-pub fn vyre_reference::workgroup::BufferMap::get_mut(&mut self, name: &str) -> core::option::Option<&mut vyre_reference::execution::expr::Buffer>
-pub fn vyre_reference::workgroup::BufferMap::insert(&mut self, name: impl core::convert::Into<alloc::sync::Arc<str>>, buffer: vyre_reference::execution::expr::Buffer) -> core::option::Option<vyre_reference::execution::expr::Buffer>
-pub fn vyre_reference::workgroup::BufferMap::into_iter_pairs(self) -> impl core::iter::traits::iterator::Iterator<Item = (alloc::sync::Arc<str>, vyre_reference::execution::expr::Buffer)>
+pub fn vyre_reference::workgroup::BufferMap::get(&self, name: &str) -> core::option::Option<&vyre_reference::expr::Buffer>
+pub fn vyre_reference::workgroup::BufferMap::get_mut(&mut self, name: &str) -> core::option::Option<&mut vyre_reference::expr::Buffer>
+pub fn vyre_reference::workgroup::BufferMap::insert(&mut self, name: impl core::convert::Into<alloc::sync::Arc<str>>, buffer: vyre_reference::expr::Buffer) -> core::option::Option<vyre_reference::expr::Buffer>
+pub fn vyre_reference::workgroup::BufferMap::into_iter_pairs(self) -> impl core::iter::traits::iterator::Iterator<Item = (alloc::sync::Arc<str>, vyre_reference::expr::Buffer)>
 pub fn vyre_reference::workgroup::BufferMap::is_empty(&self) -> bool
-pub fn vyre_reference::workgroup::BufferMap::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&str, &vyre_reference::execution::expr::Buffer)>
+pub fn vyre_reference::workgroup::BufferMap::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&str, &vyre_reference::expr::Buffer)>
 pub fn vyre_reference::workgroup::BufferMap::len(&self) -> usize
 pub fn vyre_reference::workgroup::BufferMap::new() -> Self
 pub fn vyre_reference::workgroup::Invocation<'a>::assign(&mut self, name: &str, value: vyre_reference::value::Value) -> core::result::Result<(), vyre_reference::ReferenceError>
@@ -253,32 +800,36 @@ pub fn vyre_reference::workgroup::Invocation<'a>::local(&self, name: &str) -> co
 pub fn vyre_reference::workgroup::Invocation<'a>::new(ids: vyre_reference::workgroup::InvocationIds, entry: &'a [vyre_foundation::ir_inner::model::generated::Node]) -> Self
 pub fn vyre_reference::workgroup::Invocation<'a>::pop_scope(&mut self)
 pub fn vyre_reference::workgroup::Invocation<'a>::push_scope(&mut self)
+pub fn vyre_reference::workgroup::Invocation<'a>::unbind(&mut self, name: &str) -> core::option::Option<vyre_reference::value::Value>
 pub fn vyre_reference::workgroup::LocalSlots::for_nodes(nodes: &[vyre_foundation::ir_inner::model::generated::Node]) -> Self
-pub fn vyre_reference::workgroup::LocalSlots::for_program(program: &vyre_foundation::ir_inner::model::program::core::Program) -> Self
-pub fn vyre_reference::workgroup::LocalSlots::visit_assign(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident, value: &vyre_foundation::ir_inner::model::generated::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_reference::workgroup::LocalSlots::visit_async_load(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident, _: &vyre_foundation::ir_inner::model::expr::Ident, offset: &vyre_foundation::ir_inner::model::generated::Expr, size: &vyre_foundation::ir_inner::model::generated::Expr, _: &vyre_foundation::ir_inner::model::expr::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_reference::workgroup::LocalSlots::visit_async_store(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident, _: &vyre_foundation::ir_inner::model::expr::Ident, offset: &vyre_foundation::ir_inner::model::generated::Expr, size: &vyre_foundation::ir_inner::model::generated::Expr, _: &vyre_foundation::ir_inner::model::expr::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_reference::workgroup::LocalSlots::visit_async_wait(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::for_program(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> Self
+pub fn vyre_reference::workgroup::LocalSlots::visit_assign(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::ident::Ident, value: &vyre_foundation::ir_inner::model::generated::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_async_load(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::ident::Ident, _: &vyre_foundation::ir_inner::model::expr::ident::Ident, offset: &vyre_foundation::ir_inner::model::generated::Expr, size: &vyre_foundation::ir_inner::model::generated::Expr, _: &vyre_foundation::ir_inner::model::expr::ident::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_async_store(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::ident::Ident, _: &vyre_foundation::ir_inner::model::expr::ident::Ident, offset: &vyre_foundation::ir_inner::model::generated::Expr, size: &vyre_foundation::ir_inner::model::generated::Expr, _: &vyre_foundation::ir_inner::model::expr::ident::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_async_wait(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::ident::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_reference::workgroup::LocalSlots::visit_barrier(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_reference::workgroup::LocalSlots::visit_block(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &[vyre_foundation::ir_inner::model::generated::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_reference::workgroup::LocalSlots::visit_if(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, cond: &vyre_foundation::ir_inner::model::generated::Expr, _: &[vyre_foundation::ir_inner::model::generated::Node], _: &[vyre_foundation::ir_inner::model::generated::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_reference::workgroup::LocalSlots::visit_indirect_dispatch(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident, _: u64) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_reference::workgroup::LocalSlots::visit_let(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, name: &vyre_foundation::ir_inner::model::expr::Ident, value: &vyre_foundation::ir_inner::model::generated::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_reference::workgroup::LocalSlots::visit_loop(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, var: &vyre_foundation::ir_inner::model::expr::Ident, from: &vyre_foundation::ir_inner::model::generated::Expr, to: &vyre_foundation::ir_inner::model::generated::Expr, _: &[vyre_foundation::ir_inner::model::generated::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_indirect_dispatch(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::ident::Ident, _: u64) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_let(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, name: &vyre_foundation::ir_inner::model::expr::ident::Ident, value: &vyre_foundation::ir_inner::model::generated::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_logical_barrier(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_loop(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, var: &vyre_foundation::ir_inner::model::expr::ident::Ident, from: &vyre_foundation::ir_inner::model::generated::Expr, to: &vyre_foundation::ir_inner::model::generated::Expr, _: &[vyre_foundation::ir_inner::model::generated::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_reference::workgroup::LocalSlots::visit_opaque_node(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &dyn vyre_foundation::ir_inner::model::node::NodeExtension) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_reference::workgroup::LocalSlots::visit_region(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident, _: &core::option::Option<vyre_foundation::ir_inner::model::expr::GeneratorRef>, _: &[vyre_foundation::ir_inner::model::generated::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_reference::workgroup::LocalSlots::visit_resume(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_region(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::ident::Ident, _: &core::option::Option<vyre_foundation::ir_inner::model::expr::ident::Ident>, _: &[vyre_foundation::ir_inner::model::generated::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_resume(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::ident::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_reference::workgroup::LocalSlots::visit_return(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_reference::workgroup::LocalSlots::visit_store(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident, index: &vyre_foundation::ir_inner::model::generated::Expr, value: &vyre_foundation::ir_inner::model::generated::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_reference::workgroup::LocalSlots::visit_trap(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, address: &vyre_foundation::ir_inner::model::generated::Expr, _: &vyre_foundation::ir_inner::model::expr::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_store(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::ident::Ident, index: &vyre_foundation::ir_inner::model::generated::Expr, value: &vyre_foundation::ir_inner::model::generated::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_tile(&mut self, node: &vyre_foundation::ir_inner::model::generated::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_trap(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, address: &vyre_foundation::ir_inner::model::generated::Expr, _: &vyre_foundation::ir_inner::model::expr::ident::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_reference::workgroup::Memory::bytes(&self) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::workgroup::Memory::empty() -> Self
 pub fn vyre_reference::workgroup::Memory::from_bytes(bytes: alloc::vec::Vec<u8>) -> Self
 pub fn vyre_reference::workgroup::Memory::into_bytes(self) -> alloc::vec::Vec<u8>
-pub fn vyre_reference::workgroup::Memory::with_storage(self, name: impl core::convert::Into<alloc::sync::Arc<str>>, buffer: vyre_reference::execution::expr::Buffer) -> Self
-pub fn vyre_reference::workgroup::Memory::with_workgroup(self, name: impl core::convert::Into<alloc::sync::Arc<str>>, buffer: vyre_reference::execution::expr::Buffer) -> Self
+pub fn vyre_reference::workgroup::Memory::with_storage(self, name: impl core::convert::Into<alloc::sync::Arc<str>>, buffer: vyre_reference::expr::Buffer) -> Self
+pub fn vyre_reference::workgroup::Memory::with_workgroup(self, name: impl core::convert::Into<alloc::sync::Arc<str>>, buffer: vyre_reference::expr::Buffer) -> Self
 pub mod vyre_reference
 pub mod vyre_reference::atomics
+pub mod vyre_reference::composition_witness
 pub mod vyre_reference::cpu_op
 pub mod vyre_reference::dialect_dispatch
 pub mod vyre_reference::dual
@@ -295,7 +846,6 @@ pub mod vyre_reference::dual_impls::bitwise::and
 pub mod vyre_reference::dual_impls::bitwise::and::reference_a
 pub mod vyre_reference::dual_impls::bitwise::and::reference_b
 pub mod vyre_reference::dual_impls::bitwise::clz
-pub mod vyre_reference::dual_impls::bitwise::clz::reference
 pub mod vyre_reference::dual_impls::bitwise::clz::reference_a
 pub mod vyre_reference::dual_impls::bitwise::clz::reference_b
 pub mod vyre_reference::dual_impls::bitwise::not
@@ -305,59 +855,30 @@ pub mod vyre_reference::dual_impls::bitwise::or
 pub mod vyre_reference::dual_impls::bitwise::or::reference_a
 pub mod vyre_reference::dual_impls::bitwise::or::reference_b
 pub mod vyre_reference::dual_impls::bitwise::popcount
-pub mod vyre_reference::dual_impls::bitwise::popcount::reference
 pub mod vyre_reference::dual_impls::bitwise::popcount::reference_a
 pub mod vyre_reference::dual_impls::bitwise::popcount::reference_b
 pub mod vyre_reference::dual_impls::bitwise::shift_left
-pub mod vyre_reference::dual_impls::bitwise::shift_left::reference
 pub mod vyre_reference::dual_impls::bitwise::shift_left::reference_a
 pub mod vyre_reference::dual_impls::bitwise::shift_left::reference_b
 pub mod vyre_reference::dual_impls::bitwise::shift_right
-pub mod vyre_reference::dual_impls::bitwise::shift_right::reference
 pub mod vyre_reference::dual_impls::bitwise::shift_right::reference_a
 pub mod vyre_reference::dual_impls::bitwise::shift_right::reference_b
 pub mod vyre_reference::dual_impls::bitwise::xor
 pub mod vyre_reference::dual_impls::bitwise::xor::reference_a
 pub mod vyre_reference::dual_impls::bitwise::xor::reference_b
-pub mod vyre_reference::dual_impls::common
 pub mod vyre_reference::dual_impls::compare
 pub mod vyre_reference::dual_impls::compare::eq
-pub mod vyre_reference::dual_impls::compare::eq::reference
 pub mod vyre_reference::dual_impls::compare::eq::reference_a
 pub mod vyre_reference::dual_impls::compare::eq::reference_b
 pub mod vyre_reference::dual_impls::compare::lt
-pub mod vyre_reference::dual_impls::compare::lt::reference
 pub mod vyre_reference::dual_impls::compare::lt::reference_a
 pub mod vyre_reference::dual_impls::compare::lt::reference_b
-pub mod vyre_reference::dual_impls::hash
-pub mod vyre_reference::dual_impls::hash::blake3
-pub mod vyre_reference::dual_impls::hash::blake3::reference
-pub mod vyre_reference::dual_impls::hash::fnv1a
-pub mod vyre_reference::dual_impls::hash::fnv1a::reference
-pub mod vyre_reference::dual_impls::memory
-pub mod vyre_reference::dual_impls::memory::gather
-pub mod vyre_reference::dual_impls::memory::gather::reference
-pub mod vyre_reference::dual_impls::memory::scatter
-pub mod vyre_reference::dual_impls::memory::scatter::reference
-pub mod vyre_reference::dual_impls::scan
-pub mod vyre_reference::dual_impls::scan::dfa
-pub mod vyre_reference::dual_impls::scan::dfa::reference
-pub mod vyre_reference::dual_impls::scan::literal
-pub mod vyre_reference::dual_impls::scan::literal::reference
-pub mod vyre_reference::dual_impls::scan::prefix
-pub mod vyre_reference::dual_impls::scan::prefix::reference
-pub mod vyre_reference::dual_impls::workgroup
-pub mod vyre_reference::dual_impls::workgroup::reduce
-pub mod vyre_reference::dual_impls::workgroup::reduce::reference
-pub mod vyre_reference::dual_impls::workgroup::shuffle
-pub mod vyre_reference::dual_impls::workgroup::shuffle::reference
-pub mod vyre_reference::execution
-pub mod vyre_reference::execution::expr
-pub mod vyre_reference::execution::node
-pub mod vyre_reference::execution::op_count
-pub mod vyre_reference::execution::sequential
+pub mod vyre_reference::expr
 pub mod vyre_reference::flat_cpu
 pub mod vyre_reference::ieee754
+pub mod vyre_reference::node
+pub mod vyre_reference::op_count
+pub mod vyre_reference::sequential
 pub mod vyre_reference::subgroup
 pub mod vyre_reference::value
 pub mod vyre_reference::workgroup
@@ -365,6 +886,29 @@ pub struct vyre_reference::DualReferenceFacet
 pub struct vyre_reference::OobReport
 pub struct vyre_reference::ReferenceError
 pub struct vyre_reference::ReferenceFacet
+pub struct vyre_reference::composition_witness::AdjointPair
+pub struct vyre_reference::composition_witness::Adler32ChunkWitness
+pub struct vyre_reference::composition_witness::AmgSolveScratchWitness
+pub struct vyre_reference::composition_witness::AmgVcycleScratchWitness
+pub struct vyre_reference::composition_witness::Crc32ChunkWitness
+pub struct vyre_reference::composition_witness::Crc32MapReducePlanWitness
+pub struct vyre_reference::composition_witness::Crc32MapReduceStepWitness
+pub struct vyre_reference::composition_witness::CsrPersistentClosureWitness
+pub struct vyre_reference::composition_witness::DnnfDag
+pub struct vyre_reference::composition_witness::ExplodedIfdsScratchWitness
+pub struct vyre_reference::composition_witness::FiniteCategory
+pub struct vyre_reference::composition_witness::FiniteFunctor
+pub struct vyre_reference::composition_witness::FrontierDependencyWitness
+pub struct vyre_reference::composition_witness::FrontierNodeWitness
+pub struct vyre_reference::composition_witness::FrontierTypedPlanWitness
+pub struct vyre_reference::composition_witness::FrontierWaveWitness
+pub struct vyre_reference::composition_witness::InflateStoredWitness
+pub struct vyre_reference::composition_witness::LrProduction
+pub struct vyre_reference::composition_witness::NewtonSchulzScratchWitness
+pub struct vyre_reference::composition_witness::WitnessPostProcessedMatch
+pub struct vyre_reference::composition_witness::ZiftsieveLiteralWitness
+pub struct vyre_reference::composition_witness::ZxDiagram
+pub struct vyre_reference::composition_witness::ZxSpider
 pub struct vyre_reference::dual_impls::EvalError
 pub struct vyre_reference::dual_impls::arith::add::AddDualReference
 pub struct vyre_reference::dual_impls::arith::mul::MulDualReference
@@ -372,25 +916,51 @@ pub struct vyre_reference::dual_impls::bitwise::and::AndDualReference
 pub struct vyre_reference::dual_impls::bitwise::not::NotDualReference
 pub struct vyre_reference::dual_impls::bitwise::or::OrDualReference
 pub struct vyre_reference::dual_impls::bitwise::xor::XorDualReference
-pub struct vyre_reference::dual_impls::common::EvalError
 pub struct vyre_reference::dual_impls::compare::eq::EqDualReference
 pub struct vyre_reference::dual_impls::compare::lt::LtDualReference
-pub struct vyre_reference::execution::expr::Buffer
-pub struct vyre_reference::execution::sequential::SequentialWorkgroup
+pub struct vyre_reference::expr::Buffer
+pub struct vyre_reference::sequential::SequentialWorkgroup
 pub struct vyre_reference::subgroup::SubgroupSimulator
 pub struct vyre_reference::workgroup::BufferMap
 pub struct vyre_reference::workgroup::Invocation<'a>
 pub struct vyre_reference::workgroup::InvocationIds
 pub struct vyre_reference::workgroup::LocalSlots
 pub struct vyre_reference::workgroup::Memory
+pub trait vyre_reference::composition_witness::RuleEvaluationContextWitness
 pub trait vyre_reference::dual::DualReference
 pub trait vyre_reference::dual_impls::ReferenceEvaluator
-pub trait vyre_reference::dual_impls::common::ReferenceEvaluator
 pub type vyre_reference::dual::ReferenceFn = fn(&[u8]) -> alloc::vec::Vec<u8>
 pub type vyre_reference::workgroup::LocalSlots::Break = core::convert::Infallible
+pub use vyre_reference::FP4_DECODE_TABLE
+pub use vyre_reference::I4_DECODE_TABLE
+pub use vyre_reference::InfinityBehavior
+pub use vyre_reference::NF4_QUANTILE_TABLE
+pub use vyre_reference::NUMERIC_SEMANTICS_SCHEMA_VERSION
+pub use vyre_reference::NanBehavior
+pub use vyre_reference::NumericFormat
+pub use vyre_reference::NumericSemantics
+pub use vyre_reference::OverflowBehavior
+pub use vyre_reference::RoundingMode
+pub use vyre_reference::SaturationBehavior
+pub use vyre_reference::SignedZeroBehavior
+pub use vyre_reference::SubnormalBehavior
 pub use vyre_reference::cpu_op::CategoryAOp
 pub use vyre_reference::cpu_op::CpuFn
 pub use vyre_reference::cpu_op::CpuOp
+pub use vyre_reference::dequantize_grouped_f32
+pub use vyre_reference::f32_to_f8e4m3
+pub use vyre_reference::f32_to_f8e5m2
+pub use vyre_reference::f32_to_fp4
+pub use vyre_reference::f32_to_nf4
+pub use vyre_reference::f8e4m3_decode_table
+pub use vyre_reference::f8e4m3_to_f32
+pub use vyre_reference::f8e5m2_decode_table
+pub use vyre_reference::f8e5m2_to_f32
+pub use vyre_reference::fp4_to_f32
+pub use vyre_reference::i32_to_i4
+pub use vyre_reference::i4_to_i32
+pub use vyre_reference::nf4_to_f32
+pub use vyre_reference::numeric_semantics_for
 pub vyre_reference::DualReferenceFacet::operation_id: &'static str
 pub vyre_reference::DualReferenceFacet::reference_a: vyre_reference::dual::ReferenceFn
 pub vyre_reference::DualReferenceFacet::reference_b: vyre_reference::dual::ReferenceFn
@@ -399,7 +969,171 @@ pub vyre_reference::OobReport::oob_loads: u64
 pub vyre_reference::OobReport::oob_stores: u64
 pub vyre_reference::ReferenceFacet::execute: vyre_spec::intrinsic_descriptor::CpuFn
 pub vyre_reference::ReferenceFacet::operation_id: &'static str
-pub vyre_reference::execution::sequential::SequentialWorkgroup::size: [u32; 3]
+pub vyre_reference::composition_witness::AdjointPair::is_adjoint: bool
+pub vyre_reference::composition_witness::AdjointPair::witness: core::option::Option<(u32, u32)>
+pub vyre_reference::composition_witness::Adler32ChunkWitness::a: u32
+pub vyre_reference::composition_witness::Adler32ChunkWitness::b: u32
+pub vyre_reference::composition_witness::Adler32ChunkWitness::len_mod: u32
+pub vyre_reference::composition_witness::AmgSolveScratchWitness::next_iterate: alloc::vec::Vec<f64>
+pub vyre_reference::composition_witness::AmgSolveScratchWitness::v_cycle: vyre_reference::composition_witness::AmgVcycleScratchWitness
+pub vyre_reference::composition_witness::AmgVcycleScratchWitness::coarse: alloc::vec::Vec<f64>
+pub vyre_reference::composition_witness::AmgVcycleScratchWitness::coarse_next: alloc::vec::Vec<f64>
+pub vyre_reference::composition_witness::AmgVcycleScratchWitness::coarse_rhs: alloc::vec::Vec<f64>
+pub vyre_reference::composition_witness::AmgVcycleScratchWitness::fine: alloc::vec::Vec<f64>
+pub vyre_reference::composition_witness::AmgVcycleScratchWitness::residual: alloc::vec::Vec<f64>
+pub vyre_reference::composition_witness::Base64DecodeWitnessError::Allocation
+pub vyre_reference::composition_witness::Base64DecodeWitnessError::Allocation::requested: usize
+pub vyre_reference::composition_witness::Base64DecodeWitnessError::Allocation::source: alloc::string::String
+pub vyre_reference::composition_witness::Base64DecodeWitnessError::CapacityOverflow
+pub vyre_reference::composition_witness::Base64DecodeWitnessError::CapacityOverflow::blocks: usize
+pub vyre_reference::composition_witness::Base64DecodeWitnessError::DecodedLengthOverflow
+pub vyre_reference::composition_witness::Base64DecodeWitnessError::DecodedLengthOverflow::decoded_words: usize
+pub vyre_reference::composition_witness::Base64DecodeWitnessError::InvalidLength
+pub vyre_reference::composition_witness::Base64DecodeWitnessError::InvalidLength::len: usize
+pub vyre_reference::composition_witness::Crc32ChunkWitness::crc: u32
+pub vyre_reference::composition_witness::Crc32ChunkWitness::len: u64
+pub vyre_reference::composition_witness::Crc32MapReducePlanWitness::chunk_size: core::num::nonzero::NonZeroU32
+pub vyre_reference::composition_witness::Crc32MapReducePlanWitness::input_len: u32
+pub vyre_reference::composition_witness::Crc32MapReducePlanWitness::steps: alloc::vec::Vec<vyre_reference::composition_witness::Crc32MapReduceStepWitness>
+pub vyre_reference::composition_witness::Crc32MapReduceStepKindWitness::ChunkSummary
+pub vyre_reference::composition_witness::Crc32MapReduceStepKindWitness::PairReduce
+pub vyre_reference::composition_witness::Crc32MapReduceStepWitness::grid: [u32; 3]
+pub vyre_reference::composition_witness::Crc32MapReduceStepWitness::input_items: u32
+pub vyre_reference::composition_witness::Crc32MapReduceStepWitness::input_words: u32
+pub vyre_reference::composition_witness::Crc32MapReduceStepWitness::kind: vyre_reference::composition_witness::Crc32MapReduceStepKindWitness
+pub vyre_reference::composition_witness::Crc32MapReduceStepWitness::output_pairs: u32
+pub vyre_reference::composition_witness::Crc32MapReduceStepWitness::output_words: u32
+pub vyre_reference::composition_witness::CsrPersistentClosureWitness::active_density: alloc::vec::Vec<u32>
+pub vyre_reference::composition_witness::CsrPersistentClosureWitness::active_per_iteration: alloc::vec::Vec<u32>
+pub vyre_reference::composition_witness::CsrPersistentClosureWitness::changed: u32
+pub vyre_reference::composition_witness::CsrPersistentClosureWitness::converged: bool
+pub vyre_reference::composition_witness::CsrPersistentClosureWitness::frontier: alloc::vec::Vec<u32>
+pub vyre_reference::composition_witness::CsrPersistentClosureWitness::stop_iteration: u32
+pub vyre_reference::composition_witness::DnnfDag::gates: alloc::vec::Vec<vyre_reference::composition_witness::DnnfGate>
+pub vyre_reference::composition_witness::DnnfDag::num_vars: u32
+pub vyre_reference::composition_witness::DnnfGate::And(alloc::vec::Vec<u32>)
+pub vyre_reference::composition_witness::DnnfGate::False
+pub vyre_reference::composition_witness::DnnfGate::Literal(u32, bool)
+pub vyre_reference::composition_witness::DnnfGate::Or(alloc::vec::Vec<u32>)
+pub vyre_reference::composition_witness::DnnfGate::True
+pub vyre_reference::composition_witness::ExplodedIfdsScratchWitness::cursor: alloc::vec::Vec<usize>
+pub vyre_reference::composition_witness::ExplodedIfdsScratchWitness::edges_flat: alloc::vec::Vec<(u32, u32)>
+pub vyre_reference::composition_witness::ExplodedIfdsScratchWitness::gen_cursor: alloc::vec::Vec<usize>
+pub vyre_reference::composition_witness::ExplodedIfdsScratchWitness::gen_facts: alloc::vec::Vec<u32>
+pub vyre_reference::composition_witness::ExplodedIfdsScratchWitness::gen_offsets: alloc::vec::Vec<usize>
+pub vyre_reference::composition_witness::ExplodedIfdsScratchWitness::killed: alloc::vec::Vec<bool>
+pub vyre_reference::composition_witness::FiniteCategory::hom_size: alloc::vec::Vec<u32>
+pub vyre_reference::composition_witness::FiniteCategory::n: u32
+pub vyre_reference::composition_witness::FiniteFunctor::object_map: alloc::vec::Vec<u32>
+pub vyre_reference::composition_witness::FrontierDependencyWitness::after: u32
+pub vyre_reference::composition_witness::FrontierDependencyWitness::before: u32
+pub vyre_reference::composition_witness::FrontierDomainWitness::Dataflow
+pub vyre_reference::composition_witness::FrontierDomainWitness::Diagnostic
+pub vyre_reference::composition_witness::FrontierDomainWitness::Parser
+pub vyre_reference::composition_witness::FrontierDomainWitness::Semantic
+pub vyre_reference::composition_witness::FrontierNodeWitness::active_items: u32
+pub vyre_reference::composition_witness::FrontierNodeWitness::domain: vyre_reference::composition_witness::FrontierDomainWitness
+pub vyre_reference::composition_witness::FrontierNodeWitness::id: u32
+pub vyre_reference::composition_witness::FrontierTypedPlanWitness::waves: alloc::vec::Vec<vyre_reference::composition_witness::FrontierWaveWitness>
+pub vyre_reference::composition_witness::FrontierTypedPlanWitnessError::Cycle
+pub vyre_reference::composition_witness::FrontierTypedPlanWitnessError::Cycle::unscheduled_nodes: usize
+pub vyre_reference::composition_witness::FrontierTypedPlanWitnessError::DuplicateNode
+pub vyre_reference::composition_witness::FrontierTypedPlanWitnessError::DuplicateNode::id: u32
+pub vyre_reference::composition_witness::FrontierTypedPlanWitnessError::PlanTooLarge
+pub vyre_reference::composition_witness::FrontierTypedPlanWitnessError::PlanTooLarge::field: &'static str
+pub vyre_reference::composition_witness::FrontierTypedPlanWitnessError::UnknownDependencyNode
+pub vyre_reference::composition_witness::FrontierTypedPlanWitnessError::UnknownDependencyNode::id: u32
+pub vyre_reference::composition_witness::FrontierWaveWitness::active_items: u64
+pub vyre_reference::composition_witness::FrontierWaveWitness::domains: alloc::vec::Vec<vyre_reference::composition_witness::FrontierDomainWitness>
+pub vyre_reference::composition_witness::FrontierWaveWitness::index: u32
+pub vyre_reference::composition_witness::FrontierWaveWitness::node_ids: alloc::vec::Vec<u32>
+pub vyre_reference::composition_witness::InflateStoredWitness::data: alloc::vec::Vec<u32>
+pub vyre_reference::composition_witness::InflateStoredWitness::inflated_len: u32
+pub vyre_reference::composition_witness::KanDirection::Left
+pub vyre_reference::composition_witness::KanDirection::Right
+pub vyre_reference::composition_witness::LrAction::Accept
+pub vyre_reference::composition_witness::LrAction::Error
+pub vyre_reference::composition_witness::LrAction::Reduce(u32)
+pub vyre_reference::composition_witness::LrAction::Shift(u32)
+pub vyre_reference::composition_witness::LrProduction::lhs: u32
+pub vyre_reference::composition_witness::LrProduction::rhs_len: u32
+pub vyre_reference::composition_witness::NewtonSchulzScratchWitness::three_i_minus_zy: alloc::vec::Vec<f64>
+pub vyre_reference::composition_witness::NewtonSchulzScratchWitness::y: alloc::vec::Vec<f64>
+pub vyre_reference::composition_witness::NewtonSchulzScratchWitness::z: alloc::vec::Vec<f64>
+pub vyre_reference::composition_witness::NewtonSchulzScratchWitness::zy: alloc::vec::Vec<f64>
+pub vyre_reference::composition_witness::ParseLrWitnessError::InvalidProduction
+pub vyre_reference::composition_witness::ParseLrWitnessError::InvalidProduction::prod_id: u32
+pub vyre_reference::composition_witness::ParseLrWitnessError::NoGoto
+pub vyre_reference::composition_witness::ParseLrWitnessError::NoGoto::nonterminal: u32
+pub vyre_reference::composition_witness::ParseLrWitnessError::NoGoto::state: u32
+pub vyre_reference::composition_witness::ParseLrWitnessError::StackUnderflow
+pub vyre_reference::composition_witness::ParseLrWitnessError::UnexpectedToken
+pub vyre_reference::composition_witness::ParseLrWitnessError::UnexpectedToken::pos: usize
+pub vyre_reference::composition_witness::ParseLrWitnessError::UnexpectedToken::state: u32
+pub vyre_reference::composition_witness::ParseLrWitnessError::UnexpectedToken::token: u32
+pub vyre_reference::composition_witness::RuleConditionWitness::FieldInSet
+pub vyre_reference::composition_witness::RuleConditionWitness::FieldInSet::field: alloc::sync::Arc<str>
+pub vyre_reference::composition_witness::RuleConditionWitness::FieldInSet::set: smallvec::SmallVec<[alloc::sync::Arc<str>; 4]>
+pub vyre_reference::composition_witness::RuleConditionWitness::FileSizeEq(u64)
+pub vyre_reference::composition_witness::RuleConditionWitness::FileSizeGt(u64)
+pub vyre_reference::composition_witness::RuleConditionWitness::FileSizeGte(u64)
+pub vyre_reference::composition_witness::RuleConditionWitness::FileSizeLt(u64)
+pub vyre_reference::composition_witness::RuleConditionWitness::FileSizeLte(u64)
+pub vyre_reference::composition_witness::RuleConditionWitness::FileSizeNe(u64)
+pub vyre_reference::composition_witness::RuleConditionWitness::LiteralFalse
+pub vyre_reference::composition_witness::RuleConditionWitness::LiteralTrue
+pub vyre_reference::composition_witness::RuleConditionWitness::Opaque(alloc::sync::Arc<dyn vyre_foundation::extension::RuleConditionExt>)
+pub vyre_reference::composition_witness::RuleConditionWitness::PatternCountGt
+pub vyre_reference::composition_witness::RuleConditionWitness::PatternCountGt::pattern_id: u32
+pub vyre_reference::composition_witness::RuleConditionWitness::PatternCountGt::threshold: u32
+pub vyre_reference::composition_witness::RuleConditionWitness::PatternCountGte
+pub vyre_reference::composition_witness::RuleConditionWitness::PatternCountGte::pattern_id: u32
+pub vyre_reference::composition_witness::RuleConditionWitness::PatternCountGte::threshold: u32
+pub vyre_reference::composition_witness::RuleConditionWitness::PatternExists
+pub vyre_reference::composition_witness::RuleConditionWitness::PatternExists::pattern_id: u32
+pub vyre_reference::composition_witness::RuleConditionWitness::PrefixMatch
+pub vyre_reference::composition_witness::RuleConditionWitness::PrefixMatch::prefix: alloc::sync::Arc<str>
+pub vyre_reference::composition_witness::RuleConditionWitness::PrefixMatch::value: alloc::sync::Arc<str>
+pub vyre_reference::composition_witness::RuleConditionWitness::RangeMatch
+pub vyre_reference::composition_witness::RuleConditionWitness::RangeMatch::max: u64
+pub vyre_reference::composition_witness::RuleConditionWitness::RangeMatch::min: u64
+pub vyre_reference::composition_witness::RuleConditionWitness::RangeMatch::value: u64
+pub vyre_reference::composition_witness::RuleConditionWitness::RegexMatch
+pub vyre_reference::composition_witness::RuleConditionWitness::RegexMatch::field: alloc::sync::Arc<str>
+pub vyre_reference::composition_witness::RuleConditionWitness::RegexMatch::pattern: alloc::sync::Arc<str>
+pub vyre_reference::composition_witness::RuleConditionWitness::SetMembership
+pub vyre_reference::composition_witness::RuleConditionWitness::SetMembership::set: smallvec::SmallVec<[alloc::sync::Arc<str>; 4]>
+pub vyre_reference::composition_witness::RuleConditionWitness::SetMembership::value: alloc::sync::Arc<str>
+pub vyre_reference::composition_witness::RuleConditionWitness::SubstringMatch
+pub vyre_reference::composition_witness::RuleConditionWitness::SubstringMatch::haystack: alloc::sync::Arc<str>
+pub vyre_reference::composition_witness::RuleConditionWitness::SubstringMatch::needle: alloc::sync::Arc<str>
+pub vyre_reference::composition_witness::RuleConditionWitness::SuffixMatch
+pub vyre_reference::composition_witness::RuleConditionWitness::SuffixMatch::suffix: alloc::sync::Arc<str>
+pub vyre_reference::composition_witness::RuleConditionWitness::SuffixMatch::value: alloc::sync::Arc<str>
+pub vyre_reference::composition_witness::RuleFormulaWitness::And(alloc::boxed::Box<vyre_reference::composition_witness::RuleFormulaWitness>, alloc::boxed::Box<vyre_reference::composition_witness::RuleFormulaWitness>)
+pub vyre_reference::composition_witness::RuleFormulaWitness::Condition(vyre_reference::composition_witness::RuleConditionWitness)
+pub vyre_reference::composition_witness::RuleFormulaWitness::Not(alloc::boxed::Box<vyre_reference::composition_witness::RuleFormulaWitness>)
+pub vyre_reference::composition_witness::RuleFormulaWitness::Or(alloc::boxed::Box<vyre_reference::composition_witness::RuleFormulaWitness>, alloc::boxed::Box<vyre_reference::composition_witness::RuleFormulaWitness>)
+pub vyre_reference::composition_witness::WitnessPostProcessError::InvalidRange
+pub vyre_reference::composition_witness::WitnessPostProcessError::InvalidRange::end: u32
+pub vyre_reference::composition_witness::WitnessPostProcessError::InvalidRange::haystack_len: usize
+pub vyre_reference::composition_witness::WitnessPostProcessError::InvalidRange::pattern_id: u32
+pub vyre_reference::composition_witness::WitnessPostProcessError::InvalidRange::start: u32
+pub vyre_reference::composition_witness::WitnessPostProcessedMatch::confidence: f32
+pub vyre_reference::composition_witness::WitnessPostProcessedMatch::end: u32
+pub vyre_reference::composition_witness::WitnessPostProcessedMatch::entropy_bits_per_byte: f32
+pub vyre_reference::composition_witness::WitnessPostProcessedMatch::pattern_id: u32
+pub vyre_reference::composition_witness::WitnessPostProcessedMatch::start: u32
+pub vyre_reference::composition_witness::ZiftsieveLiteralWitness::decoded_len: usize
+pub vyre_reference::composition_witness::ZiftsieveLiteralWitness::literals: alloc::vec::Vec<u8>
+pub vyre_reference::composition_witness::ZxColor::X
+pub vyre_reference::composition_witness::ZxColor::Z
+pub vyre_reference::composition_witness::ZxDiagram::edges: alloc::vec::Vec<(u32, u32)>
+pub vyre_reference::composition_witness::ZxDiagram::phase_denom: u32
+pub vyre_reference::composition_witness::ZxDiagram::spiders: alloc::vec::Vec<vyre_reference::composition_witness::ZxSpider>
+pub vyre_reference::composition_witness::ZxSpider::color: vyre_reference::composition_witness::ZxColor
+pub vyre_reference::composition_witness::ZxSpider::phase_num: u32
+pub vyre_reference::sequential::SequentialWorkgroup::size: [u32; 3]
 pub vyre_reference::value::Value::Array(alloc::vec::Vec<vyre_reference::value::Value>)
 pub vyre_reference::value::Value::Bool(bool)
 pub vyre_reference::value::Value::Bytes(alloc::sync::Arc<[u8]>)

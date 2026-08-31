@@ -1,0 +1,258 @@
+# The neutral-vocabulary contract, as data.
+#
+# A crate in a substrate-neutral layer states the capability it works on rather
+# than one vendor's product. This file is what the rule is: the roster comes from
+# the layers below crossed with docs/CRATE_OWNERSHIP.toml, and the words come
+# from the term rows. Nothing here is compiled into the gate, so adding a dialect
+# or a layer is a data change that the gate then holds against the live tree.
+#
+# Every row is checked against the tree on every run. A layer no member declares,
+# a member layer with no row, an exemption outside a neutral layer, a term whose
+# owning layer is neutral, and an interface allowance whose name appears nowhere
+# under its own directory are all findings, so a row that stopped covering
+# anything is reported instead of sitting here forever.
+
+schema_version = 1
+
+# The words a neutral crate says instead. A term row's `neutral` field must name
+# one of these, so a term cannot be banned without stating the replacement.
+[vocabulary]
+neutral_terms = [
+    "primary text",
+    "primary binary",
+    "secondary text",
+    "native module",
+    "backend",
+    "target",
+    "device",
+    "artifact",
+    "subgroup",
+    "lane",
+]
+
+# `lane` is one of the neutral words above, not a banned one: this workspace
+# calls a subgroup member a lane, and the dispatch-grid owner is spelled
+# `lane_grid`. A rule that read it as vendor vocabulary would fire on correct
+# code, so it stays a replacement and never becomes a term row.
+
+# Whether each layer declared in docs/CRATE_OWNERSHIP.toml is substrate-neutral.
+# Every layer a member declares needs a row here, and a row no member declares is
+# a decision that covers nothing: both are findings, because either one makes the
+# rule answer for a roster nobody checked.
+[[layer]]
+name = "backend-neutral"
+neutral = true
+
+[[layer]]
+name = "compiler-boundary"
+neutral = true
+
+[[layer]]
+name = "concrete-backend"
+neutral = false
+
+[[layer]]
+name = "conformance"
+neutral = false
+
+[[layer]]
+name = "emitter"
+neutral = false
+
+[[layer]]
+name = "facade"
+neutral = true
+
+[[layer]]
+name = "foundation"
+neutral = true
+
+[[layer]]
+name = "libraries"
+neutral = true
+
+[[layer]]
+name = "lowering"
+neutral = true
+
+[[layer]]
+name = "packaging"
+neutral = true
+
+# Optimizer passes expressed as Vyre programs, executed through the
+# SemanticExecutor seam, so the crate names no backend API.
+[[layer]]
+name = "pass-engine"
+neutral = true
+
+[[layer]]
+name = "primitives"
+neutral = true
+
+# Substrate-bound by function, not by accident: the link crate must name every
+# source whose registrations a build links, and the concrete drivers are sources,
+# so it reaches each backend API through them.
+[[layer]]
+name = "registry-link"
+neutral = false
+
+[[layer]]
+name = "runtime"
+neutral = true
+
+[[layer]]
+name = "semantics"
+neutral = true
+
+# structure-gate depends on no vyre crate, so it keeps running while the
+# workspace does not compile. Nothing it reads is substrate-bound.
+[[layer]]
+name = "standalone-tooling"
+neutral = true
+
+[[layer]]
+name = "test-tooling"
+neutral = false
+
+[[layer]]
+name = "tooling"
+neutral = false
+
+# Substrate-neutral layers whose crates may still name a concrete backend, and
+# the reason each may. A crate whose job is to police the backends names every
+# one of them: a roster it may not write is a roster it cannot check. Every other
+# neutral layer describes work that must read the same for every target, so this
+# list stays short and each row carries why.
+[[exempt_layer]]
+layer = "standalone-tooling"
+reason = "a tooling crate names the backends its own rules police"
+
+# Concrete backend, vendor and dialect names. Matched case-insensitively and only
+# where the hit is a whole run of identifier segments, so `cudarc` is not `CUDA`
+# and `hash` is not `ash`. `owner_layer` is the layer that owns the concrete
+# detail the word names, and it must be a layer the rows above call not neutral:
+# a word owned by a neutral layer would be banned from its own owner.
+[[term]]
+word = "cubin"
+owner_layer = "concrete-backend"
+neutral = "primary binary"
+
+[[term]]
+word = "CUDA"
+owner_layer = "concrete-backend"
+neutral = "backend"
+
+[[term]]
+word = "cudarc"
+owner_layer = "concrete-backend"
+neutral = "backend"
+
+[[term]]
+word = "GLSL"
+owner_layer = "emitter"
+neutral = "secondary text"
+
+[[term]]
+word = "HLSL"
+owner_layer = "emitter"
+neutral = "secondary text"
+
+[[term]]
+word = "Metal"
+owner_layer = "concrete-backend"
+neutral = "backend"
+
+[[term]]
+word = "MSL"
+owner_layer = "emitter"
+neutral = "primary text"
+
+[[term]]
+word = "naga"
+owner_layer = "emitter"
+neutral = "primary text"
+
+[[term]]
+word = "NVIDIA"
+owner_layer = "concrete-backend"
+neutral = "device"
+
+[[term]]
+word = "NVRTC"
+owner_layer = "concrete-backend"
+neutral = "native module"
+
+[[term]]
+word = "NVVM"
+owner_layer = "emitter"
+neutral = "primary binary"
+
+[[term]]
+word = "OpenCL"
+owner_layer = "concrete-backend"
+neutral = "backend"
+
+[[term]]
+word = "PTX"
+owner_layer = "emitter"
+neutral = "primary binary"
+
+[[term]]
+word = "ptxas"
+owner_layer = "concrete-backend"
+neutral = "native module"
+
+[[term]]
+word = "SPIR-V"
+owner_layer = "emitter"
+neutral = "primary binary"
+
+[[term]]
+word = "SPIRV"
+owner_layer = "emitter"
+neutral = "primary binary"
+
+[[term]]
+word = "Vulkan"
+owner_layer = "concrete-backend"
+neutral = "backend"
+
+[[term]]
+word = "WGPU"
+owner_layer = "concrete-backend"
+neutral = "backend"
+
+[[term]]
+word = "WGSL"
+owner_layer = "emitter"
+neutral = "primary text"
+
+[[term]]
+word = "warp"
+owner_layer = "concrete-backend"
+neutral = "subgroup"
+
+# Directory prefix, word, and reason for a name that identifies an external
+# interface instead of describing the crate's own work. A name the kernel exports
+# cannot be restated in neutral words: the probe opens that exact path, and a
+# rename would make it read the wrong file or nothing. Every other site states
+# the neutral concept, so each row here carries the reason it is not one of them.
+[[interface]]
+prefix = "vyre-runtime/src/uring/"
+name = "nvidia-fs"
+reason = "the Linux kernel module, and the /proc path it exports, that the GPUDirect probe reads"
+
+[[interface]]
+prefix = "vyre/src/"
+name = "cuda"
+reason = "the Cargo feature and the driver crate the facade links a backend registration from, both named by that crate's own package identity"
+
+[[interface]]
+prefix = "vyre/src/"
+name = "wgpu"
+reason = "the Cargo feature and the driver crate the facade links a backend registration from, both named by that crate's own package identity"
+
+[[interface]]
+prefix = "vyre-foundation/src/ir_inner/model/program/stats/"
+name = "warp"
+reason = "one vendor spelling of a subgroup intrinsic op id, recognized so a program authored outside this tree still classifies as subgroup work"

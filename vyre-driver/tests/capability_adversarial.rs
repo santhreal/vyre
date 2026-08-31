@@ -18,10 +18,14 @@ fn default_capabilities_are_fail_closed() {
     assert!(!caps.has_dual_issue_fp32_int32);
     assert!(!caps.has_tensor_core_int);
     assert!(!caps.has_native_f16);
-    assert!(!caps.has_warp_shuffle);
+    assert!(!caps.has_subgroup_shuffle);
     assert!(!caps.has_shared_memory);
     assert!(!caps.has_transcendental_polynomial_emit);
     assert_eq!(caps.max_native_int_width, 0);
+    assert!(!caps.supports_tensor_cores);
+    assert_eq!(caps.max_shared_memory_bytes, 0);
+    assert_eq!(caps.regs_per_thread_max, 0);
+    assert_eq!(caps.subgroup_size, 0);
 }
 
 #[test]
@@ -35,10 +39,11 @@ fn capability_snapshots_are_copyable_without_aliasing_state() {
         has_dual_issue_fp32_int32: true,
         has_tensor_core_int: false,
         has_native_f16: true,
-        has_warp_shuffle: true,
+        has_subgroup_shuffle: true,
         has_shared_memory: true,
         has_transcendental_polynomial_emit: false,
         max_native_int_width: 64,
+        ..BackendCapabilities::default()
     };
 
     let copied = caps;

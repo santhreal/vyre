@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`scripts/check_doc_claim_to_test.sh`, `scripts/check_op_names.sh`, `scripts/check_invariant_paths_exist.sh` and `scripts/check_repo_hygiene.sh` are gone. The `doc-claims`, `op-names`, `invariant-paths` and `repo-hygiene` gates own those rules. The claim manifest is parsed with a TOML parser rather than awk, so a phrase carrying a quote or spanning lines is read correctly, and the op-name scan no longer splits a path on whitespace or skips files by a hand-typed filename list."

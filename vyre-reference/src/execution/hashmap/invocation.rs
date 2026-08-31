@@ -1,0 +1,244 @@
+//! Invocation state, local scopes, and workgroup scheduling.
+//!
+//! This module owns the mutable per-lane interpreter state. It delegates node
+//! stepping to `step` and synchronization checks to `sync`; it does not evaluate
+//! expressions or resolve buffers directly.
+
+use super::{
+    memory::HashmapMemory,
+    step::step_round_robin,
+    sync::{live_waiting_count, release_barrier_if_ready, verify_uniform_control_flow},
+};
+use crate::execution::async_transfer::{AsyncTransfer, PendingAsyncTransfers};
+use crate::ReferenceError;
+use crate::{
+    value::Value,
+    workgroup::{Frame, InvocationIds},
+};
+use imbl::HashMap;
+use rustc_hash::FxHashMap;
+use std::sync::Arc;
+use vyre_foundation::ir::{Node, Program};
+
+#[doc = " Local variable environment backed by persistent maps for O(1) subgroup snapshots."]
+pub(crate) struct HashmapLocals {
+    pub(crate) locals: HashMap<Arc<str>, Value>,
+    pub(crate) immutable: HashMap<Arc<str>, bool>,
+    pub(crate) scopes: Vec<Vec<Arc<str>>>,
+}
+
+impl HashmapLocals {
+    pub(crate) fn new() -> Self {
+        Self {
+            locals: HashMap::new(),
+            immutable: HashMap::new(),
+            scopes: vec![Vec::new()],
+        }
+    }
+    pub(crate) fn local(&self, name: &str) -> Option<Value> {
+        self.locals.get(name).cloned()
+    }
+
+    #[cfg(feature = "subgroup-ops")]
+    pub(crate) fn snapshot(&self) -> HashmapLocalSnapshot {
+        HashmapLocalSnapshot {
+            locals: self.locals.clone(),
+        }
+    }
+    pub(crate) fn bind(&mut self, name: &str, value: Value) -> Result<Arc<str>, ReferenceError> {
+        if self.locals.contains_key(name) {
+            return Err(ReferenceError::new(format!(
+                "duplicate local binding `{name}`. Fix: choose a unique local name; shadowing is not allowed."
+            )));
+        }
+        let name: Arc<str> = Arc::from(name);
+        self.locals.insert(Arc::clone(&name), value);
+        if let Some(scope) = self.scopes.last_mut() {
+            scope.push(Arc::clone(&name));
+        }
+        Ok(name)
+    }
+    pub(crate) fn assign(&mut self, name: &str, value: Value) -> Result<(), ReferenceError> {
+        let key = self
+            .locals
+            .get_key_value(name)
+            .map(|(key, _)| Arc::clone(key))
+            .ok_or_else(|| {
+                ReferenceError::new(format!(
+                    "assignment to undeclared variable `{name}`. Fix: add a Let before assigning it."
+                ))
+            })?;
+        if self.immutable.get(name).copied().unwrap_or(false) {
+            return Err(ReferenceError::new(format!(
+                "assignment to loop variable `{name}`. Fix: loop variables are immutable."
+            )));
+        }
+        self.locals.insert(key, value);
+        Ok(())
+    }
+    pub(crate) fn bind_loop_var(&mut self, name: &str, value: Value) -> Result<(), ReferenceError> {
+        let name = self.bind(name, value)?;
+        self.immutable.insert(name, true);
+        Ok(())
+    }
+    pub(crate) fn push_scope(&mut self) {
+        self.scopes.push(Vec::new());
+    }
+    pub(crate) fn pop_scope(&mut self) {
+        if let Some(names) = self.scopes.pop() {
+            for name in names {
+                self.locals.remove(&name);
+                self.immutable.remove(&name);
+            }
+        }
+    }
+    pub(crate) fn remove(&mut self, name: &str) -> Option<Value> {
+        self.immutable.remove(name);
+        self.locals.remove(name)
+    }
+}
+
+#[cfg(feature = "subgroup-ops")]
+#[doc = " Persistent local value snapshot for subgroup collective evaluation."]
+#[derive(Clone)]
+pub(crate) struct HashmapLocalSnapshot {
+    pub(crate) locals: HashMap<Arc<str>, Value>,
+}
+
+#[cfg(feature = "subgroup-ops")]
+impl HashmapLocalSnapshot {
+    #[cfg(test)]
+    pub(crate) fn local(&self, name: &str) -> Option<Value> {
+        self.locals.get(name).cloned()
+    }
+}
+
+pub(crate) struct HashmapInvocation<'a> {
+    pub(crate) ids: InvocationIds,
+    #[cfg_attr(not(feature = "subgroup-ops"), allow(dead_code))]
+    pub(crate) linear_local_index: u32,
+    pub(crate) locals: HashmapLocals,
+    pub(crate) returned: bool,
+    pub(crate) waiting_at_barrier: bool,
+    pub(crate) uniform_checks: Vec<(usize, bool)>,
+    pub(crate) frames: Vec<Frame<'a>>,
+    pub(crate) pending_async: PendingAsyncTransfers,
+    pub(crate) op_cache: crate::execution::call::OpCache,
+}
+
+impl<'a> HashmapInvocation<'a> {
+    pub(crate) fn new(ids: InvocationIds, linear_local_index: u32, entry: &'a [Node]) -> Self {
+        Self {
+            ids,
+            linear_local_index,
+            locals: HashmapLocals::new(),
+            returned: false,
+            waiting_at_barrier: false,
+            uniform_checks: Vec::new(),
+            pending_async: PendingAsyncTransfers::new(),
+            op_cache: FxHashMap::default(),
+            frames: vec![Frame::Nodes {
+                nodes: entry,
+                index: 0,
+                scoped: false,
+            }],
+        }
+    }
+    pub(crate) fn done(&self) -> bool {
+        self.returned || self.frames.is_empty()
+    }
+
+    #[inline]
+    pub(crate) fn is_leader(&self) -> bool {
+        self.linear_local_index == 0
+    }
+
+    #[inline]
+    pub(crate) fn begin_async(
+        &mut self,
+        tag: &str,
+        transfer: AsyncTransfer,
+    ) -> Result<(), ReferenceError> {
+        self.pending_async.begin(tag, transfer)
+    }
+
+    #[inline]
+    pub(crate) fn finish_async(&mut self, tag: &str) -> Result<AsyncTransfer, ReferenceError> {
+        self.pending_async.finish(tag)
+    }
+}
+
+#[cfg(feature = "subgroup-ops")]
+#[derive(Clone)]
+pub(crate) struct HashmapInvocationSnapshot {
+    pub(crate) ids: InvocationIds,
+    pub(crate) linear_local_index: u32,
+    pub(crate) locals: HashmapLocalSnapshot,
+}
+
+pub(crate) fn create_invocations<'a>(
+    program: &Program,
+    workgroup: [u32; 3],
+    entry: &'a [Node],
+) -> Result<Vec<HashmapInvocation<'a>>, ReferenceError> {
+    let [sx, sy, sz] = program.workgroup_size();
+    let total = sx.checked_mul(sy).and_then(|c| c.checked_mul(sz)).ok_or_else(|| {
+        ReferenceError::new("workgroup invocation count overflows u32. Fix: reduce workgroup dimensions before reference execution.")
+    })?;
+    let cap = usize::try_from(total).map_err(|_| {
+        ReferenceError::new("workgroup invocation count exceeds host usize. Fix: reduce workgroup dimensions before reference execution.")
+    })?;
+    let mut invocations = Vec::with_capacity(cap);
+    for z in 0..sz {
+        let gz = workgroup[2].checked_mul(sz).and_then(|b| b.checked_add(z)).ok_or_else(|| {
+            ReferenceError::new("workgroup * dispatch dimensions overflow u32 global id. Fix: reduce workgroup id or workgroup size so each global_invocation_id component fits in u32.")
+        })?;
+        for y in 0..sy {
+            let gy = workgroup[1].checked_mul(sy).and_then(|b| b.checked_add(y)).ok_or_else(|| {
+                ReferenceError::new("workgroup * dispatch dimensions overflow u32 global id. Fix: reduce workgroup id or workgroup size so each global_invocation_id component fits in u32.")
+            })?;
+            for x in 0..sx {
+                let gx = workgroup[0].checked_mul(sx).and_then(|b| b.checked_add(x)).ok_or_else(|| {
+                    ReferenceError::new("workgroup * dispatch dimensions overflow u32 global id. Fix: reduce workgroup id or workgroup size so each global_invocation_id component fits in u32.")
+                })?;
+                let idx = invocations.len() as u32;
+                invocations.push(HashmapInvocation::new(
+                    InvocationIds {
+                        global: [gx, gy, gz],
+                        workgroup,
+                        local: [x, y, z],
+                    },
+                    idx,
+                    entry,
+                ));
+            }
+        }
+    }
+    Ok(invocations)
+}
+
+pub(crate) fn run_invocations(
+    memory: &mut HashmapMemory,
+    invocations: &mut [HashmapInvocation<'_>],
+    #[cfg(feature = "subgroup-ops")] uses_subgroup_ops: bool,
+) -> Result<(), ReferenceError> {
+    while invocations.iter().any(|inv| !inv.done()) {
+        let made_progress = step_round_robin(
+            memory,
+            invocations,
+            #[cfg(feature = "subgroup-ops")]
+            uses_subgroup_ops,
+        )?;
+        verify_uniform_control_flow(invocations)?;
+        if release_barrier_if_ready(invocations) {
+            continue;
+        }
+        if !made_progress && live_waiting_count(invocations) > 0 {
+            return Err(ReferenceError::new("program violates uniform-control-flow rule: not every live invocation reached the same barrier. Fix: move Barrier to uniform control flow."));
+        }
+    }
+    for invocation in invocations.iter() {
+        invocation.pending_async.assert_drained(invocation.ids)?;
+    }
+    Ok(())
+}

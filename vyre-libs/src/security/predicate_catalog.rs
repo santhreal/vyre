@@ -88,7 +88,11 @@ pub fn try_security_predicate_rows() -> Result<&'static [SecurityPredicateRow], 
 /// recoverable diagnostics.
 #[must_use]
 pub fn security_predicate_rows() -> &'static [SecurityPredicateRow] {
-    try_security_predicate_rows().expect("bundled security predicate Tier-B TOML must parse")
+    try_security_predicate_rows().expect(
+        "the bundled Tier-B predicate data did not parse. \
+         Fix: repair vyre-libs/rules/security_predicates.toml, or call \
+         try_security_predicate_rows to handle the parse failure",
+    )
 }
 
 /// Find one security predicate row by stable op id.
@@ -98,28 +102,6 @@ pub fn security_predicate_row_by_op_id(op_id: &str) -> Option<&'static SecurityP
         .ok()?
         .iter()
         .find(|row| row.op_id == op_id)
-}
-
-pub(crate) fn packed_witness_inputs(op_id: &str) -> Vec<Vec<Vec<u8>>> {
-    security_predicate_row_by_op_id(op_id)
-        .map(|row| {
-            vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&row.witness_lhs),
-                vyre_primitives::wire::pack_u32_slice(&row.witness_rhs),
-                vyre_primitives::wire::pack_u32_slice(&[0]),
-            ]]
-        })
-        .unwrap_or_default()
-}
-
-pub(crate) fn packed_witness_expected(op_id: &str) -> Vec<Vec<Vec<u8>>> {
-    security_predicate_row_by_op_id(op_id)
-        .map(|row| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(
-                &row.witness_expected,
-            )]]
-        })
-        .unwrap_or_default()
 }
 
 fn parse_security_predicates(source: &str) -> Result<Vec<SecurityPredicateRow>, String> {

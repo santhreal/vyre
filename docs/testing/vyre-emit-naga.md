@@ -3,7 +3,7 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-naga
+./cargo_full test -p vyre-emit-naga
 ```
 
 Consume verified lowering products and emit the primary text representation and related binary targets.
@@ -14,7 +14,7 @@ The crate lives at `vyre-emit-naga`. The `primary-text-emitter` owner maintains 
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-naga
+./cargo_full test -p vyre-emit-naga
 ```
 
 ## Feature sets
@@ -25,11 +25,14 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_emit_naga_release_surface` | `vyre-emit-naga/examples/vyre_emit_naga_release_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-naga --example vyre_emit_naga_release_surface` |
-| `lib` | `vyre_emit_naga` | `vyre-emit-naga/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-naga` |
-| `test` | `adversarial_emit_program_matrix` | `vyre-emit-naga/tests/adversarial_emit_program_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-naga --test adversarial_emit_program_matrix` |
-| `test` | `carrier_scope_regression` | `vyre-emit-naga/tests/carrier_scope_regression.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-naga --test carrier_scope_regression` |
-| `test` | `target_capabilities` | `vyre-emit-naga/tests/target_capabilities.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-naga --test target_capabilities` |
+| `example` | `vyre_emit_naga_release_surface` | `vyre-emit-naga/examples/vyre_emit_naga_release_surface.rs` | None | `./cargo_full test -p vyre-emit-naga --example vyre_emit_naga_release_surface` |
+| `lib` | `vyre_emit_naga` | `vyre-emit-naga/src/lib.rs` | None | `./cargo_full test -p vyre-emit-naga` |
+| `test` | `adversarial_emit_program_matrix` | `vyre-emit-naga/tests/adversarial_emit_program_matrix.rs` | None | `./cargo_full test -p vyre-emit-naga --test adversarial_emit_program_matrix` |
+| `test` | `carrier_scope_regression` | `vyre-emit-naga/tests/carrier_scope_regression.rs` | None | `./cargo_full test -p vyre-emit-naga --test carrier_scope_regression` |
+| `test` | `emit_contracts` | `vyre-emit-naga/tests/emit_contracts/mod.rs` | None | `./cargo_full test -p vyre-emit-naga --test emit_contracts` |
+| `test` | `emitted_artifact_byte_stability` | `vyre-emit-naga/tests/emitted_artifact_byte_stability.rs` | None | `./cargo_full test -p vyre-emit-naga --test emitted_artifact_byte_stability` |
+| `test` | `lowering_digest` | `vyre-emit-naga/tests/lowering_digest.rs` | None | `./cargo_full test -p vyre-emit-naga --test lowering_digest` |
+| `test` | `target_capabilities` | `vyre-emit-naga/tests/target_capabilities.rs` | None | `./cargo_full test -p vyre-emit-naga --test target_capabilities` |
 
 ## Test classes
 

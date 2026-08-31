@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Eleven library operation registrations computed their `expected_output` by packing a slice through the wire codec at registration time, so the fixture a conformance run compared against was produced by host code rather than declared. Each now names an exact byte constant, which also removes the codec and its sizing helpers from the set of host functions reachable from a registration."

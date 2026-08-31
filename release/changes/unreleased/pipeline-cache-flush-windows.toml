@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "An explicit pipeline cache flush opens each entry with write access, so making a cache durable no longer fails with a permission error on Windows."

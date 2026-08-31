@@ -19,6 +19,9 @@ pub(crate) enum ExprKey {
     InvocationId(u8),
     WorkgroupId(u8),
     LocalId(u8),
+    LogicalIndex(u8),
+    LogicalTileId(u8),
+    LogicalWithinTileId(u8),
     BinOp(u8, ExprId, ExprId),
     UnOp(u8, ExprId),
     /// CSE key for `BinOp::Opaque(id)`  -  stores the extension u32 id so

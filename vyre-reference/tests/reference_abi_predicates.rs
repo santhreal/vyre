@@ -9,7 +9,7 @@
 //! ran past, which points nowhere near the copy that drifted.
 //!
 //! The restatement that actually shipped was `!decl.is_output()`, in the
-//! pairwise composition harness. See BACKLOG.md R72.
+//! pairwise composition harness.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::value::Value;

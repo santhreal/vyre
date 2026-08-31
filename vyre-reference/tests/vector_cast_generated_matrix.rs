@@ -2,10 +2,15 @@
 
 use vyre_foundation::ir::{DataType, Expr, Program};
 use vyre_reference::{
-    execution::expr as eval_expr,
+    expr as eval_expr,
     value::Value,
     workgroup::{Invocation, InvocationIds, Memory},
 };
+
+#[path = "support/scalar_corpus.rs"]
+mod scalar_corpus;
+
+use scalar_corpus::mix32;
 
 fn eval_cast(target: DataType, source: Expr) -> Value {
     let program = Program::wrapped(Vec::new(), [1, 1, 1], Vec::new());
@@ -74,12 +79,4 @@ fn generated_f32(seed: u32) -> f32 {
     } else {
         -magnitude
     }
-}
-
-fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
-    value ^ (value >> 16)
 }

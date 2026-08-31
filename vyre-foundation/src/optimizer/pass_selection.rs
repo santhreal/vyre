@@ -95,7 +95,7 @@ pub fn select_pass_metadata_for_program(
 /// The report path is additive: no caller is required to provide profile data,
 /// and the empty report behaves exactly like [`select_pass_metadata_for_program`].
 #[must_use]
-pub fn select_pass_metadata_for_program_with_report(
+pub(crate) fn select_pass_metadata_for_program_with_report(
     metadata: &[PassMetadata],
     profile: OptimizerProfile,
     program: &Program,
@@ -355,9 +355,6 @@ mod tests {
             refusal_kind: None,
             required_analyses: &[],
             declared_invalidations: &[],
-            fact_substrate_reused: !changed,
-            fact_substrate_recomputed: changed,
-            fact_substrate_invalidated: changed,
             effect_bits_before: 0,
             effect_bits_after: 0,
             linear_type_violations_before: 0,

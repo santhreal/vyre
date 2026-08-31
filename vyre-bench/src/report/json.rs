@@ -341,7 +341,7 @@ struct LowerFullReportArtifact<'a> {
     kind: &'static str,
     descriptor_id: &'a str,
     verify_status: &'static str,
-    histogram: &'a vyre_lower::analyses::op_histogram::OpHistogram,
+    histogram: &'a vyre_lower::analyses::OpHistogram,
     fix_text: &'a str,
     full_report: &'a vyre_lower::FullReport,
 }
@@ -630,20 +630,7 @@ mod tests {
     }
 
     fn stats(value: u64) -> MetricStats {
-        MetricStats {
-            min: value,
-            p50: value,
-            p90: value,
-            p95: value,
-            p99: value,
-            p999: value,
-            p9999: value,
-            max: value,
-            mean: value as f64,
-            stddev: 0.0,
-            samples: 1,
-            determinism_cv: None,
-        }
+        MetricStats::single(value)
     }
 
     fn performance(contract_passed: bool) -> PerformanceEvaluation {
@@ -674,7 +661,8 @@ mod tests {
                 literals: vec![vyre_lower::LiteralValue::U32(7)],
             },
         };
-        let lower_report = vyre_lower::full_report(&desc);
+        let lower_report =
+            vyre_lower::full_report(&desc, &vyre_lower::analyses::AnalysisFacts::none());
         let artifact =
             lower_full_report_artifact(&lower_report).expect("Fix: serialize lower full report");
 

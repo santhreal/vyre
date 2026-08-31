@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Loop fusion no longer skips a fusable pair after a refusal. When two adjacent loops could not be fused, the walk advanced its cursor by two instead of one, so the pair formed by the second loop and its successor was never considered; a comment claimed the scheduler retried the skipped pair, and nothing did. The pass now bails before cloning a body that holds no fusable pair at all, rather than deep-cloning the whole body and discarding it."

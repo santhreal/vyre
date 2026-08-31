@@ -3,10 +3,6 @@
 //! Canonical, deterministic witness enumeration per DataType. Consumers
 //! use these to drive backend-parity testing and algebraic-law verification.
 
-#![forbid(unsafe_code)]
-#![deny(rust_2018_idioms)]
-#![deny(missing_docs)]
-
 pub mod cert;
 pub mod schema;
 pub mod witness;

@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre_driver::launch_fixtures::wide_limits` states the launch-geometry limits a preparation or tuning test runs under, so such a test names only the backend and the per-compute-unit thread budget."

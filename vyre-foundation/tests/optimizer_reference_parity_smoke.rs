@@ -1,7 +1,7 @@
 //! The registered optimizer must preserve reference semantics for this corpus.
 //!
 //! This is a smoke oracle; property coverage for idempotence and wire stability
-//! lives in `optimizer_idempotence_proptest.rs` (inventories #34–#35, #109).
+//! lives in `optimizer_idempotence_proptest.rs`.
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::optimizer as optimize;

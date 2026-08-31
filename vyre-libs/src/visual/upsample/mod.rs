@@ -4,7 +4,7 @@
 //! nearest-neighbor (no bilinear) because the input is already blurred  -
 //! the blur itself provides the smoothing that bilinear would add.
 //!
-//! Category A composition  -  pure IR. No Tier 2.5 primitives.
+//! Category A composition  -  pure IR. No shared primitives.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -22,68 +22,48 @@ pub fn upsample_2x(input: &str, output: &str, width: u32, height: u32) -> Progra
     let input_count = in_w.saturating_mul(in_h);
     let output_count = width.saturating_mul(height);
 
-    Program::wrapped(
-        vec![
+    crate::builder::stencil::Grid2DComposer::new(OP_ID, width, height)
+        .with_buffers(vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(input_count),
             BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(output_count),
-        ],
-        super::PIXEL_WORKGROUP_SIZE,
-        vec![crate::region::wrap_anonymous(
-            OP_ID,
+        ])
+        .build(|_shape, _idx, py, px| {
+            let in_sample_idx = crate::builder::stencil::upsample_2x_source_index(
+                &Expr::var("oy"),
+                &Expr::var("ox"),
+                in_w,
+            );
             vec![
-                Node::let_bind("idx", Expr::gid_x()),
-                Node::if_then(
-                    Expr::lt(Expr::var("idx"), Expr::u32(output_count)),
-                    vec![
-                        // Output coordinates.
-                        Node::let_bind("ox", Expr::rem(Expr::var("idx"), Expr::u32(width.max(1)))),
-                        Node::let_bind("oy", Expr::div(Expr::var("idx"), Expr::u32(width.max(1)))),
-                        // Map to input coordinates (integer division = nearest-neighbor).
-                        Node::let_bind("ix", Expr::div(Expr::var("ox"), Expr::u32(2))),
-                        Node::let_bind("iy", Expr::div(Expr::var("oy"), Expr::u32(2))),
-                        // Load input pixel.
-                        Node::let_bind(
-                            "pixel",
-                            Expr::load(
-                                input,
-                                Expr::add(
-                                    Expr::mul(Expr::var("iy"), Expr::u32(in_w.max(1))),
-                                    Expr::var("ix"),
-                                ),
-                            ),
-                        ),
-                        // Write to output.
-                        Node::store(output, Expr::var("idx"), Expr::var("pixel")),
-                    ],
-                ),
-            ],
-        )],
-    )
+                // Output coordinates.
+                Node::let_bind("ox", px),
+                Node::let_bind("oy", py),
+                // Load input pixel.
+                Node::let_bind("pixel", Expr::load(input, in_sample_idx)),
+                // Write to output.
+                Node::store(output, Expr::var("idx"), Expr::var("pixel")),
+            ]
+        })
 }
 
+const EXPECTED_UPSAMPLE_2X_OUTPUT_BYTES: [u8; 64] = [0xFF; 64];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| upsample_2x("input", "output", 4, 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || upsample_2x("input", "output", 4, 4),
+        Some(|| {
             // 2×2 all-white → 4×4 all-white
             let input = vec![0xFFFF_FFFFu32; 4];
             vec![vec![
-                crate::visual::byte_helpers::u32_words_to_le_bytes(&input),
+                crate::visual::u32_word_bytes::u32_words_to_le_bytes(&input),
                 vec![0u8; 64],
             ]]
         }),
-        expected_output: Some(|| {
-            let expected = vec![0xFFFF_FFFFu32; 16];
-            vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&expected)]]
+        Some(|| {
+            vec![vec![EXPECTED_UPSAMPLE_2X_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("visual"),
-    }
+    )
+    .with_category("visual")
 }

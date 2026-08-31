@@ -6,15 +6,15 @@
 use vyre_foundation::execution_plan::ExecutionPlan;
 
 /// Target backend category chosen by the router.
+///
+/// There is no host execution route. Vyre executes compute on a device; the
+/// only host arithmetic in the workspace is `vyre-reference`, which is a parity
+/// oracle and is never reached through this enum. Every category here is a
+/// device, and a workload that cannot be placed on one is an error naming the
+/// missing capability rather than a category.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum RoutingDecision {
-    /// Legacy explicit reference route.
-    ///
-    /// The standard runtime policy does not select this automatically; callers
-    /// that require GPU execution should treat this as an opt-in diagnostic
-    /// route, never as an implicit fallback.
-    CpuSimd,
     /// Use the default GPU pipeline.
     GpuPipeline,
     /// Use the persistent megakernel.

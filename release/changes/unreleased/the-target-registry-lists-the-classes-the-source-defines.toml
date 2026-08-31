@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The benchmark target registry lists exactly the baseline classes the source defines. `docs/optimization/BENCH_TARGETS.toml` offered `reference_correctness`, which no `BaselineClass` variant declares, and omitted `SelfUnoptimized`, which one does; the test that read the list asserted the stale triple back. `BaselineClass` now owns the registry keys through an exhaustive match and publishes the set, so a class added later does not compile until it names its key and the registry does not pass until it lists it."

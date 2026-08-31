@@ -11,64 +11,29 @@
 //! cross-body reuse rather than leaving it to a backend to miscompile.
 
 use vyre_foundation::ir::DataType;
-use vyre_lower::verify::{verify, VerifyErrorKind};
+use vyre_lower::descriptor_builder::{
+    descriptor, effect, global_rw, lit, op, store_global, SlotCount,
+};
 use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MemoryClass,
+    verify, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, VerifyErrorKind,
 };
 
-fn bindings() -> BindingLayout {
-    BindingLayout {
-        slots: vec![BindingSlot {
-            slot: 0,
-            element_type: DataType::U32,
-            element_count: Some(64),
-            memory_class: MemoryClass::Global,
-            visibility: BindingVisibility::ReadWrite,
-            name: "out".into(),
-        }],
-    }
-}
-
-fn literal(pool_idx: u32, result: u32) -> KernelOp {
-    KernelOp {
-        kind: KernelOpKind::Literal,
-        operands: vec![pool_idx],
-        result: Some(result),
-    }
-}
-
 fn invocation_id(result: u32) -> KernelOp {
-    KernelOp {
-        kind: KernelOpKind::GlobalInvocationId,
-        operands: vec![0],
-        result: Some(result),
-    }
-}
-
-fn store(index: u32, value: u32) -> KernelOp {
-    KernelOp {
-        kind: KernelOpKind::StoreGlobal,
-        operands: vec![0, index, value],
-        result: None,
-    }
+    op(KernelOpKind::GlobalInvocationId, [0], result)
 }
 
 fn if_then(condition: u32, child: u32) -> KernelOp {
-    KernelOp {
-        kind: KernelOpKind::StructuredIfThen,
-        operands: vec![condition, child],
-        result: None,
-    }
+    effect(KernelOpKind::StructuredIfThen, [condition, child])
 }
 
-fn descriptor(body: KernelBody) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "verify-id-uniqueness".into(),
-        bindings: bindings(),
-        dispatch: Dispatch::new(64, 1, 1),
-        body,
-    }
+/// One 64-element read-write output over a 64-invocation dispatch, carrying the
+/// body under test.
+fn kernel(root: KernelBody) -> KernelDescriptor {
+    descriptor("verify-id-uniqueness")
+        .slot(global_rw(0, DataType::U32, "out").with_count(64))
+        .dispatch(64, 1, 1)
+        .body(root)
+        .build()
 }
 
 fn reuse_errors(desc: &KernelDescriptor) -> Vec<(u32, Vec<usize>, Vec<usize>)> {
@@ -92,12 +57,17 @@ fn reuse_errors(desc: &KernelDescriptor) -> Vec<(u32, Vec<usize>, Vec<usize>)> {
 #[test]
 fn distinct_ids_across_bodies_verify_clean() {
     let child = KernelBody {
-        ops: vec![literal(0, 3), store(3, 3)],
+        ops: vec![lit(0, 3), store_global(0, 3, 3)],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(1)],
     };
-    let desc = descriptor(KernelBody {
-        ops: vec![literal(0, 0), invocation_id(1), if_then(0, 0), store(1, 0)],
+    let desc = kernel(KernelBody {
+        ops: vec![
+            lit(0, 0),
+            invocation_id(1),
+            if_then(0, 0),
+            store_global(0, 1, 0),
+        ],
         child_bodies: vec![child],
         literals: vec![LiteralValue::U32(1)],
     });
@@ -110,12 +80,12 @@ fn distinct_ids_across_bodies_verify_clean() {
 #[test]
 fn parent_and_child_sharing_an_id_is_rejected() {
     let child = KernelBody {
-        ops: vec![literal(0, 1), store(1, 1)],
+        ops: vec![lit(0, 1), store_global(0, 1, 1)],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(1)],
     };
-    let desc = descriptor(KernelBody {
-        ops: vec![literal(0, 0), invocation_id(1), if_then(0, 0)],
+    let desc = kernel(KernelBody {
+        ops: vec![lit(0, 0), invocation_id(1), if_then(0, 0)],
         child_bodies: vec![child],
         literals: vec![LiteralValue::U32(1)],
     });
@@ -129,17 +99,17 @@ fn parent_and_child_sharing_an_id_is_rejected() {
 #[test]
 fn sibling_bodies_sharing_an_id_is_rejected() {
     let first = KernelBody {
-        ops: vec![literal(0, 1), store(1, 1)],
+        ops: vec![lit(0, 1), store_global(0, 1, 1)],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(1)],
     };
     let second = KernelBody {
-        ops: vec![invocation_id(1), store(1, 1)],
+        ops: vec![invocation_id(1), store_global(0, 1, 1)],
         child_bodies: vec![],
         literals: vec![],
     };
-    let desc = descriptor(KernelBody {
-        ops: vec![literal(0, 0), if_then(0, 0), if_then(0, 1)],
+    let desc = kernel(KernelBody {
+        ops: vec![lit(0, 0), if_then(0, 0), if_then(0, 1)],
         child_bodies: vec![first, second],
         literals: vec![LiteralValue::U32(1)],
     });
@@ -151,17 +121,17 @@ fn sibling_bodies_sharing_an_id_is_rejected() {
 #[test]
 fn grandchild_sharing_a_top_level_id_is_rejected() {
     let grandchild = KernelBody {
-        ops: vec![literal(0, 1), store(1, 1)],
+        ops: vec![lit(0, 1), store_global(0, 1, 1)],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(1)],
     };
     let child = KernelBody {
-        ops: vec![literal(0, 5), if_then(5, 0)],
+        ops: vec![lit(0, 5), if_then(5, 0)],
         child_bodies: vec![grandchild],
         literals: vec![LiteralValue::U32(1)],
     };
-    let desc = descriptor(KernelBody {
-        ops: vec![literal(0, 0), invocation_id(1), if_then(0, 0)],
+    let desc = kernel(KernelBody {
+        ops: vec![lit(0, 0), invocation_id(1), if_then(0, 0)],
         child_bodies: vec![child],
         literals: vec![LiteralValue::U32(1)],
     });
@@ -173,17 +143,17 @@ fn grandchild_sharing_a_top_level_id_is_rejected() {
 #[test]
 fn every_reused_id_is_reported() {
     let child = KernelBody {
-        ops: vec![literal(0, 1), literal(0, 2), store(1, 2)],
+        ops: vec![lit(0, 1), lit(0, 2), store_global(0, 1, 2)],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(1)],
     };
-    let desc = descriptor(KernelBody {
+    let desc = kernel(KernelBody {
         ops: vec![
-            literal(0, 0),
+            lit(0, 0),
             invocation_id(1),
-            literal(0, 2),
+            lit(0, 2),
             if_then(0, 0),
-            store(1, 2),
+            store_global(0, 1, 2),
         ],
         child_bodies: vec![child],
         literals: vec![LiteralValue::U32(1)],
@@ -198,8 +168,8 @@ fn every_reused_id_is_reported() {
 /// 6 must not double-report it, or a single defect reads as two.
 #[test]
 fn same_body_duplicate_is_not_also_reported_as_cross_body_reuse() {
-    let desc = descriptor(KernelBody {
-        ops: vec![literal(0, 0), literal(0, 0), store(0, 0)],
+    let desc = kernel(KernelBody {
+        ops: vec![lit(0, 0), lit(0, 0), store_global(0, 0, 0)],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(1)],
     });

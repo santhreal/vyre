@@ -1,7 +1,7 @@
 # vyre-driver-wgpu  -  Configurability
 
 The `vyre-wgpu` binary and the wgpu backend library expose a small,
-explicit Tier A surface and consume the workspace Tier-B op corpus.
+explicit Tier A surface.
 
 ## Tier A  -  operational config
 
@@ -25,12 +25,11 @@ and an integration test that round-trips parsing through the public
 
 ## Tier B  -  community knowledge
 
-The wgpu backend consumes the workspace op corpus at `rules/op/*.toml`.
-Each op rule names a backend lowering (wgpu / spirv / cuda / reference)
-and an emit contract. New backend coverage lands as a TOML rule; no Rust
-change is needed to register an emitter when the rule references an
-op already present in the inventory registry.
+The wgpu backend reads no rule corpus. Which operations it runs is decided in
+Rust: `vyre-emit-naga/src/emitter/op_lookup.rs` lowers each IR node to Naga, and
+a node it has no lowering for fails emission with an `EmitError` naming the
+node. New backend coverage is a change there, not a data file.
 
-The schema for op rules lives at `rules/SCHEMA.md`. The wgpu backend
-fails fast with a structured `BackendError::InvalidProgram` if an op
-appears in a Program without a matching `rules/op/*.toml` entry.
+A workspace op corpus and its schema were described here and have never existed
+in this repository. The rule corpora that do exist are per crate:
+`vyre-libs/rules`, `vyre-lower/rules` and `vyre-lints/rules`.

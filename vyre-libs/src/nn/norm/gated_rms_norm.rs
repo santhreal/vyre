@@ -1,9 +1,9 @@
 //! RMS normalization followed by learned scale and a SiLU gate.
 
+use super::row_norm::row_sum_squares_body;
 use thiserror::Error;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program, UnOp};
 
 const OP_ID: &str = "vyre-libs::nn::gated_rms_norm";
 const LEARNED_OP_ID: &str = "vyre-libs::nn::learned_rms_norm";
@@ -187,45 +187,7 @@ fn rms_norm_impl(
         );
         Expr::mul(weighted, silu_gate)
     });
-    let body = vec![
-        Node::let_bind("index", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(index.clone(), Expr::u32(total)),
-            vec![
-                Node::let_bind("row_start", row_start),
-                Node::let_bind("sum_squares", Expr::f32(0.0)),
-                Node::loop_for(
-                    "offset",
-                    Expr::u32(0),
-                    Expr::u32(hidden),
-                    vec![
-                        Node::let_bind(
-                            "rms_value",
-                            Expr::cast(
-                                DataType::F32,
-                                Expr::load(
-                                    input,
-                                    Expr::add(Expr::var("row_start"), Expr::var("offset")),
-                                ),
-                            ),
-                        ),
-                        Node::assign(
-                            "sum_squares",
-                            Expr::add(
-                                Expr::var("sum_squares"),
-                                Expr::mul(Expr::var("rms_value"), Expr::var("rms_value")),
-                            ),
-                        ),
-                    ],
-                ),
-                Node::Store {
-                    buffer: output.into(),
-                    index,
-                    value: Expr::cast(dtype.clone(), result),
-                },
-            ],
-        ),
-    ];
+    let body = row_sum_squares_body(input, total, hidden, output, dtype.clone(), result);
     let mut buffers = vec![
         BufferDecl::storage(input, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(total),
         BufferDecl::storage(weight, 1, BufferAccess::ReadOnly, weight_dtype).with_count(hidden),
@@ -240,7 +202,7 @@ fn rms_norm_impl(
     Ok(Program::wrapped(
         buffers,
         [64, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             if gate.is_some() { OP_ID } else { LEARNED_OP_ID },
             body,
         )],

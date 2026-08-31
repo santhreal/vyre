@@ -10,8 +10,9 @@ use std::path::{Component, Path, PathBuf};
 
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use vyre_megakernel::target::TargetModuleBundle;
-use vyre_megakernel::{ArtifactEnvelope, TargetResourceAccess, TargetResourceMemory};
+use vyre_megakernel::{
+    ArtifactEnvelope, TargetModuleBundle, TargetResourceAccess, TargetResourceMemory,
+};
 
 const MANIFEST_SCHEMA_VERSION: &str = "vyre-aot-manifest-v4";
 
@@ -222,8 +223,8 @@ pub fn load_bundle(dir: &Path) -> Result<LoadedBundle, Box<dyn std::error::Error
             entry_point: entry.name.clone(),
             dispatch: DispatchConfig {
                 workgroup_size: geometry.workgroup_size,
-                grid_size: entry.grid_size,
-                dynamic_shared_bytes: entry.dynamic_shared_bytes,
+                grid_size: geometry.grid,
+                dynamic_shared_bytes: geometry.dynamic_shared_bytes,
             },
             buffers,
             notes: package.notes,

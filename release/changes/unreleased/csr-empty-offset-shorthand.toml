@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "CSR witnesses now accept the documented empty-offset shorthand only when every edge buffer is empty, preserve the source distance for empty-edge BFS, and reject malformed tensor-flow tables with distinct length, start-offset, monotonicity, and edge-count errors. The production forward validator rejects a nonzero first offset, and the dominator-frontier witness rejects a short packed seed before mutating caller output."

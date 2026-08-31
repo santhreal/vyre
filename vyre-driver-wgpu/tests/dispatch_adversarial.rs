@@ -1,4 +1,4 @@
-//! P1 inventory #88  -  adversarial tests for every dispatch path.
+//! Adversarial tests for every dispatch path.
 //!
 //! Hostile inputs against `WgpuBackend::dispatch` and friends. The
 //! test suite asserts each adversarial input produces a structured
@@ -13,7 +13,9 @@
 //!   - megakernel dispatch
 //!
 //! GPU-required: each test acquires a real adapter; no silent skip.
-//! `scripts/check_gpu_test_loudness.sh` enforces the loudness rule.
+//! The `gpu-loudness` gate enforces the loudness rule.
+
+#![cfg(feature = "device-tests")]
 
 use vyre::ir::{BufferDecl, DataType, Program};
 use vyre_driver::{BackendError, VyreBackend};

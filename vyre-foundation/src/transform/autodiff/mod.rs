@@ -23,8 +23,8 @@
 //! - `Expr::Load`  -  routes adjoint to the loaded buffer's gradient
 //! - Integer / bitwise / comparison ops → `AutodiffError::NotDifferentiable`
 
-pub mod error;
-pub mod grad;
+pub(crate) mod error;
+pub(crate) mod grad;
 pub mod rules;
 
 pub use error::AutodiffError;

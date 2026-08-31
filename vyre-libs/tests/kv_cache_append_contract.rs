@@ -2,23 +2,12 @@
 
 #![forbid(unsafe_code)]
 
+mod wire_words;
+use wire_words::{f32_bytes as bytes, f32_words_of as decode, kv_cache_append_test_spec as spec};
+
+use vyre::ir::DataType;
 use vyre_libs::nn::attention::{kv_cache_append, KvCacheAppendError};
 use vyre_reference::value::Value;
-
-fn bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode(value: &Value) -> Vec<f32> {
-    value
-        .to_bytes()
-        .chunks_exact(4)
-        .map(|word| f32::from_le_bytes(word.try_into().expect("Fix: exact f32 word")))
-        .collect()
-}
 
 #[allow(clippy::too_many_arguments)]
 fn execute(
@@ -31,17 +20,19 @@ fn execute(
     dim: u32,
     offset: u32,
 ) -> Vec<f32> {
-    let program = kv_cache_append(
-        "prior", "chunk", "next", batch, heads, capacity, chunk_len, dim, offset,
-    )
+    let program = kv_cache_append(spec(
+        batch,
+        heads,
+        capacity,
+        chunk_len,
+        dim,
+        offset,
+        DataType::F32,
+    ))
     .expect("Fix: valid cache append fixture must build");
     let outputs = vyre_reference::reference_eval(
         &program,
-        &[
-            Value::from(bytes(prior)),
-            Value::from(bytes(chunk)),
-            Value::from(vec![0; prior.len() * 4]),
-        ],
+        &[Value::from(bytes(prior)), Value::from(bytes(chunk))],
     )
     .expect("Fix: cache append must execute");
     assert_eq!(decode(&outputs[0]), prior);
@@ -98,11 +89,11 @@ fn full_prefill_replaces_every_cache_element() {
 #[test]
 fn invalid_cache_transitions_fail_closed() {
     assert_eq!(
-        kv_cache_append("p", "c", "n", 0, 1, 1, 1, 1, 0),
+        kv_cache_append(spec(0, 1, 1, 1, 1, 0, DataType::F32)),
         Err(KvCacheAppendError::EmptyShape)
     );
     assert_eq!(
-        kv_cache_append("p", "c", "n", 1, 1, 4, 2, 1, 3),
+        kv_cache_append(spec(1, 1, 4, 2, 1, 3, DataType::F32)),
         Err(KvCacheAppendError::Range {
             offset: 3,
             chunk_len: 2,
@@ -110,7 +101,7 @@ fn invalid_cache_transitions_fail_closed() {
         })
     );
     assert_eq!(
-        kv_cache_append("p", "c", "n", u32::MAX, 2, 1, 1, 1, 0),
+        kv_cache_append(spec(u32::MAX, 2, 1, 1, 1, 0, DataType::F32)),
         Err(KvCacheAppendError::ElementCountOverflow)
     );
 }

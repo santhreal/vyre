@@ -1,6 +1,6 @@
 [package]
 name = "vyre-megakernel"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 description = "Backend-neutral compiler for canonical Vyre megakernel artifacts"
@@ -16,6 +16,10 @@ categories = ["compilers", "data-structures"]
 [dependencies]
 vyre-foundation.workspace = true
 vyre-lower.workspace = true
+vyre-spec.workspace = true
+# The target-payload level stage registers itself into the level registry
+# vyre-foundation owns.
+inventory.workspace = true
 blake3.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -23,3 +27,6 @@ thiserror.workspace = true
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }

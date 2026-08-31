@@ -1,12 +1,12 @@
 //! Public cooperative tiled matmul builders and Cat-A wrappers.
 
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
-use crate::builder::{check_tensors, BuildOptions};
-use crate::tensor_ref::{TensorRef, TensorRefError};
+use crate::builder::gemm::ContractionComposer;
+use crate::builder::BuildOptions;
+use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
-use super::mma_fragment::MmaCapabilityRecord;
-use super::program::{build_matmul_tiled_program, MatmulTiledProgramSpec};
 use super::shape::MatrixShape;
 use super::tensor_core_policy::{
     plan_matmul_kernel, F32MatmulMode, MatmulKernelCapabilities, MatmulKernelPath,
@@ -77,98 +77,11 @@ impl MatmulTiledCore {
     }
 
     fn build(self) -> Result<Program, TensorRefError> {
-        let dtype = self.a.dtype.clone();
-        let tensors = if let Some(bias) = self.bias.as_ref() {
-            vec![
-                (&self.a, dtype.clone()),
-                (&self.b, dtype.clone()),
-                (bias, dtype.clone()),
-                (&self.out, dtype.clone()),
-            ]
-        } else {
-            vec![
-                (&self.a, dtype.clone()),
-                (&self.b, dtype.clone()),
-                (&self.out, dtype.clone()),
-            ]
-        };
-        check_tensors(self.op_id, &tensors)?;
-
-        if self.tile == 0 {
-            return Err(TensorRefError::ShapeMismatch {
-                name: "tile".into(),
-                found: vec![0],
-                expected: vec![1],
-                op: self.op_id,
-            });
-        }
-
-        let shape_name = if self.bias.is_some() {
-            "a/b/bias/out"
-        } else {
-            "a/b/out"
-        };
-        let bias_shape_is_valid = self.bias.as_ref().is_none_or(|bias| bias.shape.len() == 1);
-        if self.a.shape.len() != 2
-            || self.b.shape.len() != 2
-            || !bias_shape_is_valid
-            || self.out.shape.len() != 2
-        {
-            return Err(TensorRefError::ShapeMismatch {
-                name: shape_name.into(),
-                found: vec![],
-                expected: vec![0, 0],
-                op: self.op_id,
-            });
-        }
-
-        let m = self.a.shape[0];
-        let k = self.a.shape[1];
-        let n = self.b.shape[1];
-        if self.b.shape[0] != k {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.b.name.as_str().to_string(),
-                found: self.b.shape.to_vec(),
-                expected: vec![k, n],
-                op: self.op_id,
-            });
-        }
-        if let Some(bias) = self.bias.as_ref() {
-            if bias.shape[0] != n {
-                return Err(TensorRefError::ShapeMismatch {
-                    name: bias.name.as_str().to_string(),
-                    found: bias.shape.to_vec(),
-                    expected: vec![n],
-                    op: self.op_id,
-                });
-            }
-        }
-        if self.out.shape.as_ref() != [m, n] {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.out.name.as_str().to_string(),
-                found: self.out.shape.to_vec(),
-                expected: vec![m, n],
-                op: self.op_id,
-            });
-        }
-
-        build_matmul_tiled_program(MatmulTiledProgramSpec {
-            op_id: self.op_id,
-            a: self.a.name_str(),
-            b: self.b.name_str(),
-            bias: self.bias.as_ref().map(TensorRef::name_str),
-            out: self.out.name_str(),
-            m,
-            k,
-            n,
-            tile: self.tile,
-            workgroup: self.options.workgroup_size.unwrap_or([16, 16, 1]),
-            generator: self.options.region_generator.unwrap_or(self.op_id),
-            dtype,
-            a_tile_name: "matmul_a_tile",
-            b_tile_name: "matmul_b_tile",
-            mma_capabilities: MmaCapabilityRecord::ptx_sm80(),
-        })
+        let (m, k, n) = super::super::matmul_2d_dims(&self.a, &self.b);
+        let composer = ContractionComposer::tiled_2d(
+            self.op_id, self.a, self.b, self.bias, self.out, m, k, n, self.tile,
+        );
+        super::super::apply_contraction_options(composer, &self.options).build()
     }
 }
 
@@ -295,14 +208,7 @@ pub fn matmul_tiled(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32, tile: u
         tile,
     )
     .build()
-    .unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
-            OP_ID,
-            out,
-            DataType::U32,
-            format!("Fix: {err}"),
-        )
-    })
+    .unwrap_or_else(|err| trap_program(OP_ID, Some((out, DataType::U32)), format!("Fix: {err}")))
 }
 
 /// Name-based convenience constructor routed through [`MatmulBiasTiled`].
@@ -327,65 +233,47 @@ pub fn matmul_bias_tiled(
     )
     .build()
     .unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             OP_ID_BIAS,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: {err}"),
         )
     })
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::math::matmul_tiled",
-        build: Some(|| matmul_tiled("a", "b", "out", 2, 2, 2, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        "vyre-libs::math::matmul_tiled",
+        || matmul_tiled("a", "b", "out", 2, 2, 2, 2),
+        Some(|| {
             vec![vec![
                 crate::fixture_bytes::u32_bytes(&[1, 2, 3, 4]),
                 crate::fixture_bytes::u32_bytes(&[5, 6, 7, 8]),
             ]]
         }),
-        expected_output: Some(|| {
-            vec![vec![crate::fixture_bytes::u32_bytes(&[19, 22, 43, 50])]]
+        Some(|| {
+            vec![vec![crate::fixture_bytes::MATMUL_2X2_EXPECTED_BYTES.to_vec()]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::math::matmul_bias_tiled",
-        build: Some(|| matmul_bias_tiled("a", "b", "bias", "out", 2, 2, 2, 2)),
-        test_inputs: Some(|| {
-            vec![vec![
-                crate::fixture_bytes::u32_bytes(&[1, 2, 3, 4]),
-                crate::fixture_bytes::u32_bytes(&[5, 6, 7, 8]),
-                crate::fixture_bytes::u32_bytes(&[10, 20]),
-            ]]
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        "vyre-libs::math::matmul_bias_tiled",
+        || matmul_bias_tiled("a", "b", "bias", "out", 2, 2, 2, 2),
+        Some(super::super::matmul_bias_2x2_fixture_inputs),
+        Some(|| {
+            vec![vec![super::super::MATMUL_BIAS_2X2_EXPECTED_BYTES.to_vec()]]
         }),
-        expected_output: Some(|| {
-            vec![vec![crate::fixture_bytes::u32_bytes(&[29, 42, 53, 70])]]
-        }),
-        category: Some("math"),
-    }
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32_words;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_bytes;
 
     fn output_zero_bytes(program: &Program) -> Vec<u8> {
         let output = program
@@ -397,10 +285,8 @@ mod tests {
     }
 
     fn run_program(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<u32> {
-        let values = inputs.into_iter().map(Value::from).collect::<Vec<_>>();
-        let outputs = vyre_reference::reference_eval(program, &values)
-            .expect("Fix: tiled matmul must execute in the reference interpreter.");
-        decode_u32_words(&outputs[0].to_bytes())
+        let outputs = eval_bytes("matmul_tiled", program, inputs);
+        decode_u32_words(&outputs[0])
     }
 
     fn expected_matmul(
@@ -411,19 +297,9 @@ mod tests {
         k: u32,
         n: u32,
     ) -> Vec<u32> {
-        let mut out = Vec::with_capacity((m * n) as usize);
-        for row in 0..m {
-            for col in 0..n {
-                let mut acc = bias.map_or(0, |values| values[col as usize]);
-                for kk in 0..k {
-                    let av = a[(row * k + kk) as usize];
-                    let bv = b[(kk * n + col) as usize];
-                    acc = acc.wrapping_add(av.wrapping_mul(bv));
-                }
-                out.push(acc);
-            }
-        }
-        out
+        vyre_reference::composition_witness::matmul_u32_witness(
+            a, b, bias, m as usize, k as usize, n as usize,
+        )
     }
 
     fn pseudo_random_words(count: usize, seed: &mut u32) -> Vec<u32> {

@@ -5,21 +5,25 @@ use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use vyre_driver::BackendError;
 
-use crate::backend::allocations::{DispatchAllocations, HostTransferAllocations};
+use crate::backend::allocations::DispatchAllocations;
 use crate::backend::dispatch::CudaBackend;
 use crate::backend::launch_params::launch_param_byte_len;
 use crate::backend::output_range::CudaOutputReadback;
+use crate::backend::pinned_allocations::HostTransferAllocations;
 use crate::backend::resident::{CudaResidentBuffer, ResidentViewCache};
-use crate::backend::resident_dispatch::helpers::{
+use crate::backend::resident_dispatch::host_uploads::{
     enqueue_resident_h2d_copy, enqueue_resident_upload_copies_on_stream,
-    prepare_resident_sequence_fills, stage_resident_fill_payload, PreparedStep,
+    stage_resident_fill_payload,
 };
-use crate::backend::resident_dispatch_support::{
+use crate::backend::resident_dispatch::sequence_slots::prepare_resident_sequence_fills;
+use crate::backend::resident_dispatch::PreparedStep;
+use crate::backend::resident_dispatch_accounting::{
     checked_resident_dispatch_capacity_add, CudaResidentDispatchStep,
 };
 use crate::backend::resident_io::reserve_borrowed_resident_readback_outputs;
 use crate::backend::resident_readback_fusion::{
-    fuse_resident_readback_copies, validate_fused_resident_readbacks, ResidentReadbackCopy,
+    fuse_resident_readback_copies, resident_readback_copy, validate_fused_resident_readbacks,
+    ResidentReadbackCopy,
 };
 use crate::backend::staging_reserve::{reserve_hash_map, reserve_smallvec};
 
@@ -407,41 +411,34 @@ impl CudaBackend {
                     &mut params_ref,
                     &mut kernel_args,
                 )?;
-                // Take this step's grid-barrier counter for its launches and
-                // release it once they complete. Per step rather than per
+                // Take this step's module-scope globals for its launches and
+                // release them once they complete. Per step rather than per
                 // sequence: two steps that share a module would otherwise
-                // deadlock this thread against its own gate.
-                let grid_barrier = self.lease_grid_barrier(
+                // deadlock this thread against its own gate. Per step also means
+                // each step's trap record is read against that step, so a refusal
+                // names the step that trapped.
+                let module_globals = self.lease_module_globals(
                     step.program,
                     &step.prepared,
                     &step.ptx_src,
                     step.module_key,
                 )?;
                 // `launch_then_release` runs the launches and ends the lease in
-                // the one safe order: the release synchronizes the stream before
-                // freeing the gate, so a launch failure cannot leave a grid
-                // spinning while the next sequence resets the counter under it.
-                grid_barrier.launch_then_release(
+                // the one safe order: the release synchronizes the stream, reads
+                // the trap record, and only then frees the gate, so a launch
+                // failure cannot leave a grid spinning and a trap cannot be erased
+                // by the next step's reset.
+                module_globals.launch_then_release(
                     stream.raw(),
-                    "resident sequence grid-sync launch",
-                    |grid_barrier| {
-                        for _ in 0..step.prepared.fixpoint_iterations {
-                            // SAFETY: the sequence stream is live for these
-                            // launches and the memset is enqueued ahead of each
-                            // launch on it.
-                            unsafe {
-                                grid_barrier.enqueue_reset(stream.raw())?;
-                            }
-                            self.launch_prevalidated_function(
-                                resolved.func,
-                                &mut kernel_args,
-                                &step.prepared.launch,
-                                stream.raw(),
-                                false,
-                                step.prepared.cooperative,
-                            )?;
-                        }
-                        Ok(())
+                    "resident sequence launch",
+                    |module_globals| {
+                        self.replay_fixpoint_launches(
+                            module_globals,
+                            resolved.func,
+                            &mut kernel_args,
+                            &step.prepared,
+                            stream.raw(),
+                        )
                     },
                 )?;
                 Ok(())
@@ -473,57 +470,13 @@ impl CudaBackend {
                     &mut sequence_view_cache,
                     "resident sequence view cache",
                 )?;
-                let end = vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+                requested_readbacks.push(resident_readback_copy(
+                    "resident sequence compact readback",
+                    handle.handle,
+                    buffer,
                     readback.device_offset,
                     readback.byte_len,
-                    buffer.byte_len,
-                    || {
-                        BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident sequence compact readback for handle {} overflows usize at offset {} len {}.",
-                            handle.handle, readback.device_offset, readback.byte_len
-                        ),
-                    }
-                    },
-                    |end| {
-                        BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident sequence compact readback for handle {} requested bytes [{}..{}) but buffer has {} bytes.",
-                            handle.handle, readback.device_offset, end, buffer.byte_len
-                        ),
-                    }
-                    },
-                )?;
-                let src = if readback.byte_len == 0 {
-                    0
-                } else {
-                    vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
-                        buffer.ptr,
-                        readback.device_offset,
-                        || {
-                            BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: CUDA resident sequence compact readback device offset {} does not fit CUdeviceptr arithmetic for handle {}.",
-                                readback.device_offset, handle.handle
-                            ),
-                        }
-                        },
-                        || {
-                            BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: CUDA resident sequence compact readback pointer arithmetic overflowed for handle {} at offset {}.",
-                                handle.handle, readback.device_offset
-                            ),
-                        }
-                        },
-                    )?
-                };
-                let copy = ResidentReadbackCopy {
-                    handle_id: handle.handle.id(),
-                    src,
-                    byte_len: readback.byte_len,
-                };
-                requested_readbacks.push(copy);
+                )?);
             }
 
             let fused_readbacks = fuse_resident_readback_copies(&requested_readbacks)?;

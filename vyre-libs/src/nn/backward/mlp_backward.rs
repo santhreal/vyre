@@ -9,9 +9,8 @@
 //!
 //! Simplified: computes grad_x by chaining transposes.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::mlp_backward";
 
@@ -39,7 +38,7 @@ pub fn mlp_backward(
     // and h[j] = b1[j] + sum_m x[m] * W1[m * hidden + j]
 
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(i.clone(), Expr::u32(model_dim)),
             vec![
@@ -147,20 +146,18 @@ pub fn mlp_backward(
             BufferDecl::output(grad_x, 5, DataType::F32).with_count(model_dim),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
+const EXPECTED_MLP_BACKWARD_OUTPUT_BYTES: [u8; 8] =
+    [0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x80, 0x40];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| mlp_backward("x", "w1", "b1", "w2", "grad_out", "grad_x", 2, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || mlp_backward("x", "w1", "b1", "w2", "grad_out", "grad_x", 2, 2),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0]),           // x
@@ -168,19 +165,11 @@ inventory::submit! {
                 to_f32(&[0.0, 0.0]),            // b1
                 to_f32(&[1.0, 0.0, 0.0, 1.0]), // w2 = identity (2×2)
                 to_f32(&[1.0, 1.0]),            // grad_out
-                vec![0u8; 4 * 2],
             ]]
         }),
-        expected_output: Some(|| {
-            // W1=W2=I, b1=0, x=[1,2], grad_out=[1,1]
-            // h = x = [1, 2], d_act = max(0.5*h, 2*h) = [2, 4]
-            // grad_h_act[j] = sum_k grad_out[k]*W2[j*2+k] → W2=I so [1,1]
-            // grad_h = d_act * grad_h_act = [2*1, 4*1] = [2, 4]
-            // grad_x[i] = sum_j grad_h[j]*W1[i*2+j] → W1=I so [2, 4]
-            let out = [2.0_f32, 4.0];
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+        Some(|| {
+            vec![vec![EXPECTED_MLP_BACKWARD_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The `autotune` optimizer pass is gone, along with the bounds guard it emitted to cover the tail it created, because rewriting a program's declared workgroup width from adapter capabilities selected a schedule outside the one owner."

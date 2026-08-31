@@ -1,0 +1,10 @@
+lane = "conform-operation-registry"
+workflow = ".github/workflows/conform.yml"
+job = "operation-registry"
+state = "live"
+required_status = "Conformance / Operation registry contract"
+triggers = ["push", "pull_request"]
+steps = [
+  { command = "./cargo_full test -p vyre-conform-spec" },
+  { gate = "op-matrix", args = ["--check"] },
+]

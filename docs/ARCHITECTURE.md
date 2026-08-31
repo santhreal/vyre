@@ -1,248 +1,120 @@
 # Vyre architecture
 
-Last verified: 2026-08-12
+Last verified: 2026-08-17
 
-This guide describes Vyre 0.7.2 and the decided target structure it is
-migrating to. Workspace membership, dependency edges, and operation counts
-are owned by the generated artifacts: [crate graph](CRATE_GRAPH.md),
-[crate ownership registry](CRATE_OWNERSHIP.toml), and
-[operation schema](generated/OP_SCHEMA.json). This guide does not restate
-those numbers; it explains how the pieces fit and where responsibilities
-live.
+Vyre 0.8.0 is a GPU compiler. You build a `Program` from registered
+operations, compile the whole graph into one immutable `Artifact`, emit a
+target payload, and run it on the device. There is no host execution path
+and no bytecode interpreter. `vyre-reference` is the only crate allowed to
+compute on the CPU, and only as the oracle.
 
-## System shape
+Downstream crates do not own shadow operation identities. The live catalog
+is `docs/generated/OP_SCHEMA.json`, read through
+`vyre-foundation::operation::OperationRegistry`.
 
-A frontend builds typed `Program` values and adapts them into a validated
-`ProgramGraph`. The whole-program compiler selects a bounded legal
-schedule and produces an immutable `Artifact`. A registered target
-compiler attaches an authenticated `TargetPayload`; the matching driver
-materializer admits that payload and creates an `ArtifactInstance`. Typed
-bindings produce a `Submission`, then completion and readback. The
-reference interpreter is an oracle, not a silent fallback for a requested
-target.
+## Two placement rules
 
-```mermaid
-flowchart LR
-    Frontend[Frontend Program values] --> Graph[Validated ProgramGraph]
-    Graph --> Compiler[Whole-program compiler]
-    Compiler --> Artifact[Immutable Artifact]
-    Artifact --> TargetCompiler[Registered target compiler]
-    TargetCompiler --> Payload[Authenticated TargetPayload]
-    Payload --> Materializer[Driver admission and materialization]
-    Materializer --> Instance[ArtifactInstance]
-    Instance --> Submission[Typed Submission]
-    Submission --> Completion[Completion and readback]
-    Graph --> Reference[Reference oracle]
-```
+**Composed, not rewritten.** A composition returns a `Program` built from
+IR that already exists. It belongs in `vyre-libs`, whoever calls it.
 
-The current release evidence selects CUDA as the preferred backend on
-NVIDIA systems. WGPU is the portable GPU route. SPIR-V is a registered
-dispatch route. Metal is active on supported Apple targets. See
-`release/evidence/backends/backend-matrix.json` for the live probe rows.
+**Intrinsic means uncomposable.** An operation belongs in `vyre-primitives`
+only when it needs its own backend emitter arm and its own reference
+interpreter arm.
 
-## Workspace boundaries
+## Layers
 
-| Boundary | Current owner | Responsibility |
-| --- | --- | --- |
-| Public facade | `vyre` | Canonical graph compilation, artifact sessions, scan products, feature-gated target selection. |
-| Stable contracts | `vyre-spec` | Frozen cross-engine analysis, soundness, and interchange schemas. |
-| IR, registry, optimizer | `vyre-foundation` | `Program`, `ProgramGraph`, validation, serialization, semantic operation identity, diagnostics, backend-neutral optimization passes. |
-| Hardware operations | `vyre-intrinsics` | Category C operation builders. Folding into `vyre-primitives`; see the target structure below. |
-| Reusable operations | `vyre-primitives` | Shared composition builders. Becoming Category C only; see below. |
-| Library compositions | `vyre-libs` | Product-facing Category A compositions. Becoming the single Category A home; see below. |
-| Compiler self-use | `vyre-self-substrate` | GPU execution of compiler passes plus scheduling solvers. Narrowing to the pass engine; see below. |
-| Whole-program compiler | `vyre-megakernel` | Bounded legal whole-graph schedules, immutable artifacts, target payloads. |
-| Backend contracts | `vyre-driver` | Backend-neutral target compiler, materializer, device, binding, submission, completion, capability contracts. |
-| Concrete backends | `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-driver-spirv`, `vyre-driver-metal`, `vyre-driver-reference` | Target compilers, materializers, devices; admit authenticated payloads; submit typed work. |
-| Runtime | `vyre-runtime` | Compilation orchestration, admission, artifact sessions, recovery, persistence, residency, scheduling, readback. |
-| Scan product | `vyre-scan` | Scan database framing, sessions, paging, residency, execution, readback. |
-| Artifact packaging | `vyre-aot` | Package validated artifacts without owning artifact identity or live dispatch. |
-| Frontends | `vyre-frontend-c`, `vyre-frontend-rust` | Lower source-language subsets into backend-neutral `Program` or `ProgramGraph` values. |
-| Conformance | `vyre-conform`, `vyre-conform-spec` | Execute canonical artifact routes; own frozen conformance schemas. |
+- `vyre-spec` is the frozen vocabulary. It does not execute.
+- `vyre-foundation` owns validated `ProgramGraph` and schedule-free
+  `LogicalProgramGraph` IR, semantic identity, the host optimizer, and the
+  registry. No application semantics.
+- `vyre-libs` owns every composition: consumer dialects and the compiler's
+  own solvers, encoding, analysis, scheduling, and reasoning. Equal
+  residents.
+- `vyre-primitives` owns marker types and hardware intrinsics. A composition
+  belongs in `vyre-libs`.
+- `vyre-lower` owns the sole `Program` to validated `PhysicalKernel`
+  boundary. Concrete emitters may borrow its verified `KernelDescriptor`.
+- `vyre-megakernel` owns Cross-program composition: candidate generation,
+  fusion legality, the cost model, validated `SelectedPlan` schedule IR, and
+  selection under an explicit `SearchBudget`. It also owns immutable `Artifact`
+  identity and authenticated
+  `TargetPayload` construction. It does not own admission or claim a measured
+  winner that no clock produced.
+- `vyre-megakernel` also owns the `SemanticExecutor` seam. A caller submits a
+  validated `LogicalProgramGraph` plus device and external facts, an objective
+  and a budget; the compiler selects the schedule and the launch. The seam
+  accepts no grid, workgroup, persistence or route, so `vyre-libs`,
+  `vyre-pass-engine`, `vyre-driver-reference` and `vyre-bench` declare a
+  dependency on it and `docs/CRATE_OWNERSHIP.toml` records those edges.
+- `vyre-driver` is backend-agnostic machinery. Concrete drivers own names,
+  dialects, and device quirks.
+- `vyre-runtime` executes the artifact's selected persistence. It does not
+  decide whether to be persistent.
+- `vyre-pass-engine` runs the optimizer's passes as vyre Programs. `vyre-bench`
+  measures that pipeline against the host optimizer on a device, so it declares
+  an edge to the pass engine as well as to the compiler.
+- `vyre-reference` is the oracle, not a backend and not a fallback.
 
-Domain logic does not import a CLI, transport, or concrete backend.
-Shared crates use neutral target and artifact terms. Concrete backend API
-and shader dialect details stay in the concrete driver or emitter that
-owns them.
-
-## Operation categories
-
-Every registered operation is one of two categories. There is no third.
-
-- **Category A: composition.** A backend-neutral `fn(...) -> Program`
-  built from lower-tier operations over existing `Expr`/`Node` variants.
-  It adds no concrete target lowering. Regions preserve composition
-  provenance: the outer region keeps the Cat-A generator, each child
-  keeps its primitive generator and a `source_region` naming the parent.
-- **Category C: hardware intrinsic.** An operation requiring a dedicated
-  hardware contract: a dedicated emitter arm AND a dedicated
-  reference-interpreter eval arm. Its registration supplies the neutral
-  builder and deterministic fixtures; each supported target supplies a
-  keyed lowering facet. Missing facets fail closed.
-- **Category B is banned.** Vyre does not execute a general operation
-  bytecode interpreter on the host or inside a persistent kernel. A
-  program remains typed IR until verified lowering. Raw `Program`
-  execution exists only in explicitly named reference, parity, and
-  conformance oracle seams.
-
-`vyre-foundation::operation::OperationRegistry` is the semantic operation
-authority. One registration owns the operation ID, version, tier,
-signature, neutral builder, fixtures, laws, tolerance, derived effects,
-and capability keys. `generated/OP_SCHEMA.json` and the catalog are
-projections, not second identities. `docs/lego-block-rule.md` owns the
-composition policy: discovery before invention, the two-caller
-criterion, Gate 1, and the promotion patch contract.
-
-Run these checks after changing an operation:
+## Production route
 
 ```text
-cargo_full run --bin xtask -- operation-schema --check
-cargo_full run --bin xtask -- list-ops --check
-cargo_full run --bin xtask -- catalog --check
+frontend Program(s)
+  -> validated ProgramGraph
+  -> validated schedule-free LogicalProgramGraph
+  -> validated SelectedPlan in an immutable Artifact
+  -> validated PhysicalKernel per selected fusion group
+  -> authenticated TargetPayload
+  -> driver admission and materialization
+  -> ArtifactInstance
+  -> typed Submission
+  -> completion and readback
 ```
 
-## Target operation crate structure
+The logical stage records versioned iteration extents, index maps, tensor
+layouts, aliases, effects, dependencies and point bounds before schedule
+search. Library compositions cross this boundary through their typed graph
+value contracts.
 
-Decided 2026-08-12. Migration runs after the dedup campaign in
-`DEDUP_PLAN.md`; until it lands, the boundary table above describes the
-current tree.
+Ordinary library compositions contain schedule-free logical domain, tile and
+within-tile identities plus logical barriers. Selected-schedule lowering is the
+single boundary that introduces physical invocation, workgroup, local and
+barrier IR. Descriptor construction rejects unresolved logical markers.
 
-Two operation crates, one per category. Nothing else registers
-operations.
+The foundation schedule schema records phase fission and fusion, axis splitting,
+tiling, reorder, vectorization and hierarchy mapping, memory placement,
+prefetch, bounded producer/consumer pipelines, recomputation, persistent
+queues, neutral compute and device partitions, dispatch cuts, synchronization,
+and asymmetric joins. Every applied transform contains typed preconditions,
+source regions and phases, an inverse identity checkpoint, deterministic replay,
+and checked resource bounds. Distinct phases contain independent logical grids,
+workgroup shapes, resource ceilings and parallelism axes.
 
-- `vyre-primitives` owns Category C: strict hardware intrinsics only.
-  It absorbs `vyre-intrinsics`; the name then means what it says. An op
-  that does not require both a dedicated emitter arm and a dedicated
-  interpreter arm does not belong here.
-- `vyre-libs` owns every Category A composition: today's Tier 3 product
-  ops, today's Tier 2.5 primitive domains, and the generic compositions
-  currently parked in `vyre-self-substrate`. Public, feature-gated per
-  domain, maximally deduplicated. Sharing a helper becomes a `pub`
-  change inside one crate, not a cross-crate migration; the two-caller
-  criterion in `docs/lego-block-rule.md` gates making a helper public.
-- Category B stays banned.
+Every operation registration records neutral schedule constraints. The registry
+derives the semantic minimum from the canonical program and composes workgroup
+and subgroup widths, uniformity, shared scratch, cooperative launch, memory
+ordering, and element policy before search. Conflicting constraints reject the
+operation contract instead of becoming candidate prices.
 
-Optimization semantics live only in `vyre-foundation` and run on CPU.
-Compile time on CPU is the default; vyre optimizes for the runtime of
-user programs, not its own compile time. GPU execution of optimizer
-passes is an execution strategy for graphs too large for CPU passes,
-never a second implementation of a pass: the pass semantics are
-foundation's, the GPU engine replays them.
+Every production compile emits a megakernel artifact. Persistence is a
+schedule inside that artifact, not a second output type. Static and
+persistent routes consume the same artifact class and must produce the same
+bytes. Hardware enters compile as a fact vector, never as a backend name.
+Unmeasured selections are recorded as unmeasured and are never called
+autoroute. GPU execution is capability-based on the designated execution host
+(`axiomexec`). Every release crate enforces a zero panic budget.
 
-`vyre-self-substrate` narrows to exactly that GPU pass engine
-(`optimizer/`: the pass dispatcher, resident pipeline, and
-`*_via_encoded` execution) and loses everything else:
+## Chapters
 
-- `scheduling/` solvers move to the stage owners that call them per
-  `megakernel-wiring.md`: compile-time selection in `vyre-megakernel`,
-  resident lifecycle selection in `vyre-runtime`'s planner.
-- Generic GPU ops (`graph/` resident CSR variants, `data/` pipelines,
-  generic `math/` solvers) move to `vyre-libs`.
-- Dispatch and telemetry machinery moves to its consumers in
-  `vyre-driver` and `vyre-runtime`.
-- Research modules consumed only by their own tests are parked or
-  deleted per the module audit in `DEDUP_PLAN.md`; they do not move to
-  libs.
+- [Crate boundaries](architecture/crates.md): what each crate owns.
+- [The artifact is the output type](architecture/artifact.md): identity,
+  persistence, payload admission.
+- [Whole-program compile search](architecture/compile-search.md): legality,
+  budget, cost model.
+- [Parsing](architecture/parsing.md): the language-neutral substrate and
+  its frontends.
+- [The placement rule](lego-block-rule.md): which crate a new operation
+  belongs in.
 
-The dependency DAG: `vyre-foundation` (IR, registry, CPU optimizer) ←
-`vyre-primitives` (hardware intrinsics) ← `vyre-libs` (compositions) ←
-GPU pass engine ← compiler and drivers. Foundation still cannot consume
-the operation crates; `vyre_foundation::pass_substrate` remains its
-sanctioned local exception and is the one accepted duplication,
-registered with `lego-audit`.
-
-Registry impact: `OperationTier::Primitive` becomes
-`OperationTier::Intrinsic`; every registration site and
-`check-tier-deps`' tier table move with it.
-
-## Whole-program artifact pipeline
-
-1. Frontends and builders produce typed `Program` values.
-2. `ProgramGraph` centralizes graph adaptation, typed value identity,
-   constants, lifetimes, effects, and validation.
-3. The megakernel compiler performs semantic optimization, explores
-   legal whole-graph schedules under a recorded finite budget, and
-   returns the best valid explored plan. It does not claim a
-   mathematical global optimum.
-4. `attach_target` invokes a registered pure target compiler. The
-   shared selected-module boundary fuses each selected group and runs
-   verified lowering once. Concrete target compilers consume that
-   immutable product and return exact module bytes, workgroup and grid
-   geometry, dynamic shared bytes, and descriptor-to-artifact binding
-   projections for an explicit target profile.
-5. The target payload authenticates the profile generation, selected
-   node and stage identities, verified descriptor, module format and
-   bytes, geometry, binding projection, and neutral artifact digest.
-6. A concrete materializer admits authenticated target state without
-   fusing, lowering, or re-inferring geometry and creates an
-   `ArtifactInstance`.
-7. Runtime builds a typed `BindingSet`, rejects zero invocation
-   extents, submits work, waits for completion, and reads outputs by
-   artifact value identity.
-8. Recovery rematerializes authenticated artifact bytes. It does not
-   lower or compile a raw `Program` during submission.
-
-## Cross-program composition
-
-`ProgramGraph` is the composition unit. It preserves typed IDs rather
-than reconstructing values from names. Compiler requests carry external
-facts and bounded search budgets, not caller-selected fusion or schedule
-decisions. `vyre-lower` consumes the verified semantic product. Emitters
-do not run private optimizers or accept unverified raw programs.
-
-## Megakernel boundary
-
-"Megakernel" names four stages with four owners. Do not collapse them.
-The living matrix is [`megakernel-wiring.md`](megakernel-wiring.md).
-
-1. Artifact compiler: `vyre-megakernel`.
-2. Persistent runtime protocol: `vyre-runtime/src/megakernel/**`.
-3. Backend-neutral wave policy: `vyre-driver/src/megakernel_execution.rs`
-   and siblings.
-4. IR pre-dispatch fusion oracles: `vyre-foundation/src/optimizer/megakernel/`.
-
-## Optimization placement
-
-Two layers.
-
-- Layer 1 is semantic IR optimization in
-  `vyre-foundation/src/optimizer/passes/`. It rewrites typed IR and
-  benefits every backend. This is the canonical home of pass semantics.
-- Layer 2 is target lowering strategy in the owning concrete driver. It
-  changes instruction selection or scheduling without changing program
-  semantics.
-
-GPU pass execution (the narrowed self-substrate crate) is not a third
-layer and not a second implementation: it replays Layer 1 semantics on
-GPU for graphs too large for CPU passes.
-
-Shared launch planning, cache identity, and capability records live in
-`vyre-driver`. Persistent queue scheduling lives in `vyre-runtime`. The
-complete contract is in [`optimization/README.md`](optimization/README.md)
-and [`OPTIMIZATION_ARCHITECTURE.md`](OPTIMIZATION_ARCHITECTURE.md).
-
-## Conformance and release evidence
-
-A backend support claim requires an operation-matrix row and conformance
-proof. The release-facing sources are:
-
-- `docs/optimization/OP_MATRIX.toml` for operation and backend support.
-- `release/evidence/conformance/conformance-matrix.json` for
-  per-operation proof rows.
-- `release/evidence/backends/backend-matrix.json` for executable backend
-  probes.
-- `docs/generated/OP_SCHEMA.json` for the joined operation contract.
-- `release/release-train.toml` for the active version and release train.
-
-Generated evidence is refreshed through its owning command. Editing a
-digest, count, fingerprint, or support status by hand is not a valid
-architecture change.
-
-## Historical rationale
-
-Historical plans and snapshots (including `docs/archive/` and the git
-history of deleted pre-0.7 documents) explain why earlier designs were
-considered. They do not assign current ownership or support status. When
-a historical file conflicts with this guide, the generated crate graph,
-ownership registry, operation schema, backend evidence, and optimization
-control plane take precedence.
+Machine-readable contracts live next to this file:
+`CRATE_OWNERSHIP.toml`, `optimization/OWNERSHIP.toml`,
+`optimization/OP_MATRIX.toml`, and `testing/TESTING.toml`.

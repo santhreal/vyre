@@ -11,16 +11,20 @@
 //! - `NvmeGpuIngestDriver`  -  publishes completed slots into the megakernel
 //!   `io_queue`; `new_gpudirect` requires the native NVMe → BAR1 path.
 
-pub mod driver;
-pub mod gpudirect;
-pub mod io_loop;
-pub mod pump;
-pub mod ring;
-pub mod stream;
+// The submodules are the file split; the names below are the surface. Keeping
+// them private leaves one public path per item instead of two.
+mod buffer;
+mod driver;
+mod gpudirect;
+mod io_loop;
+mod pump;
+mod ring;
+mod stream;
 
+pub use buffer::{GpuMappedBuffer, Iovec};
 pub use driver::{CompletedIngest, NativeReadPath, NvmeGpuIngestDriver, NvmeGpuIngestTelemetry};
 pub use gpudirect::{encode_nvme_read_sqe, GpuDirectCapability, NVME_CMD_READ};
 pub use io_loop::{RegisteredIoDestination, ResidentIoLoop};
 pub use pump::UringResidentQueuePump;
 pub use ring::IoUringState;
-pub use stream::{AsyncUringStream, GpuMappedBuffer, Iovec};
+pub use stream::AsyncUringStream;

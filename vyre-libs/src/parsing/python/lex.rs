@@ -1,70 +1,35 @@
+//! The Python lexer program.
+//!
+//! Token numbering is owned by `vyre_spec::python_token`, which is the wire
+//! contract between this program and every host matcher that reads its rows.
+
 use crate::parsing::composition::child_phase;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-/// Sparse-token sentinel: non-token byte positions stay zeroed.
-pub const TOK_NONE: u32 = 0;
-/// Identifier token.
-pub const TOK_IDENTIFIER: u32 = 1;
-/// Number literal token.
-pub const TOK_NUMBER: u32 = 2;
-/// String literal token.
-pub const TOK_STRING: u32 = 3;
-/// Newline token.
-pub const TOK_NEWLINE: u32 = 4;
-/// Comment token.
-pub const TOK_COMMENT: u32 = 5;
-
-/// `(` token.
-pub const TOK_LPAREN: u32 = 10;
-/// `)` token.
-pub const TOK_RPAREN: u32 = 11;
-/// `[` token.
-pub const TOK_LBRACKET: u32 = 12;
-/// `]` token.
-pub const TOK_RBRACKET: u32 = 13;
-/// `{` token.
-pub const TOK_LBRACE: u32 = 14;
-/// `}` token.
-pub const TOK_RBRACE: u32 = 15;
-/// `:` token.
-pub const TOK_COLON: u32 = 16;
-/// `,` token.
-pub const TOK_COMMA: u32 = 17;
-/// `.` token.
-pub const TOK_DOT: u32 = 18;
-/// `=` token.
-pub const TOK_EQ: u32 = 19;
-/// `@` token.
-pub const TOK_AT: u32 = 20;
-/// `*` token.
-pub const TOK_STAR: u32 = 21;
-
-/// `def` keyword token.
-pub const TOK_DEF: u32 = 100;
-/// `async` keyword token.
-pub const TOK_ASYNC: u32 = 101;
-/// `class` keyword token.
-pub const TOK_CLASS: u32 = 102;
-/// `import` keyword token.
-pub const TOK_IMPORT: u32 = 103;
-/// `from` keyword token.
-pub const TOK_FROM: u32 = 104;
-/// `as` keyword token.
-pub const TOK_AS: u32 = 105;
-/// `with` keyword token.
-pub const TOK_WITH: u32 = 106;
-/// `await` keyword token.
-pub const TOK_AWAIT: u32 = 107;
-/// `match` keyword token.
-pub const TOK_MATCH: u32 = 108;
-/// `case` keyword token.
-pub const TOK_CASE: u32 = 109;
-/// `except` keyword token.
-pub const TOK_EXCEPT: u32 = 110;
+// `vyre_spec::python_token` owns the numbering of these ids. They are the wire
+// contract between the GPU lexer program below and every host matcher that
+// reads its sparse token rows, so a caller that reads a token kind names that
+// module rather than this one.
+use vyre_spec::python_token::*;
 
 fn load_byte(buffer: &str, index: Expr) -> Expr {
-    Expr::bitand(Expr::load(buffer, index), Expr::u32(0xFF))
+    crate::builder::state_machine::TableStateMachineComposer::masked_byte_load(buffer, index)
+}
+
+/// A source byte at `index`, or zero past the end of the source.
+///
+/// The keyword matcher and the lookbehind read positions a comparison in the
+/// same expression later discards, and both `Expr::and` and `Expr::select`
+/// evaluate every operand. The index is folded into range before the load, so a
+/// read that will be discarded is still inside the buffer.
+fn load_byte_bounded(buffer: &str, index: Expr, haystack_len: u32) -> Expr {
+    let in_range = Expr::lt(index.clone(), Expr::u32(haystack_len));
+    Expr::select(
+        in_range.clone(),
+        load_byte(buffer, Expr::select(in_range, index, Expr::u32(0))),
+        Expr::u32(0),
+    )
 }
 
 fn ascii(ch: u8) -> Expr {
@@ -99,13 +64,23 @@ fn is_ident_start(value: Expr) -> Expr {
     Expr::or(is_alpha(value.clone()), Expr::eq(value, ascii(b'_')))
 }
 
-fn keyword_match(haystack: &str, base: Expr, len_var: &str, word: &[u8]) -> Expr {
+fn keyword_match(
+    haystack: &str,
+    base: Expr,
+    len_var: &str,
+    word: &[u8],
+    haystack_len: u32,
+) -> Expr {
     let mut expr = Expr::eq(Expr::var(len_var), Expr::u32(word.len() as u32));
     for (offset, byte) in word.iter().enumerate() {
         expr = Expr::and(
             expr,
             Expr::eq(
-                load_byte(haystack, Expr::add(base.clone(), Expr::u32(offset as u32))),
+                load_byte_bounded(
+                    haystack,
+                    Expr::add(base.clone(), Expr::u32(offset as u32)),
+                    haystack_len,
+                ),
                 ascii(*byte),
             ),
         );
@@ -113,50 +88,50 @@ fn keyword_match(haystack: &str, base: Expr, len_var: &str, word: &[u8]) -> Expr
     expr
 }
 
-fn classify_keyword(haystack: &str, base: Expr) -> Vec<Node> {
+fn classify_keyword(haystack: &str, base: Expr, haystack_len: u32) -> Vec<Node> {
     vec![
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"def"),
+            keyword_match(haystack, base.clone(), "token_len", b"def", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_DEF))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"async"),
+            keyword_match(haystack, base.clone(), "token_len", b"async", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_ASYNC))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"class"),
+            keyword_match(haystack, base.clone(), "token_len", b"class", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_CLASS))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"import"),
+            keyword_match(haystack, base.clone(), "token_len", b"import", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_IMPORT))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"from"),
+            keyword_match(haystack, base.clone(), "token_len", b"from", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_FROM))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"as"),
+            keyword_match(haystack, base.clone(), "token_len", b"as", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_AS))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"with"),
+            keyword_match(haystack, base.clone(), "token_len", b"with", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_WITH))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"await"),
+            keyword_match(haystack, base.clone(), "token_len", b"await", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_AWAIT))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"match"),
+            keyword_match(haystack, base.clone(), "token_len", b"match", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_MATCH))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"case"),
+            keyword_match(haystack, base.clone(), "token_len", b"case", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_CASE))],
         ),
         Node::if_then(
-            keyword_match(haystack, base, "token_len", b"except"),
+            keyword_match(haystack, base, "token_len", b"except", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_EXCEPT))],
         ),
     ]
@@ -176,14 +151,25 @@ pub fn python312_lexer(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![
         Node::let_bind("ch", load_byte(haystack, t.clone())),
         Node::let_bind(
             "prev",
+            // `t - 1` wraps to `u32::MAX` at the first byte, and the select
+            // evaluates its taken and untaken arm alike, so the index is folded
+            // into range before the load.
             Expr::select(
                 Expr::gt(t.clone(), Expr::u32(0)),
-                load_byte(haystack, Expr::sub(t.clone(), Expr::u32(1))),
+                load_byte_bounded(
+                    haystack,
+                    Expr::select(
+                        Expr::gt(t.clone(), Expr::u32(0)),
+                        Expr::sub(t.clone(), Expr::u32(1)),
+                        Expr::u32(0),
+                    ),
+                    haystack_len,
+                ),
                 Expr::u32(0),
             ),
         ),
@@ -357,7 +343,7 @@ pub fn python312_lexer(
                 Node::assign("token_len", Expr::var("scan_len")),
             ]
             .into_iter()
-            .chain(classify_keyword(haystack, t.clone()))
+            .chain(classify_keyword(haystack, t.clone(), haystack_len))
             .collect(),
         ),
         Node::if_then(
@@ -569,11 +555,11 @@ pub fn python312_lexer(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::python312_lexer",
             vec![child_phase(
                 "vyre-libs::parsing::python312_lexer",
-                vyre_primitives::text::line_index::OP_ID,
+                crate::text::LINE_INDEX_OP_ID,
                 vec![Node::if_then(
                     Expr::lt(t.clone(), Expr::u32(haystack_len)),
                     body,
@@ -585,19 +571,35 @@ pub fn python312_lexer(
     .with_non_composable_with_self(true)
 }
 
+const EXPECTED_LEXER_TOK_TYPES_BYTES: [u8; 64] = [
+    100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0, 1, 0, 0, 0, 11, 0,
+    0, 0, 16, 0, 0, 0, 4, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0,
+];
+const EXPECTED_LEXER_TOK_STARTS_BYTES: [u8; 64] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 5, 0, 0, 0, 6, 0, 0, 0, 7, 0, 0, 0,
+    8, 0, 0, 0, 9, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0,
+];
+const EXPECTED_LEXER_TOK_LENS_BYTES: [u8; 64] = [
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+    1, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+const EXPECTED_LEXER_COUNTS_BYTES: [u8; 4] = [9, 0, 0, 0];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::python312_lexer",
-        build: Some(|| python312_lexer("haystack", "tok_types", "tok_starts", "tok_lens", "counts", 16)),
-        test_inputs: Some(lexer_fixture_inputs),
-        expected_output: Some(lexer_fixture_expected),
-        category: Some("parsing"),
-    }
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        "vyre-libs::parsing::python312_lexer",
+        || python312_lexer("haystack", "tok_types", "tok_starts", "tok_lens", "counts", 16),
+        Some(lexer_fixture_inputs),
+        Some(|| vec![vec![
+            EXPECTED_LEXER_TOK_TYPES_BYTES.to_vec(),
+            EXPECTED_LEXER_TOK_STARTS_BYTES.to_vec(),
+            EXPECTED_LEXER_TOK_LENS_BYTES.to_vec(),
+            EXPECTED_LEXER_COUNTS_BYTES.to_vec(),
+        ]]),
+    )
+    .with_category("parsing")
 }
 
 fn lexer_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
@@ -612,52 +614,5 @@ fn lexer_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
         vec![0u8; 16 * 4],
         vec![0u8; 16 * 4],
         vec![0u8; 4],
-    ]]
-}
-
-fn write_sparse_token(
-    tok_types: &mut [u8],
-    tok_starts: &mut [u8],
-    tok_lens: &mut [u8],
-    pos: usize,
-    tok: u32,
-    len: u32,
-) {
-    let base = pos * 4;
-    tok_types[base..base + 4].copy_from_slice(&tok.to_le_bytes());
-    tok_starts[base..base + 4].copy_from_slice(&(pos as u32).to_le_bytes());
-    tok_lens[base..base + 4].copy_from_slice(&len.to_le_bytes());
-}
-
-fn lexer_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    let mut tok_types = vec![0u8; 16 * 4];
-    let mut tok_starts = vec![0u8; 16 * 4];
-    let mut tok_lens = vec![0u8; 16 * 4];
-    for (pos, tok, len) in [
-        (0usize, TOK_DEF, 3u32),
-        (4, TOK_IDENTIFIER, 1),
-        (5, TOK_LPAREN, 1),
-        (6, TOK_IDENTIFIER, 1),
-        (7, TOK_RPAREN, 1),
-        (8, TOK_COLON, 1),
-        (9, TOK_NEWLINE, 1),
-        (10, TOK_COMMENT, 2),
-        (12, TOK_NEWLINE, 1),
-    ] {
-        write_sparse_token(
-            &mut tok_types,
-            &mut tok_starts,
-            &mut tok_lens,
-            pos,
-            tok,
-            len,
-        );
-    }
-
-    vec![vec![
-        tok_types,
-        tok_starts,
-        tok_lens,
-        9u32.to_le_bytes().to_vec(),
     ]]
 }

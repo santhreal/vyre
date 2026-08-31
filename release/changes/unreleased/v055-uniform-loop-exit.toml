@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "V055 now accepts a post-barrier loop exit only when its full return path is workgroup-uniform. It derives same-address loads from an acquiring barrier and rejects intervening writes, divergent indices, atomics, and lane-dependent guards. The DCE fixpoint loop therefore removes one redundant barrier per iteration without weakening the unsafe-exit rejection."

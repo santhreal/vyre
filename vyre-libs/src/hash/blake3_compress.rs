@@ -15,15 +15,15 @@
 //! 7-round permutation in-place on 16 local state words. Parallel
 //! tree hashing composes this compression primitive over chunk states.
 //!
-//! Migration 3 moved this op from `vyre-libs::crypto::blake3_compress`
+//! The canonical path is `vyre-libs::hash::blake3_compress`
 //! to `vyre-libs::hash::blake3_compress`.
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use crate::hash::blake3::{blake3_round, BLAKE3_ROUND_OP_ID, MSG_SCHEDULE};
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::hash::blake3::{blake3_round, BLAKE3_ROUND_OP_ID, MSG_SCHEDULE};
 
 use crate::buffer_names::scoped_generic_name;
-use crate::region::{wrap_anonymous, wrap_child};
 
 const OP_ID: &str = "vyre-libs::hash::blake3_compress";
 const FAMILY_PREFIX: &str = "hash_blake3_compress";
@@ -91,9 +91,7 @@ pub fn blake3_compress(
     // body size so construction is allocation-free without over-retaining
     // unused node slots.
     let mut body: Vec<Node> = Vec::with_capacity(BLAKE3_COMPRESS_BODY_NODE_COUNT);
-    let parent = GeneratorRef {
-        name: OP_ID.to_string(),
-    };
+    let parent = Ident::from(OP_ID);
 
     // -- Initialize state[0..8] = chaining_in[0..8]. -----------------
     for i in 0..8 {
@@ -122,9 +120,9 @@ pub fn blake3_compress(
         ));
     }
 
-    // -- 7 rounds. Each round is a composed Tier 2.5 primitive. -----
+    // -- 7 rounds. Each round is a registered child region. -----
     for (round_idx, perm) in MSG_SCHEDULE.iter().enumerate() {
-        body.push(wrap_child(
+        body.push(wrap_child_region(
             BLAKE3_ROUND_OP_ID,
             parent.clone(),
             blake3_round(round_idx, perm),
@@ -149,20 +147,27 @@ pub fn blake3_compress(
             BufferDecl::output(chaining_out, 3, DataType::U32).with_count(8),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        // One invocation owns the compression. The eight output words are the same
+        // in every invocation of the grid the backend derives from that length, so
+        // a guard on the workgroup alone would let a fused, wider arm write them
+        // from every invocation of workgroup 0 at once.
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(Expr::is_first_logical_point(), body)],
+        )],
     )
 }
 
+const EXPECTED_BLAKE3_COMPRESS_OUTPUT_BYTES: [u8; 32] = [
+    0x82, 0x5E, 0x3E, 0x45, 0xC6, 0xA8, 0x67, 0x23, 0x78, 0xCF, 0xE6, 0x40, 0x51, 0x65, 0xD4, 0x78,
+    0x8A, 0xC6, 0xEE, 0xEF, 0x86, 0x39, 0xC4, 0x55, 0x31, 0x4F, 0x36, 0xD0, 0xBC, 0xF1, 0x3F, 0xE5,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| blake3_compress("cv_in", "msg", "params", "cv_out")),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || blake3_compress("cv_in", "msg", "params", "cv_out"),
+        Some(|| {
             let iv: [u32; 8] = [
                 0x6A09_E667, 0xBB67_AE85, 0x3C6E_F372, 0xA54F_F53A,
                 0x510E_527F, 0x9B05_688C, 0x1F83_D9AB, 0x5BE0_CD19,
@@ -179,14 +184,8 @@ inventory::submit! {
                 crate::fixture_bytes::u32_bytes(&params),
             ]]
         }),
-        expected_output: Some(|| vec![
-            vec![
-                vec![0x82, 0x5e, 0x3e, 0x45, 0xc6, 0xa8, 0x67, 0x23, 0x78, 0xcf, 0xe6, 0x40, 0x51, 0x65, 0xd4, 0x78,
-                     0x8a, 0xc6, 0xee, 0xef, 0x86, 0x39, 0xc4, 0x55, 0x31, 0x4f, 0x36, 0xd0, 0xbc, 0xf1, 0x3f, 0xe5, ],
-            ],
-        ]),
-        category: None,
-    }
+        Some(|| vec![vec![EXPECTED_BLAKE3_COMPRESS_OUTPUT_BYTES.to_vec()]]),
+    )
 }
 
 #[cfg(test)]
@@ -199,9 +198,12 @@ mod tests {
         let [Node::Region { body, .. }] = program.entry() else {
             panic!("Fix: blake3_compress must remain a single provenance Region.");
         };
+        let [Node::If { then, .. }] = body.as_slice() else {
+            panic!("Fix: blake3_compress must keep its body under one first-workgroup guard.");
+        };
 
         assert_eq!(
-            body.len(),
+            then.len(),
             BLAKE3_COMPRESS_BODY_NODE_COUNT,
             "Fix: BLAKE3 compress body reservation must stay exact as the top-level IR shape evolves."
         );

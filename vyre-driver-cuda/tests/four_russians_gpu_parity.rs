@@ -1,14 +1,15 @@
 //! Parity test: vyre-primitives four_russians_apply_byte_lut matches CPU oracle.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::bitset::four_russians::{
-    binary_byte_lut, cpu_ref, four_russians_apply_byte_lut, BooleanTileOp,
+use vyre_libs::bitset::four_russians::{
+    binary_byte_lut, four_russians_apply_byte_lut, BooleanTileOp,
 };
+use vyre_reference::composition_witness::four_russians_binary_witness;
 
 fn run(lhs: &[u32], rhs: &[u32], lut: &[u32]) -> Vec<u32> {
     let words = lhs.len().min(rhs.len()) as u32;
@@ -39,7 +40,7 @@ fn cuda_four_russians_and_op() {
     let lut = binary_byte_lut(BooleanTileOp::And);
     let lhs = vec![0xFF00_FF00u32, 0x0F0F_0F0F];
     let rhs = vec![0xF0F0_F0F0u32, 0xFFFF_0000];
-    let cpu = cpu_ref(&lhs, &rhs, &lut);
+    let cpu = four_russians_binary_witness(&lhs, &rhs, &lut);
     let gpu = run(&lhs, &rhs, &lut);
     assert_eq!(gpu, cpu);
 }
@@ -49,7 +50,7 @@ fn cuda_four_russians_or_op() {
     let lut = binary_byte_lut(BooleanTileOp::Or);
     let lhs = vec![0xAAAA_AAAAu32, 0x5555_5555];
     let rhs = vec![0x5555_5555u32, 0xAAAA_AAAA];
-    let cpu = cpu_ref(&lhs, &rhs, &lut);
+    let cpu = four_russians_binary_witness(&lhs, &rhs, &lut);
     let gpu = run(&lhs, &rhs, &lut);
     assert_eq!(gpu, cpu);
     // every bit set
@@ -61,7 +62,7 @@ fn cuda_four_russians_xor_op() {
     let lut = binary_byte_lut(BooleanTileOp::Xor);
     let lhs = vec![0xCAFE_CAFEu32];
     let rhs = vec![0xBABE_BABEu32];
-    let cpu = cpu_ref(&lhs, &rhs, &lut);
+    let cpu = four_russians_binary_witness(&lhs, &rhs, &lut);
     let gpu = run(&lhs, &rhs, &lut);
     assert_eq!(gpu, cpu);
 }
@@ -71,7 +72,7 @@ fn cuda_four_russians_andnot_op() {
     let lut = binary_byte_lut(BooleanTileOp::AndNot);
     let lhs = vec![0xDEAD_BEEFu32, 0xFEED_FACE];
     let rhs = vec![0xFFFF_0000u32, 0x00FF_FF00];
-    let cpu = cpu_ref(&lhs, &rhs, &lut);
+    let cpu = four_russians_binary_witness(&lhs, &rhs, &lut);
     let gpu = run(&lhs, &rhs, &lut);
     assert_eq!(gpu, cpu);
 }

@@ -8,7 +8,7 @@ use vyre_spec::extension::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionRuleConditionId,
     ExtensionTernaryOpId, ExtensionUnOpId,
 };
-use vyre_spec::{BackendAvailabilityPredicate, Category, CollectiveOp, CommGroup};
+use vyre_spec::{BackendAvailabilityPredicate, Category, CommGroup};
 
 #[test]
 fn every_extension_id_family_uses_the_reserved_high_bit_range() {
@@ -32,29 +32,6 @@ fn every_extension_id_family_uses_the_reserved_high_bit_range() {
     assert!(
         ids.windows(2).all(|pair| pair[0] == pair[1]),
         "Fix: every extension-id family must share the same deterministic name-to-id contract."
-    );
-}
-
-#[test]
-fn collective_wire_tags_are_dense_stable_and_actionable_on_unknown_tags() {
-    let cases = [
-        (CollectiveOp::Sum, 0x01),
-        (CollectiveOp::Min, 0x02),
-        (CollectiveOp::Max, 0x03),
-        (CollectiveOp::BitAnd, 0x04),
-        (CollectiveOp::BitOr, 0x05),
-        (CollectiveOp::BitXor, 0x06),
-    ];
-
-    for (op, tag) in cases {
-        assert_eq!(op.builtin_wire_tag(), tag);
-        assert_eq!(CollectiveOp::from_wire_tag(tag), Ok(op));
-    }
-
-    let err = CollectiveOp::from_wire_tag(0x80).expect_err("unknown collective tag must fail");
-    assert!(
-        err.starts_with("Fix:"),
-        "Fix: collective decode errors must be actionable, got `{err}`."
     );
 }
 

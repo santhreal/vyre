@@ -1,95 +1,43 @@
-//! `taint_flow`  -  alias for [`crate::security::flows_to::flows_to`],
-//! exposed under a separate op id for conformance-harness coverage of
-//! API-facing `taint_flow` / `taint_flow_unsanitized` predicates.
+//! `taint_flow`  -  the `flows_to` forward-reach predicate under a second
+//! op id, so the conformance harness covers the API-facing `taint_flow` /
+//! `taint_flow_unsanitized` names as well.
 //!
-//! Downstream analyzer's predicate lowering routes both `taint_flow` and `flows_to`
-//! through `BinaryGraphKind::FlowsToForward`, which calls the
-//! `flows_to` builder; there is no semantic difference. Keeping a
-//! separate file used to mean a duplicated body  -  the body has been
-//! collapsed to a one-line delegation so the implementation stays
-//! authoritative in `flows_to.rs`.
+//! Downstream analyzer's predicate lowering routes both `taint_flow` and
+//! `flows_to` through `BinaryGraphKind::FlowsToForward`; there is no semantic
+//! difference. Both build from
+//! `crate::security::flow_composition::security_flow_program` with the same
+//! [`FLOWS_TO_MASK`] predicate, so the only thing that can differ is the op id
+//! the region carries.
 
+use crate::graph::program_graph::ProgramGraphShape;
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
 
+use crate::security::flow_composition::{
+    security_flow_program, FlowPredicate, SecurityFlowOptions,
+};
 use crate::security::flows_to::FLOWS_TO_MASK;
 
-const OP_ID: &str = "vyre-libs::security::taint_flow";
+pub(crate) const OP_ID: &str = "vyre-libs::security::taint_flow";
 
 /// Build one forward-traversal step over DATAFLOW edges only.
-/// Mirrors [`crate::security::flows_to::flows_to`]'s semantics
-/// (same edge mask, same substrate kernel) but tags the program with
-/// its own op id so the conformance harness covers both predicate
-/// names with structurally distinct IR. Downstream analyzer routes both ids
-/// through the identical kernel.
 #[must_use]
 pub fn taint_flow(shape: ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> Program {
-    crate::security::assert_security_inputs(
+    security_flow_program(SecurityFlowOptions::reach(
         OP_ID,
-        shape.node_count,
-        &[("frontier_in", frontier_in), ("frontier_out", frontier_out)],
-    );
-    crate::region::tag_program(
-        OP_ID,
-        csr_forward_traverse(shape, frontier_in, frontier_out, FLOWS_TO_MASK),
-    )
-}
-
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| taint_flow(ProgramGraphShape::new(4, 3), "fin", "fout")),
-        test_inputs: Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            // Linear 0 → 1 → 2 → 3 along ASSIGNMENT edges. Starting
-            // frontier {0}; `fout` starts as the accumulator.
-            vec![vec![
-                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
-                to_bytes(&[0, 1, 2, 3, 3]),       // pg_edge_offsets
-                to_bytes(&[1, 2, 3]),             // pg_edge_targets
-                to_bytes(&[
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                ]),                               // pg_edge_kind_mask  -  dataflow
-                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
-                to_bytes(&[0b0001]),              // fin = {0}
-                to_bytes(&[0b0001]),              // fout accumulator seed = {0}
-            ]]
-        }),
-        expected_output: Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            // One forward step writes {1} into the accumulator.
-            vec![vec![to_bytes(&[0b0011])]]
-        }),
-        category: Some("security"),
-    }
-}
-
-inventory::submit! {
-    // AUDIT_2026-04-24 F-TF-03: max_iterations matches flows_to at
-    // 4096 so deep taint paths don't hit a silent 64-step truncation.
-    crate::operation_catalog::ConvergenceContract {
-        op_id: OP_ID,
-        max_iterations: 4096,
-    }
+        shape,
+        FlowPredicate::forward(FLOWS_TO_MASK),
+        frontier_in,
+        frontier_out,
+    ))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_primitives::predicate::edge_kind;
+    use crate::predicate::edge_kind;
 
     #[test]
     fn taint_flow_uses_restricted_dataflow_mask() {
-        use crate::security::flows_to::FLOWS_TO_MASK;
         assert_eq!(FLOWS_TO_MASK & edge_kind::CONTROL, 0);
         assert_eq!(FLOWS_TO_MASK & edge_kind::DOMINANCE, 0);
         assert_ne!(FLOWS_TO_MASK & edge_kind::ASSIGNMENT, 0);
@@ -107,16 +55,7 @@ mod tests {
     fn taint_flow_program_uses_non_degenerate_shape() {
         let shape = ProgramGraphShape::new(64, 128);
         let p = taint_flow(shape, "fin", "fout");
-        let fin_buf = p
-            .buffers
-            .iter()
-            .find(|b| b.name() == "fin")
-            .expect("Fix: fin buffer");
-        assert!(
-            fin_buf.count >= 2,
-            "bitset_words(64) = 2; count {} suggests degenerate shape",
-            fin_buf.count
-        );
+        crate::security::flow_composition::assert_non_degenerate_bitset_shape(&p, "fin", 2);
     }
 
     #[test]

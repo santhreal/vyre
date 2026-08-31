@@ -1,5 +1,6 @@
 //! Element-wise residual-stream addition.
 
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Expr, Program};
 
 use super::unary::typed_binary_activation_program;
@@ -43,30 +44,27 @@ fn build_residual_add(
     dtype: DataType,
 ) -> Program {
     if n == 0 {
-        return crate::invalid_program(OP_ID, "Fix: residual_add requires n > 0");
+        return trap_program(OP_ID, None, "Fix: residual_add requires n > 0");
     }
     typed_binary_activation_program(OP_ID, residual, branch, output, n, dtype, Expr::add)
 }
+const EXPECTED_RESIDUAL_ADD_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0xC0, 0x3F, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| residual_add("residual", "branch", "output", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || residual_add("residual", "branch", "output", 4),
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_f32_slice(&[1.0, -2.0, 3.5, 0.0]),
                 vyre_primitives::wire::pack_f32_slice(&[0.5, 4.0, -1.5, -0.0]),
             ]]
         }),
-        expected_output: Some(|| {
-            vec![vec![vyre_primitives::wire::pack_f32_slice(&[
-                1.5, 2.0, 2.0, 0.0,
-            ])]]
+        Some(|| {
+            vec![vec![EXPECTED_RESIDUAL_ADD_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

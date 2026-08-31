@@ -26,7 +26,7 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
     // (truthy), or F32 (identity). It has NO defined ARITHMETIC conversion to a
     // narrow int (U8/U16/I8/I16), a 64-bit int (U64/I64), or any other exotic
     // scalar: the foundation validator (`validate::cast::cast_is_valid`) rejects
-    // those, and the naga/PTX emitters fail closed on them. Without this guard
+    // those, and the text and binary emitters fail closed on them. Without this guard
     // the narrow/widen arms (or the `_ => to_bytes()` catch-all) would return a
     // meaningless byte payload (the float's raw bits) for such a cast, silently
     // diverging from every backend. Fail closed so the reference SPEC agrees
@@ -81,7 +81,7 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
         // 64-bit integer widening. `I64` and `U64` share the `Value::U64`
         // bit-pattern representation (the model has no distinct `I64`). The
         // high bits extend per the SOURCE's signedness so the reference matches
-        // the backends (PTX `cvt.s64.s32`, naga sign-replicate) and Rust `as`:
+        // the backends (a widening convert, a sign-replicate) and Rust `as`:
         // a signed `i32` SIGN-extends (`-1i32 -> 0xFFFF_FFFF_FFFF_FFFF`), an
         // unsigned/bool source zero-extends. `try_as_u64`'s `u64::try_from`
         // would instead REJECT negative `i32`: diverging from every backend
@@ -131,7 +131,7 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
         // Narrowing integer casts TRUNCATE the high bits and keep the low
         // `width` bits, matching the documented V035 contract ("narrowing cast
         // may truncate high bits"), Rust `value as u8/u16/i8/i16`, and the masked
-        // narrowing the naga/PTX emitters now apply. WGSL/PTX have no native
+        // narrowing the emitters now apply. No target dialect has a native
         // 8/16-bit scalar register, so a narrowed value is held in a 32-bit slot:
         // U8/U16 keep the masked unsigned magnitude (`Value::U32`), while I8/I16
         // SIGN-extend from the new top bit (`Value::I32`) so e.g. `200 as i8`
@@ -196,6 +196,7 @@ fn widen_to_words(value: &Value, words: usize) -> Vec<u8> {
     bytes
 }
 
+// Inline: covers the crate-private `cast_value` and `spec_output_value`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -214,12 +214,7 @@ fn egraph_fixed_point_signature_readback_skips_full_final_snapshot() {
 fn egraph_fixed_point_signature_readback_after_max_rounds_reads_only_signatures() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let snapshot = GpuEGraphSnapshot::build([
-        (10u32, "lit", &[][..]),
-        (20u32, "lit", &[][..]),
-        (30u32, "add", &[10u32, 10u32][..]),
-        (40u32, "add", &[10u32, 20u32][..]),
-    ]);
+    let snapshot = distinct_add_snapshot();
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");

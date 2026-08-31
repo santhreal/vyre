@@ -97,16 +97,16 @@ pub fn embedding_typed(
     ))
 }
 
+const EXPECTED_EMBEDDING_OUTPUT_BYTES: [u8; 24] = [
+    0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0xA0, 0x40, 0x00, 0x00, 0xC0, 0x40, 0x00, 0x00, 0x80, 0x3F,
+    0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x40, 0x40,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| embedding("table", "tokens", "output", 2, 3)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || embedding("table", "tokens", "output", 2, 3),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             let to_u32 = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
@@ -114,87 +114,78 @@ inventory::submit! {
                 to_u32(&[1, 0]),                             // tokens
             ]]
         }),
-        expected_output: Some(|| {
-            let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            // token 1 → [4,5,6], token 0 → [1,2,3]
-            vec![vec![to_f32(&[4.0, 5.0, 6.0, 1.0, 2.0, 3.0])]]
+        Some(|| {
+            vec![vec![EXPECTED_EMBEDDING_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
+    use crate::fixture_bytes::try_eval_bytes;
     use crate::fixture_bytes::u32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn embedding_empty_tensor() {
         let program = embedding("table", "tokens", "output", 0, 3);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "embedding",
             &program,
-            &[
-                Value::from(f32_bytes(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0])),
-                Value::from(vec![]),
-                Value::from(vec![]),
-            ],
-        )
-        .expect("Fix: embedding n=0 must not panic");
-        assert!(outputs[0].to_bytes().is_empty());
+            vec![f32_bytes(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]), vec![], vec![]],
+        );
+        assert!(outputs[0].is_empty());
     }
 
     #[test]
     fn embedding_single_element() {
         let program = embedding("table", "tokens", "output", 1, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "embedding",
             &program,
-            &[
-                Value::from(f32_bytes(&[10.0, 20.0, 30.0, 40.0])),
-                Value::from(u32_bytes(&[1])),
-                Value::from(vec![0u8; 8]),
+            vec![
+                f32_bytes(&[10.0, 20.0, 30.0, 40.0]),
+                u32_bytes(&[1]),
+                vec![0u8; 8],
             ],
-        )
-        .expect("Fix: embedding single element must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        );
+        let out = decode_f32(&outputs[0]);
         assert_eq!(out, vec![30.0, 40.0]);
     }
 
     #[test]
     fn embedding_zero_token_index() {
         let program = embedding("table", "tokens", "output", 2, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "embedding",
             &program,
-            &[
-                Value::from(f32_bytes(&[1.0, 2.0, 3.0, 4.0])),
-                Value::from(u32_bytes(&[0, 0])),
+            vec![
+                f32_bytes(&[1.0, 2.0, 3.0, 4.0]),
+                u32_bytes(&[0, 0]),
                 // Two tokens of two dimensions each: four f32, sixteen bytes.
                 // This read `8` (copied from the single-token test above) and
                 // went unnoticed because the interpreter used to discard the
                 // size of a legacy output initializer entirely.
-                Value::from(vec![0u8; 16]),
+                vec![0u8; 16],
             ],
-        )
-        .expect("Fix: embedding zero token must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        );
+        let out = decode_f32(&outputs[0]);
         assert_eq!(out, vec![1.0, 2.0, 1.0, 2.0]);
     }
 
     #[test]
     fn embedding_nan_in_table_propagates_to_output() {
         let program = embedding("table", "tokens", "output", 1, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "embedding",
             &program,
-            &[
-                Value::from(f32_bytes(&[f32::NAN, 2.0])),
-                Value::from(u32_bytes(&[0])),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: embedding NaN table must not panic");
-        let out = decode_f32(&outputs[0].to_bytes());
+            vec![f32_bytes(&[f32::NAN, 2.0]), u32_bytes(&[0]), vec![0u8; 8]],
+        );
+        let out = decode_f32(&outputs[0]);
         assert!(
             out[0].is_nan(),
             "embedding must propagate NaN from table to output"
@@ -209,17 +200,13 @@ mod tests {
         // The reference interpreter may trap or return 0 for OOB.
         // We assert that it does not silently produce a finite non-zero value.
         let program = embedding("table", "tokens", "output", 1, 2);
-        let result = vyre_reference::reference_eval(
+        let result = try_eval_bytes(
             &program,
-            &[
-                Value::from(f32_bytes(&[1.0, 2.0])),
-                Value::from(u32_bytes(&[9999])),
-                Value::from(vec![0u8; 8]),
-            ],
+            vec![f32_bytes(&[1.0, 2.0]), u32_bytes(&[9999]), vec![0u8; 8]],
         );
         match result {
             Ok(outputs) => {
-                let out = decode_f32(&outputs[0].to_bytes());
+                let out = decode_f32(&outputs[0]);
                 // If the interpreter does not trap, it should at least not
                 // silently claim the lookup is valid (0 is acceptable for OOB).
                 assert!(

@@ -2,6 +2,9 @@
 
 #![forbid(unsafe_code)]
 
+mod wire_words;
+use wire_words::{f32_bytes, f32_words_of as decode_f32};
+
 use vyre::ir::{
     BufferAccess, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
@@ -10,21 +13,6 @@ use vyre_libs::nn::conv::{
     depthwise_causal_conv1d, depthwise_causal_conv1d_update, CausalConvActivation,
 };
 use vyre_reference::value::Value;
-
-fn f32_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode_f32(value: &Value) -> Vec<f32> {
-    value
-        .to_bytes()
-        .chunks_exact(4)
-        .map(|word| f32::from_le_bytes(word.try_into().expect("Fix: exact f32 word")))
-        .collect()
-}
 
 fn update(input: &[f32], state: &[f32], weight: &[f32]) -> (Vec<f32>, Vec<f32>) {
     let program = depthwise_causal_conv1d_update(
@@ -48,8 +36,9 @@ fn update(input: &[f32], state: &[f32], weight: &[f32]) -> (Vec<f32>, Vec<f32>) 
             Value::from(f32_bytes(input)),
             Value::from(f32_bytes(weight)),
             Value::from(f32_bytes(state)),
-            Value::from(vec![0; input.len() * 4]),
-            Value::from(vec![0; state.len() * 4]),
+            // `state.out` is a plain ReadWrite result: one host input slot whose
+            // incoming contents the update overwrites.
+            Value::from(f32_bytes(&vec![0.0f32; state.len()])),
         ],
     )
     .expect("Fix: state update must execute");
@@ -88,7 +77,6 @@ fn chunked_state_continuation_matches_full_sequence_convolution() {
         &[
             Value::from(f32_bytes(&[1.0, 2.0, 3.0, 4.0])),
             Value::from(f32_bytes(&weight)),
-            Value::from(vec![0; 16]),
         ],
     )
     .expect("Fix: full prefill must execute");

@@ -2,27 +2,15 @@
 
 #![forbid(unsafe_code)]
 
+mod wire_words;
+use wire_words::{default_gated_delta_spec, f32_bytes as bytes, f32_words_of as decode};
+
 use vyre::ir::{
     BufferAccess, DataType, GraphInput, GraphOutput, ProgramGraph, ShapeDim, ValueContract,
     ValueLifetime,
 };
-use vyre_libs::nn::attention::{recurrent_gated_delta, RecurrentGatedDeltaError};
+use vyre_libs::nn::attention::{recurrent_gated_delta, GatedDeltaSpec, RecurrentGatedDeltaError};
 use vyre_reference::value::Value;
-
-fn bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode(value: &Value) -> Vec<f32> {
-    value
-        .to_bytes()
-        .chunks_exact(4)
-        .map(|word| f32::from_le_bytes(word.try_into().expect("Fix: exact f32 word")))
-        .collect()
-}
 
 #[allow(clippy::too_many_arguments)]
 fn execute(
@@ -38,25 +26,16 @@ fn execute(
     key_dim: u32,
     value_dim: u32,
 ) -> (Vec<f32>, Vec<f32>) {
-    let program = recurrent_gated_delta(
-        "query",
-        "key",
-        "value",
-        "decay",
-        "beta",
-        "state.in",
-        "output",
-        "state.out",
-        1,
+    let spec = default_gated_delta_spec(
         sequence,
         key_heads,
         value_heads,
         key_dim,
         value_dim,
-        0.0,
         DataType::F32,
-    )
-    .expect("Fix: valid recurrent delta fixture must build");
+    );
+    let program =
+        recurrent_gated_delta(&spec).expect("Fix: valid recurrent delta fixture must build");
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -66,8 +45,9 @@ fn execute(
             Value::from(bytes(decay)),
             Value::from(bytes(beta)),
             Value::from(bytes(state)),
-            Value::from(vec![0; value.len() * 4]),
-            Value::from(vec![0; state.len() * 4]),
+            // `state_output` is a plain ReadWrite result: it consumes one host
+            // input slot whose incoming contents the schedule overwrites.
+            Value::from(bytes(&vec![0.0f32; state.len()])),
         ],
     )
     .expect("Fix: recurrent delta must execute");
@@ -186,46 +166,46 @@ fn returned_state_continues_across_token_partitions_exactly() {
 #[test]
 fn invalid_recurrent_delta_contracts_are_rejected() {
     assert_eq!(
-        recurrent_gated_delta(
-            "q",
-            "k",
-            "v",
-            "g",
-            "b",
-            "s",
-            "o",
-            "n",
-            0,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1e-6,
-            DataType::F32
-        )
+        recurrent_gated_delta(&GatedDeltaSpec {
+            query: "q",
+            key: "k",
+            value: "v",
+            decay_log: "g",
+            beta_logits: "b",
+            state_input: "s",
+            output: "o",
+            state_output: "n",
+            batch: 0,
+            sequence: 1,
+            key_heads: 1,
+            value_heads: 1,
+            key_dim: 1,
+            value_dim: 1,
+            eps: 1e-6,
+            dtype: DataType::F32,
+        })
         .expect_err("Fix: zero batch must fail"),
         RecurrentGatedDeltaError::EmptyShape
     );
     assert_eq!(
-        recurrent_gated_delta(
-            "q",
-            "k",
-            "v",
-            "g",
-            "b",
-            "s",
-            "o",
-            "n",
-            1,
-            1,
-            2,
-            3,
-            1,
-            1,
-            1e-6,
-            DataType::F32
-        )
+        recurrent_gated_delta(&GatedDeltaSpec {
+            query: "q",
+            key: "k",
+            value: "v",
+            decay_log: "g",
+            beta_logits: "b",
+            state_input: "s",
+            output: "o",
+            state_output: "n",
+            batch: 1,
+            sequence: 1,
+            key_heads: 2,
+            value_heads: 3,
+            key_dim: 1,
+            value_dim: 1,
+            eps: 1e-6,
+            dtype: DataType::F32,
+        })
         .expect_err("Fix: invalid head ratio must fail"),
         RecurrentGatedDeltaError::InvalidHeadGrouping {
             key_heads: 2,
@@ -233,46 +213,46 @@ fn invalid_recurrent_delta_contracts_are_rejected() {
         }
     );
     assert_eq!(
-        recurrent_gated_delta(
-            "q",
-            "k",
-            "v",
-            "g",
-            "b",
-            "s",
-            "o",
-            "n",
-            u32::MAX,
-            2,
-            1,
-            1,
-            1,
-            1,
-            1e-6,
-            DataType::F32
-        )
+        recurrent_gated_delta(&GatedDeltaSpec {
+            query: "q",
+            key: "k",
+            value: "v",
+            decay_log: "g",
+            beta_logits: "b",
+            state_input: "s",
+            output: "o",
+            state_output: "n",
+            batch: u32::MAX,
+            sequence: 2,
+            key_heads: 1,
+            value_heads: 1,
+            key_dim: 1,
+            value_dim: 1,
+            eps: 1e-6,
+            dtype: DataType::F32,
+        })
         .expect_err("Fix: flattened overflow must fail"),
         RecurrentGatedDeltaError::ElementCountOverflow
     );
     assert_eq!(
-        recurrent_gated_delta(
-            "q",
-            "k",
-            "v",
-            "g",
-            "b",
-            "s",
-            "o",
-            "n",
-            1,
-            1,
-            1,
-            1,
-            1,
-            1,
-            1e-6,
-            DataType::U32
-        )
+        recurrent_gated_delta(&GatedDeltaSpec {
+            query: "q",
+            key: "k",
+            value: "v",
+            decay_log: "g",
+            beta_logits: "b",
+            state_input: "s",
+            output: "o",
+            state_output: "n",
+            batch: 1,
+            sequence: 1,
+            key_heads: 1,
+            value_heads: 1,
+            key_dim: 1,
+            value_dim: 1,
+            eps: 1e-6,
+            dtype: DataType::U32,
+        })
         .expect_err("Fix: integer dtype must fail"),
         RecurrentGatedDeltaError::UnsupportedDtype {
             dtype: DataType::U32
@@ -344,24 +324,24 @@ fn recurrent_matrix_state_has_explicit_graph_successor() {
                 .expect("Fix: recurrent graph input must register"),
         );
     }
-    let program = recurrent_gated_delta(
-        "query",
-        "key",
-        "value",
-        "decay",
-        "beta",
-        "state.in",
-        "output",
-        "state.out",
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        0.0,
-        DataType::F32,
-    )
+    let program = recurrent_gated_delta(&GatedDeltaSpec {
+        query: "query",
+        key: "key",
+        value: "value",
+        decay_log: "decay",
+        beta_logits: "beta",
+        state_input: "state.in",
+        output: "output",
+        state_output: "state.out",
+        batch: 1,
+        sequence: 1,
+        key_heads: 1,
+        value_heads: 1,
+        key_dim: 1,
+        value_dim: 1,
+        eps: 0.0,
+        dtype: DataType::F32,
+    })
     .expect("Fix: recurrent graph Program must build");
     let (_, outputs) = graph
         .add_node(

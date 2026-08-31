@@ -1,37 +1,22 @@
-#![allow(
-    unstable_name_collisions,
-    clippy::field_reassign_with_default,
-    clippy::double_must_use,
-    clippy::type_complexity,
-    clippy::missing_errors_doc,
-    clippy::too_many_arguments,
-    clippy::manual_clamp,
-    clippy::module_inception,
-    clippy::empty_line_after_doc_comments,
-    clippy::let_and_return,
-    clippy::missing_safety_doc
-)]
-#![deny(unsafe_code)]
-#![deny(missing_docs)]
-
 //! # vyre-wgpu  -  wgpu backend for the vyre GPU compute specification
 
 mod allocation;
 mod async_dispatch;
-mod backend_impl;
+mod backend_dispatch;
 pub mod buffer;
 mod capabilities;
 mod descriptor_mapping;
 mod device_buffer;
+mod dispatch_timeout;
 pub mod emit;
 pub mod engine;
-pub mod ext;
 mod materializer;
 mod numeric;
 mod padded_upload;
 #[cfg(feature = "parity-testing")]
 mod parity_probe;
 pub mod pipeline;
+mod raw_wgsl_dispatch;
 mod resident_dispatch;
 mod resident_download;
 mod resident_resource;
@@ -82,7 +67,7 @@ pub struct WgpuBackend {
     >,
     pub(crate) resident_pipeline_cache: Arc<
         dashmap::DashMap<
-            (u64, u64, usize),
+            [u8; 32],
             Arc<crate::pipeline::WgpuPipeline>,
             BuildHasherDefault<rustc_hash::FxHasher>,
         >,
@@ -176,12 +161,12 @@ impl BackendValidationCapabilities for WgpuBackend {
                 | DataType::I16
                 | DataType::I32
                 // I64 is backed by the SAME `vec2<u32>` emulation as U64 (see
-                // `binding_helpers`/`setup` buffer lowering and the op_dispatch
+                // `operand_binding`/`setup` buffer lowering and the op_dispatch
                 // cast path, which treat `U64 | I64` identically and sign-extend
                 // the high word for a signed source). Omitting it here falsely
                 // rejected `i32 -> i64` casts the emitter and hardware handle
                 // correctly, a capability/coherence gap, NOT a real limit
-                // (verified on the live 5090 by `widening_cast_64_parity`).
+                // (verified on live GPU dispatch by `widening_cast_64_parity`).
                 | DataType::I64
                 | DataType::F32
                 | DataType::Vec2U32
@@ -213,6 +198,19 @@ pub fn artifact_materializer(
     materializer::materializer_for_backend(backend)
 }
 
+/// Backend id this crate submits into the backend registry on this target.
+///
+/// WHY: the registration below lives in this crate's object file, and a linker
+/// keeps that object only when a symbol inside it is referenced. Naming the
+/// crate with `use vyre_driver_wgpu as _;` references nothing, and reading
+/// [`WGPU_BACKEND_ID`] is a `const` that inlines at the use site, so neither
+/// keeps the registration. Calling this function does, which is why the backend
+/// registry owner calls it instead of importing the crate for effect.
+#[must_use]
+pub fn registered_backend_id() -> Option<&'static str> {
+    Some(WGPU_BACKEND_ID)
+}
+
 inventory::submit! {
     vyre_driver::BackendRegistration {
         id: WGPU_BACKEND_ID,
@@ -222,26 +220,26 @@ inventory::submit! {
         factory: || WgpuBackend::acquire().map(|backend| {
             Box::new(backend) as Box<dyn vyre_driver::VyreBackend>
         }),
-        supported_ops: vyre_driver::backend::validation::default_supported_ops_with_trap,
-        semantic_operations: vyre_driver::backend::dialect_only_supported_ops,
+        supported_ops: vyre_driver::default_supported_ops_with_trap,
+        semantic_operations: vyre_driver::dialect_only_supported_ops,
         target_compiler: Some(target_compiler::target_compiler_factory),
         materializer: Some(materializer::materializer_factory),
     }
 }
 
 inventory::submit! {
-    vyre_driver::backend::BackendPrecedence {
+    vyre_driver::BackendPrecedence {
         id: "wgpu",
         rank: 30,
     }
 }
 
 inventory::submit! {
-    vyre_driver::backend::BackendCapability {
+    vyre_driver::BackendCapability {
         id: "wgpu",
         dispatches: true,
     }
 }
 
-impl vyre_driver::backend::private::Sealed for crate::pipeline::WgpuPipeline {}
-impl vyre_driver::backend::private::Sealed for WgpuBackend {}
+impl vyre_driver::sealed::Sealed for crate::pipeline::WgpuPipeline {}
+impl vyre_driver::sealed::Sealed for WgpuBackend {}

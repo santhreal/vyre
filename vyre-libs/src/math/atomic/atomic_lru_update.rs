@@ -2,9 +2,9 @@
 //!
 //! Category-B composition over `AtomicOp::Max`.
 
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::memory_model::MemoryOrdering;
 
 /// Build a Program that atomically updates an LRU slot.
 #[must_use]
@@ -28,7 +28,7 @@ pub fn atomic_lru_update_u32(buffer: &str, index: Expr, timestamp: Expr) -> Prog
     Program::wrapped(
         vec![BufferDecl::storage(buffer, 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::math::atomic::lru_update_u32",
             body,
         )],
@@ -36,25 +36,19 @@ pub fn atomic_lru_update_u32(buffer: &str, index: Expr, timestamp: Expr) -> Prog
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::math::atomic::lru_update_u32",
-        build: Some(|| atomic_lru_update_u32("buffer", Expr::u32(0), Expr::u32(12345))),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        "vyre-libs::math::atomic::lru_update_u32",
+        || atomic_lru_update_u32("buffer", Expr::u32(0), Expr::u32(12345)),
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![
                 to_bytes(&[0u32]), // buffer (single slot, initial value 0)
             ]]
         }),
-        expected_output: Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
+        Some(|| {
             // Single lane writes timestamp 12345 into slot 0.
-            vec![vec![to_bytes(&[12345u32])]]
+            vec![vec![vec![0x39, 0x30, 0x00, 0x00]]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }

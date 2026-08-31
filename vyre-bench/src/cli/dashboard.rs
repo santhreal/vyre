@@ -56,11 +56,16 @@ fn find_latest_snapshot(dir: &std::path::Path) -> anyhow::Result<std::path::Path
                 .unwrap_or(false)
         })
         .collect();
+    // A checkout gives every file the same timestamp, so the name breaks the tie
+    // and the pick is the same on every machine.
     entries.sort_by_key(|e| {
-        e.metadata()
-            .ok()
-            .and_then(|m| m.modified().ok())
-            .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+        (
+            e.metadata()
+                .ok()
+                .and_then(|m| m.modified().ok())
+                .unwrap_or(std::time::SystemTime::UNIX_EPOCH),
+            e.file_name(),
+        )
     });
     entries
         .last()

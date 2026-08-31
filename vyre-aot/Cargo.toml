@@ -1,6 +1,6 @@
 [package]
 name = "vyre-aot"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -20,8 +20,6 @@ workspace = true
 vyre-foundation.workspace = true
 vyre-driver.workspace = true
 vyre-megakernel.workspace = true
-vyre-primitives = { workspace = true, default-features = false, features = ["math", "graph", "fixpoint", "bitset", "reduce", "inventory-registry"] }
-vyre-spec.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 thiserror.workspace = true
@@ -35,7 +33,12 @@ default = []
 ptx = []
 
 [dev-dependencies]
-vyre-test-support.workspace = true
 vyre-lower.workspace = true
 tempfile.workspace = true
 inventory.workspace = true
+# Used through the shared `tests/support/artifact_fixtures.rs` include, which
+# the unused-dependency audit cannot follow out of this directory.
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
+
+[package.metadata.cargo-machete]
+ignored = ["vyre-test-support"]

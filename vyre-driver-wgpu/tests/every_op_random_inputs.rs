@@ -6,11 +6,13 @@
 //! and the wgpu backend, and assert byte-identity (int) or within-ULP
 //! (float) equivalence.
 
+#![cfg(feature = "device-tests")]
 #![allow(clippy::filter_map_bool_then, clippy::unnecessary_map_or)]
 #![allow(deprecated)]
 use std::sync::OnceLock;
 
 use proptest::test_runner::{Config, TestRunner};
+use vyre::ir::Program;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
@@ -18,9 +20,10 @@ use vyre_foundation::optimizer::optimize;
 use vyre_libs::operation_catalog::fixture_entries;
 use vyre_reference::value::Value;
 
-mod common;
+mod harness;
 
-use common::every_op_random_inputs::{
+use harness::bounded_oracle::{bounded_oracle, oracle_deadline, Oracle};
+use harness::every_op_random_inputs::{
     compare_outputs, gpu_dispatch_inputs, is_program_graph_frontier, missing_capability_reason,
     op_seed, random_amg_v_cycle_inputs, random_buffer_for, random_program_graph_frontier,
     randomize_buffer,
@@ -32,6 +35,17 @@ fn require_backend() -> &'static WgpuBackend {
         WgpuBackend::acquire().expect(
             "every_op_random_input_stress: GPU adapter probe failed. Fix: verify nvidia-smi, WGPU_BACKEND, Vulkan drivers, and wgpu adapter selection.",
         )
+    })
+}
+
+/// Evaluate one case on the reference, bounded by the shared oracle ceiling.
+fn bounded_reference_eval(program: &Program, inputs: &[Value]) -> Oracle<Vec<Vec<u8>>> {
+    let program = program.clone();
+    let inputs = inputs.to_vec();
+    bounded_oracle(move || {
+        vyre_reference::reference_eval(&program, &inputs)
+            .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
+            .map_err(|error| error.to_string())
     })
 }
 
@@ -104,8 +118,10 @@ fn every_op_random_input_stress() {
         let lowered = optimize(program.clone()).expect("registered optimizer must converge");
         let mut op_cases = 0u64;
         let mut op_failures = 0usize;
+        let mut op_timeouts = 0usize;
 
         for case_idx in 0..count {
+            let mut randomized: Vec<&str> = Vec::new();
             let random_inputs = if entry.id.contains("amg_v_cycle") {
                 random_amg_v_cycle_inputs(fixture_case, &mut runner)
             } else {
@@ -121,6 +137,7 @@ fn every_op_random_input_stress() {
                         } else {
                             random_buffer_for(entry.id, buffer, len, &mut runner)
                         };
+                        randomized.push(buffer.name());
                         random_inputs.push(random);
                     } else {
                         random_inputs.push(fixture_case[buffer_idx].clone());
@@ -130,18 +147,19 @@ fn every_op_random_input_stress() {
             };
 
             let cpu_values: Vec<Value> = random_inputs.iter().cloned().map(Value::from).collect();
-            let cpu_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                vyre_reference::reference_eval(&program, &cpu_values)
-            }));
-
-            let cpu_outputs = match cpu_result {
-                Ok(Ok(outputs)) => outputs
-                    .into_iter()
-                    .map(|v| v.to_bytes())
-                    .collect::<Vec<_>>(),
-                Ok(Err(_)) | Err(_) => {
-                    // Reference rejected or panicked  -  no oracle for this input.
-                    continue;
+            let cpu_outputs = match bounded_reference_eval(&program, &cpu_values) {
+                Oracle::Answered(outputs) => outputs,
+                // Reference rejected or panicked  -  no oracle for this input.
+                Oracle::Declined(_) => continue,
+                Oracle::TimedOut => {
+                    op_timeouts += 1;
+                    failures.push(format!(
+                        "{} seed={seed} case={case_idx}: the reference did not answer inside {:?} with random [{}]. Fix: bound the loop trip count by the extents of the buffer it indexes; a count read from input data spins for hours on the device as well as here.",
+                        entry.id,
+                        oracle_deadline(),
+                        randomized.join(", ")
+                    ));
+                    break;
                 }
             };
 
@@ -193,8 +211,8 @@ fn every_op_random_input_stress() {
 
         total_cases += op_cases;
         println!(
-            "stress: {}  -  {} random cases evaluated, {} failures",
-            entry.id, op_cases, op_failures
+            "stress: {}  -  {} random cases evaluated, {} failures, {} oracle timeouts",
+            entry.id, op_cases, op_failures, op_timeouts
         );
     }
 

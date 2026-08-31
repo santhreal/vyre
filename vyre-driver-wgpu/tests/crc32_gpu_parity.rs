@@ -11,49 +11,39 @@
 //! silicon end-to-end. A miscompiled nested loop carrier or the conditional xor
 //! would make every GPU CRC silently wrong with no test to catch it.
 //!
-//! Dispatched on the 5090 and asserted byte-for-byte against the `crc32` Rust
+//! Dispatched on the live GPU and asserted byte-for-byte against the `crc32` Rust
 //! reference and the standard zlib CRC-32 vector for "abc".
 
-mod common;
-use common::u32_bytes;
+#![cfg(feature = "device-tests")]
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+mod harness;
+use harness::{byte_stream_input_bytes, dispatch_single_u32_output, u32_bytes};
+
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_primitives::hash::crc32::{crc32, crc32_program};
+use vyre_libs::hash::crc32::crc32_program;
+use vyre_reference::composition_witness::multi_hash_witness;
 
+fn reference_crc32(bytes: &[u8]) -> u32 {
+    multi_hash_witness(bytes).0
+}
 /// Dispatch the real `crc32_program` on the GPU: one U32 word per source byte
 /// (the update masks each to its low 8 bits), single u32 CRC out at `out[0]`.
 fn gpu_crc32(backend: &WgpuBackend, bytes: &[u8]) -> u32 {
     let n = bytes.len() as u32;
     let program = crc32_program("input", "out", n);
-    let input_words: Vec<u32> = bytes.iter().map(|&b| u32::from(b)).collect();
-    let input_b = u32_bytes(&input_words);
+    let input_b = byte_stream_input_bytes(bytes);
     let out_init = u32_bytes(&[0u32]);
-
-    let outputs = backend
-        .dispatch_borrowed(
-            &program,
-            &[input_b.as_slice(), out_init.as_slice()],
-            &DispatchConfig::default(),
-        )
-        .expect("Fix: WGPU must dispatch the CRC-32 nested-loop program.");
-    assert_eq!(
-        outputs.len(),
-        1,
-        "crc32_program exposes one output (out); got {}",
-        outputs.len()
-    );
-    let words: Vec<u32> = outputs[0]
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect();
-    assert_eq!(words.len(), 1, "out is a single u32 CRC");
-    words[0]
+    dispatch_single_u32_output(
+        backend,
+        &program,
+        &[input_b.as_slice(), out_init.as_slice()],
+        "Fix: WGPU must dispatch the CRC-32 nested-loop program.",
+    )
 }
 
 fn check(backend: &WgpuBackend, bytes: &[u8], label: &str) {
     let gpu = gpu_crc32(backend, bytes);
-    let expected = crc32(bytes);
+    let expected = reference_crc32(bytes);
     assert_eq!(
         gpu, expected,
         "GPU CRC-32 of {label} diverged from the Rust reference, the nested loop or \
@@ -67,7 +57,7 @@ fn crc32_abc_matches_reference_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: CRC-32 GPU parity requires a live GPU.");
     // Drift-guard the reference against the standard zlib/IEEE CRC-32 of "abc".
     assert_eq!(
-        crc32(b"abc"),
+        reference_crc32(b"abc"),
         0x3524_41c2,
         "CRC-32 reference drifted for \"abc\""
     );
@@ -85,7 +75,7 @@ fn crc32_varied_inputs_match_reference_on_gpu() {
     check(&backend, &long, "a 64-byte block");
     // The classic "123456789" CRC-32 check value (0xCBF43926) (a well-known KAT).
     assert_eq!(
-        crc32(b"123456789"),
+        reference_crc32(b"123456789"),
         0xCBF4_3926,
         "CRC-32 reference drifted for the check string"
     );
@@ -101,6 +91,6 @@ fn crc32_distinguishes_inputs_on_gpu() {
         a, b,
         "CRC-32 must distinguish one-byte-different inputs on the GPU"
     );
-    assert_eq!(a, crc32(b"crc-input-0"));
-    assert_eq!(b, crc32(b"crc-input-1"));
+    assert_eq!(a, reference_crc32(b"crc-input-0"));
+    assert_eq!(b, reference_crc32(b"crc-input-1"));
 }

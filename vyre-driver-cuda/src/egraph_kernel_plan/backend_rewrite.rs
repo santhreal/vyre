@@ -12,8 +12,7 @@ use super::ptx::{
 };
 use super::{
     args::{EGraphCanonicalRewriteKernelArgs, EGraphSignatureRefreshKernelArgs},
-    helpers::ceil_div_u64,
-    helpers::usize_to_u64,
+    launch_waves::{ceil_div_u64, usize_to_u64},
     CudaEGraphCanonicalRewriteDeviceImage, CudaEGraphCanonicalRewriteKernelPtx,
     CudaEGraphCanonicalRewriteKernelResult, CudaEGraphKernelLaunchConfig,
     CudaEGraphKernelPlanError, CudaEGraphSignatureRefreshKernelPtx,

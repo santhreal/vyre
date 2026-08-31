@@ -38,11 +38,12 @@ pub(crate) fn fuse_resident_upload_copies<'a>(
     driver_fuse_resident_upload_copies(copies)
 }
 
+// Inline: covers `ResidentUploadBytes`, `ResidentUploadCopy`, `fuse_resident_upload_copies`,
+// `push_resident_upload_copy`, which no integration test can name.
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use smallvec::SmallVec;
+    use vyre_driver::resident_transfer_fixtures::assert_upload_fusion_preserves_ordered_writes;
 
     use super::{
         fuse_resident_upload_copies, push_resident_upload_copy, ResidentUploadBytes,
@@ -102,48 +103,12 @@ mod tests {
         );
     }
 
+    /// Grades this crate's adapter against the neutral fusion model. A copy of
+    /// the corpus or of the ordered-write property here would let the adapter
+    /// drift from the algorithm it delegates to and still pass.
     #[test]
     fn generated_resident_upload_fusion_preserves_ordered_write_semantics() {
-        for seed in 0..4096_u64 {
-            let requests = generated_upload_requests(seed);
-            let mut copies = SmallVec::<[ResidentUploadCopy<'_>; 8]>::new();
-            for request in &requests {
-                copies.push(ResidentUploadCopy {
-                    handle_id: request.handle_id,
-                    dst_ptr: request.dst_ptr,
-                    bytes: ResidentUploadBytes::Borrowed(request.bytes.as_slice()),
-                });
-            }
-
-            let expected = materialize_requests(&requests);
-            let requested_bytes = requests
-                .iter()
-                .map(|request| request.bytes.len() as u64)
-                .sum::<u64>();
-            let (fused, fused_bytes) = fuse_resident_upload_copies(copies)
-                .expect("Fix: generated resident upload fusion must not overflow");
-
-            assert_eq!(
-                materialize_fused(&fused),
-                expected,
-                "Fix: fused resident uploads must preserve ordered write semantics for seed {seed}."
-            );
-            assert!(
-                fused_bytes <= requested_bytes,
-                "Fix: fused resident upload byte accounting must not exceed requested bytes for seed {seed}."
-            );
-            for pair in fused.as_slice().windows(2) {
-                let left = &pair[0];
-                let right = &pair[1];
-                let left_end = left.dst_ptr + left.bytes.len() as u64;
-                assert!(
-                    left.handle_id != right.handle_id
-                        || right.dst_ptr < left.dst_ptr
-                        || right.dst_ptr > left_end,
-                    "Fix: resident upload fusion left a mergeable monotonic same-handle interval for seed {seed}."
-                );
-            }
-        }
+        assert_upload_fusion_preserves_ordered_writes(0..4096, fuse_resident_upload_copies);
     }
 
     #[test]
@@ -262,61 +227,5 @@ mod tests {
             "Fix: wider full overwrite should replace the old interval instead of allocating a merged prefix buffer."
         );
         assert_eq!(fused_bytes, second.len() as u64);
-    }
-
-    struct UploadRequest {
-        handle_id: u64,
-        dst_ptr: u64,
-        bytes: Vec<u8>,
-    }
-
-    fn generated_upload_requests(seed: u64) -> Vec<UploadRequest> {
-        let mut state = seed ^ 0x5151_C0DA_9E37_1234;
-        let count = 1 + (next_u64(&mut state) as usize % 16);
-        let mut requests = Vec::with_capacity(count);
-        for _ in 0..count {
-            let handle_id = next_u64(&mut state) % 4;
-            let dst_ptr = next_u64(&mut state) % 64;
-            let len = 1 + (next_u64(&mut state) as usize % 16);
-            let mut bytes = Vec::with_capacity(len);
-            for _ in 0..len {
-                bytes.push(next_u64(&mut state) as u8);
-            }
-            requests.push(UploadRequest {
-                handle_id,
-                dst_ptr,
-                bytes,
-            });
-        }
-        requests
-    }
-
-    fn materialize_requests(requests: &[UploadRequest]) -> HashMap<(u64, u64), u8> {
-        let mut memory = HashMap::new();
-        for request in requests {
-            for (offset, &byte) in request.bytes.iter().enumerate() {
-                memory.insert((request.handle_id, request.dst_ptr + offset as u64), byte);
-            }
-        }
-        memory
-    }
-
-    fn materialize_fused(copies: &[ResidentUploadCopy<'_>]) -> HashMap<(u64, u64), u8> {
-        let mut memory = HashMap::new();
-        for copy in copies {
-            for (offset, &byte) in copy.bytes.as_slice().iter().enumerate() {
-                memory.insert((copy.handle_id, copy.dst_ptr + offset as u64), byte);
-            }
-        }
-        memory
-    }
-
-    fn next_u64(state: &mut u64) -> u64 {
-        let mut x = *state;
-        x ^= x << 13;
-        x ^= x >> 7;
-        x ^= x << 17;
-        *state = x;
-        x
     }
 }

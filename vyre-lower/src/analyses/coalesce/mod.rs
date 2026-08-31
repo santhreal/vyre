@@ -1,10 +1,9 @@
 //! Memory-coalescing analysis for vyre kernels.
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B.3 item B14.
 //!
 //! On every GPU substrate, global-memory reads and writes are
 //! dramatically faster  -  up to 32x  -  when adjacent threads in a
-//! warp/subgroup access adjacent memory addresses (a
+//! subgroup access adjacent memory addresses (a
 //! "coalesced" access pattern). When they don't, each thread's access
 //! becomes its own memory transaction and throughput collapses.
 //!
@@ -28,8 +27,9 @@
 //! bug for any rewrite that depends on this report, so the
 //! classification is intentionally conservative.
 
-pub mod analysis;
-pub mod report;
+pub(crate) mod analysis;
+pub(crate) mod report;
 
 pub use analysis::analyze;
 pub use report::{AccessPattern, AccessSite, CoalescenceReport};
+pub use report::{CoalescenceRewrite, CoalescenceWarning};

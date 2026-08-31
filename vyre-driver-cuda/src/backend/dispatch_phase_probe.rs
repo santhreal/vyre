@@ -61,13 +61,13 @@ pub(crate) enum Phase {
     Stage,
     /// `resolve_launch_function`: module cache lookup plus argument vector.
     Resolve,
-    /// `lease_grid_barrier`: grid-sync detection, PTX barrier-marker scan,
-    /// module-scope counter lookup, gate acquisition.
+    /// `lease_module_globals`: grid-sync detection, PTX barrier-marker scan,
+    /// module-scope global lookup, gate acquisition.
     Lease,
-    /// The launch loop itself: per-iteration counter reset plus launch.
+    /// The launch loop itself: per-iteration global reset plus launch.
     LaunchLoop,
-    /// `release_after_launch`: stream synchronize, arrival-count audit,
-    /// gate release.
+    /// `release_after_launch`: stream synchronize, trap readback,
+    /// arrival-count audit, gate release.
     Release,
     /// Output readback after the post-kernel fence.
     Readback,
@@ -325,7 +325,7 @@ pub(crate) fn record_counts(
         return;
     }
     let mut nodes = 0u64;
-    vyre_foundation::transform::visit::walk_nodes(program, |_| {
+    vyre_foundation::visit::walk_nodes(program, |_| {
         nodes = nodes.saturating_add(1);
     });
     let blocks = u64::from(grid[0])
@@ -442,6 +442,8 @@ fn push_field(line: &mut String, name: &str, value: u64) {
     let _ = write!(line, " {name}={value}");
 }
 
+// Inline: covers `CURRENT`, `DispatchPhases`, `Phase`, `add_host_ns` and 5 more items this module
+// keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

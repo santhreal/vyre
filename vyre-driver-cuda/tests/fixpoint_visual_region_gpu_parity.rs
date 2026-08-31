@@ -1,17 +1,16 @@
 //! Parity tests for fixpoint::bitset_fixpoint, visual::packed_rgba_map,
 //! and matching::region::dedup_regions_flag_program.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::fixpoint::bitset_fixpoint::bitset_fixpoint;
-use vyre_primitives::matching::region::{
-    dedup_regions_cluster_program, dedup_regions_flag_program, region_dedup_dispatch_grid,
-};
-use vyre_primitives::visual::packed_rgba_map::packed_rgba_map;
+use vyre_libs::fixpoint::bitset_fixpoint::bitset_fixpoint;
+use vyre_libs::pattern::REGION_DEDUP_WORKGROUP_SIZE;
+use vyre_libs::pattern::{dedup_regions_cluster_program, dedup_regions_flag_program};
+use vyre_libs::visual::packed_rgba_map::packed_rgba_map;
 
 // ---------------------------------------------------------------------
 // bitset_fixpoint: changed=1 iff current[w] != next[w] for any w.
@@ -127,8 +126,7 @@ fn run_dedup_flag(pids: &[u32], starts: &[u32], ends: &[u32]) -> Vec<u32> {
     // survivors is BufferAccess::WriteOnly so it does not consume an
     // input slot.
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(pids), u32_bytes(starts), u32_bytes(ends)];
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some(region_dedup_dispatch_grid(count));
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("dedup regions flag", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -146,8 +144,7 @@ fn run_dedup_cluster(pids: &[u32], starts: &[u32], ends: &[u32]) -> (Vec<u32>, V
     let program =
         dedup_regions_cluster_program("pids", "starts", "ends", "survivors", "merged_ends", count);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(pids), u32_bytes(starts), u32_bytes(ends)];
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some(region_dedup_dispatch_grid(count));
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("dedup regions cluster", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -249,7 +246,10 @@ fn cuda_dedup_regions_cluster_covers_lanes_past_first_workgroup() {
     let (cpu_flags, cpu_merged) = cpu_dedup_cluster_metadata(&pids, &starts, &ends);
     let (gpu_flags, gpu_merged) = run_dedup_cluster(&pids, &starts, &ends);
 
-    assert_eq!(region_dedup_dispatch_grid(count as u32), [3, 1, 1]);
+    assert!(
+        count as u32 > REGION_DEDUP_WORKGROUP_SIZE[0],
+        "Fix: the fixture must cross a workgroup boundary or it proves nothing about multi-block launches"
+    );
     assert_eq!(gpu_flags, cpu_flags);
     assert_eq!(gpu_merged, cpu_merged);
     assert_eq!(&gpu_flags[300..304], &[1, 0, 0, 1]);

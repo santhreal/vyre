@@ -10,14 +10,14 @@
 //! The test asserts byte identity between the two unless the canonical
 //! `OperationRegistration` permits backend-defined transcendental drift in
 //! ULPs. Any divergence beyond that contract is a P0 finding: a
-//! Cat-A op that passes CPU conform but diverges on the 5090 would
+//! Cat-A op that passes CPU conform but diverges on the GPU would
 //! silently corrupt every downstream consumer that dispatches the op
 //! on GPU.
 //!
 //! This file is the single load-bearing gate between vyre-libs and
 //! GPU-backed consumers. It ships with 0.6 so "release" is measurable.
 //!
-//! **Status 2026-04-20 on a live 5090:**
+//! **Status on live GPU:**
 //!
 //! Byte-identity CPU ↔ GPU differential sweep.
 //!
@@ -32,11 +32,14 @@
 //! divergences (atomic lowering, matmul accumulator, wgpu validator
 //! crash on substring, blake3 unsupported node).
 
+#![cfg(feature = "device-tests")]
 #![allow(deprecated)]
+mod harness;
+use harness::{cat_a_dispatch_config, f32_to_ordered};
 use std::sync::OnceLock;
 
 use vyre::ir::BufferAccess;
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity::effective_tolerance;
 use vyre_foundation::ir::Program;
@@ -66,50 +69,87 @@ fn lower_for_gpu(program: &Program) -> Program {
         .expect("registered optimizer must converge")
 }
 
-fn run_gpu(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
-    let lowered = lower_for_gpu(program);
-    let config = dispatch_config_for(&lowered);
-    backend()
-        .dispatch(&lowered, &inputs, &config)
-        .expect("5090 must execute Cat-A op")
-}
-
-fn dispatch_config_for(program: &Program) -> DispatchConfig {
-    let mut config = DispatchConfig::default();
-    let workgroup = program.workgroup_size();
-    if workgroup[1] == 1 && workgroup[2] == 1 {
-        return config;
-    }
-
-    let lanes = u64::from(workgroup[0])
-        .saturating_mul(u64::from(workgroup[1]))
-        .saturating_mul(u64::from(workgroup[2]));
-    let max_writable_count = program
+/// Maps canonical logical inputs from the original program to the lowered program ABI by exact binding slot.
+///
+/// WHY: Every caller supplies canonical logical inputs (non-workgroup, non-backend-allocated buffers).
+/// When `lower_for_gpu` eliminates dead buffers and intermediate pipeline-live-out buffers, surviving
+/// input buffers retain their original binding slots (in group 0). We index original inputs by the
+/// original program's logical input binding slots, validate exact counts, ensure every required lowered
+/// input binding is present, and fail closed on any mismatch.
+fn map_inputs_for_lowered(
+    original_program: &Program,
+    original_inputs: &[Vec<u8>],
+    lowered: &Program,
+) -> Vec<Vec<u8>> {
+    let logical_buffers: Vec<_> = original_program
         .buffers()
         .iter()
-        .filter(|decl| matches!(decl.access(), BufferAccess::ReadWrite) || decl.is_output())
-        .map(|decl| u64::from(decl.count()))
-        .max()
-        .unwrap_or(1);
-    assert!(
-        max_writable_count <= lanes,
-        "Fix: non-1D Cat-A program needs explicit multi-workgroup grid; workgroup={workgroup:?}, lanes={lanes}, writable={max_writable_count}"
+        .filter(|buf| buf.access() != BufferAccess::Workgroup && !buf.is_backend_allocated_output())
+        .collect();
+
+    assert_eq!(
+        original_inputs.len(),
+        logical_buffers.len(),
+        "input count ({}) must match canonical logical buffer count ({}) for program `{}`",
+        original_inputs.len(),
+        logical_buffers.len(),
+        original_program.entry_op_id().unwrap_or("unknown")
     );
-    config.grid_override = Some([1, 1, 1]);
-    config
+
+    let original_input_buffers = logical_buffers;
+    let mut binding_to_input: std::collections::HashMap<u32, &Vec<u8>> =
+        std::collections::HashMap::new();
+
+    for (buf, bytes) in original_input_buffers.iter().zip(original_inputs.iter()) {
+        let binding = buf.binding();
+        assert!(
+            binding_to_input.insert(binding, bytes).is_none(),
+            "duplicate binding slot {binding} in original program `{}`",
+            original_program.entry_op_id().unwrap_or("unknown")
+        );
+    }
+
+    let lowered_input_buffers: Vec<_> = lowered
+        .buffers()
+        .iter()
+        .filter(|buf| buf.access() != BufferAccess::Workgroup && !buf.is_backend_allocated_output())
+        .collect();
+
+    let mut lowered_inputs = Vec::with_capacity(lowered_input_buffers.len());
+    for buf in &lowered_input_buffers {
+        let binding = buf.binding();
+        let bytes = binding_to_input.get(&binding).unwrap_or_else(|| {
+            panic!(
+                "missing input for lowered buffer `{}` at binding slot {binding} in program `{}`",
+                buf.name(),
+                lowered.entry_op_id().unwrap_or("unknown")
+            );
+        });
+        lowered_inputs.push((*bytes).clone());
+    }
+
+    assert_eq!(
+        lowered_inputs.len(),
+        lowered_input_buffers.len(),
+        "lowered input count ({}) must match lowered input buffer count ({}) for program `{}`",
+        lowered_inputs.len(),
+        lowered_input_buffers.len(),
+        lowered.entry_op_id().unwrap_or("unknown")
+    );
+
+    lowered_inputs
+}
+fn run_gpu(lowered: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+    let config = cat_a_dispatch_config(lowered);
+    backend()
+        .dispatch(lowered, &inputs, &config)
+        .expect("GPU must execute Cat-A op")
 }
 
 /// Assert CPU and GPU paths agree byte-for-byte on `program` given the
 /// same input buffer set. `inputs_cpu` mirrors `inputs_gpu` (both are
 /// the same bytes in the same declaration order)  -  they're separated
 /// only because CPU wants `Value` and GPU wants `Vec<u8>`.
-fn f32_to_ordered(bits: u32) -> u32 {
-    if (bits & 0x8000_0000) != 0 {
-        !bits
-    } else {
-        bits | 0x8000_0000
-    }
-}
 
 fn assert_buffer_within_tolerance(
     op: &str,
@@ -121,14 +161,14 @@ fn assert_buffer_within_tolerance(
     assert_eq!(
         cpu.len(),
         gpu.len(),
-        "{op}: CPU vs 5090 buffer #{buffer_index} length diverged under tolerance {tolerance}. CPU={} GPU={}",
+        "{op}: CPU vs GPU buffer #{buffer_index} length diverged under tolerance {tolerance}. CPU={} GPU={}",
         cpu.len(),
         gpu.len()
     );
     if tolerance == 0 {
         assert_eq!(
             cpu, gpu,
-            "{op}: CPU vs 5090 diverged on RW buffer #{buffer_index}.\n  CPU: {:x?}\n  GPU: {:x?}",
+            "{op}: CPU vs GPU diverged on RW buffer #{buffer_index}.\n  CPU: {:x?}\n  GPU: {:x?}",
             cpu, gpu
         );
         return;
@@ -144,7 +184,7 @@ fn assert_buffer_within_tolerance(
         let diff = f32_to_ordered(cpu_bits).abs_diff(f32_to_ordered(gpu_bits));
         assert!(
             diff <= tolerance,
-            "{op}: CPU vs 5090 diverged above {} ULP on RW buffer #{} lane {}.\n  CPU bits: 0x{:08x}\n  GPU bits: 0x{:08x}\n  CPU: {:x?}\n  GPU: {:x?}",
+            "{op}: CPU vs GPU diverged above {} ULP on RW buffer #{} lane {}.\n  CPU bits: 0x{:08x}\n  GPU bits: 0x{:08x}\n  CPU: {:x?}\n  GPU: {:x?}",
             tolerance,
             buffer_index,
             lane,
@@ -159,7 +199,9 @@ fn assert_buffer_within_tolerance(
 fn assert_diff(op: &'static str, tolerance: u32, program: &Program, inputs: Vec<Vec<u8>>) {
     let cpu_inputs: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
     let cpu = run_cpu(program, cpu_inputs);
-    let gpu = run_gpu(program, inputs);
+    let lowered = lower_for_gpu(program);
+    let lowered_inputs = map_inputs_for_lowered(program, &inputs, &lowered);
+    let gpu = run_gpu(&lowered, lowered_inputs);
     assert_eq!(
         cpu.len(),
         gpu.len(),
@@ -224,21 +266,7 @@ fn run_primitive_entry_diff(entry: &vyre_foundation::operation::SemanticOperatio
 }
 
 fn missing_capability_reason(program: &vyre::ir::Program) -> Option<String> {
-    let required = vyre_foundation::program_caps::scan(program);
-    let backend = backend();
-    // Use the boolean capability queries from the frozen VyreBackend trait.
-    let check = vyre_foundation::program_caps::check_backend_capabilities(
-        backend.id(),
-        backend.supports_subgroup_ops(),
-        backend.supports_f16(),
-        backend.supports_bf16(),
-        backend.supports_indirect_dispatch(),
-        true,
-        backend.supports_distributed_collectives(),
-        backend.max_workgroup_size(),
-        &required,
-    );
-    check.err().map(|missing| missing.to_string())
+    harness::every_op_random_inputs::missing_capability_reason(backend(), program)
 }
 
 #[test]
@@ -258,20 +286,12 @@ fn diff_flash_attention_regression() {
 
 #[test]
 fn diff_ast_cse_structural_hash_primitive_regression() {
-    run_primitive_entry_diff(&primitive_entry_by_id(
-        "vyre-primitives::parsing::ast_cse_structural_hash",
-    ));
+    run_entry_diff(&entry_by_id("vyre-libs::parsing::ast_cse_structural_hash"));
 }
 
 #[test]
 fn diff_fnv1a64_primitive_regression() {
-    run_primitive_entry_diff(&primitive_entry_by_id("vyre-primitives::hash::fnv1a64"));
-}
-
-#[test]
-fn diff_fnv1a64_then_primitive_fnv1a64_regression() {
     run_entry_diff(&entry_by_id("vyre-libs::hash::fnv1a64"));
-    run_primitive_entry_diff(&primitive_entry_by_id("vyre-primitives::hash::fnv1a64"));
 }
 
 /// FINDING-GPU-7 regression. `substring_search` (binding 0 haystack, 1 needle,
@@ -282,10 +302,10 @@ fn diff_fnv1a64_then_primitive_fnv1a64_regression() {
 /// GPU-vs-CPU byte-identity of the matches buffer so the validator crash
 /// cannot silently return. Asserts real bytes (matches buffer equality) via
 /// `run_entry_diff` -> `assert_diff`, not a shape check.
-#[cfg(feature = "matching-substring")]
+#[cfg(feature = "pattern-substring")]
 #[test]
 fn diff_substring_search_gpu_regression() {
-    run_entry_diff(&entry_by_id("vyre-libs::scan::substring_search"));
+    run_entry_diff(&entry_by_id("vyre-libs::pattern::substring_search"));
 }
 
 #[test]

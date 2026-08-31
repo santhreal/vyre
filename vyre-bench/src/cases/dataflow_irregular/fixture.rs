@@ -1,7 +1,13 @@
 use crate::api::case::BenchError;
-use crate::cases::skewed_graph::{mix32, skewed_degree as shared_skewed_degree, skewed_target};
-use vyre_primitives::bitset::frontier::materialize_frontier_queue_exact_count_into;
-use vyre_primitives::predicate::edge_kind;
+use crate::cases::mix32;
+use crate::cases::queue_closure_oracle::{
+    queue_closure_oracle, QueueClosureGraph, QueueClosureOracle,
+};
+use crate::cases::skewed_graph::{
+    active_high_degree_sources, build_skewed_csr_arrays, skewed_degree as shared_skewed_degree,
+    SkewedCsrShape,
+};
+use vyre_libs::predicate::edge_kind;
 
 pub(super) const NODE_COUNT: u32 = 1_048_576;
 pub(super) const FRONTIER_WORDS: usize = NODE_COUNT.div_ceil(32) as usize;
@@ -30,6 +36,12 @@ pub(super) struct IfdsSkewedStats {
     pub(super) high_degree_sources: u64,
 }
 
+impl crate::cases::queue_materialize::FrontierWords for IfdsSkewedStats {
+    fn frontier_words(&self) -> u32 {
+        self.frontier_words
+    }
+}
+
 pub(super) struct IfdsSkewedFixture {
     pub(super) nodes: Vec<u32>,
     pub(super) edge_offsets: Vec<u32>,
@@ -56,67 +68,35 @@ pub(super) struct IfdsSkewedClosureOracle {
 }
 
 pub(super) fn build_ifds_skewed_fixture(node_count: u32) -> Result<IfdsSkewedFixture, BenchError> {
-    if !node_count.is_power_of_two() || node_count < 32 {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "IFDS skewed fixture requires a power-of-two node count >= 32, received {node_count}. Fix: choose a power-of-two exploded-supergraph size."
-        )));
-    }
-
-    let words = node_count.div_ceil(32);
-    let mut nodes = Vec::with_capacity(node_count as usize);
-    let mut edge_offsets = Vec::with_capacity(node_count as usize + 1);
-    let mut edge_targets = Vec::with_capacity((node_count as usize).saturating_mul(2));
-    let mut edge_kind_mask = Vec::with_capacity((node_count as usize).saturating_mul(2));
-    let mut node_tags = Vec::with_capacity(node_count as usize);
-    let mut frontier_in = vec![0_u32; words as usize];
-
-    let mut stats = IfdsSkewedStats {
-        nodes: node_count,
-        frontier_words: words,
-        ..Default::default()
-    };
-
-    edge_offsets.push(0);
-    for src in 0..node_count {
-        let degree = skewed_degree(src);
-        stats.max_degree = stats.max_degree.max(degree);
-        if degree >= HIGH_DEGREE_THRESHOLD {
-            stats.high_degree_sources += 1;
-        }
-        if source_is_active(src) {
-            stats.active_sources += 1;
-            frontier_in[(src / 32) as usize] |= 1_u32 << (src % 32);
-        }
-        nodes.push(ifds_node_kind(src));
-        node_tags.push(ifds_node_tag(src));
-        for edge in 0..degree {
-            edge_targets.push(skewed_target(node_count, src, edge));
-            edge_kind_mask.push(ifds_edge_kind(src, edge));
-        }
-        edge_offsets.push(u32::try_from(edge_targets.len()).map_err(|_| {
-            BenchError::EnvironmentInvalid(
-                "IFDS skewed fixture exceeded u32 edge offsets. Fix: split the benchmark graph."
-                    .to_string(),
-            )
-        })?);
-    }
-
-    stats.edges = u32::try_from(edge_targets.len()).map_err(|_| {
-        BenchError::EnvironmentInvalid(
-            "IFDS skewed fixture exceeded u32 edge count. Fix: split the benchmark graph."
-                .to_string(),
-        )
+    let arrays = build_skewed_csr_arrays(&SkewedCsrShape {
+        node_count,
+        hub_degree: UGLY_HUB_DEGREE,
+        high_degree_threshold: HIGH_DEGREE_THRESHOLD,
+        fixture: "IFDS skewed fixture",
+        power_of_two_fix: "Fix: choose a power-of-two exploded-supergraph size.",
+        node_kind: ifds_node_kind,
+        node_tag: ifds_node_tag,
+        edge_kind: ifds_edge_kind,
+        source_is_active,
     })?;
 
     Ok(IfdsSkewedFixture {
-        nodes,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        node_tags,
-        frontier_in,
-        frontier_out_seed: vec![0_u32; words as usize],
-        stats,
+        nodes: arrays.nodes,
+        edge_offsets: arrays.edge_offsets,
+        edge_targets: arrays.edge_targets,
+        edge_kind_mask: arrays.edge_kind_mask,
+        node_tags: arrays.node_tags,
+        frontier_in: arrays.frontier_in,
+        frontier_out_seed: vec![0_u32; arrays.frontier_words as usize],
+        stats: IfdsSkewedStats {
+            nodes: node_count,
+            edges: arrays.edge_count,
+            frontier_words: arrays.frontier_words,
+            active_sources: arrays.active_sources,
+            max_degree: arrays.max_degree,
+            high_degree_sources: arrays.high_degree_sources,
+            ..Default::default()
+        },
     })
 }
 
@@ -139,25 +119,13 @@ pub(super) fn ifds_active_high_degree_sources(
     fixture: &IfdsSkewedFixture,
     min_degree: u32,
 ) -> Result<u32, BenchError> {
-    let mut high_sources = 0_u32;
-    for src in 0..fixture.stats.nodes {
-        let word = (src / 32) as usize;
-        let bit = 1_u32 << (src % 32);
-        if fixture.frontier_in[word] & bit == 0 {
-            continue;
-        }
-        let start = fixture.edge_offsets[src as usize];
-        let end = fixture.edge_offsets[src as usize + 1];
-        if end.saturating_sub(start) >= min_degree {
-            high_sources = high_sources.checked_add(1).ok_or_else(|| {
-                BenchError::EnvironmentInvalid(
-                    "IFDS split queue high-degree active source count exceeded u32. Fix: split the frontier queue."
-                        .to_string(),
-                )
-            })?;
-        }
-    }
-    Ok(high_sources)
+    active_high_degree_sources(
+        &fixture.frontier_in,
+        &fixture.edge_offsets,
+        fixture.stats.nodes,
+        min_degree,
+        "IFDS split queue",
+    )
 }
 
 pub(super) fn ifds_active_queue_inputs(
@@ -190,32 +158,56 @@ pub(in crate::cases::dataflow_irregular) fn materialize_ifds_active_queue(
     queue_capacity: usize,
     context: &str,
 ) -> Result<Vec<u32>, BenchError> {
-    let mut active_queue = Vec::new();
-    let expected = u32::try_from(fixture.stats.active_sources).map_err(|_| {
-        BenchError::EnvironmentInvalid(format!(
-            "{context} active source count {} exceeds u32 indexing. Fix: split the frontier.",
-            fixture.stats.active_sources
-        ))
-    })?;
-    let seen = materialize_frontier_queue_exact_count_into(
-        fixture.stats.nodes,
+    crate::cases::skewed_graph::materialize_active_frontier_queue(
         &fixture.frontier_in,
-        expected,
+        fixture.stats.nodes,
+        fixture.stats.active_sources,
         queue_capacity,
-        &mut active_queue,
+        context,
     )
-    .map_err(|error| {
-        BenchError::EnvironmentInvalid(format!(
-            "{context} could not materialize the sparse frontier queue: {error} Fix: size the queue from the active frontier and rebuild stale fixture stats."
-        ))
-    })?;
-    if u64::from(seen) != fixture.stats.active_sources {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "{context} counted {seen} active sources but stats recorded {}. Fix: rebuild the fixture active frontier stats from the same bitset.",
-            fixture.stats.active_sources
-        )));
-    }
-    Ok(active_queue)
+}
+
+pub(super) fn ifds_queue_closure_inputs(
+    fixture: &IfdsSkewedFixture,
+    queue_capacity: u32,
+) -> Result<Vec<Vec<u8>>, BenchError> {
+    crate::cases::queue_stage::build_queue_closure_inputs(
+        &fixture.frontier_in,
+        &fixture.edge_offsets,
+        &fixture.edge_targets,
+        &fixture.edge_kind_mask,
+        fixture.stats.active_sources,
+        queue_capacity,
+        "IFDS",
+        |capacity| materialize_ifds_active_queue(fixture, capacity, "IFDS queue closure seed"),
+    )
+}
+
+pub(super) fn ifds_skewed_queue_closure_oracle(
+    fixture: &IfdsSkewedFixture,
+    max_iters: u32,
+    queue_capacity: u32,
+) -> Result<QueueClosureOracle, BenchError> {
+    let seed_queue = materialize_ifds_active_queue(
+        fixture,
+        queue_capacity as usize,
+        "IFDS queue closure oracle seed",
+    )?;
+    queue_closure_oracle(
+        QueueClosureGraph {
+            node_count: fixture.stats.nodes,
+            edge_offsets: &fixture.edge_offsets,
+            edge_targets: &fixture.edge_targets,
+            edge_kind_mask: &fixture.edge_kind_mask,
+            frontier_in: &fixture.frontier_in,
+            seed_queue,
+            allow_mask: IFDS_REACH_MASK,
+        },
+        max_iters,
+        queue_capacity,
+        "IFDS",
+        "raise CLOSURE_MAX_ITERS",
+    )
 }
 
 pub(super) fn ifds_closure_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
@@ -272,19 +264,15 @@ pub(super) fn ifds_skewed_closure_oracle(
     fixture: &IfdsSkewedFixture,
     max_iters: u32,
 ) -> IfdsSkewedClosureOracle {
-    let mut current = Vec::new();
-    let mut next = Vec::new();
     let mut iterations = 0_u32;
-    vyre_primitives::graph::csr_forward_or_changed::cpu_ref_closure_into_with_step_hook(
+    let current = vyre_reference::composition_witness::csr_closure_with_step_hook_witness(
         fixture.stats.nodes,
         &fixture.edge_offsets,
         &fixture.edge_targets,
         &fixture.edge_kind_mask,
-        &fixture.frontier_in,
         IFDS_REACH_MASK,
         max_iters,
-        &mut current,
-        &mut next,
+        &fixture.frontier_in,
         |_| {
             iterations = iterations.saturating_add(1);
         },

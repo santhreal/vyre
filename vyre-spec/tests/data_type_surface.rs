@@ -2,7 +2,11 @@
 //!
 //! Covers variant distinctness, size calculations, and float-family detection.
 
-use vyre_spec::data_type::{DataType, QuantizationScale, QuantizationZeroPoint};
+mod spec_variants;
+
+use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint};
+
+use spec_variants::{QUANTIZED_STORAGE_TYPES, SCALAR_LEAF_TYPES};
 
 #[test]
 fn all_scalar_variants_are_distinct() {
@@ -138,29 +142,26 @@ fn quantized_int4_grouped_type_preserves_storage_layout() {
     );
 }
 
+/// `is_quantized_storage` answers for exactly `QUANTIZED_STORAGE_TYPES`, in both
+/// directions.
+///
+/// The negative half walks every scalar leaf the spec has rather than four
+/// hand-picked ones, so adding a packed type to `DataType` without adding it to
+/// the shared table, or widening the predicate without widening the table, turns
+/// this red instead of passing on the four types someone thought of.
 #[test]
 fn quantized_storage_predicate_is_restricted_to_packed_numeric_storage() {
-    for supported in [
-        DataType::I4,
-        DataType::I8,
-        DataType::I16,
-        DataType::U8,
-        DataType::U16,
-        DataType::F8E4M3,
-        DataType::F8E5M2,
-        DataType::FP4,
-        DataType::NF4,
-    ] {
+    for supported in QUANTIZED_STORAGE_TYPES {
         assert!(supported.is_quantized_storage(), "{supported}");
     }
 
-    for unsupported in [
-        DataType::U32,
-        DataType::F32,
-        DataType::Bool,
-        DataType::Bytes,
-    ] {
-        assert!(!unsupported.is_quantized_storage(), "{unsupported}");
+    for leaf in SCALAR_LEAF_TYPES {
+        let expected = QUANTIZED_STORAGE_TYPES.contains(&leaf);
+        assert_eq!(
+            leaf.is_quantized_storage(),
+            expected,
+            "Fix: is_quantized_storage disagrees with the shared storage table for {leaf}."
+        );
     }
 }
 

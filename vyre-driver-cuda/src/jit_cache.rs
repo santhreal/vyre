@@ -149,6 +149,8 @@ fn default_cache_root() -> Result<PathBuf, String> {
     )
 }
 
+// Inline: the suite drives the `#[cfg(test)]` `TEST_ENV_LOCK`, `lock_test_env`, which an
+// integration test does not compile.
 #[cfg(test)]
 mod tests {
     use super::*;

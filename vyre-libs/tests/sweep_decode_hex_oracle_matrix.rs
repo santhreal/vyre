@@ -1,13 +1,13 @@
 //! Handwritten oracle matrix for ASCII hex decode.
 //!
-//! Compares `vyre_libs::decode::hex_decode` reference evaluation against an
+//! Compares `vyre_libs::decode::hex::hex_decode` reference evaluation against an
 //! independent nibble-table oracle over hostile even-length inputs.
 
 #![forbid(unsafe_code)]
 #![cfg(feature = "decode")]
 
-use vyre_libs::decode::hex_decode;
-use vyre_primitives::decode::hex::hex_decode_table_ref;
+use vyre_libs::decode::hex::hex_decode;
+use vyre_libs::decode::hex::hex_decode_table_ref;
 use vyre_reference::value::Value;
 
 const HEX_CASES: u32 = 512;
@@ -50,7 +50,6 @@ fn run_hex_decode(input: &[u8]) -> Vec<u32> {
         &program,
         &[
             Value::from(vyre_primitives::wire::pack_u32_slice(&packed_input)),
-            Value::from(vec![0u8; (input.len() / 2) * 4]),
             Value::from(vyre_primitives::wire::pack_u32_slice(hex_decode_table_ref())),
         ],
     )
@@ -60,34 +59,19 @@ fn run_hex_decode(input: &[u8]) -> Vec<u32> {
 
 fn oracle_hex_table() -> [u32; 256] {
     let mut table = [0u32; 256];
-    let mut byte = b'0';
-    while byte <= b'9' {
-        table[byte as usize] = u32::from(byte - b'0');
-        byte += 1;
-    }
-    byte = b'A';
-    while byte <= b'F' {
-        table[byte as usize] = u32::from(byte - b'A' + 10);
-        byte += 1;
-    }
-    byte = b'a';
-    while byte <= b'f' {
-        table[byte as usize] = u32::from(byte - b'a' + 10);
-        byte += 1;
+    for (i, slot) in table.iter_mut().enumerate() {
+        *slot = match i as u8 {
+            b'0'..=b'9' => u32::from(i as u8 - b'0'),
+            b'A'..=b'F' => u32::from(i as u8 - b'A' + 10),
+            b'a'..=b'f' => u32::from(i as u8 - b'a' + 10),
+            _ => 0,
+        };
     }
     table
 }
 
 fn oracle_hex_decode_packed(input: &[u8]) -> Vec<u32> {
-    let table = oracle_hex_table();
-    input
-        .chunks_exact(2)
-        .map(|pair| {
-            let hi = table[usize::from(pair[0])];
-            let lo = table[usize::from(pair[1])];
-            (hi << 4) | lo
-        })
-        .collect()
+    vyre_reference::composition_witness::hex_decode_packed_witness(input)
 }
 
 fn hostile_hex_input(seed: u32) -> Vec<u8> {

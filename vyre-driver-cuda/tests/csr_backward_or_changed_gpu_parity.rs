@@ -1,15 +1,13 @@
 //! Parity test: GPU csr_backward_or_changed reaches source lanes across blocks.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::graph::csr_backward_or_changed::{
-    csr_backward_or_changed_parallel, csr_backward_or_changed_parallel_grid,
-};
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::graph::csr_backward_or_changed::csr_backward_or_changed_parallel;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 fn set_bit(words: &mut [u32], node: u32) {
     words[(node / 32) as usize] |= 1 << (node & 31);
@@ -41,8 +39,7 @@ fn run_once(
         u32_bytes(frontier),
         vec![0u8; 4],
     ];
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some(csr_backward_or_changed_parallel_grid(node_count));
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("CSR backward-or-changed primitive", |backend| {
         backend
             .dispatch(&program, &inputs, &config)

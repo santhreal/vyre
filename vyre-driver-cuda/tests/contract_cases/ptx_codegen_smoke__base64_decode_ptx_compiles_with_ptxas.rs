@@ -2,8 +2,7 @@ use super::*;
 
 #[test]
 fn base64_decode_ptx_compiles_with_ptxas() {
-    let program =
-        vyre_primitives::decode::base64::base64_decode("input", "table", "output", "len", 8);
+    let program = vyre_libs::decode::base64::base64_decode("input", "output", 8);
     let ptx = program_to_ptx_for_sm(&program, &default_config(), 90)
         .expect("Fix: base64 decode must lower to PTX.");
     let dir = tempfile::tempdir().expect("Fix: create temp dir for ptxas smoke.");
@@ -28,7 +27,7 @@ fn base64_decode_ptx_compiles_with_ptxas() {
 
 #[test]
 fn inflate_stored_ptx_compiles_with_ptxas() {
-    let program = vyre_primitives::decode::inflate::inflate_stored("input", "output", "len", 10);
+    let program = vyre_libs::decode::inflate::inflate_stored_block("input", "output", 10);
     let ptx = program_to_ptx_for_sm(&program, &default_config(), 90)
         .expect("Fix: inflate stored must lower to PTX.");
     let dir = tempfile::tempdir().expect("Fix: create temp dir for ptxas smoke.");
@@ -59,7 +58,7 @@ fn ptx_contains_version_target_and_entry() {
         .expect("Fix: identity program must lower to PTX.");
     assert!(
         secondary_text.contains(".version 8.5"),
-        "Fix: PTX must declare version 8.5 (pinned in vyre-emit-ptx/src/emitter.rs)."
+        "Fix: PTX must declare version 8.5 (pinned in vyre-emit-ptx/src/emitter/mod.rs)."
     );
     assert!(
         secondary_text.contains(".target sm_"),
@@ -122,20 +121,7 @@ fn ptx_rejects_invalid_subgroup_width() {
 
 #[test]
 fn ptx_shared_memory_declaration_uses_element_byte_width() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::workgroup("scratch", 16, DataType::U32),
-            BufferDecl::output("out", 0, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::store("scratch", Expr::u32(0), Expr::u32(7)),
-            Node::Barrier {
-                ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-            },
-            Node::store("out", Expr::u32(0), Expr::load("scratch", Expr::u32(0))),
-        ],
-    );
+    let program = shared_memory_smoke_program([1, 1, 1]);
     let secondary_text = program_to_ptx(&program, &default_config())
         .expect("Fix: live shared-memory fixture must lower to PTX.");
     assert!(
@@ -156,7 +142,7 @@ fn ptx_dynamic_shared_memory_offsets_use_u32_registers() {
         vec![
             Node::store("scratch", Expr::InvocationId { axis: 0 }, Expr::u32(7)),
             Node::Barrier {
-                ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
             },
             Node::store(
                 "out",
@@ -233,19 +219,7 @@ fn ptx_emits_integer_arithmetic() {
         ("div", Expr::div(Expr::gid_x(), Expr::u32(3)), "mul.hi.u32"),
         ("rem", Expr::rem(Expr::gid_x(), Expr::u32(3)), "rem.u32"),
     ];
-    for (name, expr, expected_insn) in ops {
-        let program = Program::wrapped(
-            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-            [1, 1, 1],
-            vec![Node::store("out", Expr::u32(0), expr)],
-        );
-        let secondary_text = program_to_ptx(&program, &default_config())
-            .unwrap_or_else(|e| panic!("Fix: {name} must lower to PTX: {e}"));
-        assert!(
-            secondary_text.contains(expected_insn),
-            "Fix: {name} must emit {expected_insn}, got:\n{secondary_text}"
-        );
-    }
+    assert_ptx_emits_expr_insns(&ops);
 }
 
 #[test]

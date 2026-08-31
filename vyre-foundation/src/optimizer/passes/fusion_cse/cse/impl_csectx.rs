@@ -179,6 +179,10 @@ impl CseCtx {
                 self.clear_observed_state();
                 Node::barrier_with_ordering(*ordering)
             }
+            Node::LogicalBarrier { ordering } => {
+                self.clear_observed_state();
+                Node::logical_barrier(*ordering)
+            }
             Node::IndirectDispatch {
                 count_buffer,
                 count_offset,
@@ -197,7 +201,7 @@ impl CseCtx {
                 tag,
             } => {
                 self.clear_observed_state();
-                Node::async_load_ext(
+                Node::async_load_gpu_driven(
                     source.clone(),
                     destination.clone(),
                     (**offset).clone(),
@@ -253,6 +257,66 @@ impl CseCtx {
                     body: std::sync::Arc::new(nodes),
                 }
             }
+            Node::TileLoad {
+                tile,
+                tile_type,
+                buffer,
+                origin,
+                layout,
+            } => {
+                self.clear_observed_state();
+                let origin = origin.iter().map(|e| self.expr(e).into_owned()).collect();
+                Node::TileLoad {
+                    tile: tile.clone(),
+                    tile_type: tile_type.clone(),
+                    buffer: buffer.clone(),
+                    origin,
+                    layout: layout.clone(),
+                }
+            }
+            Node::TileStore {
+                buffer,
+                origin,
+                tile,
+            } => {
+                self.clear_observed_state();
+                let origin = origin.iter().map(|e| self.expr(e).into_owned()).collect();
+                Node::TileStore {
+                    buffer: buffer.clone(),
+                    origin,
+                    tile: tile.clone(),
+                }
+            }
+            Node::TileMatmul { acc, a, b } => Node::TileMatmul {
+                acc: acc.clone(),
+                a: a.clone(),
+                b: b.clone(),
+            },
+            Node::TileReduce {
+                out,
+                tile,
+                op,
+                axis,
+            } => Node::TileReduce {
+                out: out.clone(),
+                tile: tile.clone(),
+                op: *op,
+                axis: *axis,
+            },
+            Node::TileElementwise { out, inputs, body } => {
+                self.enter_scope();
+                let body = self.nodes(body);
+                self.leave_scope();
+                Node::TileElementwise {
+                    out: out.clone(),
+                    inputs: inputs.clone(),
+                    body,
+                }
+            }
+            Node::TileDecl { name, tile } => Node::TileDecl {
+                name: name.clone(),
+                tile: tile.clone(),
+            },
             Node::Opaque(extension) => {
                 self.clear_observed_state();
                 Node::Opaque(extension.clone())
@@ -336,6 +400,9 @@ impl CseCtx {
             | Expr::BufferRef { .. }
             | Expr::BufLen { .. }
             | Expr::InvocationId { .. }
+            | Expr::LogicalIndex { .. }
+            | Expr::LogicalTileId { .. }
+            | Expr::LogicalWithinTileId { .. }
             | Expr::WorkgroupId { .. }
             | Expr::LocalId { .. }
             | Expr::SubgroupBallot { .. }

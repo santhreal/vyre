@@ -7,7 +7,7 @@
 //! `t`; such a path would make the proposed order cyclic under the
 //! causal intervention "run `t` before `o`".
 
-use super::dataflow_fixpoint::reachability_closure;
+use super::semiring_closure::reachability_closure;
 
 /// Return whether ordering pass `t` before pass `o` is acyclic.
 ///

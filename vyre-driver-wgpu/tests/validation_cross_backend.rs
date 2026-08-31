@@ -8,7 +8,7 @@
 //!   2. `WgpuBackend::validation_cache: DashSet<blake3::Hash>`  -
 //!      per-backend, covers capability checks (SUBGROUP
 //!      availability, workgroup-size limits, feature flags).
-//!   3. `vyre_driver::backend::validation::validate_program(program,
+//!   3. `vyre_driver::validation::validate_program(program,
 //!      backend)`  -  the real validator.
 //!
 //! A backend MUST NOT consume structural validation as a shortcut past its own
@@ -17,6 +17,8 @@
 //! This test is the regression gate: any future "simplification"
 //! that makes validation process-wide instead of per-backend trips
 //! the assertion below.
+
+#![cfg(feature = "device-tests")]
 
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
@@ -29,16 +31,16 @@ struct ReducedBackend {
     id: &'static str,
 }
 
-impl vyre_driver::backend::private::Sealed for ReducedBackend {}
+impl vyre_driver::sealed::Sealed for ReducedBackend {}
 
 impl VyreBackend for ReducedBackend {
     fn id(&self) -> &'static str {
         self.id
     }
-    fn dispatch(
+    fn dispatch_borrowed(
         &self,
         _program: &vyre::Program,
-        _inputs: &[Vec<u8>],
+        _inputs: &[&[u8]],
         _config: &vyre_driver::DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
         Err(vyre_driver::BackendError::new(

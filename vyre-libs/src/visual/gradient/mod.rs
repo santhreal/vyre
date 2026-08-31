@@ -3,7 +3,7 @@
 //! Rasterizes a linear gradient with up to 16 color stops.
 //! Category A composition  -  pure IR expressions.
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::gradient";
@@ -31,10 +31,9 @@ pub fn linear_gradient(
     stops: &[ColorStop],
 ) -> Program {
     try_linear_gradient(output, width, height, angle_deg, stops).unwrap_or_else(|error| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             OP_ID,
-            output,
-            DataType::U32,
+            Some((output, DataType::U32)),
             format!("Fix: {error}"),
         )
     })
@@ -109,233 +108,197 @@ pub fn try_linear_gradient(
     // 2. Find enclosing stop pair
     // 3. Lerp between stops
 
-    let mut body = vec![Node::let_bind("idx", Expr::gid_x())];
+    let (py, px) = crate::builder::stencil::decompose_index(&Expr::var("idx"), width);
+    let mut inner = vec![Node::let_bind("px", px), Node::let_bind("py", py)];
 
-    body.push(Node::if_then(
-        Expr::lt(Expr::var("idx"), Expr::u32(count)),
-        {
-            let mut inner = vec![
-                Node::let_bind("px", Expr::rem(Expr::var("idx"), Expr::u32(width.max(1)))),
-                Node::let_bind("py", Expr::div(Expr::var("idx"), Expr::u32(width.max(1)))),
-            ];
+    // Compute dot product: dp = px * dx + py * dy
+    // Handle signed direction with select.
+    let dp_x = if dx_fp >= 0 {
+        Expr::mul(Expr::var("px"), Expr::u32(dx_fp as u32))
+    } else {
+        // Negative: dp_x = -(px * |dx|)
+        // We'll handle sign at the end.
+        Expr::mul(Expr::var("px"), Expr::u32((-dx_fp) as u32))
+    };
+    let dp_y = if dy_fp >= 0 {
+        Expr::mul(Expr::var("py"), Expr::u32(dy_fp as u32))
+    } else {
+        Expr::mul(Expr::var("py"), Expr::u32((-dy_fp) as u32))
+    };
 
-            // Compute dot product: dp = px * dx + py * dy
-            // Handle signed direction with select.
-            let dp_x = if dx_fp >= 0 {
-                Expr::mul(Expr::var("px"), Expr::u32(dx_fp as u32))
-            } else {
-                // Negative: dp_x = -(px * |dx|)
-                // We'll handle sign at the end.
-                Expr::mul(Expr::var("px"), Expr::u32((-dx_fp) as u32))
-            };
-            let dp_y = if dy_fp >= 0 {
-                Expr::mul(Expr::var("py"), Expr::u32(dy_fp as u32))
-            } else {
-                Expr::mul(Expr::var("py"), Expr::u32((-dy_fp) as u32))
-            };
-
-            // Signed projection is represented as positive and negative
-            // unsigned parts, then shifted by `-min_corner_projection`.
-            let pos_part = Expr::add(
-                if dx_fp >= 0 {
-                    dp_x.clone()
-                } else {
-                    Expr::u32(0)
-                },
-                if dy_fp >= 0 {
-                    dp_y.clone()
-                } else {
-                    Expr::u32(0)
-                },
-            );
-            let neg_part = Expr::add(
-                if dx_fp < 0 { dp_x } else { Expr::u32(0) },
-                if dy_fp < 0 { dp_y } else { Expr::u32(0) },
-            );
-
-            inner.push(Node::let_bind("pos_dp", pos_part));
-            inner.push(Node::let_bind("neg_dp", neg_part));
-
-            // t = (dot(pixel, direction) - min_corner_projection) / range.
-            // `raw_dp` is still fixed-point 16.16, so division by the
-            // pixel-space range preserves a 16.16 normalized parameter while
-            // avoiding a wide multiply on backends without native u64.
-            let shifted_pos = Expr::add(Expr::var("pos_dp"), Expr::u32(projection_offset));
-            inner.push(Node::let_bind(
-                "raw_dp",
-                Expr::select(
-                    Expr::ge(shifted_pos.clone(), Expr::var("neg_dp")),
-                    Expr::sub(shifted_pos, Expr::var("neg_dp")),
-                    Expr::u32(0),
-                ),
-            ));
-            inner.push(Node::let_bind(
-                "t",
-                Expr::select(
-                    Expr::gt(
-                        Expr::div(Expr::var("raw_dp"), Expr::u32(projection_range_pixels)),
-                        Expr::u32(65536),
-                    ),
-                    Expr::u32(65536),
-                    Expr::div(Expr::var("raw_dp"), Expr::u32(projection_range_pixels)),
-                ),
-            ));
-
-            // Find enclosing stop pair and lerp.
-            // For simplicity with IR, we do a flat scan: pick the last stop
-            // whose position <= t, then lerp between it and the next.
-            inner.push(Node::let_bind("out_r", Expr::u32(stop_r[0])));
-            inner.push(Node::let_bind("out_g", Expr::u32(stop_g[0])));
-            inner.push(Node::let_bind("out_b", Expr::u32(stop_b[0])));
-            inner.push(Node::let_bind("out_a", Expr::u32(stop_a[0])));
-
-            for i in 0..stops.len() - 1 {
-                let t0 = stop_positions[i];
-                let t1 = stop_positions[i + 1];
-                let span = if t1 > t0 { t1 - t0 } else { 1 }; // avoid div by 0
-
-                // If t >= t0 AND t < t1: lerp between stop[i] and stop[i+1]
-                // Channel delta is rounded in fixed-point stop space.
-                let lerp_ch = |ch: &str, c0: u32, c1: u32| -> Node {
-                    let stop_delta = Expr::sub(Expr::var("t"), Expr::u32(t0));
-                    let rounded_delta = |delta: u32| {
-                        Expr::div(
-                            Expr::add(
-                                Expr::mul(Expr::u32(delta), stop_delta.clone()),
-                                Expr::u32(span / 2),
-                            ),
-                            Expr::u32(span),
-                        )
-                    };
-                    Node::assign(
-                        ch,
-                        Expr::select(
-                            Expr::and(
-                                Expr::ge(Expr::var("t"), Expr::u32(t0)),
-                                Expr::lt(Expr::var("t"), Expr::u32(t1)),
-                            ),
-                            // lerp: c0 + round((c1 - c0) * (t - t0) / span)
-                            if c1 >= c0 {
-                                Expr::add(Expr::u32(c0), rounded_delta(c1 - c0))
-                            } else {
-                                Expr::sub(Expr::u32(c0), rounded_delta(c0 - c1))
-                            },
-                            Expr::var(ch),
-                        ),
-                    )
-                };
-
-                inner.push(lerp_ch("out_r", stop_r[i], stop_r[i + 1]));
-                inner.push(lerp_ch("out_g", stop_g[i], stop_g[i + 1]));
-                inner.push(lerp_ch("out_b", stop_b[i], stop_b[i + 1]));
-                inner.push(lerp_ch("out_a", stop_a[i], stop_a[i + 1]));
-            }
-
-            // If t >= last stop position, use last stop color.
-            let last = stops.len() - 1;
-            inner.push(Node::assign(
-                "out_r",
-                Expr::select(
-                    Expr::ge(Expr::var("t"), Expr::u32(stop_positions[last])),
-                    Expr::u32(stop_r[last]),
-                    Expr::var("out_r"),
-                ),
-            ));
-            inner.push(Node::assign(
-                "out_g",
-                Expr::select(
-                    Expr::ge(Expr::var("t"), Expr::u32(stop_positions[last])),
-                    Expr::u32(stop_g[last]),
-                    Expr::var("out_g"),
-                ),
-            ));
-            inner.push(Node::assign(
-                "out_b",
-                Expr::select(
-                    Expr::ge(Expr::var("t"), Expr::u32(stop_positions[last])),
-                    Expr::u32(stop_b[last]),
-                    Expr::var("out_b"),
-                ),
-            ));
-            inner.push(Node::assign(
-                "out_a",
-                Expr::select(
-                    Expr::ge(Expr::var("t"), Expr::u32(stop_positions[last])),
-                    Expr::u32(stop_a[last]),
-                    Expr::var("out_a"),
-                ),
-            ));
-
-            // Pack output.
-            inner.push(Node::let_bind(
-                "packed",
-                Expr::bitor(
-                    Expr::bitor(
-                        Expr::var("out_r"),
-                        Expr::shl(Expr::var("out_g"), Expr::u32(8)),
-                    ),
-                    Expr::bitor(
-                        Expr::shl(Expr::var("out_b"), Expr::u32(16)),
-                        Expr::shl(Expr::var("out_a"), Expr::u32(24)),
-                    ),
-                ),
-            ));
-            inner.push(Node::let_bind(
-                "oidx",
-                Expr::add(
-                    Expr::mul(Expr::var("py"), Expr::u32(width)),
-                    Expr::var("px"),
-                ),
-            ));
-            inner.push(Node::store(output, Expr::var("oidx"), Expr::var("packed")));
-            inner
+    // Signed projection is represented as positive and negative
+    // unsigned parts, then shifted by `-min_corner_projection`.
+    let pos_part = Expr::add(
+        if dx_fp >= 0 {
+            dp_x.clone()
+        } else {
+            Expr::u32(0)
         },
+        if dy_fp >= 0 {
+            dp_y.clone()
+        } else {
+            Expr::u32(0)
+        },
+    );
+    let neg_part = Expr::add(
+        if dx_fp < 0 { dp_x } else { Expr::u32(0) },
+        if dy_fp < 0 { dp_y } else { Expr::u32(0) },
+    );
+
+    inner.push(Node::let_bind("pos_dp", pos_part));
+    inner.push(Node::let_bind("neg_dp", neg_part));
+
+    // t = (dot(pixel, direction) - min_corner_projection) / range.
+    // `raw_dp` is still fixed-point 16.16, so division by the
+    // pixel-space range preserves a 16.16 normalized parameter while
+    // avoiding a wide multiply on backends without native u64.
+    let shifted_pos = Expr::add(Expr::var("pos_dp"), Expr::u32(projection_offset));
+    inner.push(Node::let_bind(
+        "raw_dp",
+        Expr::select(
+            Expr::ge(shifted_pos.clone(), Expr::var("neg_dp")),
+            Expr::sub(shifted_pos, Expr::var("neg_dp")),
+            Expr::u32(0),
+        ),
+    ));
+    inner.push(Node::let_bind(
+        "t",
+        Expr::select(
+            Expr::gt(
+                Expr::div(Expr::var("raw_dp"), Expr::u32(projection_range_pixels)),
+                Expr::u32(65536),
+            ),
+            Expr::u32(65536),
+            Expr::div(Expr::var("raw_dp"), Expr::u32(projection_range_pixels)),
+        ),
     ));
 
-    Ok(Program::wrapped(
+    // Find enclosing stop pair and lerp.
+    // For simplicity with IR, we do a flat scan: pick the last stop
+    // whose position <= t, then lerp between it and the next.
+    inner.push(Node::let_bind("out_r", Expr::u32(stop_r[0])));
+    inner.push(Node::let_bind("out_g", Expr::u32(stop_g[0])));
+    inner.push(Node::let_bind("out_b", Expr::u32(stop_b[0])));
+    inner.push(Node::let_bind("out_a", Expr::u32(stop_a[0])));
+
+    for i in 0..stops.len() - 1 {
+        let t0 = stop_positions[i];
+        let t1 = stop_positions[i + 1];
+        let span = if t1 > t0 { t1 - t0 } else { 1 }; // avoid div by 0
+
+        // If t >= t0 AND t < t1: lerp between stop[i] and stop[i+1]
+        // Channel delta is rounded in fixed-point stop space.
+        let lerp_ch = |ch: &str, c0: u32, c1: u32| -> Node {
+            let stop_delta = Expr::sub(Expr::var("t"), Expr::u32(t0));
+            let rounded_delta = |delta: u32| {
+                Expr::div(
+                    Expr::add(
+                        Expr::mul(Expr::u32(delta), stop_delta.clone()),
+                        Expr::u32(span / 2),
+                    ),
+                    Expr::u32(span),
+                )
+            };
+            Node::assign(
+                ch,
+                Expr::select(
+                    Expr::and(
+                        Expr::ge(Expr::var("t"), Expr::u32(t0)),
+                        Expr::lt(Expr::var("t"), Expr::u32(t1)),
+                    ),
+                    // lerp: c0 + round((c1 - c0) * (t - t0) / span)
+                    if c1 >= c0 {
+                        Expr::add(Expr::u32(c0), rounded_delta(c1 - c0))
+                    } else {
+                        Expr::sub(Expr::u32(c0), rounded_delta(c0 - c1))
+                    },
+                    Expr::var(ch),
+                ),
+            )
+        };
+
+        inner.push(lerp_ch("out_r", stop_r[i], stop_r[i + 1]));
+        inner.push(lerp_ch("out_g", stop_g[i], stop_g[i + 1]));
+        inner.push(lerp_ch("out_b", stop_b[i], stop_b[i + 1]));
+        inner.push(lerp_ch("out_a", stop_a[i], stop_a[i + 1]));
+    }
+
+    // If t >= last stop position, use last stop color.
+    let last = stops.len() - 1;
+    inner.push(Node::assign(
+        "out_r",
+        Expr::select(
+            Expr::ge(Expr::var("t"), Expr::u32(stop_positions[last])),
+            Expr::u32(stop_r[last]),
+            Expr::var("out_r"),
+        ),
+    ));
+    inner.push(Node::assign(
+        "out_g",
+        Expr::select(
+            Expr::ge(Expr::var("t"), Expr::u32(stop_positions[last])),
+            Expr::u32(stop_g[last]),
+            Expr::var("out_g"),
+        ),
+    ));
+    inner.push(Node::assign(
+        "out_b",
+        Expr::select(
+            Expr::ge(Expr::var("t"), Expr::u32(stop_positions[last])),
+            Expr::u32(stop_b[last]),
+            Expr::var("out_b"),
+        ),
+    ));
+    inner.push(Node::assign(
+        "out_a",
+        Expr::select(
+            Expr::ge(Expr::var("t"), Expr::u32(stop_positions[last])),
+            Expr::u32(stop_a[last]),
+            Expr::var("out_a"),
+        ),
+    ));
+
+    // Pack output.
+    inner.push(Node::let_bind(
+        "packed",
+        crate::builder::stencil::pack_rgba_named("out_r", "out_g", "out_b", "out_a"),
+    ));
+    inner.push(Node::let_bind(
+        "oidx",
+        crate::builder::stencil::flat_index(Expr::var("py"), width, Expr::var("px")),
+    ));
+    inner.push(Node::store(output, Expr::var("oidx"), Expr::var("packed")));
+    Ok(crate::visual::packed_rgba_map::build_pixel_pipeline(
+        OP_ID,
         vec![
             BufferDecl::storage(output, 0, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(count),
         ],
-        super::PIXEL_WORKGROUP_SIZE,
-        vec![crate::region::wrap_anonymous(
-            OP_ID,
-            vec![crate::region::wrap_child(
-                vyre_primitives::visual::packed_rgba_map::OP_ID,
-                GeneratorRef {
-                    name: OP_ID.to_string(),
-                },
-                body,
-            )],
-        )],
+        count,
+        inner,
     ))
 }
 
+const EXPECTED_GRADIENT_OUTPUT_BYTES: [u8; 16] = [
+    0xFF, 0x00, 0x00, 0xFF, 0xAA, 0x00, 0x55, 0xFF, 0x55, 0x00, 0xAA, 0xFF, 0x00, 0x00, 0xFF, 0xFF,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| linear_gradient(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || linear_gradient(
             "output", 4, 1, 90.0,
             &[
                 ColorStop { position: 0.0, color: 0xFF_0000FF }, // red
                 ColorStop { position: 1.0, color: 0xFF_FF0000 }, // blue
             ],
-        )),
-        test_inputs: Some(|| {
+        ),
+        Some(|| {
             vec![vec![vec![0u8; 16]]]  // initial 4×1 output buffer
         }),
-        expected_output: Some(|| {
-            // 4-pixel horizontal gradient: red → blue.
-            // Pixel 0: pure red, Pixel 3: pure blue.
-            // Exact values depend on interpolation rounding.
-            let expected = [0xFF_0000FFu32, 0xFF_5500AAu32, 0xFF_AA0055u32, 0xFF_FF0000u32];
-            vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&expected)]]
+        Some(|| {
+            vec![vec![EXPECTED_GRADIENT_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("visual"),
-    }
+    )
+    .with_category("visual")
 }

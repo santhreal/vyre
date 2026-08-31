@@ -79,12 +79,9 @@ fn sign(value: f32) -> f32 {
     }
 }
 
-pub(crate) fn canonical_f32(value: f32) -> f32 {
-    if value.is_nan() {
-        f32::from_bits(0x7FC0_0000)
-    } else if value.is_subnormal() {
-        f32::from_bits(value.to_bits() & 0x8000_0000)
-    } else {
-        value
-    }
-}
+/// The one canonicalizer, re-exported at this path for the evaluator's callers.
+///
+/// `vyre-foundation` owns the rule: its literal folder and this interpreter must
+/// canonicalize identically or an optimized program and its own reference run
+/// disagree on a NaN payload or a subnormal's sign.
+pub(crate) use vyre_foundation::fp_parity::canonical_f32;

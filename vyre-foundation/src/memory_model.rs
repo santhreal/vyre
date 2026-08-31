@@ -94,6 +94,20 @@ impl MemoryOrdering {
     pub const fn requires_grid_sync(self) -> bool {
         matches!(self, Self::GridSync)
     }
+
+    /// Join two orderings to the weakest ordering that satisfies both.
+    #[must_use]
+    pub const fn join(self, other: Self) -> Self {
+        use MemoryOrdering::{AcqRel, Acquire, GridSync, Relaxed, Release, SeqCst};
+        match (self, other) {
+            (GridSync, _) | (_, GridSync) => GridSync,
+            (SeqCst, _) | (_, SeqCst) => SeqCst,
+            (AcqRel, _) | (_, AcqRel) | (Acquire, Release) | (Release, Acquire) => AcqRel,
+            (Acquire, Acquire) => Acquire,
+            (Release, Release) => Release,
+            (Relaxed, ordering) | (ordering, Relaxed) => ordering,
+        }
+    }
 }
 
 impl Default for MemoryOrdering {

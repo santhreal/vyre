@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`grid_stride_tree_sum_u32` documents the one condition under which it panics. It builds both passes itself, so a fusion failure is a defect in the builder rather than a caller error, and the crate carried it as an undocumented panic."

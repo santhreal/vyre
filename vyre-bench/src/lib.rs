@@ -1,39 +1,10 @@
 #![allow(unsafe_code)]
 //! Benchmark library types and backend registration support.
-
-#[cfg(not(target_os = "macos"))]
-use vyre_driver_cuda as _;
-use vyre_driver_metal as _;
-use vyre_driver_reference as _;
-use vyre_driver_spirv as _;
-use vyre_driver_wgpu as _;
-
-/// Retain benchmark backend registration crates in the final binary.
-pub fn link_benchmark_backend_registrations() {
-    let cpu_ref_id = <vyre_driver_reference::CpuRefBackend as vyre_driver::VyreBackend>::id(
-        &vyre_driver_reference::CpuRefBackend,
-    );
-    let wgpu_acquire: fn() -> Result<vyre_driver_wgpu::WgpuBackend, vyre_driver::BackendError> =
-        vyre_driver_wgpu::WgpuBackend::acquire;
-    let metal_acquire: fn()
-        -> Result<Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError> =
-        vyre_driver_metal::acquire;
-    let spirv_factory: fn()
-        -> Result<Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError> =
-        vyre_driver_spirv::spirv_factory;
-    std::hint::black_box(cpu_ref_id);
-    std::hint::black_box(wgpu_acquire);
-    std::hint::black_box(metal_acquire);
-    std::hint::black_box(spirv_factory);
-    #[cfg(not(target_os = "macos"))]
-    {
-        let cuda_factory: fn() -> Result<
-            Box<dyn vyre_driver::VyreBackend>,
-            vyre_driver::BackendError,
-        > = vyre_driver_cuda::cuda_factory;
-        std::hint::black_box(cuda_factory);
-    }
-}
+//!
+//! Backend registrations reach this binary through `vyre-registry-link`, which
+//! owns every driver link anchor and asserts that each linked driver reached the
+//! registry. Reading the registry through that owner is what keeps the driver
+//! object files in the binary, so nothing here names a driver crate for effect.
 
 /// API definitions for external benchmark drivers.
 #[allow(missing_docs)]
@@ -47,6 +18,8 @@ pub mod probes;
 /// The benchmark registry and metadata catalog.
 #[allow(missing_docs)]
 pub mod registry;
+/// The device class a release measurement may have been taken on.
+pub mod release_floor;
 /// Parity release matrix verification logic.
 #[allow(missing_docs)]
 pub mod release_matrix;

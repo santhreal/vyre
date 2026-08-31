@@ -1,11 +1,9 @@
 # tests/SKILL.md  -  vyre-driver-spirv
 
-Read `../../.internals/skills/testing/SKILL.md` first for the category contract.
-
 ## Purpose
 
 `vyre-driver-spirv` is the target adapter and runtime owner for SPIR-V devices.
-`Program` input enters through `vyre_lower::lower_verified`; descriptor
+`Program` input enters through `vyre_lower::lower_physical`; descriptor
 serialization is delegated to `vyre-emit-spirv`.
 
 ## Critical invariants
@@ -23,7 +21,7 @@ serialization is delegated to `vyre-emit-spirv`.
 
 ## Cross-crate contracts
 
-- Consumes `Program` values through `vyre_lower::lower_verified`.
+- Consumes `Program` values through `vyre_lower::lower_physical`.
 - Delegates descriptor serialization to `vyre-emit-spirv`.
 - Owns backend registration and Vulkan execution.
 

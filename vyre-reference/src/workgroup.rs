@@ -9,13 +9,13 @@ use std::convert::Infallible;
 use std::ops::ControlFlow::{self, Continue};
 use std::sync::Arc;
 
+use crate::execution::async_transfer::{AsyncTransfer, PendingAsyncTransfers};
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
-use vyre_foundation::ir::model::expr::GeneratorRef;
 #[cfg(test)]
 use vyre_foundation::ir::BufferAccess;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::visit::{visit_node_preorder, visit_preorder, ExprVisitor, NodeVisitor};
 
 use crate::ReferenceError;
@@ -382,6 +382,42 @@ impl NodeVisitor for LocalSlots {
     fn visit_barrier(&mut self, _: &Node) -> ControlFlow<Self::Break> {
         Continue(())
     }
+    fn visit_logical_barrier(&mut self, _: &Node) -> ControlFlow<Self::Break> {
+        Continue(())
+    }
+
+    fn visit_tile(&mut self, node: &Node) -> ControlFlow<Self::Break> {
+        match node {
+            Node::TileDecl { name, .. } => {
+                self.intern(name);
+            }
+            Node::TileLoad { tile, origin, .. } => {
+                self.intern(tile);
+                for expr in origin {
+                    visit_preorder(self, expr)?;
+                }
+            }
+            Node::TileStore { origin, .. } => {
+                for expr in origin {
+                    visit_preorder(self, expr)?;
+                }
+            }
+            Node::TileMatmul { acc, .. } => {
+                self.intern(acc);
+            }
+            Node::TileReduce { out, .. } => {
+                self.intern(out);
+            }
+            Node::TileElementwise { out, inputs, .. } => {
+                self.intern(out);
+                for input in inputs {
+                    self.intern(input);
+                }
+            }
+            _ => {}
+        }
+        Continue(())
+    }
 
     fn visit_block(&mut self, _: &Node, _: &[Node]) -> ControlFlow<Self::Break> {
         Continue(())
@@ -391,7 +427,7 @@ impl NodeVisitor for LocalSlots {
         &mut self,
         _: &Node,
         _: &vyre_foundation::ir::Ident,
-        _: &Option<GeneratorRef>,
+        _: &Option<Ident>,
         _: &[Node],
     ) -> ControlFlow<Self::Break> {
         Continue(())
@@ -423,13 +459,8 @@ pub struct Invocation<'a> {
     pub uniform_checks: Vec<(usize, bool)>,
     /// Async transfers started by `AsyncLoad`/`AsyncStore` and pending
     /// observation by `AsyncWait`.
-    pub(crate) pending_async: FxHashMap<Arc<str>, AsyncTransfer>,
-    pub(crate) op_cache: FxHashMap<*const Expr, ResolvedCall>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct ResolvedCall {
-    pub(crate) operation: SemanticOperation,
+    pub(crate) pending_async: PendingAsyncTransfers,
+    pub(crate) op_cache: crate::execution::call::OpCache,
 }
 
 /// Interpreter continuation stack.
@@ -484,7 +515,7 @@ impl<'a> Invocation<'a> {
             returned: false,
             waiting_at_barrier: false,
             uniform_checks: Vec::new(),
-            pending_async: FxHashMap::default(),
+            pending_async: PendingAsyncTransfers::new(),
             op_cache: FxHashMap::default(),
         }
     }
@@ -492,6 +523,12 @@ impl<'a> Invocation<'a> {
     /// Return true when no further execution can occur.
     pub fn done(&self) -> bool {
         self.returned || self.frames.is_empty()
+    }
+
+    /// Whether this invocation is the leader invocation in its workgroup.
+    #[inline]
+    pub(crate) fn is_leader(&self) -> bool {
+        self.ids.local == [0, 0, 0]
     }
 
     /// Push a lexical scope.
@@ -528,21 +565,18 @@ impl<'a> Invocation<'a> {
         tag: &str,
         transfer: AsyncTransfer,
     ) -> Result<(), ReferenceError> {
-        let tag: Arc<str> = Arc::from(tag);
-        if self.pending_async.insert(tag.clone(), transfer).is_some() {
-            return Err(ReferenceError::new(format!(
-                "async tag `{}` was started more than once before a matching wait. \
-                 Fix: reuse the tag only after AsyncWait completes.",
-                tag
-            )));
-        }
-        Ok(())
+        self.pending_async.begin(tag, transfer)
     }
 
     pub(crate) fn finish_async(&mut self, tag: &str) -> Result<AsyncTransfer, ReferenceError> {
-        self.pending_async.remove(tag).ok_or_else(|| ReferenceError::new(format!(
-            "async wait for tag `{tag}` has no matching async load. Fix: emit AsyncLoad before AsyncWait."
-        )))
+        self.pending_async.finish(tag)
+    }
+
+    /// Refuse this invocation if it reached its end with a transfer still
+    /// queued. See
+    /// [`PendingAsyncTransfers::assert_drained`](crate::execution::async_transfer::PendingAsyncTransfers::assert_drained).
+    pub(crate) fn assert_async_drained(&self) -> Result<(), ReferenceError> {
+        self.pending_async.assert_drained(self.ids)
     }
 
     /// Look up an active local by name.
@@ -558,7 +592,7 @@ impl<'a> Invocation<'a> {
     ///
     /// ```rust,no_run
     /// use vyre_reference::{value::Value, workgroup::{Invocation, InvocationIds}};
-    /// fn main() -> Result<(), crate::ReferenceError> {
+    /// fn main() -> Result<(), vyre_reference::ReferenceError> {
     ///     let mut invocation = Invocation::new(InvocationIds::ZERO, &[]);
     ///     invocation.bind("example", Value::U32(1))?;
     ///     Ok(())
@@ -582,12 +616,18 @@ impl<'a> Invocation<'a> {
         Ok(())
     }
 
+    /// Unbind a local by name and return its value if present.
+    pub fn unbind(&mut self, name: &str) -> Option<Value> {
+        let slot = self.slots.slot(name)?;
+        self.locals[slot].take()
+    }
+
     /// Bind an immutable loop variable.
     ///
     ///
     /// ```rust,no_run
     /// use vyre_reference::{value::Value, workgroup::{Invocation, InvocationIds}};
-    /// fn main() -> Result<(), crate::ReferenceError> {
+    /// fn main() -> Result<(), vyre_reference::ReferenceError> {
     ///     let mut invocation = Invocation::new(InvocationIds::ZERO, &[]);
     ///     invocation.bind_loop_var("example", Value::U32(1))?;
     ///     Ok(())
@@ -628,16 +668,6 @@ impl<'a> Invocation<'a> {
     pub(crate) fn frames_mut(&mut self) -> &mut Vec<Frame<'a>> {
         &mut self.frames
     }
-}
-
-/// Deferred byte-copy transfer for the workgroup reference scheduler.
-pub(crate) enum AsyncTransfer {
-    /// Copy `payload` into `destination` starting at byte offset `start`.
-    Copy {
-        destination: Arc<str>,
-        start: usize,
-        payload: Vec<u8>,
-    },
 }
 
 #[cfg(test)]

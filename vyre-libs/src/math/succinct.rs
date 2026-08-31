@@ -6,14 +6,28 @@
 //! pointer chasing for popcount math over coalesced words.
 
 use core::fmt;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
-use crate::region::{tag_program, wrap_anonymous, wrap_child};
-use vyre_foundation::ir::model::expr::GeneratorRef;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, PORTABLE_WORKGROUP_INVOCATIONS,
+};
+
+use crate::builder::cooperative::chunks;
+use crate::reduce::workgroup_scan::blelloch_inclusive_sum_nodes;
 
 const RANK_SUPERBLOCKS_OP_ID: &str = "vyre-libs::math::succinct::rank1_superblocks";
 const RANK_QUERY_OP_ID: &str = "vyre-libs::math::succinct::rank1_query";
-const SELECT_QUERY_OP_ID: &str = "vyre-libs::math::succinct::select1_query";
+/// Phase boundary naming the per-block popcount each lane stages for the scan.
+/// It is a phase of this operation and not an operation of its own, so it
+/// carries the anonymous prefix instead of borrowing an unrelated op id.
+const BLOCK_POPCOUNT_OP_ID: &str = "anonymous::vyre-libs::math::succinct::rank1_block_popcount";
+/// Per-lane superblock popcount, and the inclusive scan over it.
+const RANK_BLOCK_SCRATCH: &str = "__rank1_block_scratch";
+/// The staged addend the Blelloch sweep keeps so its result reads inclusive.
+const RANK_SCAN_SCRATCH: &str = "__rank1_scan_scratch";
+/// Set bits in every chunk of blocks the workgroup has already scanned.
+const RANK_CARRY: &str = "__rank1_carry";
 
 /// Build-time errors for succinct bitvector Programs.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -65,10 +79,9 @@ pub fn rank1_superblocks(
     block_words: u32,
 ) -> Program {
     try_rank1_superblocks(bits, superblocks, word_count, block_words).unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             RANK_SUPERBLOCKS_OP_ID,
-            superblocks,
-            DataType::U32,
+            Some((superblocks, DataType::U32)),
             format!("{err}"),
         )
     })
@@ -87,60 +100,146 @@ pub fn try_rank1_superblocks(
     block_words: u32,
 ) -> Result<Program, SuccinctBuildError> {
     let out_count = superblock_count(word_count, block_words)?;
-    let body = vec![Node::if_then(
-        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-        vec![
-            Node::store(superblocks, Expr::u32(0), Expr::u32(0)),
-            Node::let_bind("rank_acc", Expr::u32(0)),
-            Node::loop_for(
-                "rank_word",
-                Expr::u32(0),
-                Expr::u32(word_count),
-                vec![
-                    Node::if_then(
-                        Expr::and(
-                            Expr::gt(Expr::var("rank_word"), Expr::u32(0)),
-                            Expr::eq(
-                                Expr::rem(Expr::var("rank_word"), Expr::u32(block_words)),
-                                Expr::u32(0),
-                            ),
-                        ),
-                        vec![Node::store(
-                            superblocks,
-                            Expr::div(Expr::var("rank_word"), Expr::u32(block_words)),
-                            Expr::var("rank_acc"),
-                        )],
-                    ),
-                    Node::assign(
-                        "rank_acc",
-                        Expr::add(
-                            Expr::var("rank_acc"),
-                            Expr::popcount(Expr::load(bits, Expr::var("rank_word"))),
-                        ),
-                    ),
-                ],
+    // One lane per superblock, so the prefix scan this metadata is runs across
+    // the workgroup. The block count decides the width because the scan is over
+    // blocks: a bitvector with four of them has no work for 252 more lanes, and
+    // the Blelloch sweep needs a power of two to walk a balanced tree.
+    let tile = block_count(out_count)
+        .max(1)
+        .next_power_of_two()
+        .min(PORTABLE_WORKGROUP_INVOCATIONS);
+    let blocks = block_count(out_count);
+    let local = Expr::var("local");
+    let block = Expr::var("rank_block");
+    let carry = Expr::load(RANK_CARRY, Expr::u32(0));
+    let inclusive = Expr::load(RANK_BLOCK_SCRATCH, local.clone());
+    let staged = Expr::load(RANK_SCAN_SCRATCH, local.clone());
+
+    let mut chunk = vec![
+        Node::let_bind(
+            "rank_block",
+            Expr::add(
+                Expr::mul(Expr::var("rank_chunk"), Expr::u32(tile)),
+                local.clone(),
             ),
-            Node::store(superblocks, Expr::u32(out_count - 1), Expr::var("rank_acc")),
-        ],
-    )];
+        ),
+        wrap_child_region(
+            BLOCK_POPCOUNT_OP_ID,
+            Ident::from(RANK_SUPERBLOCKS_OP_ID),
+            vec![
+                Node::let_bind("rank_block_pop", Expr::u32(0)),
+                Node::if_then(
+                    Expr::lt(block.clone(), Expr::u32(blocks)),
+                    vec![Node::loop_for(
+                        "rank_block_word",
+                        Expr::u32(0),
+                        Expr::u32(block_words),
+                        vec![
+                            Node::let_bind(
+                                "rank_word",
+                                Expr::add(
+                                    Expr::mul(block.clone(), Expr::u32(block_words)),
+                                    Expr::var("rank_block_word"),
+                                ),
+                            ),
+                            // The last block is partial whenever `block_words`
+                            // does not divide the word count.
+                            Node::if_then(
+                                Expr::lt(Expr::var("rank_word"), Expr::u32(word_count)),
+                                vec![Node::assign(
+                                    "rank_block_pop",
+                                    Expr::add(
+                                        Expr::var("rank_block_pop"),
+                                        Expr::popcount(Expr::load(bits, Expr::var("rank_word"))),
+                                    ),
+                                )],
+                            ),
+                        ],
+                    )],
+                ),
+                Node::store(
+                    RANK_BLOCK_SCRATCH,
+                    local.clone(),
+                    Expr::var("rank_block_pop"),
+                ),
+            ],
+        ),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
+    ];
+    chunk.extend(blelloch_inclusive_sum_nodes(
+        RANK_BLOCK_SCRATCH,
+        RANK_SCAN_SCRATCH,
+        &local,
+        tile,
+    ));
+    // A superblock holds the count before its own block, which is the inclusive
+    // scan less this lane's own staged popcount, offset by every earlier chunk.
+    chunk.push(Node::if_then(
+        Expr::and(
+            Expr::is_first_logical_tile(),
+            Expr::lt(block.clone(), Expr::u32(blocks)),
+        ),
+        vec![Node::store(
+            superblocks,
+            block.clone(),
+            Expr::add(carry.clone(), Expr::sub(inclusive.clone(), staged)),
+        )],
+    ));
+    // The carry advances only once every lane has read it, and the next chunk
+    // stages over the scan scratch only once the carry has read it.
+    chunk.push(Node::logical_barrier(
+        vyre_foundation::ir::MemoryOrdering::SeqCst,
+    ));
+    chunk.push(Node::if_then(
+        Expr::eq(local.clone(), Expr::u32(tile - 1)),
+        vec![Node::store(
+            RANK_CARRY,
+            Expr::u32(0),
+            Expr::add(carry.clone(), inclusive),
+        )],
+    ));
+    chunk.push(Node::logical_barrier(
+        vyre_foundation::ir::MemoryOrdering::SeqCst,
+    ));
+
+    let body = vec![
+        Node::let_bind("local", Expr::LogicalWithinTileId { axis: 0 }),
+        Node::if_then(
+            Expr::eq(local.clone(), Expr::u32(0)),
+            vec![Node::store(RANK_CARRY, Expr::u32(0), Expr::u32(0))],
+        ),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
+        Node::loop_for(
+            "rank_chunk",
+            Expr::u32(0),
+            Expr::u32(chunks(blocks, tile)),
+            chunk,
+        ),
+        Node::if_then(
+            Expr::and(
+                Expr::is_first_logical_tile(),
+                Expr::eq(local.clone(), Expr::u32(0)),
+            ),
+            vec![Node::store(superblocks, Expr::u32(out_count - 1), carry)],
+        ),
+    ];
     Ok(Program::wrapped(
         vec![
             BufferDecl::storage(bits, 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(word_count.max(1)),
             BufferDecl::output(superblocks, 1, DataType::U32).with_count(out_count),
+            BufferDecl::workgroup(RANK_BLOCK_SCRATCH, tile, DataType::U32),
+            BufferDecl::workgroup(RANK_SCAN_SCRATCH, tile, DataType::U32),
+            BufferDecl::workgroup(RANK_CARRY, 1, DataType::U32),
         ],
-        [1, 1, 1],
-        vec![wrap_anonymous(
-            RANK_SUPERBLOCKS_OP_ID,
-            vec![wrap_child(
-                vyre_primitives::graph::path_reconstruct::OP_ID,
-                GeneratorRef {
-                    name: RANK_SUPERBLOCKS_OP_ID.to_string(),
-                },
-                body,
-            )],
-        )],
+        [tile, 1, 1],
+        vec![wrap_anonymous_region(RANK_SUPERBLOCKS_OP_ID, body)],
     ))
+}
+
+/// Superblocks a bitvector has, from the metadata length its sentinel closes.
+const fn block_count(out_count: u32) -> u32 {
+    out_count.saturating_sub(1)
 }
 
 /// Answer rank1-before-position queries from sparse superblocks.
@@ -168,10 +267,9 @@ pub fn rank1_query(
         block_words,
     )
     .unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             RANK_QUERY_OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("{err}"),
         )
     })
@@ -193,7 +291,7 @@ pub fn try_rank1_query(
     block_words: u32,
 ) -> Result<Program, SuccinctBuildError> {
     let sb_count = superblock_count(word_count, block_words)?;
-    let q = Expr::InvocationId { axis: 0 };
+    let q = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(q.clone(), Expr::u32(query_count)),
         vec![
@@ -272,126 +370,52 @@ pub fn try_rank1_query(
             BufferDecl::output(out, 3, DataType::U32).with_count(query_count.max(1)),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(RANK_QUERY_OP_ID, body)],
-    ))
-}
-
-/// Answer select1 queries over a packed u32 bitvector.
-///
-/// Each `k_indices[q]` is a one-based rank. The output is the zero-based bit
-/// position of the `k`-th set bit. `k == 0` and `k > total_popcount` trap
-/// loudly so callers cannot silently navigate to a bogus AST or graph node.
-#[must_use]
-pub fn select1_query(
-    bits: &str,
-    k_indices: &str,
-    out: &str,
-    word_count: u32,
-    query_count: u32,
-) -> Program {
-    try_select1_query(bits, k_indices, out, word_count, query_count).unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
-            SELECT_QUERY_OP_ID,
-            out,
-            DataType::U32,
-            format!("{err}"),
-        )
-    })
-}
-
-/// Checked builder for [`select1_query`].
-///
-/// # Errors
-///
-/// Currently this builder has no static failure modes. Runtime queries still
-/// trap when `k == 0` or when `k` exceeds the bitvector popcount.
-pub fn try_select1_query(
-    bits: &str,
-    k_indices: &str,
-    out: &str,
-    word_count: u32,
-    query_count: u32,
-) -> Result<Program, SuccinctBuildError> {
-    Ok(tag_program(
-        SELECT_QUERY_OP_ID,
-        vyre_primitives::bitset::select::select1_query(
-            bits,
-            k_indices,
-            out,
-            word_count,
-            query_count,
-        ),
+        vec![wrap_anonymous_region(RANK_QUERY_OP_ID, body)],
     ))
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: RANK_SUPERBLOCKS_OP_ID,
-        build: Some(|| rank1_superblocks("bits", "superblocks", 4, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        RANK_SUPERBLOCKS_OP_ID,
+        || rank1_superblocks("bits", "superblocks", 4, 2),
+        Some(|| {
             let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&bits)]]
         }),
-        expected_output: Some(|| {
-            let expected = [0u32, 4, 20];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+        Some(|| {
+            // [0, 4, 20]
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x00, // 0
+                0x04, 0x00, 0x00, 0x00, // 4
+                0x14, 0x00, 0x00, 0x00, // 20
+            ]]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: SELECT_QUERY_OP_ID,
-        build: Some(|| select1_query("bits", "queries", "out", 4, 5)),
-        test_inputs: Some(|| {
-            let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
-            let queries = [1u32, 2, 3, 4, 5];
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            vec![vec![to_bytes(&bits), to_bytes(&queries)]]
-        }),
-        expected_output: Some(|| {
-            let expected = [0u32, 1, 3, 63, 80];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
-        }),
-        category: Some("math"),
-    }
-}
-
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: RANK_QUERY_OP_ID,
-        build: Some(|| rank1_query("bits", "superblocks", "queries", "out", 4, 5, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        RANK_QUERY_OP_ID,
+        || rank1_query("bits", "superblocks", "queries", "out", 4, 5, 2),
+        Some(|| {
             let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
             let superblocks = [0u32, 4, 20];
             let queries = [0u32, 1, 4, 63, 80];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&bits), to_bytes(&superblocks), to_bytes(&queries)]]
         }),
-        expected_output: Some(|| {
-            let expected = [0u32, 1, 3, 3, 4];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+        Some(|| {
+            // [0, 1, 3, 3, 4]
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x00, // 0
+                0x01, 0x00, 0x00, 0x00, // 1
+                0x03, 0x00, 0x00, 0x00, // 3
+                0x03, 0x00, 0x00, 0x00, // 3
+                0x04, 0x00, 0x00, 0x00, // 4
+            ]]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }

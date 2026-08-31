@@ -5,4 +5,4 @@ bench = "vyre-bench/src/main.rs"
 metric = "time_ms"
 budget = 4000
 direction = "max"
-description = "Canonical smoke-suite wall-clock ceiling."
+description = "Canonical 30-sample smoke execution ceiling, excluding setup and one-time artifact preparation."

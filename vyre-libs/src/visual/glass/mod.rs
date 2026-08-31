@@ -1,4 +1,4 @@
-//! Complete glass material  -  the hero Molten composition.
+//! Complete glass material.
 //!
 //! Combines blur + tint + border into a single batched pipeline
 //! that replaces CSS `backdrop-filter: blur(N) + background-color`.
@@ -16,11 +16,14 @@
 //! This is visually indistinguishable from full-res blur because
 //! blur already destroys high-frequency detail.
 
+use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
 
 use super::blur::{gaussian_blur_2pass, GaussianBlurStages};
+#[cfg(test)]
 use super::downsample::downsample_2x;
 use super::filter_chain::filter_chain;
+#[cfg(test)]
 use super::upsample::upsample_2x;
 
 const OP_ID: &str = "vyre-libs::visual::glass";
@@ -134,6 +137,7 @@ pub fn glass_stages(
 /// - `scratch`: working buffer `[u32; W*H]`
 /// - `half`: half-res buffer `[u32; (W/2)*(H/2)]`
 /// - `half_scratch`: half-res scratch `[u32; (W/2)*(H/2)]`
+#[cfg(test)]
 #[must_use]
 pub fn glass_stages_half_res(
     input: &str,
@@ -162,8 +166,8 @@ pub fn glass_stages_half_res(
     let half_sigma = params.blur_sigma / 2.0;
     let blur = gaussian_blur_2pass(
         half,
-        half_scratch,
         half,
+        half_scratch,
         half_w,
         half_h,
         half_radius,
@@ -171,7 +175,7 @@ pub fn glass_stages_half_res(
     );
 
     // Stage 3: Upsample half → full.
-    let upsample = upsample_2x(half_scratch, output, params.width, params.height);
+    let upsample = upsample_2x(half, output, params.width, params.height);
 
     // Stage 4: Filter chain on full-res result.
     let filter = glass_filter_stage(output, params);
@@ -185,6 +189,7 @@ pub fn glass_stages_half_res(
 }
 
 /// The set of programs for a glass composition, either full-res or half-res.
+#[cfg(test)]
 #[derive(Debug)]
 pub enum GlassHalfResPipeline {
     /// Standard two-stage (blur + filter) when radius is small.
@@ -207,6 +212,7 @@ pub enum GlassHalfResPipeline {
     },
 }
 
+#[cfg(test)]
 impl GlassHalfResPipeline {
     /// Number of GPU dispatch stages needed.
     #[must_use]
@@ -244,35 +250,46 @@ impl GlassHalfResPipeline {
     }
 }
 
+const EXPECTED_GLASS_OUTPUT_BYTES: [u8; 64] = [0xFF; 64];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| crate::region::tag_program(OP_ID, glass_blur_stage("scene", "output", "scratch", &GlassParams {
-            width: 4,
-            height: 4,
-            blur_radius: 1,
-            blur_sigma: 0.8,
-            tint_rgba: 0x0D_FFFFFF,
-            brightness: 1.0,
-            saturation: 0.75,
-        }).horizontal)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || {
+            tag_program(
+                OP_ID,
+                glass_blur_stage(
+                    "scene",
+                    "output",
+                    "scratch",
+                    &GlassParams {
+                        width: 4,
+                        height: 4,
+                        blur_radius: 1,
+                        blur_sigma: 0.8,
+                        tint_rgba: 0x0D_FFFFFF,
+                        brightness: 1.0,
+                        saturation: 0.75,
+                    },
+                )
+                .horizontal,
+            )
+        },
+        Some(|| {
             // 4×4 all-white scene → glass blur → all-white.
             let pixels = vec![0xFFFF_FFFFu32; 16];
             vec![vec![
-                crate::visual::byte_helpers::u32_words_to_le_bytes(&pixels),
+                crate::visual::u32_word_bytes::u32_words_to_le_bytes(&pixels),
                 vec![0u8; 64],
             ]]
         }),
-        expected_output: Some(|| {
-            let pixels = vec![0xFFFF_FFFFu32; 16];
-            vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&pixels)]]
+        Some(|| {
+            vec![vec![EXPECTED_GLASS_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("visual"),
-    }
+    )
+    .with_category("visual")
 }
+
+#[cfg(test)]
+#[path = "../../../tests/internal/visual/glass/mod.rs"]
+mod tests;

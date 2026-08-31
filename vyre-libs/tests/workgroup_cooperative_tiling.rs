@@ -10,7 +10,7 @@ use vyre::ir::Node;
 
 fn has_barrier(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| match node {
-        Node::Barrier { .. } => true,
+        Node::LogicalBarrier { .. } => true,
         Node::If {
             then, otherwise, ..
         } => has_barrier(then) || has_barrier(otherwise),

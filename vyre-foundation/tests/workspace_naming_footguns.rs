@@ -3,12 +3,11 @@
 //! Path dependencies that escape the workspace root and directory-name vs
 //! package-name mismatches confuse tooling and break hermetic builds.
 
-use std::path::PathBuf;
+use vyre_test_support::monorepo::vyre_workspace_root;
 
 #[test]
 fn no_path_dependencies_outside_workspace() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
+    let workspace_root = vyre_workspace_root();
     let root_toml = workspace_root.join("Cargo.toml");
     let content = std::fs::read_to_string(&root_toml).unwrap();
 
@@ -35,8 +34,7 @@ fn is_adjacent_dataflow_dependency(line: &str) -> bool {
 
 #[test]
 fn meta_crate_directory_naming_is_stable() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
+    let workspace_root = vyre_workspace_root();
 
     // vyre/ directory hosts the meta-crate named "vyre".
     // This is intentional but must remain stable.

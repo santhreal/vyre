@@ -5,10 +5,14 @@
 //! the variant family only; changing a payload must never allocate a new core
 //! tag or enter the high-bit extension-id space.
 
+mod spec_variants;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use vyre_spec::extension::ExtensionDataTypeId;
 use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint, TypeId};
+
+use spec_variants::{QUANTIZED_STORAGE_TYPES, SCALAR_LEAF_TYPES};
 
 #[test]
 fn generated_payload_variants_keep_family_tags_for_24576_cases() {
@@ -167,37 +171,21 @@ fn generated_payload_cases(seed: u32) -> [(&'static str, DataType); 10] {
 }
 
 fn generated_leaf(seed: u32) -> DataType {
-    match mix32(seed) % 12 {
-        0 => DataType::U8,
-        1 => DataType::U16,
-        2 => DataType::U32,
-        3 => DataType::U64,
-        4 => DataType::I8,
-        5 => DataType::I16,
-        6 => DataType::I32,
-        7 => DataType::I64,
-        8 => DataType::Bool,
-        9 => DataType::F32,
-        10 => DataType::I4,
-        _ => DataType::Opaque(ExtensionDataTypeId::from_name(&format!(
-            "test.dtype.{}",
-            mix32(seed)
-        ))),
+    let leaves = SCALAR_LEAF_TYPES.len() as u32;
+    let idx = mix32(seed) % (leaves + 1);
+    if idx < leaves {
+        return SCALAR_LEAF_TYPES[idx as usize].clone();
     }
+
+    DataType::Opaque(ExtensionDataTypeId::from_name(&format!(
+        "test.dtype.{}",
+        mix32(seed)
+    )))
 }
 
 fn generated_quantized_storage(seed: u32) -> DataType {
-    match mix32(seed ^ 0x5151_2424) % 9 {
-        0 => DataType::I4,
-        1 => DataType::I8,
-        2 => DataType::I16,
-        3 => DataType::U8,
-        4 => DataType::U16,
-        5 => DataType::F8E4M3,
-        6 => DataType::F8E5M2,
-        7 => DataType::FP4,
-        _ => DataType::NF4,
-    }
+    let idx = mix32(seed ^ 0x5151_2424) as usize % QUANTIZED_STORAGE_TYPES.len();
+    QUANTIZED_STORAGE_TYPES[idx].clone()
 }
 
 fn generated_scale(seed: u32) -> QuantizationScale {
@@ -254,9 +242,7 @@ fn generated_nonzero_usize(seed: u32) -> usize {
 }
 
 fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
+    value = (value ^ (value >> 16)).wrapping_mul(0x7FEB_352D);
+    value = (value ^ (value >> 15)).wrapping_mul(0x846C_A68B);
     value ^ (value >> 16)
 }

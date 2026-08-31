@@ -188,6 +188,15 @@ pub struct ProgramValidationCaps {
     pub supports_distributed_collectives: bool,
     /// `Node::Trap` is lowered with backend-visible trap semantics.
     pub supports_trap_propagation: bool,
+    /// A whole-grid barrier is lowered natively, as a cooperative launch.
+    pub supports_grid_sync: bool,
+    /// The shared registry wrapper may emulate a whole-grid barrier for this
+    /// backend by splitting one program into sequential host dispatches.
+    ///
+    /// Held separately from `supports_grid_sync` because the two answer
+    /// different questions and a backend can refuse the emulation while
+    /// lowering nothing natively. Validation refuses only when both are false.
+    pub allows_host_grid_sync_split: bool,
     /// Maximum supported workgroup dimensions.
     pub max_workgroup_size: [u32; 3],
 }
@@ -203,8 +212,38 @@ impl ProgramValidationCaps {
             supports_bf16: backend.supports_bf16(),
             supports_indirect_dispatch: backend.supports_indirect_dispatch(),
             supports_distributed_collectives: backend.supports_distributed_collectives(),
+            // Not asked of the backend, because the trait has no question for
+            // it. Both emitting backends write a trap record the host reads
+            // back, so a trapping launch refuses instead of returning wrong
+            // data, and every call site that built this set by hand passed a
+            // literal `true`. Kept here so there is one place to correct when
+            // the trait learns to answer, instead of five.
             supports_trap_propagation: true,
+            supports_grid_sync: backend.supports_grid_sync(),
+            allows_host_grid_sync_split: backend.allows_host_grid_sync_split(),
             max_workgroup_size: backend.max_workgroup_size(),
+        }
+    }
+
+    /// The same facts in the shape the foundation capability check takes.
+    ///
+    /// This is the only place a backend's advertisement is mapped onto
+    /// [`vyre_foundation::program_caps::BackendSupport`]. Written out at each
+    /// call site instead, eight same-typed values get re-spelled per caller
+    /// and a transposition reads as plausible code.
+    #[must_use]
+    pub fn support(&self) -> vyre_foundation::program_caps::BackendSupport {
+        vyre_foundation::program_caps::BackendSupport {
+            subgroup_ops: self.supports_subgroup_ops,
+            half_precision: self.supports_f16,
+            brain_float: self.supports_bf16,
+            indirect_dispatch: self.supports_indirect_dispatch,
+            trap_propagation: self.supports_trap_propagation,
+            distributed_collectives: self.supports_distributed_collectives,
+            // Either route runs the barrier. Which one is chosen happens after
+            // validation has established that one exists.
+            grid_sync: self.supports_grid_sync || self.allows_host_grid_sync_split,
+            max_workgroup_size: self.max_workgroup_size,
         }
     }
 }
@@ -242,13 +281,7 @@ pub fn validate_program_contract(
     let required = vyre_foundation::program_caps::scan(program);
     vyre_foundation::program_caps::check_backend_capabilities(
         caps.backend_id,
-        caps.supports_subgroup_ops,
-        caps.supports_f16,
-        caps.supports_bf16,
-        caps.supports_indirect_dispatch,
-        caps.supports_trap_propagation,
-        caps.supports_distributed_collectives,
-        caps.max_workgroup_size,
+        &caps.support(),
         &required,
     )
     .map_err(|error| BackendError::InvalidProgram {
@@ -260,7 +293,7 @@ fn validate_supported_ops(
     program: &Program,
     backend_id: &'static str,
     supported_ops: &HashSet<OpId>,
-) -> Result<(), vyre_foundation::ir::ValidationError> {
+) -> Result<(), vyre_foundation::validate::ValidationError> {
     struct SupportedOpsBackend<'a> {
         id: &'static str,
         ops: &'a HashSet<OpId>,
@@ -300,9 +333,9 @@ pub struct LaunchGeometryLimits {
     pub max_block_dim: [u32; 3],
     /// Maximum workgroup count per grid dimension.
     pub max_grid_dim: [u32; 3],
-    /// Maximum threads the device keeps resident on one compute unit (a CUDA
-    /// streaming multiprocessor, a Metal threadgroup-hosting core, and so on),
-    /// or `0` when the backend does not probe this number.
+    /// Maximum threads the device keeps resident on one compute unit, the
+    /// hardware block a workgroup is resident on, or `0` when the backend does
+    /// not probe this number.
     ///
     /// This is the budget that decides how many whole workgroups fit on one
     /// unit, and the division is integral: a workgroup width that does not
@@ -334,14 +367,14 @@ impl LaunchGeometryLimits {
 /// budget.
 ///
 /// This is the single definition of the residency division in the workspace.
-/// CUDA's cooperative launch preflight and cold-start launch-width selection
-/// both route through it, because two independent copies of this arithmetic
+/// Cooperative launch preflight and cold-start launch-width selection both
+/// route through it, because two independent copies of this arithmetic
 /// had already drifted apart once. The division is integral by hardware: a
 /// unit hosts whole workgroups only.
 ///
 /// Threads are the only ceiling modelled here. Hardware also caps blocks per
-/// unit independently (CUDA reports it as
-/// `CU_DEVICE_ATTRIBUTE_MAX_BLOCKS_PER_MULTIPROCESSOR`), so at narrow widths
+/// unit independently, and a backend reports that cap separately, so at narrow
+/// widths
 /// the real block count is lower than this returns and the shortfall can be
 /// large: where the device caps blocks at 24, a 32-wide group against a
 /// 1536-thread budget measures 24 blocks and 768 resident threads, half what
@@ -446,8 +479,9 @@ pub fn validate_program_for_backend(
     program: &Program,
     config: &DispatchConfig,
 ) -> Result<(), BackendError> {
+    config.validate_launch_authority(backend.id())?;
     let workgroup = config
-        .workgroup_override
+        .launch_workgroup()
         .unwrap_or(program.workgroup_size());
     let max_axes = backend.max_workgroup_size();
     if workgroup.contains(&0) {
@@ -488,12 +522,12 @@ pub fn validate_program_for_backend(
             ),
         });
     }
-    if let Some(grid) = config.grid_override {
+    if let Some(grid) = config.launch_grid() {
         let max_workgroups = backend.max_compute_workgroups_per_dimension();
         if grid.contains(&0) {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
-                    "Fix: backend `{}` cannot dispatch zero-sized grid dimensions; set positive grid_override values.",
+                    "Fix: backend `{}` cannot dispatch zero-sized grid dimensions; state positive workgroup counts.",
                     backend.id()
                 ),
             });
@@ -502,7 +536,7 @@ pub fn validate_program_for_backend(
             if dim > max_workgroups {
                 return Err(BackendError::InvalidProgram {
                     fix: format!(
-                        "Fix: backend `{}` grid_override axis {axis} requested {} workgroups but max is {}.",
+                        "Fix: backend `{}` grid axis {axis} requested {} workgroups but max is {}.",
                         backend.id(),
                         dim,
                         max_workgroups
@@ -523,9 +557,12 @@ fn vsa_words_hash(words: &[u32]) -> blake3::Hash {
     hasher.finalize()
 }
 
+// Inline: the cache cases read `ValidationCache::vsa_hashes`, a private field, so
+// no integration test can observe what the cache actually remembered.
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::launch_fixtures::wide_limits;
 
     #[test]
     fn validation_cache_records_vsa_without_lock_shards() {
@@ -555,7 +592,7 @@ mod tests {
     }
 
     /// The residency division is integral and both of its edges are pinned,
-    /// because this arithmetic now has exactly one definition and CUDA's
+    /// because this arithmetic now has exactly one definition and the native
     /// cooperative launch preflight reads it.
     ///
     /// A zero width has no meaningful block count and yields zero rather than
@@ -588,13 +625,7 @@ mod tests {
     /// no residency-aware decision can be derived from a number it never gave.
     #[test]
     fn unreported_per_unit_budget_answers_unknown_rather_than_zero() {
-        let reported = LaunchGeometryLimits {
-            backend: "reported",
-            max_threads_per_block: 1024,
-            max_block_dim: [1024, 1024, 64],
-            max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
-            max_threads_per_sm: 1536,
-        };
+        let reported = wide_limits("reported", 1536);
         let unreported = LaunchGeometryLimits {
             max_threads_per_sm: 0,
             ..reported

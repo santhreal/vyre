@@ -127,36 +127,7 @@ fn prove_emits_signed_certificate_on_gpu_build() {
         }
     }
 
-    let signature_hex = parsed["signature"]
-        .as_str()
-        .expect("Fix: signed certificate must carry signature");
-    let public_key_hex = parsed["public_key"]
-        .as_str()
-        .expect("Fix: signed certificate must carry public_key");
-    let signature_bytes =
-        hex::decode(signature_hex).expect("Fix: certificate signature must be hex");
-    let public_key_bytes =
-        hex::decode(public_key_hex).expect("Fix: certificate public key must be hex");
-    let signature = Signature::from_slice(&signature_bytes)
-        .expect("Fix: certificate signature must be a 64-byte Ed25519 signature");
-    let public_key_array: [u8; 32] = public_key_bytes
-        .as_slice()
-        .try_into()
-        .expect("Fix: certificate public key must be 32 bytes");
-    let verifying_key = VerifyingKey::from_bytes(&public_key_array)
-        .expect("Fix: certificate public key must be a valid Ed25519 verifying key");
-    let signable = serde_json::json!({
-        "wire_format_version": parsed["wire_format_version"].clone(),
-        "program_hash": parsed["program_hash"].clone(),
-        "backend_id": parsed["backend_id"].clone(),
-        "plan": parsed["plan"].clone(),
-        "pairs": parsed["pairs"].clone(),
-    });
-    let signable_bytes =
-        serde_json::to_vec(&signable).expect("Fix: certificate signable body must serialize");
-    verifying_key
-        .verify(&signable_bytes, &signature)
-        .expect("Fix: certificate Ed25519 signature must verify over the canonical prove body");
+    verify_certificate_signature(&parsed);
 }
 
 #[test]

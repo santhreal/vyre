@@ -1,6 +1,11 @@
-use crate::parsing::c::lex::tokens::*;
+//! Token classification and precedence for the shunting-yard reducer.
+//!
+//! Precedence is expressed as IR over the token id rather than as a host table
+//! lookup, so the comparison runs in the same kernel as the reduction.
+
 use crate::parsing::core::ast::node::*;
 use vyre_foundation::ir::Expr;
+use vyre_spec::c11_token::*;
 
 pub(super) fn is_value_token(token: Expr) -> Expr {
     eq_any2(token, TOK_INTEGER, TOK_IDENTIFIER)
@@ -195,19 +200,7 @@ mod tests {
                     stack.push(lane);
                 }
                 Expr::SubgroupReduce { value, .. } => stack.push(value),
-                Expr::LitU32(_)
-                | Expr::LitI32(_)
-                | Expr::LitF32(_)
-                | Expr::LitBool(_)
-                | Expr::Var(_)
-                | Expr::BufLen { .. }
-                | Expr::InvocationId { .. }
-                | Expr::WorkgroupId { .. }
-                | Expr::LocalId { .. }
-                | Expr::SubgroupLocalId
-                | Expr::SubgroupSize
-                | Expr::Opaque(_)
-                | _ => {}
+                _ => {}
             }
         }
         count

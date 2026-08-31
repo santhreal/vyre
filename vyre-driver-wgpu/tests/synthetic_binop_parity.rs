@@ -8,180 +8,73 @@
 //!   * `abs_diff`      -> `select(a < b, b - a, a - b)`
 //!   * `saturating_add`-> `select(a + b < a, MAX, a + b)`
 //!   * `saturating_sub`-> `select(a < b, 0, a - b)`
-//!   * `saturating_mul`-> `select(b != 0 && a > MAX/b, MAX, a * b)`
+//!   * `saturating_mul`-> `select(mulhi(a, b) != 0, MAX, a * b)`
 //!   * `rotate_left/right` -> `(x << (s&31)) | (x >> ((32-(s&31))&31))`
 //!
 //! Rotate is exercised inside the real BLAKE3 workload by
 //! `blake3_compress_gpu_parity`; this isolates every synthetic op directly with
-//! overflow/edge operands (0, 1, u32::MAX, 2^31, oversized rotate amounts) and
-//! asserts byte-for-byte against the Rust std reference, which IS the oracle
-//! contract (`saturating_add`, `abs_diff`, `rotate_left`, widening `mulhi`).
+//! overflow/edge operands and asserts byte-for-byte against the Rust std
+//! reference, which IS the oracle contract (`saturating_add`, `abs_diff`,
+//! `rotate_left`, widening `mulhi`).
+//!
+//! The operand table, the CPU reference and the coverage gate are
+//! `vyre_test_support::binop_parity`, shared with the CUDA twin so both backends
+//! prove the same boundary against the same restatement of the contract. What is
+//! NOT shared is this file: the naga synthesis and the live dispatch. An op
+//! added to the shared table without a reference fails at the lookup, before the
+//! GPU is acquired.
 
-mod binop_parity_support;
-mod common;
+#![cfg(feature = "device-tests")]
 
-use binop_parity_support::program;
+mod binop_parity_fixtures;
+mod harness;
+
+use binop_parity_fixtures::program;
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_foundation::ir::{Expr, Program};
+use vyre_foundation::ir::Program;
+use vyre_test_support::binop_parity::{
+    assert_covers_every_synthetic_op, assert_matches_reference, synthetic_u32_reference,
+    synthetic_u32_reference_ops, U32BinopCase, SYNTHETIC_U32_BINOPS,
+};
+
+/// What the wgpu arm lowered these ops to, for the failure message.
+const LOWERING: &str = "the multi-step naga synthesis";
 
 fn dispatch(backend: &WgpuBackend, program: &Program, pairs: &[(u32, u32)]) -> Vec<u32> {
-    binop_parity_support::dispatch(backend, program, pairs, "synthetic-binop parity contract")
+    binop_parity_fixtures::dispatch(backend, program, pairs, "synthetic-binop parity contract")
 }
 
-/// Dispatch `build` on `pairs` and assert byte-for-byte against `reference`.
-fn check(
-    backend: &WgpuBackend,
-    build: fn(Expr, Expr) -> Expr,
-    reference: fn(u32, u32) -> u32,
-    pairs: &[(u32, u32)],
-    name: &str,
-) {
-    let gpu = dispatch(backend, &program(pairs.len() as u32, build), pairs);
-    let expected: Vec<u32> = pairs.iter().map(|&(a, b)| reference(a, b)).collect();
-    assert_eq!(
-        gpu, expected,
-        "GPU synthetic `{name}` diverged from the Rust/oracle reference (the \
-         multi-step lowering miscompiles on hardware).\n  pairs:    {pairs:?}\n  \
-         expected: {expected:?}\n  gpu:      {gpu:?}"
-    );
-}
-
-/// Operands spanning the overflow/identity boundaries every synthetic op cares
-/// about: zero, one, the max, the sign bit, and mid-range values.
-fn extremes() -> Vec<(u32, u32)> {
-    vec![
-        (0, 0),
-        (1, 1),
-        (u32::MAX, 1),
-        (1, u32::MAX),
-        (u32::MAX, u32::MAX),
-        (0x8000_0000, 0x8000_0000),
-        (0x1_0000, 0x1_0000),
-        (100, 50),
-        (50, 100),
-        (0x7FFF_FFFF, 2),
-    ]
-}
-
-#[test]
-fn mulhi_matches_widening_high_word_on_gpu() {
-    let backend = WgpuBackend::acquire().expect("Fix: synthetic-binop parity needs a live GPU.");
-    let reference = |a: u32, b: u32| ((u64::from(a) * u64::from(b)) >> 32) as u32;
-    check(&backend, Expr::mulhi, reference, &extremes(), "mulhi");
-    // Pin the load-bearing cases literally: MAX*MAX high word, 2^16 squared.
-    assert_eq!(reference(u32::MAX, u32::MAX), 0xFFFF_FFFE);
-    assert_eq!(reference(0x1_0000, 0x1_0000), 1);
-}
-
-#[test]
-fn abs_diff_matches_unsigned_absolute_difference_on_gpu() {
-    let backend = WgpuBackend::acquire().expect("Fix: synthetic-binop parity needs a live GPU.");
-    check(
-        &backend,
-        Expr::abs_diff,
-        u32::abs_diff,
-        &extremes(),
-        "abs_diff",
-    );
-    assert_eq!(u32::abs_diff(0, u32::MAX), u32::MAX);
-    assert_eq!(u32::abs_diff(100, 50), 50);
-}
-
-#[test]
-fn saturating_add_clamps_to_max_on_gpu() {
-    let backend = WgpuBackend::acquire().expect("Fix: synthetic-binop parity needs a live GPU.");
-    check(
-        &backend,
-        Expr::saturating_add,
-        u32::saturating_add,
-        &extremes(),
-        "saturating_add",
-    );
-    assert_eq!(u32::saturating_add(u32::MAX, 1), u32::MAX);
-    assert_eq!(u32::saturating_add(0x8000_0000, 0x8000_0000), u32::MAX);
-}
-
-#[test]
-fn saturating_sub_clamps_to_zero_on_gpu() {
-    let backend = WgpuBackend::acquire().expect("Fix: synthetic-binop parity needs a live GPU.");
-    check(
-        &backend,
-        Expr::saturating_sub,
-        u32::saturating_sub,
-        &extremes(),
-        "saturating_sub",
-    );
-    assert_eq!(u32::saturating_sub(1, u32::MAX), 0);
-    assert_eq!(u32::saturating_sub(100, 50), 50);
-}
-
-#[test]
-fn saturating_mul_clamps_to_max_on_gpu() {
-    let backend = WgpuBackend::acquire().expect("Fix: synthetic-binop parity needs a live GPU.");
-    // Add multiplicative-overflow pairs on top of the shared extremes.
-    let mut pairs = extremes();
-    pairs.extend_from_slice(&[
-        (0x1_0000, 0x1_0000),
-        (0x8000, 0x2_0000),
-        (1000, 1000),
-        (3, 4),
-    ]);
-    check(
-        &backend,
-        Expr::saturating_mul,
-        u32::saturating_mul,
+/// Dispatch `case` on the live GPU and assert byte-for-byte against the shared
+/// CPU reference.
+fn check(backend: &WgpuBackend, case: &U32BinopCase) {
+    let pairs = case.pairs();
+    let gpu = dispatch(backend, &program(pairs.len() as u32, case.build), &pairs);
+    assert_matches_reference(
+        "GPU synthetic",
+        LOWERING,
+        case.op,
         &pairs,
-        "saturating_mul",
+        &gpu,
+        synthetic_u32_reference(case.op),
     );
-    assert_eq!(u32::saturating_mul(0x1_0000, 0x1_0000), u32::MAX); // 2^32 overflows
-    assert_eq!(u32::saturating_mul(1000, 1000), 1_000_000);
 }
 
-/// Value/amount pairs spanning the rotate-mask boundary (0, mid, 31, 32, 33).
-fn rotate_pairs() -> Vec<(u32, u32)> {
-    vec![
-        (1, 0),
-        (1, 1),
-        (1, 31),
-        (1, 32),
-        (1, 33),
-        (0x8000_0000, 1),
-        (0xDEAD_BEEF, 4),
-        (0xDEAD_BEEF, 8),
-        (0xDEAD_BEEF, 16),
-        (0xFFFF_FFFF, 17),
-    ]
+fn live_gpu() -> WgpuBackend {
+    WgpuBackend::acquire().expect("Fix: synthetic-binop parity needs a live GPU.")
 }
 
+/// Every synthetic op in the shared table lowers correctly through naga.
+///
+/// One test over the table rather than one test per op: the seven bodies this
+/// replaces differed only in the op name and the reference, and the CUDA twin
+/// carried the same seven, so an op added to the table was proven by neither
+/// until somebody wrote an eighth body twice. The coverage assertion runs
+/// first, so a missing reference fails before the GPU is acquired.
 #[test]
-fn rotate_left_matches_barrel_rotate_on_gpu() {
-    let backend = WgpuBackend::acquire().expect("Fix: synthetic-binop parity needs a live GPU.");
-    let reference = |a: u32, b: u32| a.rotate_left(b & 31);
-    check(
-        &backend,
-        Expr::rotate_left,
-        reference,
-        &rotate_pairs(),
-        "rotate_left",
-    );
-    // 1<<32 rotate == identity (mask), 0x80000000 rotl 1 == 1 (wrap).
-    assert_eq!(reference(1, 32), 1);
-    assert_eq!(reference(0x8000_0000, 1), 1);
-    assert_eq!(reference(0xDEAD_BEEF, 4), 0xEADB_EEFD);
-}
-
-#[test]
-fn rotate_right_matches_barrel_rotate_on_gpu() {
-    let backend = WgpuBackend::acquire().expect("Fix: synthetic-binop parity needs a live GPU.");
-    let reference = |a: u32, b: u32| a.rotate_right(b & 31);
-    check(
-        &backend,
-        Expr::rotate_right,
-        reference,
-        &rotate_pairs(),
-        "rotate_right",
-    );
-    assert_eq!(reference(1, 1), 0x8000_0000);
-    assert_eq!(reference(1, 32), 1);
-    assert_eq!(reference(0xDEAD_BEEF, 4), 0xFDEA_DBEE);
+fn every_synthetic_binop_matches_its_reference_on_gpu() {
+    assert_covers_every_synthetic_op("wgpu", &synthetic_u32_reference_ops());
+    let backend = live_gpu();
+    for case in SYNTHETIC_U32_BINOPS {
+        check(&backend, case);
+    }
 }

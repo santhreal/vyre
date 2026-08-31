@@ -2,33 +2,14 @@
 
 #![forbid(unsafe_code)]
 
-use vyre::ir::DataType;
+mod wire_words;
 use vyre_libs::nn::attention::gqa_attention_causal_typed;
-use vyre_reference::value::Value;
+use wire_words::{bf16_word, execute_causal_gqa_typed};
 
-fn bf16_word(value: f32) -> u16 {
-    let bits = value.to_bits();
-    let rounding_bias = 0x7fff + ((bits >> 16) & 1);
-    ((bits.wrapping_add(rounding_bias)) >> 16) as u16
-}
+use vyre::ir::DataType;
 
 fn bf16_value(value: f32) -> f32 {
     f32::from_bits(u32::from(bf16_word(value)) << 16)
-}
-
-fn bf16_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| bf16_word(*value).to_le_bytes())
-        .collect()
-}
-
-fn decode_words(value: &Value) -> Vec<u16> {
-    value
-        .to_bytes()
-        .chunks_exact(size_of::<u16>())
-        .map(|word| u16::from_le_bytes(word.try_into().expect("Fix: exact BF16 word")))
-        .collect()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -44,11 +25,10 @@ fn execute_bf16(
     dim: u32,
     offset: u32,
 ) -> Vec<u16> {
-    let program = gqa_attention_causal_typed(
-        "q",
-        "k",
-        "v",
-        "output",
+    execute_causal_gqa_typed(
+        q,
+        k,
+        v,
         batch,
         query_heads,
         kv_heads,
@@ -58,18 +38,6 @@ fn execute_bf16(
         offset,
         DataType::BF16,
     )
-    .expect("Fix: valid BF16 causal GQA must build");
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[
-            Value::from(bf16_bytes(q)),
-            Value::from(bf16_bytes(k)),
-            Value::from(bf16_bytes(v)),
-            Value::from(vec![0; q.len() * size_of::<u16>()]),
-        ],
-    )
-    .expect("Fix: BF16 causal GQA must execute");
-    decode_words(&outputs[0])
 }
 
 /// Proves one visible cache row broadcasts its exact BF16 value across every query head.

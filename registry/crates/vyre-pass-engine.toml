@@ -1,0 +1,5 @@
+name = "vyre-pass-engine"
+concern = "Execute the optimizer's own passes as Vyre Programs through compiler-owned semantic compilation and admitted artifact submission."
+pages = { spec = "vyre-pass-engine/SPEC.md", readme = "vyre-pass-engine/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-foundation", "vyre-libs", "vyre-megakernel", "vyre-primitives"]

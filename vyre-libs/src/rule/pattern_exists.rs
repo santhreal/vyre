@@ -1,3 +1,5 @@
+//! The rule leaf that asks whether a pattern matched at least once.
+
 use crate::rule::condition_op;
 use vyre_foundation::ir::{Expr, Program};
 use vyre_spec::OperationContract;

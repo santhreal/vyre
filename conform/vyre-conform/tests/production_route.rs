@@ -1,32 +1,61 @@
-//! Production conformance must exercise compiler, payload, materializer, ABI, and submission.
+//! Production conformance step bounds.
+//!
+//! The routes that compile and submit an artifact on a device live in
+//! `production_route_device.rs`. This target holds the contract that needs no
+//! hardware, so it runs on every leg.
 
-#![cfg(feature = "gpu")]
+use std::time::{Duration, Instant};
 
-use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_conform::ProductionSession;
-use vyre_driver::backend::registered_backends;
-use vyre_driver_wgpu as _;
+use vyre_conform::production::{run_bounded_step, ProductionError};
+use vyre_registry_link::backend::live_backend_registry;
 
+/// Operation identity the bounded step carries, so a bound that expires names
+/// something a reader can find.
+const LIFECYCLE_OP_ID: &str = "vyre-conform::production_route::session_lifecycle";
+
+/// A step that never returns is reported, not awaited.
+///
+/// The bound is the whole mechanism the lifecycle test rests on, so it is
+/// exercised against work that is guaranteed never to finish: without the
+/// deadline this test would hang, which is the failure it exists to convert into
+/// a named error.
 #[test]
-fn wgpu_production_route_executes_canonical_artifact() {
-    let registration = registered_backends()
+fn a_bounded_step_that_never_returns_is_reported_with_its_operation_and_backend() {
+    let backend = live_backend_registry()
         .expect("valid backend registry")
         .iter()
-        .find(|registration| registration.id == "wgpu")
-        .expect("Fix: the gpu feature must link the wgpu registration");
-    let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
+        .map(|registration| registration.id)
+        .next()
+        .expect("Fix: at least one backend must be linked to name in a bounded step.");
+    let deadline = Duration::from_millis(50);
+    let started = Instant::now();
+    let error =
+        run_bounded_step::<()>("wedged step", LIFECYCLE_OP_ID, backend, deadline, || loop {
+            std::thread::park();
+        })
+        .expect_err(
+            "Fix: a bounded step whose work never returns must fail, not block the caller.",
+        );
+
+    let elapsed = started.elapsed();
+    assert!(
+        elapsed < Duration::from_secs(5),
+        "Fix: a bounded step must return once its deadline elapses; this one took {elapsed:?} for a {deadline:?} ceiling."
     );
-
-    let session = ProductionSession::compile(&program, registration)
-        .expect("Fix: production conformance compilation and materialization must succeed");
-    let outputs = session
-        .submit(&[])
-        .expect("Fix: typed artifact submission must succeed");
-
-    assert_eq!(outputs, vec![7_u32.to_le_bytes().to_vec()]);
-    assert_ne!(session.artifact_digest().0, [0; 32]);
-    assert_ne!(session.payload_digest().0, [0; 32]);
+    match error {
+        ProductionError::Deadline {
+            step,
+            op_id,
+            backend: reported_backend,
+            deadline: reported_deadline,
+        } => {
+            assert_eq!(step, "wedged step");
+            assert_eq!(op_id, LIFECYCLE_OP_ID);
+            assert_eq!(reported_backend, backend);
+            assert_eq!(reported_deadline, deadline);
+        }
+        other => panic!(
+            "Fix: an expired bounded step must report ProductionError::Deadline, got {other:?}."
+        ),
+    }
 }

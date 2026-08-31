@@ -40,11 +40,29 @@ Hardware: No accelerator is required.
 
 Environment: No environment variables alter CLI behavior.
 
-Configuration: The command reads the enclosing Santh rules/launch and tests/launch_rule_truth trees.
+Configuration: The command reads the rules/launch tree in this repository, resolved from the repository root.
 
 Failure behavior: A missing rules tree or incomplete rule contract returns status 1.
 
 Exit codes: 0 on complete contracts or help, 1 on contract failure, 2 on invalid arguments.
+
+### `publishable_packages`
+
+```console
+./cargo_full run -p xtask --bin publishable_packages -- --help
+```
+
+Commands: none.
+
+Hardware: No accelerator is required.
+
+Environment: No environment variables alter CLI behavior.
+
+Configuration: The command reads the workspace manifests, resolved from the repository root.
+
+Failure behavior: An unreadable workspace manifest returns status 1.
+
+Exit codes: 0 on a printed roster or help, 1 on a manifest read failure, 2 on invalid arguments.
 
 ### `scaffold_rule`
 
@@ -58,29 +76,11 @@ Hardware: No accelerator is required.
 
 Environment: No environment variables alter CLI behavior.
 
-Configuration: The slug selects directories in the enclosing Santh rule and truth-test trees.
+Configuration: The slug names a directory under rules/launch in this repository, resolved from the repository root.
 
 Failure behavior: Missing slugs and filesystem creation failures return non-zero without claiming success.
 
 Exit codes: 0 on scaffold creation or help, 1 on filesystem failure, 2 on invalid arguments.
-
-### `vyre_new_op`
-
-```console
-./cargo_full run -p xtask --bin vyre_new_op -- --help
-```
-
-Commands: `new-op`.
-
-Hardware: No accelerator is required.
-
-Environment: VYRE_SPEC_MAINTAINER=1 permits reserved internal. and test. operation identifiers.
-
-Configuration: Operation id, archetype, display name, summary, and category are explicit arguments.
-
-Failure behavior: Invalid identifiers, archetypes, categories, collisions, and write failures return non-zero.
-
-Exit codes: 0 on scaffold creation or help, 1 on validation or write failure, 2 on invalid arguments.
 
 ### `xtask`
 
@@ -88,7 +88,7 @@ Exit codes: 0 on scaffold creation or help, 1 on validation or write failure, 2 
 ./cargo_full run -p xtask --bin xtask -- --help
 ```
 
-Commands: `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `package-readiness`, `platform-boundary`, `primitive-admission-gate`, `print-composition`, `release-benchmarks`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar`.
+Commands: `abstraction-gate`, `architecture-contract`, `backend-extension`, `backend-matrix`, `bench-baselines`, `bench-coverage`, `bench-crossback`, `bench-release`, `bench-smoke-runtime`, `catalog`, `check-tier-deps`, `ci-concurrency`, `ci-matrix`, `ci-registry`, `ci-required`, `ci-shell`, `ci-steps`, `cli-docs`, `codeowners`, `compile`, `conformance-matrix`, `contract-in-source`, `crate-ownership`, `crate-pages`, `crate-readmes`, `cross-target`, `cuda-parity`, `dep-drift`, `device-test-gating`, `dialect-lowering`, `doc-claims`, `docs-check`, `docs-coupling`, `docs-references`, `docs-register`, `dup-scan`, `error-codes`, `evidence-paths`, `evidence-provenance`, `example-capability`, `feature-isolation`, `feature-matrix`, `feature-msrv`, `file-size`, `frozen-contracts`, `gate-canon`, `gate1`, `gates`, `gpu-loudness`, `heuristic-audit`, `host-oracle-elimination`, `hot-path-blocking-wait`, `hot-path-inventory`, `hot-path-nested-rows`, `hot-path-owned-dispatch`, `hot-path-reserve`, `hot-path-scan`, `hot-path-unbounded-cache`, `hot-path-unbounded-read`, `hygiene-matrix`, `internal-dep-versions`, `invariant-paths`, `launch-state`, `layering`, `lego-composability`, `lego-composition-chains`, `lego-composition-depth`, `lego-cross-dialect`, `lego-exemption-liveness`, `lego-name-stems`, `lego-no-reinvention`, `lego-operand-shapes`, `lego-primitive-coverage`, `lego-quick`, `lego-semantic-organization`, `lego-tier-claims`, `lego-trend`, `lint-expect-fix`, `lint-one-policy`, `lint-unsafe-budget`, `lint-unsafe-justification`, `list-ops`, `lockfile-clean`, `metadata-matrix`, `metal-parity`, `module-layout`, `neutral-crates`, `op-matrix`, `op-names`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `oracle-sweeps`, `package-readiness`, `parity-testing-isolated`, `path-deps-resolve`, `placement-predicates`, `platform-boundary`, `platform-consumer-docs`, `print-composition`, `program-wire-fields`, `proptest-coverage`, `public-api-paths`, `public-api-snapshot`, `readback-ring`, `release-benchmarks`, `release-conformance`, `release-docs`, `release-evidence`, `release-workload-matrix`, `repo-hygiene`, `schedule-ownership`, `script-ledger`, `shader-source`, `shrink`, `single-backlog`, `source-include-module`, `source-parses`, `source-reachability`, `spirv-parity`, `test-material-placement`, `test-only-capability`, `testing-guides`, `trace-f32`, `unification`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar`, `wire-determinism`, `workspace-check`, `workspace-clippy`, `workspace-docs`, `workspace-membership`, `workspace-tests`.
 
 Hardware: Requirements are command specific. Backend, conformance, and benchmark commands require their declared devices.
 
@@ -104,17 +104,17 @@ Exit codes: 0 on help or command success, 1 on command failure or unknown subcom
 <!-- BEGIN GENERATED CRATE CONTRACT -->
 ## Crate contract
 
-This section is generated by `python3 scripts/crate_readmes.py --write` from
+This section is generated by `xtask crate-readmes --write` from
 the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Generate evidence and enforce repository, release, documentation, and architecture contracts.
+Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence, linking no vyre crate.
 
 ### Boundaries
 
 The `release-tooling` owner maintains this `tooling` crate at `xtask`.
-Its allowed internal production dependencies are: `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-spec`.
+Its allowed internal production dependencies are: `structure-gate`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
@@ -122,12 +122,12 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `xtask/src/main.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run -p xtask -- --help
+./cargo_full run -p xtask -- --help
 ```
 
 ### Features
 
-- Manifest features: None
+- Manifest features: `default`, `public-api-tool`
 - Default feature members: None
 
 ### Errors and unsupported behavior
@@ -136,18 +136,18 @@ Invalid arguments, stale evidence, violated repository contracts, and failed com
 
 ### Testing
 
-Use [`docs/testing/xtask.md`](../docs/testing/xtask.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/xtask.md`](../docs/testing/xtask.md) for the crate's test command,
+hardware contract, expected skips, and failure semantics. It is generated
+from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-This crate is internal repository and release tooling for the 0.7.2 train and is not published to crates.io.
+This crate is internal repository and release tooling for the 0.8.0 train and is not published to crates.io.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

@@ -11,9 +11,8 @@
 //!
 //! Category A composition.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 /// Build a Program that computes a single-token MoE layer forward pass.
 ///
@@ -61,7 +60,7 @@ pub fn moe_layer_route_and_accumulate(
     //
     // We use a single invocation per output dimension.
     let body = vec![
-        Node::let_bind("j", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("j", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(j.clone(), Expr::u32(out_dim)),
             vec![
@@ -116,7 +115,10 @@ pub fn moe_layer_route_and_accumulate(
             BufferDecl::output(out, 6, DataType::F32).with_count(out_dim),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::moe_layer_accumulate", body)],
+        vec![wrap_anonymous_region(
+            "vyre-libs::nn::moe_layer_accumulate",
+            body,
+        )],
     ))
 }
 
@@ -124,9 +126,9 @@ pub fn moe_layer_route_and_accumulate(
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
     use crate::fixture_bytes::u32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn moe_layer_accumulate_simple() {
@@ -153,21 +155,21 @@ mod tests {
         )
         .unwrap();
 
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "moe_layer",
             &program,
-            &[
-                Value::from(f32_bytes(&[0.0f32, 0.0])), // x (unused in this simplified kernel)
-                Value::from(f32_bytes(&[0.0f32; 8])),   // w_router (unused)
-                Value::from(f32_bytes(&[0.0f32; 4])),   // b_router (unused)
-                Value::from(u32_bytes(&expert_indices)),
-                Value::from(f32_bytes(&expert_weights)),
-                Value::from(f32_bytes(&expert_outputs)),
-                Value::from(vec![0u8; 8]),
+            vec![
+                f32_bytes(&[0.0f32, 0.0]), // x (unused in this simplified kernel)
+                f32_bytes(&[0.0f32; 8]),   // w_router (unused)
+                f32_bytes(&[0.0f32; 4]),   // b_router (unused)
+                u32_bytes(&expert_indices),
+                f32_bytes(&expert_weights),
+                f32_bytes(&expert_outputs),
+                vec![0u8; 8],
             ],
-        )
-        .expect("Fix: moe_layer accumulate must execute");
+        );
 
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = decode_f32(&outputs[0]);
         assert!(
             (out[0] - 1.8).abs() < 1e-5,
             "moe_layer out[0] mismatch: {}",

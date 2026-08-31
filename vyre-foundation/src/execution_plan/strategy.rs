@@ -1,4 +1,4 @@
-use super::{AccuracyPlan, AutotunePlan, FusionPlan, MemoryPlan, ProvenancePlan, SchedulingPolicy};
+use super::{AccuracyPlan, AutotunePlan, FusionPlan, MemoryPlan, ProvenancePlan};
 
 /// Strategy for whole-program fusion.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -18,13 +18,18 @@ pub enum DispatchStrategy {
     PersistentRuntime,
 }
 
-/// Strategy for accuracy verification.
+/// How strongly a program's numerics must be conformance-checked.
+///
+/// This is a required strength, not an execution strategy. Nothing here
+/// selects a second result path: the device produces the result, and the
+/// conformance harness alone decides what it re-runs afterwards.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum AccuracyStrategy {
-    /// Execute directly without shadow checks.
-    Direct,
-    /// Run a shadow reference interpreter for high-risk transcendental ops.
-    ShadowReference,
+pub enum ConformanceStrength {
+    /// The program's numerics carry no elevated risk.
+    Standard,
+    /// The program uses constructs whose results vary across
+    /// implementations, so conformance must cover them exhaustively.
+    Exhaustive,
 }
 
 /// Strategy for hardware-aware autotuning.
@@ -91,8 +96,8 @@ pub struct StrategyPlan {
     pub fusion: FusionStrategy,
     /// Dispatch strategy.
     pub dispatch: DispatchStrategy,
-    /// Accuracy strategy.
-    pub accuracy: AccuracyStrategy,
+    /// Required conformance strength.
+    pub conformance: ConformanceStrength,
     /// Autotune strategy.
     pub autotune: AutotuneStrategy,
     /// Provenance strategy.
@@ -111,22 +116,20 @@ impl StrategyPlan {
         accuracy: &AccuracyPlan,
         autotune: &AutotunePlan,
     ) -> Self {
-        let policy = SchedulingPolicy::standard();
         Self {
             fusion: if fusion.batch_fusion_candidate {
                 FusionStrategy::Candidate
             } else {
                 FusionStrategy::Isolated
             },
-            dispatch: if policy.use_persistent_runtime(fusion.node_count) {
-                DispatchStrategy::PersistentRuntime
+            // Every production compile emits a megakernel artifact and the
+            // artifact's schedule states the mode, so the plan reports the
+            // dispatch it will be executed under rather than picking one.
+            dispatch: DispatchStrategy::PersistentRuntime,
+            conformance: if accuracy.exhaustive_conformance_required {
+                ConformanceStrength::Exhaustive
             } else {
-                DispatchStrategy::CompiledPipeline
-            },
-            accuracy: if accuracy.shadow_reference_recommended {
-                AccuracyStrategy::ShadowReference
-            } else {
-                AccuracyStrategy::Direct
+                ConformanceStrength::Standard
             },
             autotune: if autotune.recommended {
                 AutotuneStrategy::MeasureVariants
@@ -192,7 +195,7 @@ mod tests {
 
     fn baseline_accuracy() -> AccuracyPlan {
         AccuracyPlan {
-            shadow_reference_recommended: false,
+            exhaustive_conformance_required: false,
             reason: "baseline",
         }
     }
@@ -201,10 +204,6 @@ mod tests {
         AutotunePlan {
             recommended: false,
             parallel_region_size: [1, 1, 1],
-            recommended_workgroup_size: [1, 1, 1],
-            recommended_tile: [1, 1, 1],
-            recommended_vector_pack_bits: 32,
-            recommended_unroll_depth: 1,
             reason: "none",
         }
     }
@@ -256,9 +255,9 @@ mod tests {
     }
 
     #[test]
-    fn shadow_reference_triggers_accuracy_strategy() {
+    fn elevated_numerical_risk_requires_exhaustive_conformance() {
         let mut accuracy = baseline_accuracy();
-        accuracy.shadow_reference_recommended = true;
+        accuracy.exhaustive_conformance_required = true;
         let s = StrategyPlan::from_parts(
             &baseline_fusion(),
             &baseline_memory(),
@@ -266,7 +265,7 @@ mod tests {
             &accuracy,
             &baseline_autotune(),
         );
-        assert_eq!(s.accuracy, AccuracyStrategy::ShadowReference);
+        assert_eq!(s.conformance, ConformanceStrength::Exhaustive);
     }
 
     #[test]

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The release hygiene scan reads every xtask source file. It named thirteen command modules by hand, so a release command added beside them was never scanned and a renamed module kept its row while resolving to nothing, which reads as coverage. The set is the tree now, and one owner answers whether a path holds test source for both the workspace walk and the tooling walk."

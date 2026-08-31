@@ -1,6 +1,6 @@
 use crate::ir::{BinOp, Expr, UnOp};
 use crate::optimizer::passes::fusion_cse::cse::expr_key::{ExprId, ExprKey};
-use crate::optimizer::passes::fusion_cse::cse::{is_commutative, CseCtx, TypeKey};
+use crate::optimizer::passes::fusion_cse::cse::{CseCtx, TypeKey};
 use smallvec::SmallVec;
 
 impl CseCtx {
@@ -28,10 +28,13 @@ impl CseCtx {
             Expr::InvocationId { axis } => ExprKey::InvocationId(*axis),
             Expr::WorkgroupId { axis } => ExprKey::WorkgroupId(*axis),
             Expr::LocalId { axis } => ExprKey::LocalId(*axis),
+            Expr::LogicalIndex { axis } => ExprKey::LogicalIndex(*axis),
+            Expr::LogicalTileId { axis } => ExprKey::LogicalTileId(*axis),
+            Expr::LogicalWithinTileId { axis } => ExprKey::LogicalWithinTileId(*axis),
             Expr::BinOp { op, left, right } => {
                 let mut l = self.intern_expr(left);
                 let mut r = self.intern_expr(right);
-                if is_commutative(op) && r < l {
+                if op.commutes() && r < l {
                     std::mem::swap(&mut l, &mut r);
                 }
                 match op {

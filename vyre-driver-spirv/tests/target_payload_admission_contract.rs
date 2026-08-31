@@ -13,74 +13,19 @@
 //!
 //! Not covered here: native module loading, which needs a device.
 
-use std::collections::BTreeMap;
-
 use vyre_driver::materialize::{self, MaterializerTarget};
 use vyre_driver::BackendError;
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
-    ValueContract, ValueLifetime,
-};
 use vyre_megakernel::{
-    Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetEntryPoint,
-    TargetModuleBundle, TargetPayload, TargetPayloadFormat, TargetProfile,
+    Artifact, TargetEntryPoint, TargetModuleBundle, TargetPayload, TargetPayloadFormat,
+    TargetProfile,
 };
 
-fn program() -> Program {
-    Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [64, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
-    )
-}
-
-fn artifact_with_configuration(configuration: u8) -> Artifact {
-    let mut graph = ProgramGraph::new();
-    graph
-        .add_node(
-            "main",
-            program(),
-            Vec::new(),
-            vec![GraphOutput {
-                buffer: "out".into(),
-                name: "out".into(),
-                contract: ValueContract {
-                    dtype: DataType::U32,
-                    shape: vec![ShapeDim::Known(1)],
-                    access: BufferAccess::ReadWrite,
-                    lifetime: ValueLifetime::Output,
-                },
-                retained_successor_of: None,
-            }],
-        )
-        .expect("graph node must register");
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([configuration; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 0, 0, 1),
-        1_000_000,
-    )
-    .validate()
-    .expect("compile request must validate");
-    vyre_megakernel::compile(&request).expect("artifact must compile")
-}
+mod target_artifacts;
+use target_artifacts::{foreign_artifact, spirv};
 
 /// A real artifact and the real payload a target compiler produced for it.
 fn compiled() -> (Artifact, TargetPayload) {
-    let registration = vyre_driver::backend::registered_backends()
-        .expect("valid backend registry")
-        .iter()
-        .find(|registration| registration.id == vyre_driver_spirv::SPIRV_BACKEND_ID)
-        .expect("SPIR-V registration must be force-linked")
-        .clone();
-    let compiler = registration
-        .target_compiler()
-        .expect("SPIR-V target compiler must be registered");
-    let artifact = artifact_with_configuration(0);
-    let payload = compiler
-        .compile(&artifact)
-        .expect("artifact must compile to a target payload");
-    (artifact, payload)
+    spirv().compiled()
 }
 
 fn target<'a>(payload: &'a TargetPayload) -> MaterializerTarget<'a> {
@@ -137,16 +82,47 @@ fn admission_pairs_every_selected_group_with_its_program_and_grid() {
     );
     for (module, entry) in admitted.iter().zip(payload.entries()) {
         assert_eq!(module.image.entry_point, entry.name);
+        let launch = module
+            .config
+            .launch
+            .expect("admission must freeze the recorded launch");
         assert_eq!(
-            module.config.dispatch_grid,
-            Some(entry.grid_size),
+            launch.grid(),
+            entry.grid_size,
             "admission must carry the payload entry grid, not a default"
         );
-        assert_eq!(module.config.grid_override, Some(entry.grid_size));
+        assert_eq!(launch.workgroup(), entry.workgroup_size);
         assert!(
             !module.image.bytes.is_empty(),
             "admitted module must retain its target-native bytes"
         );
+    }
+}
+
+/// WHY: an admitted module is submitted as recorded. A tuner override on an
+/// admitted config would be a second launch authority, and whichever one a
+/// backend resolved to, the other is a shape nothing compiled against. Every
+/// admitted module of a multi-entry payload is checked, not the first.
+#[test]
+fn admission_states_the_frozen_launch_and_no_tuner_override() {
+    let (artifact, payload) = spirv().compiled_two_stage();
+    let admitted =
+        materialize::admit(&artifact, &payload, target(&payload)).expect("payload must admit");
+
+    assert!(admitted.len() > 1, "the fixture must admit several modules");
+    for module in &admitted {
+        let config = &module.config;
+        assert!(
+            config.launch.is_some(),
+            "every admitted module submits the recorded launch"
+        );
+        assert_eq!(config.workgroup_override, None);
+        assert_eq!(config.grid_override, None);
+        assert_eq!(config.dispatch_elements, None);
+        assert_eq!(config.dispatch_grid, None);
+        config
+            .validate_launch_authority("spirv-admission-test")
+            .expect("an admitted config must state exactly one launch authority");
     }
 }
 
@@ -155,7 +131,7 @@ fn admission_pairs_every_selected_group_with_its_program_and_grid() {
 #[test]
 fn admission_rejects_a_payload_sealed_for_another_artifact() {
     let (_, payload) = compiled();
-    let other = artifact_with_configuration(1);
+    let other = foreign_artifact();
     let error = materialize::admit(&other, &payload, target(&payload))
         .expect_err("foreign artifact must be rejected");
     expect_invalid_program(error, "not authenticated");
@@ -188,8 +164,8 @@ fn admission_reports_a_foreign_payload_format_as_unsupported() {
 #[test]
 fn admission_rejects_a_payload_built_for_another_profile() {
     let (artifact, payload) = compiled();
-    let foreign =
-        TargetProfile::new("foreign-profile", 1, [64, 1, 1], 64, 0, 32).expect("profile must build");
+    let foreign = TargetProfile::new("foreign-profile", 1, [64, 1, 1], 64, 0, 32)
+        .expect("profile must build");
     let mismatched = MaterializerTarget {
         profile: &foreign,
         ..target(&payload)
@@ -199,20 +175,45 @@ fn admission_rejects_a_payload_built_for_another_profile() {
     expect_invalid_program(error, "profile does not match");
 }
 
-/// WHY: this is the check two of four backends were missing. A module whose
-/// entry point is not `main` was executable on half the fleet.
+/// WHY: this is the check two of four backends were missing, and it used to
+/// demand the literal name `main`. That is one dialect's spelling: a language
+/// that reserves `main` cannot emit it, its writer states a renamed entry point,
+/// and such a payload was refused by a neutral rule no module in that dialect
+/// can satisfy. A module with no entry point at all is the state nothing can
+/// look up, and it is rejected whatever the dialect. A renamed entry point that
+/// the payload metadata also names is admitted, which is the pair
+/// `admission_rejects_entry_metadata_that_names_another_entry` holds apart.
+/// The payload metadata keeps its name. An empty entry name is refused when
+/// the payload seals, so emptying it here would test that refusal instead of
+/// this one and admission would never run.
 #[test]
-fn admission_rejects_a_module_whose_entry_point_is_not_main() {
+fn admission_rejects_a_module_that_states_no_entry_point() {
     let (artifact, payload) = compiled();
     let mut bundle = bundle_of(&payload);
-    bundle.modules[0].entry_point = "not_main".to_string();
-    let mut entries = payload.entries().to_vec();
-    entries[0].name = "not_main".to_string();
+    bundle.modules[0].entry_point = String::new();
+    let entries = payload.entries().to_vec();
     let perturbed = repack(&artifact, &payload, &bundle, entries);
 
     let error = materialize::admit(&artifact, &perturbed, target(&perturbed))
-        .expect_err("non-main entry point must be rejected");
-    expect_invalid_program(error, "entry point must be `main`");
+        .expect_err("a module with no entry point must be rejected");
+    expect_invalid_program(error, "states no entry point");
+}
+
+/// WHY: a dialect that reserves `main` cannot emit it, so its writer states a
+/// renamed entry point such as `main_` and the payload must still materialize.
+/// The neutral rule reads the name the payload states, so a translated name is
+/// admitted exactly when the metadata names the same one.
+#[test]
+fn admission_admits_a_renamed_entry_point_the_metadata_names() {
+    let (artifact, payload) = compiled();
+    let mut bundle = bundle_of(&payload);
+    bundle.modules[0].entry_point = "main_".to_string();
+    let mut entries = payload.entries().to_vec();
+    entries[0].name = "main_".to_string();
+    let perturbed = repack(&artifact, &payload, &bundle, entries);
+
+    materialize::admit(&artifact, &perturbed, target(&perturbed))
+        .expect("a renamed entry point the metadata names must be admitted");
 }
 
 /// WHY: entry metadata and the emitted module must name the same entry, or the
@@ -299,4 +300,189 @@ fn admission_attributes_bundle_corruption_to_the_acquiring_backend() {
         }
         other => panic!("expected KernelCompileFailed, got {other:?}"),
     }
+}
+
+/// WHY: closes the class "two parallel per-group lists in one payload are paired
+/// by position, and nothing states the orders agree". `admit` zipped the bundle's
+/// modules, the artifact's fusion records and the payload's entries. The bundle
+/// canonically sorts its modules by `(stage, group)`, the fusion records are in
+/// the artifact's own plan order, and the entries are in the order the target
+/// compiler emitted them, so all three pairings rested on three orders happening
+/// to agree. The one check that could have caught an entry paired with the wrong
+/// module compared entry names, and every entry a compiler emits is named `main`,
+/// so a reordered entry list admitted and each module ran with another module's
+/// resource bindings.
+///
+/// The fix is resolution rather than a refusal: order carries no meaning once each
+/// module names the record and entry it belongs to, so a reordered list must still
+/// pair correctly. Launch geometry is no longer the observable, because a
+/// submission reads it out of the artifact record; the resource bindings are, and
+/// they are still the entry's own.
+///
+/// Does not catch: an entry whose bindings are wrong for the group it is correctly
+/// paired with. Node identity proves which group an entry describes, not that the
+/// description is right; that is the target compiler's contract. It also leaves
+/// two of admission's resolution failures unproven, because a sealed payload
+/// cannot carry them: `TargetPayload::new` runs `validate_entries`, which already
+/// refuses a duplicate entry node and an entry node absent from the artifact.
+#[test]
+fn admission_pairs_an_entry_with_its_own_module_whatever_the_entry_order() {
+    let (artifact, payload) = spirv().compiled_two_stage();
+    let mut entries = payload.entries().to_vec();
+    assert_eq!(
+        entries.len(),
+        2,
+        "the two-stage fixture must offer exactly two entries to permute"
+    );
+    assert_ne!(
+        entries[0].resource_bindings, entries[1].resource_bindings,
+        "the fixture entries must differ, or a mispaired entry is unobservable"
+    );
+    let expected_bindings = entries
+        .iter()
+        .map(|entry| (entry.node, entry.resource_bindings.clone()))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let recorded_grid = artifact
+        .geometry()
+        .iter()
+        .map(|record| (record.node, record.grid))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    entries.reverse();
+    let reordered = repack(&artifact, &payload, &bundle_of(&payload), entries);
+
+    let admitted = materialize::admit(&artifact, &reordered, target(&reordered))
+        .expect("a reordered entry list still names which group each entry describes");
+
+    assert_eq!(admitted.len(), artifact.fusion().len());
+    for module in &admitted {
+        let node = *module
+            .image
+            .nodes
+            .first()
+            .expect("an admitted module carries its group's member nodes");
+        assert_eq!(
+            Some(&module.resource_bindings),
+            expected_bindings.get(&node),
+            "module for node {node:?} must carry the bindings of the entry that names that node"
+        );
+        let launch = module
+            .config
+            .launch
+            .expect("admission must freeze the recorded launch");
+        assert_eq!(
+            Some(launch.grid()),
+            recorded_grid.get(&node).copied(),
+            "module for node {node:?} must submit the grid the artifact recorded for that node"
+        );
+    }
+}
+
+/// WHY: submission order is the compiler's. `admit` used to walk the bundle's
+/// own module list, so the order a target compiler serialized its modules in
+/// decided which entry point ran first, and a bundle sorted any other way would
+/// run a consumer before its producer. Two independent rules now hold that
+/// order: admission walks the selected plan, whose recorded order the artifact
+/// refuses unless it follows the dependency DAG, and a bundle whose modules are
+/// not in canonical stage/group order never decodes.
+#[test]
+fn admission_submits_in_the_recorded_plan_order() {
+    let (artifact, payload) = spirv().compiled_two_stage();
+    let planned = artifact
+        .fusion()
+        .iter()
+        .map(|record| record.id)
+        .collect::<Vec<_>>();
+    assert!(
+        planned.len() > 1,
+        "the fixture must select several fusion groups"
+    );
+
+    let admitted =
+        materialize::admit(&artifact, &payload, target(&payload)).expect("payload must admit");
+    assert_eq!(
+        admitted
+            .iter()
+            .map(|module| module.image.group)
+            .collect::<Vec<_>>(),
+        planned,
+        "admission must hand back the modules in the recorded plan order"
+    );
+
+    let mut reversed = bundle_of(&payload);
+    reversed.modules.reverse();
+    let repacked = TargetPayload::new(
+        &artifact,
+        payload.format().clone(),
+        payload.profile().clone(),
+        payload.entries().to_vec(),
+        reversed.to_bytes().expect("bundle must encode"),
+    )
+    .expect("a payload seals over whatever bytes it carries");
+    let error = materialize::admit(&artifact, &repacked, target(&repacked))
+        .expect_err("a bundle out of canonical order must be refused");
+    match error {
+        BackendError::KernelCompileFailed {
+            compiler_message, ..
+        } => assert!(
+            compiler_message.contains("canonical stage/group order"),
+            "the refusal must name the order rule; got {compiler_message}"
+        ),
+        other => panic!("expected KernelCompileFailed, got {other:?}"),
+    }
+}
+
+/// WHY: an entry that restates launch geometry is a second authority, and the one
+/// a target compiler emits is the one a backend would have submitted. A payload
+/// stating any shape other than the recorded one never seals, so no consumer has
+/// to decide which of the two to believe.
+#[test]
+fn a_payload_entry_that_restates_the_recorded_geometry_never_seals() {
+    let (artifact, payload) = spirv().compiled_two_stage();
+    let recorded = artifact
+        .geometry()
+        .first()
+        .expect("the fixture artifact records its launches");
+    let bundle = bundle_of(&payload);
+
+    for (field, mutate) in [
+        (
+            "grid_size",
+            (|entry: &mut TargetEntryPoint| {
+                entry.grid_size = [entry.grid_size[0] + 1, 1, 1];
+            }) as fn(&mut TargetEntryPoint),
+        ),
+        ("workgroup_size", |entry: &mut TargetEntryPoint| {
+            entry.workgroup_size = [entry.workgroup_size[0] + 1, 1, 1];
+        }),
+        ("dynamic_shared_bytes", |entry: &mut TargetEntryPoint| {
+            entry.dynamic_shared_bytes += 256;
+        }),
+    ] {
+        let mut entries = payload.entries().to_vec();
+        mutate(&mut entries[0]);
+        let error = TargetPayload::new(
+            &artifact,
+            payload.format().clone(),
+            payload.profile().clone(),
+            entries,
+            bundle.to_bytes().expect("bundle must encode"),
+        )
+        .expect_err("Fix: an entry restating the recorded geometry must be refused at seal.");
+        let text = format!("{error:?}");
+        assert!(
+            text.contains(field),
+            "the refusal must name the restated field; got {text}"
+        );
+    }
+
+    // The unmutated entry list, which agrees with the record, still seals.
+    TargetPayload::new(
+        &artifact,
+        payload.format().clone(),
+        payload.profile().clone(),
+        payload.entries().to_vec(),
+        bundle.to_bytes().expect("bundle must encode"),
+    )
+    .expect("Fix: a payload agreeing with the record must seal.");
+    assert_eq!(recorded.node, artifact.geometry()[0].node);
 }

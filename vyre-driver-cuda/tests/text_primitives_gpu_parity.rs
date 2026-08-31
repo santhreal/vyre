@@ -2,66 +2,42 @@
 //! Covers line_index (newline-aware line counter) and utf8_validate
 //! (per-byte UTF-8 class).
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
-
-use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::ir::{BufferAccess, DataType, Program};
-use vyre_driver::DispatchConfig;
-use vyre_primitives::text::line_index::{line_index, line_index_u8, reference_line_index};
-use vyre_primitives::text::utf8_validate::{
-    reference_utf8_validate, utf8_validate, utf8_validate_dispatch_grid, utf8_validate_u8,
-    UTF8_CONT, UTF8_INVALID, UTF8_LEAD_3, UTF8_LEAD_4,
+mod harness;
+use harness::{
+    bytes_to_u32_per_lane, bytes_u32, find_output_buffer_index, is_required_input_buffer,
+    u32_bytes, with_live_backend,
 };
-
-fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {
-    source.iter().map(|&b| b as u32).collect()
-}
+use vyre::ir::{DataType, Program};
+use vyre_driver::DispatchConfig;
+use vyre_libs::text::{line_index, line_index_u8};
+use vyre_libs::text::{
+    utf8_validate, utf8_validate_u8, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_3, UTF8_LEAD_4,
+};
+use vyre_reference::composition_witness::{
+    line_index_witness as reference_line_index, utf8_validate_witness as reference_utf8_validate,
+};
 
 fn inputs_for_program(program: &Program, source: &[u8]) -> Vec<Vec<u8>> {
     program
         .buffers()
         .iter()
-        .filter_map(|buffer| {
-            let backend_allocated = buffer.is_output() || buffer.is_pipeline_live_out();
-            let needs_input = matches!(
-                buffer.access(),
-                BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
-            ) && !backend_allocated
-                && buffer.access() != BufferAccess::Workgroup;
-            if !needs_input {
-                return None;
-            }
+        .filter(|buffer| is_required_input_buffer(buffer))
+        .map(|buffer| {
             if buffer.name() == "source" {
                 match buffer.element() {
-                    DataType::U8 => Some(source.to_vec()),
-                    DataType::U32 => Some(u32_bytes(&bytes_to_u32_per_lane(source))),
+                    DataType::U8 => source.to_vec(),
+                    DataType::U32 => u32_bytes(&bytes_to_u32_per_lane(source)),
                     other => {
                         panic!("Fix: CUDA text source buffer must be U8 or U32, got {other:?}")
                     }
                 }
             } else {
-                Some(vec![0u8; buffer.count().max(1) as usize * 4])
+                vec![0u8; buffer.count().max(1) as usize * 4]
             }
         })
         .collect()
-}
-
-fn output_index(program: &Program, name: &str) -> usize {
-    program
-        .buffers()
-        .iter()
-        .filter(|buffer| {
-            buffer.is_output()
-                || buffer.is_pipeline_live_out()
-                || matches!(
-                    buffer.access(),
-                    BufferAccess::ReadWrite | BufferAccess::WriteOnly
-                )
-        })
-        .position(|buffer| buffer.name() == name)
-        .expect("Fix: CUDA text primitive output buffer must be declared")
 }
 
 fn run_line_index(source: &[u8]) -> Vec<u32> {
@@ -69,7 +45,7 @@ fn run_line_index(source: &[u8]) -> Vec<u32> {
     let program = line_index("source", "lines", n);
     let inputs = inputs_for_program(&program, source);
     let config = DispatchConfig::default();
-    let lines_index = output_index(&program, "lines");
+    let lines_index = find_output_buffer_index(&program, "lines");
     let outputs = with_live_backend("line index primitive", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -85,7 +61,7 @@ fn run_line_index_u8(source: &[u8]) -> Vec<u32> {
     let program = line_index_u8("source", "lines", n);
     let inputs = inputs_for_program(&program, source);
     let config = DispatchConfig::default();
-    let lines_index = output_index(&program, "lines");
+    let lines_index = find_output_buffer_index(&program, "lines");
     let outputs = with_live_backend("packed-u8 line index primitive", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -218,7 +194,7 @@ fn generated_line_index_source(case: u32, len: usize) -> Vec<u8> {
 fn cuda_line_index_u8_generated_matrix_matches_cpu() {
     let len = 513usize;
     let program = line_index_u8("source", "lines", len as u32);
-    let lines_index = output_index(&program, "lines");
+    let lines_index = find_output_buffer_index(&program, "lines");
     let config = DispatchConfig::default();
 
     with_live_backend("packed-u8 generated line-index matrix", |backend| {
@@ -246,7 +222,7 @@ fn run_utf8_validate(source: &[u8]) -> Vec<u32> {
     let program = utf8_validate("source", "classes", n);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(&bytes_to_u32_per_lane(source))];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(utf8_validate_dispatch_grid(n));
+    config.grid_override = Some(vyre_primitives::lane_grid(n, 256));
     let outputs = with_live_backend("UTF-8 validate primitive", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -262,8 +238,8 @@ fn run_utf8_validate_u8(source: &[u8]) -> Vec<u32> {
     let program = utf8_validate_u8("source", "classes", n);
     let inputs = inputs_for_program(&program, source);
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(utf8_validate_dispatch_grid(n));
-    let classes_index = output_index(&program, "classes");
+    config.grid_override = Some(vyre_primitives::lane_grid(n, 256));
+    let classes_index = find_output_buffer_index(&program, "classes");
     let outputs = with_live_backend("packed-u8 UTF-8 validate primitive", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -386,9 +362,9 @@ fn generated_utf8_source(case: u32, len: usize) -> Vec<u8> {
 fn cuda_utf8_validate_u8_generated_matrix_matches_cpu() {
     let len = 1025usize;
     let program = utf8_validate_u8("source", "classes", len as u32);
-    let classes_index = output_index(&program, "classes");
+    let classes_index = find_output_buffer_index(&program, "classes");
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(utf8_validate_dispatch_grid(len as u32));
+    config.grid_override = Some(vyre_primitives::lane_grid(len as u32, 256));
 
     with_live_backend("packed-u8 generated UTF-8 matrix", |backend| {
         let mut checked = 0usize;

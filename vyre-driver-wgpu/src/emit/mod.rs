@@ -57,7 +57,7 @@ pub struct WgpuProgram {
 ///
 /// The shader text is produced only after structural Naga IR construction and
 /// validation. Callers that need the module itself should use
-/// [`vyre_lower::lower_verified`] and [`vyre_emit_naga::emit`].
+/// [`vyre_lower::lower_physical`] and [`vyre_emit_naga::emit`].
 ///
 /// # Errors
 ///
@@ -99,7 +99,7 @@ pub(crate) fn lower_with_features(
 
 /// Heuristic for selecting the optimal workgroup size for a program.
 ///
-/// Innovation I.6: Adaptive workgroup sizing.
+/// Adaptive workgroup sizing.
 ///
 /// Takes the requested size from the program and the adapter capability
 /// reports, and returns a size that maximizes occupancy and throughput.
@@ -146,7 +146,7 @@ impl WgpuProgram {
     ) -> Result<Self, LoweringError> {
         let mut descriptor = descriptor_gate::validate_and_analyze(program)?;
         let workgroup_size = config
-            .workgroup_override
+            .launch_workgroup()
             .unwrap_or_else(|| optimal_workgroup_size(program, enabled_features));
         descriptor.dispatch.workgroup_size = workgroup_size;
 
@@ -191,10 +191,10 @@ impl WgpuProgram {
 pub(crate) fn emit_naga_module_for_descriptor(
     descriptor: &vyre_lower::KernelDescriptor,
 ) -> Result<naga::Module, LoweringError> {
-    if let Err(errors) = vyre_lower::verify::verify(descriptor) {
+    if let Err(errors) = vyre_lower::verify(descriptor) {
         return Err(LoweringError::invalid(format!(
             "KernelDescriptor verification failed after wgpu workgroup selection: {}. Fix: keep DispatchConfig.workgroup_override within descriptor limits.",
-            vyre_lower::verify::format_verify_errors(&errors)
+            vyre_lower::format_verify_errors(&errors)
         )));
     }
     vyre_emit_naga::emit(descriptor).map_err(|error| {
@@ -326,14 +326,14 @@ pub(crate) fn write_wgsl(module: &naga::Module) -> Result<String, LoweringError>
     let wgsl =
         naga::back::wgsl::write_string(module, &info, naga::back::wgsl::WriterFlags::empty())
             .map_err(LoweringError::writer)?;
-    // Emission size cap (Task #65): adapter shader-binary-size limits
+    // Emission size cap: adapter shader-binary-size limits
     // are finite. At 1000+ fused arms WGSL source can exceed the
     // ceiling. Fail-fast at write_wgsl with a clear diagnostic
     // naming the byte count, instead of opaque pipeline-creation
     // failure downstream. The 32 MiB cap below is the safe floor  -
     // most adapters allow 256 MiB but Metal-on-iOS is the strictest.
     // Production adapters report their limit via wgpu::Limits; if the
-    // FusionPlan partitioning harness is wired (Task #65 callers),
+    // FusionPlan partitioning harness is wired (callers),
     // it consults the adapter limit and partitions before reaching
     // here. This guard is the last-line failsafe.
     const MAX_WGSL_BYTES: usize = 32 * 1024 * 1024;
@@ -393,11 +393,13 @@ fn static_workgroups(
     [output_words.div_ceil(total_threads).max(1), 1, 1]
 }
 
+// Inline: covers `binding_assignments`, `emit_naga_module_for_descriptor`, `static_workgroups`,
+// which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
     use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-    use vyre_lower::emit_adversarial_corpus::{self, EmitAdversarialBackend};
+    use vyre_lower::emit_adversarial_corpus;
 
     #[test]
     fn wgpu_program_lowers_through_kernel_descriptor() {
@@ -465,11 +467,6 @@ mod tests {
 
     #[test]
     fn adversarial_success_corpus_passes_wgpu_descriptor_emit_path() {
-        assert!(
-            emit_adversarial_corpus::required_backends().contains(&EmitAdversarialBackend::Wgpu),
-            "Fix: shared emit adversarial corpus must register WGPU as a required consumer."
-        );
-
         for case in emit_adversarial_corpus::success_cases() {
             let module =
                 emit_naga_module_for_descriptor(&case.descriptor).unwrap_or_else(|error| {

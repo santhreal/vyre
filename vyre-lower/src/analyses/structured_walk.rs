@@ -1,10 +1,11 @@
 //! ONE owner for the structured control-flow walk over a body tree.
 //!
 //! Every analysis that reasons about branches, loops, blocks, or regions has
-//! to do the same three things before it can say anything interesting: iterate
-//! a body's ops, resolve the child bodies a structured op names, and assign
-//! each site a flattened op index. Written per analysis that is three chances
-//! to derive the child-body offsets differently, and the copies do drift.
+//! to do the same four things before it can say anything interesting: iterate
+//! a body's ops, resolve the child bodies a structured op names, assign each
+//! site a flattened op index, and index that body's ops by the result id each
+//! one publishes. Written per analysis that is four chances to derive the
+//! child-body offsets differently, and the copies do drift.
 //!
 //! This module owns the traversal. It owns nothing about what a site means:
 //! the judgment stays with the analysis, in the crate that has a reason to
@@ -14,7 +15,7 @@
 //! the per-kind operand layout, so a walk cannot invent its own idea of where
 //! a body index lives.
 
-use crate::analyses::child_body_operands;
+use crate::analyses::{child_body_operands, producer_map, AccessKind, ProducerMap};
 use crate::{KernelBody, KernelOp, KernelOpKind};
 
 /// Whether a walk enters the arms of a structured branch.
@@ -30,7 +31,7 @@ pub enum ArmDescent {
 
 /// Receives the sites a [`walk_structured`] pass reaches.
 ///
-/// Both hooks default to doing nothing, so an analysis implements only the
+/// Every hook defaults to doing nothing, so an analysis implements only the
 /// granularity it needs: whole-body for window scans, per-op for site
 /// classification.
 pub trait StructuredVisitor<'a> {
@@ -43,8 +44,21 @@ pub trait StructuredVisitor<'a> {
 
     /// Called for each op of `body` in order, before the walk descends into
     /// any child body that op names.
-    fn visit_op(&mut self, body: &'a KernelBody, op_index: usize, op: &'a KernelOp) {
-        let _ = (body, op_index, op);
+    ///
+    /// `producers` indexes `body`'s own ops by the result id each publishes.
+    /// The walk owns it because a child body is walked in the MIDDLE of its
+    /// parent's op stream: a visitor holding one map of its own would still be
+    /// holding a nested arm's when the parent's next op arrived. All three
+    /// analyses on this walk had their own answer to that, two by hand-rolling
+    /// the descent outright.
+    fn visit_op(
+        &mut self,
+        body: &'a KernelBody,
+        producers: &ProducerMap<'a>,
+        op_index: usize,
+        op: &'a KernelOp,
+    ) {
+        let _ = (body, producers, op_index, op);
     }
 }
 
@@ -59,20 +73,19 @@ where
     walk_body(root, arms, 0, visitor);
 }
 
-fn walk_body<'a, V>(
-    body: &'a KernelBody,
-    arms: ArmDescent,
-    op_index_offset: usize,
-    visitor: &mut V,
-) where
+fn walk_body<'a, V>(body: &'a KernelBody, arms: ArmDescent, op_index_offset: usize, visitor: &mut V)
+where
     V: StructuredVisitor<'a>,
 {
     visitor.enter_body(body, op_index_offset);
+    // Held on this frame, so descending into a child cannot displace it and
+    // returning from one cannot leave the parent reading the child's map.
+    let producers = producer_map(body);
     // Every child of this body shares one offset: the flattened index just
     // past the parent's own ops.
     let child_offset = op_index_offset + body.ops.len();
     for (local_index, op) in body.ops.iter().enumerate() {
-        visitor.visit_op(body, op_index_offset + local_index, op);
+        visitor.visit_op(body, &producers, op_index_offset + local_index, op);
         if skips_arms(arms, &op.kind) {
             continue;
         }
@@ -90,6 +103,89 @@ fn skips_arms(arms: ArmDescent, kind: &KernelOpKind) -> bool {
             kind,
             KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse
         )
+}
+
+/// One memory access the walk reached, resolved against its own body.
+///
+/// `'a` is the descriptor's lifetime; `'p` is the walk frame that holds the
+/// body's producer map.
+pub(crate) struct AccessRef<'p, 'a> {
+    /// Body that holds the access op.
+    pub(crate) body: &'a KernelBody,
+    /// Producer map of that body.
+    pub(crate) producers: &'p ProducerMap<'a>,
+    /// Flattened index of the access op.
+    pub(crate) op_index: usize,
+    /// Direction of the access.
+    pub(crate) kind: AccessKind,
+    /// Binding slot the access targets, operand 0.
+    pub(crate) binding_slot: u32,
+    /// Result id of the index expression, operand 1.
+    pub(crate) index_operand_id: u32,
+}
+
+/// Slot and index operand positions, identical on every buffer access kind.
+const SLOT_POS: usize = 0;
+const INDEX_POS: usize = 1;
+
+/// Call `judge` for every op of `root` whose kind is `load` or `store`.
+///
+/// WHY: bank-conflict and coalescing classification differ in which pair of op
+/// kinds they read (shared or global) and in how they classify an index, not in
+/// how they find the accesses. Each selected its pair inside its own visitor,
+/// which left the whole visitor plus the malformed-operand guard restated on
+/// both sides. An op carrying fewer than two operands is malformed and never
+/// reaches `judge`, so a caller reads the slot and the index unconditionally.
+pub(crate) fn walk_accesses<'a, F>(
+    root: &'a KernelBody,
+    load: &KernelOpKind,
+    store: &KernelOpKind,
+    judge: F,
+) where
+    F: FnMut(AccessRef<'_, 'a>),
+{
+    let mut selector = AccessSelector { load, store, judge };
+    walk_structured(root, ArmDescent::Enter, &mut selector);
+}
+
+struct AccessSelector<'k, F> {
+    load: &'k KernelOpKind,
+    store: &'k KernelOpKind,
+    judge: F,
+}
+
+impl<'a, F> StructuredVisitor<'a> for AccessSelector<'_, F>
+where
+    F: FnMut(AccessRef<'_, 'a>),
+{
+    fn visit_op(
+        &mut self,
+        body: &'a KernelBody,
+        producers: &ProducerMap<'a>,
+        op_index: usize,
+        op: &'a KernelOp,
+    ) {
+        let kind = if &op.kind == self.load {
+            AccessKind::Load
+        } else if &op.kind == self.store {
+            AccessKind::Store
+        } else {
+            return;
+        };
+        // Bounds check the operand list so a malformed descriptor does not
+        // panic the analysis.
+        if op.operands.len() <= INDEX_POS {
+            return;
+        }
+        (self.judge)(AccessRef {
+            body,
+            producers,
+            op_index,
+            kind,
+            binding_slot: op.operands[SLOT_POS],
+            index_operand_id: op.operands[INDEX_POS],
+        });
+    }
 }
 
 /// Shape of a structured branch op.
@@ -142,10 +238,11 @@ pub fn branch_at<'a>(body: &'a KernelBody, op: &KernelOp) -> Option<StructuredBr
     })
 }
 
+// Inline: covers the crate-private `visit_op`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::descriptor_builder::{body, effect, lit};
+    use crate::descriptor_builder::{body, for_loop, if_then, if_then_else, lit};
     use crate::LiteralValue;
 
     #[derive(Default)]
@@ -159,7 +256,13 @@ mod tests {
             self.bodies.push(op_index_offset);
         }
 
-        fn visit_op(&mut self, body: &'a KernelBody, op_index: usize, op: &'a KernelOp) {
+        fn visit_op(
+            &mut self,
+            body: &'a KernelBody,
+            _producers: &ProducerMap<'a>,
+            op_index: usize,
+            op: &'a KernelOp,
+        ) {
             if branch_at(body, op).is_some() {
                 self.branches.push(op_index);
             }
@@ -173,16 +276,56 @@ mod tests {
         let arm = body()
             .literal(LiteralValue::Bool(true))
             .op(lit(0, 10))
-            .op(effect(KernelOpKind::StructuredIfThen, [10, 0]))
+            .op(if_then(10, 0))
             .child(inner);
         body()
             .literal(LiteralValue::Bool(true))
             .op(lit(0, 0))
-            .op(effect(KernelOpKind::StructuredIfThen, [0, 0]))
-            .op(effect(KernelOpKind::StructuredIfThen, [0, 1]))
+            .op(if_then(0, 0))
+            .op(if_then(0, 1))
             .child(arm)
             .child(body())
             .build()
+    }
+
+    /// A child body is walked in the middle of its parent's op stream, so the
+    /// map an op is judged against has to be its own body's. This fixture is
+    /// exactly that interleaving: outer op 2 follows the arm, and its map must
+    /// be the outer body's again rather than the arm's or the arm's own nest.
+    #[test]
+    fn each_op_is_visited_with_its_own_body_producer_map() {
+        #[derive(Default)]
+        struct Seen {
+            per_op: Vec<(usize, Vec<u32>)>,
+        }
+        impl<'a> StructuredVisitor<'a> for Seen {
+            fn visit_op(
+                &mut self,
+                _body: &'a KernelBody,
+                producers: &ProducerMap<'a>,
+                op_index: usize,
+                _op: &'a KernelOp,
+            ) {
+                let mut ids: Vec<u32> = producers.keys().copied().collect();
+                ids.sort_unstable();
+                self.per_op.push((op_index, ids));
+            }
+        }
+
+        let mut seen = Seen::default();
+        walk_structured(&nested_then_sibling(), ArmDescent::Enter, &mut seen);
+        assert_eq!(
+            seen.per_op,
+            vec![
+                (0, vec![0]),  // outer body
+                (1, vec![0]),  // outer body's first branch
+                (3, vec![10]), // that arm
+                (4, vec![10]), // the arm's own branch
+                (5, vec![20]), // the nested arm
+                (2, vec![0]),  // outer body resumes on its own map
+            ],
+            "Fix: every op must be visited with the producer map of the body that holds it, or a site after a nested arm is classified against the arm's producers."
+        );
     }
 
     #[test]
@@ -207,18 +350,13 @@ mod tests {
         let loop_body = body()
             .literal(LiteralValue::Bool(true))
             .op(lit(0, 30))
-            .op(effect(KernelOpKind::StructuredIfThen, [30, 0]))
+            .op(if_then(30, 0))
             .child(body());
         let root = body()
             .literals([LiteralValue::U32(0), LiteralValue::U32(4)])
             .op(lit(0, 0))
             .op(lit(1, 1))
-            .op(effect(
-                KernelOpKind::StructuredForLoop {
-                    loop_var: "i".into(),
-                },
-                [0, 1, 0],
-            ))
+            .op(for_loop("i", 0, 1, 0))
             .child(loop_body)
             .build();
         let mut trace = Trace::default();
@@ -231,7 +369,7 @@ mod tests {
         let root = body()
             .literal(LiteralValue::Bool(true))
             .op(lit(0, 0))
-            .op(effect(KernelOpKind::StructuredIfThenElse, [0, 0, 1]))
+            .op(if_then_else(0, 0, 1))
             .child(body().literal(LiteralValue::U32(1)).op(lit(0, 10)))
             .child(body().literal(LiteralValue::U32(2)).op(lit(0, 20)))
             .build();
@@ -250,7 +388,7 @@ mod tests {
         let root = body()
             .literal(LiteralValue::Bool(true))
             .op(lit(0, 0))
-            .op(effect(KernelOpKind::StructuredIfThenElse, [0, 0, 1]))
+            .op(if_then_else(0, 0, 1))
             .child(body().literal(LiteralValue::U32(1)).op(lit(0, 10)))
             .child(body())
             .build();
@@ -267,7 +405,7 @@ mod tests {
         let root = body()
             .literal(LiteralValue::Bool(true))
             .op(lit(0, 0))
-            .op(effect(KernelOpKind::StructuredIfThen, [0, 0]))
+            .op(if_then(0, 0))
             .child(body())
             .child(body().literal(LiteralValue::U32(1)).op(lit(0, 10)))
             .build();

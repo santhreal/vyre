@@ -1,39 +1,26 @@
 //! Generated live CUDA/reference differential matrix for data-dependent control semantics.
 
-mod common;
-#[path = "common/generated_control_values.rs"]
-mod generated_control_values;
+#![cfg(feature = "device-tests")]
 
-use common::{
-    assert_f32_output_lanes, assert_u32_output_lanes, bool_bytes, cuda_reference_outputs,
-    f32_bytes, generated_mixed_bool_values as generated_bool_values, i32_bytes, live_backend,
-    u32_bytes, GENERATED_LANE_COUNT as LANE_COUNT, GENERATED_WORKGROUP_SIZE_X as WORKGROUP_SIZE_X,
-};
+#[path = "harness/generated_control_values.rs"]
+mod generated_control_values;
+mod harness;
+
 use generated_control_values::{
     generated_f32_values, generated_i32_values, generated_u32_values, MAX_F32_ULP,
 };
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use harness::{
+    assert_f32_matrix_sweep, assert_u32_matrix_sweep, bool_bytes, f32_bytes,
+    generated_lane_program, generated_mixed_bool_values as generated_bool_values,
+    guarded_generated_store, i32_bytes, live_backend, u32_bytes, GeneratedMatrixCase,
+    GENERATED_LANE_COUNT as LANE_COUNT,
+};
+use vyre_foundation::ir::{DataType, Expr, Node, Program};
 
+/// A select case: `out[idx] = build(flag[idx], lhs[idx], rhs[idx])`. The operand
+/// and flag types come from the sweep, so one table shape covers every dtype.
 #[derive(Clone, Copy)]
-struct U32SelectCase {
-    name: &'static str,
-    build: fn(Expr, Expr, Expr) -> Expr,
-}
-
-#[derive(Clone, Copy)]
-struct I32SelectCase {
-    name: &'static str,
-    build: fn(Expr, Expr, Expr) -> Expr,
-}
-
-#[derive(Clone, Copy)]
-struct F32SelectCase {
-    name: &'static str,
-    build: fn(Expr, Expr, Expr) -> Expr,
-}
-
-#[derive(Clone, Copy)]
-struct BoolSelectCase {
+struct SelectCase {
     name: &'static str,
     build: fn(Expr, Expr, Expr) -> Expr,
 }
@@ -119,65 +106,65 @@ fn bool_select_nested(flag: Expr, lhs: Expr, rhs: Expr) -> Expr {
     Expr::select(flag, then_value, else_value)
 }
 
-const U32_SELECT_CASES: &[U32SelectCase] = &[
-    U32SelectCase {
+const U32_SELECT_CASES: &[SelectCase] = &[
+    SelectCase {
         name: "u32_select_eq_flag",
         build: u32_select_eq_flag,
     },
-    U32SelectCase {
+    SelectCase {
         name: "u32_select_lt_min",
         build: u32_select_lt_min,
     },
-    U32SelectCase {
+    SelectCase {
         name: "u32_select_bit_mixed",
         build: u32_select_bit_mixed,
     },
-    U32SelectCase {
+    SelectCase {
         name: "u32_select_nested",
         build: u32_select_nested,
     },
 ];
 
-const I32_SELECT_CASES: &[I32SelectCase] = &[
-    I32SelectCase {
+const I32_SELECT_CASES: &[SelectCase] = &[
+    SelectCase {
         name: "i32_select_lt_min",
         build: i32_select_lt_min,
     },
-    I32SelectCase {
+    SelectCase {
         name: "i32_select_ge_delta",
         build: i32_select_ge_delta,
     },
-    I32SelectCase {
+    SelectCase {
         name: "i32_select_flag_sign",
         build: i32_select_flag_sign,
     },
 ];
 
-const F32_SELECT_CASES: &[F32SelectCase] = &[
-    F32SelectCase {
+const F32_SELECT_CASES: &[SelectCase] = &[
+    SelectCase {
         name: "f32_select_nan",
         build: f32_select_nan,
     },
-    F32SelectCase {
+    SelectCase {
         name: "f32_select_finite",
         build: f32_select_finite,
     },
-    F32SelectCase {
+    SelectCase {
         name: "f32_select_ordered",
         build: f32_select_ordered,
     },
 ];
 
-const BOOL_SELECT_CASES: &[BoolSelectCase] = &[
-    BoolSelectCase {
+const BOOL_SELECT_CASES: &[SelectCase] = &[
+    SelectCase {
         name: "bool_select_flag",
         build: bool_select_flag,
     },
-    BoolSelectCase {
+    SelectCase {
         name: "bool_select_eq",
         build: bool_select_eq,
     },
-    BoolSelectCase {
+    SelectCase {
         name: "bool_select_nested",
         build: bool_select_nested,
     },
@@ -189,30 +176,16 @@ fn generated_u32_select_matrix_matches_reference_on_live_cuda() {
     let flag = generated_u32_values(0x1020_3040);
     let lhs = generated_u32_values(0xa5a5_5a5a);
     let rhs = generated_u32_values(0x5a5a_a5a5);
-    let mut checked_lanes = 0usize;
 
-    for case in U32_SELECT_CASES {
-        let program = u32_select_program(case);
-        let inputs = vec![u32_bytes(&flag), u32_bytes(&lhs), u32_bytes(&rhs)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    assert_eq!(
-        checked_lanes,
-        U32_SELECT_CASES.len() * LANE_COUNT * 2,
-        "Fix: generated CUDA u32 select matrix must keep every adversarial lane active across direct and compiled paths."
+    assert_u32_matrix_sweep(
+        &backend,
+        "u32 select",
+        "every adversarial lane active",
+        U32_SELECT_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: select_program(case, DataType::U32, DataType::U32),
+            inputs: vec![u32_bytes(&flag), u32_bytes(&lhs), u32_bytes(&rhs)],
+        }),
     );
 }
 
@@ -222,30 +195,16 @@ fn generated_i32_select_matrix_matches_reference_on_live_cuda() {
     let flag = generated_i32_values(0x1020_3040);
     let lhs = generated_i32_values(0x1357_9bdf);
     let rhs = generated_i32_values(0xfdb9_7531);
-    let mut checked_lanes = 0usize;
 
-    for case in I32_SELECT_CASES {
-        let program = i32_select_program(case);
-        let inputs = vec![i32_bytes(&flag), i32_bytes(&lhs), i32_bytes(&rhs)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    assert_eq!(
-        checked_lanes,
-        I32_SELECT_CASES.len() * LANE_COUNT * 2,
-        "Fix: generated CUDA i32 select matrix must keep every adversarial lane active across direct and compiled paths."
+    assert_u32_matrix_sweep(
+        &backend,
+        "i32 select",
+        "every adversarial lane active",
+        I32_SELECT_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: select_program(case, DataType::I32, DataType::I32),
+            inputs: vec![i32_bytes(&flag), i32_bytes(&lhs), i32_bytes(&rhs)],
+        }),
     );
 }
 
@@ -255,32 +214,17 @@ fn generated_f32_select_matrix_matches_reference_on_live_cuda() {
     let flag = generated_u32_values(0x3333_cccc);
     let lhs = generated_f32_values(0x1234_abcd);
     let rhs = generated_f32_values(0xdcba_4321);
-    let mut checked_lanes = 0usize;
 
-    for case in F32_SELECT_CASES {
-        let program = f32_select_program(case);
-        let inputs = vec![u32_bytes(&flag), f32_bytes(&lhs), f32_bytes(&rhs)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_f32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            MAX_F32_ULP,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_f32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            MAX_F32_ULP,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    assert_eq!(
-        checked_lanes,
-        F32_SELECT_CASES.len() * LANE_COUNT * 2,
-        "Fix: generated CUDA f32 select matrix must keep every adversarial lane active across direct and compiled paths."
+    assert_f32_matrix_sweep(
+        &backend,
+        "f32 select",
+        "every adversarial lane active",
+        MAX_F32_ULP,
+        F32_SELECT_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: select_program(case, DataType::U32, DataType::F32),
+            inputs: vec![u32_bytes(&flag), f32_bytes(&lhs), f32_bytes(&rhs)],
+        }),
     );
 }
 
@@ -290,30 +234,16 @@ fn generated_bool_select_matrix_matches_reference_on_live_cuda() {
     let flag = generated_bool_values(0x3333_cccc);
     let lhs = generated_bool_values(0x1234_abcd);
     let rhs = generated_bool_values(0xdcba_4321);
-    let mut checked_lanes = 0usize;
 
-    for case in BOOL_SELECT_CASES {
-        let program = bool_select_program(case);
-        let inputs = vec![bool_bytes(&flag), bool_bytes(&lhs), bool_bytes(&rhs)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    assert_eq!(
-        checked_lanes,
-        BOOL_SELECT_CASES.len() * LANE_COUNT * 2,
-        "Fix: generated CUDA bool select matrix must keep predicate select and bool output storage active across direct and compiled paths."
+    assert_u32_matrix_sweep(
+        &backend,
+        "bool select",
+        "predicate select and bool output storage active",
+        BOOL_SELECT_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: select_program(case, DataType::Bool, DataType::Bool),
+            inputs: vec![bool_bytes(&flag), bool_bytes(&lhs), bool_bytes(&rhs)],
+        }),
     );
 }
 
@@ -323,114 +253,51 @@ fn generated_data_dependent_if_then_overwrite_matches_reference_on_live_cuda() {
     let flag = generated_u32_values(0xface_cafe);
     let lhs = generated_u32_values(0x0123_4567);
     let rhs = generated_u32_values(0x89ab_cdef);
-    let program = u32_if_then_overwrite_program();
-    let inputs = vec![u32_bytes(&flag), u32_bytes(&lhs), u32_bytes(&rhs)];
-    let outputs = cuda_reference_outputs(&backend, &program, &inputs, "u32_if_then_overwrite");
-    let checked_lanes = assert_u32_output_lanes(
-        "u32_if_then_overwrite",
-        LANE_COUNT,
-        &outputs.direct_cuda,
-        &outputs.reference,
-    ) + assert_u32_output_lanes(
-        "u32_if_then_overwrite",
-        LANE_COUNT,
-        &outputs.compiled_cuda,
-        &outputs.reference,
-    );
 
-    assert_eq!(
-        checked_lanes,
-        LANE_COUNT * 2,
-        "Fix: generated CUDA if_then matrix must keep every adversarial lane active across direct and compiled paths."
+    assert_u32_matrix_sweep(
+        &backend,
+        "if_then",
+        "every adversarial lane active",
+        [GeneratedMatrixCase {
+            name: "u32_if_then_overwrite",
+            program: u32_if_then_overwrite_program(),
+            inputs: vec![u32_bytes(&flag), u32_bytes(&lhs), u32_bytes(&rhs)],
+        }]
+        .into_iter(),
     );
 }
 
-fn u32_select_program(case: &U32SelectCase) -> Program {
+/// `out[idx] = build(flag[idx], lhs[idx], rhs[idx])`, with the output taking the
+/// operand type: a select cannot change the type of the value it chooses.
+fn select_program(case: &SelectCase, flag_type: DataType, operand_type: DataType) -> Program {
     let idx = Expr::var("idx");
     let value = (case.build)(
         Expr::load("flag", idx.clone()),
         Expr::load("lhs", idx.clone()),
-        Expr::load("rhs", idx.clone()),
+        Expr::load("rhs", idx),
     );
-    Program::wrapped(
-        vec![
-            BufferDecl::read("flag", 0, DataType::U32).with_count(LANE_COUNT as u32),
-            BufferDecl::read("lhs", 1, DataType::U32).with_count(LANE_COUNT as u32),
-            BufferDecl::read("rhs", 2, DataType::U32).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 3, DataType::U32).with_count(LANE_COUNT as u32),
+    generated_lane_program(
+        &[
+            ("flag", flag_type),
+            ("lhs", operand_type.clone()),
+            ("rhs", operand_type.clone()),
         ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        guarded_store(value),
+        operand_type,
+        guarded_generated_store(value),
     )
 }
 
-fn i32_select_program(case: &I32SelectCase) -> Program {
-    let idx = Expr::var("idx");
-    let value = (case.build)(
-        Expr::load("flag", idx.clone()),
-        Expr::load("lhs", idx.clone()),
-        Expr::load("rhs", idx.clone()),
-    );
-    Program::wrapped(
-        vec![
-            BufferDecl::read("flag", 0, DataType::I32).with_count(LANE_COUNT as u32),
-            BufferDecl::read("lhs", 1, DataType::I32).with_count(LANE_COUNT as u32),
-            BufferDecl::read("rhs", 2, DataType::I32).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 3, DataType::I32).with_count(LANE_COUNT as u32),
-        ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        guarded_store(value),
-    )
-}
-
-fn f32_select_program(case: &F32SelectCase) -> Program {
-    let idx = Expr::var("idx");
-    let value = (case.build)(
-        Expr::load("flag", idx.clone()),
-        Expr::load("lhs", idx.clone()),
-        Expr::load("rhs", idx.clone()),
-    );
-    Program::wrapped(
-        vec![
-            BufferDecl::read("flag", 0, DataType::U32).with_count(LANE_COUNT as u32),
-            BufferDecl::read("lhs", 1, DataType::F32).with_count(LANE_COUNT as u32),
-            BufferDecl::read("rhs", 2, DataType::F32).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 3, DataType::F32).with_count(LANE_COUNT as u32),
-        ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        guarded_store(value),
-    )
-}
-
-fn bool_select_program(case: &BoolSelectCase) -> Program {
-    let idx = Expr::var("idx");
-    let value = (case.build)(
-        Expr::load("flag", idx.clone()),
-        Expr::load("lhs", idx.clone()),
-        Expr::load("rhs", idx.clone()),
-    );
-    Program::wrapped(
-        vec![
-            BufferDecl::read("flag", 0, DataType::Bool).with_count(LANE_COUNT as u32),
-            BufferDecl::read("lhs", 1, DataType::Bool).with_count(LANE_COUNT as u32),
-            BufferDecl::read("rhs", 2, DataType::Bool).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 3, DataType::Bool).with_count(LANE_COUNT as u32),
-        ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        guarded_store(value),
-    )
-}
-
+/// `out[idx] = rhs[idx]`, then overwritten with `lhs[idx]` on odd-flag lanes.
+/// The nested store is the contract: a lowering that hoists or reorders the
+/// inner `if_then` leaves the first value behind.
 fn u32_if_then_overwrite_program() -> Program {
-    let idx = Expr::var("idx");
-    Program::wrapped(
-        vec![
-            BufferDecl::read("flag", 0, DataType::U32).with_count(LANE_COUNT as u32),
-            BufferDecl::read("lhs", 1, DataType::U32).with_count(LANE_COUNT as u32),
-            BufferDecl::read("rhs", 2, DataType::U32).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 3, DataType::U32).with_count(LANE_COUNT as u32),
+    generated_lane_program(
+        &[
+            ("flag", DataType::U32),
+            ("lhs", DataType::U32),
+            ("rhs", DataType::U32),
         ],
-        [WORKGROUP_SIZE_X, 1, 1],
+        DataType::U32,
         vec![
             Node::let_bind("idx", Expr::gid_x()),
             Node::if_then(
@@ -452,14 +319,4 @@ fn u32_if_then_overwrite_program() -> Program {
             ),
         ],
     )
-}
-
-fn guarded_store(value: Expr) -> Vec<Node> {
-    vec![
-        Node::let_bind("idx", Expr::gid_x()),
-        Node::if_then(
-            Expr::lt(Expr::var("idx"), Expr::u32(LANE_COUNT as u32)),
-            vec![Node::store("out", Expr::var("idx"), value)],
-        ),
-    ]
 }

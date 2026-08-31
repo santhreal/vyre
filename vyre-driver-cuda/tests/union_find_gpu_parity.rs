@@ -4,14 +4,16 @@
 //! intermediate parent links but must agree on which nodes share a
 //! root.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
-use vyre_primitives::graph::union_find::union_find_dispatch_grid;
-use vyre_self_substrate::union_find_emit::{
-    canonicalize_parent_to_roots, reference_union_find_alias, union_find_alias_via,
+use harness::with_cuda_optimizer_dispatcher;
+use vyre_libs::graph::dispatch::union_find_emit::union_find_alias_via;
+use vyre_libs::graph::union_find::UNION_FIND_WORKGROUP_SIZE;
+use vyre_reference::composition_witness::{
+    canonicalize_union_find_witness as canonicalize_parent_to_roots,
+    union_find_alias_witness as reference_union_find_alias,
 };
 
 fn assert_same_partition(a: &[u32], b: &[u32]) {
@@ -38,8 +40,8 @@ fn assert_union_find_matches_partition(
     edge_b: &[u32],
 ) -> (Vec<u32>, Vec<u32>) {
     let reference = reference_union_find_alias(parent_init, edge_a, edge_b);
-    let gpu = with_cuda_optimizer_dispatcher(label, |dispatcher| {
-        union_find_alias_via(dispatcher, parent_init, edge_a, edge_b).expect("dispatch")
+    let gpu = with_cuda_optimizer_dispatcher(label, |dispatcher, policy| {
+        union_find_alias_via(dispatcher, policy, parent_init, edge_a, edge_b).expect("dispatch")
     });
     assert_same_partition(&reference, &gpu);
     (reference, gpu)
@@ -107,6 +109,9 @@ fn cuda_union_find_multi_block_chain_connects_all_nodes() {
         assert_union_find_matches_partition("multi-block chain", &parent_init, &edge_a, &edge_b);
     let roots = canonicalize_parent_to_roots(&gpu);
 
-    assert_eq!(union_find_dispatch_grid(edge_a.len() as u32), [5, 1, 1]);
+    assert!(
+        edge_a.len() as u32 > UNION_FIND_WORKGROUP_SIZE[0],
+        "Fix: the fixture must cross a workgroup boundary or it proves nothing about multi-block launches"
+    );
     assert!(roots.iter().all(|&root| root == 0));
 }

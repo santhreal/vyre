@@ -1,122 +1,194 @@
-# Contributing to Vyre
+# Contributing
 
-Vyre is a GPU-first execution substrate. Contributions are reviewed as changes to a compiler and runtime contract, not as isolated patches.
+Vyre is a Rust workspace of 34 crates. It builds a program out of registered
+operations as IR, compiles the whole graph into one immutable artifact, emits
+that artifact as a target payload, and runs it on a device. A change here is a
+change to a compiler contract and is reviewed as one.
 
-## Required Local Context
+## Build and test
 
-Read these files before changing architecture, public APIs, op definitions, or backend behavior:
+Build every crate and every target:
 
-- `docs/ARCHITECTURE.md`
-- `docs/ARCHITECTURE.md`
-- `docs/THESIS.md`
-- `.github/CI_REQUIRED.md`
-- `docs/LEGO_BLOCK_PHILOSOPHY.md`
-- `docs/gpu_parity.md`
+```bash
+./cargo_full check --workspace --all-targets
+```
 
-If a change conflicts with those documents, fix the architecture or update the contract in the same pull request. Do not add a workaround that leaves the conflict unresolved.
+Run the workspace suite:
 
-## GPU Requirement
+```bash
+./cargo_full test --workspace
+```
 
-Vyre assumes a real GPU is present on Santh development machines and self-hosted CI.
+`./cargo_full` is the wrapper at the workspace root. It declares the build
+environment once and then execs cargo, so no command, script or document sets a
+build-affecting variable or flag of its own. Pass it exactly what you would pass
+cargo. Every command in this repository's documentation is written that way, and
+a document that spells a bare `cargo` invocation fails the hygiene gate.
 
-Before claiming a backend test failure is environmental, run:
+On Windows, `cargo_full.cmd` provides the same contract and selects an
+executable Cargo binary for nested gate commands.
+
+Per-crate test instructions live under `docs/testing/`, one page per crate.
+
+### A stale build artifact
+
+Every checkout on a machine shares one build directory. Cargo reuses a compiled
+artifact when package name, version and features match, so a crate compiled from
+one source state is served to a build whose source differs. The resulting error
+names the wrong thing: a trait method the source in front of you already
+declares, or a macro argument its source already accepts. Proc-macro crates are
+the worst case, because a stale dylib reports errors naming the trait rather
+than the macro that produced it.
+
+The build directory stays shared. Splitting it per checkout multiplies a
+terabyte-scale `debug/deps` by the checkout count. A checkout's lifetime is the
+bound instead: keep one only while its branch is unmerged, and delete it when
+that branch merges. `repo-hygiene` reports a checkout still on a branch that has
+merged into `integration` or `main`.
+
+When an error names a symbol the source in front of you already defines,
+rebuild that one crate and trust the next error:
+
+```bash
+./cargo_full clean -p <crate>
+```
+
+## Gates
+
+Every check in the workspace is a gate in one registry. There are no other
+categories. Run the whole registry:
+
+```bash
+./cargo_full run -p xtask --bin xtask -- gates
+```
+
+Run one gate by name, or a related set with `--subset`:
+
+```bash
+./cargo_full run -p xtask --bin xtask -- docs-check
+./cargo_full run -p xtask --bin xtask -- gates --subset docs
+```
+
+`./cargo_full run -p xtask --bin xtask -- --help` prints every gate and every
+subset with what it judges. The subsets group gates by what they answer for:
+`prepublish`, `composition`, `structure`, `docs`, `ir`, `manifest-rules`,
+`source-rules`, `hot-path-rules`, `lint-rules`, `contract-rules`, `repo-rules`.
+
+A gate reports findings. `xtask/gate-baselines.toml` pins the count each gate is
+allowed: more findings than the pin fails, fewer is reported so the pin can be
+lowered. The pin only moves down, and `gates --write-baseline` refuses to record
+a count above the pin already written. A gate that owns a generated artifact
+checks it by default and rewrites it only when you pass `--write`.
+
+`xtask/ci-registry.toml` declares the wiring: which subsets hold each gate,
+which workflows run it, every check CI runs that is not a gate, and every
+workflow path the tree carries or once carried. Regenerate it with
+`./cargo_full run -p xtask --bin xtask -- ci-registry --write` after adding a
+gate, a subset or a workflow step. The `ci-registry` gate compares the file
+against the registry, the subsets and the steps in both directions, and
+`ci-steps` resolves every package, test, bench, example, binary and feature a
+step names against the workspace manifests.
+
+A `[[workflow]]` row states what happened to the path it names. `live` runs.
+`paused` carries the reason and the condition that ends the pause. `superseded`
+names the workflow that runs its checks and the gate that carries them.
+`unprotected` names the verification class nothing performs. A row outlives its
+file: deleting a workflow leaves the row naming a path the checkout does not
+carry, and the gate fails until the row records where the checks went.
+
+Run the smallest gate that owns the contract you changed, then the subset that
+contains it.
+
+## Backend work needs a device
+
+Backend suites run against a real GPU on the designated execution host
+(`axiomexec`). Before calling a backend failure environmental, prove the
+device is visible and the capability contract holds:
 
 ```bash
 nvidia-smi
-cargo test -p vyre-driver-wgpu --test capability_contract -- --nocapture
+./cargo_full test -p vyre-driver-wgpu --test capability_contract -- --nocapture
 ```
 
-Tests must fail loudly when a GPU probe is broken. Do not add silent CPU fallbacks or `skipped: no GPU` behavior for GPU-required lanes.
+Hardware execution is capability-based and never tied to specific hardware
+identities. A GPU-required lane fails loudly when the probe is broken. Do not
+add a host fallback, a skip guard, or a `no GPU` pass. `vyre-lints` rejects
+all three; a silent fallback is the failure class the workspace exists to prevent.
 
-## Build Commands
+## What a change must satisfy
 
-Use the workspace gate wrapper when available:
+Placement follows two rules, stated in full in
+[the placement rule](docs/lego-block-rule.md):
 
-```bash
-cargo_full(workspace)
+- Composed, not rewritten. A function that returns a `Program` built from IR
+  that already exists belongs in `vyre-libs`, whoever calls it.
+- Intrinsic means uncomposable. An operation belongs in `vyre-primitives` only
+  when it needs its own emitter arm in every backend and its own arm in the
+  reference interpreter.
+
+A new operation carries a registry entry, reference behaviour, backend
+behaviour where the backend supports it, tests, and catalog coverage.
+
+Before a change is proposed:
+
+- The contract it adds, strengthens or repairs is stated in one sentence.
+- A test fails on the previous behaviour and passes on the new one.
+- GPU-owned code was proved on a device.
+- No stub, `todo!`, placeholder branch, or silent default return is introduced.
+- No allocation, copy, blocking wait or unbounded growth is added to a dispatch
+  path.
+- A public API break carries its migration.
+- The document that owns a changed claim changed with it, and the gate in
+  `--subset docs` is green.
+- One changelog fragment records the change.
+
+## Changelog fragments
+
+An observable change adds one file under `release/changes/unreleased/`, named by
+its id, with exactly two keys:
+
+```toml
+category = "Fixed"
+text = "One sentence naming what changed and what it changed from."
 ```
 
-If the wrapper is unavailable in your shell, use bounded Cargo parallelism:
+The categories are `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed` and
+`Security`. Any other value, and any third key, is a finding. `CHANGELOG.md` is
+generated from the fragments and is never edited by hand.
 
-```bash
-CARGO_BUILD_JOBS=1 cargo test --workspace
-```
+## Commits
 
-For targeted work, run the smallest meaningful gate first, then the broader gate that owns the contract you touched.
+Split by contract, not by file. One commit changes one contract and carries
+everything that contract needs: the source, its tests, the document that owns
+the claim, and the changelog fragment. A reviewer reads the commit and sees the
+whole change; a bisect lands on a tree that builds.
 
-### SCCache Support
+Keep a rename, a move and a reformat in their own commits, away from a
+behavioural change. A diff that mixes them hides the behaviour inside the noise.
 
-Vyre uses `sccache` to speed up compilation. It is enabled by default in `.cargo/config.toml` (via `rustc-wrapper = "sccache"`).
+Write the message as what the change makes true, in the present tense, and name
+the defect it closes rather than the files it touched.
 
-To install `sccache`:
-- **Linux (Debian/Ubuntu)**: `cargo install sccache --locked` (or download prebuilt binaries from the GitHub releases page)
-- **macOS**: `brew install sccache`
-- **Windows**: `choco install sccache` or `scoop install sccache`
+## Where the manuals are
 
-Ensure `sccache` is in your `PATH` so Cargo can locate it during compilation.
+- [Architecture](docs/ARCHITECTURE.md): the layers and the production route.
+- [Crate boundaries](docs/architecture/crates.md): what each crate owns and
+  what it must not hold.
+- [The placement rule](docs/lego-block-rule.md): which crate a new operation
+  belongs in.
+- [Add an operation](docs/extending/operation.md) and
+  [add a backend](docs/extending/backend.md): the extension contracts, with a
+  buildable example for each.
+- [Conformance](docs/conformance/program.md): what a backend must prove.
+- [Release](docs/release/process.md): the release train, the gates, the
+  evidence.
+- [THESIS.md](THESIS.md): the design argument behind the boundaries.
 
-## Required Gates by Change Type
-
-Public API or crate boundary:
-
-```bash
-CARGO_BUILD_JOBS=1 cargo xtask release-gate
-CARGO_BUILD_JOBS=1 cargo test --workspace
-```
-
-LEGO primitive, composite op, or registry behavior:
-
-```bash
-CARGO_BUILD_JOBS=1 cargo xtask gate1
-CARGO_BUILD_JOBS=1 cargo xtask lego-audit
-CARGO_BUILD_JOBS=1 cargo test -p vyre-primitives --all-features
-```
-
-WGPU backend or dispatch behavior:
-
-```bash
-nvidia-smi
-CARGO_BUILD_JOBS=1 cargo test -p vyre-driver-wgpu --test capability_contract --test async_dispatch_contract -- --nocapture
-```
-
-C parser, VAST, program graph, or object sections:
-
-```bash
-CARGO_BUILD_JOBS=1 cargo test -p vyre-libs --features c-parser --test c11_parser_integration --test c11_build_vast_nodes --test c_lower_ast_to_pg_nodes --test c_lower_ast_to_pg_nodes_gpu_parity --test c11_sema_scope
-CARGO_BUILD_JOBS=1 cargo test -p vyre-frontend-c --lib --test c11_pipeline_sections
-```
-
-Repository discipline, CI, review metadata, or community files:
-
-```bash
-bash scripts/check_repo_hygiene.sh
-```
-
-## LEGO Block Rules
-
-Vyre code should be built from small reusable primitives:
-
-- Put reusable kernels in `vyre-primitives`.
-- Compose domain features in `vyre-libs`.
-- Keep backend dispatch in driver crates.
-- Keep conformance logic in conform crates.
-- Do not duplicate a primitive under a library feature because it is convenient.
-- Do not introduce a composite op when the existing primitive chain can express the behavior cleanly.
-
-Every new op needs a registry entry, reference behavior, GPU behavior when applicable, meaningful tests, and catalog coverage.
-
-## Review Standard
-
-A pull request is not ready until it has:
-
-- A precise contract statement.
-- Tests that would fail on the previous behavior.
-- GPU proof for GPU-owned code.
-- No new stubs, TODOs, FIXMEs, placeholder branches, or silent default returns.
-- No hidden allocations or avoidable copies on hot paths.
-- No public API break without an explicit migration.
-- Updated docs when the public contract changes.
+The book starts at [the summary](docs/SUMMARY.md).
 
 ## Security
 
-Report vulnerabilities through `SECURITY.md`. Do not put exploit details, credentials, or private test targets in public issues or pull requests.
+Report a vulnerability through [SECURITY.md](SECURITY.md). Do not put exploit
+details, credentials or private test targets in a public issue or pull request.
+
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) applies to every interaction here.

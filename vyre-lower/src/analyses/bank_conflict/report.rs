@@ -7,15 +7,15 @@ use crate::analyses::AccessKind;
 /// Shared-memory bank access classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BankConflictKind {
-    /// Threads in the warp access addresses that map to distinct
+    /// Threads in the subgroup access addresses that map to distinct
     /// banks (or the same bank with broadcast semantics on a read).
     /// Full single-cycle throughput.
     NoConflict,
     /// Threads access addresses that map to the same bank but for
-    /// reads where hardware broadcast is supported (CUDA: same
-    /// 32-bit word). Single cycle.
+    /// reads where hardware broadcast is supported, the same
+    /// 32-bit word. Single cycle.
     BroadcastSafe,
-    /// All N threads in a warp hit the same bank with N distinct
+    /// All N threads in a subgroup hit the same bank with N distinct
     /// addresses. Worst case  -  N-way serialization.
     Conflict {
         /// Number of accesses serialized through one bank.
@@ -36,7 +36,7 @@ pub enum ConflictSeverity {
     Mild,
     /// `Conflict { way_count: 5..=15 }`  -  5-15x slowdown.
     Severe,
-    /// `Conflict { way_count: 16+ }`  -  full warp serialization.
+    /// `Conflict { way_count: 16+ }`  -  full subgroup serialization.
     Critical,
     /// Pattern unknown  -  caller should treat as suspect until phase-2
     /// upgrades the analysis.
@@ -78,7 +78,7 @@ pub struct BankAccessSite {
 pub struct BankConflictReport {
     /// Stable kernel identifier.
     pub kernel_id: String,
-    /// Number of shared-memory banks assumed by the analysis.
+    /// Number of shared-memory banks the caller stated.
     pub bank_count: u32,
     /// Classified shared-memory access sites.
     pub sites: Vec<BankAccessSite>,
@@ -104,6 +104,7 @@ impl BankConflictReport {
     }
 }
 
+// Inline: covers the crate-private `critical_count` and `problematic_count`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

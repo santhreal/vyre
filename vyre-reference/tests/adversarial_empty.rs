@@ -23,19 +23,12 @@ fn raw_empty_program_is_rejected_with_region_context() {
 
 #[test]
 fn zero_length_input_does_not_create_implicit_bytes() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::load("input", Expr::u32(0)),
-        )],
-    );
-
+    let decls = vec![
+        BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+        BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+    ];
+    let store_node = Node::store("out", Expr::u32(0), Expr::load("input", Expr::u32(0)));
+    let program = Program::wrapped(decls, [1, 1, 1], vec![store_node]);
     let err = reference_eval(&program, &[Value::Bytes(Vec::new().into())])
         .expect_err("Fix: zero-byte input for u32 load must be rejected");
     let message = err.to_string();

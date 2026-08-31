@@ -4,12 +4,12 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::model::program_graph_identity::{
-    ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
-};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
+};
+use vyre_foundation::ir::{
+    ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
 };
 
 fn tensor(
@@ -113,6 +113,9 @@ fn context() -> ProgramGraphIdentityContext {
 }
 
 /// Pins the complete identity framing so accidental byte-level schema drift requires an explicit version change.
+///
+/// Wire revision 8 moved this digest because graph identity embeds canonical
+/// program wire bytes containing schedule-free logical execution tags.
 #[test]
 fn canonical_composition_identity_matches_frozen_digest() {
     let identity = model_graph(8, "projection")
@@ -122,8 +125,8 @@ fn canonical_composition_identity_matches_frozen_digest() {
     assert_eq!(
         identity.digest,
         [
-            128, 253, 86, 56, 126, 206, 127, 140, 199, 42, 50, 6, 50, 55, 18, 228, 217, 157, 21,
-            58, 202, 82, 10, 210, 203, 74, 221, 171, 137, 28, 46, 105,
+            197, 180, 249, 115, 151, 242, 155, 53, 166, 48, 248, 25, 130, 15, 247, 47, 224, 251,
+            231, 168, 19, 42, 79, 249, 67, 134, 9, 89, 142, 100, 222, 54,
         ]
     );
 }

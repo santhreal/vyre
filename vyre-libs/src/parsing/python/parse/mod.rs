@@ -6,6 +6,8 @@ pub mod calls;
 pub mod decorators;
 /// Python declaration/span extractor.
 pub mod structure;
+/// The one Python token-stream AST walk every extractor projects from.
+mod walk;
 
 use crate::parsing::python::INVALID_POS;
 use vyre_foundation::ir::{Expr, Node};
@@ -33,6 +35,24 @@ pub(crate) fn write_words(dst: &mut [u8], words: &[u32]) {
 
 pub(crate) fn load_u32(buffer: &str, index: Expr) -> Expr {
     Expr::load(buffer, index)
+}
+
+/// The word at `pos` in a per-token buffer, or zero when `pos` names no token.
+///
+/// A scan reports a miss as `INVALID_POS`, and every caller reads that as "no
+/// token": type zero, span zero. Indexing the buffer with the sentinel and
+/// letting the interpreter's zero-fill supply the answer works on the reference
+/// alone, since a backend that does not bounds-check reads whatever follows the
+/// allocation. The index is folded into range before the load, so the access is
+/// always inside the buffer, and the out-of-range answer is stated here instead
+/// of being borrowed from out-of-bounds semantics.
+pub(crate) fn token_word_at(buffer: &str, pos: Expr, token_capacity: u32) -> Expr {
+    let in_range = Expr::lt(pos.clone(), Expr::u32(token_capacity));
+    Expr::select(
+        in_range.clone(),
+        load_u32(buffer, Expr::select(in_range, pos, Expr::u32(0))),
+        Expr::u32(0),
+    )
 }
 
 pub(crate) fn search_next_token(
@@ -169,9 +189,17 @@ fn find_matching_delimiter_nodes(
         nodes.push(Node::let_bind(out_var, Expr::u32(INVALID_POS)));
     }
     nodes.push(Node::let_bind(depth.clone(), Expr::u32(0)));
+    // A missing open position is the sentinel, and `INVALID_POS + 1` wraps to 0,
+    // which would scan the whole token stream and report the first unmatched
+    // close token as the match. Starting at the end makes the range empty.
+    let scan_start = Expr::select(
+        Expr::eq(open_pos.clone(), Expr::u32(INVALID_POS)),
+        Expr::u32(haystack_len),
+        Expr::add(open_pos, Expr::u32(1)),
+    );
     nodes.push(Node::loop_for(
         scan.clone(),
-        Expr::add(open_pos, Expr::u32(1)),
+        scan_start,
         Expr::u32(haystack_len),
         vec![
             Node::let_bind(tok.clone(), load_u32(tok_types, Expr::var(scan.clone()))),

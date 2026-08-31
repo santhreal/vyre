@@ -3,7 +3,7 @@
 //! Drives a transfer program and a `bitset_fixpoint` program in a loop
 //! until the changed flag clears.
 
-use crate::lens::fixpoint_current_score;
+use crate::lens::fixpoint::current_score;
 use vyre::ir::{BufferAccess, Program};
 use vyre_driver::BackendRegistration;
 use vyre_reference::value::Value;
@@ -54,23 +54,6 @@ pub fn run_fixpoint_to_convergence(
     max_iterations: u32,
 ) -> Result<Vec<Vec<u8>>, ConvergenceError> {
     let (current_name, next_name, words) = infer_fixpoint_buffers(program)?;
-    let changed_name = "fp_changed";
-    let bitset_program = vyre_primitives::fixpoint::bitset_fixpoint::bitset_fixpoint(
-        current_name,
-        next_name,
-        changed_name,
-        words,
-    );
-    let transfer_session = ProductionSession::compile(program, backend)
-        .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
-    let bitset_session = ProductionSession::compile(&bitset_program, backend)
-        .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
-
-    let mut state: Vec<Vec<u8>> = Vec::with_capacity(inputs.len());
-    state.extend(inputs.iter().cloned());
-    let mut changed_buf = vec![0u8; 4];
-    let mut rw_outputs: Vec<Vec<u8>> = Vec::with_capacity(program.buffers().len());
-
     let current_idx = index_of_buffer(program, current_name).ok_or_else(|| {
         ConvergenceError::IncompatibleLayout(format!(
             "buffer `{current_name}` not found in program"
@@ -79,12 +62,29 @@ pub fn run_fixpoint_to_convergence(
     let next_idx = index_of_buffer(program, next_name).ok_or_else(|| {
         ConvergenceError::IncompatibleLayout(format!("buffer `{next_name}` not found in program"))
     })?;
+    let changed_name = "fp_changed";
+    let bitset_program = vyre_libs::fixpoint::bitset_fixpoint::bitset_fixpoint(
+        current_name,
+        next_name,
+        changed_name,
+        words,
+    );
+    let transfer_session = ProductionSession::from_registration(program, backend)
+        .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
+
+    let mut state: Vec<Vec<u8>> = Vec::with_capacity(inputs.len());
+    state.extend(inputs.iter().cloned());
+    let mut changed_buf = vec![0u8; 4];
+    let mut rw_outputs: Vec<Vec<u8>> = Vec::with_capacity(program.buffers().len());
+
+    let bitset_session = ProductionSession::from_registration(&bitset_program, backend)
+        .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
     for _ in 0..max_iterations {
         let borrowed: Vec<&[u8]> = state.iter().map(Vec::as_slice).collect();
         let transfer_outputs = transfer_session
             .submit(&borrowed)
             .map_err(|e| ConvergenceError::Dispatch(e.to_string()))?;
-        merge_rw(&mut state, transfer_outputs.as_slice(), program);
+        merge_rw(&mut state, transfer_outputs.outputs.as_slice(), program);
 
         changed_buf.fill(0);
         let converged = {
@@ -95,7 +95,7 @@ pub fn run_fixpoint_to_convergence(
                 .submit(&bitset_inputs)
                 .map_err(|e| ConvergenceError::Dispatch(e.to_string()))?;
 
-            if let Some(flag) = bitset_outputs.first() {
+            if let Some(flag) = bitset_outputs.outputs.first() {
                 if let Some(bytes) = flag.get(0..4) {
                     changed_buf.copy_from_slice(bytes);
                 } else {
@@ -170,24 +170,6 @@ fn run_cpu<'a>(
     Ok(outputs.as_slice())
 }
 
-fn convergence_grid(program: &Program) -> Result<[u32; 3], ConvergenceError> {
-    let workgroup = program.workgroup_size();
-    if workgroup[0] == 0 || workgroup[1] != 1 || workgroup[2] != 1 {
-        return Err(ConvergenceError::IncompatibleLayout(format!(
-            "convergence lens requires a nonzero 1D workgroup, got {workgroup:?}"
-        )));
-    }
-    let element_count = program
-        .buffers()
-        .iter()
-        .map(|decl| decl.count())
-        .max()
-        .unwrap_or(1)
-        .max(1);
-    let grid_x = element_count.div_ceil(workgroup[0]).max(1);
-    Ok([grid_x, 1, 1])
-}
-
 fn infer_fixpoint_buffers(program: &Program) -> Result<(&str, &str, u32), ConvergenceError> {
     let mut next: Option<&str> = None;
     let mut next_count: Option<u32> = None;
@@ -218,7 +200,7 @@ fn infer_fixpoint_buffers(program: &Program) -> Result<(&str, &str, u32), Conver
         if decl.count() != next_count {
             continue;
         }
-        let score = fixpoint_current_score(decl.name(), next);
+        let score = current_score(decl.name(), next);
         if score < best_score {
             best_score = score;
             current_decl = Some(decl);

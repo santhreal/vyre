@@ -11,16 +11,15 @@
 //!
 //! Nothing in the vyre IR asks for fusion. The IR says multiply, then add. The
 //! shader compiler and driver contract the pair anyway, and WGSL permits it.
-//! Measured on an RTX 5090 (wgpu 25, Vulkan): for `a = b = 1 + 2^-12` and
+//! Measured on GPU hardware (wgpu 25, Vulkan): for `a = b = 1 + 2^-12` and
 //! `c = -1` the device returns `0x3a000400` where two separate roundings give
 //! `0x3a000000`, a one-ulp difference that is exactly the retained low bit of
 //! the unrounded product.
 //!
-//! Two consequences, both recorded in BACKLOG.md under the release gap #1
-//! entry:
+//! Two consequences:
 //!
 //! 1. Bitwise CPU/GPU parity for f32 is not achievable through the ordinary
-//!    lowering, no matter how the arithmetic is expressed. Closing gap #1 needs
+//!    lowering, no matter how the arithmetic is expressed. Bitwise parity needs
 //!    a strict-IEEE lowering mode that blocks contraction, not a more careful
 //!    polynomial.
 //! 2. The bounded-ULP envelope in `transcendentals_parity.rs` is not merely a
@@ -32,8 +31,10 @@
 //! the two differ by at most one ulp. A device that stops contracting still
 //! passes; a device that returns something outside that pair has a real bug.
 
-mod common;
-use common::acquire_live_backend as live_backend;
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};

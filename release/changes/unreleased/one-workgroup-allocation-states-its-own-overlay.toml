@@ -1,0 +1,2 @@
+category = "Added"
+text = "Neutral lowering states a physical storage layout: one region per workgroup-scoped and invocation-private binding with its byte span, alignment, live op range and pool offset, so regions with disjoint lifetimes share bytes and a pool above the selected schedule's bound is rejected before a target sees the kernel."

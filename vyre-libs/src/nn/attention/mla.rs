@@ -15,13 +15,13 @@
 //!
 //! Category A composition.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use super::tiled_online_softmax::{
     scratch_index, tiled_online_softmax_body, TiledOnlineSoftmaxSpec,
 };
-use crate::region::wrap_anonymous;
-use vyre_primitives::nn::attention_stability::{bounded_exp_arg, bounded_score};
+use crate::nn::attention_stability::{bounded_exp_arg, bounded_score};
 
 /// Buffer names and shape for one [`mla_decode`] build.
 struct MlaDecodeSpec<'a> {
@@ -120,23 +120,23 @@ fn mla_decode_impl(spec: &MlaDecodeSpec<'_>) -> Result<Program, String> {
         return Err("Fix: mla_decode all dims must be > 0".to_string());
     }
 
-    const WORKGROUP_LANES: u32 = 64;
-    const TILE_SIZE: u32 = 64;
+    let workgroup_lanes = 64_u32;
+    let tile_size = 64_u32;
 
     let head_stride = head_dim;
     let uv_stride = num_heads.checked_mul(head_dim).ok_or("overflow")?;
 
-    let q_scratch_count = WORKGROUP_LANES.checked_mul(head_dim).ok_or("overflow")?;
-    let score_scratch_count = WORKGROUP_LANES.checked_mul(TILE_SIZE).ok_or("overflow")?;
-    let o_acc_count = WORKGROUP_LANES.checked_mul(head_dim).ok_or("overflow")?;
+    let q_scratch_count = workgroup_lanes.checked_mul(head_dim).ok_or("overflow")?;
+    let score_scratch_count = workgroup_lanes.checked_mul(tile_size).ok_or("overflow")?;
+    let o_acc_count = workgroup_lanes.checked_mul(head_dim).ok_or("overflow")?;
 
     let scale = 1.0f32 / (head_dim as f32).sqrt();
     let scale_expr = Expr::f32(scale);
-    let num_tiles = seq_len.div_ceil(TILE_SIZE);
+    let num_tiles = seq_len.div_ceil(tile_size);
 
     // Scratch index helpers: each lane gets its own sub-slice.
     let q_idx = |local: Expr, d: Expr| scratch_index(head_dim, local, d);
-    let score_idx = |local: Expr, j: Expr| scratch_index(TILE_SIZE, local, j);
+    let score_idx = |local: Expr, j: Expr| scratch_index(tile_size, local, j);
     let o_idx = |local: Expr, d: Expr| scratch_index(head_dim, local, d);
 
     // ---- Compute all scores for the current tile ----
@@ -342,7 +342,7 @@ fn mla_decode_impl(spec: &MlaDecodeSpec<'_>) -> Result<Program, String> {
             item_count: num_heads,
             seq_len,
             head_dim,
-            tile_size: TILE_SIZE,
+            tile_size,
             tile_count: num_tiles,
         },
         compute_tile_scores,
@@ -366,8 +366,8 @@ fn mla_decode_impl(spec: &MlaDecodeSpec<'_>) -> Result<Program, String> {
             BufferDecl::workgroup("o_acc", o_acc_count, DataType::F32),
             BufferDecl::output(out, 5, DataType::F32).with_count(num_heads * head_dim),
         ],
-        [WORKGROUP_LANES, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::mla_decode", body)],
+        [workgroup_lanes, 1, 1],
+        vec![wrap_anonymous_region("vyre-libs::nn::mla_decode", body)],
     ))
 }
 
@@ -393,7 +393,7 @@ pub fn mla_compress_kv(
 
     let i = Expr::var("i");
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(i.clone(), Expr::u32(kv_lora_rank)),
             vec![
@@ -436,62 +436,46 @@ pub fn mla_compress_kv(
             BufferDecl::output(c_out, 2, DataType::F32).with_count(kv_lora_rank),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::mla_compress_kv", body)],
+        vec![wrap_anonymous_region(
+            "vyre-libs::nn::mla_compress_kv",
+            body,
+        )],
     ))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
     #[test]
     fn mla_compress_kv_identity() {
-        let h = vec![2.0f32, 3.0];
-        let w_dk = vec![1.0f32, 0.0, 0.0, 1.0];
+        let h = [2.0f32, 3.0];
+        let w_dk = [1.0f32, 0.0, 0.0, 1.0];
         let program = mla_compress_kv("h", "w_dk", "c", 2, 2).unwrap();
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(f32_bytes(&h)),
-                Value::from(f32_bytes(&w_dk)),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: mla_compress_kv must execute");
-        let c = decode_f32(&outputs[0].to_bytes());
+        let c = eval_f32("mla", &program, &[&h[..], &w_dk[..]], 2);
         assert_eq!(c, vec![2.0, 3.0]);
     }
 
     #[test]
     fn mla_decode_simple() {
-        let q = vec![1.0f32, 0.0];
-        let kv_cache = vec![1.0f32, 0.0];
-        let kr_cache = vec![0.0f32, 0.0];
-        let w_uk = vec![1.0f32, 0.0, 0.0, 1.0];
-        let w_uv = vec![1.0f32, 0.0, 0.0, 1.0];
+        let q = [1.0f32, 0.0];
+        let kv_cache = [1.0f32, 0.0];
+        let kr_cache = [0.0f32, 0.0];
+        let w_uk = [1.0f32, 0.0, 0.0, 1.0];
+        let w_uv = [1.0f32, 0.0, 0.0, 1.0];
 
         let program = mla_decode(
             "q", "kv_cache", "kr_cache", "w_uk", "w_uv", "out", 1, 1, 2, 2, 2,
         )
         .unwrap();
 
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "mla",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&kv_cache)),
-                Value::from(f32_bytes(&kr_cache)),
-                Value::from(f32_bytes(&w_uk)),
-                Value::from(f32_bytes(&w_uv)),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: mla_decode must execute");
-
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&q[..], &kv_cache[..], &kr_cache[..], &w_uk[..], &w_uv[..]],
+            2,
+        );
         assert!(
             (out[0] - 1.0).abs() < 1e-4,
             "mla_decode out[0] = {}",
@@ -512,31 +496,23 @@ mod tests {
         // softmax: w0 ≈ 0.67, w1 ≈ 0.33
         // v_0 = [1,0], v_1 = [0,1]
         // out = [0.67, 0.33]
-        let q = vec![1.0f32, 0.0];
-        let kv_cache = vec![1.0f32, 0.0, 0.0, 1.0];
-        let kr_cache = vec![0.0f32; 4];
-        let w_uk = vec![1.0f32, 0.0, 0.0, 1.0];
-        let w_uv = vec![1.0f32, 0.0, 0.0, 1.0];
+        let q = [1.0f32, 0.0];
+        let kv_cache = [1.0f32, 0.0, 0.0, 1.0];
+        let kr_cache = [0.0f32; 4];
+        let w_uk = [1.0f32, 0.0, 0.0, 1.0];
+        let w_uv = [1.0f32, 0.0, 0.0, 1.0];
 
         let program = mla_decode(
             "q", "kv_cache", "kr_cache", "w_uk", "w_uv", "out", 2, 1, 2, 2, 2,
         )
         .unwrap();
 
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "mla",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&kv_cache)),
-                Value::from(f32_bytes(&kr_cache)),
-                Value::from(f32_bytes(&w_uk)),
-                Value::from(f32_bytes(&w_uv)),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: mla_decode two tokens must execute");
-
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&q[..], &kv_cache[..], &kr_cache[..], &w_uk[..], &w_uv[..]],
+            2,
+        );
         assert!(
             out[0] > 0.6 && out[0] < 0.7,
             "mla_decode out[0] = {}",

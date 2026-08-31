@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The op matrix carries only rows that resolve to a live operation registration, the integer strength reduction rewrites are named by the optimizer pass catalog that owns them, and three rewrites that had no catalog id now have one."

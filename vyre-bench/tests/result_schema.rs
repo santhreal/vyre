@@ -3,7 +3,14 @@
 //! Verifies that every case's output JSON contains the required
 //! field set: `id`, `workload_fingerprint`, `status`, `wall_ns`,
 //! `correctness`, `metrics`, and `optimization_passes_applied`.
-
+//!
+//! `execute_suite` runs a real benchmark case, which dispatches on the device
+//! the case selects. On a hosted runner with no CUDA driver and no Vulkan
+//! adapter that is not a defect in what this file asserts: the run either
+//! aborts inside the driver or reports a failed case that a weaker assertion
+//! reads as a pass. Gated on `device-tests`, which `gpu-parity.yml` enables on
+//! the runner that owns the GPU.
+#![cfg(feature = "device-tests")]
 #![allow(clippy::field_reassign_with_default)]
 use vyre_bench::api::suite::SuiteKind;
 use vyre_bench::runner::{execute_suite, RunConfig};

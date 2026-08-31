@@ -1,3 +1,5 @@
+//! Two's-complement negation of u32 lanes, wrapping at zero.
+
 use vyre_foundation::ir::{Expr, Program};
 
 const OP_ID: &str = "vyre-libs::math::wrapping_neg";
@@ -5,56 +7,46 @@ const OP_ID: &str = "vyre-libs::math::wrapping_neg";
 /// Computes wrapping negation.
 #[must_use]
 pub fn wrapping_neg(a: &str, out: &str, size: u32) -> Program {
-    super::elementwise::u32_elementwise_unary(OP_ID, a, out, size, |value| {
+    crate::builder::elementwise::u32_elementwise_unary(OP_ID, a, out, size, |value| {
         Expr::sub(Expr::u32(0), value)
     })
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| wrapping_neg("a", "out", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || wrapping_neg("a", "out", 4),
+        Some(|| {
             let a = [0u32, 1, u32::MAX, 42];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&a)]]
         }),
-        expected_output: Some(|| {
-            let expected = [
-                0u32.wrapping_neg(),
-                1u32.wrapping_neg(),
-                u32::MAX.wrapping_neg(),
-                42u32.wrapping_neg(),
-            ];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+        Some(|| {
+            // [0, u32::MAX (from 1), 1 (from u32::MAX), 0xFFFF_FFD6 (from 42)]
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x00, // 0
+                0xff, 0xff, 0xff, 0xff, // u32::MAX (wrapping_neg of 1)
+                0x01, 0x00, 0x00, 0x00, // 1 (wrapping_neg of u32::MAX)
+                0xd6, 0xff, 0xff, 0xff, // 0xFFFF_FFD6 (wrapping_neg of 42)
+            ]]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_u32;
 
-    fn run(input: &[u32]) -> Vec<u32> {
-        let n = input.len() as u32;
-        let program = wrapping_neg("input", "out", n.max(1));
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(input)),
-                Value::from(vec![0u8; (n.max(1) * 4) as usize]),
-            ],
+    fn negated(input: &[u32]) -> Vec<u32> {
+        let n = (input.len() as u32).max(1);
+        eval_u32(
+            "wrapping_neg",
+            &wrapping_neg("input", "out", n),
+            &[input],
+            n as usize,
         )
-        .expect("Fix: wrapping_neg must execute in the reference interpreter.");
-        vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())
     }
 
     #[test]
@@ -81,7 +73,11 @@ mod tests {
                 .copied()
                 .map(u32::wrapping_neg)
                 .collect::<Vec<_>>();
-            assert_eq!(run(&input), expected, "generated wrapping-neg case {case}");
+            assert_eq!(
+                negated(&input),
+                expected,
+                "generated wrapping-neg case {case}"
+            );
         }
     }
 }

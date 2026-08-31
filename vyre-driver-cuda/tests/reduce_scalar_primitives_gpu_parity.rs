@@ -1,21 +1,25 @@
 //! Parity tests for vyre-primitives reduce::{all, any, count, count_non_zero,
 //! max, min, sum, range_counts_u32, workgroup_any_u32}.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::reduce::all::{cpu_ref as all_cpu, reduce_all};
-use vyre_primitives::reduce::any::{cpu_ref as any_cpu, reduce_any};
-use vyre_primitives::reduce::count::{cpu_ref as count_cpu, reduce_count};
-use vyre_primitives::reduce::count_non_zero::{cpu_ref as count_nz_cpu, reduce_count_non_zero};
-use vyre_primitives::reduce::max::{cpu_ref as max_cpu, reduce_max};
-use vyre_primitives::reduce::min::{cpu_ref as min_cpu, reduce_min};
-use vyre_primitives::reduce::range_counts::{cpu_ref as range_counts_cpu, range_counts_u32};
-use vyre_primitives::reduce::sum::{cpu_ref as sum_cpu, reduce_sum};
-use vyre_primitives::reduce::workgroup_any::workgroup_any_u32;
+use vyre_libs::reduce::all::reduce_all;
+use vyre_libs::reduce::any::reduce_any;
+use vyre_libs::reduce::count::reduce_count;
+use vyre_libs::reduce::count_non_zero::reduce_count_non_zero;
+use vyre_libs::reduce::max::reduce_max;
+use vyre_libs::reduce::min::reduce_min;
+use vyre_libs::reduce::range_counts::range_counts_u32;
+use vyre_libs::reduce::sum::reduce_sum;
+use vyre_libs::reduce::workgroup_any::workgroup_any_u32;
+use vyre_reference::composition_witness::{
+    range_counts_witness, reduce_all_witness, reduce_any_witness, reduce_count_non_zero_witness,
+    reduce_count_witness, reduce_max_witness, reduce_min_witness, wrapping_sum_witness,
+};
 
 fn run_scalar_reduce<B>(builder: B, values: &[u32]) -> u32
 where
@@ -38,7 +42,7 @@ where
 #[test]
 fn cuda_reduce_all_with_zero_returns_zero() {
     let v = vec![1u32, 1, 0, 1];
-    let cpu = all_cpu(&v);
+    let cpu = reduce_all_witness(&v);
     let gpu = run_scalar_reduce(reduce_all, &v);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 0);
@@ -47,7 +51,7 @@ fn cuda_reduce_all_with_zero_returns_zero() {
 #[test]
 fn cuda_reduce_all_all_set_returns_one() {
     let v = vec![1u32; 8];
-    let cpu = all_cpu(&v);
+    let cpu = reduce_all_witness(&v);
     let gpu = run_scalar_reduce(reduce_all, &v);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 1);
@@ -56,7 +60,7 @@ fn cuda_reduce_all_all_set_returns_one() {
 #[test]
 fn cuda_reduce_any_with_one_returns_one() {
     let v = vec![0u32, 0, 1, 0];
-    let cpu = any_cpu(&v);
+    let cpu = reduce_any_witness(&v);
     let gpu = run_scalar_reduce(reduce_any, &v);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 1);
@@ -65,7 +69,7 @@ fn cuda_reduce_any_with_one_returns_one() {
 #[test]
 fn cuda_reduce_any_all_zero_returns_zero() {
     let v = vec![0u32; 8];
-    let cpu = any_cpu(&v);
+    let cpu = reduce_any_witness(&v);
     let gpu = run_scalar_reduce(reduce_any, &v);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 0);
@@ -74,7 +78,7 @@ fn cuda_reduce_any_all_zero_returns_zero() {
 #[test]
 fn cuda_reduce_max() {
     let v = vec![3u32, 7, 1, 9, 2, 5];
-    let cpu = max_cpu(&v);
+    let cpu = reduce_max_witness(&v);
     let gpu = run_scalar_reduce(reduce_max, &v);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 9);
@@ -83,7 +87,7 @@ fn cuda_reduce_max() {
 #[test]
 fn cuda_reduce_min() {
     let v = vec![3u32, 7, 1, 9, 2, 5];
-    let cpu = min_cpu(&v);
+    let cpu = reduce_min_witness(&v);
     let gpu = run_scalar_reduce(reduce_min, &v);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 1);
@@ -92,7 +96,7 @@ fn cuda_reduce_min() {
 #[test]
 fn cuda_reduce_sum() {
     let v = vec![1u32, 2, 3, 4, 5];
-    let cpu = sum_cpu(&v);
+    let cpu = wrapping_sum_witness(&v);
     let gpu = run_scalar_reduce(reduce_sum, &v);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 15);
@@ -101,7 +105,7 @@ fn cuda_reduce_sum() {
 #[test]
 fn cuda_reduce_sum_with_overflow_wraps() {
     let v = vec![u32::MAX, 1u32];
-    let cpu = sum_cpu(&v);
+    let cpu = wrapping_sum_witness(&v);
     let gpu = run_scalar_reduce(reduce_sum, &v);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 0);
@@ -110,7 +114,7 @@ fn cuda_reduce_sum_with_overflow_wraps() {
 #[test]
 fn cuda_reduce_count_non_zero() {
     let v = vec![0u32, 5, 0, 7, 0, 0, 3];
-    let cpu = count_nz_cpu(&v);
+    let cpu = reduce_count_non_zero_witness(&v);
     let gpu = run_scalar_reduce(reduce_count_non_zero, &v);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 3);
@@ -120,7 +124,7 @@ fn cuda_reduce_count_non_zero() {
 fn cuda_reduce_count_bitset_popcount() {
     // reduce_count counts set bits in the packed bitset.
     let bits = vec![0b1010u32, 0xFFu32, 0u32];
-    let cpu = count_cpu(&bits);
+    let cpu = reduce_count_witness(&bits);
     let gpu = run_scalar_reduce(reduce_count, &bits);
     assert_eq!(gpu, cpu);
     // 0b1010 has 2 bits, 0xFF has 8, 0 has 0 → total 10.
@@ -150,7 +154,7 @@ fn cuda_range_counts_ascii_band() {
     histogram[b'A' as usize] = 3;
     histogram[b'Z' as usize] = 5;
     histogram[0xFF] = 99;
-    let cpu = range_counts_cpu(&histogram, 0x41, 0x5B);
+    let cpu = range_counts_witness(&histogram, 0x41, 0x5B);
     let gpu = run_range_counts(&histogram, 0x41, 0x5B);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 8); // A + Z, 0xFF excluded.
@@ -160,7 +164,7 @@ fn cuda_range_counts_ascii_band() {
 fn cuda_range_counts_empty_range() {
     let mut histogram = [0u32; 256];
     histogram[0x10] = 5;
-    let cpu = range_counts_cpu(&histogram, 0x20, 0x20);
+    let cpu = range_counts_witness(&histogram, 0x20, 0x20);
     let gpu = run_range_counts(&histogram, 0x20, 0x20);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, 0);

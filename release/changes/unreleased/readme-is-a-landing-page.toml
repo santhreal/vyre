@@ -1,0 +1,2 @@
+category = "Changed"
+text = "README.md is a landing page: what vyre is, how to install it, one example, and links out. The crate-by-crate boundary manual it carried moved to docs/architecture/crates.md and the megakernel and persistence model moved to docs/architecture/artifact.md, both verified against the manifests and the compiler source. Its previous example did not compile against any released version: it called vyre::backend::select, which the facade does not export, and passed three arguments to a composition that takes six."

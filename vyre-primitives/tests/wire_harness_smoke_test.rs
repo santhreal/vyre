@@ -5,28 +5,74 @@
 //! determinism) so the harness can build against a frozen interface.
 
 use std::io::Write;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::sync::LazyLock;
 
-fn example_path() -> std::path::PathBuf {
-    // `cargo test --example` puts the binary under `target/<profile>/examples`.
-    let mut path = std::env::current_exe().expect("current_exe");
-    // current_exe is .../target/<profile>/deps/<testname>-<hash>; pop twice + descend examples.
-    path.pop();
-    path.pop();
-    path.push("examples");
-    path.push("wire_harness_smoke");
+/// The example binary, built on demand when the selected targets did not build it.
+///
+/// Cargo only builds examples as plain binaries under its default target
+/// selection. `--tests`, `--examples` and `--all-targets` all compile an
+/// example as a *test harness* instead, named `wire_harness_smoke-<hash>`,
+/// which runs zero tests and never reaches the CLI `main` this test exercises.
+/// The coverage lane passes `--tests`, so relying on the default selection made
+/// this test fail on a flag rather than on a defect.
+///
+/// Building it here inherits the invoking cargo's environment, including the
+/// instrumentation and target directory a coverage run exports, so the binary
+/// lands beside this test in every lane.
+/// Built once per test process; five tests share one binary.
+static EXAMPLE: LazyLock<PathBuf> = LazyLock::new(build_example);
+
+fn build_example() -> PathBuf {
+    let exe = std::env::current_exe().expect("current_exe");
+    // current_exe is <target>/<profile>/deps/<testname>-<hash>.
+    let profile = exe
+        .parent()
+        .and_then(std::path::Path::parent)
+        .expect("a test binary lives under <target>/<profile>/deps");
+    // The suffix is part of the name cargo writes: on Windows the example is
+    // `wire_harness_smoke.exe`, and a bare stem never exists there.
+    let path = profile.join("examples").join(format!(
+        "wire_harness_smoke{}",
+        std::env::consts::EXE_SUFFIX
+    ));
+    if path.exists() {
+        return path;
+    }
+    // The target directory is derived from where this test is running, not
+    // inherited: cargo-llvm-cov passes --target-dir on its own command line
+    // rather than exporting it, so a child cargo that reads only the
+    // environment writes the example into the default directory and the
+    // coverage run never sees it. RUSTFLAGS is exported, so the example is
+    // built with the same instrumentation as everything beside it.
+    let target = profile
+        .parent()
+        .expect("<target>/<profile> has a target directory above it");
+    let built = Command::new(env!("CARGO"))
+        .args([
+            "build",
+            "--example",
+            "wire_harness_smoke",
+            "-p",
+            "vyre-primitives",
+            "--target-dir",
+        ])
+        .arg(target)
+        .status()
+        .expect("cargo must be invocable to build the example under test");
+    assert!(built.success(), "building wire_harness_smoke failed");
+    assert!(
+        path.exists(),
+        "wire_harness_smoke was built but is not at {}",
+        path.display()
+    );
     path
 }
 
 fn run_harness(stdin_input: &str) -> (String, String, Option<i32>) {
-    let path = example_path();
-    if !path.exists() {
-        panic!(
-            "wire_harness_smoke not built. Run `cargo build --example wire_harness_smoke -p vyre-primitives` first. Looked at: {}",
-            path.display()
-        );
-    }
-    let mut child = Command::new(&path)
+    let path = &*EXAMPLE;
+    let mut child = Command::new(path)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

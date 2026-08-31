@@ -30,7 +30,7 @@ fn ptx_emits_barrier() {
         [64, 1, 1],
         vec![
             Node::Barrier {
-                ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
             },
             Node::store("out", Expr::gid_x(), Expr::u32(0)),
         ],
@@ -117,20 +117,7 @@ fn ptx_emits_u32_to_f32_cast() {
 
 #[test]
 fn ptx_declares_shared_memory() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::workgroup("scratch", 16, DataType::U32),
-            BufferDecl::output("out", 0, DataType::U32).with_count(1),
-        ],
-        [64, 1, 1],
-        vec![
-            Node::store("scratch", Expr::u32(0), Expr::u32(7)),
-            Node::Barrier {
-                ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-            },
-            Node::store("out", Expr::u32(0), Expr::load("scratch", Expr::u32(0))),
-        ],
-    );
+    let program = shared_memory_smoke_program([64, 1, 1]);
     let secondary_text =
         program_to_ptx(&program, &default_config()).expect("Fix: shared memory must lower to PTX.");
     assert!(
@@ -192,7 +179,7 @@ fn assert_ptx_is_ascii(label: &str, ptx: &str) {
 
 #[test]
 fn ptx_is_pure_ascii_for_every_barrier_ordering() {
-    use vyre_foundation::memory_model::MemoryOrdering;
+    use vyre_foundation::ir::MemoryOrdering;
     for ordering in [
         MemoryOrdering::Acquire,
         MemoryOrdering::Release,
@@ -215,7 +202,7 @@ fn ptx_is_pure_ascii_for_every_barrier_ordering() {
 
 #[test]
 fn ptx_emits_cooperative_grid_barrier_not_cta_downgrade() {
-    use vyre_foundation::memory_model::MemoryOrdering;
+    use vyre_foundation::ir::MemoryOrdering;
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [64, 1, 1],
@@ -231,8 +218,9 @@ fn ptx_emits_cooperative_grid_barrier_not_cta_downgrade() {
     // programs cooperatively). The PTX must contain the whole-grid machinery, NOT
     // a silent downgrade to a CTA-scope `bar.sync 0`: a module-scope arrival
     // counter, a global atomic on it, and global memory fences.
-    let ptx = program_to_ptx(&program, &default_config())
-        .unwrap_or_else(|e| panic!("Fix: CUDA must lower GridSync to a cooperative grid barrier: {e}"));
+    let ptx = program_to_ptx(&program, &default_config()).unwrap_or_else(|e| {
+        panic!("Fix: CUDA must lower GridSync to a cooperative grid barrier: {e}")
+    });
     assert_ptx_is_ascii("GridSync", &ptx);
     assert!(
         ptx.contains(".global .align 4 .u32 _vyre_grid_barrier[1];"),

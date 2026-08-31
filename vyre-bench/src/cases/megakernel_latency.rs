@@ -1,18 +1,26 @@
+use super::byte_pack::{rate_per_second_x1000, read_word, write_word};
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
+    prepared_as_mut, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
-use crate::api::resident::{
-    dispatch_artifact_timed, input_bytes_total, transfer_accounting, ResidentInputPool,
+use crate::api::resident::{dispatch_artifact_timed, ResidentInputPool};
+use crate::cases::reference_sample::{reference_metrics, timed_reference};
+use crate::cases::resident_queue::{
+    account, accounted_metrics, queue_buffers, resident_pool_sets_metric,
 };
 use vyre_driver::autotune_store::{AutotuneRecord, AutotuneStore};
-use vyre_driver::specialization::SpecCacheKey;
-use vyre_driver::speculate::SpeculativeVariantKeys;
-use vyre_driver::speculation_substrate::SpeculationVerdict;
-use vyre_runtime::resident_work_queue::{
-    self, control, slot, PairedSpeculationSample, PairedSpeculationWindow, SLOT_WORDS, STATUS_WORD,
+use vyre_driver::speculation_verdict::SpeculationVerdict;
+use vyre_driver::SpecCacheKey;
+use vyre_driver::SpeculativeVariantKeys;
+use vyre_runtime::resident_work_queue::protocol::{control, slot, SLOT_WORDS, STATUS_WORD};
+use vyre_runtime::resident_work_queue::speculation::{
+    PairedSpeculationSample, PairedSpeculationWindow,
 };
+use vyre_runtime::resident_work_queue::{self};
+
+/// Names this case's buffers in word codec errors.
+const WORD_CONTEXT: &str = "megakernel latency output";
 
 pub struct MegakernelLatency;
 
@@ -49,16 +57,6 @@ impl BenchCase for MegakernelLatency {
         }
     }
 
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: None,
-            min_input_bytes: None,
-            feature_set: vec![],
-        }
-    }
-
     fn performance_contract(&self) -> Option<PerformanceContract> {
         Some(PerformanceContract::cpu_sota_10x(
             "resident megakernel slot dispatch",
@@ -70,30 +68,18 @@ impl BenchCase for MegakernelLatency {
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
         let program =
             resident_work_queue::build_program_sharded_once_slots(WORKGROUP_SIZE, SLOT_COUNT, &[]);
-        let control_bytes = resident_work_queue::encode_control(false, 1, 0)
-            .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
         let ring_bytes = published_ring(SLOT_COUNT)?;
-        let debug_bytes = resident_work_queue::encode_empty_debug_log(
-            resident_work_queue::debug::RECORD_CAPACITY,
-        )
-        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
-        let io_bytes = resident_work_queue::io::try_encode_empty_io_queue(
-            resident_work_queue::io::IO_SLOT_COUNT,
-        )
-        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
-        let inputs = vec![control_bytes, ring_bytes, debug_bytes, io_bytes];
-        let input_bytes_total = input_bytes_total(&inputs);
-        let resident = ResidentInputPool::upload_optional(
+        let queue = queue_buffers(
             ctx,
-            &inputs,
+            ring_bytes,
             RESIDENT_SAMPLE_SETS,
             "megakernel latency bench",
         )?;
         Ok(Box::new(MegakernelLatencyPrepared {
             program,
-            inputs,
-            input_bytes_total,
-            resident,
+            inputs: queue.inputs,
+            input_bytes_total: queue.input_bytes_total,
+            resident: queue.resident,
         }))
     }
 
@@ -106,13 +92,8 @@ impl BenchCase for MegakernelLatency {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_mut::<MegakernelLatencyPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "megakernel latency prepared payload type mismatch".to_string(),
-                )
-            })?;
+        let prepared =
+            prepared_as_mut::<MegakernelLatencyPrepared>(prepared, "megakernel latency")?;
         let mut config = ctx.dispatch_config.clone();
         config.grid_override = Some([1, 1, 1]);
 
@@ -123,40 +104,16 @@ impl BenchCase for MegakernelLatency {
             &prepared.inputs,
             &config,
         )?;
-        let resident_used = dispatch.resident_used;
-        let elapsed = dispatch.timed.wall_ns;
-        let dispatch_ns = dispatch.timed.device_ns;
-        let outputs = dispatch.timed.outputs;
-        let output_bytes_total = outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let accounting = transfer_accounting(
-            prepared.input_bytes_total,
-            output_bytes_total,
-            resident_used,
-        );
-        let device_ns = dispatch_ns.unwrap_or(elapsed);
-        let wall_gb_s = gb_per_second(accounting.bytes_touched, elapsed);
-        let device_gb_s = gb_per_second(accounting.bytes_touched, device_ns);
-        let start_ref = std::time::Instant::now();
-        let baseline_outputs = simulate_sharded_once_outputs(&prepared.inputs)?;
-        let baseline_ns = start_ref.elapsed().as_nanos() as u64;
+        let sample = account(dispatch, prepared.input_bytes_total);
+        let (baseline, baseline_ns) =
+            timed_reference(|| simulate_sharded_once_outputs(&prepared.inputs));
+        let baseline_outputs = baseline?;
         let baseline_output_bytes = baseline_outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let baseline_bytes_touched = prepared
-            .input_bytes_total
-            .saturating_add(baseline_output_bytes);
         let speculation = record_speculation_probe()?;
 
         Ok(BenchRun {
             metrics: BenchMetrics {
-                wall_ns: Some(elapsed),
-                dispatch_ns,
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(output_bytes_total),
-                bytes_touched: Some(accounting.bytes_touched),
-                bytes_read: Some(accounting.bytes_read),
-                bytes_written: Some(accounting.bytes_written),
                 atomic_op_count: Some(u64::from(SLOT_COUNT).saturating_mul(2)),
-                wall_throughput_gb_s: Some(wall_gb_s),
-                device_throughput_gb_s: Some(device_gb_s),
                 custom: vec![
                     MetricPoint {
                         name: "megakernel_slots".to_string(),
@@ -164,24 +121,17 @@ impl BenchCase for MegakernelLatency {
                     },
                     MetricPoint {
                         name: "megakernel_dispatch_latency_ns".to_string(),
-                        value: device_ns,
+                        value: sample.device_ns,
                     },
                     MetricPoint {
                         name: "megakernel_slots_per_sec_x1000".to_string(),
-                        value: rate_per_second_x1000(u64::from(SLOT_COUNT), device_ns),
+                        value: rate_per_second_x1000(u64::from(SLOT_COUNT), sample.device_ns),
                     },
                     MetricPoint {
                         name: "megakernel_roundtrip_buffers".to_string(),
-                        value: outputs.len() as u64,
+                        value: sample.outputs.len() as u64,
                     },
-                    MetricPoint {
-                        name: "megakernel_resident_input_pool_sets".to_string(),
-                        value: if resident_used {
-                            RESIDENT_SAMPLE_SETS as u64
-                        } else {
-                            0
-                        },
-                    },
+                    resident_pool_sets_metric(sample.resident_used, RESIDENT_SAMPLE_SETS),
                     MetricPoint {
                         name: "megakernel_speculation_samples".to_string(),
                         value: speculation.samples,
@@ -203,18 +153,14 @@ impl BenchCase for MegakernelLatency {
                         value: speculation.autotune_records,
                     },
                 ],
-                ..Default::default()
+                ..accounted_metrics(&sample, prepared.input_bytes_total)
             },
-            baseline_metrics: Some(BenchMetrics {
-                wall_ns: Some(baseline_ns),
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(baseline_output_bytes),
-                bytes_touched: Some(baseline_bytes_touched),
-                bytes_read: Some(prepared.input_bytes_total),
-                bytes_written: Some(baseline_output_bytes),
-                ..Default::default()
-            }),
-            outputs,
+            baseline_metrics: Some(reference_metrics(
+                baseline_ns,
+                prepared.input_bytes_total,
+                baseline_output_bytes,
+            )),
+            outputs: sample.outputs,
             baseline_outputs: Some(baseline_outputs),
         })
     }
@@ -299,15 +245,14 @@ fn speculation_sample(
         speculative_dispatch_ns,
         conservative_compile_ns: 0,
         speculative_compile_ns,
-        conservative_record: autotune_record(64),
-        speculative_record: autotune_record(128),
+        conservative_record: autotune_record(1),
+        speculative_record: autotune_record(4),
     }
 }
 
-fn autotune_record(workgroup: u32) -> AutotuneRecord {
+fn autotune_record(unroll: u32) -> AutotuneRecord {
     AutotuneRecord {
-        workgroup_size: [workgroup, 1, 1],
-        unroll: 1,
+        unroll,
         tile: [0, 0, 0],
         recorded_at: "2026-05-05".to_string(),
     }
@@ -323,7 +268,7 @@ fn spec_key(id: u64) -> SpecCacheKey {
 }
 
 fn published_ring(slot_count: u32) -> Result<Vec<u8>, BenchError> {
-    let mut ring = resident_work_queue::encode_empty_ring(slot_count)
+    let mut ring = resident_work_queue::protocol::encode_empty_ring(slot_count)
         .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
     let slot_bytes = (SLOT_WORDS as usize).checked_mul(4).ok_or_else(|| {
         BenchError::ExecutionFailed("megakernel slot byte width overflowed usize".to_string())
@@ -335,59 +280,6 @@ fn published_ring(slot_count: u32) -> Result<Vec<u8>, BenchError> {
         slot[status_offset..status_offset + 4].copy_from_slice(&slot::PUBLISHED.to_le_bytes());
     }
     Ok(ring)
-}
-
-fn gb_per_second(bytes: u64, nanos: u64) -> f64 {
-    if nanos == 0 {
-        return 0.0;
-    }
-    bytes as f64 / nanos as f64
-}
-
-fn rate_per_second_x1000(units: u64, nanos: u64) -> u64 {
-    if nanos == 0 {
-        return 0;
-    }
-    ((u128::from(units) * 1_000_000_000_000u128) / u128::from(nanos)).min(u128::from(u64::MAX))
-        as u64
-}
-
-fn read_word(bytes: &[u8], word_index: u32) -> Result<u32, BenchError> {
-    let offset = usize::try_from(word_index)
-        .ok()
-        .and_then(|word| word.checked_mul(4))
-        .ok_or_else(|| {
-            BenchError::CorrectnessViolation("megakernel word index overflowed usize".to_string())
-        })?;
-    let end = offset.checked_add(4).ok_or_else(|| {
-        BenchError::CorrectnessViolation("megakernel word byte range overflowed usize".to_string())
-    })?;
-    let bytes = bytes.get(offset..end).ok_or_else(|| {
-        BenchError::CorrectnessViolation(format!(
-            "megakernel word {word_index} is outside output buffer"
-        ))
-    })?;
-    vyre_primitives::wire::read_u32_le_word(bytes, 0, "megakernel latency output")
-        .map_err(BenchError::CorrectnessViolation)
-}
-
-fn write_word(bytes: &mut [u8], word_index: u32, value: u32) -> Result<(), BenchError> {
-    let offset = usize::try_from(word_index)
-        .ok()
-        .and_then(|word| word.checked_mul(4))
-        .ok_or_else(|| {
-            BenchError::ExecutionFailed("megakernel word index overflowed usize".to_string())
-        })?;
-    let end = offset.checked_add(4).ok_or_else(|| {
-        BenchError::ExecutionFailed("megakernel word byte range overflowed usize".to_string())
-    })?;
-    let slot = bytes.get_mut(offset..end).ok_or_else(|| {
-        BenchError::ExecutionFailed(format!(
-            "megakernel word {word_index} is outside output buffer"
-        ))
-    })?;
-    slot.copy_from_slice(&value.to_le_bytes());
-    Ok(())
 }
 
 fn simulate_sharded_once_outputs(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, BenchError> {
@@ -402,8 +294,13 @@ fn simulate_sharded_once_outputs(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, Ben
     let debug = inputs[2].clone();
     let io = inputs[3].clone();
 
-    write_word(&mut control, control::DONE_COUNT, SLOT_COUNT)?;
-    write_word(&mut control, control::METRICS_BASE, SLOT_COUNT)?;
+    write_word(&mut control, control::DONE_COUNT, SLOT_COUNT, WORD_CONTEXT)?;
+    write_word(
+        &mut control,
+        control::METRICS_BASE,
+        SLOT_COUNT,
+        WORD_CONTEXT,
+    )?;
     for slot_index in 0..SLOT_COUNT {
         write_word(
             &mut ring,
@@ -411,6 +308,7 @@ fn simulate_sharded_once_outputs(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, Ben
                 .saturating_mul(SLOT_WORDS)
                 .saturating_add(STATUS_WORD),
             slot::DONE,
+            WORD_CONTEXT,
         )?;
     }
     Ok(vec![control, ring, debug, io])
@@ -423,7 +321,7 @@ fn verify_megakernel_outputs(outputs: &[Vec<u8>]) -> Result<Correctness, BenchEr
             outputs.len()
         )));
     }
-    let done_count = read_word(&outputs[0], control::DONE_COUNT)?;
+    let done_count = read_word(&outputs[0], control::DONE_COUNT, WORD_CONTEXT)?;
     if done_count != SLOT_COUNT {
         return Err(BenchError::CorrectnessViolation(format!(
             "megakernel DONE_COUNT was {done_count}, expected {SLOT_COUNT}"
@@ -435,6 +333,7 @@ fn verify_megakernel_outputs(outputs: &[Vec<u8>]) -> Result<Correctness, BenchEr
             slot_index
                 .saturating_mul(SLOT_WORDS)
                 .saturating_add(STATUS_WORD),
+            WORD_CONTEXT,
         )?;
         if status != slot::DONE {
             return Err(BenchError::CorrectnessViolation(format!(

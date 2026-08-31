@@ -16,6 +16,46 @@ pub struct MetricStats {
     pub determinism_cv: Option<f64>,
 }
 
+impl MetricStats {
+    /// Produce a degenerate `MetricStats` for a single observation.
+    #[must_use]
+    pub fn single(value: u64) -> Self {
+        Self {
+            min: value,
+            p50: value,
+            p90: value,
+            p95: value,
+            p99: value,
+            p999: value,
+            p9999: value,
+            max: value,
+            mean: value as f64,
+            stddev: 0.0,
+            samples: 1,
+            determinism_cv: None,
+        }
+    }
+
+    /// MetricStats with custom summary parameters.
+    #[must_use]
+    pub fn point(p50: u64, mean: f64, stddev: f64, samples: u32) -> Self {
+        Self {
+            min: p50,
+            p50,
+            p90: p50,
+            p95: p50,
+            p99: p50,
+            p999: p50,
+            p9999: p50,
+            max: p50,
+            mean,
+            stddev,
+            samples,
+            determinism_cv: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GpuCounter {
     pub name: String,
@@ -26,6 +66,29 @@ pub struct GpuCounter {
 pub struct MetricPoint {
     pub name: String,
     pub value: u64,
+}
+
+/// Nanoseconds elapsed since `started`, saturating at `u64::MAX`.
+///
+/// Every timed span in the benchmark reports nanoseconds as a `u64`, and
+/// `Duration::as_nanos` is a `u128`. Three spellings of the narrowing coexisted:
+/// a bare `as u64` cast, a `min(u64::MAX)` clamp, and a `try_from().unwrap_or`.
+/// The bare cast truncates instead of saturating: a count past `u64::MAX`
+/// nanoseconds is reported as an unrelated small number rather than clamped at
+/// the maximum. This is the single spelling, and it saturates.
+#[must_use]
+pub fn elapsed_ns(started: std::time::Instant) -> u64 {
+    narrow_nanos(started.elapsed().as_nanos())
+}
+
+/// The one narrowing of a nanosecond count to the `u64` every metric reports.
+///
+/// Split out from `elapsed_ns` so the saturation boundary is reachable without
+/// an `Instant` far enough in the past to overflow, which no monotonic clock
+/// can supply.
+#[must_use]
+fn narrow_nanos(nanos: u128) -> u64 {
+    u64::try_from(nanos).unwrap_or(u64::MAX)
 }
 
 #[must_use]
@@ -77,7 +140,7 @@ pub struct BenchMetrics {
     pub wire_bytes: Option<u64>,
     pub gpu_counter: Vec<GpuCounter>,
     pub custom: Vec<MetricPoint>,
-    /// ROADMAP M3: cold-vs-warm separation. Wall-clock (ns) of the
+    /// cold-vs-warm separation. Wall-clock (ns) of the
     /// first warmup sample for this case, captured before any pipeline
     /// cache hits, before any naga module cache hits, and before the
     /// GPU adapter has memoised the kernel. Compare against `wall_ns`
@@ -96,7 +159,7 @@ pub struct BenchMetrics {
 }
 
 impl BenchMetrics {
-    /// ROADMAP M4  -  CPU-side achieved memory bandwidth probe.
+    /// CPU-side achieved memory bandwidth probe.
     ///
     /// Returns `bytes_touched / wall_ns * 1e9 / 1e9` (= `bytes_touched / wall_ns`)
     /// in GB/s when both `bytes_touched` and `wall_ns` are present and
@@ -173,5 +236,32 @@ mod tests {
             joined, split,
             "Fix: benchmark output digests must include buffer boundaries."
         );
+    }
+
+    /// A span longer than `u64::MAX` nanoseconds reports as the maximum rather
+    /// than wrapping to a small number. No monotonic clock can produce an
+    /// `Instant` 585 years in the past, so the boundary is driven through
+    /// `narrow_nanos`, the function `elapsed_ns` delegates the cast to. The
+    /// bare `as u64` cast this replaced wrapped `u64::MAX + 1` to 0.
+    #[test]
+    fn nanosecond_narrowing_saturates_rather_than_wrapping() {
+        assert_eq!(narrow_nanos(u128::from(u64::MAX) + 1), u64::MAX);
+        assert_eq!(narrow_nanos(u128::from(u64::MAX) * 4), u64::MAX);
+        assert_eq!(narrow_nanos(u128::from(u64::MAX)), u64::MAX);
+        assert_eq!(narrow_nanos(1_000_000), 1_000_000);
+        assert_eq!(narrow_nanos(0), 0);
+    }
+
+    /// A real span narrows to a plausible nonzero count without saturating.
+    #[test]
+    fn real_span_reports_between_zero_and_saturation() {
+        let started = std::time::Instant::now();
+        std::thread::sleep(std::time::Duration::from_millis(2));
+        let observed = elapsed_ns(started);
+        assert!(
+            observed >= 1_000_000,
+            "2ms sleep must exceed 1ms: {observed}"
+        );
+        assert!(observed < u64::MAX, "a real span must not saturate");
     }
 }

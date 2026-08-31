@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "One resolver answers which cargo a gate starts, so a build a gate spawns cannot compile a different workspace than the one being judged: the exported wrapper wins, then a wrapper beside the workspace root, then the toolchain that started the process, then the bare name."

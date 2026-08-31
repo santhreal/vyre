@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The `hot-path-nested-rows` gate reads the trait that returns nested byte rows rather than counting the text of the type in one crate. A dispatch trait that returns `Vec<Vec<u8>>` must also declare a form that fills slots the caller keeps, and such a form must fill them rather than assign fresh rows through the parameter. The counted spelling condemned the shared dispatch ABI at one backend while the caller-owned slot machinery that answers it read as a finding too, so the pin could only be met by rewording."

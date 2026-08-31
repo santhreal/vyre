@@ -5,9 +5,7 @@
 
 use proptest::prelude::*;
 use vyre_emit_ptx::EmitError;
-use vyre_lower::emit_adversarial_corpus::{
-    self, EmitAdversarialBackend, EmitAdversarialCase, EmitAdversarialFamily,
-};
+use vyre_lower::emit_adversarial_corpus::{self, EmitAdversarialCase, EmitAdversarialFamily};
 
 fn assert_ptx_structure(case: &EmitAdversarialCase, ptx: &str) {
     assert!(ptx.contains(".version"), "{}: missing .version", case.id);
@@ -123,11 +121,6 @@ fn assert_ptx_structure(case: &EmitAdversarialCase, ptx: &str) {
 
 #[test]
 fn hostile_success_corpus_emits_structured_ptx() {
-    assert!(
-        emit_adversarial_corpus::required_backends().contains(&EmitAdversarialBackend::Ptx),
-        "Fix: shared emit adversarial corpus must register PTX as a required consumer."
-    );
-
     for case in emit_adversarial_corpus::success_cases() {
         let ptx = vyre_emit_ptx::emit(
             &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),

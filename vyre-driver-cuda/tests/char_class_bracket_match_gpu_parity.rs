@@ -1,25 +1,24 @@
 //! Parity test: vyre-primitives char_class + bracket_match match
 //! their reference oracles.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::ir::{BufferAccess, DataType, Program};
+use harness::{
+    bytes_to_u32_per_lane, bytes_u32, find_output_buffer_index, is_required_input_buffer,
+    u32_bytes, with_live_backend,
+};
+use vyre::ir::{DataType, Program};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::matching::bracket_match::{
-    bracket_match, bracket_match_dispatch_grid, cpu_ref as bracket_cpu, CLOSE_BRACE, MATCH_NONE,
-    OPEN_BRACE, OTHER,
+use vyre_libs::pattern::{
+    bracket_match, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_OTHER, BRACKET_MATCH_NONE,
+    BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE,
 };
-use vyre_primitives::text::char_class::{
-    build_char_class_table, char_class, char_class_dispatch_grid, char_class_u8,
-    reference_char_class,
+use vyre_libs::text::{build_char_class_table, char_class, char_class_u8};
+use vyre_reference::composition_witness::{
+    bracket_match_witness as reference_bracket_match, char_class_witness as reference_char_class,
 };
-
-fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {
-    source.iter().map(|&b| b as u32).collect()
-}
 
 fn inputs_for_char_class_program(
     program: &Program,
@@ -29,45 +28,17 @@ fn inputs_for_char_class_program(
     program
         .buffers()
         .iter()
-        .filter_map(|buffer| {
-            let backend_allocated = buffer.is_output() || buffer.is_pipeline_live_out();
-            let needs_input = matches!(
-                buffer.access(),
-                BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
-            ) && !backend_allocated
-                && buffer.access() != BufferAccess::Workgroup;
-            if !needs_input {
-                return None;
-            }
-            match buffer.name() {
-                "source" => match buffer.element() {
-                    DataType::U8 => Some(source.to_vec()),
-                    DataType::U32 => Some(u32_bytes(&bytes_to_u32_per_lane(source))),
-                    other => {
-                        panic!("Fix: CUDA char-class source must be U8 or U32, got {other:?}")
-                    }
-                },
-                "table" => Some(u32_bytes(table)),
-                other => panic!("Fix: unexpected CUDA char-class input buffer `{other}`"),
-            }
+        .filter(|buffer| is_required_input_buffer(buffer))
+        .map(|buffer| match buffer.name() {
+            "source" => match buffer.element() {
+                DataType::U8 => source.to_vec(),
+                DataType::U32 => u32_bytes(&bytes_to_u32_per_lane(source)),
+                other => panic!("Fix: CUDA char-class source must be U8 or U32, got {other:?}"),
+            },
+            "table" => u32_bytes(table),
+            other => panic!("Fix: unexpected CUDA char-class input buffer `{other}`"),
         })
         .collect()
-}
-
-fn output_index(program: &Program, name: &str) -> usize {
-    program
-        .buffers()
-        .iter()
-        .filter(|buffer| {
-            buffer.is_output()
-                || buffer.is_pipeline_live_out()
-                || matches!(
-                    buffer.access(),
-                    BufferAccess::ReadWrite | BufferAccess::WriteOnly
-                )
-        })
-        .position(|buffer| buffer.name() == name)
-        .expect("Fix: CUDA char-class output buffer must be declared")
 }
 
 fn run_char_class_program(
@@ -78,8 +49,8 @@ fn run_char_class_program(
 ) -> Vec<u32> {
     let inputs = inputs_for_char_class_program(&program, source, table);
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(char_class_dispatch_grid(source.len() as u32));
-    let classified_index = output_index(&program, "classified");
+    config.grid_override = Some(vyre_primitives::lane_grid(source.len() as u32, 256));
+    let classified_index = find_output_buffer_index(&program, "classified");
     let outputs = with_live_backend(case_name, |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -215,8 +186,7 @@ fn run_bracket_match(kinds: &[u32], max_depth: u32) -> Vec<u32> {
         // stack scratch: zero-init.
         vec![0u8; max_depth as usize * 4],
     ];
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some(bracket_match_dispatch_grid(n, max_depth));
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("bracket match", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -231,56 +201,61 @@ fn run_bracket_match(kinds: &[u32], max_depth: u32) -> Vec<u32> {
 
 #[test]
 fn cuda_bracket_match_simple_pair() {
-    // {x} → indices 0 OPEN, 1 OTHER, 2 CLOSE.
-    let kinds = vec![OPEN_BRACE, OTHER, CLOSE_BRACE];
-    let cpu = bracket_cpu(&kinds, 3);
+    // {x} → indices 0 OPEN, 1 BRACKET_KIND_OTHER, 2 CLOSE.
+    let kinds = vec![BRACKET_KIND_OPEN, BRACKET_KIND_OTHER, BRACKET_KIND_CLOSE];
+    let expected = reference_bracket_match(&kinds, 3);
     let gpu = run_bracket_match(&kinds, 3);
-    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, expected);
 }
 
 #[test]
 fn cuda_bracket_match_nested_pairs() {
     // {{}} → 0 OPEN, 1 OPEN, 2 CLOSE, 3 CLOSE.
-    let kinds = vec![OPEN_BRACE, OPEN_BRACE, CLOSE_BRACE, CLOSE_BRACE];
-    let cpu = bracket_cpu(&kinds, 4);
+    let kinds = vec![
+        BRACKET_KIND_OPEN,
+        BRACKET_KIND_OPEN,
+        BRACKET_KIND_CLOSE,
+        BRACKET_KIND_CLOSE,
+    ];
+    let expected = reference_bracket_match(&kinds, 4);
     let gpu = run_bracket_match(&kinds, 4);
-    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, expected);
 }
 
 #[test]
 fn cuda_bracket_match_unbalanced_open_left_unmatched() {
     // {{} → 0 OPEN, 1 OPEN, 2 CLOSE. Inner pair 1↔2; outer 0 unmatched.
-    let kinds = vec![OPEN_BRACE, OPEN_BRACE, CLOSE_BRACE];
-    let cpu = bracket_cpu(&kinds, 3);
+    let kinds = vec![BRACKET_KIND_OPEN, BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE];
+    let expected = reference_bracket_match(&kinds, 3);
     let gpu = run_bracket_match(&kinds, 3);
-    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, expected);
 }
 
 #[test]
 fn cuda_bracket_match_extra_close_dropped() {
     // }{} → 0 CLOSE (no opening), 1 OPEN, 2 CLOSE.
-    let kinds = vec![CLOSE_BRACE, OPEN_BRACE, CLOSE_BRACE];
-    let cpu = bracket_cpu(&kinds, 3);
+    let kinds = vec![BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE];
+    let expected = reference_bracket_match(&kinds, 3);
     let gpu = run_bracket_match(&kinds, 3);
-    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, expected);
 }
 
 #[test]
 fn cuda_bracket_match_parallel_crosses_workgroup_boundaries() {
-    let mut kinds = vec![OTHER; 513];
-    kinds[0] = OPEN_BRACE;
-    kinds[300] = OPEN_BRACE;
-    kinds[301] = CLOSE_BRACE;
-    kinds[512] = CLOSE_BRACE;
+    let mut kinds = vec![BRACKET_KIND_OTHER; 513];
+    kinds[0] = BRACKET_KIND_OPEN;
+    kinds[300] = BRACKET_KIND_OPEN;
+    kinds[301] = BRACKET_KIND_CLOSE;
+    kinds[512] = BRACKET_KIND_CLOSE;
 
-    let cpu = bracket_cpu(&kinds, kinds.len() as u32);
+    let expected = reference_bracket_match(&kinds, kinds.len() as u32);
     let gpu = run_bracket_match(&kinds, kinds.len() as u32);
 
-    assert_eq!(
-        bracket_match_dispatch_grid(kinds.len() as u32, kinds.len() as u32),
-        [3, 1, 1]
+    assert!(
+        kinds.len() as u32 > BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE[0],
+        "Fix: the fixture must cross a workgroup boundary or it proves nothing about multi-block launches"
     );
-    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, expected);
     assert_eq!(gpu[0], 512);
     assert_eq!(gpu[512], 0);
     assert_eq!(gpu[300], 301);
@@ -290,22 +265,32 @@ fn cuda_bracket_match_parallel_crosses_workgroup_boundaries() {
 #[test]
 fn cuda_bracket_match_bounded_depth_stays_exact_for_overflow_opens() {
     let kinds = vec![
-        OPEN_BRACE,
-        OPEN_BRACE,
-        OPEN_BRACE,
-        CLOSE_BRACE,
-        CLOSE_BRACE,
-        CLOSE_BRACE,
+        BRACKET_KIND_OPEN,
+        BRACKET_KIND_OPEN,
+        BRACKET_KIND_OPEN,
+        BRACKET_KIND_CLOSE,
+        BRACKET_KIND_CLOSE,
+        BRACKET_KIND_CLOSE,
     ];
-    let cpu = bracket_cpu(&kinds, 2);
+    let expected = reference_bracket_match(&kinds, 2);
     let gpu = run_bracket_match(&kinds, 2);
 
     assert_eq!(
-        bracket_match_dispatch_grid(kinds.len() as u32, 2),
-        [1, 1, 1]
+        vyre_foundation::guarded_logical_span(&bracket_match(
+            "kinds",
+            "stack",
+            "match_pairs",
+            kinds.len() as u32,
+            2
+        )),
+        Some(1),
+        "Fix: the depth-capped path is serial, so it must admit exactly one lane"
     );
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, vec![4, 3, MATCH_NONE, 1, 0, MATCH_NONE]);
+    assert_eq!(gpu, expected);
+    assert_eq!(
+        gpu,
+        vec![4, 3, BRACKET_MATCH_NONE, 1, 0, BRACKET_MATCH_NONE]
+    );
 }
 
 #[test]
@@ -315,19 +300,19 @@ fn cuda_bracket_match_parallel_generated_mixed_tokens() {
     for index in 0..1029u32 {
         state = state.rotate_left(7) ^ index.wrapping_mul(0x9E37_79B9);
         let kind = match state % 6 {
-            0 | 1 => OPEN_BRACE,
-            2 | 3 => CLOSE_BRACE,
-            _ => OTHER,
+            0 | 1 => BRACKET_KIND_OPEN,
+            2 | 3 => BRACKET_KIND_CLOSE,
+            _ => BRACKET_KIND_OTHER,
         };
         kinds.push(kind);
     }
 
-    let cpu = bracket_cpu(&kinds, kinds.len() as u32);
+    let expected = reference_bracket_match(&kinds, kinds.len() as u32);
     let gpu = run_bracket_match(&kinds, kinds.len() as u32);
 
-    assert_eq!(
-        bracket_match_dispatch_grid(kinds.len() as u32, kinds.len() as u32),
-        [5, 1, 1]
+    assert!(
+        kinds.len() as u32 > BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE[0],
+        "Fix: the fixture must cross a workgroup boundary or it proves nothing about multi-block launches"
     );
-    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, expected);
 }

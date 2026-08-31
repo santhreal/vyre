@@ -1,10 +1,12 @@
 //! Contracts for canonical match post-processing and engine pipelines.
 
-#![cfg(feature = "matching")]
+#![cfg(feature = "pattern")]
 #![allow(deprecated)]
 use vyre_foundation::match_result::ByteRange;
-use vyre_libs::scan::{
-    shannon_entropy_bits_per_byte, try_reference_post_process, PostProcessError,
+use vyre_reference::composition_witness::{
+    shannon_entropy_bits_per_byte_witness as shannon_entropy_bits_per_byte,
+    try_match_post_process_witness as try_reference_post_process,
+    WitnessPostProcessError as PostProcessError,
 };
 
 #[test]

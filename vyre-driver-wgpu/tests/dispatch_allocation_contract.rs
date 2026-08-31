@@ -1,4 +1,4 @@
-//! P0 inventory #10  -  allocation-count contracts for steady-state GPU dispatch.
+//! Allocation-count contracts for steady-state GPU dispatch.
 //!
 //! After caches are warm, CPU-side heap traffic must stay bounded. Budgets are
 //! documented here; tighten them as zero-copy and caller-owned output buffers
@@ -8,10 +8,12 @@
 //! `SmallVec` (inline capacity 8) and passes those borrows through to GPU staging. Caller-owned
 //! `Vec` buffers must stay alive until `PendingDispatch` resolves (same aliasing contract as
 //! `dispatch_borrowed_async`).
+
+#![cfg(feature = "device-tests")]
 #![allow(missing_docs)]
 
-mod common;
-use common::acquire_live_backend as live_backend;
+mod harness;
+use harness::{acquire_live_backend as live_backend, add_one_program};
 
 use std::alloc::System;
 use std::sync::{Mutex, MutexGuard};
@@ -33,34 +35,9 @@ fn allocation_contract_guard() -> MutexGuard<'static, ()> {
     })
 }
 
-fn add_one_program(words: u32) -> Program {
-    let idx = Expr::gid_x();
-    let in_bounds = Expr::lt(idx.clone(), Expr::u32(words));
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(words),
-            BufferDecl::output("out", 1, DataType::U32)
-                .with_count(words)
-                .with_output_byte_range(0..(words as usize * 4)),
-        ],
-        [64, 1, 1],
-        vec![
-            Node::if_then(
-                in_bounds,
-                vec![Node::store(
-                    "out",
-                    idx.clone(),
-                    Expr::add(Expr::load("input", idx), Expr::u32(1)),
-                )],
-            ),
-            Node::return_(),
-        ],
-    )
-}
-
 /// Build a Program with `inputs` separate read buffers and one output. The
 /// summed program exceeds the dispatch-local `SmallVec` inline cap of 8 used
-/// by `clear_requests`, exercising the spill path covered by audit P0 #9.
+/// by `clear_requests`, exercising the spill path.
 fn many_input_sum_program(inputs: u32, words: u32) -> Program {
     let mut bindings: Vec<BufferDecl> = (0..inputs)
         .map(|i| BufferDecl::read(&format!("input_{i}"), i, DataType::U32).with_count(words))
@@ -100,7 +77,7 @@ fn budget_borrowed_hot() -> (usize, usize) {
 
 /// Wide-program ratchet: a Program whose buffer count exceeds the dispatch
 /// `SmallVec` inline cap (8 for `clear_requests`) must stay within this budget
-/// after warm-up. Inventory P0 #9  -  per-thread scratch arenas eliminate the
+/// after warm-up. Per-thread scratch arenas eliminate the
 /// per-dispatch heap allocations that the spill path used to pay.
 fn budget_borrowed_wide_hot() -> (usize, usize) {
     (4096, 6 * 1024 * 1024)
@@ -121,7 +98,7 @@ fn direct_dispatch_borrowed_steady_state_alloc_bounded() {
     let _guard = allocation_contract_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
     let borrowed = [input.as_slice()];
 
     let _ = backend
@@ -155,11 +132,11 @@ fn wide_program_dispatch_borrowed_steady_state_alloc_bounded() {
     let backend = live_backend();
     // 12 inputs > clear_requests inline cap (8): the dispatch hot path's
     // SmallVec spill must come from per-thread scratch capacity, not a fresh
-    // heap allocation per dispatch. Audit P0 #9.
+    // heap allocation per dispatch.
     let inputs_count: u32 = 12;
     let words: u32 = 256;
     let program = many_input_sum_program(inputs_count, words);
-    let one_input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..words);
+    let one_input: Vec<u8> = (0..words).flat_map(u32::to_le_bytes).collect();
     let owned: Vec<Vec<u8>> = (0..inputs_count).map(|_| one_input.clone()).collect();
     let borrowed: Vec<&[u8]> = owned.iter().map(Vec::as_slice).collect();
 
@@ -198,7 +175,7 @@ fn compiled_pipeline_dispatch_steady_state_alloc_bounded() {
     let _guard = allocation_contract_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
 
     let pipeline = backend
         .compile_pipeline_for_oracle(&program, &DispatchConfig::default())
@@ -236,7 +213,7 @@ fn async_dispatch_steady_state_alloc_bounded() {
     let _guard = allocation_contract_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
 
     let pending0 = backend
         .dispatch_async(&program, &[input.clone()], &DispatchConfig::default())
@@ -286,7 +263,7 @@ fn async_dispatch_multi_input_borrowed_smallvec_inline_alloc_bounded() {
     let inputs_count: u32 = 3;
     let words: u32 = 256;
     let program = many_input_sum_program(inputs_count, words);
-    let one_input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..words);
+    let one_input: Vec<u8> = (0..words).flat_map(u32::to_le_bytes).collect();
     let owned: Vec<Vec<u8>> = (0..inputs_count).map(|_| one_input.clone()).collect();
 
     let pending0 = backend

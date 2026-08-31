@@ -1,15 +1,14 @@
 //! Parity test: GPU csr_backward_traverse one-step matches CPU oracle.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, csr_traversal_inputs, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::graph::csr_backward_traverse::{
-    cpu_ref, csr_backward_traverse, csr_backward_traverse_dispatch_grid,
-};
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_libs::graph::csr_backward_traverse::csr_backward_traverse;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
+use vyre_reference::composition_witness::csr_backward_traverse_witness;
 
 fn run(
     node_count: u32,
@@ -21,26 +20,20 @@ fn run(
     allow_mask: u32,
 ) -> Vec<u32> {
     let words = ((node_count + 31) / 32).max(1);
-    let pg_nodes = vec![0u32; node_count as usize];
-    let pg_node_tags = vec![0u32; node_count as usize];
     let program = csr_backward_traverse(
         ProgramGraphShape::new(node_count, edge_count.max(1)),
         "frontier_in",
         "frontier_out",
         allow_mask,
     );
-    let inputs: Vec<Vec<u8>> = vec![
-        u32_bytes(&pg_nodes),
-        u32_bytes(edge_offsets),
-        u32_bytes(edge_targets),
-        u32_bytes(edge_kind_mask),
-        u32_bytes(&pg_node_tags),
-        u32_bytes(frontier),
-        // frontier_out: zero-init.
-        vec![0u8; words as usize * 4],
-    ];
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some(csr_backward_traverse_dispatch_grid(node_count));
+    let inputs = csr_traversal_inputs(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier,
+    );
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("CSR backward traverse", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -61,7 +54,7 @@ fn cuda_csr_backward_chain_one_step() {
     let edge_kind_mask = vec![1u32; 3];
     // frontier_in = {3}. Backward step → {2} (only src that points to 3).
     let frontier = vec![0b1000u32];
-    let cpu = cpu_ref(
+    let cpu = csr_backward_traverse_witness(
         4,
         &edge_offsets,
         &edge_targets,
@@ -90,7 +83,7 @@ fn cuda_csr_backward_diamond_one_step() {
     let edge_kind_mask = vec![1u32; 4];
     // frontier_in = {3}. Backward → {1, 2}.
     let frontier = vec![0b1000u32];
-    let cpu = cpu_ref(
+    let cpu = csr_backward_traverse_witness(
         4,
         &edge_offsets,
         &edge_targets,
@@ -118,7 +111,7 @@ fn cuda_csr_backward_kind_mask_filters() {
     let edge_kind_mask = vec![0b0010u32]; // kind bit 1
     let frontier = vec![0b10u32];
     // allow=0b0001 (kind 0)  -  edge filtered out, no backward step.
-    let cpu = cpu_ref(
+    let cpu = csr_backward_traverse_witness(
         2,
         &edge_offsets,
         &edge_targets,
@@ -145,7 +138,7 @@ fn cuda_csr_backward_empty_frontier() {
     let edge_targets = vec![1u32, 2, 3];
     let edge_kind_mask = vec![1u32; 3];
     let frontier = vec![0u32];
-    let cpu = cpu_ref(
+    let cpu = csr_backward_traverse_witness(
         4,
         &edge_offsets,
         &edge_targets,
@@ -179,7 +172,7 @@ fn cuda_csr_backward_reaches_source_past_first_workgroup() {
     let mut frontier = vec![0u32; words];
     frontier[512 / 32] |= 1u32 << (512 % 32);
 
-    let cpu = cpu_ref(
+    let cpu = csr_backward_traverse_witness(
         node_count,
         &edge_offsets,
         &edge_targets,

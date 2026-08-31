@@ -1,7 +1,7 @@
 //! Hashmap reference interpreter invocation-count contracts.
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_reference::{reference_eval, value::Value};
+use vyre_reference::reference_eval;
 
 #[test]
 fn huge_workgroup_dimensions_return_structured_error() {
@@ -11,7 +11,7 @@ fn huge_workgroup_dimensions_return_structured_error() {
         vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
     );
 
-    let error = reference_eval(&program, &[Value::from(vec![0u8; 4])])
+    let error = reference_eval(&program, &[])
         .expect_err("huge workgroup dimensions must not allocate or panic");
     let message = error.to_string();
     assert!(

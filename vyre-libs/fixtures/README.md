@@ -14,7 +14,7 @@ Format:
 
 ```toml
 schema_version = "1"
-op = "vyre-libs::matching::aho_corasick"
+op = "vyre-libs::pattern::aho_corasick"
 source = "Aho-Corasick 1975 paper + aho-corasick crate regression corpus"
 
 [[witness]]

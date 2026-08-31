@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Selected plans now authenticate a versioned backend-neutral phase schedule with typed transform preconditions, deterministic replay, inverse/source provenance, exact per-phase geometry, and checked resource bounds before physical lowering."

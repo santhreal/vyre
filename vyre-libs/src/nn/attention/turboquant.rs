@@ -13,7 +13,7 @@
 //! `(packed[flat / 10] >> ((flat % 10) * 3)) & 0x7`, cast value-preserving
 //! to f32.
 
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::nn::attention::turboquant";
@@ -78,51 +78,8 @@ pub fn turboquant_attention(
         )
     };
 
-    if seq_len <= 8 && d_head <= 16 {
-        let mut stores = Vec::with_capacity(d_head as usize);
-        for dim in 0..d_head {
-            let mut acc = Expr::f32(0.0);
-            for i in 0..seq_len {
-                let mut score = Expr::f32(0.0);
-                for e in 0..d_head {
-                    score = Expr::add(
-                        score,
-                        Expr::mul(
-                            Expr::load(q, Expr::u32(e)),
-                            unpack_3bit(k_packed, Expr::u32(i * d_head + e)),
-                        ),
-                    );
-                }
-                acc = Expr::add(
-                    acc,
-                    Expr::mul(score, unpack_3bit(v_packed, Expr::u32(i * d_head + dim))),
-                );
-            }
-            stores.push(Node::store(out, Expr::u32(dim), acc));
-        }
-        return Program::wrapped(
-            vec![
-                BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(d_head),
-                BufferDecl::storage(k_packed, 1, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(packed_words),
-                BufferDecl::storage(v_packed, 2, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(packed_words),
-                BufferDecl::storage(out, 3, BufferAccess::ReadWrite, DataType::F32)
-                    .with_count(d_head),
-            ],
-            [1, 1, 1],
-            vec![wrap_anonymous(
-                OP_ID,
-                vec![Node::if_then(
-                    Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                    stores,
-                )],
-            )],
-        );
-    }
-
     // Per output lane d: walk i in 0..seq_len, accumulate score*V.
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     let inner_body = vec![
         Node::let_bind("d", t.clone()),
@@ -140,36 +97,29 @@ pub fn turboquant_attention(
                     Expr::u32(d_head),
                     vec![Node::assign(
                         "score",
-                        Expr::add(
-                            Expr::var("score"),
-                            Expr::mul(
-                                Expr::load(q, Expr::var("e")),
-                                unpack_3bit(
-                                    k_packed,
-                                    Expr::add(
-                                        Expr::mul(Expr::var("i"), Expr::u32(d_head)),
-                                        Expr::var("e"),
-                                    ),
+                        Expr::fma(
+                            Expr::load(q, Expr::var("e")),
+                            unpack_3bit(
+                                k_packed,
+                                Expr::add(
+                                    Expr::mul(Expr::var("i"), Expr::u32(d_head)),
+                                    Expr::var("e"),
                                 ),
                             ),
+                            Expr::var("score"),
                         ),
                     )],
                 ),
                 // acc += score * dequant_v[i, d]
                 Node::assign(
                     "acc",
-                    Expr::add(
-                        Expr::var("acc"),
-                        Expr::mul(
-                            Expr::var("score"),
-                            unpack_3bit(
-                                v_packed,
-                                Expr::add(
-                                    Expr::mul(Expr::var("i"), Expr::u32(d_head)),
-                                    Expr::var("d"),
-                                ),
-                            ),
+                    Expr::fma(
+                        Expr::var("score"),
+                        unpack_3bit(
+                            v_packed,
+                            Expr::add(Expr::mul(Expr::var("i"), Expr::u32(d_head)), Expr::var("d")),
                         ),
+                        Expr::var("acc"),
                     ),
                 ),
             ],
@@ -187,7 +137,7 @@ pub fn turboquant_attention(
             BufferDecl::storage(out, 3, BufferAccess::ReadWrite, DataType::F32).with_count(d_head),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::if_then(
                 Expr::lt(t.clone(), Expr::u32(d_head)),
@@ -197,16 +147,13 @@ pub fn turboquant_attention(
     )
 }
 
+const EXPECTED_TURBOQUANT_OUTPUT_BYTES: [u8; 8] = [0x00, 0x00, 0x40, 0x40, 0x00, 0x00, 0xE0, 0x40];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| turboquant_attention("q", "kp", "vp", "out", 2, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || turboquant_attention("q", "kp", "vp", "out", 2, 2),
+        Some(|| {
             let to_f32_bytes =
                 |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
 
@@ -226,25 +173,19 @@ inventory::submit! {
                 vec![0u8; 2 * 4],
             ]]
         }),
-        expected_output: Some(|| {
-            let to_f32_bytes =
-                |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            // score[0] = dot([1,1], [k00=1, k01=2]) = 3
-            // score[1] = dot([1,1], [k10=3, k11=4]) = 7
-            // out[0] = score[0]*v00 + score[1]*v10 = 3*1 + 7*0 = 3
-            // out[1] = score[0]*v01 + score[1]*v11 = 3*0 + 7*1 = 7
-            vec![vec![to_f32_bytes(&[3.0, 7.0])]]
+        Some(|| {
+            vec![vec![EXPECTED_TURBOQUANT_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn turboquant_nan_in_q_propagates_to_output() {
@@ -253,17 +194,12 @@ mod tests {
         let kp = crate::fixture_bytes::u32_bytes(&[0u32]);
         let vp = crate::fixture_bytes::u32_bytes(&[0u32]);
         let program = turboquant_attention("q", "kp", "vp", "out", 2, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "turboquant",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(kp),
-                Value::from(vp),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: turboquant must not panic on NaN q");
-        let out = decode_f32(&outputs[0].to_bytes());
+            vec![f32_bytes(&q), kp, vp, vec![0u8; 8]],
+        );
+        let out = decode_f32(&outputs[0]);
         assert!(
             out.iter().all(|v| v.is_nan()),
             "turboquant NaN in q must produce NaN output, got {:?}",
@@ -277,17 +213,12 @@ mod tests {
         let kp = crate::fixture_bytes::u32_bytes(&[0u32]);
         let vp = crate::fixture_bytes::u32_bytes(&[0u32]);
         let program = turboquant_attention("q", "kp", "vp", "out", 0, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "turboquant",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(kp),
-                Value::from(vp),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: turboquant seq_len=0 must not panic");
-        let out = decode_f32(&outputs[0].to_bytes());
+            vec![f32_bytes(&q), kp, vp, vec![0u8; 8]],
+        );
+        let out = decode_f32(&outputs[0]);
         assert_eq!(
             out,
             vec![0.0, 0.0],
@@ -304,17 +235,12 @@ mod tests {
         // v_packed: same
         let vp = crate::fixture_bytes::u32_bytes(&[9u32]);
         let program = turboquant_attention("q", "kp", "vp", "out", 1, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "turboquant",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(kp),
-                Value::from(vp),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: turboquant single token must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+            vec![f32_bytes(&q), kp, vp, vec![0u8; 8]],
+        );
+        let out = decode_f32(&outputs[0]);
         // score = dot([1,1], [1,1]) = 2
         // out[d] = score * v[0,d] = 2 * 1 = 2 for both lanes
         assert_eq!(out, vec![2.0, 2.0]);

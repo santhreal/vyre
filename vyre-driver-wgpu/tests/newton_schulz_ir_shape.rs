@@ -1,100 +1,73 @@
-//! Regression tests for optimizer IR shape that can explode lowering time.
+//! The Newton-Schulz op's IR shape stays small enough for the wgpu emitter.
+//!
+//! # Why this lives in the driver crate
+//!
+//! `newton_schulz_5step` composes five iterations of a degree-5 polynomial. Emit
+//! it by cloning the polynomial tree per iteration and the expression count grows
+//! multiplicatively, which the naga lowering pays for in compile time rather than
+//! in a wrong answer: nothing fails, the shader just takes minutes to build. So
+//! the pin is on the shape the emitter is handed, and the proof is that the
+//! program it is handed still lowers and validates.
+//!
+//! # Why it counts with the foundation walker
+//!
+//! The count comes from `vyre_foundation::visit::walk_exprs`. A
+//! hand-rolled counter here would be a second traversal of a `#[non_exhaustive]`
+//! enum written outside the crate that declares it: its catch-all arm makes a
+//! variant added tomorrow read as a leaf, so a tree that grew through the new
+//! variant would count as small and this pin would pass on it. Inside
+//! `vyre-foundation` the match is exhaustive, which is the only place a traversal
+//! of this IR cannot silently stop descending.
 
-use vyre::ir::{Expr, Node};
+#![cfg(feature = "device-tests")]
+
+mod harness;
+
+use vyre_foundation::visit::walk_exprs;
+
+/// Expression-node ceiling for the five-iteration composition.
+///
+/// The measured shape is well under this. The ceiling is set at the order of
+/// magnitude that separates shared let-bound SSA from a cloned tree, not at the
+/// measurement, so an ordinary retuning of the op does not move it and a
+/// recursive clone cannot fit under it.
+const MAX_EXPR_NODES: usize = 128;
+
+/// Statement-node ceiling: this is a fixed-size Category-A composition.
+const MAX_NODES: usize = 32;
 
 #[test]
 fn newton_schulz_ir_shape_stays_linear() {
     let program = vyre_libs::nn::optim::newton_schulz_5step("mat", "output", 2, 2);
-    let expr_nodes = program.entry().iter().map(count_node_exprs).sum::<usize>();
+
+    let mut expr_nodes = 0usize;
+    walk_exprs(&program, |_| expr_nodes += 1);
 
     assert!(
-        expr_nodes <= 128,
-        "Fix: newton_schulz_5step must emit shared let-bound SSA expressions, not recursively clone the polynomial tree; expr_nodes={expr_nodes}"
+        expr_nodes <= MAX_EXPR_NODES,
+        "Fix: newton_schulz_5step must emit shared let-bound SSA expressions, not recursively \
+         clone the polynomial tree; expr_nodes={expr_nodes} exceeds {MAX_EXPR_NODES}"
     );
     assert!(
-        program.stats().node_count <= 32,
-        "Fix: newton_schulz_5step should remain a small fixed-size Cat-A composition; nodes={}",
+        program.stats().node_count <= MAX_NODES,
+        "Fix: newton_schulz_5step should remain a small fixed-size Cat-A composition; nodes={} \
+         exceeds {MAX_NODES}",
         program.stats().node_count
     );
 }
 
-fn count_node_exprs(node: &Node) -> usize {
-    match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => count_expr(value),
-        Node::Store { index, value, .. } => count_expr(index) + count_expr(value),
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            count_expr(cond)
-                + then.iter().map(count_node_exprs).sum::<usize>()
-                + otherwise.iter().map(count_node_exprs).sum::<usize>()
-        }
-        Node::Loop { from, to, body, .. } => {
-            count_expr(from) + count_expr(to) + body.iter().map(count_node_exprs).sum::<usize>()
-        }
-        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-            count_expr(offset) + count_expr(size)
-        }
-        Node::Trap { address, .. } => count_expr(address),
-        Node::Block(nodes) => nodes.iter().map(count_node_exprs).sum(),
-        Node::Region { body, .. } => body.iter().map(count_node_exprs).sum(),
-        Node::IndirectDispatch { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Return
-        | Node::Barrier {
-            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-        }
-        | Node::Opaque(_) => 0,
-        _ => panic!("Fix: update newton_schulz IR-shape test for new Node variant."),
-    }
-}
-
-fn count_expr(expr: &Expr) -> usize {
-    1 + match expr {
-        Expr::Load { index, .. }
-        | Expr::UnOp { operand: index, .. }
-        | Expr::Cast { value: index, .. }
-        | Expr::SubgroupBallot { cond: index }
-        | Expr::SubgroupReduce { value: index, .. } => count_expr(index),
-        Expr::BinOp { left, right, .. }
-        | Expr::SubgroupShuffle {
-            value: left,
-            lane: right,
-        } => count_expr(left) + count_expr(right),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        }
-        | Expr::Fma {
-            a: cond,
-            b: true_val,
-            c: false_val,
-        } => count_expr(cond) + count_expr(true_val) + count_expr(false_val),
-        Expr::Call { args, .. } => args.iter().map(count_expr).sum(),
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            count_expr(index) + expected.as_deref().map(count_expr).unwrap_or(0) + count_expr(value)
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => 0,
-        _ => panic!("Fix: update newton_schulz IR-shape test for new Expr variant."),
-    }
+/// The pinned shape is the shape the wgpu emitter is actually handed.
+///
+/// A shape pin on its own proves nothing about lowering: the op could stay small
+/// and still fail to emit. Lowering it here is what makes the ceiling above a
+/// statement about this backend's compile cost rather than about the IR alone.
+#[test]
+fn newton_schulz_lowers_through_the_wgpu_emitter() {
+    let program = vyre_libs::nn::optim::newton_schulz_5step("mat", "output", 2, 2);
+    let wgsl = harness::emit_validated_wgsl(&program);
+    assert!(
+        wgsl.contains("fn main"),
+        "Fix: the emitted module must carry a compute entry point; got {} bytes of WGSL",
+        wgsl.len()
+    );
 }

@@ -3,7 +3,7 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform-spec
+./cargo_full test -p vyre-conform-spec
 ```
 
 Define conformance case, result, and certificate schemas against the public facade.
@@ -14,7 +14,7 @@ The crate lives at `conform/vyre-conform-spec`. The `conformance` owner maintain
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform-spec
+./cargo_full test -p vyre-conform-spec
 ```
 
 ## Feature sets
@@ -25,9 +25,10 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_conform_spec` | `conform/vyre-conform-spec/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform-spec` |
-| `test` | `schema_contract` | `conform/vyre-conform-spec/tests/schema_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform-spec --test schema_contract` |
-| `test` | `witness_contract` | `conform/vyre-conform-spec/tests/witness_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform-spec --test witness_contract` |
+| `lib` | `vyre_conform_spec` | `conform/vyre-conform-spec/src/lib.rs` | None | `./cargo_full test -p vyre-conform-spec` |
+| `test` | `cert_contracts` | `conform/vyre-conform-spec/tests/cert_contracts.rs` | None | `./cargo_full test -p vyre-conform-spec --test cert_contracts` |
+| `test` | `schema_contract` | `conform/vyre-conform-spec/tests/schema_contract.rs` | None | `./cargo_full test -p vyre-conform-spec --test schema_contract` |
+| `test` | `witness_contract` | `conform/vyre-conform-spec/tests/witness_contract.rs` | None | `./cargo_full test -p vyre-conform-spec --test witness_contract` |
 
 ## Test classes
 

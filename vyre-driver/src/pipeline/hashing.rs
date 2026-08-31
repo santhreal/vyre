@@ -2,7 +2,6 @@
 
 use crate::backend::DispatchConfig;
 use vyre_foundation::ir::Program;
-use vyre_spec::BackendId;
 
 /// Return the normalized program digest used by backend pipeline caches.
 ///
@@ -39,7 +38,7 @@ pub fn update_dispatch_policy_cache_hash(hasher: &mut blake3::Hasher, config: &D
         }
     };
     hasher.update(b"\0wg\0");
-    match config.workgroup_override {
+    match config.launch_workgroup() {
         Some(workgroup) => {
             hasher.update(&[1]);
             for axis in workgroup {
@@ -74,7 +73,7 @@ pub fn dispatch_policy_cache_string(config: &DispatchConfig) -> String {
     policy.push_str("ulp=");
     push_debug_option_u8(&mut policy, config.ulp_budget);
     policy.push_str(":wg=");
-    push_debug_option_workgroup(&mut policy, config.workgroup_override);
+    push_debug_option_workgroup(&mut policy, config.launch_workgroup());
     policy
 }
 
@@ -193,6 +192,7 @@ pub(super) fn push_decimal_u32(out: &mut String, value: u32) {
     }
 }
 
+// Inline: covers `push_decimal_u32`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{
@@ -241,5 +241,33 @@ mod tests {
                 "Fix: dispatch-policy digest must stay single-sourced through update_dispatch_policy_cache_hash for generated case {case}."
             );
         }
+    }
+
+    /// WHY: a frozen launch selects the workgroup a backend compiles against, so
+    /// two artifacts differing only in that workgroup must not share a pipeline
+    /// cache entry. A key that reads only the tuner override would collide them
+    /// and run the second launch on the first launch's kernel.
+    #[test]
+    fn a_frozen_launch_workgroup_separates_pipeline_cache_keys() {
+        let launch_of = |workgroup: [u32; 3]| {
+            let mut config = DispatchConfig::default();
+            config.launch = Some(
+                crate::launch_directive::LaunchDirective::stated(workgroup, [8, 1, 1], 0)
+                    .expect("the stated fixture launch is positive"),
+            );
+            config
+        };
+        let narrow = dispatch_policy_cache_digest(&launch_of([64, 1, 1]));
+        let wide = dispatch_policy_cache_digest(&launch_of([256, 1, 1]));
+        assert_ne!(
+            narrow, wide,
+            "Fix: a frozen launch workgroup must reach the pipeline cache key."
+        );
+
+        // The same kernel, stated through either authority, is one cache entry:
+        // the grid is a launch argument and does not change generated code.
+        let mut overridden = DispatchConfig::default();
+        overridden.workgroup_override = Some([64, 1, 1]);
+        assert_eq!(dispatch_policy_cache_digest(&overridden), narrow);
     }
 }

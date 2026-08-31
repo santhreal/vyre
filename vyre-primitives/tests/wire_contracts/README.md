@@ -14,7 +14,7 @@ that locks the truth of a specific claim. This directory is the index.
 | 6. Property (proptest)   | ok     | `tests/proptest_wire_roundtrip.rs` (8 properties × 10 000 cases)     |
 | 7. Differential          | ok     | `tests/wire_differential_std_io.rs` vs `std::io::Cursor` LE reader   |
 | 8. Performance           | ok     | `benches/wire_throughput.rs` (criterion, 3 input sizes × 6 paths)    |
-| 9. Scale                 | open   | `tests/wire_contracts/scale.rs` (TODO: 1B-byte buffer roundtrip)     |
+| 9. Scale                 | open   | no test yet; 1B-byte buffer roundtrip                                |
 | 10. End-to-end CLI       | open   | drives the vyre binary once one ships                                |
 
 The two "open" tiers stay open and unfinished, they are real work the

@@ -1,0 +1,2 @@
+category = "Added"
+text = "Every quantized dispatch entry point in `vyre-libs` published as `_via` must carry a row asserting how it rejects a malformed backend readback, checked against the re-export list parsed from `vyre_libs::solvers::quantized_dispatch` at run time, so a new entry point is red on its first run."

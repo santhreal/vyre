@@ -3,7 +3,7 @@
 //! Memory ordering is part of the atomic and barrier contracts; a
 //! mis-mapped tag silently changes synchronization semantics.
 
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::ir::MemoryOrdering;
 
 #[test]
 fn relaxed_wire_tag_roundtrips() {

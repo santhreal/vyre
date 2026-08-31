@@ -1,13 +1,15 @@
 //! Generated live CUDA/reference differential matrix for indexed memory semantics.
 
-mod common;
+#![cfg(feature = "device-tests")]
 
-use common::{
-    assert_f32_output_lanes, assert_u32_output_lanes, bool_bytes, cuda_reference_outputs,
-    f32_bytes, i32_bytes, live_backend, u32_bytes, GENERATED_LANE_COUNT as LANE_COUNT,
-    GENERATED_WORKGROUP_SIZE_X as WORKGROUP_SIZE_X,
+mod harness;
+
+use harness::{
+    assert_f32_matrix_sweep, assert_u32_matrix_sweep, bool_bytes, f32_bytes,
+    generated_lane_program, guarded_generated_store_at, i32_bytes, live_backend, u32_bytes,
+    GeneratedMatrixCase, GENERATED_LANE_COUNT as LANE_COUNT,
 };
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{DataType, Expr, Program};
 
 const INDEX_MASK: u32 = LANE_COUNT as u32 - 1;
 const MAX_F32_ULP: u32 = 0;
@@ -167,30 +169,16 @@ const BOOL_MEMORY_CASES: &[MemoryCase] = &[
 fn generated_u32_memory_permutation_matrix_matches_reference_on_live_cuda() {
     let backend = live_backend();
     let input = generated_u32_values(0x3141_5926);
-    let mut checked_lanes = 0usize;
 
-    for case in U32_MEMORY_CASES {
-        let program = memory_program(case);
-        let inputs = vec![u32_bytes(&input)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    assert_eq!(
-        checked_lanes,
-        U32_MEMORY_CASES.len() * LANE_COUNT * 2,
-        "Fix: generated CUDA u32 memory permutation matrix must keep every lane active across direct and compiled paths."
+    assert_u32_matrix_sweep(
+        &backend,
+        "u32 memory permutation",
+        "every lane active",
+        U32_MEMORY_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: memory_program(case),
+            inputs: vec![u32_bytes(&input)],
+        }),
     );
 }
 
@@ -198,30 +186,16 @@ fn generated_u32_memory_permutation_matrix_matches_reference_on_live_cuda() {
 fn generated_i32_memory_permutation_matrix_matches_reference_on_live_cuda() {
     let backend = live_backend();
     let input = generated_i32_values(0x2718_2818);
-    let mut checked_lanes = 0usize;
 
-    for case in I32_MEMORY_CASES {
-        let program = memory_program(case);
-        let inputs = vec![i32_bytes(&input)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    assert_eq!(
-        checked_lanes,
-        I32_MEMORY_CASES.len() * LANE_COUNT * 2,
-        "Fix: generated CUDA i32 memory permutation matrix must keep every lane active across direct and compiled paths."
+    assert_u32_matrix_sweep(
+        &backend,
+        "i32 memory permutation",
+        "every lane active",
+        I32_MEMORY_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: memory_program(case),
+            inputs: vec![i32_bytes(&input)],
+        }),
     );
 }
 
@@ -229,32 +203,17 @@ fn generated_i32_memory_permutation_matrix_matches_reference_on_live_cuda() {
 fn generated_f32_memory_permutation_matrix_matches_reference_on_live_cuda() {
     let backend = live_backend();
     let input = generated_f32_values();
-    let mut checked_lanes = 0usize;
 
-    for case in F32_MEMORY_CASES {
-        let program = memory_program(case);
-        let inputs = vec![f32_bytes(&input)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_f32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            MAX_F32_ULP,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_f32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            MAX_F32_ULP,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    assert_eq!(
-        checked_lanes,
-        F32_MEMORY_CASES.len() * LANE_COUNT * 2,
-        "Fix: generated CUDA f32 memory permutation matrix must keep every lane active across direct and compiled paths."
+    assert_f32_matrix_sweep(
+        &backend,
+        "f32 memory permutation",
+        "every lane active",
+        MAX_F32_ULP,
+        F32_MEMORY_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: memory_program(case),
+            inputs: vec![f32_bytes(&input)],
+        }),
     );
 }
 
@@ -262,51 +221,31 @@ fn generated_f32_memory_permutation_matrix_matches_reference_on_live_cuda() {
 fn generated_bool_memory_permutation_matrix_matches_reference_on_live_cuda() {
     let backend = live_backend();
     let input = generated_bool_values();
-    let mut checked_lanes = 0usize;
 
-    for case in BOOL_MEMORY_CASES {
-        let program = memory_program(case);
-        let inputs = vec![bool_bytes(&input)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    assert_eq!(
-        checked_lanes,
-        BOOL_MEMORY_CASES.len() * LANE_COUNT * 2,
-        "Fix: generated CUDA bool memory permutation matrix must keep every lane active across direct and compiled paths."
+    assert_u32_matrix_sweep(
+        &backend,
+        "bool memory permutation",
+        "every lane active",
+        BOOL_MEMORY_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: memory_program(case),
+            inputs: vec![bool_bytes(&input)],
+        }),
     );
 }
 
+/// `out[build_dst(idx)] = build_value(input[build_src(idx)], idx)`. The store
+/// destination is deliberately not the lane index: a permutation matrix exists
+/// to catch a lowering that assumes it is.
 fn memory_program(case: &MemoryCase) -> Program {
     let idx = Expr::var("idx");
     let src = (case.build_src)(idx.clone());
     let dst = (case.build_dst)(idx.clone());
     let value = (case.build_value)(src, idx);
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, case.ty.clone()).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 1, case.ty.clone()).with_count(LANE_COUNT as u32),
-        ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(LANE_COUNT as u32)),
-                vec![Node::store("out", dst, value)],
-            ),
-        ],
+    generated_lane_program(
+        &[("input", case.ty.clone())],
+        case.ty.clone(),
+        guarded_generated_store_at(dst, value),
     )
 }
 

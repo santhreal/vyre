@@ -1,10 +1,15 @@
-use vyre_foundation::ir::ProgramGraph;
+use vyre_foundation::logical::LogicalProgramGraph;
+use vyre_foundation::numeric::NumericContract;
 
 use crate::{
     candidate::CandidatePlan,
+    certificate::SearchCertificate,
+    derive,
     facts::{DataflowEdge, PlanningFacts},
+    law_candidates::LawDerivationError,
     legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason},
-    DependencyEdge, FusionGroupId, SearchBudget, SearchWork,
+    objective::CompileObjective,
+    DependencyEdge, DeviceFacts, SearchBudget, SearchWork,
 };
 
 #[derive(Debug)]
@@ -17,72 +22,57 @@ pub(crate) struct RejectedEdge {
 pub(crate) struct SearchResult {
     pub(crate) candidates: Vec<CandidatePlan>,
     pub(crate) rejected: Vec<RejectedEdge>,
+    pub(crate) certificate: SearchCertificate,
     pub(crate) work: SearchWork,
 }
 
+/// Derive every candidate the grammar reaches within one budget.
+///
+/// Fusion legality is decided per producer-consumer pair before derivation, so
+/// an illegal pair is recorded with its stable reason in the artifact instead of
+/// being derived and eliminated anonymously.
 pub(crate) fn explore(
-    graph: &ProgramGraph,
+    logical: &LogicalProgramGraph<'_>,
     facts: &PlanningFacts,
     dependencies: &[DependencyEdge],
     budget: SearchBudget,
-) -> SearchResult {
-    let mut candidates = vec![CandidatePlan::baseline(graph.nodes().len())];
+    device: DeviceFacts,
+    objective: &CompileObjective,
+    numeric: Option<NumericContract>,
+) -> Result<SearchResult, LawDerivationError> {
+    let graph = logical.graph();
     let mut rejected = Vec::new();
-    let mut legal_edges = Vec::new();
     let mut cpu_work = 0_u64;
-
     for edge in &facts.dataflow {
         if !can_spend(cpu_work, budget) {
             break;
         }
         cpu_work = cpu_work.saturating_add(1);
-        match analyze_fusion_pair(graph, edge.from, edge.to, edge.value) {
-            FusionDecision::Legal => {
-                let candidate = CandidatePlan::from_edges(graph.nodes().len(), &[*edge]);
-                if candidate_is_acyclic(&candidate, dependencies) {
-                    legal_edges.push(*edge);
-                    if candidates.len() < budget.max_candidates as usize {
-                        candidates.push(candidate);
-                    }
-                } else {
-                    rejected.push(RejectedEdge {
-                        edge: *edge,
-                        reason: FusionRejectionReason::DependencyCycle,
-                    });
-                }
-            }
-            FusionDecision::Rejected(reason) => rejected.push(RejectedEdge {
+        if let FusionDecision::Rejected(reason) =
+            analyze_fusion_pair(graph, edge.from, edge.to, edge.value)
+        {
+            rejected.push(RejectedEdge {
                 edge: *edge,
                 reason,
-            }),
+            });
         }
     }
 
-    if legal_edges.len() > 1
-        && candidates.len() < budget.max_candidates as usize
-        && can_spend(cpu_work, budget)
-    {
-        cpu_work = cpu_work.saturating_add(1);
-        let mut accepted = Vec::new();
-        for edge in legal_edges {
-            let mut proposed = accepted.clone();
-            proposed.push(edge);
-            let candidate = CandidatePlan::from_edges(graph.nodes().len(), &proposed);
-            if candidate_is_acyclic(&candidate, dependencies) {
-                accepted = proposed;
-            } else {
-                rejected.push(RejectedEdge {
-                    edge,
-                    reason: FusionRejectionReason::DependencyCycle,
-                });
-            }
-        }
-        candidates.push(CandidatePlan::from_edges(graph.nodes().len(), &accepted));
-    }
-    candidates.sort_by(|left, right| left.node_groups.cmp(&right.node_groups));
-    candidates.dedup_by(|left, right| left.node_groups == right.node_groups);
+    let derived = derive::derive(
+        logical,
+        facts,
+        dependencies,
+        budget,
+        device,
+        objective,
+        numeric,
+    )?;
+    let cpu_work = cpu_work
+        .saturating_add(derived.cpu_work)
+        .min(budget.max_cpu_work);
+    let candidates = derived.candidates;
 
-    SearchResult {
+    Ok(SearchResult {
         work: SearchWork {
             candidates_explored: u32::try_from(candidates.len()).unwrap_or(u32::MAX),
             cpu_work,
@@ -92,17 +82,8 @@ pub(crate) fn explore(
         },
         candidates,
         rejected,
-    }
-}
-
-fn candidate_is_acyclic(candidate: &CandidatePlan, dependencies: &[DependencyEdge]) -> bool {
-    let groups = candidate
-        .node_groups
-        .iter()
-        .copied()
-        .map(FusionGroupId)
-        .collect::<Vec<_>>();
-    crate::group_stages(candidate.group_count(), dependencies, &groups).is_ok()
+        certificate: derived.certificate,
+    })
 }
 
 fn can_spend(cpu_work: u64, budget: SearchBudget) -> bool {

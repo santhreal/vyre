@@ -1,4 +1,5 @@
 {
+  "source_fingerprint": "git:d9bcd400a6ad14708796af12741b9277fca821f8:dirty=true:worktree=ba7c571995093d8fe3b85fdb312513826612d363456fb865022d0cc7517dd497",
   "schema_version": 1,
   "source_manifest": "docs/optimization/THRESHOLD_POLICY.toml",
   "evidence_artifact": "release/evidence/hygiene/threshold-policy.json",
@@ -7,22 +8,9 @@
   "registered_policy_count": 14,
   "rows": [
     {
-      "id": "VX475-STAGING_BUFFER_POOL_CLASS_CAP",
-      "path": "vyre-driver-wgpu/src/buffer/handle.rs",
-      "line": 19,
-      "name": "STAGING_BUFFER_POOL_CLASS_CAP",
-      "observed_value": "16",
-      "unit": "pool classes",
-      "provenance": "Existing WGPU staging buffer pool class bound; prevents unbounded class fanout in descriptor allocation.",
-      "config_tier": "structural",
-      "override_path": "not operator configurable; changing this requires buffer-pool ABI review",
-      "evidence_link": "release/evidence/hygiene/threshold-policy.json",
-      "release_rule": "VX-475"
-    },
-    {
       "id": "VX475-BIND_GROUP_CACHE_CAP",
-      "path": "vyre-driver-wgpu/src/buffer/handle.rs",
-      "line": 781,
+      "path": "vyre-driver-wgpu/src/buffer/bind_group_cache/mod.rs",
+      "line": 16,
       "name": "BIND_GROUP_CACHE_CAP",
       "observed_value": "256",
       "unit": "bind group entries",
@@ -59,6 +47,19 @@
       "release_rule": "VX-475"
     },
     {
+      "id": "VX475-STAGING_BUFFER_POOL_CLASS_CAP",
+      "path": "vyre-driver-wgpu/src/buffer/staging/mod.rs",
+      "line": 9,
+      "name": "STAGING_BUFFER_POOL_CLASS_CAP",
+      "observed_value": "16",
+      "unit": "pool classes",
+      "provenance": "Existing WGPU staging buffer pool class bound; prevents unbounded class fanout in descriptor allocation.",
+      "config_tier": "structural",
+      "override_path": "not operator configurable; changing this requires buffer-pool ABI review",
+      "evidence_link": "release/evidence/hygiene/threshold-policy.json",
+      "release_rule": "VX-475"
+    },
+    {
       "id": "VX475-DEFAULT_THRESHOLD",
       "path": "vyre-driver-wgpu/src/runtime/cache/tiered_cache.rs",
       "line": 103,
@@ -73,8 +74,8 @@
     },
     {
       "id": "VX475-DEFAULT_EXTRACTION_ITER_BUDGET",
-      "path": "vyre-foundation/src/optimizer/eqsat.rs",
-      "line": 47,
+      "path": "vyre-foundation/src/optimizer/eqsat/mod.rs",
+      "line": 70,
       "name": "DEFAULT_EXTRACTION_ITER_BUDGET",
       "observed_value": "1024",
       "unit": "extraction iterations",
@@ -112,7 +113,7 @@
     },
     {
       "id": "VX475-EMPTY_TEMPLATE_CACHE_CAP",
-      "path": "vyre-runtime/src/megakernel/builder/cache.rs",
+      "path": "vyre-runtime/src/resident_work_queue/builder/cache.rs",
       "line": 10,
       "name": "EMPTY_TEMPLATE_CACHE_CAP",
       "observed_value": "64",
@@ -125,7 +126,7 @@
     },
     {
       "id": "VX475-GRID_PLAN_CACHE_CAP",
-      "path": "vyre-runtime/src/megakernel/planner/grid.rs",
+      "path": "vyre-runtime/src/resident_work_queue/planner/grid.rs",
       "line": 22,
       "name": "GRID_PLAN_CACHE_CAP",
       "observed_value": "128",
@@ -138,7 +139,7 @@
     },
     {
       "id": "VX475-LAUNCH_RECOMMENDATION_CACHE_CAP",
-      "path": "vyre-runtime/src/megakernel/policy/cache.rs",
+      "path": "vyre-runtime/src/resident_work_queue/policy/cache.rs",
       "line": 8,
       "name": "LAUNCH_RECOMMENDATION_CACHE_CAP",
       "observed_value": "128",
@@ -151,7 +152,7 @@
     },
     {
       "id": "VX475-RESERVED_MAX_RANGE_MIN",
-      "path": "vyre-runtime/src/megakernel/protocol/opcode.rs",
+      "path": "vyre-runtime/src/resident_work_queue/protocol/opcode.rs",
       "line": 32,
       "name": "RESERVED_MAX_RANGE_MIN",
       "observed_value": "0x0000_FFF0",
@@ -164,7 +165,7 @@
     },
     {
       "id": "VX475-STARVATION_THRESHOLD",
-      "path": "vyre-runtime/src/megakernel/scheduler.rs",
+      "path": "vyre-runtime/src/resident_work_queue/scheduler/mod.rs",
       "line": 48,
       "name": "STARVATION_THRESHOLD",
       "observed_value": "16",
@@ -177,7 +178,7 @@
     },
     {
       "id": "VX475-TENANT_FAIRNESS_THRESHOLD",
-      "path": "vyre-runtime/src/megakernel/scheduler.rs",
+      "path": "vyre-runtime/src/resident_work_queue/scheduler/mod.rs",
       "line": 52,
       "name": "TENANT_FAIRNESS_THRESHOLD",
       "observed_value": "64",

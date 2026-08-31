@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-driver-spirv` answers the seven capability queries it does not probe from the `VyreBackend` defaults instead of restating `false` for each. The Vulkan compute path probes four limits and claims nothing else, and the trait default is already the conservative answer, so a capability added to the trait no longer needs a hand-written denial here to keep the backend honest."

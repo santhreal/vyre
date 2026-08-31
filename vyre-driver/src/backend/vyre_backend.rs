@@ -1,53 +1,15 @@
 //! The frozen `VyreBackend` contract.
 
-use std::sync::Arc;
-
-use smallvec::SmallVec;
 use vyre_foundation::ir::Program;
 
+use crate::backend::resident_sequence::{dispatch_resident_steps, read_resident_ranges_into};
+pub use crate::backend::resident_sequence::{
+    ResidentDispatchStep, ResidentReadRange, ResidentSequenceTiming,
+};
 use crate::backend::{
-    device_buffer::unsupported_device_buffer, private, BackendError, DeviceBuffer, DispatchConfig,
+    device_buffer::unsupported_device_buffer, sealed, BackendError, DeviceBuffer, DispatchConfig,
     OutputBuffers, PendingDispatch, Resource, TimedDispatchResult,
 };
-
-/// One backend-resident program dispatch in an ordered sequence.
-pub struct ResidentDispatchStep<'a> {
-    /// Program to dispatch.
-    pub program: &'a Program,
-    /// Resident resources in binding order.
-    pub resources: &'a [Resource],
-    /// Optional CUDA/grid-style launch override.
-    pub grid_override: Option<[u32; 3]>,
-    /// Optional workgroup override. MUST be carried alongside `grid_override`:
-    /// a caller that sizes its grid for a specific workgroup (grid =
-    /// ceil(work / workgroup)) will under-cover the work if the step falls back
-    /// to a different default workgroup. `None` keeps the backend's resolved
-    /// default (correct only when `grid_override` is also `None`).
-    pub workgroup_override: Option<[u32; 3]>,
-}
-
-/// One compact byte range to read from a backend-resident resource.
-pub struct ResidentReadRange<'a> {
-    /// Resident resource to read.
-    pub resource: &'a Resource,
-    /// Byte offset inside the resident resource.
-    pub byte_offset: usize,
-    /// Number of bytes to read.
-    pub byte_len: usize,
-}
-
-/// Timing captured for an ordered resident dispatch sequence.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct ResidentSequenceTiming {
-    /// Host-observed sequence duration including requested readbacks.
-    pub wall_ns: u64,
-    /// Device-observed elapsed dispatch time when the backend exposes timers.
-    pub device_ns: Option<u64>,
-    /// Host time spent enqueueing backend work before waiting.
-    pub enqueue_ns: Option<u64>,
-    /// Host time spent waiting for completion and collecting outputs.
-    pub wait_ns: Option<u64>,
-}
 
 /// The frozen contract between vyre and every execution backend.
 ///
@@ -60,7 +22,7 @@ pub struct ResidentSequenceTiming {
 ///
 /// # Examples
 ///
-pub trait VyreBackend: private::Sealed + Send + Sync {
+pub trait VyreBackend: sealed::Sealed + Send + Sync {
     /// Stable backend identifier used for logging, certificates, and adapter selection.
     ///
     /// The identifier must be unique among all backends linked into the
@@ -116,14 +78,16 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         program: &Program,
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError>;
+    ) -> Result<Vec<Vec<u8>>, BackendError> {
+        let borrowed = crate::backend::borrowed_input_slices(inputs, "backend input staging")?;
+        self.dispatch_borrowed(program, &borrowed, config)
+    }
 
     /// Executes the program with borrowed input buffers.
     ///
-    /// Backends may override this method to avoid staging borrowed bytes into
-    /// owned `Vec<u8>` buffers. The default is non-breaking: it performs one
-    /// owned vector allocation for the call and delegates to
-    /// [`VyreBackend::dispatch`].
+    /// This is the dispatch every backend implements. A backend binds caller
+    /// memory, so a row it never has to own is the contract: the owned form
+    /// above borrows the rows it was handed and calls this.
     ///
     /// # Errors
     ///
@@ -133,13 +97,7 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         program: &Program,
         inputs: &[&[u8]],
         config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let owned =
-            crate::backend::clone_borrowed_inputs_for_dispatch(inputs, "backend input staging")?;
-        let outputs = self.dispatch(program, &owned, config)?;
-        crate::observability::record_dispatch_io(inputs, &outputs);
-        Ok(outputs)
-    }
+    ) -> Result<Vec<Vec<u8>>, BackendError>;
 
     /// Executes a borrowed-input dispatch and returns backend-owned timing.
     ///
@@ -159,13 +117,10 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
     ) -> Result<TimedDispatchResult, BackendError> {
         let started = std::time::Instant::now();
         let outputs = self.dispatch_borrowed(program, inputs, config)?;
-        Ok(TimedDispatchResult {
+        Ok(TimedDispatchResult::host_timed(
             outputs,
-            wall_ns: crate::backend::checked_elapsed_wall_ns(started, "backend borrowed dispatch")?,
-            device_ns: None,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+            crate::backend::checked_elapsed_wall_ns(started, "backend borrowed dispatch")?,
+        ))
     }
 
     /// Executes the program with borrowed input buffers and writes outputs into
@@ -185,13 +140,9 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         config: &DispatchConfig,
         outputs: &mut OutputBuffers,
     ) -> Result<(), BackendError> {
-        let result = self.dispatch_borrowed(program, inputs, config)?;
-        let stats = crate::backend::dispatch_result::replace_output_buffers_preserving_slots_with_memory_stats(
-            result,
-            outputs,
-        );
-        crate::observability::record_output_replacement_stats(stats);
-        Ok(())
+        crate::backend::resident_sequence::dispatch_borrowed_into_default(
+            self, program, inputs, config, outputs,
+        )
     }
 
     /// Allocate a backend-resident buffer and return a stable resource handle.
@@ -336,16 +287,12 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         byte_offset: usize,
         byte_len: usize,
     ) -> Result<Vec<u8>, BackendError> {
-        let mut bytes = Vec::new();
-        bytes.try_reserve_exact(byte_len).map_err(|error| {
-            BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: resident ranged download could not reserve {byte_len} output byte(s): {error}. Split the readback range before dispatch."
-                ),
-            }
-        })?;
-        self.download_resident_range_into(resource, byte_offset, byte_len, &mut bytes)?;
-        Ok(bytes)
+        crate::backend::resident_sequence::download_resident_range_default(
+            self,
+            resource,
+            byte_offset,
+            byte_len,
+        )
     }
 
     /// Download a byte range from a backend-resident resource into
@@ -383,19 +330,9 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         ranges: &[(&Resource, usize, usize)],
         outputs: &mut [&mut Vec<u8>],
     ) -> Result<(), BackendError> {
-        if ranges.len() != outputs.len() {
-            return Err(BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: resident ranged batch download expected matching range/output counts but got {} range(s) and {} output(s).",
-                    ranges.len(),
-                    outputs.len()
-                ),
-            });
-        }
-        for ((resource, byte_offset, byte_len), output) in ranges.iter().zip(outputs.iter_mut()) {
-            self.download_resident_range_into(resource, *byte_offset, *byte_len, output)?;
-        }
-        Ok(())
+        crate::backend::resident_sequence::download_resident_ranges_into_default(
+            self, ranges, outputs,
+        )
     }
 
     /// Free a backend-resident resource previously returned by
@@ -468,9 +405,10 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
     ///
     /// The default preserves correctness by dispatching each step through
     /// [`VyreBackend::dispatch_resident_timed`] and then calling
-    /// [`VyreBackend::download_resident_ranges_into`]. CUDA overrides this to
-    /// enqueue the whole dependent chain plus D2H readbacks on one stream and
-    /// pay one host synchronization point.
+    /// [`VyreBackend::download_resident_ranges_into`]. A backend with an ordered
+    /// command queue overrides this to enqueue the whole dependent chain plus
+    /// device-to-host readbacks on one queue and pay one host synchronization
+    /// point.
     ///
     /// # Errors
     ///
@@ -482,16 +420,8 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         read_ranges: &[ResidentReadRange<'_>],
         outputs: &mut [&mut Vec<u8>],
     ) -> Result<(), BackendError> {
-        for step in steps {
-            let mut config = DispatchConfig::default();
-            config.grid_override = step.grid_override;
-            self.dispatch_resident_timed(step.program, step.resources, &config)?;
-        }
-        let ranges = read_ranges
-            .iter()
-            .map(|range| (range.resource, range.byte_offset, range.byte_len))
-            .collect::<SmallVec<[_; 8]>>();
-        self.download_resident_ranges_into(&ranges, outputs)
+        dispatch_resident_steps(self, steps)?;
+        read_resident_ranges_into(self, read_ranges, outputs)
     }
 
     /// Timed variant of
@@ -512,47 +442,12 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         read_ranges: &[ResidentReadRange<'_>],
         outputs: &mut [&mut Vec<u8>],
     ) -> Result<ResidentSequenceTiming, BackendError> {
-        let started = std::time::Instant::now();
-        let mut device_ns = Some(0_u64);
-        let mut enqueue_ns = Some(0_u64);
-        let mut wait_ns = Some(0_u64);
-        for step in steps {
-            let mut config = DispatchConfig::default();
-            config.grid_override = step.grid_override;
-            let timed = self.dispatch_resident_timed(step.program, step.resources, &config)?;
-            device_ns = crate::accounting::sum_optional_timing(
-                device_ns,
-                timed.device_ns,
-                "device timing",
-                "resident sequence",
-                "per-step",
-            )?;
-            enqueue_ns = crate::accounting::sum_optional_timing(
-                enqueue_ns,
-                timed.enqueue_ns,
-                "enqueue timing",
-                "resident sequence",
-                "per-step",
-            )?;
-            wait_ns = crate::accounting::sum_optional_timing(
-                wait_ns,
-                timed.wait_ns,
-                "wait timing",
-                "resident sequence",
-                "per-step",
-            )?;
-        }
-        let ranges = read_ranges
-            .iter()
-            .map(|range| (range.resource, range.byte_offset, range.byte_len))
-            .collect::<SmallVec<[_; 8]>>();
-        self.download_resident_ranges_into(&ranges, outputs)?;
-        Ok(ResidentSequenceTiming {
-            wall_ns: elapsed_resident_sequence_wall_ns(started)?,
-            device_ns,
-            enqueue_ns,
-            wait_ns,
-        })
+        crate::backend::resident_sequence::dispatch_resident_sequence_read_ranges_timed_into_default(
+            self,
+            steps,
+            read_ranges,
+            outputs,
+        )
     }
 
     /// Dispatch a resident prefix, repeat a resident sub-sequence, and read
@@ -576,23 +471,14 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         read_ranges: &[ResidentReadRange<'_>],
         outputs: &mut [&mut Vec<u8>],
     ) -> Result<(), BackendError> {
-        for step in prefix_steps {
-            let mut config = DispatchConfig::default();
-            config.grid_override = step.grid_override;
-            self.dispatch_resident_timed(step.program, step.resources, &config)?;
-        }
-        for _ in 0..repeat_count {
-            for step in repeated_steps {
-                let mut config = DispatchConfig::default();
-                config.grid_override = step.grid_override;
-                self.dispatch_resident_timed(step.program, step.resources, &config)?;
-            }
-        }
-        let ranges = read_ranges
-            .iter()
-            .map(|range| (range.resource, range.byte_offset, range.byte_len))
-            .collect::<SmallVec<[_; 8]>>();
-        self.download_resident_ranges_into(&ranges, outputs)
+        crate::backend::resident_sequence::dispatch_resident_repeated_sequence_read_ranges_into_default(
+            self,
+            prefix_steps,
+            repeated_steps,
+            repeat_count,
+            read_ranges,
+            outputs,
+        )
     }
 
     /// Optional compiled-pipeline cache counters for compile telemetry.
@@ -783,10 +669,18 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
     /// avoiding a wasted allocate/upload that would otherwise end in
     /// [`crate::backend::ErrorCode::CooperativeResidencyExceeded`].
     ///
-    /// Default: `Ok(false)` (no native cooperative launch). Backends that lower
-    /// grid sync override this with the real residency check. Returns `Ok(false)`
-    ///: not an error, when the program carries no grid-sync barrier, since
-    /// there is then nothing to launch cooperatively.
+    /// Default: [`VyreBackend::supports_grid_sync`]. A backend that does not
+    /// lower a whole-grid barrier can fit no cooperative launch, and one that
+    /// does and has declared no residency limit fits every launch it is handed.
+    /// The default was a bare `Ok(false)`, which read as "no native cooperative
+    /// launch" and was correct only for the first of those: a backend that
+    /// reported `supports_grid_sync()` and left the residency check alone was
+    /// routed to the host split on every dispatch, which is the opposite of
+    /// what it asked for. Overriding one of the two without the other is the
+    /// defect this default closes. Answers `Ok(false)` for a program carrying
+    /// no grid-sync barrier only because a backend that lowers none reports no
+    /// support; a native backend answers for the launch it was given, and
+    /// callers ask only when the program has a barrier.
     ///
     /// # Errors
     ///
@@ -798,7 +692,7 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         _inputs: &[&[u8]],
         _config: &DispatchConfig,
     ) -> Result<bool, BackendError> {
-        Ok(false)
+        Ok(self.supports_grid_sync())
     }
 
     /// Whether the shared registry wrapper may emulate whole-grid
@@ -808,7 +702,7 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
     /// This exists separately from [`VyreBackend::supports_grid_sync`]
     /// because a backend can intentionally reject hidden host
     /// orchestration while native cooperative-grid lowering is absent.
-    /// CUDA uses that policy in the release path so missing native
+    /// A native backend uses that policy in the release path so missing
     /// grid-barrier lowering is surfaced as an unsupported feature
     /// instead of silently becoming a slower multi-launch path.
     ///
@@ -919,46 +813,14 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
     /// Unified backend-neutral device profile.
     ///
     /// Shared planner code should prefer this single profile over reading
-    /// individual capability methods one by one. Concrete backends may
-    /// override it when they can report richer device facts such as shared
-    /// memory size or native lowering-strategy features.
+    /// individual capability methods one by one. A concrete backend overrides
+    /// the facts it can report better, such as shared memory size or a native
+    /// lowering-strategy feature, and takes the rest from
+    /// [`crate::DeviceProfile::from_backend`], which is the one place the
+    /// neutral profile is spelled.
     #[must_use]
     fn device_profile(&self) -> crate::DeviceProfile {
-        let max_workgroup_size = self.max_workgroup_size();
-        crate::DeviceProfile {
-            backend: self.id(),
-            supports_subgroup_ops: self.supports_subgroup_ops(),
-            supports_indirect_dispatch: self.supports_indirect_dispatch(),
-            supports_distributed_collectives: self.supports_distributed_collectives(),
-            supports_specialization_constants: false,
-            supports_f16: self.supports_f16(),
-            supports_bf16: self.supports_bf16(),
-            supports_trap_propagation: false,
-            supports_tensor_cores: self.supports_tensor_cores(),
-            has_mul_high: false,
-            has_dual_issue_fp32_int32: false,
-            has_subgroup_shuffle: self.supports_subgroup_ops(),
-            has_shared_memory: false,
-            max_native_int_width: 32,
-            max_workgroup_size,
-            max_invocations_per_workgroup: self.max_compute_invocations_per_workgroup(),
-            max_shared_memory_bytes: 0,
-            max_storage_buffer_binding_size: self.max_storage_buffer_bytes(),
-            subgroup_size: self.subgroup_size().unwrap_or(0),
-            compute_units: 0,
-            regs_per_thread_max: 0,
-            l1_cache_bytes: 0,
-            l2_cache_bytes: 0,
-            mem_bw_gbps: 0,
-            timing_quality: crate::DeviceTimingQuality::HostOnly,
-            supports_device_timestamps: false,
-            supports_hardware_counters: false,
-            ideal_unroll_depth: 0,
-            ideal_vector_pack_bits: 0,
-            ideal_workgroup_tile: [0, 0, 0],
-            shared_memory_bank_count: 0,
-            shared_memory_bank_width_bytes: 0,
-        }
+        crate::DeviceProfile::from_backend(self)
     }
 
     // ---------------------------------------------------------------
@@ -1048,9 +910,9 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
     /// `DEVICE_BUFFER_FEATURE` name; production callers that require
     /// resident-buffer performance must treat that as a hard capability
     /// failure rather than silently routing through host `Vec<u8>`
-    /// dispatch. Real device backends (cuda/wgpu/spirv) override this to
-    /// wrap their concrete handle (for example, a vendor device allocation,
-    /// vulkan buffer) in a `DeviceBuffer` impl.
+    /// dispatch. Real device backends override this to wrap their concrete
+    /// handle, a vendor device allocation or a native buffer object, in a
+    /// `DeviceBuffer` impl.
     ///
     /// See `crate::backend::device_buffer` for the substrate.
     ///
@@ -1127,170 +989,5 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         _config: &DispatchConfig,
     ) -> Result<(), BackendError> {
         Err(unsupported_device_buffer(self.id()))
-    }
-}
-
-fn elapsed_resident_sequence_wall_ns(started: std::time::Instant) -> Result<u64, BackendError> {
-    u64::try_from(started.elapsed().as_nanos()).map_err(|error| BackendError::InvalidProgram {
-        fix: format!(
-            "Fix: resident sequence wall timing cannot fit u64 nanoseconds: {error}. Split telemetry windows or report per-step timing."
-        ),
-    })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-
-    struct TelemetryBackend;
-
-    impl private::Sealed for TelemetryBackend {}
-
-    impl VyreBackend for TelemetryBackend {
-        fn id(&self) -> &'static str {
-            "telemetry-test"
-        }
-
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _config: &DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, BackendError> {
-            Ok(vec![vec![1, 2], vec![3, 4]])
-        }
-    }
-
-    struct SequenceTimingBackend {
-        dispatches: AtomicUsize,
-    }
-
-    impl private::Sealed for SequenceTimingBackend {}
-
-    impl VyreBackend for SequenceTimingBackend {
-        fn id(&self) -> &'static str {
-            "sequence-timing-test"
-        }
-
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _config: &DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, BackendError> {
-            Ok(Vec::new())
-        }
-
-        fn dispatch_resident_timed(
-            &self,
-            _program: &Program,
-            _resources: &[Resource],
-            config: &DispatchConfig,
-        ) -> Result<TimedDispatchResult, BackendError> {
-            let index = self.dispatches.fetch_add(1, Ordering::SeqCst) as u64;
-            assert_eq!(
-                config.grid_override,
-                Some([index as u32 + 1, 1, 1]),
-                "Fix: default resident sequence timing must preserve each step's grid override."
-            );
-            Ok(TimedDispatchResult {
-                outputs: Vec::new(),
-                wall_ns: 10 + index,
-                device_ns: Some(7 + index),
-                enqueue_ns: Some(3 + index),
-                wait_ns: Some(4 + index),
-            })
-        }
-
-        fn download_resident_ranges_into(
-            &self,
-            ranges: &[(&Resource, usize, usize)],
-            outputs: &mut [&mut Vec<u8>],
-        ) -> Result<(), BackendError> {
-            assert_eq!(ranges.len(), outputs.len());
-            for ((resource, offset, len), output) in ranges.iter().zip(outputs.iter_mut()) {
-                let Resource::Resident(handle) = resource else {
-                    panic!("Fix: default timed resident sequence test expects resident resources.");
-                };
-                output.clear();
-                output.extend_from_slice(&handle.id().to_le_bytes());
-                output.extend_from_slice(&(*offset as u64).to_le_bytes());
-                output.extend_from_slice(&(*len as u64).to_le_bytes());
-            }
-            Ok(())
-        }
-    }
-
-    #[test]
-    fn default_borrowed_into_dispatch_records_runtime_telemetry() {
-        let _guard = crate::observability::audit_events_test_lock();
-        let before = crate::observability::snapshot_dispatch_telemetry();
-        let backend = TelemetryBackend;
-        let mut outputs = vec![Vec::with_capacity(4), Vec::with_capacity(1)];
-
-        backend
-            .dispatch_borrowed_into(
-                &Program::empty(),
-                &[&[9, 8, 7]],
-                &DispatchConfig::default(),
-                &mut outputs,
-            )
-            .expect("Fix: default borrowed-into dispatch must succeed");
-
-        let telemetry = crate::observability::snapshot_dispatch_telemetry();
-        assert!(telemetry.launches > before.launches);
-        assert!(telemetry.input_bytes >= before.input_bytes + 3);
-        assert!(telemetry.output_bytes >= before.output_bytes + 4);
-        assert!(telemetry.output_slots >= before.output_slots + 2);
-        assert!(telemetry.output_slots_reused > before.output_slots_reused);
-        assert!(telemetry.output_slots_moved > before.output_slots_moved);
-        assert!(telemetry.output_slots_appended >= before.output_slots_appended);
-    }
-
-    #[test]
-    fn default_resident_sequence_timing_sums_step_device_times_and_reads_ranges() {
-        let backend = SequenceTimingBackend {
-            dispatches: AtomicUsize::new(0),
-        };
-        let program = Program::empty();
-        let owner = crate::ResidentOwner::new().expect("Fix: owner ids must be available");
-        let first_resources = [Resource::Resident(owner.handle(11))];
-        let second_resources = [Resource::Resident(owner.handle(22))];
-        let steps = [
-            ResidentDispatchStep {
-                program: &program,
-                resources: &first_resources,
-                grid_override: Some([1, 1, 1]),
-                workgroup_override: None,
-            },
-            ResidentDispatchStep {
-                program: &program,
-                resources: &second_resources,
-                grid_override: Some([2, 1, 1]),
-                workgroup_override: None,
-            },
-        ];
-        let read_resource = Resource::Resident(owner.handle(33));
-        let reads = [ResidentReadRange {
-            resource: &read_resource,
-            byte_offset: 4,
-            byte_len: 8,
-        }];
-        let mut output = Vec::new();
-
-        let timing = backend
-            .dispatch_resident_sequence_read_ranges_timed_into(&steps, &reads, &mut [&mut output])
-            .expect("Fix: default timed resident sequence must execute and read ranges.");
-
-        assert_eq!(backend.dispatches.load(Ordering::SeqCst), 2);
-        assert_eq!(timing.device_ns, Some(15));
-        assert_eq!(timing.enqueue_ns, Some(7));
-        assert_eq!(timing.wait_ns, Some(9));
-        assert!(timing.wall_ns > 0);
-        assert_eq!(output.len(), 24);
-        assert_eq!(u64::from_le_bytes(output[0..8].try_into().unwrap()), 33);
-        assert_eq!(u64::from_le_bytes(output[8..16].try_into().unwrap()), 4);
-        assert_eq!(u64::from_le_bytes(output[16..24].try_into().unwrap()), 8);
     }
 }

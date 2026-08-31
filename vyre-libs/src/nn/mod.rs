@@ -38,8 +38,6 @@ pub mod moe;
 pub(crate) mod rms;
 
 #[cfg(feature = "nn-norm")]
-pub(crate) mod tiled_reduce;
-
 #[cfg(any(
     feature = "nn-inference",
     all(
@@ -60,3 +58,12 @@ pub mod optim;
 
 #[cfg(feature = "nn-activation")]
 pub mod quant;
+
+/// Reusable attention score / normalization passes.
+pub mod attention_passes;
+/// Shared attention numeric-stability guards.
+pub mod attention_stability;
+/// Shared F32 numeric-stability guards.
+pub mod f32_stability;
+/// Reusable Quest-style KV paging passes.
+pub mod quest_paging_passes;

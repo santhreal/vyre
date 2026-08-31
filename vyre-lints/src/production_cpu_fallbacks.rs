@@ -5,7 +5,7 @@
 //! production GPU dispatch paths because a hidden reference path can turn a
 //! GPU regression into a green release.
 
-use crate::{paths::workspace_relative, Violation, ViolationKind};
+use crate::{scan, Violation, ViolationKind};
 use anyhow::{Context, Result};
 use proc_macro2::{Span, TokenTree};
 use std::path::Path;
@@ -43,22 +43,14 @@ const APPROVED_PARITY_PATHS: &[&str] = &[
 
 /// Scan a source tree for production calls into CPU reference execution.
 pub fn scan_tree(root: &Path) -> Result<Vec<Violation>> {
-    let mut all = Vec::new();
-    for entry in walkdir::WalkDir::new(root)
-        .into_iter()
-        .filter_map(|entry| entry.ok())
-    {
-        let path = entry.path();
-        if !path.is_file() || path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
-            continue;
-        }
-        let workspace_rel = workspace_relative(path);
-        if is_approved_parity_path(&workspace_rel) || is_approved_parity_file(&workspace_rel) {
-            continue;
-        }
-        all.extend(scan_file(path, &workspace_rel)?);
-    }
-    Ok(all)
+    scan::collect_violations(
+        root,
+        scan::RUST_SOURCE,
+        |workspace_rel| {
+            !is_approved_parity_path(workspace_rel) && !is_approved_parity_file(workspace_rel)
+        },
+        scan_file,
+    )
 }
 
 fn is_approved_parity_path(workspace_rel: &str) -> bool {

@@ -1,10 +1,10 @@
 //! Workgroup-uniformity analysis for `Expr` nodes.
 //!
-//! An expression is *uniform* iff every invocation in the same
-//! workgroup, evaluating it at the same source position, produces
-//! the same value. Uniform `Loop` bounds and `If` conditions keep
-//! every invocation in lockstep, so a `Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }` placed in
-//! such a body is well-defined under backend barrier semantics.
+//! An expression is *uniform* iff every invocation in the same workgroup,
+//! evaluating it at the same source position, produces the same value. Uniform
+//! `Loop` bounds and `If` conditions keep every invocation in lockstep, so a
+//! physical or logical barrier in such a body is well-defined under backend
+//! barrier semantics.
 //!
 //! The analyzer is intentionally conservative: anything we cannot
 //! statically prove uniform is reported as divergent. False
@@ -21,13 +21,13 @@ use smallvec::SmallVec;
 /// Return `true` when `expr` is statically uniform across the
 /// workgroup given the live `scope` of `Var` bindings.
 ///
-/// Uniform: literal scalars, `BufLen { .. }`, `WorkgroupId { .. }`,
-/// `Var` bindings flagged uniform, and arithmetic/cast/select trees
-/// whose every leaf is uniform.
+/// Uniform: literal scalars, `BufLen { .. }`, physical workgroup identity,
+/// logical tile identity, `Var` bindings flagged uniform, and
+/// arithmetic/cast/select trees whose every leaf is uniform.
 ///
-/// Divergent: `InvocationId`, `LocalId`, `SubgroupLocalId`,
-/// `SubgroupSize`, `Load`, `Atomic`, every `Subgroup*` op, `Call`,
-/// and `Opaque`. A `Var` for which no binding is known is also
+/// Divergent: physical invocation or local identity, logical point or
+/// within-tile identity, subgroup identity, `Load`, `Atomic`, every `Subgroup*`
+/// op, `Call`, and `Opaque`. A `Var` for which no binding is known is also
 /// treated as divergent.
 pub(crate) fn is_uniform(expr: &Expr, scope: &FxHashMap<crate::ir::Ident, Binding>) -> bool {
     is_uniform_with_load_policy(expr, scope, |_| false)
@@ -54,7 +54,8 @@ pub(crate) fn is_uniform_with_load_policy(
             | Expr::LitBool(_)
             | Expr::BufferRef { .. }
             | Expr::BufLen { .. }
-            | Expr::WorkgroupId { .. } => {}
+            | Expr::WorkgroupId { .. }
+            | Expr::LogicalTileId { .. } => {}
             Expr::Var(name) if scope.get(name.as_str()).is_some_and(|b| b.uniform) => {}
             Expr::BinOp { left, right, .. } => {
                 stack.push(right);
@@ -79,6 +80,8 @@ pub(crate) fn is_uniform_with_load_policy(
             Expr::Load { buffer, index } if load_is_uniform(buffer) => stack.push(index),
             Expr::InvocationId { .. }
             | Expr::LocalId { .. }
+            | Expr::LogicalIndex { .. }
+            | Expr::LogicalWithinTileId { .. }
             | Expr::SubgroupLocalId
             | Expr::SubgroupSize
             | Expr::Var(_)

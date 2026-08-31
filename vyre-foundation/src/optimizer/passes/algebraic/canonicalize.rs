@@ -4,13 +4,13 @@
 //! idempotent) is the load-bearing pre-lowering normalization. Wrapping
 //! it as a `ProgramPass` puts it on the same scheduler / invalidates / requires
 //! substrate as ``const_fold`` / `fusion` / `dead_buffer_elim` /
-//! `normalize_atomics` / ``strength_reduce`` / `autotune` / `spec_driven`.
+//! `normalize_atomics` / ``strength_reduce`` / `spec_driven`.
 //! The free [`canonicalize_engine::run`] / [`canonicalize_engine::run_borrowed`]
 //! entry points stay available for hot paths (e.g. pipeline fingerprinting)
 //! that need the canonical form without running the full pass scheduler.
 
 use crate::ir::Program;
-use crate::optimizer::{fingerprint_program, vyre_pass, PassAnalysis, PassResult};
+use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 
 #[vyre_pass(
     name = "canonicalize",
@@ -40,14 +40,9 @@ impl Canonicalize {
 
     /// Run the canonical-form rewrite on `program`.
     pub fn transform(program: Program) -> PassResult {
-        let before_fingerprint = fingerprint_program(&program);
+        let before = program.clone();
         let canonical = super::canonicalize_engine::run(program);
-        let after_fingerprint = fingerprint_program(&canonical);
-        let changed = before_fingerprint != after_fingerprint;
-        PassResult {
-            program: canonical,
-            changed,
-        }
+        PassResult::from_programs(before, canonical)
     }
 }
 

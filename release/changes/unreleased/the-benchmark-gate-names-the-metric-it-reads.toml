@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The criterion regression gate reported its threshold check as a median change while reading the upper bound of the confidence interval. It now prints both and names the bound it gates on. The threshold is unchanged."

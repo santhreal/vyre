@@ -1,11 +1,10 @@
 //! `mlp_4x_leaky_sq` walks its hidden and output dimensions in fixed 256-wide
-//! strides off the GLOBAL invocation id, with no gate confining that walk to one
-//! workgroup, so above `model_dim = 256` it writes activations computed from
+//! strides off the global logical point, with no gate confining that walk to one
+//! tile, so above `model_dim = 256` it writes activations computed from
 //! workgroup scratch it never filled.
 //!
-//! Mechanism. The builder binds `lane` to `Expr::InvocationId { axis: 0 }`, which
-//! is the GLOBAL id (`vyre-foundation` `ir_inner/model/expr.rs` defines `gid_x()`
-//! as exactly that). Both projection bodies then index
+//! Mechanism. The builder binds `lane` to `Expr::LogicalIndex { axis: 0 }`,
+//! the schedule-free global logical index. Both projection bodies then index
 //! `chunk * MLP_WORKGROUP + lane`, so in workgroup `g` the effective index is
 //! `(chunk + g) * 256 + local`. That window is SHIFTED UP by `g * 256`:
 //!
@@ -117,7 +116,6 @@ fn run(model_dim: u32, hidden_dim: u32) -> (Vec<f32>, Vec<f32>) {
             Value::from(pack_f32_slice(&f.b1)),
             Value::from(pack_f32_slice(&f.w2)),
             Value::from(pack_f32_slice(&f.b2)),
-            Value::from(vec![0_u8; model_dim as usize * std::mem::size_of::<f32>()]),
         ],
     )
     .expect("Fix: mlp_4x_leaky_sq must reference-evaluate");

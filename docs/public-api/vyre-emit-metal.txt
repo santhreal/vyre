@@ -1,5 +1,6 @@
 impl core::default::Default for vyre_emit_metal::MetalEmitOptions
 pub const vyre_emit_metal::DEFAULT_MSL_VERSION: (u8, u8)
+pub const vyre_emit_metal::MAX_DIRECT_BUFFERS_PER_STAGE: usize
 pub const vyre_emit_metal::METAL_ARTIFACT_SCHEMA: u32
 pub enum vyre_emit_metal::EmitError
 pub fn vyre_emit_metal::MetalEmitOptions::default() -> Self

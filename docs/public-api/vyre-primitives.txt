@@ -1,32 +1,40 @@
 #[non_exhaustive] pub enum vyre_primitives::CombineOp
-pub fn vyre_primitives::prelude::append_f32_slice_le_bytes(values: &[f32], out: &mut alloc::vec::Vec<u8>)
-pub fn vyre_primitives::prelude::append_packed_byte_lane(bytes: &[u8], out: &mut alloc::vec::Vec<u8>)
-pub fn vyre_primitives::prelude::append_u32_slice_le_bytes(words: &[u32], out: &mut alloc::vec::Vec<u8>)
-pub fn vyre_primitives::prelude::decode_f32_le_bytes_all(bytes: &[u8]) -> alloc::vec::Vec<f32>
-pub fn vyre_primitives::prelude::decode_i32_le_bytes_all(bytes: &[u8]) -> alloc::vec::Vec<i32>
-pub fn vyre_primitives::prelude::decode_u16_le_bytes_all(bytes: &[u8]) -> alloc::vec::Vec<u16>
-pub fn vyre_primitives::prelude::decode_u32_le_bytes_all(bytes: &[u8]) -> alloc::vec::Vec<u32>
-pub fn vyre_primitives::prelude::decode_u64_le_bytes_all(bytes: &[u8]) -> alloc::vec::Vec<u64>
-pub fn vyre_primitives::prelude::pack_bytes_as_u32_slice(bytes: &[u8]) -> alloc::vec::Vec<u8>
-pub fn vyre_primitives::prelude::pack_bytes_as_u32_slice_min_words(bytes: &[u8], min_words: usize) -> core::result::Result<(alloc::vec::Vec<u8>, usize), alloc::string::String>
-pub fn vyre_primitives::prelude::pack_f32_slice(values: &[f32]) -> alloc::vec::Vec<u8>
-pub fn vyre_primitives::prelude::pack_f32_slice_into(values: &[f32], out: &mut alloc::vec::Vec<u8>)
-pub fn vyre_primitives::prelude::pack_f32_slice_into_uninit(values: &[f32]) -> alloc::vec::Vec<u8>
-pub fn vyre_primitives::prelude::pack_i32_slice(values: &[i32]) -> alloc::vec::Vec<u8>
-pub fn vyre_primitives::prelude::pack_i32_slice_into(values: &[i32], out: &mut alloc::vec::Vec<u8>)
-pub fn vyre_primitives::prelude::pack_u16_slice(values: &[u16]) -> alloc::vec::Vec<u8>
-pub fn vyre_primitives::prelude::pack_u16_slice_into(values: &[u16], out: &mut alloc::vec::Vec<u8>)
-pub fn vyre_primitives::prelude::pack_u32_slice(words: &[u32]) -> alloc::vec::Vec<u8>
-pub fn vyre_primitives::prelude::pack_u32_slice_into(words: &[u32], out: &mut alloc::vec::Vec<u8>)
-pub fn vyre_primitives::prelude::pack_u32_slice_into_uninit(words: &[u32]) -> alloc::vec::Vec<u8>
-pub fn vyre_primitives::prelude::pack_u32_slice_min_words_into(words: &[u32], min_words: u32, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>
-pub fn vyre_primitives::prelude::pack_u64_slice(values: &[u64]) -> alloc::vec::Vec<u8>
-pub fn vyre_primitives::prelude::pack_u64_slice_into(values: &[u64], out: &mut alloc::vec::Vec<u8>)
-pub fn vyre_primitives::prelude::read_f32_le_word(bytes: &[u8], word_index: usize, label: &str) -> core::result::Result<f32, alloc::string::String>
-pub fn vyre_primitives::prelude::read_u32_le_word(bytes: &[u8], word_index: usize, label: &str) -> core::result::Result<u32, alloc::string::String>
-pub fn vyre_primitives::prelude::unpack_f32_slice(bytes: &[u8], count: usize, label: &str) -> core::result::Result<alloc::vec::Vec<f32>, alloc::string::String>
-pub fn vyre_primitives::prelude::unpack_f32_slice_into(bytes: &[u8], count: usize, label: &str, out: &mut alloc::vec::Vec<f32>) -> core::result::Result<(), alloc::string::String>
-pub fn vyre_primitives::prelude::unpack_u32_slice_into(bytes: &[u8], count: usize, label: &str, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+impl inventory::Collect for vyre_primitives::hardware::catalog::IntrinsicFacet
+impl vyre_primitives::hardware::catalog::OpShape
+pub const fn vyre_primitives::hardware::catalog::OpShape::new(input_buffers: u8, output_buffers: u8, lane_bytes: u8, semantic: vyre_primitives::hardware::catalog::HardwareSemantic) -> Self
+pub const fn vyre_primitives::hardware::catalog::OpShape::total_buffers(self) -> u8
+pub const fn vyre_primitives::lane_grid(lanes: u32, lanes_per_group: u32) -> [u32; 3]
+pub const vyre_primitives::hardware::HARDWARE_CATEGORY: &str
+pub const vyre_primitives::hardware::bit_reverse_u32::OP_ID: &str
+pub const vyre_primitives::hardware::catalog::F32_TERNARY_SIGNATURE: vyre_foundation::dialect_lookup::Signature
+pub const vyre_primitives::hardware::catalog::F32_UNARY_SIGNATURE: vyre_foundation::dialect_lookup::Signature
+pub const vyre_primitives::hardware::catalog::U32_BINARY_SIGNATURE: vyre_foundation::dialect_lookup::Signature
+pub const vyre_primitives::hardware::catalog::U32_UNARY_SIGNATURE: vyre_foundation::dialect_lookup::Signature
+pub const vyre_primitives::hardware::fma_f32::OP_ID: &str
+pub const vyre_primitives::hardware::inverse_sqrt_f32::OP_ID: &str
+pub const vyre_primitives::hardware::popcount_u32::OP_ID: &str
+pub const vyre_primitives::hardware::storage_barrier::OP_ID: &str
+pub const vyre_primitives::hardware::subgroup_add::OP_ID: &str
+pub const vyre_primitives::hardware::subgroup_ballot::OP_ID: &str
+pub const vyre_primitives::hardware::subgroup_shuffle::OP_ID: &str
+pub const vyre_primitives::hardware::workgroup_barrier::OP_ID: &str
+pub enum vyre_primitives::hardware::catalog::HardwareSemantic
+pub fn vyre_primitives::hardware::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
+pub fn vyre_primitives::hardware::bit_reverse_u32::bit_reverse_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_primitives::hardware::catalog::intrinsic_facet(operation_id: &str) -> core::option::Option<&'static vyre_primitives::hardware::catalog::IntrinsicFacet>
+pub fn vyre_primitives::hardware::fma_f32::fma_f32(a: &str, b: &str, c: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_primitives::hardware::inverse_sqrt_f32::inverse_sqrt_f32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_primitives::hardware::popcount_u32::popcount_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_primitives::hardware::storage_barrier::storage_barrier(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_primitives::hardware::subgroup_add::subgroup_add(values: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_primitives::hardware::subgroup_ballot::subgroup_ballot(cond_input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_primitives::hardware::subgroup_shuffle::subgroup_shuffle(values: &str, lanes: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_primitives::hardware::workgroup_barrier::workgroup_barrier(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_primitives::ir_safe::byte_table_lookup(table: &str, byte: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_primitives::ir_safe::clamped_load(buf: &str, idx: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_primitives::ir_safe::clamped_load_to(buf: &str, idx: vyre_foundation::ir_inner::model::generated::Expr, bound: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_primitives::ir_safe::source_byte_table_lookup(table: &str, source: &str, index: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_primitives::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
 pub fn vyre_primitives::wire::append_f32_slice_le_bytes(values: &[f32], out: &mut alloc::vec::Vec<u8>)
 pub fn vyre_primitives::wire::append_packed_byte_lane(bytes: &[u8], out: &mut alloc::vec::Vec<u8>)
 pub fn vyre_primitives::wire::append_u32_slice_le_bytes(words: &[u32], out: &mut alloc::vec::Vec<u8>)
@@ -42,17 +50,12 @@ pub fn vyre_primitives::wire::pack_bytes_as_u32_slice_min_words(bytes: &[u8], mi
 pub fn vyre_primitives::wire::pack_bytes_as_u32_slice_min_words_into(bytes: &[u8], min_words: usize, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<usize, alloc::string::String>
 pub fn vyre_primitives::wire::pack_f32_slice(values: &[f32]) -> alloc::vec::Vec<u8>
 pub fn vyre_primitives::wire::pack_f32_slice_into(values: &[f32], out: &mut alloc::vec::Vec<u8>)
-pub fn vyre_primitives::wire::pack_f32_slice_into_uninit(values: &[f32]) -> alloc::vec::Vec<u8>
 pub fn vyre_primitives::wire::pack_i32_slice(values: &[i32]) -> alloc::vec::Vec<u8>
 pub fn vyre_primitives::wire::pack_i32_slice_into(values: &[i32], out: &mut alloc::vec::Vec<u8>)
-pub fn vyre_primitives::wire::pack_u16_slice(values: &[u16]) -> alloc::vec::Vec<u8>
 pub fn vyre_primitives::wire::pack_u16_slice_into(values: &[u16], out: &mut alloc::vec::Vec<u8>)
-pub fn vyre_primitives::wire::pack_u32_iter<I>(words: I) -> alloc::vec::Vec<u8> where I: core::iter::traits::collect::IntoIterator<Item = u32>
 pub fn vyre_primitives::wire::pack_u32_slice(words: &[u32]) -> alloc::vec::Vec<u8>
 pub fn vyre_primitives::wire::pack_u32_slice_into(words: &[u32], out: &mut alloc::vec::Vec<u8>)
-pub fn vyre_primitives::wire::pack_u32_slice_into_uninit(words: &[u32]) -> alloc::vec::Vec<u8>
 pub fn vyre_primitives::wire::pack_u32_slice_min_words_into(words: &[u32], min_words: u32, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>
-pub fn vyre_primitives::wire::pack_u64_slice(values: &[u64]) -> alloc::vec::Vec<u8>
 pub fn vyre_primitives::wire::pack_u64_slice_into(values: &[u64], out: &mut alloc::vec::Vec<u8>)
 pub fn vyre_primitives::wire::read_f32_le_word(bytes: &[u8], word_index: usize, label: &str) -> core::result::Result<f32, alloc::string::String>
 pub fn vyre_primitives::wire::read_u32_le_at(bytes: &[u8], byte_offset: usize, label: &str) -> core::result::Result<u32, alloc::string::String>
@@ -63,8 +66,21 @@ pub fn vyre_primitives::wire::try_pack_u32_slice_into(words: &[u32], out: &mut a
 pub fn vyre_primitives::wire::unpack_f32_slice(bytes: &[u8], count: usize, label: &str) -> core::result::Result<alloc::vec::Vec<f32>, alloc::string::String>
 pub fn vyre_primitives::wire::unpack_f32_slice_into(bytes: &[u8], count: usize, label: &str, out: &mut alloc::vec::Vec<f32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_primitives::wire::unpack_u32_slice_into(bytes: &[u8], count: usize, label: &str, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub macro vyre_primitives::submit_intrinsic_operation!
 pub mod vyre_primitives
-pub mod vyre_primitives::prelude
+pub mod vyre_primitives::hardware
+pub mod vyre_primitives::hardware::bit_reverse_u32
+pub mod vyre_primitives::hardware::catalog
+pub mod vyre_primitives::hardware::fma_f32
+pub mod vyre_primitives::hardware::inverse_sqrt_f32
+pub mod vyre_primitives::hardware::popcount_u32
+pub mod vyre_primitives::hardware::storage_barrier
+pub mod vyre_primitives::hardware::subgroup_add
+pub mod vyre_primitives::hardware::subgroup_ballot
+pub mod vyre_primitives::hardware::subgroup_shuffle
+pub mod vyre_primitives::hardware::workgroup_barrier
+pub mod vyre_primitives::ir_safe
+pub mod vyre_primitives::operation_catalog
 pub mod vyre_primitives::wire
 pub struct vyre_primitives::ArithAdd
 pub struct vyre_primitives::ArithMul
@@ -87,6 +103,8 @@ pub struct vyre_primitives::Scatter
 pub struct vyre_primitives::ShiftLeft
 pub struct vyre_primitives::ShiftRight
 pub struct vyre_primitives::Shuffle
+pub struct vyre_primitives::hardware::catalog::IntrinsicFacet
+pub struct vyre_primitives::hardware::catalog::OpShape
 pub vyre_primitives::CombineOp::Add
 pub vyre_primitives::CombineOp::BitAnd
 pub vyre_primitives::CombineOp::BitOr
@@ -98,3 +116,16 @@ pub vyre_primitives::PatternMatchDfa::dfa: alloc::vec::Vec<u8>
 pub vyre_primitives::PatternMatchLiteral::literal: alloc::vec::Vec<u8>
 pub vyre_primitives::Reduce::combine: vyre_primitives::CombineOp
 pub vyre_primitives::Scan::combine: vyre_primitives::CombineOp
+pub vyre_primitives::hardware::catalog::HardwareSemantic::BarrierIdentityU32
+pub vyre_primitives::hardware::catalog::HardwareSemantic::FmaF32
+pub vyre_primitives::hardware::catalog::HardwareSemantic::InverseSqrtF32
+pub vyre_primitives::hardware::catalog::HardwareSemantic::SubgroupAddU32
+pub vyre_primitives::hardware::catalog::HardwareSemantic::SubgroupBallotU32
+pub vyre_primitives::hardware::catalog::HardwareSemantic::SubgroupShuffleU32
+pub vyre_primitives::hardware::catalog::HardwareSemantic::UnaryU32Map
+pub vyre_primitives::hardware::catalog::IntrinsicFacet::operation_id: &'static str
+pub vyre_primitives::hardware::catalog::IntrinsicFacet::shape: vyre_primitives::hardware::catalog::OpShape
+pub vyre_primitives::hardware::catalog::OpShape::input_buffers: u8
+pub vyre_primitives::hardware::catalog::OpShape::lane_bytes: u8
+pub vyre_primitives::hardware::catalog::OpShape::output_buffers: u8
+pub vyre_primitives::hardware::catalog::OpShape::semantic: vyre_primitives::hardware::catalog::HardwareSemantic

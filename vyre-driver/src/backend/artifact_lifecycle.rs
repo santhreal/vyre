@@ -1,7 +1,9 @@
 use std::collections::BTreeMap;
 
+use vyre_megakernel::measure::DeviceState;
 use vyre_megakernel::{
-    Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat, TargetProfile,
+    Artifact, ArtifactValueId, Digest, EmittedResources, TargetPayload, TargetPayloadFormat,
+    TargetProfile,
 };
 
 use super::BackendError;
@@ -43,7 +45,6 @@ pub enum BoundResource {
 pub struct BindingSet {
     artifact: Digest,
     resources: BTreeMap<ArtifactValueId, BoundResource>,
-    invocation_grid: Option<[u32; 3]>,
 }
 
 impl BindingSet {
@@ -53,7 +54,6 @@ impl BindingSet {
         Self {
             artifact,
             resources: BTreeMap::new(),
-            invocation_grid: None,
         }
     }
 
@@ -72,26 +72,6 @@ impl BindingSet {
     #[must_use]
     pub const fn resources(&self) -> &BTreeMap<ArtifactValueId, BoundResource> {
         &self.resources
-    }
-
-    /// Set the runtime invocation grid without changing immutable artifact identity.
-    pub fn set_invocation_grid(&mut self, grid: [u32; 3]) -> Result<(), BackendError> {
-        if let Some(axis) = grid.iter().position(|extent| *extent == 0) {
-            return Err(BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: invocation grid axis {axis} must be positive, got {}.",
-                    grid[axis]
-                ),
-            });
-        }
-        self.invocation_grid = Some(grid);
-        Ok(())
-    }
-
-    /// Runtime grid override for this invocation.
-    #[must_use]
-    pub const fn invocation_grid(&self) -> Option<[u32; 3]> {
-        self.invocation_grid
     }
 }
 
@@ -126,6 +106,19 @@ pub trait ArtifactInstance: Send + Sync {
     fn device(&self) -> &DeviceIdentity;
     /// Validate bindings and submit one invocation.
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError>;
+    /// What the loaded module allocates, one record per payload entry point in
+    /// payload entry order.
+    ///
+    /// Registers and spill are decided by the target compiler, not by the
+    /// neutral artifact, so only the loaded module holds them. Compile-time
+    /// finalist ranking reads these figures in place of its own estimate. A
+    /// backend whose API reports none of them returns one default record per
+    /// entry, which leaves the estimate in force.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the device rejects the query.
+    fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError>;
 }
 
 /// Device-specific admission and native-handle construction.
@@ -175,6 +168,16 @@ pub trait ArtifactMaterializer: Send + Sync {
             name: "artifact resident buffer free".to_string(),
             backend: self.device().identity().backend.to_string(),
         })
+    }
+
+    /// Clock, thermal and power state the backend reads for this device.
+    ///
+    /// Compile-time measurement retains this beside its samples, so a reader can
+    /// tell a slow candidate from a throttled device. A backend whose API exposes
+    /// none of it returns [`DeviceState::unreported`], and the measurement
+    /// session still records the drift it observes across its own rounds.
+    fn device_state(&self) -> DeviceState {
+        DeviceState::unreported()
     }
 
     /// Materialize authenticated immutable target bytes.

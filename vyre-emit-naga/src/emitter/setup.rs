@@ -516,29 +516,19 @@ fn descriptor_trap_sidecar_slot(desc: &KernelDescriptor) -> Result<Option<u32>, 
     Ok(Some(slot.slot))
 }
 
-fn descriptor_trap_tag_codes(body: &KernelBody) -> FxHashMap<vyre_lower::descriptor::Name, u32> {
-    fn walk(
-        body: &KernelBody,
-        tags: &mut FxHashMap<vyre_lower::descriptor::Name, u32>,
-        next: &mut u32,
-    ) {
-        for op in &body.ops {
-            if let KernelOpKind::Trap { tag } = &op.kind {
-                tags.entry(tag.clone()).or_insert_with(|| {
-                    let code = *next;
-                    *next = next.saturating_add(1);
-                    code
-                });
-            }
-        }
-        for child in &body.child_bodies {
-            walk(child, tags, next);
-        }
-    }
-    let mut tags = FxHashMap::default();
-    let mut next = 1;
-    walk(body, &mut tags, &mut next);
-    tags
+/// Index `vyre_lower::descriptor_trap_tags` by tag for the emitter, which
+/// resolves a code from the tag it is lowering. The numbering itself belongs to
+/// vyre-lower so a code decodes to the same tag on every backend and host.
+fn descriptor_trap_tag_codes(
+    body: &KernelBody,
+) -> Result<FxHashMap<vyre_lower::Name, u32>, EmitError> {
+    let table = vyre_lower::descriptor_trap_tags(body).map_err(|source| {
+        EmitError::InvalidDescriptor(format!("trap tag codes unavailable: {source}"))
+    })?;
+    Ok(table
+        .into_iter()
+        .map(|entry| (entry.tag, entry.code))
+        .collect())
 }
 
 pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, EmitError> {
@@ -548,7 +538,7 @@ pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, Emi
         builder.add_binding(binding, atomic_slots.contains(&binding.slot))?;
     }
     let trap_sidecar_slot = descriptor_trap_sidecar_slot(desc)?;
-    let trap_tag_codes = descriptor_trap_tag_codes(&desc.body);
+    let trap_tag_codes = descriptor_trap_tag_codes(&desc.body)?;
 
     let mut function = Function::default();
     function.name = Some("main".to_owned());
@@ -572,6 +562,7 @@ pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, Emi
         named_carrier_locals: FxHashMap::default(),
         named_carrier_types: FxHashMap::default(),
         named_carrier_result_ids: FxHashMap::default(),
+        vector_lanes: FxHashMap::default(),
         trap_sidecar_slot,
         trap_tag_codes,
         op_dispatch_routes: Default::default(),
@@ -594,6 +585,7 @@ pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, Emi
 // Re-export the cache wrapper from this module so the `crate::emit`
 // boundary stays unchanged.
 
+// Inline: covers the private `emitter::setup` type and builtin tables, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -610,8 +602,8 @@ mod tests {
             [1, 1, 1],
             vec![Node::store("out", Expr::u32(0), Expr::buf_len("input"))],
         );
-        let descriptor = vyre_lower::lower_verified(&program)
-            .map(|lowered| lowered.descriptor)
+        let descriptor = vyre_lower::lower_physical(&program)
+            .map(|lowered| lowered.into_descriptor())
             .expect("Fix: counted storage buf_len program must lower");
         let module =
             emit_uncached(&descriptor).expect("Fix: counted storage buf_len descriptor must emit");

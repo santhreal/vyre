@@ -1,26 +1,3 @@
-#![allow(
-    clippy::doc_lazy_continuation,
-    clippy::double_must_use,
-    clippy::manual_div_ceil,
-    clippy::needless_range_loop,
-    clippy::collapsible_if,
-    clippy::match_like_matches_macro,
-    clippy::redundant_closure,
-    clippy::too_many_arguments,
-    clippy::nonminimal_bool,
-    clippy::derivable_impls,
-    clippy::unnecessary_lazy_evaluations,
-    clippy::needless_lifetimes,
-    clippy::bind_instead_of_map,
-    clippy::needless_borrows_for_generic_args,
-    clippy::map_entry,
-    clippy::map_identity,
-    clippy::manual_map,
-    clippy::match_single_binding,
-    clippy::field_reassign_with_default,
-    dead_code,
-    unused_variables
-)]
 //! Naga IR emitter for vyre `KernelDescriptor`.
 //!
 //! Consumes a substrate-neutral `vyre_lower::KernelDescriptor` and
@@ -36,6 +13,15 @@ mod error;
 pub mod patterns;
 pub mod program;
 pub use error::EmitError;
+
+/// Digest of this emitter's source, stamped in at build time.
+///
+/// A pipeline cache keyed on the program and a hand-edited lowering label
+/// cannot see that the emitter changed: the key stays the same and a stale
+/// compiled pipeline answers for a fixed lowering. Mixing this into the key
+/// ties every cached artifact to the emitter that produced it, whether or not
+/// the label was edited.
+pub const LOWERING_DIGEST: &str = env!("VYRE_NAGA_LOWERING_DIGEST");
 
 /// Stable diagnostic row emitted when binding a lowered Vyre operation into a
 /// Naga module.
@@ -153,6 +139,3 @@ fn emit_many_with(
         })
         .collect()
 }
-
-#[cfg(test)]
-mod tests;

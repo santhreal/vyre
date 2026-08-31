@@ -123,6 +123,7 @@ fn promote_to_workgroup(program: Program, handoff_buf: &str, count: u32) -> Prog
 /// How many bytes of DRAM traffic one dispatch saves by fusing a
 /// decoder+scanner pair with an N-byte handoff. Used by the G12
 /// benchmark harness to verify the fusion is paying off.
+#[cfg(test)]
 #[must_use]
 pub fn dram_bytes_saved(handoff_byte_count: u32, invocations: u32) -> u64 {
     // Decoder would have written `handoff_byte_count` bytes to DRAM
@@ -146,7 +147,7 @@ mod tests {
             [64, 1, 1],
             vec![Node::store(
                 handoff,
-                Expr::InvocationId { axis: 0 },
+                Expr::LogicalIndex { axis: 0 },
                 Expr::u32(0xAA),
             )],
         )
@@ -163,7 +164,7 @@ mod tests {
             [64, 1, 1],
             vec![Node::let_bind(
                 "byte",
-                Expr::load(handoff, Expr::InvocationId { axis: 0 }),
+                Expr::load(handoff, Expr::LogicalIndex { axis: 0 }),
             )],
         )
     }

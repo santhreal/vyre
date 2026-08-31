@@ -14,28 +14,15 @@
 //! These tests require a CUDA device. Backend acquisition failure is a test
 //! failure on the GPU-required Vyre test hosts.
 
-mod common;
-use common::{bytes_u32, u32_bytes};
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::{add_one_program, bytes_u32, u32_bytes};
 use vyre_driver::{grid_sync, BackendError, DispatchConfig};
 use vyre_driver_cuda::occupancy::cooperative_thread_residency_block_limit;
 use vyre_driver_cuda::{cuda_factory, CudaBackend};
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::memory_model::MemoryOrdering;
-
-fn add_one_program() -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(8),
-            BufferDecl::output("out", 1, DataType::U32).with_count(8),
-        ],
-        [128, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::add(Expr::load("input", Expr::gid_x()), Expr::u32(1)),
-        )],
-    )
-}
 
 #[test]
 fn cooperative_dispatch_matches_regular_dispatch_on_supported_hardware() {

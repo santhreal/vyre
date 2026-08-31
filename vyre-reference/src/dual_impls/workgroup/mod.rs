@@ -1,4 +1,4 @@
 /// docs
-pub mod reduce;
+pub(crate) mod reduce;
 /// docs
-pub mod shuffle;
+pub(crate) mod shuffle;

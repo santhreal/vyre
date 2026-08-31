@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The WGSL arm synthesized a saturating unsigned multiply as a guarded division, comparing the operand against the maximum divided by the other operand. The NVIDIA 580 shader compiler aborts while compiling that guarded-divide and logical-and shape, taking the process down with an illegal instruction inside the pipeline build. Overflow is now the high half of the widening product, matching the PTX arm, which removes the division from the emitted kernel as well."

@@ -1,0 +1,9 @@
+lane = "gates-feature-msrv"
+workflow = ".github/workflows/gates.yml"
+job = "feature-msrv"
+state = "live"
+required_status = "gates / Every feature compiles alone on the MSRV"
+triggers = ["pull_request", "push"]
+steps = [
+  { gate = "feature-isolation", args = ["--sweep", "--msrv"] },
+]

@@ -4,15 +4,18 @@
 //! Follow `AUTHORING.md` in vyre-libs for the pattern.
 
 use {{crate_name_snake}}::ExampleOp;
-use vyre_libs::tensor_ref::TensorRef;
+use vyre_libs::TensorRef;
 use vyre_reference::value::Value;
 
 fn u32_bytes(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
+    words.iter().flat_map(|word| word.to_le_bytes()).collect()
 }
 
 fn decode_u32_words(bytes: &[u8]) -> Vec<u32> {
-    vyre_primitives::wire::decode_u32_le_bytes_all(bytes)
+    bytes
+        .chunks_exact(4)
+        .map(|word| u32::from_le_bytes([word[0], word[1], word[2], word[3]]))
+        .collect()
 }
 
 #[test]
@@ -25,10 +28,7 @@ fn example_op_adds_one_elementwise() {
     .expect("example operation must satisfy its typed contract");
     let outputs = vyre_reference::reference_eval(
         &program,
-        &[
-            Value::from(u32_bytes(&[1, 2, 3, 4])),
-            Value::from(vec![0u8; 16]),
-        ],
+        &[Value::from(u32_bytes(&[1, 2, 3, 4]))],
     )
     .expect("example_op must execute");
     let got = decode_u32_words(&outputs[0].to_bytes());

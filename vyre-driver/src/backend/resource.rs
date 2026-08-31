@@ -60,7 +60,7 @@ impl ResidentOwner {
     /// Unwrap a handle minted by this owner, refusing a foreign one.
     ///
     /// `context` names the operation for the error message, for example
-    /// `"CUDA resident upload"`.
+    /// `"resident upload"`.
     ///
     /// # Errors
     ///
@@ -151,6 +151,8 @@ impl From<ResidentHandle> for Resource {
     }
 }
 
+// Inline: `vyre_driver::backend` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

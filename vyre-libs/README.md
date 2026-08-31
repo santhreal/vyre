@@ -1,49 +1,78 @@
 # vyre-libs
 
-Category A composition ecosystem over vyre's hardware-intrinsic
-primitives. Every function here returns a `vyre::Program` (or a
-list of `vyre::ir::Node` a consumer can embed in a larger Program)
-built entirely from existing vyre-ops primitives. No shader source,
-no new `inventory::submit!`, no backend-specific code.
+Every composition in the workspace. You call a builder and you get a
+`vyre_foundation::ir::Program` built from existing IR as pure mathematical
+and semantic mappings. The crate does not emit shaders, does not pick a backend,
+does not decide execution-level schedules (serial vs parallel thread mappings,
+workgroup geometries), and does not run the program.
 
-## Modules
+Consumer domains and compiler-internal domains are equal residents.
+`nn::attention` and a solver the optimizer composes for itself are the
+same kind of thing. Reuse count is not an admission criterion.
 
-- `vyre_libs::math`: linear algebra, scans, broadcasts
-- `vyre_libs::nn`: neural-net primitives (linear, ReLU, softmax,
-  layer_norm, attention)
-- `vyre_libs::matching`: string scanning (substring, DFA, multi-string): one building block inside arbitrary programs
-- `vyre_libs::crypto`: hashing (FNV-1a, BLAKE3, SHA-256, CRC32)
+Not here: anything that names a concrete backend, links an emitter crate,
+reimplements in host Rust what IR already expresses (including CPU reference
+oracles), encodes execution-level thread indexing, or implements host dispatch
+orchestration.
 
-## Design
+Place the program in a validated `ProgramGraph` and compile it through
+`vyre-megakernel`. Schedule selection, vectorization, and loop fusion belong to
+the optimizer and megakernel planner; dispatch belongs to `vyre-driver` and
+`vyre-runtime`.
+## Domains
 
-Every public function wraps its IR body in a `Node::Region` with a
-stable generator name. The optimizer treats Regions as opaque by
-default (preserves source-mapping + debuggability); explicit inline
-passes can unroll. This is LLVM's function-vs-always-inline split at
-IR level.
+Product dialects, enabled by feature:
 
-One crate with four public modules today; each module promotes to
-its own crates.io identity (`vyre-nn`, `vyre-math`,
-`vyre-crypto`) when its consumer base justifies the fragmentation.
+| Module | Feature family | What you build |
+| --- | --- | --- |
+| `math` | `math-*` | Linear algebra, scans, broadcasts, algebra, succinct queries |
+| `nn` | `nn-*` | Linear, activations, norms, attention, MoE, inference graphs |
+| `pattern` | `pattern-*` | Substring, DFA, NFA, bracket-match, and regex programs |
+| `hash` | `hash`, `crypto-blake3` | FNV, CRC, Adler, BLAKE3 compression |
+| `decode` | `decode` | Base64, hex, inflate, ziftsieve |
+| `parsing` | `parsing` | C, Go, and Python parser compositions |
+| `security` | `security` | Taint and dataflow compositions |
+| `visual` | `visual` | Blur, composite, and related image programs |
+| `logical` | `logical` | Element-wise boolean compositions |
+| `rule` | `rule` | Typed detection-rule conditions |
+
+`hash` replaced the old `crypto` module. `pattern` unified `matching` and
+`scan`. There is no `vyre-nn` / `vyre-math` split today. A domain moves to
+its own crate only through a clean cutover that migrates every caller.
+
+Compiler-internal domains (`device`, `graph-dispatch`, `solvers`,
+`encoding`, `analysis`, `scheduling`, `reasoning`, `telemetry`) are
+compositions too. They live behind their own features because a library
+consumer should not compile them by default. `full` is every dialect that
+submits an `OperationRegistration`. The compiler-internal set submits
+nothing and is not in `full`. That is a feature split, not a second crate.
+
+Every public composition wraps its body in a `Node::Region` with a stable
+generator name. The optimizer treats that region as atomic until an explicit
+inline pass unrolls it.
 
 ## Usage
+
+`dot` takes two input names, an output name, and the vector length. Empty
+inputs are rejected.
 
 ```rust
 use vyre_libs::math::dot;
 
-let program = dot("x", "y", "result");
+let program = dot("x", "y", "result", 128)?;
+# Ok::<(), String>(())
 ```
 
-Production callers place library programs in a validated `ProgramGraph` and
-execute them through the compiler artifact lifecycle.
+Author a new composition through [`AUTHORING.md`](AUTHORING.md) and
+`vyre_libs::prelude`.
 
 ## Bounded regex replay
 
-Open-ended regexes need a finite accelerator work bound. Set that bound when
-you compile the pipeline:
+Open-ended regexes need a finite accelerator work bound. Enable
+`pattern-regex` (it is not a default) and set the bound when you compile:
 
 ```rust
-use vyre_libs::matching::{
+use vyre_libs::pattern::{
     build_regex_dfa_pipeline_with_policy, RegexReplayPolicy,
 };
 
@@ -55,35 +84,31 @@ let pipeline = build_regex_dfa_pipeline_with_policy(
         open_ended_limit_bytes: 16 * 1024,
     },
 )?;
+# Ok::<(), vyre_libs::pattern::RegexDfaError>(())
 ```
 
 The limit applies to each candidate origin. Bounded patterns use their exact
-maximum. Open-ended patterns expose `max_bytes = None` and the selected finite
-limit through `CompiledRegexSet::pattern_extents`. The whole-buffer program
-derives each match start from its replay origin, so variable-length matches do
-not subtract a guessed maximum from the end. Region evidence returns one
-longest match for each pattern and origin.
+maximum. Open-ended patterns expose `max_bytes = None` and the selected
+finite limit through `CompiledRegexSet::pattern_extents`.
 
-## Multi-device paged scans
-
-Use `scan_sharded_fused_weighted_timed` when one corpus spans several
-physical adapters. Pass one backend and one measured throughput weight per
-adapter. The result is identical to the single-device paged scan.
-`ShardedScanTiming` reports each adapter's windows, own bytes, wall time, and
-device time. You can use those values to rebalance the next batch and to
-separate kernel work from staging and host aggregation.
+Scan builders return programs and compilation artifacts. Resident dispatch,
+timing, and multi-device sharding are owned by the driver and runtime
+crates, not by this one.
 
 ## Feature flags
 
 ```toml
 [dependencies]
-vyre-libs = { version = "0.1", default-features = false, features = ["nn"] }
+vyre-libs = { version = "0.8.0", default-features = false, features = ["nn-linear"] }
 ```
 
-- `math` (default): linear algebra
-- `nn` (default, implies `math`): neural-net primitives
-- `matching` (default): string scanning primitives
-- `crypto` (default): hashing
+Defaults (`cargo add vyre-libs`) enable `math-linalg`, `math-scan`,
+`math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`,
+`pattern-substring`, `pattern-dfa`, `hash`, and `decode`.
+
+Bundle aliases: `math`, `nn`, `pattern`, and `crypto` (`crypto` is
+`crypto-blake3` only). `full` enables every consumer dialect. Turn
+defaults off and pick the dialect you need.
 
 ## License
 
@@ -92,31 +117,31 @@ MIT OR Apache-2.0
 <!-- BEGIN GENERATED CRATE CONTRACT -->
 ## Crate contract
 
-This section is generated by `python3 scripts/crate_readmes.py --write` from
+This section is generated by `xtask crate-readmes --write` from
 the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Own product-facing Tier 3 program compositions built from neutral primitives and contracts.
+Own every composition in the workspace: consumer dialects and compiler-internal solvers, encoding, analysis, scheduling, and reasoning. Returns Programs. No backend, no emitter, no host rewrite of IR.
 
 ### Boundaries
 
 The `product-libraries` owner maintains this `libraries` crate at `vyre-libs`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-primitives`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-libs/examples/check_select1.rs`:
+Run the checked-in behavior from `vyre-libs/examples/dominator_tree_e2e.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-libs --example check_select1
+./cargo_full run -p vyre-libs --example dominator_tree_e2e --features graph
 ```
 
 ### Features
 
-- Manifest features: `bench`, `c-parser`, `cpu-parity`, `crypto`, `crypto-blake3`, `crypto-fnv`, `decode`, `default`, `full`, `go-parser`, `hash`, `intern`, `logical`, `matching`, `matching-dfa`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `parsing`, `python-parser`, `rule`, `security`, `test-fixtures`, `text`, `visual`
-- Default feature members: `math-linalg`, `math-scan`, `math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`, `matching-substring`, `matching-dfa`, `hash`, `decode`
+- Manifest features: `analysis`, `bitset`, `builder-ops`, `cat-a-builder-options`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `fixpoint`, `full`, `geom`, `go-parser`, `graph`, `graph-dispatch`, `hash`, `label`, `llm`, `logical`, `math`, `math-algebra`, `math-broadcast`, `math-dialect`, `math-kernels`, `math-linalg`, `math-scan`, `math-succinct`, `nfa`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-kernels`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `opt`, `parsing`, `parsing-kernels`, `pattern`, `pattern-dfa`, `pattern-kernels`, `pattern-nfa`, `pattern-regex`, `pattern-substring`, `predicate`, `python-parser`, `reasoning`, `reduce`, `representation`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `topology`, `vfs`, `visual`
+- Default feature members: `math-linalg`, `math-scan`, `math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`, `pattern-substring`, `pattern-dfa`, `hash`, `decode`
 
 ### Errors and unsupported behavior
 
@@ -124,18 +149,18 @@ Invalid shapes, unsupported compositions, arithmetic overflow, and malformed evi
 
 ### Testing
 
-Use [`docs/testing/vyre-libs.md`](../docs/testing/vyre-libs.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/vyre-libs.md`](../docs/testing/vyre-libs.md) for the crate's test command,
+hardware contract, expected skips, and failure semantics. It is generated
+from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-`vyre-libs@0.7.2` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
+`vyre-libs@0.8.0` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

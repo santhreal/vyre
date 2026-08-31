@@ -15,8 +15,10 @@ target details into domain logic.
   contracts.
 - Concrete driver crates own target formats, device acquisition, native
   executable modules, and target-specific execution.
-- `vyre-runtime` owns compile-to-materialize orchestration, sessions, recovery,
-  persistence, residency, and readback.
+- `vyre-libs` owns every composition. `vyre-primitives` owns only uncomposable
+  intrinsics.
+- `vyre-runtime` owns sessions, recovery, residency, and readback. It executes
+  the artifact's selected persistence. It does not choose that schedule.
 
 ## Architectural laws
 
@@ -48,8 +50,9 @@ parity, adversarial, scale, and lifecycle evidence appropriate to its risk.
 
 ## Source map
 
-- `docs/ARCHITECTURE.md` defines the executable lifecycle.
-- `docs/CRATE_OWNERSHIP.toml` defines crate ownership.
-- `docs/optimization/README.md` defines optimization ownership and evidence.
+- `docs/architecture/crates.md` states what each crate owns.
+- `docs/ARCHITECTURE.md` is the short page the architecture gate checks.
+- `docs/CRATE_OWNERSHIP.toml` defines crate ownership and allowed edges.
+- `docs/optimization/OWNERSHIP.toml` and `docs/optimization/OP_MATRIX.toml`
+  define optimization lanes and operation coverage.
 - `docs/DOCS.toml` defines documentation lifecycle and navigation.
-- `docs/targets.md` defines target registration and support evidence.

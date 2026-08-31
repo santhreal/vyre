@@ -1,22 +1,22 @@
 //! Shared backend launch validation contracts.
 
 use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 struct GridLimitBackend;
 
-impl vyre_driver::backend::private::Sealed for GridLimitBackend {}
+impl vyre_driver::sealed::Sealed for GridLimitBackend {}
 
 impl VyreBackend for GridLimitBackend {
     fn id(&self) -> &'static str {
         "grid-limit-test"
     }
 
-    fn dispatch(
+    fn dispatch_borrowed(
         &self,
-        _program: &Program,
-        _inputs: &[Vec<u8>],
-        _config: &DispatchConfig,
+        _: &Program,
+        _: &[&[u8]],
+        _: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         Ok(Vec::new())
     }
@@ -47,8 +47,9 @@ fn validate_program_for_backend_rejects_grid_override_past_backend_axis_limit() 
         let mut config = DispatchConfig::default();
         config.grid_override = Some(grid);
 
-        let err = vyre_driver::validate_program_for_backend(&backend, &program, &config)
-            .expect_err("Fix: grid_override above the backend per-dimension limit must fail.");
+        let err =
+            vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
+                .expect_err("Fix: grid_override above the backend per-dimension limit must fail.");
         let msg = err.to_string();
         assert!(
             msg.contains("Fix:"),
@@ -80,13 +81,15 @@ fn backend_error_preserves_structured_validation_source() {
         supports_indirect_dispatch: false,
         supports_distributed_collectives: false,
         supports_trap_propagation: false,
+        supports_grid_sync: false,
+        allows_host_grid_sync_split: false,
         max_workgroup_size: [256, 256, 64],
     };
 
     let error = vyre_driver::validation::validate_program_contract(
         &program,
         vyre_foundation::validate::ValidationOptions::default(),
-        vyre_driver::backend::validation::default_supported_ops(),
+        vyre_driver::default_supported_ops(),
         caps,
     )
     .expect_err("zero workgroup axis must fail validation");
@@ -107,7 +110,7 @@ fn validate_program_for_backend_accepts_grid_override_at_backend_axis_limit() {
     let mut config = DispatchConfig::default();
     config.grid_override = Some([7, 7, 7]);
 
-    vyre_driver::validate_program_for_backend(&backend, &program, &config)
+    vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
         .expect("Fix: grid_override equal to the backend per-dimension limit must be valid.");
 }
 
@@ -118,7 +121,7 @@ fn validate_program_for_backend_rejects_zero_grid_override_dimension() {
     let mut config = DispatchConfig::default();
     config.grid_override = Some([1, 0, 1]);
 
-    let err = vyre_driver::validate_program_for_backend(&backend, &program, &config)
+    let err = vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
         .expect_err("Fix: zero grid_override dimensions must fail before backend dispatch.");
     let msg = err.to_string();
     assert!(
@@ -156,7 +159,11 @@ fn launch_plan_prepares_geometry_and_param_words_once() {
             BufferDecl::output("out", 1, DataType::U32).with_count(1_000),
         ],
         [128, 1, 1],
-        vec![Node::Return],
+        vec![Node::store(
+            "out",
+            Expr::logical_index(0),
+            Expr::load("input", Expr::logical_index(0)),
+        )],
     );
     let bindings = vyre_driver::BindingPlan::build(&program)
         .expect("Fix: shared launch-plan test program must build a binding plan.");
@@ -212,5 +219,84 @@ fn launch_plan_rejects_zero_grid_override_before_driver_entry() {
     assert!(
         err.to_string().contains("non-zero"),
         "Fix: shared launch preparation must return actionable geometry errors; got: {err}"
+    );
+}
+
+/// WHY: a dispatch that states a frozen launch and a tuner override states two
+/// launches, and resolving them picks one and drops the other with nothing
+/// reported. One of the two is then a shape nothing compiled against. Every
+/// dispatch-shape field is covered, not the one field a caller happened to set;
+/// `DispatchConfig::validate_launch_authority` destructures the struct field by
+/// field, so a new dispatch-shape field cannot be added without a decision here.
+#[test]
+fn a_frozen_launch_beside_any_dispatch_shape_override_is_rejected() {
+    let backend = GridLimitBackend;
+    let program = tiny_program();
+    let frozen = vyre_driver::LaunchDirective::stated([64, 1, 1], [2, 1, 1], 0)
+        .expect("the stated fixture launch is positive");
+
+    let overrides: [(&str, fn(&mut DispatchConfig)); 4] = [
+        ("workgroup_override", |config| {
+            config.workgroup_override = Some([64, 1, 1]);
+        }),
+        ("grid_override", |config| {
+            config.grid_override = Some([2, 1, 1]);
+        }),
+        ("dispatch_elements", |config| {
+            config.dispatch_elements = Some(128);
+        }),
+        ("dispatch_grid", |config| {
+            config.dispatch_grid = Some([2, 1, 1]);
+        }),
+    ];
+
+    for (field, state) in overrides {
+        let mut config = DispatchConfig::default();
+        config.launch = Some(frozen);
+        state(&mut config);
+
+        let err =
+            vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
+                .expect_err(
+                    "Fix: a frozen launch beside an override must be rejected, not resolved.",
+                );
+        let msg = err.to_string();
+        assert!(
+            msg.contains(field),
+            "the rejection must name the competing field; got: {msg}"
+        );
+
+        // The override alone, and the frozen launch alone, are both admissible.
+        let mut alone = DispatchConfig::default();
+        state(&mut alone);
+        vyre_driver::validation::validate_program_for_backend(&backend, &program, &alone)
+            .expect("Fix: a stated override alone must stay valid.");
+    }
+
+    let mut frozen_alone = DispatchConfig::default();
+    frozen_alone.launch = Some(frozen);
+    vyre_driver::validation::validate_program_for_backend(&backend, &program, &frozen_alone)
+        .expect("Fix: a frozen launch alone must stay valid.");
+}
+
+/// WHY: backend axis limits are enforced against whatever grid is submitted, and
+/// a frozen launch is submitted exactly. Reading only `grid_override` would let a
+/// recorded grid past a limit reach the device driver.
+#[test]
+fn a_frozen_launch_grid_past_the_backend_axis_limit_is_rejected() {
+    let backend = GridLimitBackend;
+    let program = tiny_program();
+    let mut config = DispatchConfig::default();
+    config.launch = Some(
+        vyre_driver::LaunchDirective::stated([1, 1, 1], [8, 1, 1], 0)
+            .expect("the stated fixture launch is positive"),
+    );
+
+    let err = vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
+        .expect_err("Fix: a frozen grid above the backend axis limit must fail.");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("axis 0") && msg.contains("max is 7"),
+        "the rejection must name the failing axis and the limit; got: {msg}"
     );
 }

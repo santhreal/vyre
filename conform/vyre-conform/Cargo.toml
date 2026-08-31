@@ -1,6 +1,6 @@
 [package]
 name = "vyre-conform"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -10,15 +10,73 @@ homepage.workspace = true
 description = "Canonical Vyre conformance engine and thin proof CLI."
 publish = false
 
+[package.metadata.cargo-machete]
+ignored = ["vyre-test-support"]
+
 [lints]
 workspace = true
 
 [lib]
 path = "src/lib.rs"
 
+# The whole suite compares the reference path against cuda and wgpu, so it needs
+# the concrete driver crates the `gpu` feature pulls in. Declared here rather
+# than wrapped in a file-level `cfg`: cargo then skips the target when the
+# feature is off, which is what `--no-default-features --all-targets` needs from
+# any consumer, instead of compiling 606 lines down to an empty test binary.
+[[test]]
+name = "countless_readwrite_output_parity"
+path = "tests/countless_readwrite_output_parity/mod.rs"
+required-features = ["device-tests"]
+
+[[test]]
+name = "reference_parity_classes"
+path = "tests/reference_parity_classes/mod.rs"
+required-features = ["device-tests"]
+
+# Both contracts here acquire a live backend through
+# `production::live_test_backend`, so the target compiles only where a device
+# is admitted. Split out of `lens_parity`, whose remaining contracts need none.
+[[test]]
+name = "lens_parity_device"
+required-features = ["device-tests"]
+
+# The ULP audit compares a device result against the reference, so it acquires
+# one too.
+[[test]]
+name = "ulp_audit"
+required-features = ["device-tests"]
+
+# The parity matrix measures every registered operation on every concrete
+# backend and reports an unmeasured pair as a defect, which is the correct
+# contract on a device lane and an unsatisfiable one on a hosted runner with no
+# adapter at all.
+[[test]]
+name = "parity_matrix"
+path = "tests/parity_matrix.rs"
+required-features = ["device-tests"]
+
+# Every route here compiles and submits an artifact through a linked backend.
+# Split out of `production_route`, whose step-bound contract needs no device.
+[[test]]
+name = "production_route_device"
+required-features = ["device-tests"]
+
 [features]
 default = ["gpu"]
-gpu = ["dep:vyre-driver-cuda", "dep:vyre-driver-metal", "dep:vyre-driver-wgpu"]
+gpu = [
+    "dep:vyre-driver-cuda",
+    "dep:vyre-driver-wgpu",
+    "vyre-registry-link/cuda",
+    "vyre-registry-link/metal",
+    "vyre-registry-link/wgpu",
+]
+# A test that drives the built binary through a real device is compiled only
+# where the device is. `gpu` links the concrete drivers, which every lane does,
+# so requiring it admits nothing: it is on by default. The admission is this
+# feature, which `conform.yml` turns on for the runner that has the device, and
+# it pulls in `gpu` because a test that acquires a backend also has to link it.
+device-tests = ["gpu"]
 
 [dependencies]
 blake3 = { workspace = true }
@@ -34,17 +92,47 @@ vyre = { workspace = true }
 vyre-conform-spec = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-driver-cuda = { workspace = true, optional = true }
-vyre-driver-metal = { workspace = true, optional = true }
-vyre-driver-reference = { workspace = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
 vyre-foundation = { workspace = true }
-vyre-intrinsics = { workspace = true }
-vyre-libs = { workspace = true, features = ["full", "logical", "nn-moe", "security", "visual", "parsing", "math", "nn", "matching", "crypto"] }
+vyre-libs = { workspace = true, features = ["full"] }
 vyre-megakernel = { workspace = true }
-vyre-primitives = { workspace = true }
+vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
+# The registries this harness judges are read through their owner, which links
+# every submitting crate and asserts each one reached the registry. Naming a
+# submitting crate here for link effect alone is what left readers judging a
+# partial registry.
+vyre-registry-link = { workspace = true, default-features = false, features = ["operations", "reference"] }
 vyre-runtime = { workspace = true }
 vyre-spec = { workspace = true }
 
 [dev-dependencies]
+# `ir-fixtures` for the one owner of the single-element copy node every bundle
+# fixture here builds.
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
+# The bundle round-trip contract judges the descriptor a lowering produced, so it
+# needs the lowering that owns `LiteralValue` and its encoding.
+vyre-lower.workspace = true
+# Run-time checkout root, so a contract binary reused across checkouts still
+# reports on the tree cargo was invoked in. publish = false on both sides.
+structure-gate = { path = "../../structure-gate" }
 toml = { workspace = true }
+# The frozen-surface variant tables under `tests/support` are shared by source
+# with vyre-spec and vyre-foundation, so they name one crate for the run-time
+# checkout root and every including crate carries it.
+
+[[test]]
+name = "cert_artifact"
+path = "tests/cert_artifact/mod.rs"
+
+[[test]]
+name = "library_contracts"
+path = "tests/library_contracts/mod.rs"
+
+[[test]]
+name = "cert_regression_pin"
+path = "tests/cert_regression_pin/mod.rs"
+
+[[test]]
+name = "op_matrix_truth"
+path = "tests/op_matrix_truth/mod.rs"

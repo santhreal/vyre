@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The metal-parity device run quotes the remote checkout path for the remote shell and refuses an ssh destination that opens with a dash, so neither value can carry a command."

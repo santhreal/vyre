@@ -3,25 +3,8 @@ use super::*;
 #[test]
 fn cuda_large_storage_atomic_sum_crosses_workgroup_boundary() {
     let count = 4096u32;
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("sum", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-            BufferDecl::read("values", 1, DataType::U32).with_count(count),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(count)),
-                vec![Node::let_bind(
-                    "old_sum",
-                    Expr::atomic_add("sum", Expr::u32(0), Expr::load("values", Expr::var("idx"))),
-                )],
-            ),
-        ],
-    );
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend must acquire on the GPU-required host.");
+    let program = make_atomic_sum_program(count, false);
+    let backend = acquire_cuda_backend();
     let outputs = backend
         .dispatch(
             &program,
@@ -38,49 +21,26 @@ fn cuda_large_storage_atomic_sum_crosses_workgroup_boundary() {
 }
 
 #[test]
-fn cuda_artifact_dispatch_matches_direct_dispatch_for_multi_block_atomics() {
+fn cuda_artifact_dispatch_uses_admitted_geometry_over_hostile_caller_config() {
     let count = 4096u32;
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("sum", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-            BufferDecl::read("values", 1, DataType::U32).with_count(count),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(count)),
-                vec![Node::let_bind(
-                    "old_sum",
-                    Expr::atomic_add("sum", Expr::u32(0), Expr::load("values", Expr::var("idx"))),
-                )],
-            ),
-        ],
-    );
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend must acquire on the GPU-required host.");
+    let program = make_atomic_sum_program(count, false);
+    let backend = acquire_cuda_backend();
     let values = u32_bytes(&vec![1; count as usize]);
     let initial_sum = u32_bytes(&[0]);
-    let grid = vyre_driver::program_walks::infer_dispatch_grid(
-        &program,
-        &[initial_sum.clone(), values.clone()],
-        &DispatchConfig::default(),
-    )
-    .expect("Fix: shared dispatch-grid inference must handle CUDA storage atomic programs.");
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some(grid);
+    let mut hostile_config = DispatchConfig::default();
+    hostile_config.grid_override = Some([1, 1, 1]);
     let outputs = compiled_cuda_outputs_with_config(
         &backend,
         &program,
         &[initial_sum, values],
-        &config,
-        "cuda multi-block storage atomic",
+        &hostile_config,
+        "CUDA artifact admitted geometry",
     );
 
     assert_eq!(
         bytes_u32(&outputs[0]),
         vec![count],
-        "Fix: CUDA artifact dispatch must honor caller launch config across all workgroups."
+        "Fix: CUDA artifact dispatch must retain admitted geometry instead of caller launch config."
     );
 }
 

@@ -6,7 +6,7 @@
 //!
 //! Each test:
 //! 1. Builds a vyre `Program` with a specific control-flow shape.
-//! 2. Runs `vyre_lower::lower_verified`.
+//! 2. Runs the physical or selected-schedule lowering boundary appropriate to the fixture.
 //! 3. Calls `vyre_emit_naga::emit` to produce a `naga::Module`.
 //! 4. Calls `naga::valid::Validator` with all flags + capabilities.
 //! 5. Asserts validation succeeds (no NotInScope, no DanglingResultRef,
@@ -19,9 +19,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 fn assert_emits_clean(prog: Program, label: &str) {
     // Verified lowering owns semantic optimization and descriptor canonicalization.
-    let lk = vyre_lower::lower_verified(&prog)
-        .unwrap_or_else(|e| panic!("{label}: lower_verified failed: {e}"));
-    let module = vyre_emit_naga::emit(&lk.descriptor)
+    let lk = vyre_lower::lower_physical(&prog)
+        .unwrap_or_else(|e| panic!("{label}: lower_physical failed: {e}"));
+    let module = vyre_emit_naga::emit(lk.descriptor())
         .unwrap_or_else(|e| panic!("{label}: emit failed: {e}"));
     let res = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
@@ -398,9 +398,12 @@ fn loop_carrier_with_let_bind_shadowing_in_body() {
 }
 
 #[test]
-fn dump_c11_lexer_naga() {
-    use vyre_libs::parsing::c::lex::lexer::c11_lexer;
-    let prog = c11_lexer(
+fn dump_python312_lexer_naga() {
+    use std::collections::BTreeMap;
+    use vyre_foundation::ir::ProgramGraph;
+    use vyre_foundation::logical::LogicalProgramGraph;
+    use vyre_libs::parsing::python::lex::python312_lexer;
+    let prog = python312_lexer(
         "haystack",
         "out_tok_types",
         "out_tok_starts",
@@ -408,8 +411,15 @@ fn dump_c11_lexer_naga() {
         "out_counts",
         256,
     );
-    let lk = vyre_lower::lower_verified(&prog).expect("c11_lexer lower_verified must succeed");
-    let module = vyre_emit_naga::emit(&lk.descriptor).expect("c11_lexer emit must succeed");
+    let graph = ProgramGraph::from_program("python312_lexer", prog.clone())
+        .expect("python312_lexer must form a valid program graph");
+    let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
+        .expect("python312_lexer must have a valid logical domain");
+    let schedule = vyre_test_support::selected_schedules::baseline(&logical);
+    let phase = schedule.phases[0].id;
+    let lk = vyre_lower::lower_scheduled(&prog, &schedule, phase)
+        .expect("python312_lexer selected schedule must lower");
+    let module = vyre_emit_naga::emit(lk.descriptor()).expect("python312_lexer emit must succeed");
     let wgsl = naga::back::wgsl::write_string(
         &module,
         &naga::valid::Validator::new(

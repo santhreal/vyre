@@ -1,9 +1,15 @@
-use vyre_foundation::ir::model::expr::GeneratorRef;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
-use vyre_primitives::math::semiring_gemm::OP_ID as SEMIRING_GEMM_OP_ID;
+//! Assembly of a tiled matmul program: buffers, tile shape, and the body the
+//! selected kernel path supplies.
+//!
+//! The tensor-core body is chosen only when the capability record admits it;
+//! the cooperative body is the path every device can run.
 
-use crate::region::{wrap, wrap_child};
-use crate::tensor_ref::TensorRefError;
+use crate::math::semiring_gemm::OP_ID as SEMIRING_GEMM_OP_ID;
+use vyre_foundation::composition::{wrap_child_region, wrap_region};
+use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
+
+use crate::plumbing::operand::tensor_ref::TensorRefError;
 
 use super::body::cooperative_matmul_body;
 use super::mma_body::cooperative_matmul_body_mma;
@@ -11,25 +17,25 @@ use super::mma_fragment::{gate_mma_path, MmaCapabilityRecord};
 use super::shape::{output_tile_shape, padded_tile_lane_count, MatrixShape, TileShape};
 use super::tensor_core_policy::{select_matmul_kernel, MatmulKernelPath};
 
-pub(super) struct MatmulTiledProgramSpec<'a> {
-    pub(super) op_id: &'static str,
-    pub(super) a: &'a str,
-    pub(super) b: &'a str,
-    pub(super) bias: Option<&'a str>,
-    pub(super) out: &'a str,
-    pub(super) m: u32,
-    pub(super) k: u32,
-    pub(super) n: u32,
-    pub(super) tile: u32,
-    pub(super) workgroup: [u32; 3],
-    pub(super) generator: &'static str,
-    pub(super) dtype: DataType,
-    pub(super) a_tile_name: &'a str,
-    pub(super) b_tile_name: &'a str,
-    pub(super) mma_capabilities: MmaCapabilityRecord,
+pub(crate) struct MatmulTiledProgramSpec<'a> {
+    pub(crate) op_id: &'static str,
+    pub(crate) a: &'a str,
+    pub(crate) b: &'a str,
+    pub(crate) bias: Option<&'a str>,
+    pub(crate) out: &'a str,
+    pub(crate) m: u32,
+    pub(crate) k: u32,
+    pub(crate) n: u32,
+    pub(crate) tile: u32,
+    pub(crate) workgroup: [u32; 3],
+    pub(crate) generator: &'static str,
+    pub(crate) dtype: DataType,
+    pub(crate) a_tile_name: &'a str,
+    pub(crate) b_tile_name: &'a str,
+    pub(crate) mma_capabilities: MmaCapabilityRecord,
 }
 
-pub(super) fn build_matmul_tiled_program(
+pub(crate) fn build_matmul_tiled_program(
     spec: MatmulTiledProgramSpec<'_>,
 ) -> Result<Program, TensorRefError> {
     let MatmulTiledProgramSpec {
@@ -160,11 +166,9 @@ pub(super) fn build_matmul_tiled_program(
             name: out.to_string(),
             shape: vec![m, n],
         })?;
-    let body = vec![wrap_child(
+    let body = vec![wrap_child_region(
         SEMIRING_GEMM_OP_ID,
-        GeneratorRef {
-            name: generator.to_string(),
-        },
+        Ident::from(generator),
         kernel_body,
     )];
 
@@ -199,7 +203,7 @@ pub(super) fn build_matmul_tiled_program(
     Ok(Program::wrapped(
         buffers,
         dispatch_wg,
-        vec![wrap(generator, body, None)],
+        vec![wrap_region(generator, body, None)],
     ))
 }
 
@@ -235,9 +239,11 @@ mod tests {
     }
 
     #[test]
-    fn supported_ptx_mma_capabilities_emit_mma_body() {
-        let program = build_matmul_tiled_program(f16_mma_spec(MmaCapabilityRecord::ptx_sm80()))
-            .expect("Fix: PTX F16 M16N8K16 tiled matmul spec must build.");
+    fn descriptor_mma_capabilities_emit_mma_body() {
+        let program = build_matmul_tiled_program(f16_mma_spec(
+            MmaCapabilityRecord::all_descriptor_mma_shapes(),
+        ))
+        .expect("Fix: an F16 M16N8K16 tiled matmul spec must build.");
         let debug = format!("{:?}", program.entry());
 
         assert!(debug.contains("mma_c0"));
@@ -245,14 +251,30 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_mma_backend_capabilities_emit_cooperative_body() {
-        for capabilities in [MmaCapabilityRecord::metal(), MmaCapabilityRecord::wgpu()] {
-            let program = build_matmul_tiled_program(f16_mma_spec(capabilities))
-                .expect("Fix: unsupported MMA backends must fall back to cooperative matmul.");
-            let debug = format!("{:?}", program.entry());
+    fn a_target_without_descriptor_mma_emits_the_cooperative_body() {
+        let program =
+            build_matmul_tiled_program(f16_mma_spec(MmaCapabilityRecord::no_descriptor_mma()))
+                .expect("Fix: a target without descriptor MMA must fall back to cooperative.");
+        let debug = format!("{:?}", program.entry());
 
-            assert!(!debug.contains("mma_c0"));
-            assert_ne!(program.workgroup_size(), [32, 1, 1]);
-        }
+        assert!(!debug.contains("mma_c0"));
+        assert_ne!(program.workgroup_size(), [32, 1, 1]);
+    }
+
+    /// A target that lowers descriptor MMA but not this precision takes the
+    /// cooperative body too. The gate is per shape, not per target.
+    #[test]
+    fn descriptor_mma_without_f16_support_emits_the_cooperative_body() {
+        let program = build_matmul_tiled_program(f16_mma_spec(MmaCapabilityRecord {
+            descriptor_mma: true,
+            f16_m16n8k16: false,
+            bf16_m16n8k16: true,
+            tf32_m16n8k4: true,
+        }))
+        .expect("Fix: a per-precision MMA gap must fall back, not fail the build.");
+        let debug = format!("{:?}", program.entry());
+
+        assert!(!debug.contains("mma_c0"));
+        assert_ne!(program.workgroup_size(), [32, 1, 1]);
     }
 }

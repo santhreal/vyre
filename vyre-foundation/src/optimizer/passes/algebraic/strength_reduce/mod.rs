@@ -3,11 +3,18 @@ use crate::optimizer::rewrite::rewrite_program;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 
 mod arithmetic;
+mod bounds;
+mod divisibility;
+mod duplication;
+mod exact_div;
 
 use arithmetic::{
-    granlund_montgomery_div, horner_polynomial_int, power_of_two_shift, reciprocal_constant_fold,
-    shift_add_decompose, synthesize_fma_add, synthesize_fma_sub,
+    div_operand_copies, granlund_montgomery_div, horner_polynomial_int, power_of_two_shift,
+    reciprocal_constant_fold, shift_add_decompose, synthesize_fma_add, synthesize_fma_sub,
 };
+use divisibility::rewrite_divisibility_test;
+use duplication::may_duplicate;
+use exact_div::{cancel_constant_factor, fuse_constant_divisors, narrow_nested_modulus};
 
 /// Replace multiplication by powers of two with shifts.
 #[derive(Debug, Default)]
@@ -40,8 +47,39 @@ impl StrengthReduce {
     /// (see builder.rs line ~134). No explicit call needed here.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let (program, changed) = rewrite_program(program, reduce_expr);
-        PassResult { program, changed }
+        // Recognition runs first and on its own sweep. The expression
+        // rewriter assembles children before their parent, so by the time
+        // `reduce_expr` reaches `x % d == 0` or `(x * c) / d`, the inner
+        // remainder or product has already been lowered and the cheaper
+        // shape is unreachable.
+        let (program, recognized) = rewrite_program(program, recognize_source_shape);
+        let (program, reduced) = rewrite_program(program, reduce_expr);
+        PassResult {
+            program,
+            changed: recognized || reduced,
+        }
+    }
+}
+
+/// Rewrites that must see the operands as written.
+///
+/// Each one keys on a constant that the lowering table consumes: the
+/// remainder in a divisibility test, the multiplier inside a dividend, the
+/// inner divisor of a division chain. Lowering a child destroys that
+/// constant, and a bottom-up rewriter lowers children first, so these have to
+/// run as a separate earlier sweep rather than as entries in the table.
+fn recognize_source_shape(expr: &Expr) -> Option<Expr> {
+    if let Some(test) = rewrite_divisibility_test(expr) {
+        return Some(test);
+    }
+    let Expr::BinOp { op, left, right } = expr else {
+        return None;
+    };
+    match (op, right.as_ref()) {
+        (BinOp::Div, Expr::LitU32(divisor)) => cancel_constant_factor(left, *divisor)
+            .or_else(|| fuse_constant_divisors(left, *divisor)),
+        (BinOp::Mod, Expr::LitU32(modulus)) => narrow_nested_modulus(left, *modulus),
+        _ => None,
     }
 }
 
@@ -129,11 +167,11 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
         // LitU32 power of two  -  LitI32 paths avoid signed semantics
         // mismatch (negative dividend + rounding direction).
         BinOp::Div => {
-            // ROADMAP G2: 1.0 / constant → compile-time reciprocal literal.
+            // 1.0 / constant → compile-time reciprocal literal.
             if let Some(folded) = reciprocal_constant_fold(left.as_ref(), right.as_ref()) {
                 return Some(folded);
             }
-            // ROADMAP G2: 1.0 / x → Reciprocal(x). Keeping reciprocal as
+            // 1.0 / x → Reciprocal(x). Keeping reciprocal as
             // a first-class IR op lets strict backends emit precise rcp and
             // ULP-budgeted backends emit approximate rcp without re-discovering
             // the expression shape in every driver.
@@ -189,6 +227,13 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
             // ~40-90 cycle integer umod becomes mulhi + shift + mul + sub.
             // d == 0 falls through here (granlund_montgomery_div guards d <= 1),
             // leaving modulo-by-zero intact for the backend to trap.
+            //
+            // The subtraction reads `x` on top of every read the quotient
+            // makes, so the whole shape has to clear the duplication budget
+            // before the quotient is built.
+            if !may_duplicate(left, 1 + div_operand_copies(*value)) {
+                return None;
+            }
             granlund_montgomery_div(left.as_ref(), *value).map(|quotient| {
                 Expr::sub(
                     left.as_ref().clone(),
@@ -196,15 +241,19 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
                 )
             })
         }
-        // Float: x + 0.0 → x (additive identity).
+        // Float: x + (-0.0) → x (additive identity).
         BinOp::Add => {
             if let Some(fma) = synthesize_fma_add(left, right) {
                 return Some(fma);
             }
-            if matches!(right.as_ref(), Expr::LitF32(v) if *v == 0.0) {
+            // Only the negative zero is an additive identity under IEEE-754:
+            // `-0.0 + 0.0` is `+0.0`, so folding `x + 0.0` away rewrites the
+            // sign of a negative-zero input. `lit_f32_eq` compares bit patterns
+            // because `-0.0 == 0.0` holds for the value comparison.
+            if matches!(right.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, -0.0)) {
                 return Some(left.as_ref().clone());
             }
-            if matches!(left.as_ref(), Expr::LitF32(v) if *v == 0.0) {
+            if matches!(left.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, -0.0)) {
                 return Some(right.as_ref().clone());
             }
             // Integer: x + 0 → x.
@@ -233,12 +282,14 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
             }
             None
         }
-        // Float: x - 0.0 → x (subtractive identity).
+        // Float: x - (+0.0) → x (subtractive identity).
         BinOp::Sub => {
             if let Some(fma) = synthesize_fma_sub(left, right) {
                 return Some(fma);
             }
-            if matches!(right.as_ref(), Expr::LitF32(v) if *v == 0.0) {
+            // The subtractive identity takes the opposite zero: `-0.0 - -0.0`
+            // is `+0.0`, while `x - 0.0` is `x` for every input.
+            if matches!(right.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, 0.0)) {
                 return Some(left.as_ref().clone());
             }
             if matches!(right.as_ref(), Expr::LitU32(0)) {
@@ -254,46 +305,9 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
             }
             None
         }
-        // ── Shift fusion + shift-by-zero elimination ────────────
-        // (x << a) << b → x << (a + b) when a,b are literal.
-        // x << 0 → x,  x >> 0 → x.
+        // Shift identities and chained-shift fusion have one owner.
         BinOp::Shl | BinOp::Shr => {
-            // Zero shifted by any amount is still zero.
-            if matches!(left.as_ref(), Expr::LitU32(0) | Expr::LitI32(0)) {
-                return Some(left.as_ref().clone());
-            }
-            // Shift by zero → identity.
-            if matches!(right.as_ref(), Expr::LitU32(0)) {
-                return Some(left.as_ref().clone());
-            }
-            // Chained shift fusion: (x <<|>> a) <<|>> b → x <<|>> (a+b)
-            // Only fuse when both shifts are the same direction.
-            if let Expr::BinOp {
-                op: inner_op,
-                left: x,
-                right: inner_shift,
-            } = left.as_ref()
-            {
-                if inner_op == op {
-                    if let (Expr::LitU32(a), Expr::LitU32(b)) =
-                        (inner_shift.as_ref(), right.as_ref())
-                    {
-                        let total = a.saturating_add(*b);
-                        // A u32 shift by >= 32 bits produces 0 for every
-                        // non-zero value of x; clamping to 31 would produce
-                        // x << 31 instead of 0 (a miscompile).
-                        if total > 31 {
-                            return Some(Expr::u32(0));
-                        }
-                        return Some(Expr::BinOp {
-                            op: *op,
-                            left: x.clone(),
-                            right: Box::new(Expr::u32(total)),
-                        });
-                    }
-                }
-            }
-            None
+            super::shift_fusion::reduce_shift(*op, left.as_ref(), right.as_ref())
         }
 
         // ── BitAnd mask fusion ──────────────────────────────────
@@ -408,4 +422,5 @@ fn f32_nonzero(value: f32) -> bool {
 }
 
 #[cfg(test)]
+#[path = "../../../../../tests/internal/optimizer/passes/algebraic/strength_reduce/mod.rs"]
 mod tests;

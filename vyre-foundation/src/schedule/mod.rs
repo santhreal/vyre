@@ -1,0 +1,567 @@
+//! Versioned backend-neutral selected schedule representation.
+//!
+//! A logical program states what points and dependencies exist. This module
+//! records how those regions are transformed and assigned to execution and
+//! storage scopes before physical-kernel lowering. Concrete target names and
+//! instruction choices are not part of this schema.
+
+mod error;
+mod legality;
+mod normalize;
+mod preconditions;
+
+pub use error::ScheduleLegalityError;
+
+use std::collections::BTreeSet;
+
+use serde::{Deserialize, Serialize};
+
+/// Current backend-neutral schedule schema and identity version.
+///
+/// Version 2 rewrites the axis nest for tiling and splitting, so a tiled phase
+/// and an untiled one no longer share a schedule identity.
+pub const SCHEDULE_IR_VERSION: u16 = 2;
+
+/// Stable identity of one selected schedule phase.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct SchedulePhaseId(pub u32);
+
+/// One logical axis retained through schedule transformation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct ScheduleAxis {
+    /// Source logical region.
+    pub region: u32,
+    /// Source logical axis.
+    pub axis: u32,
+    /// Validated upper bound on this axis.
+    pub extent: u64,
+}
+
+/// Backend-neutral physical hierarchy available to an axis mapping.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MappingLevel {
+    /// One invocation lane.
+    Lane,
+    /// A target-provided subgroup.
+    Subgroup,
+    /// One cooperative workgroup.
+    Workgroup,
+    /// A neutral partition of the target's compute capacity.
+    ComputeUnitPartition,
+    /// One device partition in a multi-device schedule.
+    DevicePartition,
+}
+
+/// Backend-neutral storage placement selected for a graph value.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MemoryPlacement {
+    /// Invocation-private storage.
+    Invocation,
+    /// Workgroup-shared storage.
+    Workgroup,
+    /// Device-visible storage.
+    Device,
+    /// Storage retained across submissions.
+    Retained,
+}
+
+/// Scope crossed by an explicit selected-schedule synchronization phase.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SynchronizationScope {
+    /// Synchronize a subgroup.
+    Subgroup,
+    /// Synchronize a workgroup.
+    Workgroup,
+    /// Synchronize all cooperating workgroups on one device.
+    Device,
+}
+
+/// Role assigned to a bounded producer/consumer pipeline group.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PipelineRole {
+    /// Produces values into the pipeline ring.
+    Producer,
+    /// Consumes values from the pipeline ring.
+    Consumer,
+}
+
+/// One bounded role group in a producer/consumer pipeline.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PipelineRoleGroup {
+    /// Role performed by this group.
+    pub role: PipelineRole,
+    /// Nonzero number of logical workers assigned to the role.
+    pub workers: u32,
+}
+
+/// Checked resource ceiling attached to a phase or transform.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ScheduleResourceBounds {
+    /// Maximum logical points covered by the phase.
+    pub logical_points: u64,
+    /// Maximum workgroup-shared bytes required by the phase.
+    pub shared_bytes: u64,
+    /// Maximum invocation-private bytes required by the phase.
+    pub private_bytes: u64,
+    /// Maximum scalar register slots required by one invocation.
+    pub registers_per_invocation: u32,
+    /// Maximum slots in a bounded asynchronous pipeline ring.
+    pub pipeline_slots: u32,
+    /// Maximum entries in a persistent work queue.
+    pub queue_capacity: u32,
+}
+
+impl ScheduleResourceBounds {
+    fn checked_join(self, other: Self) -> Result<Self, ScheduleLegalityError> {
+        Ok(Self {
+            logical_points: self
+                .logical_points
+                .checked_add(other.logical_points)
+                .ok_or(ScheduleLegalityError::ResourceOverflow("logical_points"))?,
+            shared_bytes: self
+                .shared_bytes
+                .checked_add(other.shared_bytes)
+                .ok_or(ScheduleLegalityError::ResourceOverflow("shared_bytes"))?,
+            private_bytes: self
+                .private_bytes
+                .checked_add(other.private_bytes)
+                .ok_or(ScheduleLegalityError::ResourceOverflow("private_bytes"))?,
+            registers_per_invocation: self
+                .registers_per_invocation
+                .checked_add(other.registers_per_invocation)
+                .ok_or(ScheduleLegalityError::ResourceOverflow(
+                    "registers_per_invocation",
+                ))?,
+            pipeline_slots: self
+                .pipeline_slots
+                .checked_add(other.pipeline_slots)
+                .ok_or(ScheduleLegalityError::ResourceOverflow("pipeline_slots"))?,
+            queue_capacity: self
+                .queue_capacity
+                .checked_add(other.queue_capacity)
+                .ok_or(ScheduleLegalityError::ResourceOverflow("queue_capacity"))?,
+        })
+    }
+}
+
+/// One selected logical-axis mapping.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AxisMapping {
+    /// Mapped logical axis.
+    pub axis: ScheduleAxis,
+    /// Selected hierarchy level.
+    pub level: MappingLevel,
+}
+
+/// One phase of a selected schedule.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SchedulePhase {
+    /// Stable phase identity.
+    pub id: SchedulePhaseId,
+    /// Source logical regions covered by this phase.
+    pub source_regions: Vec<u32>,
+    /// Axes available to transforms in this phase.
+    pub axes: Vec<ScheduleAxis>,
+    /// Exact logical coverage selected for this phase.
+    pub grid: [u64; 3],
+    /// Exact workgroup shape selected for this phase.
+    pub workgroup: [u32; 3],
+    /// Selected vector width.
+    pub vector_width: u32,
+    /// Selected axis mappings.
+    pub mappings: Vec<AxisMapping>,
+    /// Preceding selected phases.
+    pub predecessors: Vec<SchedulePhaseId>,
+    /// Checked resource ceiling.
+    pub resources: ScheduleResourceBounds,
+}
+
+/// Stable kind of a nonzero or bounded schedule operand.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScheduleBoundKind {
+    /// Split, tile, or vector factor.
+    Factor,
+    /// Byte resource bound.
+    Bytes,
+    /// Prefetch distance.
+    PrefetchDistance,
+    /// Pipeline ring slot count.
+    PipelineRing,
+    /// Persistent queue capacity.
+    QueueCapacity,
+    /// Spatial partition count.
+    PartitionCount,
+}
+
+/// Typed precondition authenticated with one applied transform.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SchedulePrecondition {
+    /// The referenced phase exists.
+    PhaseExists(SchedulePhaseId),
+    /// The referenced axis exists in the phase.
+    AxisExists(ScheduleAxis),
+    /// A factor or bound is nonzero.
+    NonZero(ScheduleBoundKind),
+    /// An axis extent is divisible by the transform factor.
+    Divisible {
+        /// Source axis extent.
+        extent: u64,
+        /// Selected exact factor.
+        factor: u32,
+    },
+    /// The listed phases are pairwise distinct.
+    DistinctPhases(Vec<SchedulePhaseId>),
+    /// A resource increase remains representable.
+    BoundedResource(ScheduleBoundKind),
+    /// Adding the edge preserves acyclic phase order.
+    Acyclic,
+    /// The new axis order is a permutation of the existing axes.
+    AxisPermutation,
+}
+
+/// Inverse provenance for an applied transform.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ScheduleInverse {
+    /// Identity of the complete selected schedule before this transform.
+    pub previous_identity: [u8; 32],
+}
+
+/// Source and inverse provenance for one applied transform.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ScheduleTransformProvenance {
+    /// Source logical regions read by the transform.
+    pub source_regions: Vec<u32>,
+    /// Source selected phases read by the transform.
+    pub source_phases: Vec<SchedulePhaseId>,
+    /// Exact inverse checkpoint.
+    pub inverse: ScheduleInverse,
+}
+
+/// One backend-neutral schedule transform.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScheduleTransform {
+    /// Split one phase after a source logical region.
+    PhaseFission {
+        /// Phase to split.
+        phase: SchedulePhaseId,
+        /// Last source region retained by the first phase.
+        split_after_region: u32,
+    },
+    /// Fuse two or more phases.
+    Fuse {
+        /// Phases to fuse.
+        phases: Vec<SchedulePhaseId>,
+    },
+    /// Tile one or more logical axes.
+    Tile {
+        /// Phase containing the axes.
+        phase: SchedulePhaseId,
+        /// Axes and nonzero tile factors.
+        tiles: Vec<(ScheduleAxis, u32)>,
+    },
+    /// Split one logical axis by a nonzero exact factor.
+    Split {
+        /// Phase containing the axis.
+        phase: SchedulePhaseId,
+        /// Axis to split.
+        axis: ScheduleAxis,
+        /// Exact split factor.
+        factor: u32,
+    },
+    /// Reorder every axis of one phase.
+    Reorder {
+        /// Phase to reorder.
+        phase: SchedulePhaseId,
+        /// Complete axis permutation.
+        axes: Vec<ScheduleAxis>,
+    },
+    /// Select vector execution for one logical axis.
+    Vectorize {
+        /// Phase containing the axis.
+        phase: SchedulePhaseId,
+        /// Axis to vectorize.
+        axis: ScheduleAxis,
+        /// Nonzero exact vector width.
+        width: u32,
+    },
+    /// Map a logical axis to a backend-neutral hierarchy level.
+    Map {
+        /// Phase containing the axis.
+        phase: SchedulePhaseId,
+        /// Axis to map.
+        axis: ScheduleAxis,
+        /// Selected hierarchy level.
+        level: MappingLevel,
+    },
+    /// Select the exact workgroup shape for one phase.
+    SetWorkgroup {
+        /// Phase whose physical workgroup is selected.
+        phase: SchedulePhaseId,
+        /// Nonzero selected shape.
+        shape: [u32; 3],
+    },
+    /// Place one graph value in a backend-neutral memory class.
+    PlaceMemory {
+        /// Phase using the value.
+        phase: SchedulePhaseId,
+        /// Graph value identity.
+        value: u32,
+        /// Selected memory class.
+        placement: MemoryPlacement,
+        /// Checked byte bound.
+        bytes: u64,
+    },
+    /// Prefetch one graph value a bounded number of phases ahead.
+    Prefetch {
+        /// Phase issuing the prefetch.
+        phase: SchedulePhaseId,
+        /// Graph value identity.
+        value: u32,
+        /// Nonzero bounded prefetch distance.
+        distance: u32,
+        /// Checked byte bound.
+        bytes: u64,
+    },
+    /// Form a bounded asynchronous producer/consumer pipeline.
+    Pipeline {
+        /// Producer phase.
+        producer: SchedulePhaseId,
+        /// Consumer phase.
+        consumer: SchedulePhaseId,
+        /// Nonzero ring slot count.
+        ring_slots: u32,
+        /// Explicit nonempty producer and consumer role groups.
+        roles: Vec<PipelineRoleGroup>,
+    },
+    /// Recompute graph values instead of retaining them.
+    Recompute {
+        /// Phase that performs recomputation.
+        phase: SchedulePhaseId,
+        /// Nonempty graph value set.
+        values: Vec<u32>,
+    },
+    /// Execute one phase through a bounded persistent queue.
+    PersistentQueue {
+        /// Persistent phase.
+        phase: SchedulePhaseId,
+        /// Nonzero queue capacity.
+        capacity: u32,
+    },
+    /// Partition one phase spatially across neutral compute partitions.
+    SpatialPartition {
+        /// Phase to partition.
+        phase: SchedulePhaseId,
+        /// Nonzero partition count.
+        partitions: u32,
+        /// Neutral partition level.
+        level: MappingLevel,
+    },
+    /// Force a submission boundary before one phase.
+    DispatchCut {
+        /// Preceding phase.
+        before: SchedulePhaseId,
+        /// Following phase.
+        after: SchedulePhaseId,
+    },
+    /// Add an explicit synchronization phase boundary.
+    Synchronize {
+        /// Nonempty synchronized phases.
+        phases: Vec<SchedulePhaseId>,
+        /// Selected synchronization scope.
+        scope: SynchronizationScope,
+    },
+    /// Join two or more producer phases into one consumer phase.
+    AsymmetricJoin {
+        /// Distinct producer phases.
+        producers: Vec<SchedulePhaseId>,
+        /// Consumer phase.
+        consumer: SchedulePhaseId,
+    },
+}
+
+/// Whether one transform changes the order in which the invocations of the
+/// phases it governs combine into a shared location.
+///
+/// Reordering an accumulation preserves its result only when the combine is
+/// associative and commutative, which
+/// [`algebraic_reordering`](crate::algebraic_reordering) answers for a program.
+/// This states which transforms have to ask.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum CombineOrder {
+    /// Every combine reaches its location in the order the program stated.
+    Preserved,
+    /// The order changes when the carried shape differs from the shape a
+    /// covered region declared, and is preserved when it does not.
+    ChangedWhenReshaped([u32; 3]),
+    /// The order changes wherever the transform applies.
+    Changed,
+}
+
+impl ScheduleTransform {
+    /// What this transform does to the combine order of the phases it governs.
+    ///
+    /// Splitting, tiling, reordering, vectorizing, and remapping an axis change
+    /// which invocations reach a location and in what sequence. A pipeline, a
+    /// persistent queue, a spatial partition, and an asymmetric join let
+    /// independent workers arrive in an order the schedule does not fix.
+    /// Recomputation applies a covered combine a second time, so the sequence
+    /// reaching a location is not the one the program stated either.
+    ///
+    /// Fission, fusion, memory placement, prefetch, a submission boundary, and
+    /// an added synchronization point move where work runs without changing
+    /// which invocations combine or in what sequence.
+    #[must_use]
+    pub fn combine_order(&self) -> CombineOrder {
+        match self {
+            Self::Tile { .. }
+            | Self::Split { .. }
+            | Self::Reorder { .. }
+            | Self::Vectorize { .. }
+            | Self::Map { .. }
+            | Self::Pipeline { .. }
+            | Self::Recompute { .. }
+            | Self::PersistentQueue { .. }
+            | Self::SpatialPartition { .. }
+            | Self::AsymmetricJoin { .. } => CombineOrder::Changed,
+            Self::SetWorkgroup { shape, .. } => CombineOrder::ChangedWhenReshaped(*shape),
+            Self::PhaseFission { .. }
+            | Self::Fuse { .. }
+            | Self::PlaceMemory { .. }
+            | Self::Prefetch { .. }
+            | Self::DispatchCut { .. }
+            | Self::Synchronize { .. } => CombineOrder::Preserved,
+        }
+    }
+}
+
+/// One validated application of a schedule transform.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ScheduleTransformRecord {
+    /// Applied transform.
+    pub transform: ScheduleTransform,
+    /// Typed preconditions proven before application.
+    pub preconditions: Vec<SchedulePrecondition>,
+    /// Source and inverse provenance.
+    pub provenance: ScheduleTransformProvenance,
+    /// Checked resource increase introduced by the transform.
+    pub resource_bounds: ScheduleResourceBounds,
+}
+
+/// Versioned backend-neutral selected schedule.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SelectedSchedule {
+    /// Schedule schema version.
+    pub version: u16,
+    /// Identity of the validated logical algorithm this schedule transforms.
+    pub logical_identity: [u8; 32],
+    /// Immutable schedule-free phase set used to replay transform proofs.
+    pub source_phases: Vec<SchedulePhase>,
+    /// Immutable resource bound before schedule transforms.
+    pub source_resources: ScheduleResourceBounds,
+    /// Selected phases in stable identity order.
+    pub phases: Vec<SchedulePhase>,
+    /// Applied transforms in source order.
+    pub transforms: Vec<ScheduleTransformRecord>,
+    /// Checked whole-schedule resource ceiling.
+    pub resources: ScheduleResourceBounds,
+}
+
+impl SelectedSchedule {
+    /// Canonical schedule identity bytes.
+    pub fn canonical_wire(&self) -> Result<Vec<u8>, ScheduleLegalityError> {
+        serde_json::to_vec(self).map_err(|error| ScheduleLegalityError::Identity(error.to_string()))
+    }
+
+    /// Deterministic content identity of the complete selected schedule.
+    pub fn identity(&self) -> Result<[u8; 32], ScheduleLegalityError> {
+        Ok(*blake3::hash(&self.canonical_wire()?).as_bytes())
+    }
+
+    /// Return the phase containing one source logical region.
+    #[must_use]
+    pub fn phase_for_region(&self, region: u32) -> Option<&SchedulePhase> {
+        self.phases
+            .iter()
+            .find(|phase| phase.source_regions.contains(&region))
+    }
+
+    /// Validate every persisted phase, transform proof, dependency, and resource bound.
+    pub fn validate(&self) -> Result<(), ScheduleLegalityError> {
+        if self.version != SCHEDULE_IR_VERSION {
+            return Err(ScheduleLegalityError::UnsupportedVersion {
+                found: self.version,
+                expected: SCHEDULE_IR_VERSION,
+            });
+        }
+        if self.phases.is_empty() {
+            return Err(ScheduleLegalityError::Empty("phases"));
+        }
+        let mut ids = BTreeSet::new();
+        let mut regions = BTreeSet::new();
+        for phase in &self.phases {
+            if !ids.insert(phase.id) {
+                return Err(ScheduleLegalityError::DuplicatePhase(phase.id));
+            }
+            if phase.source_regions.is_empty() {
+                return Err(ScheduleLegalityError::Empty("phase.source_regions"));
+            }
+            for region in &phase.source_regions {
+                if !regions.insert(*region) {
+                    return Err(ScheduleLegalityError::DuplicateRegion(*region));
+                }
+            }
+            if phase.grid.contains(&0) || phase.workgroup.contains(&0) || phase.vector_width == 0 {
+                return Err(ScheduleLegalityError::Zero("phase geometry"));
+            }
+            if phase.axes.iter().any(|axis| axis.extent == 0) {
+                return Err(ScheduleLegalityError::Zero("axis extent"));
+            }
+            for predecessor in &phase.predecessors {
+                if *predecessor == phase.id
+                    || !self.phases.iter().any(|item| item.id == *predecessor)
+                {
+                    return Err(ScheduleLegalityError::DependencyCycle {
+                        from: *predecessor,
+                        to: phase.id,
+                    });
+                }
+            }
+        }
+        self.validate_acyclic()?;
+        for record in &self.transforms {
+            if record.preconditions.is_empty()
+                || record.provenance.source_phases.is_empty()
+                || record.provenance.source_regions.is_empty()
+            {
+                return Err(ScheduleLegalityError::MissingProvenance);
+            }
+        }
+        let mut replay = Self {
+            version: self.version,
+            logical_identity: self.logical_identity,
+            source_phases: self.source_phases.clone(),
+            source_resources: self.source_resources,
+            phases: self.source_phases.clone(),
+            transforms: Vec::new(),
+            resources: self.source_resources,
+        };
+        for (index, record) in self.transforms.iter().enumerate() {
+            replay.apply(record.transform.clone())?;
+            if replay.transforms.last() != Some(record) {
+                return Err(ScheduleLegalityError::InvalidTransformProof(index));
+            }
+        }
+        if replay.phases != self.phases || replay.resources != self.resources {
+            return Err(ScheduleLegalityError::ReplayMismatch);
+        }
+        let _ = self.identity()?;
+        Ok(())
+    }
+}

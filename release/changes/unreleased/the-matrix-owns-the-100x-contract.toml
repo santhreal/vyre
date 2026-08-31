@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The Criterion release-macro test no longer asserts that every synthetic macro spec carries a 100x CPU-SOTA contract. It held a second, weaker copy of a rule the `release-workload-matrix` gate owns, and it read the pin per case while the matrix ranks families, so correcting the bandwidth-bound scatter pin turned it red for a workload the release never required at 100x."

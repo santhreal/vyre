@@ -2,10 +2,10 @@
 //!
 //! Category A composition.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{Expr, Program, UnOp};
 
-use crate::region::wrap_anonymous;
-use vyre_primitives::nn::f32_stability::flush_tiny;
+use crate::nn::f32_stability::flush_tiny;
 
 /// Shared SiLU expression with the same tiny-value stabilization used by
 /// standalone and fused activation builders.
@@ -30,70 +30,35 @@ pub(crate) fn silu_expr(x: Expr) -> Expr {
 /// `output`. `n` is the element count of both buffers.
 #[must_use]
 pub fn silu(input: &str, output: &str, n: u32) -> Program {
-    let i = Expr::var("i");
-    let x = Expr::load(input, i.clone());
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::buf_len(input)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value: silu_expr(x),
-            }],
-        ),
-    ];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(output, 1, DataType::F32)
-                .with_count(n.max(1))
-                .with_output_byte_range(0..(n as usize).saturating_mul(4)),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::silu", body)],
-    )
+    ElementwiseComposer::f32_unary("vyre-libs::nn::silu", input, output, n, silu_expr)
 }
 
+const EXPECTED_SILU_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x00, 0xA8, 0x26, 0x3B, 0x3F, 0xB0, 0xB2, 0x89, 0xBE, 0xEA, 0x7B, 0xE1, 0x3F,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(1),
-        id: "vyre-libs::nn::silu",
-        build: Some(|| silu("input", "output", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        "vyre-libs::nn::silu",
+        || silu("input", "output", 4),
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_f32_slice;
             vec![vec![
                 to_bytes(&[0.0_f32, 1.0, -1.0, 2.0]), // input
             ]]
         }),
-        expected_output: Some(|| {
-            // SiLU via the same x / (1 + exp(-x)) formula the IR evaluates.
-            // The cross-backend f32 ULP tolerance in parity_matrix
-            // widens to 64 ULP for transcendentals, so this CPU-side
-            // value is byte-identical with the reference interpreter.
-            let input = [0.0_f32, 1.0, -1.0, 2.0];
-            let out: Vec<f32> = input
-                .iter()
-                .map(|x| x / (1.0 + (-x).exp()))
-                .collect();
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+        Some(|| {
+            vec![vec![EXPECTED_SILU_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
+    .with_numeric(vyre_foundation::numeric::NumericContract::ieee_f32(1))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
     fn silu_ref(x: f32) -> f32 {
         x / (1.0 + (-x).exp())
@@ -103,12 +68,7 @@ mod tests {
     fn silu_nan_input_propagates_nan() {
         let input = [f32::NAN];
         let program = silu("input", "output", 1);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: silu must not panic on NaN input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("silu", &program, &[&input[..]], 1);
         assert!(out[0].is_nan(), "silu(NaN) must be NaN");
     }
 
@@ -116,27 +76,11 @@ mod tests {
     fn silu_inf_inputs() {
         let program = silu("input", "output", 2);
         // +Inf
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(f32_bytes(&[f32::INFINITY, 0.0])),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: silu must not panic on +Inf input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("silu", &program, &[&[f32::INFINITY, 0.0][..]], 2);
         assert_eq!(out[0], f32::INFINITY, "silu(+Inf) must be +Inf");
 
         // -Inf: sigmoid(-Inf)=0, -Inf*0 = NaN
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(f32_bytes(&[f32::NEG_INFINITY, 0.0])),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: silu must not panic on -Inf input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("silu", &program, &[&[f32::NEG_INFINITY, 0.0][..]], 2);
         assert!(
             out[0].is_nan(),
             "silu(-Inf) must be NaN (negative infinity times zero)"
@@ -146,15 +90,7 @@ mod tests {
     #[test]
     fn silu_negative_zero_vs_positive_zero() {
         let program = silu("input", "output", 2);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(f32_bytes(&[0.0f32, -0.0f32])),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: silu must distinguish -0.0 from 0.0");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("silu", &program, &[&[0.0f32, -0.0f32][..]], 2);
         assert_eq!(out[0].to_bits(), 0.0f32.to_bits());
         // silu(-0.0) = -0.0 * 0.5 = -0.0, but flush_tiny may flush it
         // The reference computes -0.0 / 2.0 = -0.0
@@ -168,12 +104,7 @@ mod tests {
     fn silu_subnormal_input_is_flushed_to_zero() {
         let sub = f32::from_bits(1); // smallest positive subnormal
         let program = silu("input", "output", 1);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&[sub])), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: silu must not panic on subnormal input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("silu", &program, &[&[sub][..]], 1);
         assert_eq!(
             out[0].to_bits(),
             0.0f32.to_bits(),
@@ -185,12 +116,7 @@ mod tests {
     fn silu_all_zeros() {
         let input = [0.0f32; 4];
         let program = silu("input", "output", 4);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: silu all-zeros must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("silu", &program, &[&input[..]], 4);
         assert_eq!(out, vec![0.0; 4]);
     }
 
@@ -198,12 +124,7 @@ mod tests {
     fn silu_all_ones() {
         let input = [1.0f32; 4];
         let program = silu("input", "output", 4);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: silu all-ones must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("silu", &program, &[&input[..]], 4);
         let expected = silu_ref(1.0);
         for (i, &v) in out.iter().enumerate() {
             assert!(
@@ -217,12 +138,7 @@ mod tests {
     fn silu_all_max_f32() {
         let input = [f32::MAX; 4];
         let program = silu("input", "output", 4);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: silu all-max-f32 must not panic");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("silu", &program, &[&input[..]], 4);
         for (i, &v) in out.iter().enumerate() {
             // sigmoid(MAX) ≈ 1.0, so silu(MAX) ≈ MAX (does not overflow because MAX*1.0 = MAX)
             assert_eq!(
@@ -237,12 +153,7 @@ mod tests {
     fn silu_single_element() {
         let input = [2.5f32];
         let program = silu("input", "output", 1);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: silu single element must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("silu", &program, &[&input[..]], 1);
         let expected = silu_ref(2.5);
         assert!(
             (out[0] - expected).abs() <= 1.0e-6,
@@ -255,10 +166,8 @@ mod tests {
     #[test]
     fn silu_empty_tensor() {
         let program = silu("input", "output", 0);
-        let outputs =
-            vyre_reference::reference_eval(&program, &[Value::from(vec![]), Value::from(vec![])])
-                .expect("Fix: silu n=0 must not panic");
-        assert!(outputs[0].to_bytes().is_empty());
+        let out = eval_f32("silu", &program, &[&[] as &[f32]], 0);
+        assert!(out.is_empty());
     }
 
     use proptest::prelude::*;
@@ -267,12 +176,7 @@ mod tests {
         #[test]
         fn silu_output_invariant_for_finite_inputs(x in -1e10f32..1e10f32) {
             let program = silu("input", "output", 1);
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[Value::from(f32_bytes(&[x])), Value::from(vec![0u8; 4])],
-            )
-            .expect("Fix: silu must not panic on finite input");
-            let out = decode_f32(&outputs[0].to_bytes())[0];
+            let out = eval_f32("silu", &program, &[&[x][..]], 1)[0];
             if x.is_nan() {
                 prop_assert!(out.is_nan());
             } else if x > 0.0 {

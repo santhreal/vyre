@@ -1,3 +1,9 @@
+//! The population-count family, generated from one macro.
+//!
+//! Every member differs only in which bits it counts, so the program, the
+//! registration, and the witness bytes are written once and instantiated per
+//! kind rather than copied per operation.
+
 use super::bit_count_u32::{bit_count_u32_program, BitCountKind};
 use vyre_foundation::ir::Program;
 
@@ -9,10 +15,11 @@ macro_rules! define_bit_count_u32_op {
         kind = $kind:expr,
         reference = $reference:ident,
         expected = $expected:expr,
+        expected_bytes = $expected_bytes:expr,
         doc = $doc:expr
     ) => {
         #[doc = $doc]
-        pub mod $module {
+        mod $module {
             use super::*;
 
             const OP_ID: &str = $op_id;
@@ -24,54 +31,46 @@ macro_rules! define_bit_count_u32_op {
             }
 
             inventory::submit! {
-                vyre_foundation::operation::OperationRegistration {
-                    semantic_version: 1,
-                    signature: None,
-                    tier: vyre_foundation::operation::OperationTier::Library,
-                    laws: &[],
-                    tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-                    id: OP_ID,
-                    build: Some(|| $function("input", "out", 4)),
-                    test_inputs: Some(|| {
+                vyre_foundation::operation::OperationRegistration::library_unconstrained(
+                    OP_ID,
+                    || $function("input", "out", 4),
+                    Some(|| {
                         let input = [0u32, 1, 0x8000_0000, 0x00F0_0000];
                         let to_bytes = vyre_primitives::wire::pack_u32_slice;
                         vec![vec![to_bytes(&input)]]
                     }),
-                    expected_output: Some(|| {
-                        let bytes = vyre_primitives::wire::pack_u32_slice(&$expected);
-                        vec![vec![bytes]]
+                    Some(|| {
+                        vec![vec![$expected_bytes.to_vec()]]
                     }),
-                    category: Some("math"),
-                }
+                )
+                .with_category("math")
             }
 
             #[cfg(test)]
             mod tests {
                 use super::*;
-                use vyre_reference::value::Value;
+                use crate::fixture_bytes::eval_u32;
 
-                fn run(input: &[u32]) -> Vec<u32> {
-                    let n = input.len() as u32;
-                    let program = $function("input", "out", n.max(1));
-                    let to_bytes = vyre_primitives::wire::pack_u32_slice;
-                    let inputs = vec![
-                        Value::Bytes(to_bytes(input).into()),
-                        Value::Bytes(vec![0u8; (n.max(1) * 4) as usize].into()),
-                    ];
-                    let outputs = vyre_reference::reference_eval(&program, &inputs)
-                        .expect("Fix: bit-count u32 op must run in the reference interpreter.");
-                    vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())
+                fn counted(input: &[u32]) -> Vec<u32> {
+                    let n = (input.len() as u32).max(1);
+                    eval_u32(
+                        stringify!($function),
+                        &$function("input", "out", n),
+                        &[input],
+                        n as usize,
+                    )
                 }
 
                 #[test]
                 fn matches_rust_reference_samples() {
                     let input = [0u32, 1, 2, 3, 0x8000_0000, 0x00F0_0000, u32::MAX];
-                    let got = run(&input);
+                    let got = counted(&input);
                     let expected: Vec<u32> = input.iter().map(|value| value.$reference()).collect();
                     assert_eq!(got, expected);
                 }
             }
         }
+        pub use $module::$function;
     };
 }
 
@@ -82,6 +81,12 @@ define_bit_count_u32_op!(
     kind = BitCountKind::LeadingZeros,
     reference = leading_zeros,
     expected = [32u32, 31, 0, 8],
+    expected_bytes = [
+        0x20, 0x00, 0x00, 0x00, // 32
+        0x1f, 0x00, 0x00, 0x00, // 31
+        0x00, 0x00, 0x00, 0x00, // 0
+        0x08, 0x00, 0x00, 0x00, // 8
+    ],
     doc = "Map `input[i] -> input[i].leading_zeros()` into `out[i]`."
 );
 
@@ -92,5 +97,11 @@ define_bit_count_u32_op!(
     kind = BitCountKind::TrailingZeros,
     reference = trailing_zeros,
     expected = [32u32, 0, 31, 20],
+    expected_bytes = [
+        0x20, 0x00, 0x00, 0x00, // 32
+        0x00, 0x00, 0x00, 0x00, // 0
+        0x1f, 0x00, 0x00, 0x00, // 31
+        0x14, 0x00, 0x00, 0x00, // 20
+    ],
     doc = "Map `input[i] -> input[i].trailing_zeros()` into `out[i]`."
 );

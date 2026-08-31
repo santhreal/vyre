@@ -15,8 +15,8 @@
 //! confirms the gradient value.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::transform::autodiff::error::AutodiffError;
-use vyre_foundation::transform::autodiff::grad::grad;
+use vyre_foundation::transform::autodiff::grad;
+use vyre_foundation::transform::autodiff::AutodiffError;
 use vyre_reference::value::Value;
 
 /// Forward: `let a = x[0]; out[0] = a * a`. The adjoint needs `a`'s forward
@@ -72,16 +72,27 @@ fn grad_buffer_load_square_oracle_confirms_two_x() {
 
     let backward = grad(&program, &["out"], &["x"]).expect("buffer-load square must differentiate");
 
-    // Backward buffers: x(ro), out(ro), grad_out(rw), grad_x(rw) -- all
-    // non-output, so the reference wants one input Value each. x = 3.0; the
-    // grad buffers are cleared by the backward itself so their inputs are
-    // placeholders; out is unused by the square's backward.
-    let inputs = [
-        Value::from(3.0f32.to_le_bytes().to_vec()), // x
-        Value::from(0.0f32.to_le_bytes().to_vec()), // out (unused)
-        Value::from(0.0f32.to_le_bytes().to_vec()), // grad_out (cleared+seeded)
-        Value::from(0.0f32.to_le_bytes().to_vec()), // grad_x (cleared)
-    ];
+    // The reference wants one Value per buffer it accepts as an input and none
+    // for a backend-allocated output, and the backward's buffer set is the
+    // transform's to choose. Reading the list off the program keeps this case
+    // from going stale the next time that set changes: `x` is the only buffer
+    // whose value matters, and the gradient buffers are cleared by the backward.
+    let inputs: Vec<Value> = backward
+        .buffers()
+        .iter()
+        .filter(|decl| vyre_reference::is_reference_input(decl))
+        .map(|decl| {
+            let seed: f32 = if decl.name() == "x" { 3.0 } else { 0.0 };
+            Value::from(seed.to_le_bytes().to_vec())
+        })
+        .collect();
+    assert!(
+        backward
+            .buffers()
+            .iter()
+            .any(|decl| decl.name() == "x" && vyre_reference::is_reference_input(decl)),
+        "Fix: the backward must accept `x` as an input, or this case seeds nothing and 2*x is meaningless"
+    );
     let results = vyre_reference::reference_eval(&backward, &inputs)
         .expect("buffer-load square backward must validate and run");
 

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "No gate sets a build-affecting variable on a command line. The shared cargo runner, the release shard prover, the Metal MacBook gate and both the conformance and release-evidence workflows exported CARGO_BUILD_JOBS, and three of them read or exported CARGO_TARGET_DIR, so each one built a different build than a bare cargo invocation in the same checkout and none of them shared a compiled artifact with it. Job count and build directory are declared once, in .cargo/config.toml."

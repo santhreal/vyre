@@ -1,7 +1,7 @@
 //! CRC-32 wrapper vs independent oracle matrix over hostile packed bytes.
 //!
 //! The oracle is implemented locally with the IEEE 802.3 reflected polynomial.
-//! It is intentionally separate from `vyre_primitives::hash::crc32::crc32` so
+//! It is intentionally separate from `vyre_libs::hash::crc32::crc32` so
 //! this matrix catches wrapper/program regressions rather than tautologies.
 
 #![cfg(feature = "hash")]
@@ -39,7 +39,7 @@ fn oracle_crc32(bytes: &[u8]) -> u32 {
 
 fn run_crc32(words: &[u32]) -> u32 {
     let n = words.len().max(1) as u32;
-    let program = vyre_libs::hash::crc32("input", "out", n);
+    let program = vyre_libs::hash::crc32::crc32_program("input", "out", n);
     let input = vyre_primitives::wire::pack_u32_slice(words);
     let outputs = vyre_reference::reference_eval(&program, &[Value::Bytes(input.into())])
         .expect("Fix: crc32 reference_eval must succeed for matrix inputs.");
@@ -88,7 +88,7 @@ fn matrix_crc32_canonical_vectors_match_independent_oracle() {
     for (index, (bytes, expected)) in vectors.iter().enumerate() {
         let words: Vec<u32> = bytes.iter().map(|&byte| u32::from(byte)).collect();
         let n = words.len() as u32;
-        let program = vyre_libs::hash::crc32("input", "out", n);
+        let program = vyre_libs::hash::crc32::crc32_program("input", "out", n);
         let packed = vyre_primitives::wire::pack_u32_slice(&words);
         let outputs = vyre_reference::reference_eval(&program, &[Value::Bytes(packed.into())])
             .expect("Fix: canonical crc32 vector must execute.");

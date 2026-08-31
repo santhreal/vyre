@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`docs/generated/error-codes.toml` is rendered from the validation rule table and a test held the committed copy to that render, but no command wrote it: `xtask error-codes` owned only the driver catalog, so the regeneration command the failure message named did nothing and the document could only be hand-edited. The gate now writes both catalogs, each through the renderer of the crate that owns the inventory, and the generated header names the command that produces it."

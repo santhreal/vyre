@@ -37,7 +37,7 @@ use crate::artifact::{registration, TargetId};
 use crate::launcher::{emit_launcher_rust, LauncherError, LauncherOpts};
 use crate::manifest::Manifest;
 use crate::VERSION;
-use vyre_megakernel::{ArtifactEnvelope, TargetPayload};
+use vyre_megakernel::{ArtifactEnvelope, TargetEntryPoint, TargetPayload};
 
 const METRIC_RECORD_WORDS: u32 = 8;
 const MAX_BUNDLE_MANIFEST_BYTES: u64 = 1024 * 1024;
@@ -259,11 +259,6 @@ fn validate_artifact_for_bundle(
     let entry = payload.entries().first().ok_or_else(|| {
         BundleError::InvalidArtifact("target payload has no entry metadata".to_string())
     })?;
-    if entry.resource_bindings.is_empty() {
-        return Err(BundleError::InvalidArtifact(
-            "target entry has no canonical resource bindings".to_string(),
-        ));
-    }
     let neutral = envelope.neutral();
     let geometry = neutral
         .geometry()
@@ -275,9 +270,9 @@ fn validate_artifact_for_bundle(
             )
         })?;
     validate_axes("workgroup_size", geometry.workgroup_size)?;
-    validate_axes("grid_size", entry.grid_size)?;
-    validate_resource_bindings(envelope, payload)?;
-    validate_weight_payload_fits_first_finite_resource(envelope, payload, weights)
+    validate_axes("grid_size", geometry.grid)?;
+    validate_resource_bindings(envelope, entry)?;
+    validate_weight_payload_fits_first_finite_resource(envelope, entry, weights)
 }
 
 fn validate_axes(label: &str, axes: [u32; 3]) -> Result<(), BundleError> {
@@ -299,10 +294,9 @@ fn validate_axes(label: &str, axes: [u32; 3]) -> Result<(), BundleError> {
 
 fn validate_resource_bindings(
     envelope: &ArtifactEnvelope,
-    payload: &TargetPayload,
+    entry: &TargetEntryPoint,
 ) -> Result<(), BundleError> {
     let neutral = envelope.neutral();
-    let entry = &payload.entries()[0];
     let mut metrics_resources = 0_usize;
     for binding in &entry.resource_bindings {
         let resource = neutral
@@ -345,21 +339,30 @@ fn validate_resource_bindings(
 
 fn validate_weight_payload_fits_first_finite_resource(
     envelope: &ArtifactEnvelope,
-    payload: &TargetPayload,
+    entry: &TargetEntryPoint,
     weights: &[u8],
 ) -> Result<(), BundleError> {
-    let entry = &payload.entries()[0];
     let first_binding = entry
         .resource_bindings
         .iter()
         .min_by_key(|binding| binding.slot)
-        .expect("validated non-empty target resource bindings");
+        .ok_or_else(|| {
+            BundleError::InvalidArtifact(format!(
+                "target entry `{}` has no canonical resource bindings",
+                entry.name
+            ))
+        })?;
     let first = envelope
         .neutral()
         .resources()
         .iter()
         .find(|resource| resource.value == first_binding.resource)
-        .expect("canonical target payload validation guarantees resource association");
+        .ok_or_else(|| {
+            BundleError::InvalidArtifact(format!(
+                "binding slot {} names missing canonical resource {}",
+                first_binding.slot, first_binding.resource.0
+            ))
+        })?;
     if first.element_count == 0 {
         return Ok(());
     }

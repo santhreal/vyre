@@ -1,0 +1,820 @@
+# Every feature selection this workspace judges.
+#
+# The axis is derived from the tracked manifests at run time, never from this
+# file. The `feature` column spells the selection: `(none)` is the per-member
+# `--no-default-features` probe, `(default)` is the plain `cargo check -p`
+# build, a bare name is that one feature enabled alone, and a comma-joined
+# list is a selection a workspace edge asks of a sibling, with defaults kept
+# when the list opens with `(default)`. A selection with no row here, and a row
+# naming a selection no manifest declares, are each a failure.
+#
+# A row states no compile outcome. Whether a selection compiles is measured by
+# the run that compiles it and is never stored here, because a stored
+# measurement is stale the moment a feature edge moves. A sweep that leaves
+# part of the axis uncompiled reports the rest as unmeasured and fails, so a
+# bare row claims nothing and exempts nothing.
+#
+# `outcome = "blocked"` exempts a selection that cannot compile, and needs a
+# one-line technical constraint in `reason`. A feature that merely needs
+# another feature is not blocked: give it the missing edge in its own
+# [features] table so `--features x` enables what x needs, which fixes the
+# crate for a downstream consumer and not only for this sweep.
+#
+# Declare the axis: `cargo run -p xtask --bin xtask -- feature-isolation --write`.
+# Measure it: `cargo run -p xtask --bin xtask -- feature-isolation --sweep`.
+
+[[pair]]
+member = "structure-gate"
+feature = "(default)"
+
+[[pair]]
+member = "structure-gate"
+feature = "(none)"
+
+[[pair]]
+member = "vyre"
+feature = "(default)"
+
+[[pair]]
+member = "vyre"
+feature = "(none)"
+
+[[pair]]
+member = "vyre"
+feature = "cpu-parity"
+
+[[pair]]
+member = "vyre"
+feature = "cuda"
+
+[[pair]]
+member = "vyre"
+feature = "wgpu"
+
+[[pair]]
+member = "vyre-aot"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-aot"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-aot"
+feature = "ptx"
+
+[[pair]]
+member = "vyre-bench"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-bench"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-bench"
+feature = "cli"
+
+[[pair]]
+member = "vyre-bench"
+feature = "device-tests"
+
+[[pair]]
+member = "vyre-conform"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-conform"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-conform"
+feature = "device-tests"
+
+[[pair]]
+member = "vyre-conform"
+feature = "gpu"
+
+[[pair]]
+member = "vyre-conform-spec"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-conform-spec"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-debug"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-debug"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-driver"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-driver"
+feature = "(default),libs-compositions"
+
+[[pair]]
+member = "vyre-driver"
+feature = "(default),test-fixtures"
+
+[[pair]]
+member = "vyre-driver"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-driver"
+feature = "libs-compositions"
+
+[[pair]]
+member = "vyre-driver"
+feature = "test-fixtures"
+
+[[pair]]
+member = "vyre-driver-cuda"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-driver-cuda"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-driver-cuda"
+feature = "cuda"
+
+[[pair]]
+member = "vyre-driver-cuda"
+feature = "device-tests"
+
+[[pair]]
+member = "vyre-driver-metal"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-driver-metal"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-driver-metal"
+feature = "device-tests"
+
+[[pair]]
+member = "vyre-driver-reference"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-driver-reference"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-driver-spirv"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-driver-spirv"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-driver-spirv"
+feature = "device-tests"
+
+[[pair]]
+member = "vyre-driver-spirv"
+feature = "spirv-val"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "device-tests"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "math-linalg"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "math-scan"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "nn-attention"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "parity-testing"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "pattern-dfa"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "pattern-nfa"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "pattern-substring"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "wgpu"
+
+[[pair]]
+member = "vyre-emit-metal"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-emit-metal"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-emit-naga"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-emit-naga"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-emit-ptx"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-emit-ptx"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-emit-ptx"
+feature = "nvrtc"
+
+[[pair]]
+member = "vyre-emit-spirv"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-emit-spirv"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-foundation"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-foundation"
+feature = "(default),serde"
+
+[[pair]]
+member = "vyre-foundation"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-foundation"
+feature = "serde"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),analysis,encoding,full,solvers"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),bitset,graph,math-scan,nn-linear-4bit,predicate"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),crypto-blake3,hash,nn-attention,parsing,pattern"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),device,graph-dispatch,scheduling"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),full"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),full,pattern-regex"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),graph-dispatch"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),python-parser"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),reasoning"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs"
+feature = "analysis"
+
+[[pair]]
+member = "vyre-libs"
+feature = "bitset"
+
+[[pair]]
+member = "vyre-libs"
+feature = "builder-ops"
+
+[[pair]]
+member = "vyre-libs"
+feature = "cat-a-builder-options"
+
+[[pair]]
+member = "vyre-libs"
+feature = "crypto"
+
+[[pair]]
+member = "vyre-libs"
+feature = "crypto-blake3"
+
+[[pair]]
+member = "vyre-libs"
+feature = "decode"
+
+[[pair]]
+member = "vyre-libs"
+feature = "device"
+
+[[pair]]
+member = "vyre-libs"
+feature = "encoding"
+
+[[pair]]
+member = "vyre-libs"
+feature = "fixpoint"
+
+[[pair]]
+member = "vyre-libs"
+feature = "full"
+
+[[pair]]
+member = "vyre-libs"
+feature = "geom"
+
+[[pair]]
+member = "vyre-libs"
+feature = "go-parser"
+
+[[pair]]
+member = "vyre-libs"
+feature = "graph"
+
+[[pair]]
+member = "vyre-libs"
+feature = "graph-dispatch"
+
+[[pair]]
+member = "vyre-libs"
+feature = "hash"
+
+[[pair]]
+member = "vyre-libs"
+feature = "label"
+
+[[pair]]
+member = "vyre-libs"
+feature = "llm"
+
+[[pair]]
+member = "vyre-libs"
+feature = "logical"
+
+[[pair]]
+member = "vyre-libs"
+feature = "math"
+
+[[pair]]
+member = "vyre-libs"
+feature = "math-algebra"
+
+[[pair]]
+member = "vyre-libs"
+feature = "math-broadcast"
+
+[[pair]]
+member = "vyre-libs"
+feature = "math-dialect"
+
+[[pair]]
+member = "vyre-libs"
+feature = "math-kernels"
+
+[[pair]]
+member = "vyre-libs"
+feature = "math-linalg"
+
+[[pair]]
+member = "vyre-libs"
+feature = "math-scan"
+
+[[pair]]
+member = "vyre-libs"
+feature = "math-succinct"
+
+[[pair]]
+member = "vyre-libs"
+feature = "nfa"
+
+[[pair]]
+member = "vyre-libs"
+feature = "nn"
+
+[[pair]]
+member = "vyre-libs"
+feature = "nn-activation"
+
+[[pair]]
+member = "vyre-libs"
+feature = "nn-attention"
+
+[[pair]]
+member = "vyre-libs"
+feature = "nn-inference"
+
+[[pair]]
+member = "vyre-libs"
+feature = "nn-kernels"
+
+[[pair]]
+member = "vyre-libs"
+feature = "nn-linear"
+
+[[pair]]
+member = "vyre-libs"
+feature = "nn-linear-4bit"
+
+[[pair]]
+member = "vyre-libs"
+feature = "nn-moe"
+
+[[pair]]
+member = "vyre-libs"
+feature = "nn-norm"
+
+[[pair]]
+member = "vyre-libs"
+feature = "opt"
+
+[[pair]]
+member = "vyre-libs"
+feature = "parsing"
+
+[[pair]]
+member = "vyre-libs"
+feature = "parsing-kernels"
+
+[[pair]]
+member = "vyre-libs"
+feature = "pattern"
+
+[[pair]]
+member = "vyre-libs"
+feature = "pattern-dfa"
+
+[[pair]]
+member = "vyre-libs"
+feature = "pattern-kernels"
+
+[[pair]]
+member = "vyre-libs"
+feature = "pattern-nfa"
+
+[[pair]]
+member = "vyre-libs"
+feature = "pattern-regex"
+
+[[pair]]
+member = "vyre-libs"
+feature = "pattern-substring"
+
+[[pair]]
+member = "vyre-libs"
+feature = "predicate"
+
+[[pair]]
+member = "vyre-libs"
+feature = "python-parser"
+
+[[pair]]
+member = "vyre-libs"
+feature = "reasoning"
+
+[[pair]]
+member = "vyre-libs"
+feature = "reduce"
+
+[[pair]]
+member = "vyre-libs"
+feature = "representation"
+
+[[pair]]
+member = "vyre-libs"
+feature = "rule"
+
+[[pair]]
+member = "vyre-libs"
+feature = "scheduling"
+
+[[pair]]
+member = "vyre-libs"
+feature = "security"
+
+[[pair]]
+member = "vyre-libs"
+feature = "solvers"
+
+[[pair]]
+member = "vyre-libs"
+feature = "telemetry"
+
+[[pair]]
+member = "vyre-libs"
+feature = "test-fixtures"
+
+[[pair]]
+member = "vyre-libs"
+feature = "text"
+
+[[pair]]
+member = "vyre-libs"
+feature = "topology"
+
+[[pair]]
+member = "vyre-libs"
+feature = "vfs"
+
+[[pair]]
+member = "vyre-libs"
+feature = "visual"
+
+[[pair]]
+member = "vyre-lints"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-lints"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-lower"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-lower"
+feature = "(default),test-fixtures"
+
+[[pair]]
+member = "vyre-lower"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-lower"
+feature = "test-fixtures"
+
+[[pair]]
+member = "vyre-macros"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-macros"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-megakernel"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-megakernel"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-pass-engine"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-pass-engine"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-pass-engine"
+feature = "all-solvers"
+
+[[pair]]
+member = "vyre-pass-engine"
+feature = "optimizer"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "(default),hardware"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "(default),inventory-registry"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "cpu-parity"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "gpu"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "hardware"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "inventory-registry"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "vyre-foundation"
+
+[[pair]]
+member = "vyre-reference"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-reference"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-reference"
+feature = "subgroup-ops"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "(default),cuda,metal,reference,spirv,wgpu"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "(default),cuda,operations,reference,spirv,wgpu"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "cuda"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "metal"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "operations"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "operations,reference"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "reference"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "spirv"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "wgpu"
+
+[[pair]]
+member = "vyre-runtime"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-runtime"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-runtime"
+feature = "libs-compositions"
+
+[[pair]]
+member = "vyre-runtime"
+feature = "megakernel-batch"
+
+[[pair]]
+member = "vyre-runtime"
+feature = "remote-cache"
+
+[[pair]]
+member = "vyre-runtime"
+feature = "subgroup-ops"
+
+[[pair]]
+member = "vyre-runtime"
+feature = "uring-cmd-nvme"
+
+[[pair]]
+member = "vyre-safetensors"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-safetensors"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-spec"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-spec"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),ir-fixtures"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),ir-fixtures,semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "ir-fixtures"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "semantic-requests"
+
+[[pair]]
+member = "xtask"
+feature = "(default)"
+
+[[pair]]
+member = "xtask"
+feature = "(none)"
+
+[[pair]]
+member = "xtask"
+feature = "public-api-tool"
+
+[[pair]]
+member = "xtask-evidence"
+feature = "(default)"
+
+[[pair]]
+member = "xtask-evidence"
+feature = "(none)"
+
+[[pair]]
+member = "xtask-registry"
+feature = "(default)"
+
+[[pair]]
+member = "xtask-registry"
+feature = "(none)"

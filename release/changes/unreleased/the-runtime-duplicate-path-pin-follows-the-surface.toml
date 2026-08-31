@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The runtime publishes 4 items at more than one path, down from the recorded 119, and the pin records it. Deleting the re-export-only `scaling` module and making the uring submodules private removed 115 second paths; the committed snapshots are refreshed to the surface that remains."

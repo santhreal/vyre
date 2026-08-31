@@ -6,7 +6,7 @@
 //! which bit a family lives at.
 //!
 //! Every family used in any rule must be represented explicitly in
-//! [`CANONICAL_BITS`]. There is no synthetic-bit fallback  -  a family
+//! [`crate::security::family_mask::CANONICAL_BITS`]. There is no synthetic-bit fallback  -  a family
 //! without an entry is a compile-time error.
 //!
 //! # Bit layout
@@ -49,21 +49,37 @@ pub fn resolve_label_family_mask(family: &str) -> Result<u32, String> {
 // Canonical security families  -  bits 0..15.
 // ────────────────────────────────────────────────────────────────────
 
+/// Allocation entry points (`malloc`, `calloc`, `realloc`).
 pub const ALLOCATOR: u32 = 1 << 0;
+/// Unbounded or length-taking input reads (`gets`, `recv`, `read`).
 pub const RECEIVE: u32 = 1 << 1;
+/// Arithmetic or length checks that bound a later operation.
 pub const OVERFLOW_CHECK: u32 = 1 << 2;
+/// Sanitizers that neutralize tainted data.
 pub const SANITIZER: u32 = 1 << 3;
+/// Network-facing taint sources.
 pub const SOURCE_NETWORK: u32 = 1 << 4;
+/// Filesystem sinks (`open`, `unlink`, path APIs).
 pub const SINK_FILESYSTEM: u32 = 1 << 5;
+/// Process-execution sinks (`system`, `exec*`).
 pub const SINK_PROCESS: u32 = 1 << 6;
+/// Kernel-to-user copies.
 pub const COPY_TO_USER: u32 = 1 << 7;
+/// User-to-kernel copies.
 pub const COPY_FROM_USER: u32 = 1 << 15;
+/// Deallocation entry points (`free`, `kfree`).
 pub const FREE: u32 = 1 << 8;
+/// Comparison operators usable as a bound check.
 pub const COMPARISON_OP: u32 = 1 << 9;
+/// Decoders that expand attacker-controlled input.
 pub const DECODE: u32 = 1 << 10;
+/// Decompressors with attacker-controlled expansion ratio.
 pub const INFLATE: u32 = 1 << 11;
+/// Casts that drop range or signedness guarantees.
 pub const TYPE_CAST_UNCHECKED: u32 = 1 << 12;
+/// Privilege or capability checks.
 pub const PRIVILEGE_CHECK: u32 = 1 << 13;
+/// Operations that require a prior privilege check.
 pub const PRIVILEGE_USE: u32 = 1 << 14;
 
 // ────────────────────────────────────────────────────────────────────
@@ -74,13 +90,21 @@ pub const PRIVILEGE_USE: u32 = 1 << 14;
 // calls (narrow).
 // ────────────────────────────────────────────────────────────────────
 
+/// `gets`-shaped unbounded reads.
 pub const GETS_LAUNCH: u32 = 1 << 24;
+/// `printf`-family format-string consumers.
 pub const PRINTF_LAUNCH: u32 = 1 << 25;
+/// Copies with no destination bound (`strcpy`, `strcat`).
 pub const UNBOUNDED_COPY_LAUNCH: u32 = 1 << 26;
+/// `sprintf`-shaped writes with no destination bound.
 pub const UNBOUNDED_SPRINTF_LAUNCH: u32 = 1 << 27;
+/// Pointer dereference sites.
 pub const POINTER_USE_LAUNCH: u32 = 1 << 28;
+/// Type-tag or discriminant checks.
 pub const TYPE_TAG_CHECK_LAUNCH: u32 = 1 << 29;
+/// Assignments that null a pointer after release.
 pub const REASSIGN_NULL_AFTER_FREE_LAUNCH: u32 = 1 << 30;
+/// Bounded copies and the length checks that bound them.
 pub const BOUNDED_COPY_OR_LENGTH_CHECK_LAUNCH: u32 = 1 << 31;
 
 /// Canonical family allocation table.
@@ -161,8 +185,14 @@ pub const CANONICAL_BITS: &[(&str, u32)] = &[
     ("unbounded_sprintf", UNBOUNDED_SPRINTF_LAUNCH),
     ("pointer_use_family", POINTER_USE_LAUNCH),
     ("type_tag_check", TYPE_TAG_CHECK_LAUNCH),
-    ("reassign_or_null_after_free", REASSIGN_NULL_AFTER_FREE_LAUNCH),
-    ("bounded_copy_or_length_check", BOUNDED_COPY_OR_LENGTH_CHECK_LAUNCH),
+    (
+        "reassign_or_null_after_free",
+        REASSIGN_NULL_AFTER_FREE_LAUNCH,
+    ),
+    (
+        "bounded_copy_or_length_check",
+        BOUNDED_COPY_OR_LENGTH_CHECK_LAUNCH,
+    ),
     ("allocator", ALLOCATOR),
     ("deallocator", FREE),
     ("worker_family", SINK_PROCESS),

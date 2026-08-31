@@ -1,5 +1,7 @@
 //! Regex bitstream program registry test suite.
 
+#![cfg(feature = "device-tests")]
+
 const PROGRAMS: &str = include_str!("../../docs/optimization/REGEX_BITSTREAM_PROGRAMS.toml");
 
 #[test]

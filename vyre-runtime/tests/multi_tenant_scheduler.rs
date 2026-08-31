@@ -12,10 +12,11 @@
 
 #![allow(clippy::assertions_on_constants)]
 
-use vyre_runtime::resident_work_queue::{
-    self, control, opcode, slot, ARG0_WORD, OPCODE_WORD, PRIORITY_WORD, SLOT_WORDS, STATUS_WORD,
+use vyre_runtime::resident_work_queue::protocol::{
+    control, opcode, slot, ARG0_WORD, OPCODE_WORD, PRIORITY_WORD, SLOT_WORDS, STATUS_WORD,
     TENANT_WORD,
 };
+use vyre_runtime::resident_work_queue::{self};
 
 #[test]
 fn slot_layout_is_stable() {

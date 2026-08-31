@@ -5,9 +5,7 @@
 //! without missing nested bodies.
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::transform::visit::{
-    collect_call_op_ids, referenced_buffers, walk_exprs, walk_nodes,
-};
+use vyre_foundation::visit::{collect_call_op_ids, referenced_buffers, walk_exprs, walk_nodes};
 use vyre_foundation::visit::{visit_expr_buffer_accesses, ExprBufferAccess};
 
 fn sample_program() -> Program {
@@ -234,4 +232,68 @@ fn direct_buffer_accesses_ignore_scalar_only_expressions() {
     });
 
     assert!(accesses.is_empty());
+}
+/// A `Call` reachable only through a subgroup operand must still be walked.
+///
+/// `walk_exprs` classified `SubgroupBallot`, `SubgroupShuffle`, and
+/// `SubgroupReduce` as leaves, so no consumer of the walk ever saw their
+/// operands. `collect_call_op_ids` is what the inliner uses to decide which
+/// callee bodies a program needs, so a call under `subgroup_add` was invisible:
+/// the op never entered the requested set and the call survived inlining with
+/// no body available for it.
+#[test]
+fn collect_call_op_ids_finds_a_call_inside_a_subgroup_operand() {
+    let prog = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::subgroup_add(Expr::call("math::add", vec![Expr::u32(1), Expr::u32(2)])),
+        )],
+    );
+
+    let ids = collect_call_op_ids(&prog);
+
+    assert_eq!(
+        ids.iter().map(AsRef::as_ref).collect::<Vec<&str>>(),
+        vec!["math::add"],
+    );
+}
+
+/// The same operand must be reachable through the raw expression walk, not only
+/// through the one consumer that happened to be checked.
+#[test]
+fn walk_exprs_descends_into_every_subgroup_operand() {
+    let prog = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![
+            Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::subgroup_add(Expr::var("reduced")),
+            ),
+            Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::subgroup_ballot(Expr::var("balloted")),
+            ),
+            Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::subgroup_shuffle(Expr::var("shuffled"), Expr::var("lane")),
+            ),
+        ],
+    );
+
+    let mut names = Vec::new();
+    walk_exprs(&prog, |expr| {
+        if let Expr::Var(name) = expr {
+            names.push(name.to_string());
+        }
+    });
+    names.sort();
+
+    assert_eq!(names, vec!["balloted", "lane", "reduced", "shuffled"]);
 }

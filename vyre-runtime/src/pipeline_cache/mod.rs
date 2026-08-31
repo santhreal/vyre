@@ -1,13 +1,13 @@
 //! Content-addressed neutral-artifact cache.
 //!
-//! [`PipelineFingerprint`] derives directly from the authenticated neutral
+//! [`crate::pipeline_cache::PipelineFingerprint`] derives directly from the authenticated neutral
 //! [`vyre_megakernel::Artifact`] identity. Dispatch inputs, target payloads,
 //! device generations, and runtime policy do not enter this layer's key.
 //! Persisted blobs use a versioned, digest-bound frame and stale versions miss
 //! rather than being served.
 //!
-//! Hot paths use [`InMemoryPipelineCache`], process-restart reuse uses
-//! [`DiskCache`], and callers compose them through [`LayeredPipelineCache`].
+//! Hot paths use [`crate::pipeline_cache::InMemoryPipelineCache`], process-restart reuse uses
+//! [`crate::pipeline_cache::DiskCache`], and callers compose them through [`crate::pipeline_cache::LayeredPipelineCache`].
 
 #![allow(clippy::missing_const_for_thread_local, clippy::explicit_auto_deref)]
 
@@ -21,7 +21,7 @@ mod remote;
 mod store;
 
 #[cfg(test)]
-pub(super) mod test_helpers;
+pub(super) mod test_artifact_fixtures;
 
 pub use disk::{DiskCache, DiskCacheDurabilityReport, DiskCacheError};
 pub use fingerprint::PipelineFingerprint;

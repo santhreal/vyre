@@ -7,7 +7,6 @@ use vyre::ir::Program;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::optimizer::optimize;
 use vyre_libs::operation_catalog::all_entries;
-use vyre_reference::value::Value;
 
 fn entry(id: &'static str) -> SemanticOperation {
     all_entries()
@@ -23,7 +22,7 @@ fn bytes_from_f32(values: &[f32]) -> Vec<u8> {
 }
 
 fn output_bytes(program: &Program, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
-    let values = inputs.iter().cloned().map(Value::from).collect::<Vec<_>>();
+    let values = vyre_reference::reference_inputs(program, inputs.to_vec());
     vyre_reference::reference_eval(program, &values)
         .unwrap_or_else(|error| panic!("Fix: reference execution failed: {error}"))
         .into_iter()
@@ -35,7 +34,7 @@ fn harness_path_outputs(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Ve
     let program = entry
         .program()
         .expect("Fix: registered library operation must provide a neutral builder");
-    let errors = vyre::ir::validate(&program);
+    let errors = vyre::validate(&program);
     assert!(
         errors.is_empty(),
         "Fix: {} failed validation on adversarial f32 input: {:?}",

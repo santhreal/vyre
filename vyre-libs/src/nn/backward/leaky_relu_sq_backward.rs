@@ -21,37 +21,32 @@ pub fn leaky_relu_sq_backward(input: &str, grad_out: &str, grad_in: &str, n: u32
     })
 }
 
+const EXPECTED_LEAKY_RELU_SQ_BACKWARD_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| leaky_relu_sq_backward("input", "grad_out", "grad_in", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || leaky_relu_sq_backward("input", "grad_out", "grad_in", 4),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[2.0, -4.0, 0.0, 1.0]),
                 to_f32(&[1.0, 1.0, 1.0, 1.0]),
-                vec![0u8; 4 * 4],
             ]]
         }),
-        expected_output: Some(|| {
-            // x=2: max(1,4)=4; x=-4: max(-2,-8)=-2; x=0: 0; x=1: max(0.5,2)=2
-            let out = [4.0_f32, -2.0, 0.0, 2.0];
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+        Some(|| {
+            vec![vec![EXPECTED_LEAKY_RELU_SQ_BACKWARD_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::unary_f32::eval_unary_f32_backward;
     use super::*;
-    use vyre_reference::value::Value;
 
     #[test]
     fn generated_leaky_relu_sq_backward_matches_scalar_reference() {
@@ -63,16 +58,12 @@ mod tests {
             .map(|i| ((i as i32 % 31) - 15) as f32 / 5.0)
             .collect::<Vec<_>>();
         let program = leaky_relu_sq_backward("input", "grad_out", "grad_in", n as u32);
-        let outputs = vyre_reference::reference_eval(
+        let actual = eval_unary_f32_backward(
             &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_f32_slice(&input)),
-                Value::from(vyre_primitives::wire::pack_f32_slice(&grad_out)),
-                Value::from(vec![0u8; n * core::mem::size_of::<f32>()]),
-            ],
-        )
-        .expect("Fix: leaky_relu_sq_backward must execute in the reference interpreter.");
-        let actual = vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes());
+            &input,
+            &grad_out,
+            "Fix: leaky_relu_sq_backward must execute in the reference interpreter.",
+        );
         for (index, ((actual, x), dy)) in actual
             .iter()
             .copied()

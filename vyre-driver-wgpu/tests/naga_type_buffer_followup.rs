@@ -1,7 +1,10 @@
 //! Regression tests for type and buffer-lowering follow-up findings.
-mod common;
 
-use common::emit_validated_wgsl as emit_wgsl;
+#![cfg(feature = "device-tests")]
+
+mod harness;
+
+use harness::emit_validated_wgsl as emit_wgsl;
 
 use vyre_emit_naga::program::emit_module;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, MemoryKind, Node, Program};

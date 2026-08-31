@@ -1,16 +1,17 @@
 //! Smoke tests for target-neutral `vyre_aot::compile` behavior.
 
-mod common;
+mod fixture_target;
 
 use vyre_aot::{compile, emit_launcher_rust, CompileError, LauncherError, LauncherOpts, TargetId};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_test_support::pass_programs::workgroup_scratch_program;
 
 fn trivial_xor_program() -> Program {
     Program::wrapped(
         vec![
-            BufferDecl::read("a", 0, DataType::U32),
-            BufferDecl::read("b", 1, DataType::U32),
-            BufferDecl::read_write("out", 2, DataType::U32),
+            BufferDecl::read("a", 0, DataType::U32).with_count(1),
+            BufferDecl::read("b", 1, DataType::U32).with_count(1),
+            BufferDecl::read_write("out", 2, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
         vec![
@@ -53,5 +54,36 @@ fn launcher_requires_linked_target_emitter() {
 }
 
 fn minimal_ptx_artifact_for_template_test() -> vyre_aot::ArtifactEnvelope {
-    common::compiled_artifact()
+    fixture_target::compiled_artifact()
+}
+
+/// WHY: 130. The neutral half of every artifact is compiled against
+/// `DeviceFacts::unknown`, which states no capability snapshot. Reading that
+/// absence as a device that grants nothing refused every program declaring
+/// workgroup scratch here with `MKC001_INVALID_PROGRAM`, before any target had
+/// been selected, while the artifact identity this path produces must stay
+/// device-neutral and so cannot hold a real device's facts instead.
+///
+/// Against the previous behaviour this failed at the `neutral-request` stage.
+#[test]
+fn a_neutral_compile_admits_workgroup_scratch_when_no_snapshot_is_stated() {
+    compile(
+        &workgroup_scratch_program(),
+        fixture_target::fixture_target(),
+    )
+    .expect("Fix: a device-neutral compile must not judge an unstated capability");
+}
+
+/// The same program against a target that is not linked, so the neutral stage is
+/// isolated from every target decision: the only refusal left is the missing
+/// target compiler, which `compile` reaches only after the neutral artifact.
+#[test]
+fn the_neutral_stage_admits_workgroup_scratch_before_any_target_is_resolved() {
+    let target = TargetId::expect_valid("unlinked-fixture-target");
+    let error = compile(&workgroup_scratch_program(), target.clone())
+        .expect_err("an unlinked target cannot emit bytes");
+    assert!(
+        matches!(&error, CompileError::TargetNotEnabled(id) if id == &target),
+        "Fix: the neutral artifact must be built before the target is resolved, got {error:?}."
+    );
 }

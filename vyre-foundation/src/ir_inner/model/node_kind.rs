@@ -1,7 +1,6 @@
 //! Open statement IR model.
 
-use crate::ir_eval::canonical_f32;
-use crate::ir_inner::model::types::{BinOp, UnOp};
+use crate::ir_inner::model::op_signature::{BinOp, UnOp};
 use rustc_hash::FxHashMap;
 use std::fmt;
 use std::sync::Arc;
@@ -22,6 +21,10 @@ pub struct VarId(pub u32);
 pub struct RegionId(pub u32);
 
 /// Scalar value carried by the generic interpreter.
+///
+/// The operator semantics over these values live in the private `scalar_ops`
+/// module, which the literal folder shares, so the interpreter and the folder cannot
+/// answer differently.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Value {
@@ -229,225 +232,13 @@ impl NodeStorage {
             Self::LitF32(value) => Ok(Value::F32(*value)),
             Self::LitBool(value) => Ok(Value::Bool(*value)),
             Self::BinOp { op, left, right } => {
-                interpret_bin_op(*op, ctx.get(*left)?, ctx.get(*right)?)
+                crate::scalar_ops::apply_binary(*op, ctx.get(*left)?, ctx.get(*right)?)
             }
-            Self::UnOp { op, operand } => interpret_un_op(op, ctx.get(*operand)?),
+            Self::UnOp { op, operand } => crate::scalar_ops::apply_unary(op, ctx.get(*operand)?),
             Self::Extern { op_id, .. } => Err(EvalError::new(format!(
                 "extern node `{op_id}` has no linked interpreter. Fix: link the primitive crate that registered this op or lower it to a hot NodeStorage variant before reference execution."
             ))),
         }
-    }
-}
-
-#[expect(
-    clippy::too_many_lines,
-    reason = "reference interpreter keeps each BinOp semantics in one exhaustive table"
-)]
-fn interpret_bin_op(op: BinOp, left: Value, right: Value) -> Result<Value, EvalError> {
-    match (left, right) {
-        (Value::U32(left), Value::U32(right)) => match op {
-            BinOp::Add => Ok(Value::U32(left.wrapping_add(right))),
-            BinOp::Sub => Ok(Value::U32(left.wrapping_sub(right))),
-            BinOp::Mul => Ok(Value::U32(left.wrapping_mul(right))),
-            BinOp::Div => {
-                Ok(Value::U32(left.checked_div(right).unwrap_or(u32::MAX)))
-            }
-            BinOp::Mod => {
-                Ok(Value::U32(left.checked_rem(right).unwrap_or(0)))
-            }
-            BinOp::BitAnd => Ok(Value::U32(left & right)),
-            BinOp::BitOr => Ok(Value::U32(left | right)),
-            BinOp::BitXor => Ok(Value::U32(left ^ right)),
-            BinOp::Shl => Ok(Value::U32(left.wrapping_shl(right & 31))),
-            BinOp::Shr => Ok(Value::U32(left.wrapping_shr(right & 31))),
-            BinOp::Eq => Ok(Value::Bool(left == right)),
-            BinOp::Ne => Ok(Value::Bool(left != right)),
-            BinOp::Lt => Ok(Value::Bool(left < right)),
-            BinOp::Le => Ok(Value::Bool(left <= right)),
-            BinOp::Gt => Ok(Value::Bool(left > right)),
-            BinOp::Ge => Ok(Value::Bool(left >= right)),
-            BinOp::Min => Ok(Value::U32(left.min(right))),
-            BinOp::Max => Ok(Value::U32(left.max(right))),
-            BinOp::SaturatingAdd => Ok(Value::U32(left.saturating_add(right))),
-            BinOp::SaturatingSub => Ok(Value::U32(left.saturating_sub(right))),
-            BinOp::SaturatingMul => Ok(Value::U32(left.saturating_mul(right))),
-            BinOp::AbsDiff => Ok(Value::U32(left.abs_diff(right))),
-            BinOp::RotateLeft => Ok(Value::U32(left.rotate_left(right & 31))),
-            BinOp::RotateRight => Ok(Value::U32(left.rotate_right(right & 31))),
-            BinOp::MulHigh => Ok(Value::U32(u32::try_from((u64::from(left).wrapping_mul(u64::from(right))) >> 32).unwrap_or(u32::MAX))),
-            BinOp::And => Ok(Value::Bool(left != 0 && right != 0)),
-            BinOp::Or => Ok(Value::Bool(left != 0 || right != 0)),
-            _ => Err(EvalError::new(format!(
-                "unsupported u32 binary operation {op:?}. Fix: add interpreter semantics before registering this operation."
-            ))),
-        },
-        (Value::U64(left), Value::U64(right)) => match op {
-            BinOp::Add => Ok(Value::U64(left.wrapping_add(right))),
-            BinOp::Sub => Ok(Value::U64(left.wrapping_sub(right))),
-            BinOp::Mul => Ok(Value::U64(left.wrapping_mul(right))),
-            BinOp::Div => Ok(Value::U64(if right == 0 {
-                u64::MAX
-            } else {
-                left / right
-            })),
-            BinOp::Mod => Ok(Value::U64(if right == 0 { 0 } else { left % right })),
-            BinOp::BitAnd => Ok(Value::U64(left & right)),
-            BinOp::BitOr => Ok(Value::U64(left | right)),
-            BinOp::BitXor => Ok(Value::U64(left ^ right)),
-            BinOp::Shl => Ok(Value::U64(left.wrapping_shl((right & 63) as u32))),
-            BinOp::Shr => Ok(Value::U64(left.wrapping_shr((right & 63) as u32))),
-            BinOp::Eq => Ok(Value::Bool(left == right)),
-            BinOp::Ne => Ok(Value::Bool(left != right)),
-            BinOp::Lt => Ok(Value::Bool(left < right)),
-            BinOp::Le => Ok(Value::Bool(left <= right)),
-            BinOp::Gt => Ok(Value::Bool(left > right)),
-            BinOp::Ge => Ok(Value::Bool(left >= right)),
-            BinOp::Min => Ok(Value::U64(left.min(right))),
-            BinOp::Max => Ok(Value::U64(left.max(right))),
-            BinOp::SaturatingAdd => Ok(Value::U64(left.saturating_add(right))),
-            BinOp::SaturatingSub => Ok(Value::U64(left.saturating_sub(right))),
-            BinOp::SaturatingMul => Ok(Value::U64(left.saturating_mul(right))),
-            BinOp::AbsDiff => Ok(Value::U64(left.abs_diff(right))),
-            BinOp::WrappingAdd => Ok(Value::U64(left.wrapping_add(right))),
-            BinOp::WrappingSub => Ok(Value::U64(left.wrapping_sub(right))),
-            BinOp::MulHigh => Ok(Value::U64(((left as u128 * right as u128) >> 64) as u64)),
-            BinOp::And => Ok(Value::Bool(left != 0 && right != 0)),
-            BinOp::Or => Ok(Value::Bool(left != 0 || right != 0)),
-            _ => Err(EvalError::new(format!(
-                "unsupported u64 binary operation {op:?}. Fix: add interpreter semantics before registering this operation."
-            ))),
-        },
-        (Value::Bool(left), Value::Bool(right)) => match op {
-            BinOp::And => Ok(Value::Bool(left && right)),
-            BinOp::Or => Ok(Value::Bool(left || right)),
-            BinOp::Eq => Ok(Value::Bool(left == right)),
-            BinOp::Ne => Ok(Value::Bool(left != right)),
-            _ => Err(EvalError::new(format!(
-                "unsupported bool binary operation {op:?}. Fix: add interpreter semantics before registering this operation."
-            ))),
-        },
-        (Value::F32(left), Value::F32(right)) => {
-            let left = canonical_f32(left);
-            let right = canonical_f32(right);
-            match op {
-                BinOp::Add => Ok(Value::F32(canonical_f32(left + right))),
-                BinOp::Sub => Ok(Value::F32(canonical_f32(left - right))),
-                BinOp::Mul => Ok(Value::F32(canonical_f32(left * right))),
-                BinOp::Div => Ok(Value::F32(canonical_f32(left / right))),
-                BinOp::Eq => Ok(Value::Bool(left.partial_cmp(&right).is_some_and(std::cmp::Ordering::is_eq))),
-                BinOp::Ne => Ok(Value::Bool(left.partial_cmp(&right).is_none_or(|ordering| !ordering.is_eq()))),
-                BinOp::Lt => Ok(Value::Bool(left < right)),
-                BinOp::Le => Ok(Value::Bool(left <= right)),
-                BinOp::Gt => Ok(Value::Bool(left > right)),
-                BinOp::Ge => Ok(Value::Bool(left >= right)),
-                BinOp::Min => Ok(Value::F32(canonical_f32(left.min(right)))),
-                BinOp::Max => Ok(Value::F32(canonical_f32(left.max(right)))),
-                _ => Err(EvalError::new(format!(
-                    "unsupported f32 binary operation {op:?}. Fix: add interpreter semantics before registering this operation."
-                ))),
-            }
-        },
-        (Value::I32(left), Value::I32(right)) => match op {
-            BinOp::Add => Ok(Value::I32(left.wrapping_add(right))),
-            BinOp::Sub => Ok(Value::I32(left.wrapping_sub(right))),
-            BinOp::Mul => Ok(Value::I32(left.wrapping_mul(right))),
-            BinOp::Div => {
-                if right == 0 || (left == i32::MIN && right == -1) {
-                    Err(undefined_i32_division("division", left, right))
-                } else {
-                    Ok(Value::I32(left / right))
-                }
-            }
-            BinOp::Mod => {
-                if right == 0 || (left == i32::MIN && right == -1) {
-                    Err(undefined_i32_division("remainder", left, right))
-                } else {
-                    Ok(Value::I32(left % right))
-                }
-            }
-            BinOp::BitAnd => Ok(Value::I32(left & right)),
-            BinOp::BitOr => Ok(Value::I32(left | right)),
-            BinOp::BitXor => Ok(Value::I32(left ^ right)),
-            BinOp::Shl => Ok(Value::I32(left.wrapping_shl(u32::from_ne_bytes(right.to_ne_bytes()) & 31))),
-            BinOp::Shr => Ok(Value::I32(left.wrapping_shr(u32::from_ne_bytes(right.to_ne_bytes()) & 31))),
-            BinOp::Eq => Ok(Value::Bool(left == right)),
-            BinOp::Ne => Ok(Value::Bool(left != right)),
-            BinOp::Lt => Ok(Value::Bool(left < right)),
-            BinOp::Le => Ok(Value::Bool(left <= right)),
-            BinOp::Gt => Ok(Value::Bool(left > right)),
-            BinOp::Ge => Ok(Value::Bool(left >= right)),
-            BinOp::Min => Ok(Value::I32(left.min(right))),
-            BinOp::Max => Ok(Value::I32(left.max(right))),
-            BinOp::SaturatingAdd => Ok(Value::I32(left.saturating_add(right))),
-            BinOp::SaturatingSub => Ok(Value::I32(left.saturating_sub(right))),
-            BinOp::SaturatingMul => Ok(Value::I32(left.saturating_mul(right))),
-            _ => Err(EvalError::new(format!(
-                "unsupported i32 binary operation {op:?}. Fix: add interpreter semantics before registering this operation."
-            ))),
-        },
-        _ => Err(EvalError::new(
-            "type mismatch in binary operation. Fix: validate operand types before interpretation.",
-        )),
-    }
-}
-
-fn undefined_i32_division(kind: &str, left: i32, right: i32) -> EvalError {
-    EvalError::new(format!(
-        "i32 {kind} `{left} / {right}` has undefined target-text semantics. Fix: guard the signed divisor/overflow case before interpretation, or use unsigned operands when zero-divisor semantics must be total."
-    ))
-}
-
-fn interpret_un_op(op: &UnOp, operand: Value) -> Result<Value, EvalError> {
-    match operand {
-        Value::U32(value) => match op {
-            UnOp::BitNot => Ok(Value::U32(!value)),
-            UnOp::LogicalNot => Ok(Value::Bool(value == 0)),
-            UnOp::Popcount => Ok(Value::U32(value.count_ones())),
-            UnOp::Clz => Ok(Value::U32(value.leading_zeros())),
-            UnOp::Ctz => Ok(Value::U32(value.trailing_zeros())),
-            UnOp::ReverseBits => Ok(Value::U32(value.reverse_bits())),
-            _ => Err(EvalError::new(format!(
-                "unsupported u32 unary operation {op:?}. Fix: add interpreter semantics before registering this operation."
-            ))),
-        },
-        Value::Bool(value) => match op {
-            UnOp::LogicalNot => Ok(Value::Bool(!value)),
-            _ => Err(EvalError::new(format!(
-                "unsupported bool unary operation {op:?}. Fix: add interpreter semantics before registering this operation."
-            ))),
-        },
-        Value::F32(value) => match op {
-            UnOp::Negate => Ok(Value::F32(canonical_f32(-canonical_f32(value)))),
-            UnOp::InverseSqrt => {
-                let value = canonical_f32(value);
-                Ok(Value::F32(canonical_f32(1.0 / value.sqrt())))
-            }
-            UnOp::Reciprocal => {
-                let value = canonical_f32(value);
-                Ok(Value::F32(canonical_f32(1.0 / value)))
-            }
-            _ => Err(EvalError::new(format!(
-                "unsupported f32 unary operation {op:?}. Fix: add interpreter semantics before registering this operation."
-            ))),
-        },
-        Value::I32(value) => match op {
-            UnOp::Negate => Ok(Value::I32(value.wrapping_neg())),
-            _ => Err(EvalError::new(format!(
-                "unsupported i32 unary operation {op:?}. Fix: add interpreter semantics before registering this operation."
-            ))),
-        },
-        Value::U64(value) => match op {
-            UnOp::Negate => Ok(Value::U64(0u64.wrapping_sub(value))),
-            UnOp::BitNot => Ok(Value::U64(!value)),
-            UnOp::LogicalNot => Ok(Value::Bool(value == 0)),
-            UnOp::Popcount => Ok(Value::U64(u64::from(value.count_ones()))),
-            UnOp::Clz => Ok(Value::U64(u64::from(value.leading_zeros()))),
-            UnOp::Ctz => Ok(Value::U64(u64::from(value.trailing_zeros()))),
-            UnOp::ReverseBits => Ok(Value::U64(value.reverse_bits())),
-            _ => Err(EvalError::new(format!(
-                "unsupported u64 unary operation {op:?}. Fix: register explicit u64 semantics before interpreting this operation."
-            ))),
-        },
     }
 }
 

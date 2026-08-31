@@ -6,13 +6,12 @@
 //! complex buffers `[re0, im0, re1, im1, ...]` with length `2 * n`.
 
 use std::sync::Arc;
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
-use super::common::validate_complex_len;
+use super::complex_length::validate_complex_len;
 use super::fft_radix2_complex;
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::math::fft::fft_convolve_circular_complex";
 const FFT_OP_ID: &str = "vyre-libs::math::fft::fft_radix2";
@@ -62,9 +61,7 @@ pub fn fft_convolve_circular_complex(
         // the structural-budget gate stops counting nodes once it
         // descends below this Region. The `multiply + conjugate` step
         // is a self-contained sub-op of the FFT-convolve composition.
-        source_region: Some(GeneratorRef {
-            name: MULTIPLY_OP_ID.to_string(),
-        }),
+        source_region: Some(Ident::from(MULTIPLY_OP_ID)),
         body: Arc::new(multiply_and_conjugate_body(
             signal_freq,
             kernel_freq,
@@ -73,14 +70,21 @@ pub fn fft_convolve_circular_complex(
         )),
     });
     entry.push(fft_region(product_freq, output, n)?);
-    entry.push(Node::Region {
-        generator: Ident::from(SCALE_OP_ID),
-        source_region: Some(GeneratorRef {
-            name: SCALE_OP_ID.to_string(),
-        }),
-        body: Arc::new(scale_conjugate_body(output, n)),
-    });
+    entry.push(wrap_child_region(
+        SCALE_OP_ID,
+        Ident::from(SCALE_OP_ID),
+        scale_conjugate_body(output, n),
+    ));
 
+    // The three scratch buffers are workgroup memory and the stages read each
+    // other through them, so the composition is only defined inside a single
+    // workgroup. The backend derives a 1D grid from the output length, and the
+    // scale stage reads back the buffer the inverse FFT just wrote, so a second
+    // workgroup would rescale or overwrite lanes the first already finished.
+    // One invocation owns the whole convolution: every stage rewrites the shared
+    // frequency scratch in place, so a second invocation repeats the chain over
+    // the same words. The guard names the invocation so a fusion that widens the
+    // arm still admits one.
     Ok(Program::wrapped(
         vec![
             BufferDecl::storage(signal, 0, BufferAccess::ReadOnly, DataType::F32)
@@ -93,7 +97,10 @@ pub fn fft_convolve_circular_complex(
             BufferDecl::output(output, 2, DataType::F32).with_count(elements),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(OP_ID, entry)],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(Expr::is_first_logical_point(), entry)],
+        )],
     )
     .with_entry_op_id(OP_ID))
 }
@@ -115,13 +122,11 @@ fn validate_names(names: &[&str]) -> Result<(), String> {
 }
 
 fn fft_region(input: &str, output: &str, n: u32) -> Result<Node, String> {
-    Ok(Node::Region {
-        generator: Ident::from(FFT_OP_ID),
-        source_region: Some(GeneratorRef {
-            name: FFT_OP_ID.to_string(),
-        }),
-        body: Arc::new(fft_radix2_complex(input, output, n)?.into_entry_vec()),
-    })
+    Ok(wrap_child_region(
+        FFT_OP_ID,
+        Ident::from(FFT_OP_ID),
+        fft_radix2_complex(input, output, n)?.into_entry_vec(),
+    ))
 }
 
 fn multiply_and_conjugate_body(
@@ -159,16 +164,20 @@ fn multiply_and_conjugate_body(
         let ai = Expr::var(ai_name);
         let br = Expr::var(br_name);
         let bi = Expr::var(bi_name);
+        // One `fma` each, not a multiply feeding an add: a backend may
+        // contract that shape and the reference may not, so the two sides
+        // would round a different number of times on the same program.
         body.push(Node::let_bind(
             prod_re_name.clone(),
-            Expr::sub(
-                Expr::mul(ar.clone(), br.clone()),
-                Expr::mul(ai.clone(), bi.clone()),
+            Expr::fma(
+                ar.clone(),
+                br.clone(),
+                Expr::negate(Expr::mul(ai.clone(), bi.clone())),
             ),
         ));
         body.push(Node::let_bind(
             prod_im_name.clone(),
-            Expr::add(Expr::mul(ar, bi), Expr::mul(ai, br)),
+            Expr::fma(ar, bi, Expr::mul(ai, br)),
         ));
         body.push(Node::store(
             product_freq,
@@ -254,9 +263,14 @@ fn pointwise_complex_multiply_conjugate_program() -> Program {
             BufferDecl::output("product_freq", 2, DataType::F32).with_count(elements),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        // The body writes every output lane at a constant index, so one
+        // invocation owns it under any grid or fused geometry.
+        vec![wrap_anonymous_region(
             MULTIPLY_OP_ID,
-            multiply_and_conjugate_body("signal_freq", "kernel_freq", "product_freq", n),
+            vec![Node::if_then(
+                Expr::is_first_logical_point(),
+                multiply_and_conjugate_body("signal_freq", "kernel_freq", "product_freq", n),
+            )],
         )],
     )
     .with_entry_op_id(MULTIPLY_OP_ID)
@@ -272,9 +286,14 @@ fn scale_conjugate_inverse_program() -> Program {
             BufferDecl::output("output", 1, DataType::F32).with_count(elements),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        // The body writes every output lane at a constant index, so one
+        // invocation owns it under any grid or fused geometry.
+        vec![wrap_anonymous_region(
             SCALE_OP_ID,
-            scale_conjugate_body_from("product_freq", "output", n),
+            vec![Node::if_then(
+                Expr::is_first_logical_point(),
+                scale_conjugate_body_from("product_freq", "output", n),
+            )],
         )],
     )
     .with_entry_op_id(SCALE_OP_ID)
@@ -291,63 +310,58 @@ fn pointwise_complex_multiply_conjugate_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
-fn pointwise_complex_multiply_conjugate_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![fixture_f32_bytes(&[
-        -7.0, -16.0, -10.0, 5.0, 0.0, -1.25, 0.0, 6.0,
-    ])]]
-}
-
 fn scale_conjugate_inverse_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![fixture_f32_bytes(&[
         4.0, -8.0, -12.0, 16.0, 0.0, 0.0, 2.0, -4.0,
     ])]]
 }
 
-fn scale_conjugate_inverse_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![fixture_f32_bytes(&[
-        1.0, 2.0, -3.0, -4.0, 0.0, 0.0, 0.5, 1.0,
-    ])]]
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        MULTIPLY_OP_ID,
+        pointwise_complex_multiply_conjugate_program,
+        Some(pointwise_complex_multiply_conjugate_inputs),
+        Some(|| {
+            vec![vec![vec![
+                0x00, 0x00, 0xe0, 0xc0, // -7.0
+                0x00, 0x00, 0x80, 0xc1, // -16.0
+                0x00, 0x00, 0x20, 0xc1, // -10.0
+                0x00, 0x00, 0xa0, 0x40, // 5.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0xa0, 0xbf, // -1.25
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0xc0, 0x40, // 6.0
+            ]]]
+        }),
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: MULTIPLY_OP_ID,
-        build: Some(pointwise_complex_multiply_conjugate_program),
-        test_inputs: Some(pointwise_complex_multiply_conjugate_inputs),
-        expected_output: Some(pointwise_complex_multiply_conjugate_expected),
-        category: Some("math"),
-    }
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        SCALE_OP_ID,
+        scale_conjugate_inverse_program,
+        Some(scale_conjugate_inverse_inputs),
+        Some(|| {
+            vec![vec![vec![
+                0x00, 0x00, 0x80, 0x3f, // 1.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x40, 0xc0, // -3.0
+                0x00, 0x00, 0x80, 0xc0, // -4.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0x00, 0x3f, // 0.5
+                0x00, 0x00, 0x80, 0x3f, // 1.0
+            ]]]
+        }),
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: SCALE_OP_ID,
-        build: Some(scale_conjugate_inverse_program),
-        test_inputs: Some(scale_conjugate_inverse_inputs),
-        expected_output: Some(scale_conjugate_inverse_expected),
-        category: Some("math"),
-    }
-}
-
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(4),
-        id: OP_ID,
-        build: Some(|| fft_convolve_circular_complex(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || fft_convolve_circular_complex(
             "signal",
             "kernel",
             "signal_freq",
@@ -355,25 +369,34 @@ inventory::submit! {
             "product_freq",
             "output",
             4,
-        ).unwrap_or_else(|_| unreachable!("Fix: catalog fixture uses valid power-of-two buffers."))),
-        test_inputs: Some(|| {
+        ).unwrap_or_else(|_| unreachable!("Fix: catalog fixture uses valid power-of-two buffers.")),
+        Some(|| {
             vec![vec![
                 crate::fixture_bytes::f32_bytes(&[1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0]),
                 crate::fixture_bytes::f32_bytes(&[1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
             ]]
         }),
-        expected_output: Some(|| {
-            vec![vec![crate::fixture_bytes::f32_bytes(&[5.0, 0.0, 3.0, 0.0, 5.0, 0.0, 7.0, 0.0])]]
+        Some(|| {
+            vec![vec![vec![
+                0x00, 0x00, 0xa0, 0x40, // 5.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0x40, 0x40, // 3.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0xa0, 0x40, // 5.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0xe0, 0x40, // 7.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+            ]]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
+    .with_numeric(vyre_foundation::numeric::NumericContract::ieee_f32(4))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {
         bytes
@@ -382,8 +405,8 @@ mod tests {
             .collect()
     }
 
-    fn run(signal: &[f32], kernel: &[f32], n: u32) -> Vec<f32> {
-        let prog = fft_convolve_circular_complex(
+    fn convolved(signal: &[f32], kernel: &[f32], n: u32) -> Vec<f32> {
+        let program = fft_convolve_circular_complex(
             "signal",
             "kernel",
             "signal_freq",
@@ -394,20 +417,15 @@ mod tests {
         )
         .expect("Fix: build");
         let byte_len = (2 * n as usize) * 4;
-        let outputs = vyre_reference::reference_eval(
-            &prog,
-            &[
-                Value::from(f32_bytes(signal)),
-                Value::from(f32_bytes(kernel)),
-                Value::from(vec![0u8; byte_len]),
-            ],
-        )
-        .expect("Fix: fft_convolve_circular_complex must execute in the reference interpreter.");
+        let outputs = crate::fixture_bytes::eval_bytes(
+            "fft_convolve_circular_complex",
+            &program,
+            vec![f32_bytes(signal), f32_bytes(kernel), vec![0u8; byte_len]],
+        );
         decode(
-            &outputs
+            outputs
                 .last()
-                .expect("Fix: output buffer must be returned after scratch buffers.")
-                .to_bytes(),
+                .expect("Fix: output buffer must be returned after scratch buffers."),
         )
     }
 
@@ -435,7 +453,7 @@ mod tests {
     fn fft_convolve_circular_real_fixture_matches_reference() {
         let signal = [1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0];
         let kernel = [1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(&signal, &kernel, 4);
+        let actual = convolved(&signal, &kernel, 4);
         let expected = naive_circular_complex(&signal, &kernel, 4);
         for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
             assert!((a - e).abs() <= 1.0e-4, "lane {i}: {a} != {e}");
@@ -446,7 +464,7 @@ mod tests {
     fn fft_convolve_circular_complex_fixture_matches_reference() {
         let signal = [1.0, 1.0, 0.0, -1.0, 2.0, 0.5, -3.0, 0.25];
         let kernel = [0.5, -1.0, 2.0, 0.0, -1.0, 0.5, 0.25, 1.0];
-        let actual = run(&signal, &kernel, 4);
+        let actual = convolved(&signal, &kernel, 4);
         let expected = naive_circular_complex(&signal, &kernel, 4);
         for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
             assert!((a - e).abs() <= 1.0e-4, "lane {i}: {a} != {e}");
@@ -477,7 +495,7 @@ mod tests {
         let mut signal = vec![0.0_f32; 8];
         signal[0] = f32::NAN;
         let kernel = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(&signal, &kernel, 4);
+        let actual = convolved(&signal, &kernel, 4);
         assert!(
             actual.iter().any(|&v| v.is_nan()),
             "convolution with NaN signal must produce at least one NaN component"
@@ -492,7 +510,7 @@ mod tests {
         let mut signal = vec![0.0_f32; 8];
         signal[0] = f32::INFINITY;
         let kernel = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(&signal, &kernel, 4);
+        let actual = convolved(&signal, &kernel, 4);
         assert!(
             actual.iter().any(|&v| v.is_nan() || v.is_infinite()),
             "convolution with Inf signal must produce NaN or Inf; got {:?}",

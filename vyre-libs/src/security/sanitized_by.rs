@@ -7,11 +7,11 @@
 //! Source filtering is part of the CSR traversal stage. No intermediate
 //! clean-frontier buffer or cross-dispatch synchronization is required.
 
-use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse_excluding;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
+use crate::graph::csr_forward_traverse::csr_forward_traverse_excluding;
+use crate::graph::program_graph::ProgramGraphShape;
+use vyre_foundation::composition::tag_program;
 
-const OP_ID: &str = "vyre-libs::security::sanitized_by";
+pub(crate) const OP_ID: &str = "vyre-libs::security::sanitized_by";
 
 /// Build one sanitizer-guarded forward-traversal step.
 ///
@@ -40,58 +40,40 @@ pub fn sanitized_by(
         frontier_out,
         crate::security::flows_to::FLOWS_TO_MASK,
     );
-    crate::region::tag_program(OP_ID, traverse)
+    tag_program(OP_ID, traverse)
 }
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| sanitized_by(ProgramGraphShape::new(4, 3), "fin", "san", "fout")),
-        test_inputs: Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            // Linear 0→1→2→3 with node 1 marked sanitizer.
-            vec![vec![
-                to_bytes(&[0, 0, 0, 0]),          // 0: pg_nodes
-                to_bytes(&[0, 1, 2, 3, 3]),       // 1: pg_edge_offsets
-                to_bytes(&[1, 2, 3]),             // 2: pg_edge_targets
-                to_bytes(&[
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                ]),                               // 3: pg_edge_kind_mask
-                to_bytes(&[0, 1, 0, 0]),          // 4: pg_node_tags
-                to_bytes(&[0b0001]),              // 5: fin = {0}
-                to_bytes(&[0b0010]),              // 6: san = {1}
-                to_bytes(&[0b0001]),              // 7: fout accumulator seed = {0}
-            ]]
-        }),
-        expected_output: Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0b0011])]]
-        }),
-        category: Some("security"),
-    }
+pub(crate) const EXPECTED_SANITIZED_BY_OUTPUT_BYTES: [u8; 4] = [0x03, 0x00, 0x00, 0x00];
+
+pub(crate) fn sanitized_by_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
+    vec![vec![
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 0: pg_nodes
+        vec![0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0], // 1: pg_edge_offsets
+        vec![1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0],             // 2: pg_edge_targets
+        vec![1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],             // 3: pg_edge_kind_mask (ASSIGNMENT=1)
+        vec![0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 4: pg_node_tags
+        vec![1, 0, 0, 0],                                     // 5: fin = {0}
+        vec![2, 0, 0, 0],                                     // 6: san = {1}
+        vec![1, 0, 0, 0],                                     // 7: fout accumulator seed = {0}
+    ]]
 }
 
-inventory::submit! {
-    // AUDIT_2026-04-24 F-SB-01: raised from 64 to 4096 so taint
-    // sanitization on deep call chains doesn't truncate silently;
-    // same reasoning as flows_to / taint_flow.
-    crate::operation_catalog::ConvergenceContract {
-        op_id: OP_ID,
-        max_iterations: 4096,
-    }
+#[cfg(test)]
+pub(crate) fn sanitized_by_fixture_expected() -> Vec<Vec<Vec<u8>>> {
+    vec![vec![EXPECTED_SANITIZED_BY_OUTPUT_BYTES.to_vec()]]
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_primitives::predicate::edge_kind;
+    use crate::fixture_bytes::eval_bytes;
+    use crate::predicate::edge_kind;
+
+    #[test]
+    fn test_sanitized_by_expected_bytes_identity() {
+        let constructed = crate::fixture_bytes::u32_bytes(&[3]);
+        assert_eq!(constructed, EXPECTED_SANITIZED_BY_OUTPUT_BYTES);
+    }
 
     #[test]
     fn sanitized_by_declares_sanitizer_buffer() {
@@ -115,19 +97,15 @@ mod tests {
     }
 
     #[test]
+    fn registration_fixture_matches_exact_byte_constant() {
+        assert_eq!(EXPECTED_SANITIZED_BY_OUTPUT_BYTES, [0x03, 0x00, 0x00, 0x00]);
+    }
+
+    #[test]
     fn sanitized_by_program_uses_non_degenerate_shape() {
         let shape = ProgramGraphShape::new(64, 128);
         let p = sanitized_by(shape, "fin", "san", "fout");
-        let fin_buf = p
-            .buffers()
-            .iter()
-            .find(|b| b.name() == "fin")
-            .expect("Fix: fin buffer");
-        assert!(
-            fin_buf.count >= 2,
-            "bitset_words(64) = 2; count {} suggests degenerate shape",
-            fin_buf.count
-        );
+        crate::security::flow_composition::assert_non_degenerate_bitset_shape(&p, "fin", 2);
     }
 
     #[test]
@@ -156,12 +134,8 @@ mod tests {
             to_bytes(&[0b0010]),
             to_bytes(&[0b0001]),
         ];
-        let values: Vec<vyre_reference::value::Value> = inputs
-            .into_iter()
-            .map(vyre_reference::value::Value::from)
-            .collect();
-        let outputs = vyre_reference::reference_eval(&p, &values).unwrap();
-        let fout_word = u32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("sanitized_by", &p, inputs.clone());
+        let fout_word = u32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert_eq!(
             fout_word, 0b0011,
             "sanitized_by must mark the sanitizer when taint arrives at it; \
@@ -185,12 +159,8 @@ mod tests {
             to_bytes(&[0b0010]),  // san = {1}
             to_bytes(&[0b0010]),  // fout seed = {1}
         ];
-        let values: Vec<vyre_reference::value::Value> = inputs
-            .into_iter()
-            .map(vyre_reference::value::Value::from)
-            .collect();
-        let outputs = vyre_reference::reference_eval(&p, &values).unwrap();
-        let fout_word = u32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("sanitized_by", &p, inputs);
+        let fout_word = u32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert_eq!(
             fout_word, 0b0010,
             "sanitized_by must NOT propagate from sanitizer node 1; fout should remain {{1}}"

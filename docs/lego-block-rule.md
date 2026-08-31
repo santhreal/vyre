@@ -1,318 +1,251 @@
 # LEGO-block rule: composition is the architecture
 
-**Status: Active.** This is the workspace-wide composition policy every
-author and agent follows before adding a new sub-op. It is the only
-composition policy document; the older tier documents were deleted and
-live in git history. `docs/ARCHITECTURE.md` owns workspace boundaries and
-the target crate structure; this doc owns the reuse rule, the promotion
-criteria, and the enforcement loop. The generated operation schema
-(`docs/generated/OP_SCHEMA.json`) is the operation inventory this rule
-operates over.
+The workspace composition policy: the discovery step, the Gate 1 budget, the
+promotion criteria, and Category A/C placement. Read it before adding or
+restructuring an operation. `docs/ARCHITECTURE.md` owns workspace boundaries
+and the crate structure. `docs/generated/OP_SCHEMA.json` is the operation
+inventory this rule operates over.
 
 ## The rule
 
-> **Before inventing a new sub-op, scan the Category A domain folders
-> (`vyre-libs/src/<domain>/`; until the Phase 2 move in `DEDUP_PLAN.md`
-> lands, the shared builders still live under `vyre-primitives/src/<domain>/`)
-> for an existing primitive that does the work. Only invent a new sub-op
-> when (a) nothing existing maps AND (b) the new sub-op will be reused by
-> 2+ callers.**
+Before inventing a new sub-op, scan the domain folders under `vyre-libs/src/`
+for a primitive that already does the work. Invent a new sub-op only when
+nothing existing maps and the new sub-op will be reused by two or more callers.
 
-The Gate 1 complexity budget is enforced by *reuse*, not by bespoke
-splitting. When attention has 8 loops, the answer is not 4 new
-attention-private sub-ops; it is "composes existing matmul + softmax +
-layer_norm primitives." When blake3_compress has 601 nodes, the answer
-is not "split into 4 blake3-only chunks"; it is "extract the G mixing
-function and the round permutation as `vyre_libs::hash::blake3_g` /
-`blake3_round`, reused by future `blake3_keyed`, `blake3_xof`, and
-`blake3_tree_hash`."
+The Gate 1 budget is met by reuse, not by bespoke splitting. When
+attention has eight loops, the answer is not four attention-private
+sub-ops; it is composing the existing matmul, softmax and layer-norm
+primitives. When a hash compression body reaches 601 nodes, the answer is
+not four hash-only chunks; it is extracting the mixing function and the
+round permutation as primitives that a keyed, extendable-output or tree
+variant composes next.
 
 ## Operation categories
 
 Every operation is one of two categories. There is no third.
 
 - **Category A: composition.** A backend-neutral `fn(...) -> Program`
-  built from lower-tier operations over existing `Expr`/`Node`
+  built from lower-level operations over existing `Expr` and `Node`
   variants. It adds no concrete target lowering. Regions preserve
-  composition provenance: the outer region keeps the Cat-A generator,
-  each child keeps its primitive generator and a `source_region`
-  naming the parent. Every Category A op lives in `vyre-libs`.
+  composition provenance: the outer region keeps the Category A
+  generator, and each child keeps its primitive generator plus a
+  `source_region` naming the parent. Every Category A op lives in
+  `vyre-libs`.
 - **Category C: hardware intrinsic.** An operation that requires a
-  dedicated hardware contract: a dedicated emitter arm AND a dedicated
-  reference-interpreter eval arm. Its registration supplies the
-  neutral builder and deterministic fixture contract; each supported
-  target supplies a keyed lowering facet. Missing facets fail closed.
-  Every Category C op lives in `vyre-primitives` (which absorbs
-  `vyre-intrinsics` in the Phase 2 move). That crate is intentionally
-  small.
-- **Category B is banned.** Category B was runtime interpretation of a
-  general operation bytecode, on the host or inside a persistent
-  kernel. Vyre does not do this. A program remains typed IR until
-  verified lowering; raw `Program` execution exists only in explicitly
-  named reference, parity, and conformance oracle seams. An op that
-  "needs an interpreter" is an un-decomposed Category A op; decompose
-  it.
+  dedicated hardware contract: its own emitter arm in every backend and
+  its own arm in the reference interpreter. Its registration supplies the
+  neutral builder and the deterministic fixture contract; each supported
+  target supplies a keyed lowering facet, and a missing facet fails
+  closed. Every Category C op lives in `vyre-primitives`, which stays
+  small for that reason.
+- **Category B is banned.** Category B is runtime interpretation of a
+  general operation bytecode, on the host or inside a persistent kernel.
+  A program stays typed IR until verified lowering; raw `Program`
+  execution exists only in the named reference, parity and conformance
+  oracle seams. An op that needs an interpreter is an un-decomposed
+  Category A op. Decompose it.
 
-Placement test: if you can write it as `fn(...) -> Program` using only
+Placement test: if it can be written as `fn(...) -> Program` over
 existing IR variants, it is Category A and belongs in `vyre-libs`. If it
-needs a new `Expr` variant, that is a change in `vyre-foundation`; if the
-variant exists to reach hardware, the op is Category C in
-`vyre-primitives`.
+needs a new `Expr` variant, that variant is a change in
+`vyre-foundation`; if the variant exists to reach hardware, the op is
+Category C in `vyre-primitives`.
 
 ## Why
 
-Vyre's product claim is "compose perfect primitives, beat monolithic
-kernels." That claim fails the moment a dialect crate reinvents a
-primitive locally: the new caller doesn't benefit from the existing
-one's hardening, the optimizer can't fuse across the boundary, and
-the LEGO substrate fragments. Every primitive that lives in only one
-op's source file is wasted leverage.
+The product claim is that composed primitives beat monolithic kernels.
+The claim fails the moment a dialect reinvents a primitive locally: the
+new caller does not inherit the existing one's hardening, the optimizer
+cannot fuse across the boundary, and the substrate fragments. A primitive
+that lives in one op's source file is reuse nobody else gets.
 
-## Discovery checklist
+## Discovery
 
 Before writing a new sub-op:
 
-1. **Search by name.** `rg -i 'fn <verb>' vyre-libs/src
-   vyre-primitives/src`. If the work has a name (matmul, scan, hash,
-   dfa_step), someone has probably written it.
-2. **Search by op id.** `cargo_full run --bin xtask -- print-composition
-   vyre-libs::...` walks a registered op's region tree. If a target
-   Region's `generator` reads like the work you're about to do, that's
-   the primitive.
-3. **Search by region chain.** Pick a sibling op (same domain, similar
-   shape) and print its composition. The chain shows what primitives
-   that sibling already composes; chances are 1+ apply to your op too.
-4. **Ask Gate 1.** `cargo_full run --bin xtask -- gate1` reports
-   per-op `composed_fraction`. A sibling with a high composed_fraction
-   is the playbook to follow.
+1. **Search by name.** `git grep -n 'fn <verb>' -- vyre-libs/src`. If the work
+   has a name, someone has probably written it.
+2. **Search by op id.** `./cargo_full run --bin xtask -- print-composition
+   --op-id <id>` walks a registered op's region tree. If a region's
+   generator reads like the work you are about to do, that is the
+   primitive.
+3. **Search by region chain.** Print the composition of a sibling op in
+   the same domain. The chain names the primitives that sibling already
+   composes, and usually one of them applies.
+4. **Ask Gate 1.** `./cargo_full run --bin xtask -- gate1` reports each
+   op's composed fraction. A sibling with a high composed fraction is the
+   playbook to follow.
 
-## Promotion criteria (private helper → public op)
+## Placement, then visibility
 
-A `fn(...) -> Program` graduates from "private to one op file" to
-"public `vyre-libs` op" when ALL THREE conditions hold:
+Placement is decided by composability alone. A `fn(...) -> Program` built
+from existing IR variants is a Category A composition and belongs in
+`vyre-libs` from its first caller. `docs/CRATE_OWNERSHIP.toml` declares that
+rule: reuse count is not an admission criterion, and a composition still
+living in `vyre-primitives` is a live defect. Nothing below may be read as a
+reason to leave a composition outside `vyre-libs`.
 
-1. **Reusability.** ≥ 2 callers (dialect ops, `xtask` / conform tooling,
-   or an actual community pack) consume it.
-2. **Stability.** The helper's API has settled: argument list is small,
-   named, no caller is asking for breaking changes.
-3. **No domain glue.** The op does ONE concern. `matmul` does matmul,
-   not "matmul plus a softmax for transformers." Domain compositions
-   glue primitives together; the primitive itself is single-purpose
-   (LAW 7).
+What reuse decides is visibility inside `vyre-libs`: whether the function
+stays private to one op file or becomes a published, registered op. It
+graduates when all three hold:
 
-After the Phase 2 collapse there is one composition crate, so promotion
-is a visibility change (`pub` + registration), not a cross-crate move.
-If only ONE caller has a private helper, leave it alone: premature
-publication creates churn for no gain. `lego-audit` primitive-coverage
-reports orphan public ops as adoption advisories; synthetic catalog
-consumers registered to fake a second caller are hard failures.
+1. **Reuse.** Two or more callers consume it: dialect ops, xtask or
+   conform tooling, or a community pack.
+2. **Stability.** The argument list is small and named, and no caller is
+   asking for a breaking change.
+3. **One concern.** `matmul` does matmul, not matmul plus a softmax for
+   transformers. Domain compositions glue primitives together; the
+   primitive itself is single-purpose.
+
+Publishing is a visibility change plus a registration, not a move: the op
+was already in the right crate. With one caller, leave the helper private,
+because publishing early buys churn and no reuse. `lego-audit` reports an
+orphan published op as an adoption advisory, and a catalog consumer
+registered to fake a second caller is a hard failure.
+
+## The composition helpers a block is built from
+
+`vyre-foundation::composition` holds the wrappers every composition uses.
+`wrap_region`, `wrap_anonymous_region` and `wrap_child_region` attribute a body
+to the generator that produced it, so a region tree records which composition
+emitted which nodes.
+
+`single_invocation` guards a body with `Expr::eq(Expr::logical_index(0),
+Expr::u32(0))`, and `single_invocation_region` wraps that guard in one anonymous
+region. The marker is a logical index, not a physical invocation id: a serial
+block states which element its body belongs to, and target lowering selects the
+physical id that names that element. A composition that reaches for a physical
+id states a launch, which is the compiler's decision, not the block's.
 
 ## Gate 1 and lego-audit
 
-Gate 1 (`cargo_full run --bin xtask -- gate1`) walks every registered
-op's region tree:
+`./cargo_full run --bin xtask -- gate1` walks every registered op's region
+tree and passes an op when either half holds:
 
-1. Count nodes + loops in its expanded body.
-2. Under raw budget (loops ≤ 4 AND nodes ≤ 200): pass.
-3. Over budget: compute `composed_fraction = nodes inside child
-   regions with a registered source_region / total nodes`.
-   `composed_fraction ≥ 0.6` means the op composes primitives: pass.
-4. Otherwise fail with a diagnostic listing which inline sub-blocks
-   would have been composeable as primitives.
+1. Under raw budget: four loops or fewer and 200 nodes or fewer.
+2. Composed: nodes inside a region whose generator is a registered op id
+   are at least 60 percent of total nodes.
 
-Wrapping a `Node::Region` around inlined code does not game this; the
-body has to call into registered primitive ops.
+Wrapping a region around inlined code does not satisfy the second half. A
+region that names no operation carries one of the two prefixes in
+`vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES`: `inline::`,
+minted when the composer reparents a body onto its caller, and
+`anonymous::`, written by a builder that needs a named boundary inside one
+operation. Such a region still carries a `source_region` naming its own op,
+so a `source_region` alone says nothing about composition; the generator
+has to name another registered op. On failure the diagnostic lists the
+inline sub-blocks that should have been primitive calls.
 
-`cargo_full run --bin xtask -- lego-audit` is the stricter pass: IR
-fingerprint no-reinvention (>80% overlap without an invocation edge is
-flagged), depth-of-composition, primitive coverage, and cross-dialect
-reach-through. `dedup-report` emits the machine-readable duplicate
-family schema.
+`gate1` owns the budget. `abstraction-gate` reads the same walk for the
+boundary question: whether every child region names a building block that
+is registered, and whether every cited parent is an op that exists.
+
+`./cargo_full run --bin xtask -- lego-audit` is the stricter pass: IR
+fingerprint no-reinvention, depth of composition, primitive coverage, and
+cross-dialect reach-through. `./cargo_full run --bin xtask -- dup-scan`
+reports duplicated line counts per crate against their pins.
+
+### Tiers
+
+Those gates report in tiers. A tier is not a property a source file declares;
+it is derived from the registered op id alone, in
+`xtask-registry/src/gates/lego_audit/ops.rs`:
+
+| Tier | Op id prefix | Meaning |
+| --- | --- | --- |
+| 2 | `vyre-primitives::hardware::` | Hardware intrinsic. |
+| 2.5 | any other `vyre-primitives::` | Intrinsic: needs an emitter arm in every backend. |
+| 3 | `vyre-libs::` | Composition over existing IR. |
+
+So the tier follows placement, and a doc comment claiming a tier its crate
+contradicts is wrong by construction. Tier 2 and 2.5 must not compose child
+regions, tier 3 must, and the promotion contract below is what moves an op
+between them.
 
 ## Cross-crate promotion patch contract
 
-A primitive promotion across crate boundaries changes the public
-dependency graph, so one patch must update all of: the crate graph
-(`docs/CRATE_OWNERSHIP.toml` + regenerated `docs/CRATE_GRAPH.md`), this
-rule, and an import-path migration test. The import-path migration test
-names the old path, the canonical owner path, or the compatibility shim
-that keeps downstream code working. After the Phase 2 collapse this
-contract applies to moves between `vyre-foundation`, `vyre-primitives`,
-and `vyre-libs`; moves within `vyre-libs` need only the registration and
-the visibility change.
+Promoting a primitive across a crate boundary changes the published
+dependency graph, so one patch updates all of: `docs/CRATE_OWNERSHIP.toml`
+with the regenerated `docs/CRATE_GRAPH.md`, this document, and an
+import-path migration test. The import-path migration test names the old
+path and the owner path, and it migrates every caller in the same change:
+this workspace ships no compatibility shim for a moved item.
 
-`check-tier-deps` owns dependency-direction validation and verifies this
-contract text is present. `lego-audit` owns composition and
-cross-dialect import validation. A promotion that satisfies only one
-gate is not owned.
+`check-tier-deps` owns dependency-direction validation and checks that
+this contract is present here. `lego-audit` owns composition and
+cross-dialect import validation. A promotion that satisfies one gate and
+not the other is not owned.
 
-## Before / after example: `attention`
+## What the rule rejects
 
-### Before (Gate 1 fails, 8 loops, composed_fraction=0%)
+- **An inline helper that should be a primitive.** A local
+  `fn(...) -> Program` inside one op file, written without running
+  discovery first.
+- **A cross-domain reach-around.** One `vyre-libs` domain importing
+  private items from a sibling domain. Publish the shared helper under
+  the promotion criteria instead.
+- **A bespoke split to satisfy Gate 1.** Splitting an op into `part_a`
+  and `part_b` private helpers lowers the loop count and adds no reuse.
+  The composed fraction detects it.
+- **Premature publication.** Publishing a single-caller helper before the
+  second caller exists.
+- **Category B under another name.** A dispatch table, a bytecode or an
+  interpreter loop over op codes. Lower to typed IR instead.
 
-```rust
-pub fn attention(q: &str, k: &str, v: &str, out: &str, d: u32, s: u32) -> Program {
-    // bespoke 8-loop body that inlines:
-    //   - q @ k^T computation         (would be `matmul`)
-    //   - per-row max for stable softmax  (would be `reduce_max`)
-    //   - per-row exp/sum/divide      (would be `softmax_step`)
-    //   - score @ v                   (would be `matmul`)
-    //   - residual norm               (would be `layer_norm`)
-}
-```
+## When the primitive does not exist yet
 
-### After (Gate 1 passes via composition, 0 inline loops)
-
-```rust
-pub fn attention(q: &str, k: &str, v: &str, out: &str, d: u32, s: u32) -> Program {
-    let scratch_scores = "scores_scratch";
-    let scratch_norm = "norm_scratch";
-    Program::wrapped(
-        vec![/* ... declarations including scratches ... */],
-        [s, 1, 1],
-        vec![
-            region::wrap_child(
-                "vyre-libs::nn::attention",
-                /* parent generator-ref */,
-                vec![
-                    // every step is a wrap_child INTO a registered primitive
-                    region::wrap_child("vyre-libs::math::matmul", /* ref */,
-                        vec![/* call into matmul body */]),
-                    region::wrap_child("vyre-libs::nn::softmax_step", /* ref */,
-                        vec![/* call into softmax_step body */]),
-                    region::wrap_child("vyre-libs::math::matmul", /* ref */,
-                        vec![/* second matmul */]),
-                    region::wrap_child("vyre-libs::nn::layer_norm_step", /* ref */,
-                        vec![/* residual norm */]),
-                ],
-            ),
-        ],
-    )
-}
-```
-
-Gate 1 passes: 4 child regions, each a registered primitive,
-composed_fraction=100%. The optimizer can still inline+fuse across
-boundaries; the composition chain stays visible to `print-composition`
-for audit.
-
-The win: a future `linear_attention`, `multi_query_attention`, or
-`flash_attention_v2` reuses the same matmul + softmax_step +
-layer_norm_step primitives. No code duplication. No drift.
-
-## Anti-patterns the rule rejects
-
-- **Inline helpers that should be primitives.** If you're writing a
-  `fn(...)->Program` local to one op file, run the discovery checklist
-  first. If a primitive exists, use it.
-- **Cross-domain reach-around.** One domain module in `vyre-libs`
-  importing private items from a sibling domain. Make the shared helper
-  public per the promotion criteria instead.
-- **Bespoke split to satisfy Gate 1.** Splitting `attention` into
-  `attention_part_a` / `attention_part_b` private helpers passes the
-  loop count but fails the LEGO test: there is no reuse, just visual
-  surgery. Gate 1 enforcement detects this via composed_fraction.
-- **Premature publication.** Making a single-caller helper public
-  before a second consumer materializes. Wait for the second caller.
-- **Category B by another name.** A "dispatch table," "bytecode," or
-  "interpreter loop" over op codes is banned interpretation. Lower to
-  typed IR instead.
-
-## Workflow when the primitive doesn't exist yet
-
-1. Write the primitive directly in the appropriate
-   `vyre-libs/src/<domain>/<primitive>.rs` (NOT inside the consuming
+1. Write the primitive in its own file under the owning domain
+   (`vyre-libs/src/<domain>/<primitive>.rs`, not inside the consuming
    op's file), behind that domain's cargo feature.
-2. Add an `inventory::submit!(OperationRegistration { .. })`
-   registration so the universal harness picks it up.
-3. Add `test_inputs` + `expected_output` (use the trace tooling for
-   f32 ops).
-4. Record the promoting consumers in the commit body (the discovery
-   note below covers the review trail).
-5. Wire the high-level op to call into it via
-   `region::wrap_child(<primitive_op_id>, ...)`.
-6. Run `cargo_full run --bin xtask -- gate1`; the op should now pass
-   via composed_fraction.
+2. Submit one `OperationRegistration` so the universal harness discovers
+   it.
+3. Give it `test_inputs` and `expected_output`.
+4. Wrap the consuming op's call in a child region naming the primitive
+   op id, so the composition stays visible to `print-composition`.
+5. Run `gate1`. The op passes on its composed fraction.
 
 ## Enforcement
 
-- `cargo_full run --bin xtask -- gate1` runs in CI and fails on
-  budget violations.
-- `conform/vyre-conform/tests/contract_cases/composition_discipline__every_op_is_under_complexity_budget.rs::no_op_reinvents_another_registered_op`
-  scans for op bodies whose IR fingerprint matches an
-  already-registered op but isn't dispatching through it.
-- `check-tier-deps` blocks upward path dependencies and unowned tier
-  movement; `lego-audit` blocks cross-tier imports that bypass the
-  canonical primitive or facade owner.
-- Code review: every change touching `vyre-libs/src/<domain>/` or
-  `vyre-primitives/src/` that adds a new `fn(...)->Program` includes a
-  one-line discovery-checklist note in the commit body confirming
-  nothing existing applied.
+- `gate1` runs in CI and fails on a budget violation.
+- `conform/vyre-conform/tests/contract_cases/composition_discipline__every_op_is_under_complexity_budget.rs`
+  holds `no_op_reinvents_another_registered_op`, which scans for an op
+  body whose IR fingerprint matches a registered op it does not dispatch
+  through.
+- `check-tier-deps` blocks an upward dependency and unowned layer
+  movement; `lego-audit` blocks a cross-tier import that bypasses the
+  canonical owner.
 
-## Before / after example: `visual` domain (Molten)
+## Worked example: the visual domain
 
-This is a real decomposition that occurred when adding GPU-accelerated
-visual effects (blur, shadow, filter chains) for the Molten web engine.
-It illustrates the full discovery process and how domain-level thinking
-distills into existing primitives.
+Adding GPU visual effects (blur, shadow, filter chains) started as a
+`visual/` primitive domain with six primitives: two-pass Gaussian blur,
+box shadow with signed-distance falloff, a brightness and contrast filter
+chain, Porter-Duff alpha compositing, gradient rasterization, and box
+downsampling. Each was one monolithic `fn(...) -> Program` of inlined IR
+with its own pixel unpacking, color math and kernel loops. Gate 1 would
+have rejected every one of them at a composed fraction of zero.
 
-### Attempt 1: new domain with 6 primitives
+The second pass proposed smaller primitives: a 1D convolution along an
+axis, RGBA word packing, color interpolation, and a signed distance to a
+rounded rectangle.
 
-Initial plan created an entire `visual/` primitive domain:
+The third pass dissolved them:
 
-```
-visual/
-├── blur.rs            # two-pass Gaussian blur
-├── shadow.rs          # box shadow with SDF falloff
-├── filter_chain.rs    # brightness/contrast/saturate/invert
-├── composite.rs       # Porter-Duff alpha over
-├── gradient.rs        # CSS gradient rasterization
-└── downsample.rs      # 2× box-filter downsample
-```
-
-Each file was a monolithic `fn(...) -> Program`: ~200 lines of inlined
-IR with custom pixel unpacking, color math, and kernel loops. Gate 1
-would have rejected every one of them on composed_fraction = 0%.
-
-### Attempt 2: decompose into real primitives
-
-Applied the discovery checklist. Proposed primitives:
-
-- `visual::separable_conv`: 1D convolution along an axis
-- `visual::pixel_pack`: RGBA u32 ↔ separate channels
-- `visual::color_lerp`: interpolate between two colors
-- `visual::sdf_rounded_rect`: signed distance to a rounded rect
-
-### Attempt 3: dissolve into existing domains (correct answer)
-
-Applied the checklist *again*. Each "visual primitive" collapsed into
-something that already exists or belongs in `math/`:
-
-| Proposed visual primitive | Actual home | Why |
+| Proposed primitive | Where it went | Why |
 |---|---|---|
-| `separable_conv` | **`math::conv1d`** | 1D convolution is domain-neutral: used by signal processing, audio, NLP, and image processing. Not visual-specific. |
-| `pixel_pack/unpack` | **Already Tier 1 IR** | `Expr::bitand`, `Expr::shr`, `Expr::shl`, `Expr::bitor` do this directly. No primitive needed. |
-| `color_lerp` | **Already Tier 1 IR** | `lerp(a, b, t) = a + (b - a) * t`: three Expr ops. A color is just a value. |
-| `sdf_rounded_rect` | **Private in the consuming op** | Only one consumer (`box_shadow`). By the promotion rule, stays inline until a second caller appears. |
+| Separable convolution | `vyre-libs` `math::conv1d` | A 1D convolution is domain-neutral: signal processing, audio, natural language and image work all use it. |
+| Pixel pack and unpack | Existing IR | `Expr::bitand`, `Expr::shr`, `Expr::shl` and `Expr::bitor` do it directly. |
+| Color interpolation | Existing IR | `a + (b - a) * t` is three expressions. A color is a value. |
+| Signed distance to a rounded rectangle | Private to its one consumer | Only the shadow op needs it, so it stays private until a second caller appears. |
 
-**Result:** the `visual/` primitive domain was deleted entirely. The only
-new shared primitive is `math::conv1d`, a 1D separable convolution that
-blur, signal processing, and future audio ops all compose from.
+The `visual/` primitive domain was deleted. The one shared primitive that
+came out of it is `math::conv1d`, which blur composes and future signal
+and audio ops compose too. The domain compositions live in
+`vyre-libs/src/visual/` over `math::conv1d`, existing IR expressions, and
+private helpers where one caller exists.
 
-The domain-specific compositions (`blur`, `box_shadow`, `filter_chain`,
-`glass`) live in `vyre-libs/src/visual/` as compositions over:
-
-- `math::conv1d` (blur kernel)
-- Existing IR expressions (pixel bit manipulation, lerp, clamp)
-- Private helpers where only one caller exists (SDF)
-
-### The lesson
-
-**Domain thinking creates domain primitives. LEGO thinking dissolves
-them into math.** When the discovery checklist says "nothing existing
-maps," run it again: you're probably looking at the wrong abstraction
-level. A "color interpolation" is marketing language for a multiply-add.
-A "pixel unpack" is marketing language for a bit shift. The LEGO rule
-forces you to see through the domain framing to the underlying
-operation, which is almost always already in `math/`, `text/`, or the
+Domain thinking creates domain primitives, and composition thinking dissolves
+them into math. When discovery says nothing existing maps, run it again at a
+lower level. A color interpolation is a multiply-add. A pixel unpack is a bit
+shift. The operation is almost always already in `math`, in `text`, or in the
 IR itself.

@@ -1,0 +1,577 @@
+//! Canonical physical-kernel lowering boundary.
+//!
+//! This is the only production boundary from high-level `Program` IR to a
+//! validated `PhysicalKernel`: expand registered compositions, reject unresolved
+//! logical markers, run the registered fallible semantic optimizer once, reject
+//! unresolved calls, lower to a `KernelDescriptor`, canonicalize representation
+//! order, and verify.
+
+use crate::descriptor::{KernelDescriptor, PhysicalSchedule, StorageLayout};
+use crate::lower::lower;
+use crate::{verify_descriptor, VerifyFailure};
+use std::fmt;
+use vyre_foundation::{
+    ir::{Expr, Node, Program},
+    schedule::{SchedulePhaseId, SelectedSchedule},
+    visit::{for_each_expr, for_each_node},
+};
+
+/// Verified physical kernel IR. Construction is restricted to
+/// [`lower_scheduled`] and [`lower_physical`], so an unverified descriptor
+/// cannot enter target compilation.
+#[derive(Debug, Clone)]
+pub struct PhysicalKernel {
+    descriptor: KernelDescriptor,
+    schedule: Option<PhysicalSchedule>,
+    storage: StorageLayout,
+}
+
+impl PhysicalKernel {
+    /// Borrow the verified backend-neutral descriptor.
+    #[must_use]
+    pub const fn descriptor(&self) -> &KernelDescriptor {
+        &self.descriptor
+    }
+
+    /// Borrow the frozen schedule facts this kernel was lowered under.
+    ///
+    /// Absent for a program lowered without a selected schedule. A target that
+    /// needs a frozen fact rejects the kernel when it is absent rather than
+    /// choosing a value the schedule never selected.
+    #[must_use]
+    pub const fn schedule(&self) -> Option<&PhysicalSchedule> {
+        self.schedule.as_ref()
+    }
+
+    /// Borrow the lifetime-overlaid storage plan for this kernel.
+    ///
+    /// A target allocates the stated pools and addresses each region at its
+    /// stated offset. Nothing downstream re-derives a byte total from the
+    /// binding list.
+    #[must_use]
+    pub const fn storage(&self) -> &StorageLayout {
+        &self.storage
+    }
+
+    /// Consume the physical stage and return its verified descriptor.
+    #[must_use]
+    pub fn into_descriptor(self) -> KernelDescriptor {
+        self.descriptor
+    }
+}
+
+/// Canonical semantic program and its verified physical kernel.
+#[derive(Debug, Clone)]
+pub struct PhysicalLowering {
+    /// Program after semantic optimization.
+    pub program: Program,
+    /// Verified physical kernel stage.
+    pub kernel: PhysicalKernel,
+}
+
+impl PhysicalLowering {
+    /// Borrow the verified physical descriptor.
+    #[must_use]
+    pub const fn descriptor(&self) -> &KernelDescriptor {
+        self.kernel.descriptor()
+    }
+
+    /// Borrow the frozen schedule facts this kernel was lowered under.
+    #[must_use]
+    pub const fn schedule(&self) -> Option<&PhysicalSchedule> {
+        self.kernel.schedule()
+    }
+
+    /// Borrow the lifetime-overlaid storage plan for this kernel.
+    #[must_use]
+    pub const fn storage(&self) -> &StorageLayout {
+        self.kernel.storage()
+    }
+
+    /// Consume the lowering result and return its verified descriptor.
+    #[must_use]
+    pub fn into_descriptor(self) -> KernelDescriptor {
+        self.kernel.into_descriptor()
+    }
+}
+
+/// Error raised while constructing verified physical kernel IR.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PhysicalLoweringError {
+    message: String,
+}
+
+impl PhysicalLoweringError {
+    pub(crate) fn new(message: impl Into<String>) -> Self {
+        let message = message.into();
+        debug_assert!(message.contains("Fix:"));
+        Self { message }
+    }
+
+    /// Return the actionable diagnostic.
+    #[must_use]
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+}
+
+impl fmt::Display for PhysicalLoweringError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for PhysicalLoweringError {}
+
+fn expand_semantic_program(program: &Program) -> Result<Program, PhysicalLoweringError> {
+    let expanded = vyre_foundation::transform::inline::inline_composite_calls(program).map_err(
+        |error| {
+            PhysicalLoweringError::new(format!(
+                "composition expansion failed before semantic optimization: {error}. Fix: repair the registered composition body or its call graph."
+            ))
+        },
+    )?;
+    lower_single_rank_collectives_for_emit(expanded)
+}
+
+fn reject_logical_markers(program: &Program) -> Result<(), PhysicalLoweringError> {
+    let mut has_logical_identity = false;
+    for_each_expr(program.entry(), |expr| {
+        has_logical_identity |= matches!(
+            expr,
+            Expr::LogicalIndex { .. }
+                | Expr::LogicalTileId { .. }
+                | Expr::LogicalWithinTileId { .. }
+        );
+    });
+    if has_logical_identity {
+        return Err(PhysicalLoweringError::new(
+            "schedule-free logical identity reached physical descriptor lowering. Fix: lower the validated selected schedule before lower_physical().",
+        ));
+    }
+
+    let mut has_logical_barrier = false;
+    for_each_node(program.entry(), |node| {
+        has_logical_barrier |= matches!(node, Node::LogicalBarrier { .. });
+    });
+    if has_logical_barrier {
+        return Err(PhysicalLoweringError::new(
+            "schedule-free logical barrier reached physical descriptor lowering. Fix: lower the validated selected schedule before lower_physical().",
+        ));
+    }
+    Ok(())
+}
+
+fn prepare_expanded_physical_program(expanded: Program) -> Result<Program, PhysicalLoweringError> {
+    reject_logical_markers(&expanded)?;
+    let optimized = vyre_foundation::optimizer::optimize(expanded).map_err(|error| {
+        PhysicalLoweringError::new(format!(
+            "registered semantic optimization failed before descriptor lowering: {error}. Fix: repair pass registration, legality, or convergence instead of emitting unoptimized IR."
+        ))
+    })?;
+    let prepared =
+        vyre_foundation::transform::inline::inline_calls(&optimized).map_err(|error| {
+            PhysicalLoweringError::new(format!(
+                "unresolved call remained after semantic optimization: {error}. Fix: register its composition body or eliminate the dead call before backend emission."
+            ))
+        })?;
+    reject_logical_markers(&prepared)?;
+    Ok(prepared)
+}
+
+fn prepare_physical_program(program: &Program) -> Result<Program, PhysicalLoweringError> {
+    prepare_expanded_physical_program(expand_semantic_program(program)?)
+}
+
+fn lower_single_rank_collectives_for_emit(
+    program: Program,
+) -> Result<Program, PhysicalLoweringError> {
+    match vyre_foundation::transform::collectives::lower_single_rank_collectives(&program) {
+        Ok(Some(lowered)) => Ok(lowered),
+        Ok(None) => Ok(program),
+        Err(error) => Err(PhysicalLoweringError::new(format!(
+            "single-rank collective lowering failed before descriptor lowering: {error}. Fix: route true multi-rank collectives through a backend transport path or lower them before physical lowering."
+        ))),
+    }
+}
+
+/// Apply one validated selected-schedule phase and construct physical kernel IR.
+///
+/// Schedule lowering freezes the phase's exact workgroup shape on a cloned
+/// semantic program before the canonical physical lowering boundary. The
+/// selected schedule remains the authority; target emitters cannot substitute
+/// a different shape through this API.
+///
+/// # Errors
+///
+/// Returns [`PhysicalLoweringError`] when the schedule is malformed, the phase
+/// does not exist, or canonical physical lowering fails.
+pub fn lower_scheduled(
+    program: &Program,
+    schedule: &SelectedSchedule,
+    phase: SchedulePhaseId,
+) -> Result<PhysicalLowering, PhysicalLoweringError> {
+    schedule.validate().map_err(|error| {
+        PhysicalLoweringError::new(format!(
+            "selected schedule validation failed before physical lowering: {error}. Fix: repair bounded schedule search and persist only a validated neutral schedule."
+        ))
+    })?;
+    let selected = schedule
+        .phases
+        .iter()
+        .find(|selected| selected.id == phase)
+        .ok_or_else(|| {
+            PhysicalLoweringError::new(format!(
+                "selected schedule phase {} is absent before physical lowering. Fix: preserve fusion-group to schedule-phase identity through artifact construction.",
+                phase.0
+            ))
+        })?;
+    let expanded = expand_semantic_program(program)?;
+    let (mut scheduled, _) =
+        vyre_foundation::transform::schedule_lowering::lower_logical_schedule(expanded);
+    scheduled.set_workgroup_size(selected.workgroup);
+    let projected = PhysicalSchedule::project(schedule, phase).map_err(|error| {
+        PhysicalLoweringError::new(format!(
+            "selected schedule projection failed before physical lowering: {error}"
+        ))
+    })?;
+    let prepared = prepare_expanded_physical_program(scheduled)?;
+    lower_prepared_physical(prepared, Some(projected))
+}
+
+/// Construct verified physical kernel IR from a physical [`Program`].
+///
+/// The constructor expands compositions, rejects schedule-free markers,
+/// optimizes once, lowers into the backend-neutral physical descriptor,
+/// canonicalizes representation order, and verifies the result. Schedule-free
+/// semantic callers first use [`lower_scheduled`]. [`PhysicalKernel`] has no
+/// public raw-descriptor constructor, so every target receives a value that
+/// crossed this validator.
+///
+/// # Errors
+///
+/// Returns [`PhysicalLoweringError`] when composition expansion, semantic
+/// optimization, call resolution, descriptor lowering, canonicalization, or
+/// verification fails.
+pub fn lower_physical(program: &Program) -> Result<PhysicalLowering, PhysicalLoweringError> {
+    lower_prepared_physical(prepare_physical_program(program)?, None)
+}
+
+fn lower_prepared_physical(
+    program: Program,
+    schedule: Option<PhysicalSchedule>,
+) -> Result<PhysicalLowering, PhysicalLoweringError> {
+    let mut descriptor = lower(&program).map_err(|error| {
+        PhysicalLoweringError::new(format!(
+            "KernelDescriptor lowering failed after semantic Program optimization: {error}. Fix: add the missing neutral descriptor mapping before any concrete backend emits this Program."
+        ))
+    })?;
+    if let Some(projected) = &schedule {
+        let ring_slots = u16::try_from(projected.ring_slots).unwrap_or(u16::MAX);
+        crate::descriptor::stage_transactions(&mut descriptor.body, ring_slots);
+    }
+    let descriptor = verify_descriptor(&descriptor).map_err(|failure| {
+        let (stage, fix) = match failure {
+            VerifyFailure::Input(_) => (
+                "after semantic Program optimization",
+                "Fix: repair the neutral lowering mapping before descriptor canonicalization.",
+            ),
+            VerifyFailure::Output(_) => (
+                "after bounded representation canonicalization",
+                "Fix: repair vyre-lower canonicalization so every emitter receives valid neutral lower IR.",
+            ),
+        };
+        PhysicalLoweringError::new(format!(
+            "KernelDescriptor verification failed {stage}: {}. {fix}",
+            format_verify_failure(&failure)
+        ))
+    })?;
+    if let Some(projected) = &schedule {
+        if projected.workgroup != descriptor.dispatch.workgroup_size {
+            return Err(PhysicalLoweringError::new(format!(
+                "lowered dispatch {:?} is not the workgroup {:?} the selected schedule froze. Fix: keep schedule lowering the only writer of dispatch geometry.",
+                descriptor.dispatch.workgroup_size, projected.workgroup
+            )));
+        }
+    }
+    let storage = StorageLayout::plan(&descriptor).map_err(|error| {
+        PhysicalLoweringError::new(format!(
+            "physical storage cannot be planned for this kernel: {error}"
+        ))
+    })?;
+    if let Some(projected) = &schedule {
+        storage
+            .validate(
+                projected.resources.shared_bytes,
+                projected.resources.registers_per_invocation,
+            )
+            .map_err(|error| {
+                PhysicalLoweringError::new(format!(
+                    "physical storage exceeds what the selected schedule reserved: {error}"
+                ))
+            })?;
+    }
+    let stated = crate::equivalence::EffectSignature::from_program(&program);
+    let performed = crate::equivalence::EffectSignature::from_descriptor(&descriptor);
+    crate::equivalence::check_effects(&stated, &performed, &[crate::TRAP_SIDECAR_NAME]).map_err(
+        |errors| {
+            let mut message =
+                String::from("the lowered kernel does not perform the effects its program states:");
+            for error in &errors {
+                message.push_str("\n  - ");
+                message.push_str(&error.to_string());
+            }
+            PhysicalLoweringError::new(message)
+        },
+    )?;
+    Ok(PhysicalLowering {
+        program,
+        kernel: PhysicalKernel {
+            descriptor,
+            schedule,
+            storage,
+        },
+    })
+}
+
+fn format_verify_failure(error: &VerifyFailure) -> String {
+    use std::fmt::Write as _;
+
+    let stage = match error {
+        VerifyFailure::Input(_) => "input",
+        VerifyFailure::Output(_) => "output",
+    };
+    let mut out = String::with_capacity(64);
+    out.push_str(stage);
+    out.push_str(" descriptor invalid");
+    for (index, err) in error.errors().iter().take(4).enumerate() {
+        out.push_str(if index == 0 { ": " } else { "; " });
+        let _ = write!(out, "{err:?}");
+    }
+    if error.errors().len() > 4 {
+        out.push_str("; ...");
+    }
+    out
+}
+
+// Inline: covers the crate-private `message` and `new`, which no integration test can reach.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{KernelBody, KernelOpKind};
+    use vyre_foundation::ir::{
+        BufferAccess, BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Ident, MemoryOrdering,
+        Node,
+    };
+    use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform};
+    use vyre_test_support::logical_markers::{census, logical_marker_sum, MarkerCensus};
+
+    #[test]
+    fn lower_physical_runs_program_and_descriptor_pipeline() {
+        let buffer =
+            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16);
+        let program = Program::wrapped(
+            vec![buffer],
+            [64, 1, 1],
+            vec![Node::Store {
+                buffer: Ident::from("out"),
+                index: Expr::InvocationId { axis: 0 },
+                value: Expr::LitU32(7),
+            }],
+        );
+
+        let lowered = lower_physical(&program).expect("Fix: pre-emit lowering must pass");
+
+        assert_eq!(lowered.program.workgroup_size(), [64, 1, 1]);
+        assert_eq!(lowered.descriptor().dispatch.workgroup_size, [64, 1, 1]);
+        assert_eq!(lowered.descriptor().bindings.slots.len(), 1);
+        assert!(crate::verify::verify(lowered.descriptor()).is_ok());
+        assert_eq!(
+            crate::canonicalize::canonicalize_for_emit(lowered.descriptor()),
+            *lowered.descriptor()
+        );
+    }
+
+    #[test]
+    fn lower_scheduled_freezes_the_selected_phase_shape_before_physical_lowering() {
+        let program = Program::wrapped(Vec::new(), [64, 1, 1], Vec::new());
+        let mut schedule = vyre_test_support::selected_schedules::synthetic(1);
+        schedule
+            .apply(ScheduleTransform::SetWorkgroup {
+                phase: SchedulePhaseId(0),
+                shape: [32, 2, 1],
+            })
+            .unwrap();
+
+        let lowered = lower_scheduled(&program, &schedule, SchedulePhaseId(0)).unwrap();
+        assert_eq!(lowered.program.workgroup_size(), [32, 2, 1]);
+        assert_eq!(lowered.descriptor().dispatch.workgroup_size, [32, 2, 1]);
+
+        let error = lower_scheduled(&program, &schedule, SchedulePhaseId(9)).unwrap_err();
+        assert!(error.message().contains("phase 9 is absent"));
+        assert!(error.message().contains("Fix:"));
+    }
+    #[test]
+    fn selected_schedule_closes_every_logical_execution_marker() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(64),
+            ],
+            [64, 1, 1],
+            vec![
+                Node::store("out", Expr::logical_index(0), logical_marker_sum()),
+                Node::logical_barrier(MemoryOrdering::Acquire),
+            ],
+        );
+        let schedule = vyre_test_support::selected_schedules::synthetic(1);
+
+        let lowered = lower_scheduled(&program, &schedule, SchedulePhaseId(0)).unwrap();
+
+        assert_eq!(
+            census(lowered.program.entry()),
+            MarkerCensus {
+                logical: 0,
+                physical_axes: [2, 1, 1],
+                logical_barriers: 0,
+                physical_orderings: vec![MemoryOrdering::Acquire],
+            }
+        );
+    }
+
+    #[test]
+    fn raw_physical_lowering_rejects_unresolved_logical_markers() {
+        let cases = [
+            Program::wrapped(
+                Vec::new(),
+                [1, 1, 1],
+                vec![Node::let_bind("logical", Expr::logical_index(0))],
+            ),
+            Program::wrapped(
+                Vec::new(),
+                [1, 1, 1],
+                vec![Node::let_bind("logical", Expr::logical_tile_index(0))],
+            ),
+            Program::wrapped(
+                Vec::new(),
+                [1, 1, 1],
+                vec![Node::let_bind(
+                    "logical",
+                    Expr::logical_within_tile_index(0),
+                )],
+            ),
+            Program::wrapped(
+                Vec::new(),
+                [1, 1, 1],
+                vec![Node::logical_barrier(MemoryOrdering::SeqCst)],
+            ),
+        ];
+
+        for program in cases {
+            let error = lower_physical(&program).expect_err("logical marker must fail closed");
+            assert!(error.message().contains("schedule-free logical"));
+            assert!(error.message().contains("lower_physical"));
+            assert!(error.message().contains("Fix:"));
+        }
+    }
+
+    #[test]
+    fn lower_physical_rejects_invalid_descriptor_before_backend_emit() {
+        let program = Program::wrapped(Vec::new(), [0, 1, 1], Vec::new());
+
+        let error = lower_physical(&program).expect_err("zero dispatch must fail");
+
+        assert!(error.message().contains("KernelDescriptor"));
+        assert!(error.message().contains("Fix:"));
+    }
+
+    #[test]
+    fn lower_physical_lowers_world_allgather_before_descriptor_lowering() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::read("gather_in", 0, DataType::U32).with_count(8),
+                BufferDecl::output("gather_out", 1, DataType::U32).with_count(8),
+            ],
+            [64, 1, 1],
+            vec![Node::AllGather {
+                input: "gather_in".into(),
+                output: "gather_out".into(),
+                group: CommGroup::WORLD,
+            }],
+        );
+
+        let lowered = lower_physical(&program).expect(
+            "Fix: canonical pre-emit must lower WORLD AllGather before descriptor lowering.",
+        );
+
+        assert!(!lowered.program.stats().distributed_collectives());
+        assert!(crate::verify::verify(lowered.descriptor()).is_ok());
+    }
+
+    #[test]
+    fn lower_physical_rejects_transport_collectives_before_descriptor_lowering() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::read("scatter_in", 0, DataType::U32).with_count(8),
+                BufferDecl::output("scatter_out", 1, DataType::U32).with_count(8),
+            ],
+            [64, 1, 1],
+            vec![Node::ReduceScatter {
+                input: "scatter_in".into(),
+                output: "scatter_out".into(),
+                op: CollectiveOp::Sum,
+                group: CommGroup(7),
+            }],
+        );
+
+        let error = lower_physical(&program)
+            .expect_err("Fix: canonical pre-emit must reject collectives that need transport.");
+
+        assert!(error.message().contains("Multi-rank collective transport"));
+    }
+
+    #[test]
+    fn lower_physical_preserves_loop_carrier_swap_snapshot() {
+        let program = Program::wrapped(
+            vec![BufferDecl::output("results", 0, DataType::U32).with_count(1)],
+            [64, 1, 1],
+            vec![
+                Node::let_bind("s0", Expr::u32(1)),
+                Node::let_bind("s1", Expr::u32(2)),
+                Node::Loop {
+                    var: "pc".into(),
+                    from: Expr::u32(0),
+                    to: Expr::u32(4),
+                    body: vec![
+                        Node::let_bind("tmp", Expr::var("s0")),
+                        Node::assign("s0", Expr::var("s1")),
+                        Node::assign("s1", Expr::var("tmp")),
+                    ],
+                },
+                Node::store("results", Expr::u32(0), Expr::var("s0")),
+            ],
+        );
+
+        let lowered = lower_physical(&program).expect("Fix: pre-emit lowering must pass");
+
+        assert!(
+            body_has_s1_end_from_copy(&lowered.descriptor().body),
+            "Fix: lowering must preserve `let tmp = s0` as a Copy snapshot so SWAP writes s1 from old s0 instead of the post-assign s0 carrier"
+        );
+    }
+
+    fn body_has_s1_end_from_copy(body: &KernelBody) -> bool {
+        body.ops.iter().any(|op| {
+            let KernelOpKind::LoopCarrierEnd { name } = &op.kind else {
+                return false;
+            };
+            name.as_ref() == "s1"
+                && op.operands.first().copied().is_some_and(|operand| {
+                    body.ops.iter().any(|producer| {
+                        producer.result == Some(operand)
+                            && matches!(producer.kind, KernelOpKind::Copy)
+                    })
+                })
+        }) || body.child_bodies.iter().any(body_has_s1_end_from_copy)
+    }
+}

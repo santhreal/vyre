@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The file-size gate test that claims the core ratchet beats the audit ceiling now proves it. It named a path only the core table listed, so it asserted a core cap and never exercised the precedence; cap_from takes both tables, and the test injects one path into both and asserts the tighter number wins."

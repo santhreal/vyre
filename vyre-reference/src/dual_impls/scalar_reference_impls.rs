@@ -1,11 +1,11 @@
-use crate::{dual_impls::common, workgroup::Memory};
+use crate::{dual_impls::evaluator, workgroup::Memory};
 use vyre_primitives::{ArithAdd, ArithMul, Clz, Popcount};
 
 macro_rules! impl_binary_u32_reference {
     ($type:ty, $name:literal, $op:path) => {
-        impl common::ReferenceEvaluator for $type {
-            fn evaluate(&self, inputs: &[Memory]) -> Result<Memory, common::EvalError> {
-                common::binary_u32_scalar(inputs, $name, $op)
+        impl evaluator::ReferenceEvaluator for $type {
+            fn evaluate(&self, inputs: &[Memory]) -> Result<Memory, evaluator::EvalError> {
+                evaluator::binary_u32_scalar(inputs, $name, $op)
             }
         }
     };
@@ -13,9 +13,9 @@ macro_rules! impl_binary_u32_reference {
 
 macro_rules! impl_unary_u32_reference {
     ($type:ty, $name:literal, $op:path) => {
-        impl common::ReferenceEvaluator for $type {
-            fn evaluate(&self, inputs: &[Memory]) -> Result<Memory, common::EvalError> {
-                common::unary_u32_scalar(inputs, $name, $op)
+        impl evaluator::ReferenceEvaluator for $type {
+            fn evaluate(&self, inputs: &[Memory]) -> Result<Memory, evaluator::EvalError> {
+                evaluator::unary_u32_scalar(inputs, $name, $op)
             }
         }
     };

@@ -1,8 +1,8 @@
 # Doc-claim-to-test manifest.
 #
 # Every README / docs performance or capability claim that should be
-# regression-gated lands here as one row. The gate
-# (`scripts/check_doc_claim_to_test.sh`) verifies:
+# regression-gated lands here as one row. The `doc-claims` gate
+# verifies:
 #   - each claim's `doc` file exists and contains the `phrase`.
 #   - each claim's `test` file exists.
 #
@@ -11,7 +11,7 @@
 # proving test/bench. Removing a claim requires removing both.
 #
 # This is the "for every claim the docs make, there is a test that
-# fails when the claim becomes false" contract from CLAUDE.md, encoded.
+# fails when the claim becomes false" contract from AGENTS.md, encoded.
 
 [[claim]]
 id = "dispatch_hot_path_budgets"
@@ -34,27 +34,26 @@ phrase = "pipeline-cache entry budget"
 test = "vyre-driver-wgpu/tests/pipeline_cache_contract.rs"
 description = "In-memory pipeline-cache entry-count enforcement (audit item #18)."
 
-[[claim]]
-id = "dispatch_allocation_contract"
-doc = "audits/VYRE_PERFORMANCE_ARCHITECTURE_INVENTORY_2026-04-28.md"
-phrase = "dispatch_allocation_contract.rs"
-test = "vyre-driver-wgpu/tests/dispatch_allocation_contract.rs"
-description = "Per-dispatch heap-allocation budget claim (audit item #10)."
+# primitives_lego_substrate removed. It required vyre-primitives/README.md to
+# contain "reusable Tier 2.5 program builders", a phrase that README does not
+# carry and whose vocabulary the crate retired: the composition folders the
+# phrase described are a live defect that moves to vyre-libs, not the crate's
+# purpose. Its proving test, tests/region_adversarial.rs, pins the span-dedup
+# primitive and could never fail on the substrate claim. The claim below is the
+# one this README states and a test enforces.
 
 [[claim]]
-id = "primitives_lego_substrate"
+id = "primitives_feature_classification"
 doc = "vyre-primitives/README.md"
-phrase = "Tier-2.5 LEGO substrate"
-test = "vyre-primitives/tests/region_adversarial.rs"
-description = "Tier-2.5 LEGO substrate compositional contract claim."
+phrase = "every_cargo_feature_is_classified_exactly_once"
+test = "vyre-primitives/src/organization.rs"
+description = "Every Cargo feature is classified exactly once by the crate's own feature table."
 
-
-[[claim]]
-id = "aot_no_runtime_dependency"
-doc = "vyre-aot/README.md"
-phrase = "removes the entire vyre runtime from the deployed image"
-test = "vyre-aot/tests/compile_smoke.rs"
-description = "AOT-emitted artifacts compile through the full pipeline (compile_smoke.rs)."
+# aot_no_runtime_dependency removed. It required vyre-aot/README.md to contain
+# "removes the entire vyre runtime from the deployed image", and that README makes
+# no claim about runtime removal at all. A manifest of doc claims tracks claims a
+# doc actually makes, so there is nothing here to prove. Restoring the row means
+# first restoring the sentence, with evidence for it.
 
 [[claim]]
 id = "cuda_unsafe_policy"
@@ -63,9 +62,14 @@ phrase = "unsafe FFI"
 test = "vyre-driver-cuda/src/lib.rs"
 description = "CUDA crate documents its unsafe-code policy in lib.rs."
 
-[[claim]]
-id = "tier_b_zero_rust_extensibility"
-doc = "rules/README.md"
-phrase = "No Rust code required"
-test = "rules/op/decode.base64.toml"
-description = "Tier-B rule corpus extensibility  -  zero-Rust contribution path."
+# tier_b_zero_rust_extensibility removed. It pointed at rules/README.md and
+# rules/op/decode.base64.toml, and the repository-root rules/ tree does not
+# exist: there is no rules/op corpus anywhere, and "No Rust code required"
+# survives only inside a 2026-04-28 audit, which is a historical record and not a
+# live claim. Both the doc and the proving artifact are gone, so the row asserted
+# a contract with no subject on either side.
+#
+# Per-crate rule corpora do still exist, in vyre-libs/rules, vyre-lower/rules and
+# vyre-lints/rules. If the zero-Rust op contribution path is still a claim worth
+# gating, it needs a doc that states it and a corpus file that proves it.
+

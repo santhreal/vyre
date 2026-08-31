@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A registration is rejected when the tier it declares is one the crate that minted its id cannot carry, and when the id names no crate at all."

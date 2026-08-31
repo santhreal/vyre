@@ -8,11 +8,15 @@
 use vyre_test_support::consumer_boundary::{
     assert_source_does_not_name_downstream_consumers, ConsumerBoundaryScan,
 };
+use vyre_test_support::monorepo::vyre_workspace_root;
 
 #[test]
 fn primitive_source_does_not_name_downstream_consumers() {
     assert_source_does_not_name_downstream_consumers(
-        ConsumerBoundaryScan::for_crate("vyre-primitives", env!("CARGO_MANIFEST_DIR"))
-            .with_rationale("vyre-primitives is the reusable primitive authority"),
+        ConsumerBoundaryScan::for_crate(
+            "vyre-primitives",
+            vyre_workspace_root().join("vyre-primitives"),
+        )
+        .with_rationale("vyre-primitives is the reusable primitive authority"),
     );
 }

@@ -4,16 +4,16 @@
 //! This root module owns expression evaluation and the split modules own their
 //! state, memory, execution, synchronization, and subgroup contracts.
 
+pub(crate) mod invocation;
 pub(crate) mod memory;
-pub(crate) mod state;
 pub(crate) mod step;
 pub(crate) mod subgroup;
 pub(crate) mod sync;
 
-use memory::{atomic_buffer_mut, output_value, resolve_buffer, HashmapMemory};
 #[cfg(feature = "subgroup-ops")]
-use state::HashmapInvocationSnapshot;
-use state::{create_invocations, run_invocations, HashmapInvocation};
+use invocation::HashmapInvocationSnapshot;
+use invocation::{create_invocations, run_invocations, HashmapInvocation};
+use memory::{atomic_buffer_mut, output_value, resolve_buffer, HashmapMemory};
 use step::{axis_value, eval_call, eval_to_index};
 #[cfg(feature = "subgroup-ops")]
 use subgroup::{eval_subgroup_ballot, eval_subgroup_reduce, eval_subgroup_shuffle};
@@ -49,6 +49,31 @@ pub(crate) enum LaneOrder {
     /// Workgroups and intra-workgroup invocations both stepped in reverse. Only the
     /// STEPPING order changes; every invocation keeps its true global/local ids.
     Reversed,
+    /// Workgroups and intra-workgroup invocations both stepped starting `by` positions
+    /// in, wrapping around. Only the STEPPING order changes; every invocation keeps its
+    /// true global/local ids.
+    ///
+    /// Reversal alone is a symmetric permutation, so a defect that maps lane identity
+    /// onto step position survives any "reverse it back" repair and stays invisible to a
+    /// forward-vs-reversed comparison of a reversal-symmetric program. A rotation is
+    /// asymmetric, so it separates lane identity from step position for real.
+    Rotated(u32),
+}
+
+/// Permute a dispatch-order list in place according to `lane_order`.
+///
+/// One home for the permutation so the workgroup list and the per-workgroup
+/// invocation list cannot drift into stepping different orders.
+fn apply_step_order<T>(items: &mut [T], lane_order: LaneOrder) {
+    match lane_order {
+        LaneOrder::Forward => {}
+        LaneOrder::Reversed => items.reverse(),
+        LaneOrder::Rotated(by) => {
+            if !items.is_empty() {
+                items.rotate_left(by as usize % items.len());
+            }
+        }
+    }
 }
 
 /// A `MemoryOrdering::GridSync` barrier, the grid-wide fence `fuse_programs` inserts
@@ -60,6 +85,8 @@ fn is_grid_sync_barrier(node: &Node) -> bool {
     matches!(
         node,
         Node::Barrier {
+            ordering: MemoryOrdering::GridSync
+        } | Node::LogicalBarrier {
             ordering: MemoryOrdering::GridSync
         }
     )
@@ -73,6 +100,7 @@ fn contains_grid_sync(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| match node {
         Node::Block(inner) => contains_grid_sync(inner),
         Node::Region { body, .. } => contains_grid_sync(body),
+        // Deliberate: a fence under an `If` or `Loop` is not treated as a scope boundary here, because the resident hashmap only flattens unconditional wrappers.
         other => is_grid_sync_barrier(other),
     })
 }
@@ -93,6 +121,7 @@ fn flatten_grid_sync_scopes(nodes: &[Node], out: &mut Vec<Node>) {
             Node::Region { body, .. } if contains_grid_sync(body) => {
                 flatten_grid_sync_scopes(body, out);
             }
+            // Deliberate: only unconditional wrappers flatten, so any other statement is emitted as one opaque step.
             other => out.push(other.clone()),
         }
     }
@@ -170,17 +199,18 @@ pub(crate) fn run_hashmap_reference(
     explicit_grid: Option<[u32; 3]>,
 ) -> Result<Vec<Value>, ReferenceError> {
     #[cfg(feature = "subgroup-ops")]
-    let validation_report = vyre_foundation::validate::validate::validate_with_options(
+    let validation_report = vyre_foundation::validate::validate_with_options(
         program,
         vyre_foundation::validate::ValidationOptions::default().with_backend_capabilities(
             vyre_foundation::validate::BackendCapabilities {
                 supports_subgroup_ops: true,
+                supports_tensor_cores: true,
                 ..Default::default()
             },
         ),
     );
     #[cfg(not(feature = "subgroup-ops"))]
-    let validation_report = vyre_foundation::validate::validate::validate_with_options(
+    let validation_report = vyre_foundation::validate::validate_with_options(
         program,
         vyre_foundation::validate::ValidationOptions::default(),
     );
@@ -188,18 +218,30 @@ pub(crate) fn run_hashmap_reference(
         return Err(ReferenceError::validation(source));
     }
     let mut storage = FxHashMap::default();
+    // The interpreter's ABI is exactly the artifact ABI: one Value per
+    // `is_reference_input` buffer. It used to also accept a vector sized to
+    // every non-workgroup buffer, treating the extra entries as initializers
+    // for backend-allocated outputs. Nothing writes those bytes on any path, so
+    // the compatibility branch bought a fixture the right to be malformed: an
+    // op whose fixture carried a placeholder for a backend-allocated output
+    // passed every CPU lens and was rejected only by the strict artifact ABI on
+    // a device, which is the wrong place and the wrong run to find out.
     let logical_input_count = program
         .buffers()
         .iter()
         .filter(|decl| is_reference_input(decl))
         .count();
-    let legacy_input_count = program
-        .buffers()
-        .iter()
-        .filter(|decl| decl.access() != BufferAccess::Workgroup)
-        .count();
-    let legacy_input_mode =
-        inputs.len() == legacy_input_count && inputs.len() != logical_input_count;
+    if inputs.len() > logical_input_count {
+        return Err(ReferenceError::new(format!(
+            "reference_eval received {} input Value(s) for a program with {logical_input_count} \
+             reference input buffer(s), so {} of them is an unused input Value. Fix: pass one \
+             Value per buffer accepted by `vyre_reference::is_reference_input`, and none for a \
+             backend-allocated output; a placeholder for one is what the artifact ABI rejects on \
+             a device.",
+            inputs.len(),
+            inputs.len() - logical_input_count
+        )));
+    }
     let mut input_index = 0usize;
     let mut output_decls = Vec::new();
     let mut max_output_elements = 0u32;
@@ -218,7 +260,7 @@ pub(crate) fn run_hashmap_reference(
         // The oracle must refuse exactly what the device backends refuse. A
         // backend-allocated output with no static count has no size source on any
         // path: answering it with an empty buffer here certified programs that
-        // CUDA and WGPU both reject, which is a certification hole rather than a
+        // both device backends reject, which is a certification hole rather than a
         // cosmetic inconsistency.
         decl.require_static_readback_size()
             .map_err(|message| ReferenceError::new(message))?;
@@ -234,34 +276,6 @@ pub(crate) fn run_hashmap_reference(
             input_index += 1;
             value.to_bytes()
         } else {
-            if legacy_input_mode {
-                let legacy_output_initializer = inputs.get(input_index).ok_or_else(|| {
-                    ReferenceError::new(format!(
-                        "missing legacy output initializer for buffer `{}`. Fix: pass one Value for each non-workgroup buffer or migrate to logical inputs only.",
-                        decl.name()
-                    ))
-                })?;
-                // Backend-allocated outputs are zero-filled, so this Value's
-                // CONTENTS are unused, but its SIZE is still part of the
-                // caller's contract and must be checked. Discarding it whole
-                // meant an undersized output buffer produced a full-size
-                // result with no diagnostic: the caller believed a 12-byte
-                // output had been written when the interpreter had quietly
-                // substituted its own 16-byte buffer (a Law 10 fail-open).
-                //
-                // The requirement is the LOGICAL output size, not the declared
-                // storage size. A buffer declared with an output byte range is
-                // padded on purpose (a tiled kernel rounds its storage up to a
-                // whole tile, and `relu(n = 0)` declares one element so the
-                // decl stays well-formed), and the caller is expected to size
-                // the placeholder to the range it will actually read back.
-                check_min_byte_len(
-                    decl,
-                    legacy_output_initializer.to_bytes().len(),
-                    logical_output_byte_len(decl, required_bytes),
-                )?;
-                input_index += 1;
-            }
             vec![0u8; required_bytes]
         };
         check_min_byte_len(decl, bytes.len(), required_bytes)?;
@@ -278,7 +292,7 @@ pub(crate) fn run_hashmap_reference(
         );
     }
     if input_index != inputs.len() {
-        return Err(ReferenceError::new("unused input values supplied. Fix: pass exactly one Value per non-workgroup buffer declaration."));
+        return Err(ReferenceError::new("unused input values supplied. Fix: pass exactly one Value per buffer accepted by `vyre_reference::is_reference_input`."));
     }
     if program.workgroup_size().contains(&0) {
         return Err(ReferenceError::new(
@@ -365,11 +379,11 @@ pub(crate) fn run_hashmap_reference(
     } else {
         vec![entry]
     };
-    // Canonical workgroup dispatch order (z,y,x-nested). `LaneOrder::Reversed`
-    // steps this list, and the invocations within each workgroup, back to front
-    // to flip the deterministic last-writer of any non-atomic same-slot store, so a
-    // forward-vs-reversed output comparison surfaces a hidden cross-lane race (see
-    // [`LaneOrder`]). Forward keeps the exact original nested-loop order.
+    // Canonical workgroup dispatch order (z,y,x-nested). A non-`Forward`
+    // [`LaneOrder`] permutes this list, and the invocations within each workgroup, to
+    // flip the deterministic last-writer of any non-atomic same-slot store, so an
+    // output comparison against `Forward` surfaces a hidden cross-lane race. Forward
+    // keeps the exact original nested-loop order.
     let mut wg_coords: Vec<[u32; 3]> = Vec::new();
     for wg_z in 0..workgroup_count_z {
         for wg_y in 0..workgroup_count_y {
@@ -378,20 +392,16 @@ pub(crate) fn run_hashmap_reference(
             }
         }
     }
-    if lane_order == LaneOrder::Reversed {
-        wg_coords.reverse();
-    }
+    apply_step_order(&mut wg_coords, lane_order);
     let mut memory = HashmapMemory::new(storage);
     for &segment in &segments {
         for &wg in &wg_coords {
             memory.reset_workgroup(program)?;
             let mut invocations = create_invocations(program, wg, segment)?;
-            if lane_order == LaneOrder::Reversed {
-                // Reverse the STEP order only; each invocation retains its true
-                // global/local ids and linear_local_index (fields move with the
-                // element), so semantics are unchanged for a race-free program.
-                invocations.reverse();
-            }
+            // Permute the STEP order only; each invocation retains its true
+            // global/local ids and linear_local_index (fields move with the
+            // element), so semantics are unchanged for a race-free program.
+            apply_step_order(&mut invocations, lane_order);
             run_invocations(
                 &mut memory,
                 &mut invocations,
@@ -484,6 +494,9 @@ fn eval_expr(
         Expr::InvocationId { axis } => axis_value(invocation.ids.global, *axis),
         Expr::WorkgroupId { axis } => axis_value(invocation.ids.workgroup, *axis),
         Expr::LocalId { axis } => axis_value(invocation.ids.local, *axis),
+        Expr::LogicalIndex { axis } => axis_value(invocation.ids.global, *axis),
+        Expr::LogicalTileId { axis } => axis_value(invocation.ids.workgroup, *axis),
+        Expr::LogicalWithinTileId { axis } => axis_value(invocation.ids.local, *axis),
         Expr::SubgroupLocalId => {
             #[cfg(feature = "subgroup-ops")]
             {
@@ -703,15 +716,11 @@ fn eval_atomic(
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<Value, ReferenceError> {
-    match (op, expected) {
-        (AtomicOp::CompareExchange, None) => {
-            return Err(ReferenceError::new("compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."));
-        }
-        (AtomicOp::CompareExchange, Some(_)) => {}
-        (_, Some(_)) => {
-            return Err(ReferenceError::new("non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange."));
-        }
-        (_, None) => {}
+    if op == AtomicOp::CompareExchange && expected.is_none() {
+        return Err(ReferenceError::new("compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."));
+    }
+    if op != AtomicOp::CompareExchange && expected.is_some() {
+        return Err(ReferenceError::new("non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange."));
     }
     let idx = eval_to_index(
         index,
@@ -748,6 +757,7 @@ fn eval_atomic(
 /// reading Pass-A's not-yet-written per-block totals). These pin the private splitting
 /// helpers IN the crate that owns them, the end-to-end value parity lives downstream in
 /// `vyre-primitives`'s multi_block/line_index tests, but the split MECHANICS belong here.
+// Inline: covers the crate-private `contains_grid_sync` and `flatten_grid_sync_scopes`, which no integration test can reach.
 #[cfg(test)]
 mod grid_sync_segmentation {
     use super::*;

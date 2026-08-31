@@ -1,15 +1,27 @@
-//! Direct 2D convolution with a 3x3 kernel and unit stride.
+//! 2D convolution with a 3x3 kernel and unit stride, expressed as an
+//! im2col patch row contracted against the kernel:
 //!
-//! `out[y, x] = sum_{ky=0..3, kx=0..3} input[y+ky-1, x+kx-1] * kernel[ky, kx]`
+//! `out[y, x] = sum_{k=0..9} im2col[y*W + x, k] * kernel[k]`
+//!
+//! which is the canonical
+//! `sum_{ky, kx} input[y+ky-1, x+kx-1] * kernel[ky, kx]`.
+//!
+//! The patch row comes from the stencil owner (`crate::builder::stencil::stencil_3x3_taps`),
+//! so the 3x3 neighbour walk lives in exactly one place. The gemm half is the
+//! `k` contraction in the body, unrolled at `k = 9` and fused into the same
+//! invocation: a lane consumes only the patch row it produced, so no patch
+//! matrix is materialized and the registered buffer signature stays
+//! `input` / `kernel` / `output`.
 //!
 //! Boundary handling: zero-padding (samples outside the input
 //! bounds are treated as 0). Input + output are length-`H * W` F32
 //! buffers in row-major layout; kernel is length-9 F32 in
 //! row-major layout (`kernel[ky*3 + kx]`).
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::region::wrap_anonymous;
+use crate::builder::stencil::stencil_3x3_taps;
 
 const OP_ID: &str = "vyre-libs::math::conv::conv2d_3x3_direct";
 
@@ -33,72 +45,40 @@ pub fn conv2d_3x3_direct(
         "Fix: conv2d_3x3_direct h*w overflows u32; reduce dimensions.".to_string()
     })?;
     // Per-output body: one invocation per output pixel.
+    let (y, x) = crate::builder::stencil::decompose_index(&Expr::var("flat"), w);
     let body = vec![
-        Node::let_bind("flat", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("flat", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("flat"), Expr::u32(elements)),
             vec![
-                Node::let_bind("y", Expr::div(Expr::var("flat"), Expr::u32(w))),
-                Node::let_bind("x", Expr::rem(Expr::var("flat"), Expr::u32(w))),
+                Node::let_bind("y", y),
+                Node::let_bind("x", x),
                 Node::let_bind("acc", Expr::f32(0.0)),
-                // Unrolled 3x3 inner loop. Each tap loads
-                // input[y+ky-1, x+kx-1] (zero-padded) and multiplies
-                // by kernel[ky*3 + kx].
-                {
-                    let mut taps: Vec<Node> = Vec::new();
-                    for ky in 0..3u32 {
-                        for kx in 0..3u32 {
-                            // Compute neighbour coordinates with
-                            // unsigned arithmetic + bounds check.
-                            // Source: ky_off = ky as i32 - 1 (i.e.
-                            // -1, 0, +1). Apply via wrapping_add
-                            // and bounds-check `Var(y) + ky_off in
-                            // [0, h)`.
-                            let dy = (ky as i32) - 1;
-                            let dx = (kx as i32) - 1;
-                            let y_in_bounds = if dy < 0 {
-                                Expr::ge(Expr::var("y"), Expr::u32((-dy) as u32))
-                            } else {
-                                Expr::lt(
-                                    Expr::add(Expr::var("y"), Expr::u32(dy as u32)),
-                                    Expr::u32(h),
-                                )
-                            };
-                            let x_in_bounds = if dx < 0 {
-                                Expr::ge(Expr::var("x"), Expr::u32((-dx) as u32))
-                            } else {
-                                Expr::lt(
-                                    Expr::add(Expr::var("x"), Expr::u32(dx as u32)),
-                                    Expr::u32(w),
-                                )
-                            };
-                            let ny = if dy < 0 {
-                                Expr::sub(Expr::var("y"), Expr::u32((-dy) as u32))
-                            } else if dy > 0 {
-                                Expr::add(Expr::var("y"), Expr::u32(dy as u32))
-                            } else {
-                                Expr::var("y")
-                            };
-                            let nx = if dx < 0 {
-                                Expr::sub(Expr::var("x"), Expr::u32((-dx) as u32))
-                            } else if dx > 0 {
-                                Expr::add(Expr::var("x"), Expr::u32(dx as u32))
-                            } else {
-                                Expr::var("x")
-                            };
-                            let load_idx = Expr::add(Expr::mul(ny, Expr::u32(w)), nx);
-                            let kernel_val = Expr::load(kernel, Expr::u32(ky * 3 + kx));
-                            let in_bounds = Expr::and(y_in_bounds, x_in_bounds);
-                            let tap = Expr::select(
-                                in_bounds,
-                                Expr::mul(Expr::load(input, load_idx), kernel_val),
-                                Expr::f32(0.0),
-                            );
-                            taps.push(Node::assign("acc", Expr::add(Expr::var("acc"), tap)));
-                        }
-                    }
-                    Node::Block(taps)
-                },
+                // gemm over the im2col patch row: patch column k times
+                // kernel[k], accumulated across the nine taps. A column
+                // outside the image is zero-padding, so it contributes
+                // exactly 0.0 instead of a product with the kernel tap.
+                Node::Block(
+                    stencil_3x3_taps(&Expr::var("y"), &Expr::var("x"), h, w)
+                        .into_iter()
+                        .map(|tap| {
+                            Node::assign(
+                                "acc",
+                                Expr::add(
+                                    Expr::var("acc"),
+                                    Expr::select(
+                                        tap.in_bounds.clone(),
+                                        Expr::mul(
+                                            Expr::load(input, tap.bounded_input_index()),
+                                            Expr::load(kernel, Expr::u32(tap.column)),
+                                        ),
+                                        Expr::f32(0.0),
+                                    ),
+                                ),
+                            )
+                        })
+                        .collect(),
+                ),
                 Node::store(output, Expr::var("flat"), Expr::var("acc")),
             ],
         ),
@@ -111,29 +91,18 @@ pub fn conv2d_3x3_direct(
             BufferDecl::output(output, 2, DataType::F32).with_count(elements),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| {
-            conv2d_3x3_direct("input", "kernel", "output", 4, 4).unwrap_or_else(|error| {
-                crate::builder::invalid_builder_trap_program(
-                    OP_ID,
-                    "output",
-                    DataType::F32,
-                    error,
-                )
-            })
-        }),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || {
+            conv2d_3x3_direct("input", "kernel", "output", 4, 4)
+                .unwrap_or_else(|error| super::trap_f32_output_program(OP_ID, "output", error))
+        },
+        Some(|| {
             // 4x4 input = identity matrix; 3x3 box kernel
             let input = crate::fixture_bytes::f32_bytes(&[
                 1.0, 0.0, 0.0, 0.0,
@@ -144,37 +113,34 @@ inventory::submit! {
             let kernel = crate::fixture_bytes::f32_bytes(&[1.0; 9]);
             vec![vec![input, kernel]]
         }),
-        expected_output: Some(|| {
-            // box-kernel convolution of identity matrix with
-            // zero-padding: each output pixel is the sum of the 3x3
-            // window around it, where the window is intersected
-            // with the input bounds. Computed via the naive
-            // reference in the test below  -  this is just the
-            // canonical fixture output for the inventory entry.
-            // For 4x4 identity with 3x3 box kernel:
-            // out[y, x] = number of 1.0 entries in the 3x3 window
-            //              centered at (y, x), zero-padded
-            // Computed offline:
-            // [[2, 2, 1, 0],
-            //  [2, 3, 2, 1],
-            //  [1, 2, 3, 2],
-            //  [0, 1, 2, 2]]
-            vec![vec![crate::fixture_bytes::f32_bytes(&[
-                2.0, 2.0, 1.0, 0.0,
-                2.0, 3.0, 2.0, 1.0,
-                1.0, 2.0, 3.0, 2.0,
-                0.0, 1.0, 2.0, 2.0,
-            ])]]
+        Some(|| {
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x80, 0x3f, // 1.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x40, 0x40, // 3.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x80, 0x3f, // 1.0
+                0x00, 0x00, 0x80, 0x3f, // 1.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x40, 0x40, // 3.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0x80, 0x3f, // 1.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+            ]]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {
         bytes
@@ -206,17 +172,15 @@ mod tests {
         out
     }
 
-    fn run(h: u32, w: u32, input: &[f32], kernel: &[f32]) -> Vec<f32> {
-        let prog = conv2d_3x3_direct("input", "kernel", "output", h, w).expect("Fix: build");
-        let outputs = vyre_reference::reference_eval(
-            &prog,
-            &[
-                Value::from(f32_bytes(input)),
-                Value::from(f32_bytes(kernel)),
-            ],
+    fn convolved(h: u32, w: u32, input: &[f32], kernel: &[f32]) -> Vec<f32> {
+        let program = conv2d_3x3_direct("input", "kernel", "output", h, w).expect("Fix: build");
+        decode(
+            &crate::fixture_bytes::eval_bytes(
+                "conv2d_3x3_direct",
+                &program,
+                vec![f32_bytes(input), f32_bytes(kernel)],
+            )[0],
         )
-        .expect("Fix: conv2d_3x3_direct must execute in the reference interpreter.");
-        decode(&outputs[0].to_bytes())
     }
 
     /// Direct 3x3 conv on a 4x4 identity matrix with box kernel
@@ -227,7 +191,7 @@ mod tests {
             1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
         ];
         let kernel = vec![1.0; 9];
-        let actual = run(4, 4, &input, &kernel);
+        let actual = convolved(4, 4, &input, &kernel);
         let expected = naive_conv2d_3x3(&input, &kernel, 4, 4);
         assert_eq!(actual.len(), 16);
         for (a, e) in actual.iter().zip(expected.iter()) {
@@ -241,7 +205,7 @@ mod tests {
     fn conv2d_identity_kernel_passes_input_through() {
         let input: Vec<f32> = (0..16).map(|i| i as f32 - 7.5).collect();
         let kernel = vec![0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(4, 4, &input, &kernel);
+        let actual = convolved(4, 4, &input, &kernel);
         for (a, e) in actual.iter().zip(input.iter()) {
             assert!((a - e).abs() <= 1.0e-5, "{a} != {e}");
         }
@@ -261,7 +225,7 @@ mod tests {
         for _ in 0..30 {
             let input: Vec<f32> = (0..25).map(|_| next()).collect();
             let kernel: Vec<f32> = (0..9).map(|_| next()).collect();
-            let actual = run(5, 5, &input, &kernel);
+            let actual = convolved(5, 5, &input, &kernel);
             let expected = naive_conv2d_3x3(&input, &kernel, 5, 5);
             for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
                 assert!(
@@ -282,7 +246,7 @@ mod tests {
     fn conv2d_1x1_image() {
         let input = vec![5.0_f32];
         let kernel = vec![0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(1, 1, &input, &kernel);
+        let actual = convolved(1, 1, &input, &kernel);
         assert_eq!(actual.len(), 1);
         assert!(
             (actual[0] - 5.0).abs() <= 1.0e-5,
@@ -296,7 +260,7 @@ mod tests {
     fn conv2d_nan_input_propagates() {
         let input = vec![f32::NAN; 16];
         let kernel = vec![1.0_f32; 9];
-        let actual = run(4, 4, &input, &kernel);
+        let actual = convolved(4, 4, &input, &kernel);
         for (i, &v) in actual.iter().enumerate() {
             assert!(
                 v.is_nan(),
@@ -310,7 +274,7 @@ mod tests {
     fn conv2d_inf_input_propagates() {
         let input = vec![f32::INFINITY; 16];
         let kernel = vec![1.0_f32; 9];
-        let actual = run(4, 4, &input, &kernel);
+        let actual = convolved(4, 4, &input, &kernel);
         for (i, &v) in actual.iter().enumerate() {
             assert!(
                 v.is_infinite(),

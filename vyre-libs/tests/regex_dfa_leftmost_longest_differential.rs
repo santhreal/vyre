@@ -15,13 +15,13 @@
 //! recall-correct today (verified: the 4 `ghp_…{36}` parity cases pass). BOUNDED
 //! RANGE `{n,m}` repeats are intentionally EXCLUDED, they are a known, tracked bug
 //! (the single-pass DFA over-reports every admissible end `n..=m` instead of the one
-//! leftmost-longest end; vyre `BACKLOG.md` item 18/27). Locking the range contract
+//! leftmost-longest end). Locking the range contract
 //! belongs with that fix, not here, so this suite stays green and pins the
 //! correct-today semantics as a regression floor beneath the range work.
-#![cfg(feature = "matching-regex")]
+#![cfg(feature = "pattern-regex")]
 
 use proptest::prelude::*;
-use vyre_libs::scan::regex_dfa::build_regex_dfa_unanchored;
+use vyre_libs::pattern::build_regex_dfa_unanchored;
 
 /// Build the unanchored DFA and run the production single-pass scan (mirrors
 /// `regex_dfa.rs`): follow one transition per byte off the public transition table;

@@ -26,7 +26,7 @@ Release contract:
 - No hidden CPU fallback language in production backend paths.
 - Audit, findings, and plan reports must live under `.audits/` or the project `audits/` archive; stray root-level reports block release.
 - Hygiene scanning covers Vyre production source, tests, release tooling, release documentation, and the release-critical workflow and branch-protection controls.
-- Release CI hygiene covers `.github/workflows/architectural-invariants.yml`, `.github/CI_REQUIRED.md`, `scripts/apply-branch-protection.sh`, and `scripts/check_architectural_invariants.sh` so required branch-protection contexts cannot drift from implemented workflows.
+- Release CI hygiene covers `.github/workflows/architectural-invariants.yml`, `.github/CI_REQUIRED.md`, `scripts/apply-branch-protection.sh`, and `xtask/src/gates/layering.rs` so required branch-protection contexts cannot drift from implemented workflows.
 - Hidden-fallback scanning rejects silent no-GPU skips, `GpuUnavailable` skip/fallback branches, CPU/software fallback wording, and `cfg(not(feature = "gpu"))` GPU test escapes.
 - Benchmark hygiene rejects synthetic GPU timing and known fake timing formulas.
 - No raw workspace `cargo` commands in release tooling; use `cargo_full`.

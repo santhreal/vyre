@@ -1,22 +1,25 @@
 //! CUDA backend: device lifecycle, buffer management, and kernel dispatch.
 
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Arc, Mutex};
 
 use dashmap::DashMap;
 
 use cudarc::driver::CudaContext;
 use smallvec::SmallVec;
-use vyre_driver::binding::{BindingPlan, BindingRole};
-use vyre_driver::speculate::SpeculationMode;
 use vyre_driver::validation::ValidationCache;
+use vyre_driver::SpeculationMode;
 use vyre_driver::{resolve_fixpoint_iterations, BackendError, DispatchConfig, LaunchPlan};
+use vyre_driver::{BindingPlan, BindingRole};
 use vyre_foundation::ir::Program;
+use vyre_megakernel::EmittedResources;
 
-use super::allocations::{DeviceAllocationPool, PinnedHostAllocationPool};
+use super::allocations::DeviceAllocationPool;
 use super::module_cache::{
-    CudaModuleCache, CudaPtxSourceCache, CudaPtxSourceCacheSnapshot, ModuleCacheKey,
+    CudaModuleCache, CudaPtxSourceCache, CudaPtxSourceCacheSnapshot, ModuleCacheKey, ModuleGlobals,
     PtxSourceCacheKey,
 };
+use super::module_globals::*;
+use super::pinned_allocations::PinnedHostAllocationPool;
 use super::plan::{compute_ordered_output_indices, CudaDispatchPlan};
 use super::ptx_target::select_loadable_ptx_target_sm;
 use super::resident::{
@@ -30,583 +33,6 @@ use crate::device::{CudaDeviceCaps, CudaDeviceHandle};
 const TRANSIENT_ALLOCATION_POOL_BYTES: usize = 256 * 1024 * 1024;
 const PINNED_HOST_POOL_BYTES: usize = 128 * 1024 * 1024;
 const CUDA_LAUNCH_RESOURCE_CACHE: usize = 128;
-
-#[cfg(test)]
-mod tests {
-    /// A counter at exactly TWICE the ceiling is the missed-reset signature, and
-    /// it must fire.
-    ///
-    /// This is the literal shape of the bug that shipped. Launch 1 starts from a
-    /// zero counter and drives it to `barriers * gridSize`. Launch 2 on the same
-    /// module without a reset starts from that value: every barrier finds its
-    /// release target already satisfied, becomes a pass-through, and the kernel
-    /// returns success with wrong cross-block data. Because a CTA records its
-    /// arrival BEFORE it spins, the pass-through arrivals still count, so the
-    /// counter lands at exactly 2x. That is the value asserted here. If this stops
-    /// firing, the silent-wrong-answer mode is back and the only symptom is bad
-    /// output: no error, no log line, no failed launch.
-    #[test]
-    fn counter_at_exactly_twice_the_ceiling_is_the_missed_reset_signature_and_fires() {
-        // One barrier over 4 blocks: ceiling 4, a second un-reset launch reaches 8.
-        let error = super::verify_arrival_count(8, 4).expect_err(
-            "Fix: 8 arrivals against a ceiling of 4 is a missed reset and must be refused.",
-        );
-        let message = error.to_string();
-        assert!(
-            message.contains('8') && message.contains('4'),
-            "Fix: the refusal must name the observed count and the ceiling, because the whole \
-             reason this bug survived is that the failure was silent. Got: {message}"
-        );
-        assert!(
-            message.contains("_vyre_grid_barrier"),
-            "Fix: the refusal must name the counter symbol so a reader can find it. Got: {message}"
-        );
-        assert!(
-            message.contains("enqueue_reset"),
-            "Fix: the refusal must name the call that was skipped, so the fix does not require \
-             reading this module. Got: {message}"
-        );
-        // A fourth un-reset launch lands at 4x and must also fire: the check is
-        // not an equality test that only recognizes the doubled case.
-        assert!(
-            super::verify_arrival_count(16, 4).is_err(),
-            "Fix: any multiple of the ceiling is a missed reset and must fire, not just 2x."
-        );
-    }
-
-    /// One arrival past the ceiling must fire.
-    ///
-    /// The boundary matters because a PARTIAL reset (a memset that landed on the
-    /// wrong stream, or a reset racing a still-spinning grid from a previous
-    /// launch) does not produce a clean multiple. Slack here would let exactly
-    /// that case through, and it is the case the per-module gate exists to
-    /// prevent, so the audit must not soften the boundary the gate defends.
-    #[test]
-    fn counter_one_past_the_ceiling_fires() {
-        assert!(
-            super::verify_arrival_count(5, 4).is_err(),
-            "Fix: exceeding the ceiling by one must fire; slack would hide a partial reset."
-        );
-        assert!(
-            super::verify_arrival_count(1021, 1020).is_err(),
-            "Fix: the boundary must hold at the real cooperative grid width measured on this host \
-             (1020 blocks at workgroup 256), not only at toy values."
-        );
-    }
-
-    /// A counter exactly AT the ceiling must pass.
-    ///
-    /// This is what a healthy launch produces: every block arrives at every
-    /// barrier exactly once. An audit that fired here would refuse every correct
-    /// cooperative dispatch, which is not a conservative failure: it would force
-    /// whoever hit it to delete the check, and the silent bug would come back with
-    /// nothing left watching for it.
-    #[test]
-    fn counter_exactly_at_the_ceiling_passes() {
-        assert!(
-            super::verify_arrival_count(4, 4).is_ok(),
-            "Fix: a healthy launch lands exactly at the ceiling and must pass."
-        );
-        assert!(
-            super::verify_arrival_count(8160, 8160).is_ok(),
-            "Fix: a healthy launch must pass at a realistic width too (8 barriers over 1020 \
-             blocks), where an accidental narrower integer type would also show up."
-        );
-    }
-
-    /// A counter BELOW the ceiling must pass, and this is the case that documents
-    /// why exact equality was rejected.
-    ///
-    /// A grid-uniform early exit legitimately skips later barriers. `exatok`'s
-    /// convergence loop takes that exit on every converged encode: the grid agrees
-    /// it is done and returns before reaching the remaining barrier sites, leaving
-    /// the counter below `barriers * gridSize`. Exact equality would refuse that
-    /// on the normal path, and a check that cries wolf on the normal path gets
-    /// deleted rather than debugged. The bound is therefore one-sided ON PURPOSE,
-    /// and it still catches the real bug because a missed reset overshoots.
-    #[test]
-    fn counter_below_the_ceiling_passes_because_a_grid_uniform_early_exit_is_legitimate() {
-        assert!(
-            super::verify_arrival_count(2, 4).is_ok(),
-            "Fix: an early exit that skips later barriers lands below the ceiling and is correct."
-        );
-        assert!(
-            super::verify_arrival_count(1020, 8160).is_ok(),
-            "Fix: a converged encode that clears only the first of 8 barrier sites over 1020 \
-             blocks is correct and must not be refused."
-        );
-    }
-
-    /// A zero counter must pass, and it IS reachable.
-    ///
-    /// Two ways to reach it, both correct. A grid-uniform early exit that returns
-    /// before the FIRST barrier leaves the counter at the value the pre-launch
-    /// memset wrote, which is zero. And a program whose barrier sits inside a
-    /// region no block enters (a loop with a zero trip count on this input) never
-    /// arrives at all. Neither is a bug, so zero must not fire. It is worth
-    /// stating because zero is also what a BROKEN read would return, and the
-    /// distinction is that a broken read is caught by `d2h_sync_checked`
-    /// propagating its driver error rather than by this comparison.
-    #[test]
-    fn zero_counter_passes_and_is_reachable_by_an_early_exit_before_the_first_barrier() {
-        assert!(
-            super::verify_arrival_count(0, 4).is_ok(),
-            "Fix: a grid that exits before its first barrier leaves the counter at zero, which is \
-             correct and must not fire."
-        );
-        assert!(
-            super::verify_arrival_count(0, 8160).is_ok(),
-            "Fix: zero must pass regardless of how large the ceiling is."
-        );
-    }
-
-    /// The ceiling for a REAL multi-barrier program must be the observed barrier
-    /// count times the block count, asserted as an exact number.
-    ///
-    /// This closes the failure mode that a synthetic-PTX test cannot see: a
-    /// ceiling computed too HIGH never fires, and the audit silently becomes
-    /// decoration. That is the same failure class as the original no-op barrier,
-    /// where everything reported success and only the data was wrong. So the count
-    /// is taken from PTX the real emitter produced for a real program rather than
-    /// from a hand-written string.
-    ///
-    /// `persistent_fixpoint_grid` emits two grid barriers per wave (one after the
-    /// transfer body, one after the per-word compare and ping-pong), so a
-    /// four-wave program carries eight barrier sites. If the emitter ever merges
-    /// or drops barrier markers, the marker count and this ceiling disagree with
-    /// the barrier count the kernel actually executes, and a missed reset stops
-    /// being detectable at the launch that causes it.
-    #[test]
-    fn four_wave_fixpoint_ceiling_is_eight_barriers_times_the_block_count() {
-        use vyre_foundation::ir::{Expr, Node};
-
-        const WORDS: u32 = 64;
-        const WAVES: u32 = 4;
-        let transfer_body = vec![Node::if_then(
-            Expr::lt(Expr::InvocationId { axis: 0 }, Expr::u32(WORDS)),
-            vec![Node::store(
-                "next",
-                Expr::InvocationId { axis: 0 },
-                Expr::bitor(
-                    Expr::load("current", Expr::InvocationId { axis: 0 }),
-                    Expr::u32(1),
-                ),
-            )],
-        )];
-        let program = vyre_primitives::fixpoint::persistent_fixpoint::persistent_fixpoint_grid(
-            transfer_body,
-            "current",
-            "next",
-            "changed",
-            WORDS,
-            WAVES,
-        );
-
-        let mut config = vyre_driver::DispatchConfig::default();
-        config.cooperative = true;
-        let ptx = crate::codegen::program_to_ptx_for_sm(&program, &config, 90)
-            .expect("Fix: the four-wave persistent fixpoint program must emit PTX.");
-
-        let barriers = ptx.matches(super::GRID_BARRIER_PTX_MARKER).count();
-        assert_eq!(
-            barriers, 8,
-            "Fix: four waves emit two grid barriers each, so eight barrier markers must appear. \
-             Got {barriers}. A lower count means the ceiling under-counts arrivals and the audit \
-             would refuse healthy launches; a higher count means it over-counts and the audit \
-             stops detecting a missed reset."
-        );
-
-        // 1020 blocks is the cooperative block ceiling measured on this host at
-        // workgroup 256, so this is the real geometry the audit runs against.
-        let ceiling = super::grid_barrier_arrival_ceiling(&ptx, [1020, 1, 1])
-            .expect("Fix: a program with barrier markers must yield a ceiling.");
-        assert_eq!(
-            ceiling, 8160,
-            "Fix: eight barriers over 1020 blocks admit exactly 8160 arrivals (8 * 1020). A \
-             ceiling that ignored the barrier count would compute 1020 and refuse this program's \
-             every healthy launch; one that over-counted would never fire at all."
-        );
-        // Same program, narrower grid: the ceiling must track the grid, not latch.
-        assert_eq!(
-            super::grid_barrier_arrival_ceiling(&ptx, [4, 1, 1])
-                .expect("a 4-block grid yields a ceiling"),
-            32,
-            "Fix: the ceiling must scale with the launch grid; eight barriers over 4 blocks admit \
-             32 arrivals."
-        );
-    }
-
-    /// The ceiling must be `barriers * blocks`, computed from real PTX text.
-    ///
-    /// A ceiling that ignored the barrier count would refuse every legitimate
-    /// multi-barrier launch; one that ignored the grid would refuse every launch
-    /// wider than one block. Both are false positives that end with the check
-    /// deleted, so the arithmetic is asserted against exact values.
-    #[test]
-    fn arrival_ceiling_is_barrier_count_times_block_count() {
-        let one = "// grid.sync barrier #0 target\nbar.sync 0;\n";
-        assert_eq!(
-            super::grid_barrier_arrival_ceiling(one, [4, 1, 1])
-                .expect("one barrier over 4 blocks is representable"),
-            4,
-            "Fix: one barrier over 4 blocks admits exactly 4 arrivals."
-        );
-        let three = "// grid.sync barrier #0\n// grid.sync barrier #1\n// grid.sync barrier #2\n";
-        assert_eq!(
-            super::grid_barrier_arrival_ceiling(three, [4, 1, 1])
-                .expect("three barriers over 4 blocks is representable"),
-            12,
-            "Fix: three barriers over 4 blocks admits 12 arrivals; a ceiling pinned to one \
-             barrier would refuse this launch at 8 arrivals."
-        );
-        // Blocks multiply across all three grid dimensions.
-        assert_eq!(
-            super::grid_barrier_arrival_ceiling(one, [4, 3, 2])
-                .expect("4x3x2 blocks is representable"),
-            24,
-            "Fix: the block count is the product of all three grid dimensions."
-        );
-        // A 1020-block cooperative grid, the measured exatok ceiling at
-        // workgroup 256 on this host, with one barrier.
-        assert_eq!(
-            super::grid_barrier_arrival_ceiling(one, [1020, 1, 1])
-                .expect("1020 blocks is representable"),
-            1020,
-            "Fix: the real cooperative grid width must produce a ceiling equal to its block count."
-        );
-    }
-
-    /// PTX with no barrier marker must be REFUSED, not silently unbounded.
-    ///
-    /// The audit derives its bound by counting an emitter comment marker. If that
-    /// marker is renamed, a zero count would make the ceiling zero and every
-    /// launch would look infinitely healthy, quietly disabling the check that
-    /// exists to catch a silent bug. Failing closed here means a rename shows up
-    /// as a loud refusal instead of as lost coverage.
-    #[test]
-    fn missing_barrier_marker_fails_closed_instead_of_disabling_the_audit() {
-        let error = super::grid_barrier_arrival_ceiling("bar.sync 0;\n", [4, 1, 1]).expect_err(
-            "Fix: PTX with no barrier marker must refuse, because a zero ceiling would silently \
-             disable the arrival audit.",
-        );
-        let message = error.to_string();
-        assert!(
-            message.contains(super::GRID_BARRIER_PTX_MARKER),
-            "Fix: the refusal must name the marker it looked for so the fix is obvious. \
-             Got: {message}"
-        );
-    }
-
-    /// An overflowing ceiling must refuse rather than wrap.
-    ///
-    /// A wrapped ceiling can land BELOW a healthy arrival count and refuse
-    /// correct work, or land absurdly high and accept a stale counter. Neither is
-    /// acceptable for a check whose job is to be trusted.
-    #[test]
-    fn overflowing_arrival_ceiling_is_refused_rather_than_wrapped() {
-        let mut ptx = String::new();
-        for index in 0..4 {
-            ptx.push_str(&format!("// grid.sync barrier #{index}\n"));
-        }
-        // u32::MAX blocks per dimension across three dimensions overflows u64
-        // when multiplied by 4 barriers.
-        let grid = [u32::MAX, u32::MAX, u32::MAX];
-        assert!(
-            super::grid_barrier_arrival_ceiling(&ptx, grid).is_err(),
-            "Fix: an overflowing ceiling must refuse; a wrapped ceiling would either refuse \
-             healthy launches or accept a stale counter."
-        );
-    }
-
-    /// Is the gate's busy flag set right now?
-    fn gate_is_busy(gate: &std::sync::Arc<super::GridBarrierGate>) -> bool {
-        *gate
-            .busy
-            .lock()
-            .expect("Fix: the gate mutex must not be poisoned inside this test.")
-    }
-
-    /// A lease holding the gate but addressing no counter.
-    ///
-    /// Exercises the gate lifecycle without a CUDA context: the release
-    /// short-circuits before any stream work, so ordering and freeing are
-    /// observable on the host.
-    fn gate_only_lease(gate: &std::sync::Arc<super::GridBarrierGate>) -> super::GridBarrierLease {
-        let guard = super::GridBarrierGate::acquire(gate)
-            .expect("Fix: a fresh gate must be acquirable by the first caller.");
-        super::GridBarrierLease {
-            target: None,
-            guard: Some(guard),
-            arrival_ceiling: 0,
-        }
-    }
-
-    fn test_error(message: &str) -> super::BackendError {
-        super::BackendError::DispatchFailed {
-            code: None,
-            message: message.to_string(),
-        }
-    }
-
-    /// The gate must still be HELD while the synchronize runs.
-    ///
-    /// # The bug this locks out
-    ///
-    /// Freeing the gate before the synchronize returns lets the next sequence
-    /// acquire the counter and memset it to zero while this launch's grid is
-    /// still running, so that grid's remaining barriers wait for a release target
-    /// that can no longer be reached. The symptom is a HANG rather than an error,
-    /// and it reproduces only under cooperative launch. Asserting the gate ends
-    /// up free is not enough: that holds for the broken order too. This asserts
-    /// the gate is still held DURING the wait.
-    #[test]
-    fn release_in_order_holds_the_gate_until_the_synchronize_returns() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
-        let guard = super::GridBarrierGate::acquire(&gate)
-            .expect("Fix: a fresh gate must be acquirable by the first caller.");
-        assert!(
-            gate_is_busy(&gate),
-            "Fix: acquiring the gate must set the busy flag, or the whole exclusion is inert."
-        );
-        let held_during_synchronize = std::cell::Cell::new(false);
-        let result = super::release_in_order(
-            Some(guard),
-            || {
-                held_during_synchronize.set(gate_is_busy(&gate));
-                Ok(())
-            },
-            || Ok(()),
-        );
-        assert!(result.is_ok(), "Fix: a clean release must report success.");
-        assert!(
-            held_during_synchronize.get(),
-            "Fix: the gate must remain held while the stream synchronize runs. Releasing first \
-             lets the next launch reset the counter under a live grid, which hangs instead of \
-             erroring."
-        );
-        assert!(
-            !gate_is_busy(&gate),
-            "Fix: the gate must be free once the release returns, or every later cooperative \
-             launch of this module blocks forever."
-        );
-    }
-
-    /// Synchronize, then audit, then free: exactly that order.
-    ///
-    /// # The bug this locks out
-    ///
-    /// The audit reads the counter over the bus with a blocking copy, so it is
-    /// only meaningful once the stream is quiescent. Auditing before the
-    /// synchronize reads a counter that arrivals are still landing in, which
-    /// under-reports and makes a missed reset invisible; auditing after the gate
-    /// is freed races the next sequence's memset and can read that instead.
-    #[test]
-    fn release_in_order_audits_after_the_synchronize_and_while_the_gate_is_held() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
-        let guard = super::GridBarrierGate::acquire(&gate)
-            .expect("Fix: a fresh gate must be acquirable by the first caller.");
-        let steps = std::cell::RefCell::new(Vec::new());
-        let audit_saw_gate_held = std::cell::Cell::new(false);
-        let result = super::release_in_order(
-            Some(guard),
-            || {
-                steps.borrow_mut().push("synchronize");
-                Ok(())
-            },
-            || {
-                steps.borrow_mut().push("audit");
-                audit_saw_gate_held.set(gate_is_busy(&gate));
-                Ok(())
-            },
-        );
-        assert!(result.is_ok(), "Fix: a clean release must report success.");
-        assert_eq!(
-            *steps.borrow(),
-            vec!["synchronize", "audit"],
-            "Fix: the audit must read the counter only after the stream is quiescent, or a \
-             missed reset goes unnoticed."
-        );
-        assert!(
-            audit_saw_gate_held.get(),
-            "Fix: the audit must run while the gate is still held, or it races the next \
-             sequence's memset of the same counter."
-        );
-    }
-
-    /// A failed synchronize must free the gate and skip the audit.
-    ///
-    /// # The bug this locks out
-    ///
-    /// The audit's device-to-host read is only sound once the stream is
-    /// quiescent, which a failed synchronize has not established, so running it
-    /// anyway reads a counter with launches possibly still in flight and can
-    /// refuse healthy work. Returning early instead would leave the busy flag set
-    /// and block every later cooperative launch of the module.
-    #[test]
-    fn release_in_order_frees_the_gate_and_skips_the_audit_when_the_synchronize_fails() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
-        let guard = super::GridBarrierGate::acquire(&gate)
-            .expect("Fix: a fresh gate must be acquirable by the first caller.");
-        let audited = std::cell::Cell::new(false);
-        let result = super::release_in_order(
-            Some(guard),
-            || Err(test_error("synchronize failed")),
-            || {
-                audited.set(true);
-                Ok(())
-            },
-        );
-        let message = match result {
-            Err(super::BackendError::DispatchFailed { message, .. }) => message,
-            other => panic!("Fix: a failed synchronize must surface its error. Got: {other:?}"),
-        };
-        assert_eq!(
-            message, "synchronize failed",
-            "Fix: the synchronize error must reach the caller unchanged, not be replaced by an \
-             audit error from an unsynchronized read."
-        );
-        assert!(
-            !audited.get(),
-            "Fix: the audit must not run after a failed synchronize; its counter read is only \
-             sound once the stream is quiescent."
-        );
-        assert!(
-            !gate_is_busy(&gate),
-            "Fix: a failed synchronize must still free the gate, or one transient stream error \
-             wedges every later cooperative launch of this module."
-        );
-    }
-
-    /// A failed audit must free the gate before reporting.
-    ///
-    /// # The bug this locks out
-    ///
-    /// The audit fires exactly when a stale counter is detected, which is already
-    /// a bad day. Propagating that refusal without freeing the gate would turn a
-    /// diagnosable wrong-data error into a permanent block on every later
-    /// cooperative launch of the same module, hiding the message that names the
-    /// real defect.
-    #[test]
-    fn release_in_order_frees_the_gate_when_the_audit_refuses() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
-        let guard = super::GridBarrierGate::acquire(&gate)
-            .expect("Fix: a fresh gate must be acquirable by the first caller.");
-        let result =
-            super::release_in_order(Some(guard), || Ok(()), || Err(test_error("stale counter")));
-        assert!(
-            result.is_err(),
-            "Fix: an audit refusal must reach the caller; a stale counter means the kernel's \
-             cross-block reads were wrong even though the launch reported success."
-        );
-        assert!(
-            !gate_is_busy(&gate),
-            "Fix: an audit refusal must still free the gate, or the error that names the defect \
-             is followed by a hang that hides it."
-        );
-    }
-
-    /// The launch runs while the gate is held, and its value is returned.
-    ///
-    /// # The bug this locks out
-    ///
-    /// The lease exists to give one launch sequence exclusive use of a module's
-    /// counter. A helper that released before running the launch, or that dropped
-    /// the launch's return value, would satisfy the type checker while removing
-    /// the exclusion the counter depends on.
-    #[test]
-    fn launch_then_release_runs_the_launch_while_the_gate_is_held() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
-        let lease = gate_only_lease(&gate);
-        let held_during_launch = std::cell::Cell::new(false);
-        let launched =
-            lease.launch_then_release(std::ptr::null_mut(), "gate lifetime unit test", |_lease| {
-                held_during_launch.set(gate_is_busy(&gate));
-                Ok(7_u32)
-            });
-        assert_eq!(
-            launched.expect("Fix: a successful launch closure must return its value."),
-            7,
-            "Fix: the launch closure's value must reach the caller unchanged."
-        );
-        assert!(
-            held_during_launch.get(),
-            "Fix: the launch must run while the lease holds the gate, or two sequences share one \
-             module's arrival counter."
-        );
-        assert!(
-            !gate_is_busy(&gate),
-            "Fix: the gate must be free once the helper returns."
-        );
-    }
-
-    /// A failed launch must still end the lease, and must still be reported.
-    ///
-    /// # The bug this locks out
-    ///
-    /// This is the case the hand-written shape at the four call sites got wrong
-    /// by construction: `launched?` placed before the release returns early, the
-    /// guard drops through `Drop` instead of through the release, and the gate is
-    /// freed WITHOUT the stream synchronize. The next sequence then resets the
-    /// counter under a grid that may still be spinning. Swallowing the error
-    /// instead would be worse still: the launch failure would vanish and the
-    /// dispatch would report success.
-    #[test]
-    fn launch_then_release_reports_a_failed_launch_and_still_frees_the_gate() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
-        let lease = gate_only_lease(&gate);
-        let result: Result<(), super::BackendError> =
-            lease.launch_then_release(std::ptr::null_mut(), "gate lifetime unit test", |_lease| {
-                Err(test_error("launch failed"))
-            });
-        let message = match result {
-            Err(super::BackendError::DispatchFailed { message, .. }) => message,
-            other => panic!("Fix: a failed launch must surface its error. Got: {other:?}"),
-        };
-        assert_eq!(
-            message, "launch failed",
-            "Fix: the launch error must reach the caller unchanged; swallowing it would report a \
-             failed dispatch as a success."
-        );
-        assert!(
-            !gate_is_busy(&gate),
-            "Fix: a failed launch must still end the lease through the release, or the gate stays \
-             set and every later cooperative launch of this module blocks."
-        );
-    }
-
-    /// A second lease on the same gate must wait for the first to be released.
-    ///
-    /// # The bug this locks out
-    ///
-    /// The counter is a module-scope symbol at a fixed address, so two concurrent
-    /// sequences launching the same module share one counter: each one's
-    /// arrivals inflate the other's barrier targets and its reset zeroes the
-    /// other's progress. If the gate did not actually exclude, that corruption
-    /// would be invisible until a multi-threaded caller appeared.
-    #[test]
-    fn a_released_gate_is_acquirable_again_and_a_held_one_is_not() {
-        let gate = std::sync::Arc::new(super::GridBarrierGate::default());
-        let first = super::GridBarrierGate::acquire(&gate)
-            .expect("Fix: a fresh gate must be acquirable by the first caller.");
-        assert!(
-            gate_is_busy(&gate),
-            "Fix: a held gate must report busy, or the exclusion does nothing."
-        );
-        drop(first);
-        assert!(
-            !gate_is_busy(&gate),
-            "Fix: dropping the guard must clear the busy flag, including on unwind."
-        );
-        let second = super::GridBarrierGate::acquire(&gate)
-            .expect("Fix: a released gate must be acquirable by the next sequence.");
-        assert!(
-            gate_is_busy(&gate),
-            "Fix: re-acquiring must set the busy flag again."
-        );
-        drop(second);
-    }
-}
-
 /// A live CUDA backend handle bound to a specific device.
 #[derive(Debug, Clone)]
 pub struct CudaBackend {
@@ -628,11 +54,12 @@ pub struct CudaBackend {
     /// kernel shape, so this makes the per-launch occupancy-evidence query a map
     /// lookup after the first launch instead of repeated FFI (Law 7).
     pub(crate) occupancy_blocks_cache: Arc<DashMap<(usize, u32), u32>>,
-    /// Serializing gate per module-cache key for cooperative grid-sync launches,
-    /// created on first use. Keyed exactly like the module cache because that is
-    /// the aliasing set: one key means one loaded CUmodule and therefore one
-    /// module-scope `_vyre_grid_barrier` counter. See [`GridBarrierGate`].
-    grid_barrier_gates: Arc<DashMap<ModuleCacheKey, Arc<GridBarrierGate>>>,
+    /// Serializing gate per module-cache key for launches that hold a
+    /// module-scope global, created on first use. Keyed exactly like the module
+    /// cache because that is the aliasing set: one key means one loaded CUmodule
+    /// and therefore one `_vyre_grid_barrier` counter and one trap record. See
+    /// [`ModuleGlobalsGate`].
+    module_globals_gates: Arc<DashMap<ModuleCacheKey, Arc<ModuleGlobalsGate>>>,
     pub(crate) ctx: Arc<CudaContext>,
 }
 
@@ -676,7 +103,7 @@ impl CudaBackend {
             async_upload_stream: Arc::new(Mutex::new(None)),
             telemetry: Arc::new(CudaTelemetry::default()),
             occupancy_blocks_cache: Arc::new(DashMap::new()),
-            grid_barrier_gates: Arc::new(DashMap::new()),
+            module_globals_gates: Arc::new(DashMap::new()),
             ctx,
         })
     }
@@ -964,15 +391,56 @@ impl CudaBackend {
             .function_for_ptx(ptx_src, key, self.ptx_target_sm())
     }
 
-    /// Device pointer + byte size of the cooperative grid-barrier counter for
-    /// this PTX module, or `None` when the kernel declares no grid barrier.
-    pub(crate) fn grid_barrier_global_with_key(
+    /// Registers, spill bytes, static shared bytes and resident device bytes the
+    /// driver assigned to this PTX module's entry point.
+    pub(crate) fn module_resources_with_key(
         &self,
         ptx_src: &str,
         key: ModuleCacheKey,
-    ) -> Result<Option<(u64, usize)>, BackendError> {
+    ) -> Result<EmittedResources, BackendError> {
+        let func = self.module_for_ptx_with_key(ptx_src, key)?;
+        let (registers_per_invocation, spill_bytes_per_invocation, shared_memory_bytes) =
+            super::module_cache::cuda_function_resources(func).map_err(|res| {
+                BackendError::DispatchFailed {
+                    code: None,
+                    message: format!(
+                        "cuFuncGetAttribute failed with {res:?} for a loaded CUDA entry point. Fix: verify the module is still resident on the acquired device."
+                    ),
+                }
+            })?;
+        Ok(EmittedResources {
+            registers_per_invocation,
+            spill_bytes_per_invocation,
+            shared_memory_bytes,
+            resident_device_bytes: self.resident_device_bytes()?,
+        })
+    }
+
+    /// Device bytes this backend currently holds resident.
+    ///
+    /// The resident store and the transient pool are the only allocators that
+    /// hold device storage for a dispatch, so their totals are what the artifact
+    /// bound. The compiler reconciles this against the allocation plan it
+    /// selected before a measurement decides anything.
+    fn resident_device_bytes(&self) -> Result<u64, BackendError> {
+        let transient = super::transient_memory_budget::cuda_usize_bytes_to_u64(
+            self.transient_pool.allocated_bytes()?,
+            "transient pool allocated bytes",
+        )?;
+        Ok(self
+            .resident_store
+            .allocated_bytes()
+            .saturating_add(transient))
+    }
+
+    /// The module-scope globals this PTX module exposes to the host.
+    pub(crate) fn module_globals_with_key(
+        &self,
+        ptx_src: &str,
+        key: ModuleCacheKey,
+    ) -> Result<ModuleGlobals, BackendError> {
         self.module_cache
-            .grid_barrier_global_for_ptx(ptx_src, key, self.ptx_target_sm())
+            .module_globals_for_ptx(ptx_src, key, self.ptx_target_sm())
     }
 
     /// The module-scope `_vyre_grid_barrier` counter this launch must start from
@@ -982,24 +450,23 @@ impl CudaBackend {
     /// in-kernel barriers, and each barrier's release target is a compile-time
     /// multiple of `gridSize`. A launch that starts from a stale value therefore
     /// releases its first barrier before every CTA has arrived. Every cooperative
-    /// launch site takes a [`GridBarrierLease`] over it, which resolves the
-    /// counter here and zeroes it before each launch, so the borrowed-host path,
-    /// the resident paths, and the compiled pipeline that reuses them share ONE
-    /// reset instead of drifting copies.
+    /// launch site takes a [`ModuleGlobalsLease`] over it, which zeroes it before
+    /// each launch, so the borrowed-host path, the resident paths, and the
+    /// compiled pipeline that reuses them share ONE reset instead of drifting
+    /// copies.
     ///
     /// A grid-sync program whose loaded module declares no counter is a codegen
     /// failure, not a launch to attempt quietly.
-    pub(crate) fn grid_barrier_reset_target(
+    fn grid_barrier_reset_target(
         &self,
         program: &Program,
         prepared: &CudaDispatchPlan,
-        ptx_src: &str,
-        module_key: ModuleCacheKey,
+        globals: &ModuleGlobals,
     ) -> Result<Option<(u64, usize)>, BackendError> {
         if !prepared.cooperative || !vyre_driver::grid_sync::contains_grid_sync(program) {
             return Ok(None);
         }
-        match self.grid_barrier_global_with_key(ptx_src, module_key)? {
+        match globals.grid_barrier {
             Some(global) => Ok(Some(global)),
             None => Err(BackendError::InvalidProgram {
                 fix:
@@ -1009,40 +476,51 @@ impl CudaBackend {
         }
     }
 
-    /// Exclusive lease on the module-scope `_vyre_grid_barrier` counter for one
-    /// cooperative launch sequence, or an inert lease when this launch needs no
-    /// counter.
+    /// Exclusive lease on this module's host-visible module-scope globals for one
+    /// launch sequence, or an inert lease when the module has none.
     ///
-    /// Acquiring the lease BLOCKS while another launch sequence on the same
-    /// module is still in flight, which is what makes the shared counter safe.
-    /// Hold it across the resets and launches, then end it with
-    /// [`GridBarrierLease::launch_then_release`].
-    pub(crate) fn lease_grid_barrier(
+    /// Acquiring the lease BLOCKS while another launch sequence on the same module
+    /// is still in flight, which is what makes a per-module global safe to share
+    /// across concurrent dispatches. Hold it across the resets and launches, then
+    /// end it with [`ModuleGlobalsLease::launch_then_release`].
+    ///
+    /// A trap-declaring module takes the lease whether or not the launch is
+    /// cooperative, because the trap record is per-module exactly as the counter
+    /// is: two overlapping launches would zero each other's record and the second
+    /// one's trap would be reported against the first one's launch, or lost.
+    pub(crate) fn lease_module_globals(
         &self,
         program: &Program,
         prepared: &CudaDispatchPlan,
         ptx_src: &str,
         module_key: ModuleCacheKey,
-    ) -> Result<GridBarrierLease, BackendError> {
-        let Some(target) =
-            self.grid_barrier_reset_target(program, prepared, ptx_src, module_key)?
-        else {
-            return Ok(GridBarrierLease {
-                target: None,
+    ) -> Result<ModuleGlobalsLease, BackendError> {
+        let globals = self.module_globals_with_key(ptx_src, module_key)?;
+        let barrier = self.grid_barrier_reset_target(program, prepared, &globals)?;
+        let trap = globals.trap;
+        if barrier.is_none() && trap.is_none() {
+            return Ok(ModuleGlobalsLease {
+                barrier: None,
+                trap: None,
                 guard: None,
                 arrival_ceiling: 0,
             });
+        }
+        let arrival_ceiling = if barrier.is_some() {
+            grid_barrier_arrival_ceiling(ptx_src, prepared.launch.grid)?
+        } else {
+            0
         };
-        let arrival_ceiling = grid_barrier_arrival_ceiling(ptx_src, prepared.launch.grid)?;
         let gate = Arc::clone(
-            self.grid_barrier_gates
+            self.module_globals_gates
                 .entry(module_key)
-                .or_insert_with(|| Arc::new(GridBarrierGate::default()))
+                .or_insert_with(|| Arc::new(ModuleGlobalsGate::default()))
                 .value(),
         );
-        let guard = GridBarrierGate::acquire(&gate)?;
-        Ok(GridBarrierLease {
-            target: Some(target),
+        let guard = ModuleGlobalsGate::acquire(&gate)?;
+        Ok(ModuleGlobalsLease {
+            barrier,
+            trap,
             guard: Some(guard),
             arrival_ceiling,
         })
@@ -1059,7 +537,7 @@ impl CudaBackend {
 
     /// Compiled module cache counters for honest compile telemetry.
     #[must_use]
-    pub fn pipeline_cache_snapshot(&self) -> vyre_driver::pipeline::PipelineCacheSnapshot {
+    pub fn pipeline_cache_snapshot(&self) -> vyre_driver::PipelineCacheSnapshot {
         self.module_cache.snapshot()
     }
 
@@ -1174,309 +652,4 @@ impl CudaBackend {
                 .to_string(),
         })
     }
-}
-
-/// Serializes cooperative grid-sync launch sequences that share one loaded
-/// module's `_vyre_grid_barrier` arrival counter.
-///
-/// # Why serializing is required rather than merely tidy
-///
-/// The counter is a MODULE-scope global, and a barrier releases when it reaches
-/// `(barrier_index + 1) * gridSize`. Two launches of one module that are in
-/// flight together therefore interfere in both directions, and both were
-/// measured on an RTX 5090 before this gate existed:
-///
-/// - Their arrivals MIX. Barrier 0's target is one `gridSize`, so it is reached
-///   after `gridSize` arrivals drawn from either grid, releasing both before
-///   either has fully arrived. Blocks then read each other's pre-barrier state
-///   and the output is wrong with no error raised.
-/// - Their resets CLOBBER. One launch's zeroing lands while the other's blocks
-///   are spinning, dropping the counter below a target that was already met, so
-///   that grid spins forever. That is a hang, not a wrong answer.
-///
-/// This is reachable with no threads at all: a compiled pipeline's batched
-/// dispatch enqueues each batch element as its own async dispatch on its own
-/// stream, so the elements overlap on the device and alias the counter.
-///
-/// # The cost, stated plainly
-///
-/// This is a serialization, not a way to make concurrent cooperative launches
-/// work. Cooperative grid-sync launches that share a module now run one at a
-/// time, and the lease is held until the launch COMPLETES because the counter
-/// stays live for the kernel's whole execution. Launches on different modules,
-/// on independent backends, and every non-grid-sync launch are untouched.
-///
-/// The throughput this gives up is small in practice and unavailable in
-/// principle: a cooperative launch requires every block co-resident, so a
-/// grid-sync grid is sized to fill the device and a second one had nowhere to run
-/// concurrently anyway. Removing the serialization requires giving each launch
-/// its OWN counter, which means the counter's address has to become a launch
-/// input rather than a module-scope symbol. That is an emitter and kernel-ABI
-/// change, not a driver-side one.
-#[derive(Debug, Default)]
-pub(crate) struct GridBarrierGate {
-    busy: Mutex<bool>,
-    free: Condvar,
-}
-
-impl GridBarrierGate {
-    /// Block until no other launch sequence holds this module's counter.
-    fn acquire(gate: &Arc<Self>) -> Result<GridBarrierGuard, BackendError> {
-        let mut busy = gate.busy.lock().map_err(|_| BackendError::DispatchFailed {
-            code: None,
-            message:
-                "CUDA cooperative grid-barrier gate mutex was poisoned by a panicking launch. Fix: a launch panicked while holding the module's _vyre_grid_barrier counter; treat the earlier panic as the defect."
-                    .to_string(),
-        })?;
-        while *busy {
-            busy = gate.free.wait(busy).map_err(|_| BackendError::DispatchFailed {
-                code: None,
-                message:
-                    "CUDA cooperative grid-barrier gate mutex was poisoned while waiting for the module's counter. Fix: a launch panicked while holding it; treat the earlier panic as the defect."
-                        .to_string(),
-            })?;
-        }
-        *busy = true;
-        drop(busy);
-        Ok(GridBarrierGuard {
-            gate: Arc::clone(gate),
-        })
-    }
-}
-
-/// Releases its [`GridBarrierGate`] on drop, including on unwind, so a panicking
-/// launch cannot wedge every later cooperative launch of the same module.
-#[derive(Debug)]
-pub(crate) struct GridBarrierGuard {
-    gate: Arc<GridBarrierGate>,
-}
-
-impl Drop for GridBarrierGuard {
-    fn drop(&mut self) {
-        // Recover the poisoned guard rather than propagating: failing to clear
-        // the flag here would block every future cooperative launch on this
-        // module, which is strictly worse than continuing after someone else's
-        // panic.
-        let mut busy = self
-            .gate
-            .busy
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        *busy = false;
-        drop(busy);
-        self.gate.free.notify_one();
-    }
-}
-
-/// One cooperative launch sequence's exclusive hold on a module's grid-barrier
-/// counter, plus the counter itself.
-///
-/// An inert lease (no grid-sync barrier in the program, or a non-cooperative
-/// launch) holds nothing and enqueues nothing, so non-grid-sync launches pay only
-/// a moved `Option`.
-#[derive(Debug)]
-pub(crate) struct GridBarrierLease {
-    target: Option<(u64, usize)>,
-    guard: Option<GridBarrierGuard>,
-    /// Arrivals ONE launch of this kernel can contribute: static barrier count
-    /// times grid block count. See [`grid_barrier_arrival_ceiling`].
-    arrival_ceiling: u64,
-}
-
-impl GridBarrierLease {
-    /// Zero the counter on `stream`, ahead of the launch it belongs to.
-    ///
-    /// The memset is stream-ordered, so it lands before the kernel that reads the
-    /// counter without any host synchronization. Call this before EVERY launch in
-    /// the sequence, not once per sequence: each launch drives the counter up to
-    /// `barriers * gridSize` and the next launch must start from zero.
-    ///
-    /// # Safety
-    ///
-    /// `stream` must be live until the memset completes.
-    pub(crate) unsafe fn enqueue_reset(
-        &self,
-        stream: cudarc::driver::sys::CUstream,
-    ) -> Result<(), BackendError> {
-        let Some((counter_ptr, counter_len)) = self.target else {
-            return Ok(());
-        };
-        // SAFETY: the pointer came from cuModuleGetGlobal on the module this
-        // lease was taken against; stream lifetime is the caller's guarantee.
-        unsafe { super::copy::memset_d8_async_checked(counter_ptr, 0, counter_len, stream) }
-    }
-
-    /// Run `launch` under this lease, then end the lease, in the ONE order that
-    /// is safe.
-    ///
-    /// The launch closure's error is captured rather than propagated, so the
-    /// release always runs, and the release SYNCHRONIZES `stream` before the gate
-    /// is freed. That synchronize is why this order cannot be rearranged and why
-    /// the release cannot be moved into the closure or made cheap: the counter is
-    /// live for the kernel's whole EXECUTION, not merely until the launch call
-    /// returns. Free the gate before the grid finishes and the next sequence
-    /// memsets `_vyre_grid_barrier` to zero underneath a still-running kernel,
-    /// whose remaining barriers then wait for a release target that can no longer
-    /// be reached. That is a hang rather than an error, and it reproduces only
-    /// under cooperative launch.
-    ///
-    /// Taking `self` by value is deliberate: it makes skipping the release
-    /// unrepresentable at a call site. Hand-writing the sequence instead, as
-    /// `let launched = (|| { .. })(); release(..)?; launched?;`, works but puts
-    /// the ordering back in four places, and getting it wrong there COMPILES and
-    /// passes every non-cooperative test.
-    pub(crate) fn launch_then_release<T>(
-        self,
-        stream: cudarc::driver::sys::CUstream,
-        label: &'static str,
-        launch: impl FnOnce(&Self) -> Result<T, BackendError>,
-    ) -> Result<T, BackendError> {
-        let launched = launch(&self);
-        self.release_after_launch(stream, label)?;
-        launched
-    }
-
-    /// End the lease once the launches have completed.
-    ///
-    /// When a counter is held this SYNCHRONIZES `stream` first, and that is
-    /// load-bearing rather than defensive: the counter is live for the kernel's
-    /// whole execution, so releasing at enqueue time would let the next sequence
-    /// reset the counter under a still-running grid, which is the hang described
-    /// on [`GridBarrierGate`]. An inert lease synchronizes nothing.
-    ///
-    /// Private on purpose: [`GridBarrierLease::launch_then_release`] is the only
-    /// caller, so no launch site can open-code the release and drift out of
-    /// order.
-    fn release_after_launch(
-        self,
-        stream: cudarc::driver::sys::CUstream,
-        label: &'static str,
-    ) -> Result<(), BackendError> {
-        if self.target.is_none() {
-            return Ok(());
-        }
-        let Self {
-            target,
-            guard,
-            arrival_ceiling,
-        } = self;
-        release_in_order(
-            guard,
-            || crate::stream::synchronize_raw_stream(stream, label),
-            || audit_arrivals(target, arrival_ceiling),
-        )
-    }
-}
-
-/// Synchronize, audit, and only THEN free the gate.
-///
-/// # The bug this locks out
-///
-/// Dropping the guard before the synchronize has returned frees the gate while
-/// the grid may still be running, and the next sequence's reset then lands under
-/// a live kernel: its remaining barriers wait on a target that can no longer be
-/// reached, so the symptom is a hang rather than an error. Both fallible steps
-/// therefore run BEFORE the drop, and their error is returned AFTER it, so a
-/// failed synchronize or a failed audit still frees the gate instead of leaving
-/// the busy flag set.
-fn release_in_order(
-    guard: Option<GridBarrierGuard>,
-    synchronize: impl FnOnce() -> Result<(), BackendError>,
-    audit: impl FnOnce() -> Result<(), BackendError>,
-) -> Result<(), BackendError> {
-    let audited = synchronize().and_then(|()| audit());
-    drop(guard);
-    audited
-}
-
-/// Verify the counter did not exceed what ONE launch can contribute.
-///
-/// # The bug this locks out
-///
-/// A grid barrier releases when the module-scope counter reaches
-/// `(index + 1) * gridSize`. A launch that starts from a STALE counter finds
-/// that already satisfied and every barrier becomes a pass-through no-op: the
-/// kernel returns success, the driver reports no error, and the only symptom is
-/// wrong data. That is what shipped on the resident dispatch paths until the
-/// per-launch reset landed, and it cost a day of chasing a flake.
-///
-/// A CTA records its arrival BEFORE it spins, so a no-op barrier still counts.
-/// The counter after one reset-then-launch sequence therefore cannot exceed
-/// `barriers * gridSize`, and a missed reset shows up as a MULTIPLE of that
-/// bound. Checking the upper bound rather than exact equality is deliberate: a
-/// grid-uniform early exit legitimately skips later barriers and leaves the
-/// counter BELOW the bound, which is correct and must not be flagged.
-fn audit_arrivals(target: Option<(u64, usize)>, arrival_ceiling: u64) -> Result<(), BackendError> {
-    let Some((counter_ptr, _)) = target else {
-        return Ok(());
-    };
-    if arrival_ceiling == 0 {
-        return Ok(());
-    }
-    let mut observed = 0_u32;
-    // SAFETY: the pointer came from cuModuleGetGlobal for this module and
-    // addresses the 4-byte counter; the caller synchronized the stream, so every
-    // arrival from this sequence has landed and no launch is in flight.
-    unsafe {
-        super::copy::d2h_sync_checked(
-            std::ptr::from_mut(&mut observed).cast::<std::ffi::c_void>(),
-            counter_ptr,
-            std::mem::size_of::<u32>(),
-        )?;
-    }
-    verify_arrival_count(observed, arrival_ceiling)
-}
-
-/// Marker the PTX emitter writes once per emitted grid-sync barrier.
-///
-/// The static barrier count is not carried on the program or the plan, and the
-/// emitted PTX is the only place it exists by the time a launch site needs it.
-/// Pinned by a test so the coupling breaks loudly if the emitter's comment
-/// changes rather than silently disabling the audit.
-pub(crate) const GRID_BARRIER_PTX_MARKER: &str = "grid.sync barrier #";
-
-/// Arrivals ONE launch can contribute: static barrier count times grid blocks.
-///
-/// Every CTA records one arrival per barrier it reaches, and grid-sync barriers
-/// are top-level, so a launch of a `b`-barrier kernel over `g` blocks contributes
-/// at most `b * g`.
-fn grid_barrier_arrival_ceiling(ptx_src: &str, grid: [u32; 3]) -> Result<u64, BackendError> {
-    let barriers = ptx_src.matches(GRID_BARRIER_PTX_MARKER).count();
-    if barriers == 0 {
-        return Err(BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: CUDA cooperative grid-sync launch found no `{GRID_BARRIER_PTX_MARKER}` marker in PTX that declares the _vyre_grid_barrier counter, so the barrier-arrival audit cannot bound the counter. Keep the emitter's per-barrier comment marker, or carry the barrier count on the dispatch plan instead."
-            ),
-        });
-    }
-    // Checked throughout: the block product alone overflows u64 for a maximal
-    // three-dimensional grid, and this runs on the launch path, so a panicking
-    // multiply here would turn an audit into a crash.
-    u64::from(grid[0])
-        .checked_mul(u64::from(grid[1]))
-        .and_then(|blocks| blocks.checked_mul(u64::from(grid[2])))
-        .and_then(|blocks| u64::try_from(barriers).ok()?.checked_mul(blocks))
-        .ok_or_else(|| BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: CUDA grid-sync barrier arrival ceiling overflowed for {barriers} barrier(s) over grid {grid:?}. Reduce the grid or the barrier count."
-            ),
-        })
-}
-
-/// Refuse an arrival count above what ONE launch can contribute.
-///
-/// Split from the device read so the refusal itself is unit-testable: proving
-/// the audit FIRES otherwise means deliberately skipping a counter reset in
-/// production code, and the audit exists precisely because that failure is
-/// silent.
-fn verify_arrival_count(observed: u32, ceiling: u64) -> Result<(), BackendError> {
-    if u64::from(observed) <= ceiling {
-        return Ok(());
-    }
-    Err(BackendError::DispatchFailed {
-        code: None,
-        message: format!(
-            "CUDA cooperative grid-sync launch left the module-scope _vyre_grid_barrier counter at {observed} arrivals, above the {ceiling} that one launch of this kernel can contribute (static barrier count times grid blocks). The counter was not zeroed before this launch, so its barriers released on arrival instead of waiting and the kernel's cross-block reads are WRONG even though the launch reported success. Fix: every cooperative launch site must hold a GridBarrierLease and call enqueue_reset before EACH launch; a new launch path that skips it reintroduces silent wrong answers from the second launch onward."
-        ),
-    })
 }

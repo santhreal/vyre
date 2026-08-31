@@ -3,7 +3,8 @@
 use std::fmt;
 use std::sync::Arc;
 
-use crate::ir::{CommGroup, Expr, Node, Program};
+use crate::ir::{CollectiveOp, CommGroup, Expr, Ident, Node, Program};
+use crate::visit::child_bodies;
 
 /// Error returned when a collective cannot be lowered without real transport.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -218,54 +219,158 @@ pub fn collective_transport_plan(program: &Program) -> CollectiveTransportPlan {
     plan
 }
 
-fn record_nodes_transport_plan(nodes: &[Node], plan: &mut CollectiveTransportPlan) {
+/// Semantics of one collective node, without any placement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum CollectiveExchangeKind {
+    /// Every participant contributes and receives the combined value.
+    AllReduce,
+    /// Every participant receives every shard.
+    AllGather,
+    /// Every participant receives the combined value of its own shard.
+    ReduceScatter,
+    /// One participant sends a value to every other.
+    Broadcast,
+}
+
+/// One collective node as data: what it does, over which group, to which
+/// program buffers.
+///
+/// The buffers are program-local names. A graph binds them to connected values,
+/// so a caller that needs payload bytes reads the value contract rather than a
+/// size restated here.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CollectiveExchange {
+    /// Exchange semantics.
+    pub kind: CollectiveExchangeKind,
+    /// Participant group the exchange is scoped to.
+    pub group: u32,
+    /// Combining operator, present exactly when the exchange combines.
+    pub combine: Option<CollectiveOp>,
+    /// Program-local buffers the exchange reads or writes, in operand order.
+    pub buffers: Vec<Ident>,
+    /// Sending participant of a broadcast.
+    pub root: Option<u32>,
+}
+
+/// Every collective one program states, in body order.
+///
+/// This is the enumeration behind both the transport plan and schedule
+/// placement, so a new nesting variant cannot hide a collective from either.
+#[must_use]
+pub fn collective_exchanges(program: &Program) -> Vec<CollectiveExchange> {
+    let mut exchanges = Vec::new();
+    visit_collectives(program.entry(), &mut |exchange| exchanges.push(exchange));
+    exchanges
+}
+
+/// Walk every collective node of a body, nested bodies included.
+fn visit_collectives(nodes: &[Node], visit: &mut impl FnMut(CollectiveExchange)) {
     let mut stack = Vec::new();
     stack.push(nodes);
     while let Some(nodes) = stack.pop() {
         for node in nodes {
+            // Children come from the single exhaustive owner, so a new nesting
+            // variant cannot hide a collective from any consumer of this walk.
+            for body in child_bodies(node).into_iter().rev() {
+                if !body.is_empty() {
+                    stack.push(body);
+                }
+            }
             match node {
-                Node::AllReduce { group, .. } => {
-                    plan.record(
-                        transport_kind_for_group(*group),
-                        CollectiveNodeKind::AllReduce,
-                    );
-                }
-                Node::AllGather { group, .. } => {
-                    plan.record(
-                        transport_kind_for_group(*group),
-                        CollectiveNodeKind::AllGather,
-                    );
-                }
-                Node::ReduceScatter { group, .. } => {
-                    plan.record(
-                        transport_kind_for_group(*group),
-                        CollectiveNodeKind::ReduceScatter,
-                    );
-                }
-                Node::Broadcast { root, group, .. } => {
-                    let transport = if *group == CommGroup::WORLD && *root == 0 {
-                        CollectiveTransportKind::LocalSingleRank
-                    } else {
-                        CollectiveTransportKind::MultiRankTransport
-                    };
-                    plan.record(transport, CollectiveNodeKind::Broadcast);
-                }
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    stack.push(otherwise);
-                    stack.push(then);
-                }
-                Node::Loop { body, .. } | Node::Block(body) => stack.push(body),
-                Node::Region { body, .. } => stack.push(body.as_ref()),
-                _ => {}
+                Node::AllReduce { buffer, op, group } => visit(CollectiveExchange {
+                    kind: CollectiveExchangeKind::AllReduce,
+                    group: group.0,
+                    combine: Some(*op),
+                    buffers: vec![buffer.clone()],
+                    root: None,
+                }),
+                Node::AllGather {
+                    input,
+                    output,
+                    group,
+                } => visit(CollectiveExchange {
+                    kind: CollectiveExchangeKind::AllGather,
+                    group: group.0,
+                    combine: None,
+                    buffers: vec![input.clone(), output.clone()],
+                    root: None,
+                }),
+                Node::ReduceScatter {
+                    input,
+                    output,
+                    op,
+                    group,
+                } => visit(CollectiveExchange {
+                    kind: CollectiveExchangeKind::ReduceScatter,
+                    group: group.0,
+                    combine: Some(*op),
+                    buffers: vec![input.clone(), output.clone()],
+                    root: None,
+                }),
+                Node::Broadcast {
+                    buffer,
+                    root,
+                    group,
+                } => visit(CollectiveExchange {
+                    kind: CollectiveExchangeKind::Broadcast,
+                    group: group.0,
+                    combine: None,
+                    buffers: vec![buffer.clone()],
+                    root: Some(*root),
+                }),
+                Node::If { .. }
+                | Node::Loop { .. }
+                | Node::Block(_)
+                | Node::Region { .. }
+                | Node::Let { .. }
+                | Node::Assign { .. }
+                | Node::Store { .. }
+                | Node::Return
+                | Node::Barrier { .. }
+                | Node::LogicalBarrier { .. }
+                | Node::IndirectDispatch { .. }
+                | Node::AsyncLoad { .. }
+                | Node::AsyncStore { .. }
+                | Node::AsyncWait { .. }
+                | Node::Trap { .. }
+                | Node::Resume { .. }
+                | Node::TileLoad { .. }
+                | Node::TileStore { .. }
+                | Node::TileMatmul { .. }
+                | Node::TileReduce { .. }
+                | Node::TileElementwise { .. }
+                | Node::TileDecl { .. }
+                | Node::Opaque(_) => {}
             }
         }
     }
 }
 
-fn transport_kind_for_group(group: CommGroup) -> CollectiveTransportKind {
-    if group == CommGroup::WORLD {
+fn record_nodes_transport_plan(nodes: &[Node], plan: &mut CollectiveTransportPlan) {
+    visit_collectives(nodes, &mut |exchange| {
+        let world = exchange.group == CommGroup::WORLD.0;
+        let (transport, node) = match exchange.kind {
+            CollectiveExchangeKind::AllReduce => {
+                (transport_kind(world), CollectiveNodeKind::AllReduce)
+            }
+            CollectiveExchangeKind::AllGather => {
+                (transport_kind(world), CollectiveNodeKind::AllGather)
+            }
+            CollectiveExchangeKind::ReduceScatter => {
+                (transport_kind(world), CollectiveNodeKind::ReduceScatter)
+            }
+            CollectiveExchangeKind::Broadcast => (
+                transport_kind(world && exchange.root == Some(0)),
+                CollectiveNodeKind::Broadcast,
+            ),
+        };
+        plan.record(transport, node);
+    });
+}
+
+/// A collective is local exactly when it needs no participant beyond this one.
+fn transport_kind(single_rank: bool) -> CollectiveTransportKind {
+    if single_rank {
         CollectiveTransportKind::LocalSingleRank
     } else {
         CollectiveTransportKind::MultiRankTransport
@@ -520,19 +625,50 @@ mod tests {
         assert!(!plan.is_empty());
     }
 
+    /// WHY: an iterative walk and a recursive one agree on every shallow
+    /// program, so depth is the only input that separates them. The depth is
+    /// judged against a stated stack rather than the host's default: 8192 nested
+    /// blocks fit an iterative walk on a quarter-megabyte stack and overflow a
+    /// recursive visitor there, and a test that leans on whatever stack the
+    /// harness happens to give a thread proves nothing on one host and
+    /// overflows on another.
+    ///
+    /// Building the nest and dropping it recurse through `Vec<Node>` whatever
+    /// the walk does, so both happen on a thread sized for the depth, and only
+    /// the walk runs on the small stack.
     #[test]
     fn transport_plan_handles_deeply_nested_collectives_without_recursive_walk() {
-        let mut node = Node::AllGather {
-            input: "input".into(),
-            output: "out".into(),
-            group: CommGroup::WORLD,
-        };
-        for _ in 0..8192 {
-            node = Node::Block(vec![node]);
-        }
-        let program = program_with(node, 8);
+        /// Nesting depth no recursive walk survives on `WALK_STACK`.
+        const DEPTH: usize = 8192;
+        /// Stack sized for constructing and dropping a `DEPTH`-deep nest.
+        const BUILD_STACK: usize = 32 * 1024 * 1024;
+        /// Stack an iterative walk fits in and a recursive one does not.
+        const WALK_STACK: usize = 256 * 1024;
 
-        let plan = collective_transport_plan(&program);
+        let plan = std::thread::Builder::new()
+            .stack_size(BUILD_STACK)
+            .spawn(|| {
+                let mut node = Node::AllGather {
+                    input: "input".into(),
+                    output: "out".into(),
+                    group: CommGroup::WORLD,
+                };
+                for _ in 0..DEPTH {
+                    node = Node::Block(vec![node]);
+                }
+                let program = program_with(node, 8);
+                std::thread::scope(|scope| {
+                    std::thread::Builder::new()
+                        .stack_size(WALK_STACK)
+                        .spawn_scoped(scope, || collective_transport_plan(&program))
+                        .expect("Fix: the bounded-stack walk thread must spawn.")
+                        .join()
+                        .expect("Fix: the walk must not recurse over program depth.")
+                })
+            })
+            .expect("Fix: the deep-nest builder thread must spawn.")
+            .join()
+            .expect("Fix: building a bounded-depth nest must not overflow its own stack.");
 
         assert_eq!(plan.local_single_rank_collectives(), 1);
         assert_eq!(plan.transport_collectives(), 0);

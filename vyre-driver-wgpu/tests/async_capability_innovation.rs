@@ -8,8 +8,13 @@
 //! - Timeout errors carry actionable remediation guidance
 //! - Backend max_workgroup_size is nonzero on any real GPU
 
-mod common;
-use common::shared_live_backend as live_backend;
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::{
+    add_one_expected, add_one_input, add_one_program, assert_non_cpu_backend, long_running_program,
+    shared_live_backend as live_backend,
+};
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -24,18 +29,7 @@ use vyre_foundation::validate::BackendValidationCapabilities;
 #[test]
 fn live_gpu_required_no_cpu_fallback() {
     let backend = live_backend();
-
-    let info = backend.adapter_info();
-    assert!(
-        !matches!(
-            info.device_type,
-            wgpu::DeviceType::Cpu | wgpu::DeviceType::Other
-        ),
-        "Fix: WgpuBackend must never silently fall back to a CPU adapter. \
-         Adapter `{}` has type {:?}.",
-        info.name,
-        info.device_type
-    );
+    assert_non_cpu_backend(&backend);
 }
 
 #[test]
@@ -62,7 +56,7 @@ fn subgroup_capability_is_derived_from_adapter_features() {
     let backend = live_backend();
 
     let info = backend.adapter_info();
-    let adapter = vyre_driver_wgpu::runtime::device::adapter_for_info(info)
+    let adapter = vyre_driver_wgpu::runtime::adapter_for_info(info)
         .expect("Fix: selected wgpu backend adapter must remain enumerable for capability probing");
     let adapter_features = adapter.features();
     let limits = adapter.limits();
@@ -202,62 +196,6 @@ fn bf16_rejected_at_capability_gate_before_lowering() {
 // 4. Async dispatch / pending dispatch is NOT synchronous under the hood
 // ------------------------------------------------------------------
 
-fn add_one_program(words: u32) -> Program {
-    let idx = Expr::gid_x();
-    let in_bounds = Expr::lt(idx.clone(), Expr::u32(words));
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(words),
-            BufferDecl::output("out", 1, DataType::U32)
-                .with_count(words)
-                .with_output_byte_range(0..(words as usize * 4)),
-        ],
-        [64, 1, 1],
-        vec![
-            Node::if_then(
-                in_bounds,
-                vec![Node::store(
-                    "out",
-                    idx.clone(),
-                    Expr::add(Expr::load("input", idx), Expr::u32(1)),
-                )],
-            ),
-            Node::return_(),
-        ],
-    )
-}
-
-/// Build a program that takes measurably longer on the GPU than on the host.
-fn long_running_program() -> Program {
-    const OUTPUT_WORDS: u32 = 2 * 1024 * 1024;
-    let mut body = Vec::with_capacity(260);
-    body.push(Node::let_bind("idx", Expr::gid_x()));
-    body.push(Node::let_bind("acc", Expr::var("idx")));
-    for round in 0..128u32 {
-        body.push(Node::assign(
-            "acc",
-            Expr::bitxor(
-                Expr::mul(Expr::var("acc"), Expr::u32(1_664_525)),
-                Expr::add(
-                    Expr::var("idx"),
-                    Expr::u32(1_013_904_223u32.wrapping_add(round)),
-                ),
-            ),
-        ));
-    }
-    body.push(Node::if_then(
-        Expr::lt(Expr::var("idx"), Expr::buf_len("out")),
-        vec![Node::store("out", Expr::var("idx"), Expr::var("acc"))],
-    ));
-    Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32)
-            .with_count(OUTPUT_WORDS)
-            .with_output_byte_range(0..4)],
-        [256, 1, 1],
-        body,
-    )
-}
-
 #[test]
 fn async_dispatch_does_not_block_on_gpu_execution() {
     let backend = live_backend();
@@ -308,7 +246,7 @@ fn dispatch_async_overlaps_with_host_work() {
     let backend = live_backend();
 
     let program = add_one_program(256 * 1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..256 * 1024u32);
+    let input: Vec<u8> = add_one_input(256 * 1024);
 
     let start = Instant::now();
     let pending = backend
@@ -335,7 +273,7 @@ fn dispatch_async_overlaps_with_host_work() {
         "Fix: host work must have taken measurable time"
     );
 
-    let expected: Vec<u8> = vyre_primitives::wire::pack_u32_iter(1..=256 * 1024u32);
+    let expected: Vec<u8> = add_one_expected(256 * 1024);
     assert_eq!(
         outputs,
         vec![expected],

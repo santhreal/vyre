@@ -2,39 +2,14 @@
 
 #![forbid(unsafe_code)]
 
+mod wire_words;
+use wire_words::{bf16_bytes, bf16_word, f32_bytes, f32_words_of as decode_f32};
+
 use std::collections::HashMap;
 
 use vyre::ir::{DataType, ProgramGraph};
 use vyre_libs::nn::model::{dense_gated_mlp_graph, DenseGatedMlpSpec};
 use vyre_reference::value::Value;
-
-fn f32_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode_f32(value: &Value) -> Vec<f32> {
-    value
-        .to_bytes()
-        .chunks_exact(4)
-        .map(|word| f32::from_le_bytes(word.try_into().expect("Fix: exact f32 word")))
-        .collect()
-}
-
-fn bf16_word(value: f32) -> u16 {
-    let bits = value.to_bits();
-    let bias = 0x7fff + ((bits >> 16) & 1);
-    bits.wrapping_add(bias).wrapping_shr(16) as u16
-}
-
-fn bf16_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| bf16_word(*value).to_le_bytes())
-        .collect()
-}
 
 fn decode_bf16_word(word: u16) -> f32 {
     f32::from_bits(u32::from(word) << 16)
@@ -63,13 +38,8 @@ fn execute_graph(graph: &ProgramGraph, external: &[(&str, Vec<u8>)]) -> Value {
             .program
             .buffers()
             .iter()
+            .filter(|buffer| !buffer.is_output)
             .map(|buffer| {
-                if buffer.is_output {
-                    return Value::from(vec![
-                        0;
-                        buffer.count as usize * element_bytes(&buffer.element)
-                    ]);
-                }
                 let input = node
                     .inputs
                     .iter()

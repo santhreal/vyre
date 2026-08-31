@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The library composition provenance gate no longer pins a hand-measured operation count. The population is the registry the build linked, which changes with the enabled dialect features, so the pinned floor of 100 was red under the default feature set that registers 97. It now requires that the registry linked at all, that no operation reached the check without a program builder, and that no exemption row names an operation which already stamps its own id or an id no source registers."

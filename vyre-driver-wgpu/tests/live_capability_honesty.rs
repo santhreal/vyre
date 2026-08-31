@@ -6,47 +6,18 @@
 //! agree, async dispatch must be genuinely non-blocking and
 //! contract-visible, and CPU fallback is never permitted.
 
+#![cfg(feature = "device-tests")]
 #![allow(clippy::assertions_on_constants)]
 
-mod common;
-use common::shared_live_backend as live_backend;
-
+mod harness;
+use harness::{
+    add_one_program, assert_actionable_error, assert_non_cpu_backend, selected_adapter,
+    shared_live_backend as live_backend,
+};
 use std::time::Instant;
-use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
-
-fn selected_adapter(backend: &WgpuBackend) -> wgpu::Adapter {
-    vyre_driver_wgpu::runtime::device::adapter_for_info(backend.adapter_info()).expect(
-        "Fix: selected wgpu backend adapter must still be enumerable for live capability probing",
-    )
-}
-
-fn add_one_program(words: u32) -> Program {
-    let idx = Expr::gid_x();
-    let in_bounds = Expr::lt(idx.clone(), Expr::u32(words));
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(words),
-            BufferDecl::output("out", 1, DataType::U32)
-                .with_count(words)
-                .with_output_byte_range(0..(words as usize * 4)),
-        ],
-        [64, 1, 1],
-        vec![
-            Node::if_then(
-                in_bounds,
-                vec![Node::store(
-                    "out",
-                    idx.clone(),
-                    Expr::add(Expr::load("input", idx), Expr::u32(1)),
-                )],
-            ),
-            Node::return_(),
-        ],
-    )
-}
 
 // ------------------------------------------------------------------
 // 1. subgroup_ops must match enabled_features/live BackendValidationCapabilities
@@ -188,7 +159,7 @@ fn async_dispatch_returns_contract_visible_pending_handle() {
     let backend = live_backend();
 
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
 
     let pending = backend
         .dispatch_async(&program, &[input], &DispatchConfig::default())
@@ -204,7 +175,7 @@ fn async_dispatch_returns_contract_visible_pending_handle() {
         .await_result()
         .expect("Fix: pending handle must resolve to correct GPU outputs");
 
-    let expected: Vec<u8> = vyre_primitives::wire::pack_u32_iter(1..=1024u32);
+    let expected: Vec<u8> = (1..=1024u32).flat_map(u32::to_le_bytes).collect();
     assert_eq!(
         outputs,
         vec![expected],
@@ -217,7 +188,7 @@ fn async_dispatch_is_non_blocking_for_real_gpu_work() {
     let backend = live_backend();
 
     let program = add_one_program(256 * 1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..256 * 1024u32);
+    let input: Vec<u8> = (0..256 * 1024u32).flat_map(u32::to_le_bytes).collect();
 
     // Warm the pipeline cache so the measurement is about execution,
     // not shader compilation on the first dispatch.
@@ -269,7 +240,7 @@ fn async_dispatch_ready_state_is_observable_for_non_trivial_work() {
     // Use a large enough program that the GPU won't finish before we
     // can observe the pending state.
     let program = add_one_program(512 * 1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..512 * 1024u32);
+    let input: Vec<u8> = (0..512 * 1024u32).flat_map(u32::to_le_bytes).collect();
 
     let pending = backend
         .dispatch_async(&program, &[input], &DispatchConfig::default())
@@ -287,7 +258,7 @@ fn async_dispatch_ready_state_is_observable_for_non_trivial_work() {
         .await_result()
         .expect("Fix: await_result must resolve the dispatch");
 
-    let expected: Vec<u8> = vyre_primitives::wire::pack_u32_iter(1..=512 * 1024u32);
+    let expected: Vec<u8> = (1..=512 * 1024u32).flat_map(u32::to_le_bytes).collect();
     assert_eq!(
         outputs,
         vec![expected],
@@ -314,43 +285,26 @@ fn async_dispatch_ready_state_is_observable_for_non_trivial_work() {
 #[test]
 fn acquisition_never_returns_cpu_adapter() {
     let backend = live_backend();
-    let info = backend.adapter_info();
-    assert!(
-        !matches!(
-            info.device_type,
-            wgpu::DeviceType::Cpu | wgpu::DeviceType::Other
-        ),
-        "Fix: WgpuBackend must never silently fall back to a CPU adapter. \
-         Adapter `{}` has type {:?}.",
-        info.name,
-        info.device_type
-    );
+    assert_non_cpu_backend(&backend);
 }
 
 #[test]
 fn acquire_fails_when_only_cpu_adapters_are_available() {
-    let has_real_gpu = vyre_driver_wgpu::runtime::device::has_real_gpu_adapter();
+    let has_real_gpu = vyre_driver_wgpu::runtime::has_real_gpu_adapter();
 
     if !has_real_gpu {
         let result = WgpuBackend::acquire();
         assert!(
             result.is_err(),
-            "Fix: WgpuBackend::acquire() must fail when only CPU/Other adapters \
-             are available, rather than falling back to CPU execution."
+            "Fix: WgpuBackend::acquire() must fail when only CPU/Other adapters are available, rather than falling back to CPU execution."
         );
-        let err = result.unwrap_err();
-        let text = err.to_string();
-        assert!(
-            text.contains("Fix:"),
-            "Fix: CPU-only rejection error must be actionable. Got: {text}"
-        );
+        assert_actionable_error(&result, "CPU-only rejection error must be actionable");
     }
-    // If a real GPU exists, this test passes trivially.
 }
 
 #[test]
 fn new_also_rejects_cpu_fallback() {
-    let has_real_gpu = vyre_driver_wgpu::runtime::device::has_real_gpu_adapter();
+    let has_real_gpu = vyre_driver_wgpu::runtime::has_real_gpu_adapter();
 
     if !has_real_gpu {
         let result = WgpuBackend::new();
@@ -359,18 +313,9 @@ fn new_also_rejects_cpu_fallback() {
             "Fix: WgpuBackend::new() must fail when only CPU/Other adapters are available."
         );
     }
-    // If a real GPU exists, verify the acquired adapter is not CPU.
     if has_real_gpu {
         let backend = WgpuBackend::new()
             .expect("Fix: WgpuBackend::new() must acquire a real GPU when one is present.");
-        let info = backend.adapter_info();
-        assert!(
-            !matches!(
-                info.device_type,
-                wgpu::DeviceType::Cpu | wgpu::DeviceType::Other
-            ),
-            "Fix: WgpuBackend::new() must never return a CPU adapter. Got {:?}",
-            info.device_type
-        );
+        assert_non_cpu_backend(&backend);
     }
 }

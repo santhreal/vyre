@@ -1,3 +1,8 @@
+//! The packed LR action word: a four-bit tag over a 28-bit payload.
+//!
+//! Packing shift, reduce, accept, and error into one u32 keeps the action table
+//! a plain buffer the device can index.
+
 const TAG_SHIFT: u32 = 0;
 const TAG_REDUCE: u32 = 1;
 const TAG_ACCEPT: u32 = 2;

@@ -1,18 +1,18 @@
 //! Bundle packaging contract tests for canonical artifact envelopes.
 
-mod common;
+mod fixture_target;
 
 use vyre_aot::{bundle, package_artifact, BundleError, LauncherError, LauncherOpts, TargetId};
 
 fn fixture_target() -> TargetId {
-    common::fixture_target()
+    fixture_target::fixture_target()
 }
 
 /// Existing launcher behavior remains target-owned after the artifact schema cutover.
 #[test]
 fn bundle_requires_linked_launcher_emitter() {
     let directory = tempfile::tempdir().expect("temporary directory must exist");
-    let artifact = common::compiled_artifact();
+    let artifact = fixture_target::compiled_artifact();
     let error = bundle(
         directory.path(),
         &artifact,
@@ -27,7 +27,7 @@ fn bundle_requires_linked_launcher_emitter() {
     assert!(matches!(
         error,
         BundleError::Launcher(LauncherError::TargetNotEnabled(target))
-            if target == common::fixture_target()
+            if target == fixture_target::fixture_target()
     ));
 }
 
@@ -35,7 +35,7 @@ fn bundle_requires_linked_launcher_emitter() {
 #[test]
 fn bundle_does_not_write_partial_artifacts_without_launcher() {
     let directory = tempfile::tempdir().expect("temporary directory must exist");
-    let artifact = common::compiled_artifact();
+    let artifact = fixture_target::compiled_artifact();
     let error = bundle(
         directory.path(),
         &artifact,
@@ -58,7 +58,7 @@ fn bundle_does_not_write_partial_artifacts_without_launcher() {
 fn package_rejects_weight_payload_larger_than_first_canonical_resource() {
     let parent = tempfile::tempdir().expect("temporary directory must exist");
     let output = parent.path().join("oversized");
-    let artifact = common::compiled_artifact();
+    let artifact = fixture_target::compiled_artifact();
     let error = package_artifact(
         &output,
         &artifact,
@@ -80,7 +80,7 @@ fn package_rejects_weight_payload_larger_than_first_canonical_resource() {
 #[test]
 fn package_writes_the_canonical_artifact_files() {
     let directory = tempfile::tempdir().expect("temporary directory must exist");
-    let artifact = common::compiled_artifact();
+    let artifact = fixture_target::compiled_artifact();
     let package = package_artifact(
         directory.path(),
         &artifact,

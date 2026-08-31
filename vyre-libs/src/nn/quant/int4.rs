@@ -1,16 +1,17 @@
 //! Packed INT4 inference primitives.
 //!
-//! The dot-product wrapper delegates to the Tier-2.5 primitive so packed
+//! The dot-product wrapper delegates to `math::quantized` so packed
 //! weights stay packed through the inner product. This avoids the extra global
 //! memory traffic of materializing an unpacked i32 lane buffer before a dot.
 
+use crate::math::quantized::i4x8_batched_matmul_f32_scaled as primitive_i4x8_batched_matmul_f32_scaled;
+use crate::math::quantized::i4x8_batched_matmul_top1_f32_scaled as primitive_i4x8_batched_matmul_top1_f32_scaled;
+use crate::math::quantized::i4x8_batched_matvec_f32_scaled as primitive_i4x8_batched_matvec_f32_scaled;
+use crate::math::quantized::i4x8_dot_f32_scaled as primitive_i4x8_dot_f32_scaled;
+use crate::math::quantized::i4x8_dot_i32 as primitive_i4x8_dot_i32;
+use crate::math::quantized::i4x8_matvec_f32_scaled as primitive_i4x8_matvec_f32_scaled;
+use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
-use vyre_primitives::math::quantized::i4x8_batched_matmul_f32_scaled as primitive_i4x8_batched_matmul_f32_scaled;
-use vyre_primitives::math::quantized::i4x8_batched_matmul_top1_f32_scaled as primitive_i4x8_batched_matmul_top1_f32_scaled;
-use vyre_primitives::math::quantized::i4x8_batched_matvec_f32_scaled as primitive_i4x8_batched_matvec_f32_scaled;
-use vyre_primitives::math::quantized::i4x8_dot_f32_scaled as primitive_i4x8_dot_f32_scaled;
-use vyre_primitives::math::quantized::i4x8_dot_i32 as primitive_i4x8_dot_i32;
-use vyre_primitives::math::quantized::i4x8_matvec_f32_scaled as primitive_i4x8_matvec_f32_scaled;
 
 /// Stable spec-level extension name for packed INT4 dot products.
 pub const INT4_DOT_EXTENSION_NAME: &str = "quant.int4.dot";
@@ -81,7 +82,7 @@ pub fn int4_batched_matmul_top1_scaled_extension_id() -> vyre_spec::extension::E
 /// Build a packed signed INT4 dot-product Program.
 #[must_use]
 pub fn int4_dot_i32(lhs_packed: &str, rhs_packed: &str, out: &str, lane_count: u32) -> Program {
-    crate::region::tag_program(
+    tag_program(
         DOT_OP_ID,
         primitive_i4x8_dot_i32(lhs_packed, rhs_packed, out, lane_count),
     )
@@ -97,7 +98,7 @@ pub fn int4_dot_f32_scaled(
     out: &str,
     lane_count: u32,
 ) -> Program {
-    crate::region::tag_program(
+    tag_program(
         DOT_SCALED_OP_ID,
         primitive_i4x8_dot_f32_scaled(
             lhs_packed, rhs_packed, lhs_scale, rhs_scale, out, lane_count,
@@ -115,7 +116,7 @@ pub fn int4_matvec_f32_scaled(
     rows: u32,
     cols: u32,
 ) -> Program {
-    crate::region::tag_program(
+    tag_program(
         MATVEC_SCALED_OP_ID,
         primitive_i4x8_matvec_f32_scaled(weights_packed, x, row_scales, out, rows, cols),
     )
@@ -132,7 +133,7 @@ pub fn int4_batched_matvec_f32_scaled(
     rows: u32,
     cols: u32,
 ) -> Program {
-    crate::region::tag_program(
+    tag_program(
         BATCHED_MATVEC_SCALED_OP_ID,
         primitive_i4x8_batched_matvec_f32_scaled(
             weights_packed,
@@ -158,7 +159,7 @@ pub fn int4_batched_matmul_f32_scaled(
     rows: u32,
     cols: u32,
 ) -> Program {
-    crate::region::tag_program(
+    tag_program(
         BATCHED_MATMUL_SCALED_OP_ID,
         primitive_i4x8_batched_matmul_f32_scaled(
             weights_packed,
@@ -185,7 +186,7 @@ pub fn int4_batched_matmul_top1_f32_scaled(
     rows: u32,
     cols: u32,
 ) -> Program {
-    crate::region::tag_program(
+    tag_program(
         BATCHED_MATMUL_TOP1_SCALED_OP_ID,
         primitive_i4x8_batched_matmul_top1_f32_scaled(
             weights_packed,
@@ -200,36 +201,31 @@ pub fn int4_batched_matmul_top1_f32_scaled(
     )
 }
 
+const EXPECTED_INT4_DOT_OUTPUT_BYTES: [u8; 4] = [0x28, 0x00, 0x00, 0x00];
+const EXPECTED_INT4_DOT_SCALED_OUTPUT_BYTES: [u8; 4] = [0x00, 0x00, 0xA0, 0x40];
+const EXPECTED_INT4_MATVEC_SCALED_OUTPUT_BYTES: [u8; 8] = [0u8; 8];
+const EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES: [u8; 16] = [0u8; 16];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: DOT_OP_ID,
-        build: Some(|| int4_dot_i32("lhs", "rhs", "out", 8)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        DOT_OP_ID,
+        || int4_dot_i32("lhs", "rhs", "out", 8),
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321]),
                 vyre_primitives::wire::pack_u32_slice(&[0xFEDC_1234]),
             ]]
         }),
-        expected_output: Some(|| vec![vec![40i32.to_le_bytes().to_vec()]]),
-        category: Some("nn"),
-    }
+        Some(|| vec![vec![EXPECTED_INT4_DOT_OUTPUT_BYTES.to_vec()]]),
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: DOT_SCALED_OP_ID,
-        build: Some(|| int4_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", 8)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        DOT_SCALED_OP_ID,
+        || int4_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", 8),
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321]),
                 vyre_primitives::wire::pack_u32_slice(&[0xFEDC_1234]),
@@ -237,66 +233,47 @@ inventory::submit! {
                 vyre_primitives::wire::pack_f32_slice(&[0.25]),
             ]]
         }),
-        expected_output: Some(|| vec![vec![5.0_f32.to_le_bytes().to_vec()]]),
-        category: Some("nn"),
-    }
+        Some(|| vec![vec![EXPECTED_INT4_DOT_SCALED_OUTPUT_BYTES.to_vec()]]),
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: MATVEC_SCALED_OP_ID,
-        build: Some(|| int4_matvec_f32_scaled("weights", "x", "scales", "out", 2, 8)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        MATVEC_SCALED_OP_ID,
+        || int4_matvec_f32_scaled("weights", "x", "scales", "out", 2, 8),
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321, 0xFEDC_1234]),
                 vyre_primitives::wire::pack_f32_slice(&[1.0; 8]),
                 vyre_primitives::wire::pack_f32_slice(&[0.5, 0.25]),
             ]]
         }),
-        expected_output: Some(|| {
-            vec![vec![vyre_primitives::wire::pack_f32_slice(&[0.0, 0.0])]]
-        }),
-        category: Some("nn"),
-    }
+        Some(|| vec![vec![EXPECTED_INT4_MATVEC_SCALED_OUTPUT_BYTES.to_vec()]]),
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: BATCHED_MATVEC_SCALED_OP_ID,
-        build: Some(|| int4_batched_matvec_f32_scaled("weights", "x", "scales", "out", 2, 2, 8)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        BATCHED_MATVEC_SCALED_OP_ID,
+        || int4_batched_matvec_f32_scaled("weights", "x", "scales", "out", 2, 2, 8),
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321, 0xFEDC_1234]),
                 vyre_primitives::wire::pack_f32_slice(&[1.0; 16]),
                 vyre_primitives::wire::pack_f32_slice(&[0.5, 0.25]),
             ]]
         }),
-        expected_output: Some(|| {
-            vec![vec![vyre_primitives::wire::pack_f32_slice(&[0.0, 0.0, 0.0, 0.0])]]
-        }),
-        category: Some("nn"),
-    }
+        Some(|| vec![vec![EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES.to_vec()]]),
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: BATCHED_MATMUL_SCALED_OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        BATCHED_MATMUL_SCALED_OP_ID,
+        || {
             int4_batched_matmul_f32_scaled(
                 "weights",
                 "activations",
@@ -307,8 +284,8 @@ inventory::submit! {
                 2,
                 8,
             )
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0, 0]),
                 vyre_primitives::wire::pack_u32_slice(&[0, 0]),
@@ -316,22 +293,15 @@ inventory::submit! {
                 vyre_primitives::wire::pack_f32_slice(&[0.125, 0.25]),
             ]]
         }),
-        expected_output: Some(|| {
-            vec![vec![vyre_primitives::wire::pack_f32_slice(&[0.0, 0.0, 0.0, 0.0])]]
-        }),
-        category: Some("nn"),
-    }
+        Some(|| vec![vec![EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES.to_vec()]]),
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: BATCHED_MATMUL_TOP1_SCALED_OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        BATCHED_MATMUL_TOP1_SCALED_OP_ID,
+        || {
             int4_batched_matmul_top1_f32_scaled(
                 "weights",
                 "activations",
@@ -342,8 +312,8 @@ inventory::submit! {
                 2,
                 8,
             )
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0, 0]),
                 vyre_primitives::wire::pack_u32_slice(&[0, 0]),
@@ -351,31 +321,34 @@ inventory::submit! {
                 vyre_primitives::wire::pack_f32_slice(&[0.125, 0.25]),
             ]]
         }),
-        expected_output: Some(|| {
-            vec![vec![vyre_primitives::wire::pack_f32_slice(&[0.0, 0.0, 0.0, 0.0])]]
-        }),
-        category: Some("nn"),
-    }
+        Some(|| vec![vec![EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES.to_vec()]]),
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_reference::{reference_eval, value::Value};
+    use crate::fixture_bytes::eval_bytes;
+    use vyre_reference::composition_witness::{
+        i4x8_batched_matmul_f32_scaled_witness, i4x8_batched_matmul_top1_f32_scaled_witness,
+        i4x8_batched_matvec_f32_scaled_witness, i4x8_dot_f32_scaled_witness, i4x8_dot_i32_witness,
+        i4x8_matvec_f32_scaled_witness, pack_i4x8_witness,
+    };
 
-    fn run(lhs: &[i32], rhs: &[i32]) -> i32 {
-        let lhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(lhs);
-        let rhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(rhs);
+    fn dot(lhs: &[i32], rhs: &[i32]) -> i32 {
+        let lhs_packed = pack_i4x8_witness(lhs);
+        let rhs_packed = pack_i4x8_witness(rhs);
         let program = int4_dot_i32("lhs", "rhs", "out", lhs.len() as u32);
-        let outputs = reference_eval(
+        let raw = crate::fixture_bytes::eval_bytes(
+            "int4_dot_i32",
             &program,
-            &[
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&lhs_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&rhs_packed).into()),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&lhs_packed),
+                vyre_primitives::wire::pack_u32_slice(&rhs_packed),
             ],
         )
-        .expect("Fix: packed INT4 dot wrapper must execute in the reference oracle.");
-        let raw = outputs[0].to_bytes();
+        .swap_remove(0);
         i32::from_le_bytes(
             raw.get(0..4)
                 .expect("Fix: packed INT4 dot must emit one i32.")
@@ -385,8 +358,8 @@ mod tests {
     }
 
     fn run_scaled(lhs: &[i32], rhs: &[i32], lhs_scale: f32, rhs_scale: f32) -> f32 {
-        let lhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(lhs);
-        let rhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(rhs);
+        let lhs_packed = pack_i4x8_witness(lhs);
+        let rhs_packed = pack_i4x8_witness(rhs);
         let program = int4_dot_f32_scaled(
             "lhs",
             "rhs",
@@ -395,17 +368,17 @@ mod tests {
             "out",
             lhs.len() as u32,
         );
-        let outputs = reference_eval(
+        let outputs = eval_bytes(
+            "int4",
             &program,
-            &[
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&lhs_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&rhs_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(&[lhs_scale]).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(&[rhs_scale]).into()),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&lhs_packed),
+                vyre_primitives::wire::pack_u32_slice(&rhs_packed),
+                vyre_primitives::wire::pack_f32_slice(&[lhs_scale]),
+                vyre_primitives::wire::pack_f32_slice(&[rhs_scale]),
             ],
-        )
-        .expect("Fix: fused scaled packed INT4 dot wrapper must execute in the reference oracle.");
-        let raw = outputs[0].to_bytes();
+        );
+        let raw = outputs[0].clone();
         f32::from_le_bytes(
             raw.get(0..4)
                 .expect("Fix: scaled packed INT4 dot must emit one f32.")
@@ -416,10 +389,10 @@ mod tests {
 
     fn pack_i4_matrix_rows(rows: &[Vec<i32>]) -> Vec<u32> {
         let cols = rows.first().map_or(0, Vec::len) as u32;
-        let words_per_row = vyre_primitives::math::quantized::i4_packed_words(cols) as usize;
+        let words_per_row = crate::math::quantized::i4_packed_words(cols) as usize;
         let mut out = Vec::with_capacity(rows.len() * words_per_row);
         for row in rows {
-            let mut packed = vyre_primitives::math::quantized::pack_i4x8_cpu(row);
+            let mut packed = pack_i4x8_witness(row);
             packed.resize(words_per_row, 0);
             out.extend_from_slice(&packed);
         }
@@ -431,23 +404,17 @@ mod tests {
         let cols = x.len() as u32;
         let packed = pack_i4_matrix_rows(weights);
         let program = int4_matvec_f32_scaled("weights", "x", "scales", "out", rows, cols);
-        let outputs = reference_eval(
+        let outputs = eval_bytes(
+            "int4",
             &program,
-            &[
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(x).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(scales).into()),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&packed),
+                vyre_primitives::wire::pack_f32_slice(x),
+                vyre_primitives::wire::pack_f32_slice(scales),
             ],
-        )
-        .expect(
-            "Fix: fused scaled packed INT4 matvec wrapper must execute in the reference oracle.",
         );
-        vyre_primitives::wire::unpack_f32_slice(
-            &outputs[0].to_bytes(),
-            rows as usize,
-            "int4 matvec output",
-        )
-        .expect("Fix: fused INT4 matvec output must decode as f32 rows.")
+        vyre_primitives::wire::unpack_f32_slice(&outputs[0], rows as usize, "int4 matvec output")
+            .expect("Fix: fused INT4 matvec output must decode as f32 rows.")
     }
 
     fn run_batched_matvec(
@@ -461,19 +428,17 @@ mod tests {
         let packed = pack_i4_matrix_rows(weights);
         let program =
             int4_batched_matvec_f32_scaled("weights", "x", "scales", "out", batch, rows, cols);
-        let outputs = reference_eval(
+        let outputs = eval_bytes(
+            "int4",
             &program,
-            &[
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(x_batches).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(scales).into()),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&packed),
+                vyre_primitives::wire::pack_f32_slice(x_batches),
+                vyre_primitives::wire::pack_f32_slice(scales),
             ],
-        )
-        .expect(
-            "Fix: batched fused scaled packed INT4 matvec wrapper must execute in the reference oracle.",
         );
         vyre_primitives::wire::unpack_f32_slice(
-            &outputs[0].to_bytes(),
+            &outputs[0],
             (batch * rows) as usize,
             "batched int4 matvec output",
         )
@@ -502,20 +467,18 @@ mod tests {
             rows,
             cols,
         );
-        let outputs = reference_eval(
+        let outputs = eval_bytes(
+            "int4",
             &program,
-            &[
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&weights_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&activations_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(row_scales).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(batch_scales).into()),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&weights_packed),
+                vyre_primitives::wire::pack_u32_slice(&activations_packed),
+                vyre_primitives::wire::pack_f32_slice(row_scales),
+                vyre_primitives::wire::pack_f32_slice(batch_scales),
             ],
-        )
-        .expect(
-            "Fix: packed-activation batched INT4 matmul wrapper must execute in the reference oracle.",
         );
         vyre_primitives::wire::unpack_f32_slice(
-            &outputs[0].to_bytes(),
+            &outputs[0],
             (batch * rows) as usize,
             "batched int4 matmul output",
         )
@@ -543,18 +506,18 @@ mod tests {
             rows,
             cols,
         );
-        let outputs = reference_eval(
+        let outputs = eval_bytes(
+            "int4",
             &program,
-            &[
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&weights_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&activations_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(row_scales).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(batch_scales).into()),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&weights_packed),
+                vyre_primitives::wire::pack_u32_slice(&activations_packed),
+                vyre_primitives::wire::pack_f32_slice(row_scales),
+                vyre_primitives::wire::pack_f32_slice(batch_scales),
             ],
-        )
-        .expect("Fix: packed-activation INT4 top1 wrapper must execute in the reference oracle.");
+        );
         let packed = vyre_primitives::wire::unpack_f32_slice(
-            &outputs[0].to_bytes(),
+            &outputs[0],
             (batch * 2) as usize,
             "batched int4 top1 packed output",
         )
@@ -568,43 +531,37 @@ mod tests {
     }
 
     #[test]
-    fn packed_dot_matches_cpu_oracle() {
+    fn packed_dot_matches_reference_oracle() {
         let lhs = [1, 2, 3, 4, -1, -2, -3, -4];
         let rhs = [4, 3, 2, 1, -4, -3, -2, -1];
-        let lhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(&lhs);
-        let rhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(&rhs);
+        let lhs_packed = pack_i4x8_witness(&lhs);
+        let rhs_packed = pack_i4x8_witness(&rhs);
 
-        assert_eq!(run(&lhs, &rhs), 40);
+        assert_eq!(dot(&lhs, &rhs), 40);
         assert_eq!(
-            run(&lhs, &rhs),
-            vyre_primitives::math::quantized::i4x8_dot_i32_cpu(&lhs_packed, &rhs_packed, 8)
+            dot(&lhs, &rhs),
+            i4x8_dot_i32_witness(&lhs_packed, &rhs_packed, 8)
         );
     }
 
     #[test]
-    fn scaled_dot_matches_cpu_oracle() {
+    fn scaled_dot_matches_reference_oracle() {
         let lhs = [1, 2, 3, 4, -1, -2, -3, -4];
         let rhs = [4, 3, 2, 1, -4, -3, -2, -1];
         let lhs_scale = 0.5_f32;
         let rhs_scale = 0.25_f32;
-        let lhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(&lhs);
-        let rhs_packed = vyre_primitives::math::quantized::pack_i4x8_cpu(&rhs);
+        let lhs_packed = pack_i4x8_witness(&lhs);
+        let rhs_packed = pack_i4x8_witness(&rhs);
 
         assert_eq!(
             run_scaled(&lhs, &rhs, lhs_scale, rhs_scale).to_bits(),
-            vyre_primitives::math::quantized::i4x8_dot_f32_scaled_cpu(
-                &lhs_packed,
-                &rhs_packed,
-                lhs_scale,
-                rhs_scale,
-                8
-            )
-            .to_bits()
+            i4x8_dot_f32_scaled_witness(&lhs_packed, &rhs_packed, lhs_scale, rhs_scale, 8)
+                .to_bits()
         );
     }
 
     #[test]
-    fn scaled_matvec_matches_cpu_oracle() {
+    fn scaled_matvec_matches_reference_oracle() {
         let weights = vec![
             vec![1, 2, 3, 4, -1, -2, -3, -4, 5],
             vec![4, 3, 2, 1, -4, -3, -2, -1, -5],
@@ -615,7 +572,7 @@ mod tests {
         let packed = pack_i4_matrix_rows(&weights);
 
         let actual = run_matvec(&weights, &x, &scales);
-        let expected = vyre_primitives::math::quantized::i4x8_matvec_f32_scaled_cpu(
+        let expected = i4x8_matvec_f32_scaled_witness(
             &packed,
             &x,
             &scales,
@@ -630,7 +587,7 @@ mod tests {
     }
 
     #[test]
-    fn batched_scaled_matvec_matches_cpu_oracle() {
+    fn batched_scaled_matvec_matches_reference_oracle() {
         let weights = vec![
             vec![1, 2, 3, 4, -1, -2, -3, -4, 5],
             vec![4, 3, 2, 1, -4, -3, -2, -1, -5],
@@ -644,7 +601,7 @@ mod tests {
         let packed = pack_i4_matrix_rows(&weights);
 
         let actual = run_batched_matvec(&weights, &x_batches, &scales, 2);
-        let expected = vyre_primitives::math::quantized::i4x8_batched_matvec_f32_scaled_cpu(
+        let expected = i4x8_batched_matvec_f32_scaled_witness(
             &packed,
             &x_batches,
             &scales,
@@ -660,7 +617,7 @@ mod tests {
     }
 
     #[test]
-    fn batched_scaled_matmul_matches_cpu_oracle() {
+    fn batched_scaled_matmul_matches_reference_oracle() {
         let weights = vec![
             vec![1, 2, 3, 4, -1, -2, -3, -4, 5],
             vec![4, 3, 2, 1, -4, -3, -2, -1, -5],
@@ -676,7 +633,7 @@ mod tests {
         let activations_packed = pack_i4_matrix_rows(&activation_batches);
 
         let actual = run_batched_matmul(&weights, &activation_batches, &row_scales, &batch_scales);
-        let expected = vyre_primitives::math::quantized::i4x8_batched_matmul_f32_scaled_cpu(
+        let expected = i4x8_batched_matmul_f32_scaled_witness(
             &weights_packed,
             &activations_packed,
             &row_scales,
@@ -693,7 +650,7 @@ mod tests {
     }
 
     #[test]
-    fn batched_scaled_matmul_top1_matches_cpu_oracle() {
+    fn batched_scaled_matmul_top1_matches_reference_oracle() {
         let weights = vec![
             vec![1, 2, 3, 4, -1, -2, -3, -4, 5],
             vec![4, 3, 2, 1, -4, -3, -2, -1, -5],
@@ -710,16 +667,15 @@ mod tests {
 
         let (actual_scores, actual_indices) =
             run_batched_matmul_top1(&weights, &activation_batches, &row_scales, &batch_scales);
-        let (expected_scores, expected_indices) =
-            vyre_primitives::math::quantized::i4x8_batched_matmul_top1_f32_scaled_cpu(
-                &weights_packed,
-                &activations_packed,
-                &row_scales,
-                &batch_scales,
-                activation_batches.len() as u32,
-                weights.len() as u32,
-                weights[0].len() as u32,
-            );
+        let (expected_scores, expected_indices) = i4x8_batched_matmul_top1_f32_scaled_witness(
+            &weights_packed,
+            &activations_packed,
+            &row_scales,
+            &batch_scales,
+            activation_batches.len() as u32,
+            weights.len() as u32,
+            weights[0].len() as u32,
+        );
 
         assert_eq!(actual_indices, expected_indices);
         assert_eq!(

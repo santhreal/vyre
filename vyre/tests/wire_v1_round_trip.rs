@@ -6,24 +6,11 @@
 //! decoder when a new IR variant lands; exhaustive proptest coverage
 //! lives at `vyre-foundation/tests/terminal_wire_round_trip.rs`.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre::ir::Program;
 
-fn empty_program() -> Program {
-    Program::wrapped(Vec::new(), [1, 1, 1], Vec::new())
-}
-
-fn trivial_program() -> Program {
-    Program::wrapped(
-        vec![BufferDecl::storage(
-            "out",
-            0,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )],
-        [64, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
-    )
-}
+#[path = "program_fixtures/mod.rs"]
+mod program_fixtures;
+use program_fixtures::{empty_program, one_store_program};
 
 #[test]
 fn empty_program_round_trips() {
@@ -35,7 +22,7 @@ fn empty_program_round_trips() {
 
 #[test]
 fn trivial_program_round_trips() {
-    let p = trivial_program();
+    let p = one_store_program();
     let bytes = p.to_wire().expect("trivial program must encode");
     let decoded = Program::from_wire(&bytes).expect("trivial program must decode");
     assert_eq!(decoded, p);
@@ -45,7 +32,7 @@ fn trivial_program_round_trips() {
 fn re_encode_is_stable() {
     // Encoder must be deterministic: encoding the decoded program
     // yields the same bytes.
-    let p = trivial_program();
+    let p = one_store_program();
     let bytes = p.to_wire().expect("encode");
     let decoded = Program::from_wire(&bytes).expect("decode");
     let re_encoded = decoded.to_wire().expect("re-encode");

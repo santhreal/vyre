@@ -1,65 +1,29 @@
-//! End-to-end test: vyre's DCE pass running as a vyre Program on the
-//! GPU through the canonical `WgpuBackend::dispatch` API.
+//! End-to-end test for DCE through the WGPU artifact-backed semantic executor.
 //!
-//! No CPU fallback. The test wires a `WgpuOptimizerDispatcher` that
-//! satisfies the `vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher`
-//! trait and calls `gpu_dce`. Result is asserted fingerprint-equal to
-//! the foundation CPU `dce` pass on the same input  -  proving the
-//! self-hosted GPU pass is semantically identical, with the substrate
-//! actually running on hardware.
+//! Result is fingerprint-equal to the foundation CPU `dce` pass on the same
+//! input while production execution runs on hardware.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
-use common::acquire_live_backend as live_backend;
+mod harness;
+use harness::acquire_live_backend as live_backend;
+use harness::self_optimizer::{semantic_execution, wrapped};
 
-use vyre::ir::{Expr, Node, Program};
-use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_driver_wgpu::WgpuBackend;
+use vyre::ir::{Expr, Node};
 use vyre_foundation::optimizer::fingerprint_program;
-use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as cpu_dce_oracle;
-use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
-use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
-
-/// Wraps a live `WgpuBackend` and adapts its `dispatch` API to the
-/// `OptimizerDispatcher` trait the self-hosted optimizer expects.
-struct WgpuOptimizerDispatcher<'a> {
-    backend: &'a WgpuBackend,
-}
-
-impl<'a> WgpuOptimizerDispatcher<'a> {
-    fn new(backend: &'a WgpuBackend) -> Self {
-        Self { backend }
-    }
-}
-
-impl<'a> OptimizerDispatcher for WgpuOptimizerDispatcher<'a> {
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let mut config = DispatchConfig::default();
-        config.grid_override = grid_override;
-        VyreBackend::dispatch(self.backend, program, inputs, &config)
-            .map_err(|err| DispatchError::BackendError(err.to_string()))
-    }
-}
-
-fn wrapped(entry: Vec<Node>) -> Program {
-    Program::wrapped(Vec::new(), [1, 1, 1], entry)
-}
+use vyre_foundation::optimizer::passes::fusion_cse::dce::dce as cpu_dce_oracle;
+use vyre_pass_engine::optimizer::dce_via_encoded::gpu_dce;
 
 fn assert_gpu_dce_matches_cpu_oracle(entry: Vec<Node>) {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = semantic_execution(&backend);
 
     let oracle_in = wrapped(entry.clone());
     let test_in = wrapped(entry);
 
     let oracle_out = cpu_dce_oracle(oracle_in);
-    let gpu_out = gpu_dce(test_in, &dispatcher).expect("gpu_dce dispatches through wgpu cleanly");
+    let gpu_out = gpu_dce(test_in, &dispatcher.0, &dispatcher.1)
+        .expect("gpu_dce dispatches through wgpu cleanly");
     assert_eq!(
         fingerprint_program(&oracle_out),
         fingerprint_program(&gpu_out),

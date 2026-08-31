@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Descriptor verification rejects an operation that addresses a binding slot the layout does not declare, instead of passing the unresolvable slot to a backend."

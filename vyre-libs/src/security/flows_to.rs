@@ -1,5 +1,5 @@
 //! `flows_to`  -  Tier-3 shim over
-//! [`vyre_primitives::graph::csr_forward_traverse`].
+//! [`crate::graph::csr_forward_traverse`].
 //!
 //! The taint-reachability semantics (*does taint flow from source
 //! NodeSet to sink NodeSet given this ProgramGraph?*) live in the
@@ -15,11 +15,13 @@
 //! signature from the inert v2 API has been deleted  -  the shim
 //! now takes only the canonical frontier / sink buffer names.
 
+use crate::graph::program_graph::ProgramGraphShape;
+use crate::predicate::edge_kind;
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
 
-use crate::security::flow_composition::dataflow_reach_program;
+use crate::security::flow_composition::{
+    security_flow_program, FlowPredicate, SecurityFlowOptions,
+};
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::flows_to";
 
@@ -65,12 +67,13 @@ pub const ALIAS_PROPAGATION_MASK: u32 =
 /// receives the union of nodes reachable in one more dataflow hop.
 #[must_use]
 pub fn flows_to(shape: ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> Program {
-    crate::security::assert_security_inputs(
+    security_flow_program(SecurityFlowOptions::reach(
         OP_ID,
-        shape.node_count,
-        &[("frontier_in", frontier_in), ("frontier_out", frontier_out)],
-    );
-    dataflow_reach_program(OP_ID, shape, frontier_in, frontier_out, FLOWS_TO_MASK)
+        shape,
+        FlowPredicate::forward(FLOWS_TO_MASK),
+        frontier_in,
+        frontier_out,
+    ))
 }
 
 /// Build one forward-traversal step along ALIAS-only edges.
@@ -83,72 +86,21 @@ pub fn flows_to_alias_only(
     frontier_in: &str,
     frontier_out: &str,
 ) -> Program {
-    dataflow_reach_program(
+    security_flow_program(SecurityFlowOptions::reach(
         OP_ID,
         shape,
+        FlowPredicate::forward(ALIAS_PROPAGATION_MASK),
         frontier_in,
         frontier_out,
-        ALIAS_PROPAGATION_MASK,
-    )
-}
-
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| flows_to(ProgramGraphShape::new(4, 3), "fin", "fout")),
-        test_inputs: Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            // Linear chain 0 → 1 → 2 → 3. Starting frontier {0}.
-            // `fout` starts as the accumulator frontier so the
-            // convergence lens monotonically grows {0,1,2,3}.
-            vec![vec![
-                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
-                to_bytes(&[0, 1, 2, 3, 3]),       // pg_edge_offsets: 0→{1}, 1→{2}, 2→{3}, 3→{}
-                to_bytes(&[1, 2, 3]),             // pg_edge_targets
-                to_bytes(&[
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                ]),                               // pg_edge_kind_mask  -  all dataflow
-                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
-                to_bytes(&[0b0001]),              // fin = {0}
-                to_bytes(&[0b0001]),              // fout accumulator seed = {0}
-            ]]
-        }),
-        expected_output: Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            // One forward-reach step from {0}: the step writes {1}
-            // into the accumulator. A no-op that leaves fout at {0}
-            // fails this oracle.
-            vec![vec![to_bytes(&[0b0011])]]
-        }),
-        category: Some("security"),
-    }
-}
-
-inventory::submit! {
-    // AUDIT_2026-04-24 F-FT-03: max_iterations raised from 64 to
-    // 4096 so deep call graphs (Linux kernel-scale code) don't hit
-    // a silent truncation ceiling during the closure. The fixpoint
-    // driver aborts early whenever the frontier stops growing, so
-    // a higher ceiling costs nothing on small graphs; the only
-    // case where this matters is a pathologically deep reachability
-    // walk, where the old 64-step cap was producing false negatives.
-    crate::operation_catalog::ConvergenceContract {
-        op_id: OP_ID,
-        max_iterations: 4096,
-    }
+    ))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_primitives::predicate::edge_kind;
+    use crate::fixture_bytes::try_eval_bytes;
+    use crate::predicate::edge_kind;
+    use vyre_reference::composition_witness::csr_forward_traverse_witness;
 
     #[test]
     fn flows_to_mask_excludes_control_and_dominance() {
@@ -202,7 +154,7 @@ mod tests {
             edge_kind::MUT_REF,
             edge_kind::RETURN,
         ];
-        let alias_only = vyre_primitives::graph::csr_forward_traverse::cpu_ref(
+        let alias_only = csr_forward_traverse_witness(
             6,
             &edge_offsets,
             &edge_targets,
@@ -210,7 +162,7 @@ mod tests {
             &[0b000001],
             ALIAS_PROPAGATION_MASK,
         );
-        let full_flow = vyre_primitives::graph::csr_forward_traverse::cpu_ref(
+        let full_flow = csr_forward_traverse_witness(
             6,
             &edge_offsets,
             &edge_targets,
@@ -243,16 +195,7 @@ mod tests {
     fn flows_to_program_uses_non_degenerate_shape() {
         let shape = ProgramGraphShape::new(64, 128);
         let p = flows_to(shape, "fin", "fout");
-        let fin_buf = p
-            .buffers
-            .iter()
-            .find(|b| b.name() == "fin")
-            .expect("Fix: fin buffer");
-        assert!(
-            fin_buf.count >= 2,
-            "bitset_words(64) = 2; count {} suggests degenerate shape",
-            fin_buf.count
-        );
+        crate::security::flow_composition::assert_non_degenerate_bitset_shape(&p, "fin", 2);
     }
 
     #[test]
@@ -306,11 +249,7 @@ mod tests {
             to_bytes(&[0b0001]),     // fin
             to_bytes(&[0b0001]),     // fout
         ];
-        let values: Vec<vyre_reference::value::Value> = inputs
-            .into_iter()
-            .map(vyre_reference::value::Value::from)
-            .collect();
-        let error = vyre_reference::reference_eval(&p, &values).expect_err(
+        let error = try_eval_bytes(&p, inputs).expect_err(
             "edge_count (10) exceeds actual edges (3) must trap or error in reference_eval",
         );
         let msg = error.to_string();

@@ -90,7 +90,7 @@ impl BodyBuilder<'_> {
     pub(super) fn emit_trap(
         &mut self,
         op: &KernelOp,
-        tag: &vyre_lower::descriptor::Name,
+        tag: &vyre_lower::Name,
     ) -> Result<(), EmitError> {
         let tag_code = *self.trap_tag_codes.get(tag).ok_or_else(|| {
             EmitError::InvalidDescriptor(format!(

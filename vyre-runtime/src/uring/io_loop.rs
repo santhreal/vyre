@@ -1,6 +1,6 @@
 //! Autonomous IO loop for persistent megakernel.
 //!
-//! This module implements Innovation I.5: host-side pump thread that
+//! This module implements a host-side pump thread that
 //! polls the GPU's `io_queue` for requests and services them via
 //! io_uring. This removes the CPU from the dispatch critical path.
 
@@ -210,5 +210,11 @@ impl ResidentIoLoop {
         } else {
             Ok(())
         }
+    }
+}
+
+impl Drop for ResidentIoLoop {
+    fn drop(&mut self) {
+        let _ = self.stop();
     }
 }

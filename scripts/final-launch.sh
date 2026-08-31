@@ -25,10 +25,8 @@ fi
 
 VYRE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$VYRE_ROOT"
-source scripts/lib/cargo_runner.sh
 source scripts/lib/repo_boundary.sh
 source scripts/lib/release_train.sh
-vyre_select_cargo_runner
 vyre_load_repo_boundary
 vyre_load_release_train
 
@@ -99,7 +97,8 @@ if [[ -z "$repo_visibility" ]]; then
     printf 'Fix: GitHub repository %s is not visible to gh; refusing final launch before publish.\n' "$VYRE_RELEASE_PUBLIC_REPO" >&2
     exit 2
 fi
-if [[ "${repo_visibility^^}" != "PUBLIC" ]]; then
+repo_visibility_upper="$(printf '%s' "$repo_visibility" | tr '[:lower:]' '[:upper:]')"
+if [[ "$repo_visibility_upper" != "PUBLIC" ]]; then
     printf 'Fix: GitHub repository %s visibility is %s, expected PUBLIC. %s visibility is intentionally untouched.\n' "$VYRE_RELEASE_PUBLIC_REPO" "$repo_visibility" "$VYRE_RELEASE_PRIVATE_REPO" >&2
     exit 2
 fi
@@ -129,7 +128,7 @@ git push origin "$release_branch"
 git push origin "$VYRE_RELEASE_TAG_VYRE_RC"
 
 
-"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate --prepublish
+./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate
 VYRE_RELEASE_APPROVED="$VYRE_RELEASE_PUBLISH_APPROVAL_TOKEN" bash scripts/publish-release.sh
 printf 'verified GitHub repository is public: %s\n' "$VYRE_RELEASE_PUBLIC_REPO"
 
@@ -137,7 +136,7 @@ git tag -a "$VYRE_RELEASE_TAG_VYRE" -m "$VYRE_RELEASE_TAG_VYRE"
 git push origin "$VYRE_RELEASE_TAG_VYRE"
 
 
-release_notes="docs/release/v${VYRE_RELEASE_VYRE_VERSION}.md"
+release_notes="release/evidence/docs/release-notes-body.md"
 gh release create "$VYRE_RELEASE_TAG_VYRE" \
     --repo "$VYRE_RELEASE_VYRE_REPOSITORY" \
     --title "$VYRE_RELEASE_DISPLAY" \
@@ -190,8 +189,8 @@ jq -n \
         completion_status: "complete"
     }' > release/evidence/final/public-launch-completion.json
 
-"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json
-"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate
+./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- launch-state --write
+./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate --launch-complete
 
 git add \
     release/evidence/package/publish-readiness.json \

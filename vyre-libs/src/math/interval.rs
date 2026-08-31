@@ -1,0 +1,146 @@
+//! Value-set interval boundary propagation as Vyre IR.
+//!
+//! The primitive computes conservative `[min, max]` interval merges over u32
+//! pairs. Backend crates decide how to lower min/max; this module only owns the
+//! substrate-neutral program shape.
+
+use vyre_foundation::composition::wrap_anonymous_region;
+
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
+/// Canonical op id for interval merge.
+pub const OP_ID: &str = "vyre-libs::math::interval_merge";
+
+/// Build the per-lane interval merge body.
+///
+/// Buffers use pair layout: `mins_out[i] = min(mins_a[i], mins_b[i])` and
+/// `maxs_out[i] = max(maxs_a[i], maxs_b[i])`.
+#[must_use]
+pub fn interval_merge_body(
+    mins_a: &str,
+    maxs_a: &str,
+    mins_b: &str,
+    maxs_b: &str,
+    mins_out: &str,
+    maxs_out: &str,
+    lane_count: u32,
+) -> Vec<Node> {
+    let lane = Expr::logical_index(0);
+    vec![Node::if_then(
+        Expr::lt(lane.clone(), Expr::u32(lane_count)),
+        vec![
+            Node::let_bind("interval_min_a", Expr::load(mins_a, lane.clone())),
+            Node::let_bind("interval_max_a", Expr::load(maxs_a, lane.clone())),
+            Node::let_bind("interval_min_b", Expr::load(mins_b, lane.clone())),
+            Node::let_bind("interval_max_b", Expr::load(maxs_b, lane.clone())),
+            Node::store(
+                mins_out,
+                lane.clone(),
+                Expr::min(Expr::var("interval_min_a"), Expr::var("interval_min_b")),
+            ),
+            Node::store(
+                maxs_out,
+                lane,
+                Expr::max(Expr::var("interval_max_a"), Expr::var("interval_max_b")),
+            ),
+        ],
+    )]
+}
+
+/// Build an interval merge Program.
+#[must_use]
+#[allow(clippy::too_many_arguments)]
+pub fn interval_merge_program(
+    mins_a: &str,
+    maxs_a: &str,
+    mins_b: &str,
+    maxs_b: &str,
+    mins_out: &str,
+    maxs_out: &str,
+    lane_count: u32,
+) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(mins_a, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(lane_count.max(1)),
+            BufferDecl::storage(maxs_a, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(lane_count.max(1)),
+            BufferDecl::storage(mins_b, 2, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(lane_count.max(1)),
+            BufferDecl::storage(maxs_b, 3, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(lane_count.max(1)),
+            BufferDecl::storage(mins_out, 4, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(lane_count.max(1)),
+            BufferDecl::storage(maxs_out, 5, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(lane_count.max(1)),
+        ],
+        [256, 1, 1],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            interval_merge_body(
+                mins_a, maxs_a, mins_b, maxs_b, mins_out, maxs_out, lane_count,
+            ),
+        )],
+    )
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || interval_merge_program("amin", "amax", "bmin", "bmax", "omin", "omax", 3),
+        Some(|| {
+            // Three lanes, elementwise [min, max] merge of interval pair A vs B. Each lane
+            // writes its OWN disjoint output slots (omin[lane], omax[lane]) with plain
+            // stores, so the pass is race-clean and over-fire-safe by construction. The two
+            // ReadWrite outputs are also inputs (seeded, then overwritten), so the fixture
+            // provides a seed for each.
+            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
+            vec![vec![
+                to_bytes(&[10, 0, 7]),  // amin
+                to_bytes(&[20, 3, 9]),  // amax
+                to_bytes(&[4, 2, 8]),   // bmin
+                to_bytes(&[18, 5, 12]), // bmax
+                to_bytes(&[0, 0, 0]),   // omin seed (overwritten)
+                to_bytes(&[0, 0, 0]),   // omax seed (overwritten)
+            ]]
+        }),
+        Some(|| {
+            // omin = min(a,b) per lane; omax = max(a,b) per lane.
+            vec![vec![
+                vec![
+                    0x04, 0x00, 0x00, 0x00, // 4
+                    0x00, 0x00, 0x00, 0x00, // 0
+                    0x07, 0x00, 0x00, 0x00, // 7
+                ],
+                vec![
+                    0x14, 0x00, 0x00, 0x00, // 20
+                    0x05, 0x00, 0x00, 0x00, // 5
+                    0x0c, 0x00, 0x00, 0x00, // 12
+                ],
+            ]]
+        }),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vyre_reference::composition_witness::interval_merge_witness as cpu_interval_merge;
+
+    #[test]
+    fn interval_merge_program_is_ir_not_target_text() {
+        let program = interval_merge_program("amin", "amax", "bmin", "bmax", "omin", "omax", 16);
+        let dump = format!("{program:#?}");
+        assert!(dump.contains("Min"));
+        assert!(dump.contains("Max"));
+        assert!(!dump.contains("subgroupMin"));
+        assert!(!dump.contains("vec2<u32>"));
+    }
+
+    #[test]
+    fn cpu_interval_merge_is_conservative() {
+        let (mins, maxs) = cpu_interval_merge(&[10, 0, 7], &[20, 3, 9], &[4, 2, 8], &[18, 5, 12]);
+        assert_eq!(mins, vec![4, 0, 7]);
+        assert_eq!(maxs, vec![20, 5, 12]);
+    }
+}

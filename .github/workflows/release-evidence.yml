@@ -14,68 +14,77 @@ jobs:
   evidence:
     name: Generate release evidence
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Crate metadata evidence
         run: |
-          ./cargo_full run -p xtask -- metadata-matrix
-          ./cargo_full run -p xtask -- version-matrix
-          ./cargo_full run -p xtask -- feature-matrix
-          ./cargo_full run -p xtask -- package-readiness
+          ./cargo_full run -p xtask -- metadata-matrix --write
+          ./cargo_full run -p xtask -- version-matrix --write
+          ./cargo_full run -p xtask -- feature-matrix --write
+          ./cargo_full run -p xtask -- package-readiness --write
 
       - name: Backend and workload evidence
         run: |
-          ./cargo_full run -p xtask -- backend-matrix
-          ./cargo_full run -p xtask -- release-workload-matrix
-          ./cargo_full run -p xtask -- op-matrix
+          ./cargo_full run -p xtask -- release-workload-matrix --write
+          ./cargo_full run -p xtask -- op-matrix --write
 
       - name: Optimization evidence
         run: |
-          ./cargo_full run -p xtask -- optimization-matrix
-          ./cargo_full run -p xtask -- optimization-corpus
+          ./cargo_full run -p xtask -- optimization-matrix --write
+          ./cargo_full run -p xtask -- optimization-corpus --write
 
       - name: Launch state
-        run: ./cargo_full run -p xtask -- launch-state
+        run: ./cargo_full run -p xtask -- launch-state --write
 
       - name: Structural release evidence
-        run: ./cargo_full run -p xtask -- release-evidence
+        run: ./cargo_full run -p xtask -- release-evidence --write
 
   measured-evidence:
     name: Generate measured evidence
-    runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
+    runs-on: [self-hosted, axiomexec, gpu]
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Backend hardware evidence
+        run: ./cargo_full run -p xtask -- backend-matrix --write
+
       - name: Backend conformance artifacts
-        run: ./cargo_full run -p xtask -- release-conformance
+        run: ./cargo_full run -p xtask -- release-conformance --write
 
       - name: Release benchmark artifacts
         run: |
-          ./cargo_full run -p xtask -- release-benchmarks
+          ./cargo_full run -p xtask -- release-benchmarks --backend cuda --measured-samples 30 --write
+          ./cargo_full run -p xtask -- release-benchmarks --backend wgpu --measured-samples 30 --write
           ./cargo_full run -p xtask -- bench-release
 
   prepublish:
     name: Composite pre-publish runners
     runs-on: ubuntu-latest
     needs: [evidence, measured-evidence]
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
-      # Both re-run checks that `xtask gates` already covers individually, and
-      # additionally drive full workspace builds, so they belong here rather
-      # than in the per-change sweep.
-      - name: Cat-A pre-merge runner
-        run: ./cargo_full run -p xtask -- check-cat-a
+      # The prepublish subset carries cross-target, which fails closed on a
+      # triple the toolchain does not have. rust-toolchain.toml decides which
+      # toolchain the targets land on, so this runs inside the checkout.
+      - name: Install the cross targets the tree declares
+        run: |
+          rustup target add \
+            aarch64-linux-android \
+            aarch64-apple-ios \
+            x86_64-unknown-linux-gnu \
+            x86_64-apple-darwin \
+            x86_64-pc-windows-msvc
 
-      - name: Pre-publish sanity checks
-        run: ./cargo_full run -p xtask -- release-gate
+      # Both are descriptor-derived subsets. Each member is held to its pinned
+      # finding count exactly as it is in the whole-registry sweep.
+      - name: Pre-publish subset
+        run: ./cargo_full run -p xtask -- gates --subset prepublish
+
+      - name: Release evidence subset
+        run: ./cargo_full run -p xtask -- gates --subset release-evidence

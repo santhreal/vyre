@@ -23,8 +23,9 @@ struct ReleaseTargetRow {
     frontier_density: String,
     transfer_pressure: String,
     primitive: String,
-    cpu_baseline: String,
-    min_speedup_over_cpu_sota: f64,
+    baseline: String,
+    baseline_class: String,
+    min_speedup_over_baseline: f64,
     dataset_id: String,
     metric_schema: String,
     threshold_source: String,
@@ -119,20 +120,21 @@ fn benchmark_target_contracts_validate_release_targets(
         let frontier_density = required_string(target, "frontier_density", &mut failures);
         let transfer_pressure = required_string(target, "transfer_pressure", &mut failures);
         let primitive = required_string(target, "primitive", &mut failures);
-        let cpu_baseline = required_string(target, "cpu_baseline", &mut failures);
+        let baseline = required_string(target, "baseline", &mut failures);
+        let baseline_class = required_string(target, "baseline_class", &mut failures);
         let dataset_id = bench_case_id.clone();
-        let min_speedup_over_cpu_sota = target
-            .get("min_speedup_over_cpu_sota")
+        let min_speedup_over_baseline = target
+            .get("min_speedup_over_baseline")
             .and_then(toml::Value::as_float)
             .or_else(|| {
                 target
-                    .get("min_speedup_over_cpu_sota")
+                    .get("min_speedup_over_baseline")
                     .and_then(toml::Value::as_integer)
                     .map(|value| value as f64)
             })
             .unwrap_or_else(|| {
                 failures.push(format!(
-                    "Fix: release-workload BENCH_TARGETS row `{id}` must declare numeric min_speedup_over_cpu_sota."
+                    "Fix: release-workload BENCH_TARGETS row `{id}` must declare numeric min_speedup_over_baseline."
                 ));
                 0.0
             });
@@ -179,9 +181,14 @@ fn benchmark_target_contracts_validate_release_targets(
                 "Fix: BENCH_TARGETS target `{id}` timing_quality `{timing_quality}` must be host_enqueue_wait, device_timestamps, or hardware_counters."
             ));
         }
-        if min_speedup_over_cpu_sota <= 0.0 {
+        if min_speedup_over_baseline <= 0.0 {
             failures.push(format!(
-                "Fix: BENCH_TARGETS target `{id}` min_speedup_over_cpu_sota must be positive."
+                "Fix: BENCH_TARGETS target `{id}` min_speedup_over_baseline must be positive."
+            ));
+        }
+        if !baseline_classes.is_empty() && !baseline_classes.contains(baseline_class.as_str()) {
+            failures.push(format!(
+                "Fix: BENCH_TARGETS target `{id}` declares baseline_class `{baseline_class}`, which baseline_class_values does not list."
             ));
         }
         if !shape_skew.is_empty()
@@ -220,9 +227,9 @@ fn benchmark_target_contracts_validate_release_targets(
                 "Fix: BENCH_TARGETS target `{id}` transfer_pressure `{transfer_pressure}` must be lowercase snake-case data."
             ));
         }
-        if !primitive.is_empty() && primitive == cpu_baseline {
+        if !primitive.is_empty() && primitive == baseline {
             failures.push(format!(
-                "Fix: BENCH_TARGETS target `{id}` primitive and cpu_baseline must describe different concepts."
+                "Fix: BENCH_TARGETS target `{id}` primitive and baseline must describe different concepts."
             ));
         }
         rows.push(ReleaseTargetRow {
@@ -236,8 +243,9 @@ fn benchmark_target_contracts_validate_release_targets(
             frontier_density,
             transfer_pressure,
             primitive,
-            cpu_baseline,
-            min_speedup_over_cpu_sota,
+            baseline,
+            baseline_class,
+            min_speedup_over_baseline,
             dataset_id,
             metric_schema: metric_schema.clone(),
             threshold_source: threshold_source.clone(),
@@ -325,17 +333,95 @@ fn benchmark_target_contracts_cover_release_workload_case_ids() {
                 && !row.frontier_density.is_empty()
                 && !row.transfer_pressure.is_empty()
                 && !row.primitive.is_empty()
-                && !row.cpu_baseline.is_empty()
+                && !row.baseline.is_empty()
+                && !row.baseline_class.is_empty()
                 && row.dataset_id == row.bench_case_id
                 && row.metric_schema == "bench-target-release-workload:v1"
                 && row.threshold_source == "docs/optimization/BENCH_TARGETS.toml"
                 && row.hardware_digest_source
                     == "release/evidence/benchmarks/cuda-release-suite.json#hardware_digest"
-                && row.min_speedup_over_cpu_sota > 0.0,
+                && row.min_speedup_over_baseline > 0.0,
             "Fix: release target row must retain non-empty canonical metadata: {:?}",
             row
         );
     }
+}
+
+/// The manifest and the harness each name a primitive, a baseline and a
+/// speedup threshold for every release macro workload, and only the harness
+/// decides what a run enforces. A row that disagrees is a published claim no
+/// clock produced.
+///
+/// WHY: the manifest named "tree-sitter/libclang-class CPU AST traversal
+/// baseline" and the harness timed an in-process scalar loop, so the
+/// row named an engine that never ran. Every row read as valid because the only
+/// checks were non-empty and positive. The roster is read from the harness, so a
+/// new workload without a row fails here rather than passing in silence.
+///
+/// Does not catch a threshold that is wrong on both sides; that is what
+/// re-measuring the baseline is for.
+#[test]
+fn release_workload_rows_agree_with_the_contract_the_harness_enforces() {
+    let manifest = toml::from_str::<toml::Value>(BENCH_TARGETS)
+        .expect("Fix: BENCH_TARGETS.toml must parse as TOML.");
+    let targets = manifest
+        .get("target")
+        .and_then(toml::Value::as_array)
+        .expect("Fix: BENCH_TARGETS.toml must contain [[target]] rows.");
+    let specs = vyre_bench::cases::release_workloads::release_macro_program_specs();
+    assert!(
+        !specs.is_empty(),
+        "Fix: the release macro roster must expose at least one workload."
+    );
+    let mut failures = Vec::new();
+    for spec in &specs {
+        let matching = targets
+            .iter()
+            .filter(|target| {
+                target.get("bench_case_id").and_then(toml::Value::as_str) == Some(spec.id)
+            })
+            .collect::<Vec<_>>();
+        let [row] = matching.as_slice() else {
+            failures.push(format!(
+                "Fix: release workload `{}` is named by {} BENCH_TARGETS row(s); it needs exactly one.",
+                spec.id,
+                matching.len()
+            ));
+            continue;
+        };
+        let primitive = row
+            .get("primitive")
+            .and_then(toml::Value::as_str)
+            .unwrap_or_default();
+        if primitive != spec.primitive {
+            failures.push(format!(
+                "Fix: BENCH_TARGETS row for `{}` names primitive `{primitive}` where the harness contract names `{}`.",
+                spec.id, spec.primitive
+            ));
+        }
+        let baseline = row
+            .get("baseline")
+            .and_then(toml::Value::as_str)
+            .unwrap_or_default();
+        if baseline != spec.cpu_baseline {
+            failures.push(format!(
+                "Fix: BENCH_TARGETS row for `{}` names baseline `{baseline}` where the harness times `{}`.",
+                spec.id, spec.cpu_baseline
+            ));
+        }
+        let threshold = row
+            .get("min_speedup_over_baseline")
+            .and_then(toml::Value::as_float)
+            .unwrap_or_default();
+        let enforced = f64::from(spec.min_speedup_x);
+        if threshold != enforced {
+            failures.push(format!(
+                "Fix: BENCH_TARGETS row for `{}` requires {threshold}x where the harness enforces {enforced}x. A fractional threshold needs ReleaseMacroProgramSpec::min_speedup_x widened past u32.",
+                spec.id
+            ));
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
 fn case_id_from_command(command: &str) -> Option<String> {
@@ -354,7 +440,7 @@ fn benchmark_target_contracts_negative_fixtures_reject_missing_target_and_stale_
     let expected = active.clone();
     let missing_manifest = toml::from_str::<toml::Value>(
         r#"
-schema = 1
+schema = 2
 baseline_class_values = ["cpu_sota"]
 
 [release_workload_identity]
@@ -371,8 +457,9 @@ suite = "release-workload"
 backend_focus = "cuda"
 metric = "items_per_second_p50"
 timing_quality = "device_timestamps"
-min_speedup_over_cpu_sota = 10.0
-cpu_baseline = "other CPU baseline"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 10.0
+baseline = "other CPU baseline"
 gpu_competitor = "none"
 "#,
     )
@@ -389,7 +476,7 @@ gpu_competitor = "none"
 
     let stale_manifest = toml::from_str::<toml::Value>(
         r#"
-schema = 1
+schema = 2
 baseline_class_values = ["cpu_sota"]
 
 [release_workload_identity]
@@ -406,8 +493,9 @@ suite = "release-workload"
 backend_focus = "cuda"
 metric = "items_per_second_p50"
 timing_quality = "device_timestamps"
-min_speedup_over_cpu_sota = 10.0
-cpu_baseline = "fixture CPU baseline"
+baseline_class = "cpu_sota"
+min_speedup_over_baseline = 10.0
+baseline = "fixture CPU baseline"
 gpu_competitor = "none"
 "#,
     )
@@ -421,4 +509,146 @@ gpu_competitor = "none"
             .any(|failure| failure.contains("stale or inactive release benchmark case")),
         "Fix: stale target fixture produced weak failures: {stale:?}"
     );
+}
+
+/// A target naming a benchmark case declares the class that case's performance
+/// contract declares.
+///
+/// WHY: the manifest declared `baseline_class_values` and no target declared a
+/// class, so the one machine-readable place a target could state its
+/// comparison was inert while the row keys asserted a host baseline for every
+/// row. `release.optimization.foundation_optimizer_impact` named a CPU
+/// baseline of "the same Program submitted without semantic optimization",
+/// which is a self-comparison, and its case has declared
+/// `BaselineClass::SelfUnoptimized` the whole time.
+///
+/// The class per case is read through the case registry at run time, so a case
+/// that changes what it compares against turns this red instead of leaving the
+/// manifest to be re-read by hand.
+///
+/// Does not catch a target whose case declares no contract: there is no class
+/// to disagree with, and whether an unbaselined target may carry a threshold
+/// at all is a separate claim.
+#[test]
+fn every_target_declares_the_class_its_benchmark_case_declares() {
+    let manifest = toml::from_str::<toml::Value>(BENCH_TARGETS)
+        .expect("Fix: BENCH_TARGETS.toml must parse as TOML.");
+    let targets = manifest
+        .get("target")
+        .and_then(toml::Value::as_array)
+        .expect("Fix: BENCH_TARGETS.toml must contain [[target]] rows.");
+    let registry = vyre_bench::registry::collect_all();
+    let mut declared = BTreeMap::<String, BTreeSet<&'static str>>::new();
+    for case in registry.iter() {
+        let Some(contract) = case.performance_contract() else {
+            continue;
+        };
+        let classes = declared.entry(case.id().0.to_string()).or_default();
+        for baseline in &contract.baselines {
+            classes.insert(baseline.class.registry_key());
+        }
+    }
+    assert!(
+        declared.len() >= 20,
+        "Fix: the case registry exposed only {} case contract(s); a set this narrow cannot judge the manifest.",
+        declared.len()
+    );
+    let mut checked = 0usize;
+    let mut failures = Vec::new();
+    for target in targets {
+        let id = target
+            .get("id")
+            .and_then(toml::Value::as_str)
+            .unwrap_or_default();
+        let Some(case_id) = target.get("bench_case_id").and_then(toml::Value::as_str) else {
+            continue;
+        };
+        let Some(classes) = declared.get(case_id) else {
+            continue;
+        };
+        let class = target
+            .get("baseline_class")
+            .and_then(toml::Value::as_str)
+            .unwrap_or_default();
+        checked += 1;
+        if !classes.contains(class) {
+            failures.push(format!(
+                "Fix: BENCH_TARGETS target `{id}` declares baseline_class `{class}` where case `{case_id}` declares {}.",
+                classes.iter().copied().collect::<Vec<_>>().join(", ")
+            ));
+        }
+    }
+    assert!(
+        checked >= 10,
+        "Fix: only {checked} target(s) matched a case contract; the manifest and the case registry are no longer linked."
+    );
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// Every manifest row's floor equals the floor its registered case enforces.
+///
+/// The release-workload roster is cross-checked above through its macro program
+/// specs, which covers one suite. A row in any other suite carried a second copy
+/// of the number that nothing compared, so a manifest floor and the contract the
+/// harness fails a case against could disagree, and the release gate would read
+/// the looser of the two. The case registry is enumerated at run time, so a case
+/// registered later is judged without editing this test.
+///
+/// Does not catch a threshold that is wrong on both sides; that is what
+/// re-measuring the baseline is for.
+#[test]
+fn every_target_floor_equals_the_floor_its_case_enforces() {
+    let manifest = toml::from_str::<toml::Value>(BENCH_TARGETS)
+        .expect("Fix: BENCH_TARGETS.toml must parse as TOML.");
+    let targets = manifest
+        .get("target")
+        .and_then(toml::Value::as_array)
+        .expect("Fix: BENCH_TARGETS.toml must contain [[target]] rows.");
+    let registry = vyre_bench::registry::collect_all();
+    let mut enforced = BTreeMap::<String, BTreeMap<&'static str, f64>>::new();
+    for case in registry.iter() {
+        let Some(contract) = case.performance_contract() else {
+            continue;
+        };
+        let floors = enforced.entry(case.id().0.to_string()).or_default();
+        for baseline in &contract.baselines {
+            floors.insert(baseline.class.registry_key(), baseline.min_speedup_x);
+        }
+    }
+    let mut checked = 0usize;
+    let mut failures = Vec::new();
+    for target in targets {
+        let id = target
+            .get("id")
+            .and_then(toml::Value::as_str)
+            .unwrap_or_default();
+        let Some(case_id) = target.get("bench_case_id").and_then(toml::Value::as_str) else {
+            continue;
+        };
+        let class = target
+            .get("baseline_class")
+            .and_then(toml::Value::as_str)
+            .unwrap_or_default();
+        let Some(floor) = enforced
+            .get(case_id)
+            .and_then(|floors| floors.get(class).copied())
+        else {
+            continue;
+        };
+        let declared = target
+            .get("min_speedup_over_baseline")
+            .and_then(toml::Value::as_float)
+            .unwrap_or_default();
+        checked += 1;
+        if declared != floor {
+            failures.push(format!(
+                "Fix: BENCH_TARGETS target `{id}` declares {declared}x over the `{class}` baseline where case `{case_id}` enforces {floor}x."
+            ));
+        }
+    }
+    assert!(
+        checked >= 10,
+        "Fix: only {checked} target(s) matched a case contract floor; the manifest and the case registry are no longer linked."
+    );
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
 }

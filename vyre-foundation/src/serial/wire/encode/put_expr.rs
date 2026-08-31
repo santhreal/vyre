@@ -119,6 +119,18 @@ pub fn put_expr(out: &mut Vec<u8>, expr: &Expr) -> Result<(), WireEncodeErr> {
                     put_u8(out, 8);
                     put_u8(out, *axis);
                 }
+                Expr::LogicalIndex { axis } => {
+                    put_u8(out, 23);
+                    put_u8(out, *axis);
+                }
+                Expr::LogicalTileId { axis } => {
+                    put_u8(out, 24);
+                    put_u8(out, *axis);
+                }
+                Expr::LogicalWithinTileId { axis } => {
+                    put_u8(out, 25);
+                    put_u8(out, *axis);
+                }
                 Expr::BinOp { op, left, right } => {
                     put_u8(out, 9);
                     if let crate::ir::BinOp::Opaque(id) = op {

@@ -1,0 +1,633 @@
+# Generated from vyre_foundation::validate::catalog. Do not hand-edit.
+# Regenerate: ./cargo_full run -p xtask --bin xtask -- error-codes --write
+schema_version = 1
+
+[[rule]]
+code = "V008"
+phase = "node"
+invariant = "Duplicate local binding (shadowing)"
+corrective_action = "Choose a unique local name, or pass `ValidationOptions::with_shadowing(true)` to allow nested shadowing."
+
+[[rule]]
+code = "V009"
+phase = "memory"
+invariant = "Atomic on non-writable buffer"
+corrective_action = "Declare the buffer with `BufferAccess::ReadWrite`."
+
+[[rule]]
+code = "V010"
+phase = "memory"
+invariant = "Barrier reached by only part of a workgroup (divergent barrier)"
+corrective_action = "Move the barrier to uniform control flow."
+
+[[rule]]
+code = "V011"
+phase = "node"
+invariant = "Assignment to loop variable"
+corrective_action = "Loop variables are immutable, so rename instead."
+
+[[rule]]
+code = "V012"
+phase = "expression"
+invariant = "Unsupported cast between two DataTypes"
+corrective_action = "Use a supported casts.md conversion or rewrite the expression before validation."
+
+[[rule]]
+code = "V013"
+phase = "memory"
+invariant = "Bytes load/store on buffer without `bytes_extraction = true`"
+corrective_action = "Use a typed buffer (U32/I32/F32/…), or declare the buffer with `.with_bytes_extraction(true)` when the op is a bytes-extraction op like `decode.base64`."
+
+[[rule]]
+code = "V014"
+phase = "memory"
+invariant = "Atomic on buffer with non-u32 element type"
+corrective_action = "Atomics only support U32 elements, so retype the buffer."
+
+[[rule]]
+code = "V016"
+phase = "expression"
+invariant = "Unknown op id in `Expr::Call`"
+corrective_action = "Use a registered op id or add the op to core::ops::*."
+
+[[rule]]
+code = "V018"
+phase = "limits"
+invariant = "Program nesting depth exceeds `DEFAULT_MAX_NESTING_DEPTH`"
+corrective_action = "Flatten nested If/Loop/Block structures or split the program before lowering."
+
+[[rule]]
+code = "V019"
+phase = "limits"
+invariant = "Program has more than `DEFAULT_MAX_NODE_COUNT` nodes"
+corrective_action = "Split the program into smaller kernels or run an optimization pass before lowering."
+
+[[rule]]
+code = "V020"
+phase = "expression"
+invariant = "Call argument count mismatches callee signature input count"
+corrective_action = "Pass exactly the number of arguments declared by the op signature."
+
+[[rule]]
+code = "V021"
+phase = "expression"
+invariant = "Call signature uses unknown or unsupported type spelling"
+corrective_action = "Register a foundation-known scalar/vector type spelling for this parameter or validate it in the dialect layer."
+
+[[rule]]
+code = "V022"
+phase = "expression"
+invariant = "Call argument type mismatches callee parameter type, or program declares too many outputs"
+corrective_action = "Cast or rewrite the argument to match the registered op signature, and declare at most one output buffer."
+
+[[rule]]
+code = "V023"
+phase = "expression"
+invariant = "Cast to `Bytes` is unsupported in secondary text lowering"
+corrective_action = "Use buffer load/store directly for byte data."
+
+[[rule]]
+code = "V025"
+phase = "memory"
+invariant = "Atomic on workgroup buffer is outside the portable memory model"
+corrective_action = "Use a storage ReadWrite buffer for atomics."
+
+[[rule]]
+code = "V027"
+phase = "memory"
+invariant = "Atomic index has wrong type (expected `u32`)"
+corrective_action = "Cast the index to U32 before the atomic."
+
+[[rule]]
+code = "V028"
+phase = "type"
+invariant = "Fma operand has wrong type (expected `f32`)"
+corrective_action = "Cast the operand to F32 before Fma, or use the integer mul/add form explicitly."
+
+[[rule]]
+code = "V029"
+phase = "expression"
+invariant = "Select branches have mismatched types"
+corrective_action = "Cast both branches to the same type before Select."
+
+[[rule]]
+code = "V030"
+phase = "expression"
+invariant = "Opaque Expr extension fails invariant (empty extension_kind/debug_identity/missing result_type/validate_extension failure)"
+corrective_action = "Return a stable non-empty `extension_kind`, a human-readable `debug_identity`, and an explicit `result_type`, and pass `validate_extension`."
+
+[[rule]]
+code = "V031"
+phase = "node"
+invariant = "Opaque Node extension fails invariant (empty extension_kind/debug_identity/validate_extension failure)"
+corrective_action = "Return a stable non-empty `extension_kind`, a human-readable `debug_identity`, and pass `validate_extension`."
+
+[[rule]]
+code = "V032"
+phase = "node"
+invariant = "Duplicate sibling `let` binding in the same region"
+corrective_action = "Rename one binding, or move one declaration into an inner Block/Region/Loop if a new scope is intended."
+
+[[rule]]
+code = "V033"
+phase = "limits"
+invariant = "Expression nesting exceeds `DEFAULT_MAX_EXPR_DEPTH`"
+corrective_action = "Split the expression into intermediate let-bindings before lowering."
+
+[[rule]]
+code = "V034"
+phase = "expression"
+invariant = "Backend does not support the requested cast target"
+corrective_action = "Choose a target type the backend supports, or validate against a backend that advertises that cast support."
+
+[[rule]]
+code = "V035"
+phase = "type"
+invariant = "Narrowing cast may truncate high bits"
+corrective_action = "Use a non-narrowing target, or prove the source value fits before casting."
+
+[[rule]]
+code = "V036"
+phase = "node"
+invariant = "Constant store index exceeds the declared buffer element count"
+corrective_action = "Keep constant store indices inside the declared element range."
+
+[[rule]]
+code = "V041"
+phase = "expression"
+invariant = "Subgroup expressions used without backend subgroup support"
+corrective_action = "Validate with `ValidationOptions::with_backend(backend)` where `backend.supports_subgroup_ops() == true`, or remove subgroup ops before lowering."
+
+[[rule]]
+code = "V042"
+phase = "memory"
+invariant = "Atomic read-modify-write uses a memory ordering the operation does not accept"
+corrective_action = "Use Relaxed, Acquire, Release, AcqRel, or SeqCst for atomic read-modify-write operations."
+
+[[rule]]
+code = "V043"
+phase = "memory"
+invariant = "Barrier uses a memory ordering that does not synchronize memory"
+corrective_action = "Use Acquire, Release, AcqRel, or SeqCst; use no barrier at all for Relaxed."
+
+[[rule]]
+code = "V044"
+phase = "type"
+invariant = "Binary `Div` or `Mod` has a statically-zero divisor"
+corrective_action = "Guard the divisor, use Select to substitute a non-zero value, or reject the input before building IR."
+
+[[rule]]
+code = "V045"
+phase = "node"
+invariant = "Assignment value type does not match the declared binding or buffer element type"
+corrective_action = "Cast the value to the declared type, or introduce a binding or buffer with the intended type."
+
+[[rule]]
+code = "V046"
+phase = "node"
+invariant = "Distributed collective node validation failure"
+corrective_action = "Validate with backend collective support, use matching collective buffer element types, declare every referenced buffer, and keep collective buffers in device/global storage."
+
+[[rule]]
+code = "V047"
+phase = "expression"
+invariant = "Bitwise subgroup reduction given an f32 operand"
+corrective_action = "Use an integer operand for `And`/`Or`/`Xor`, or use `Add`/`Mul`/`Min`/`Max` for a float reduction."
+
+[[rule]]
+code = "V051"
+phase = "expression"
+invariant = "Buffer reference used where a value is expected"
+corrective_action = "A buffer reference is legal only as a call argument. Pass it directly to a composite op, or read an element with `Expr::Load`."
+
+[[rule]]
+code = "V052"
+phase = "expression"
+invariant = "Call passes a reference to an undeclared buffer"
+corrective_action = "Declare the buffer in `Program::buffers`."
+
+[[rule]]
+code = "V053"
+phase = "expression"
+invariant = "Value passed for a `buffer<T>` parameter"
+corrective_action = "Pass `Expr::buffer_ref(name)` naming the buffer the op should read."
+
+[[rule]]
+code = "V054"
+phase = "expression"
+invariant = "Referenced buffer's element type does not match the signature"
+corrective_action = "Pass a buffer whose element type matches `buffer<T>`, or change the op signature."
+
+[[rule]]
+code = "V055"
+phase = "memory"
+invariant = "Synchronizing loop exit is unordered against the back edge"
+corrective_action = "Put an unconditional barrier after the early exit, as the final node in the loop body."
+
+[[rule]]
+code = "V056"
+phase = "capability"
+invariant = "Backend does not support one operation used by the program"
+corrective_action = "Choose a backend that supports the operation or register its implementation."
+
+[[rule]]
+code = "V057"
+phase = "memory"
+invariant = "atomic value type `…` does not match required `u32`"
+corrective_action = "Ensure the atomic operand is U32."
+
+[[rule]]
+code = "V058"
+phase = "memory"
+invariant = "compare-exchange expected type `…` does not match required `u32`"
+corrective_action = "Ensure Expr::Atomic.expected is U32."
+
+[[rule]]
+code = "V059"
+phase = "memory"
+invariant = "compare-exchange atomic is missing expected value"
+corrective_action = "Set Expr::Atomic.expected for AtomicOp::CompareExchange."
+
+[[rule]]
+code = "V060"
+phase = "memory"
+invariant = "non-compare-exchange atomic includes an expected value"
+corrective_action = "Use Expr::Atomic.expected only with AtomicOp::CompareExchange."
+
+[[rule]]
+code = "V061"
+phase = "memory"
+invariant = "atomic on unknown buffer `…`"
+corrective_action = "Declare it in Program::buffers."
+
+[[rule]]
+code = "V063"
+phase = "memory"
+invariant = "store to non-writable buffer `…`"
+corrective_action = "Declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or BufferAccess::Workgroup."
+
+[[rule]]
+code = "V064"
+phase = "memory"
+invariant = "store to unknown buffer `…`"
+corrective_action = "Declare it in Program::buffers."
+
+[[rule]]
+code = "V065"
+phase = "memory"
+invariant = "load from unknown buffer `…`"
+corrective_action = "Declare it in Program::buffers."
+
+[[rule]]
+code = "V066"
+phase = "expression"
+invariant = "Reference to an undeclared variable"
+corrective_action = "Add a declaration before this use."
+
+[[rule]]
+code = "V067"
+phase = "expression"
+invariant = "buflen of unknown buffer `…`"
+corrective_action = "Declare it in Program::buffers."
+
+[[rule]]
+code = "V068"
+phase = "expression"
+invariant = "invocation/workgroup ID axis … out of range"
+corrective_action = "Use 0 (x), 1 (y), or 2 (z)."
+
+[[rule]]
+code = "V070"
+phase = "program"
+invariant = "Linear, affine, or relevant buffer use count violates its declared discipline"
+corrective_action = "Add or delete buffer uses to satisfy the discipline, or select the intended `LinearType`."
+
+[[rule]]
+code = "V083"
+phase = "program"
+invariant = "buffer `…` declared shape predicate `…` but has count=…"
+corrective_action = "Change the count to satisfy the predicate, or relax the predicate."
+
+[[rule]]
+code = "V084"
+phase = "type"
+invariant = "64-bit integer arithmetic used where the shared IR supports only portable 32-bit arithmetic"
+corrective_action = "Express the operation as a U32 pair with explicit carry/borrow, or use a backend-specific op whose schema declares native 64-bit arithmetic."
+
+[[rule]]
+code = "V085"
+phase = "type"
+invariant = "Saturating arithmetic `…` received left=`…`, right=`…`; legal set is only U32 in the current lowering"
+corrective_action = "Cast both operands to U32, or clamp explicitly for I32/F32."
+
+[[rule]]
+code = "V086"
+phase = "type"
+invariant = "AbsDiff has left=`…`, right=`…` and can overflow (i32::MIN - i32::MAX invokes target-text signed-integer UB)"
+corrective_action = "Cast operands to U32 before AbsDiff, or rewrite as an explicit branch."
+
+[[rule]]
+code = "V087"
+phase = "type"
+invariant = "binary operation `…` … operand has type `…`, but numeric arithmetic expects one of `u32`, `i32`, or `f32`"
+corrective_action = "Cast the operand to U32 or I32 before arithmetic, or rewrite to avoid mixing logical and arithmetic operators."
+
+[[rule]]
+code = "V088"
+phase = "type"
+invariant = "binary operation `…` operands have mismatched numeric types: left=`…`, right=`…` (legal set: U32, I32, F32)"
+corrective_action = "Cast one operand so both sides share a type (target-text has no implicit promotion)."
+
+[[rule]]
+code = "V089"
+phase = "type"
+invariant = "binary operation `Mod` … operand must be `u32` or `i32`, got `…`. Legal set for Mod is integer-only"
+corrective_action = "Cast both operands to the same integer type before modulo."
+
+[[rule]]
+code = "V090"
+phase = "type"
+invariant = "binary operation `Mod` operands have mismatched integer types: left=`…`, right=`…`"
+corrective_action = "Cast one operand so both sides share the same integer type."
+
+[[rule]]
+code = "V091"
+phase = "type"
+invariant = "binary operation `…` left operand has type `…`; legal integer set is `u32` or `i32`"
+corrective_action = "Cast the left operand to U32 or I32."
+
+[[rule]]
+code = "V092"
+phase = "type"
+invariant = "binary operation `…` right operand has type `…`; legal integer set is `u32` or `i32`"
+corrective_action = "Cast the right operand to U32 or I32."
+
+[[rule]]
+code = "V093"
+phase = "type"
+invariant = "Integer operation operands have mismatched types"
+corrective_action = "Cast both operands to the same integer type."
+
+[[rule]]
+code = "V094"
+phase = "type"
+invariant = "binary operation `…` … operand has type `…`; shift/rotate operands must be `u32`"
+corrective_action = "Cast the operand to U32 before shifting/rotating."
+
+[[rule]]
+code = "V095"
+phase = "type"
+invariant = "binary operation `…` … operand has type `…`; logical And/Or operands must be `u32` or `bool`"
+corrective_action = "Cast the operand to U32 or Bool."
+
+[[rule]]
+code = "V096"
+phase = "type"
+invariant = "binary comparison `…` operands have mismatched types: left=`…`, right=`…`. Comparisons require matching types"
+corrective_action = "Cast both operands to the same type before comparing."
+
+[[rule]]
+code = "V097"
+phase = "type"
+invariant = "Subgroup operation used without backend subgroup capability evidence"
+corrective_action = "Validate with ValidationOptions::with_backend(backend) where `backend.supports_subgroup_ops() == true`, or remove the subgroup-dependent operation before lowering."
+
+[[rule]]
+code = "V098"
+phase = "type"
+invariant = "Negation operand violates the portable total-arithmetic contract"
+corrective_action = "Use `0 - x` for wrapping i32 negation, cast to U32 before Negate, or guard with Select(i32::MIN, 0, -x)."
+
+[[rule]]
+code = "V099"
+phase = "type"
+invariant = "unary operation `…` operand has type `…`, but legal set is U32, I32, or F32"
+corrective_action = "Cast or rewrite the operand to U32/I32/F32."
+
+[[rule]]
+code = "V100"
+phase = "type"
+invariant = "unary operation `LogicalNot` operand has type `…`; legal set is `u32` or `bool`"
+corrective_action = "Cast or rewrite the operand to produce U32 or Bool."
+
+[[rule]]
+code = "V101"
+phase = "type"
+invariant = "unary operation `…` operand has type `…`; legal integer set is `u32`, `i32`, or `u64`"
+corrective_action = "Cast or rewrite the operand to produce U32, I32, or U64."
+
+[[rule]]
+code = "V102"
+phase = "type"
+invariant = "unary operation `…` operand has type `…`; legal set for math ops is `f32`"
+corrective_action = "Cast or rewrite the operand to produce F32."
+
+[[rule]]
+code = "V103"
+phase = "type"
+invariant = "unary operation `…` operand has type `…`; unpack ops require a 32-bit integer (`u32` or `i32`) word"
+corrective_action = "Cast or rewrite the operand to produce U32 or I32."
+
+[[rule]]
+code = "V104"
+phase = "type"
+invariant = "unary operation `…` is not recognized"
+corrective_action = "Use a known UnOp variant from this enum (`Negate`, `LogicalNot`, `BitNot`, `Popcount`, `Clz`, `Ctz`, `ReverseBits`, `Sin`, `Cos`, `Exp`, `Log`, `Log2`, `Exp2`, `Tan`, `Acos`, `Asin`, `Atan`, `Tanh`, `Sinh`, `Cosh`, `Abs`, `Sqrt`, `InverseSqrt`, `Reciprocal`, `Floor`, `Ceil`, `Round`, `Trunc`, `Sign`, `IsNan`, `IsInf`, `IsFinite`, `Unpack4Low`, `Unpack4High`, `Unpack8Low`, `Unpack8High`)."
+
+[[rule]]
+code = "V105"
+phase = "program"
+invariant = "Program lacks one top-level Region"
+corrective_action = "Construct runnable programs with Program::wrapped or add one top-level Region."
+
+[[rule]]
+code = "V106"
+phase = "program"
+invariant = "workgroup_size[…] is 0"
+corrective_action = "All workgroup dimensions must be >= 1."
+
+[[rule]]
+code = "V107"
+phase = "program"
+invariant = "duplicate buffer name `…`"
+corrective_action = "Each buffer must have a unique name."
+
+[[rule]]
+code = "V108"
+phase = "program"
+invariant = "duplicate binding slot … (buffer `…`)"
+corrective_action = "Each buffer must have a unique binding."
+
+[[rule]]
+code = "V109"
+phase = "program"
+invariant = "workgroup buffer `…` has count 0"
+corrective_action = "Declare a positive element count."
+
+[[rule]]
+code = "V110"
+phase = "program"
+invariant = "output buffer `…` uses unsupported element type `…`"
+corrective_action = "Output buffers must use fixed-width scalar or vector element types, not Array or Tensor."
+
+[[rule]]
+code = "V111"
+phase = "node"
+invariant = "malformed validation frame stream: PopScope without matching PushScope"
+corrective_action = "Rebuild the program through the structured IR builder before validation."
+
+[[rule]]
+code = "V112"
+phase = "node"
+invariant = "unreachable statements after `return`"
+corrective_action = "Remove statements after `return` or reorder them."
+
+[[rule]]
+code = "V114"
+phase = "node"
+invariant = "malformed validation frame stream: loop variable `…` inserted outside any scope"
+corrective_action = "Rebuild the program through the structured IR builder before validation."
+
+[[rule]]
+code = "V115"
+phase = "composition"
+invariant = "region `…` is marked non-composable with itself but appears multiple times in one fused program"
+corrective_action = "Split the parser into separate dispatches, or give each instance distinct scratch storage before fusion."
+
+[[rule]]
+code = "V116"
+phase = "composition"
+invariant = "Fused nodes mix non-atomic reads and atomic access without an ordering barrier"
+corrective_action = "Insert `Node::barrier()` between the read path and the atomic path, or rename the buffers before fusion."
+
+[[rule]]
+code = "V118"
+phase = "node"
+invariant = "malformed validation frame stream: let binding `…` appeared outside any scope"
+corrective_action = "Rebuild the program through the structured IR builder before validation."
+
+[[rule]]
+code = "V119"
+phase = "node"
+invariant = "assignment to buffer `…` requires read-write storage but declared access is `…`"
+corrective_action = "Use a read-write/output buffer or store into a mutable local binding."
+
+[[rule]]
+code = "V120"
+phase = "node"
+invariant = "Assignment targets an undeclared variable"
+corrective_action = "Add a declaration before this assignment."
+
+[[rule]]
+code = "V121"
+phase = "node"
+invariant = "Store value type does not match the buffer element type"
+corrective_action = "Cast the value to the buffer element type or use a compatible store type."
+
+[[rule]]
+code = "V122"
+phase = "node"
+invariant = "Node::Store buffer `…` index has type `…` but must be `u32`"
+corrective_action = "Cast the index to U32 before storing."
+
+[[rule]]
+code = "V123"
+phase = "node"
+invariant = "Node::If condition has type `…` but must be `u32` or `bool`"
+corrective_action = "Cast or rewrite the condition expression to produce `u32` or `bool`."
+
+[[rule]]
+code = "V124"
+phase = "node"
+invariant = "Node::Loop from-bound has type `…`; legal loop bound type is `u32`"
+corrective_action = "Cast the `from` bound to `u32`."
+
+[[rule]]
+code = "V125"
+phase = "node"
+invariant = "Node::Loop to-bound has type `…`; legal loop bound type is `u32`"
+corrective_action = "Cast the `to` bound to `u32`."
+
+[[rule]]
+code = "V126"
+phase = "node"
+invariant = "indirect dispatch offset … is not 4-byte aligned"
+corrective_action = "Use an offset aligned to a u32 dispatch count tuple."
+
+[[rule]]
+code = "V127"
+phase = "node"
+invariant = "indirect dispatch references unknown buffer `…`"
+corrective_action = "Declare the count buffer before validation."
+
+[[rule]]
+code = "V128"
+phase = "node"
+invariant = "async stream tag is empty"
+corrective_action = "Use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes."
+
+[[rule]]
+code = "V129"
+phase = "memory"
+invariant = "malformed barrier visitor dispatch"
+corrective_action = "Rebuild the program through the structured IR builder before validation."
+
+[[rule]]
+code = "V130"
+phase = "program"
+invariant = "backend-allocated output buffer `…` has no static element count or output byte range"
+corrective_action = "Declare the output with `.with_count(n)`, or use `.with_output_byte_range(0..0)` for a genuinely empty output."
+
+[[rule]]
+code = "V131"
+phase = "memory"
+invariant = "async transfer tag `…` starts a copy while a copy under the same tag is still in flight on every path reaching it"
+corrective_action = "Wait the tag before starting it again, or give the second copy its own tag: a depth-D pipeline needs D tags."
+
+[[rule]]
+code = "V132"
+phase = "memory"
+invariant = "async wait on tag `…` has no transfer to wait for on any path reaching it"
+corrective_action = "Start the copy with AsyncLoad or AsyncStore under that tag before waiting, or drop the wait."
+
+[[rule]]
+code = "V133"
+phase = "memory"
+invariant = "async transfer tag `…` may still be in flight where the invocation ends"
+corrective_action = "Wait the tag with AsyncWait on every path that starts it, before the Return that ends the invocation."
+
+[[rule]]
+code = "V134"
+phase = "memory"
+invariant = "async transfer writes into non-writable buffer `…`"
+corrective_action = "Declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or BufferAccess::Workgroup, or name a storage tier the dispatch does not bind."
+
+[[rule]]
+code = "V135"
+phase = "node"
+invariant = "Tile operation violates residency or hardware limits"
+corrective_action = "Validate with BackendCapabilities supporting sufficient shared memory and register limits, or adjust tile parameters."
+
+[[rule]]
+code = "V136"
+phase = "node"
+invariant = "Tile store operation references invalid or incompatible buffer"
+corrective_action = "Declare the buffer before storing tiles to it."
+
+[[rule]]
+code = "V137"
+phase = "node"
+invariant = "Matrix multiplication tile operation requires tensor core instruction support"
+corrective_action = "Validate with BackendCapabilities supporting tensor cores or lower to scalar operations."
+
+[[rule]]
+code = "V138"
+phase = "node"
+invariant = "Tile load operation references invalid or incompatible buffer"
+corrective_action = "Declare the buffer before loading tiles from it."
+
+[[rule]]
+code = "V139"
+phase = "node"
+invariant = "async transfer offset and size expressions must be workgroup-uniform"
+corrective_action = "Compute the transfer offset and size from workgroup-uniform expressions: literals, buffer lengths, workgroup ID, or a load from a read-only or uniform buffer at a uniform index, written in the operand rather than hoisted into a binding. Avoid thread-divergent expressions like invocation ID."

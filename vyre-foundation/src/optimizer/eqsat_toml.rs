@@ -1,6 +1,6 @@
 //! Tier-B TOML rule database for the egraph saturation engine.
 //!
-//! ROADMAP A6. The Rust-coded `Family::rules` pattern in
+//! The Rust-coded `Family::rules` pattern in
 //! [`crate::optimizer::eqsat`] keeps every rewrite in source code,
 //! which means new equivalences need a recompile. The Tier-B contract
 //! says community-contributable rule families should live in TOML so
@@ -18,20 +18,27 @@
 //! ## TOML format
 //!
 //! ```toml
-//! schema = 1
+//! schema = 2
 //!
 //! [[equivalence]]
 //! left = "vyre-libs::math::matmul"
 //! right = "vyre-libs::math::matmul_strassen_one_level"
+//! law = "algebraic"
 //!
 //! [[equivalence]]
-//! left = "vyre-primitives::math::elementwise_add"
+//! left = "vyre-libs::math::elementwise_add"
 //! right = "vyre-libs::math::add"
+//! law = "algebraic"
 //! ```
 //!
 //! Each `[[equivalence]]` row tells the rule that whenever both
 //! `left` and `right` op ids appear as enodes anywhere in the
 //! egraph, their e-classes are equivalent.
+//!
+//! `law` names the [`vyre_spec::RegionLawFamily`] that authorizes the pair,
+//! and is what makes a data-file rewrite admissible in candidate search: an
+//! unrecognized name is rejected at load rather than saturating on the claim
+//! of the file that wrote it. Schema 1 files carry no law and are rejected.
 //!
 //! ## Trait expectations
 //!
@@ -47,7 +54,10 @@ use std::path::Path;
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
 
+use vyre_spec::RegionLawFamily;
+
 use crate::optimizer::eqsat::{EClassId, EGraph, ENodeLang, Rule};
+use crate::optimizer::rewrite_contract::RewriteWitness;
 
 /// Languages that participate in TOML equivalence rules expose the
 /// op-id string of each enode. The string is the registry id
@@ -60,12 +70,22 @@ pub trait OpIdNode {
 }
 
 /// One TOML-loaded equivalence pair.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EquivalenceRule {
     /// Op-id of the left side.
     pub left: String,
     /// Op-id of the right side.
     pub right: String,
+    /// Law family that authorizes the pair.
+    pub law: RegionLawFamily,
+}
+
+/// Wire form of one row, before the cited law is resolved.
+#[derive(Debug, Clone, Deserialize)]
+struct WireEquivalenceRule {
+    left: String,
+    right: String,
+    law: String,
 }
 
 /// TOML schema container.
@@ -74,8 +94,11 @@ struct RuleFile {
     #[serde(default)]
     schema: u32,
     #[serde(default)]
-    equivalence: Vec<EquivalenceRule>,
+    equivalence: Vec<WireEquivalenceRule>,
 }
+
+/// Schema version this loader accepts.
+pub const EQSAT_TOML_SCHEMA_VERSION: u32 = 2;
 
 /// A loaded TOML equivalence rule set.
 ///
@@ -116,24 +139,44 @@ impl TomlEquivalenceRules {
     ///
     /// # Errors
     ///
-    /// Returns `std::io::ErrorKind::InvalidData` when the TOML text
-    /// cannot be decoded or declares an unsupported schema version.
+    /// Returns `std::io::ErrorKind::InvalidData` when the TOML text cannot be
+    /// decoded, declares an unsupported schema version, or cites a law family
+    /// outside [`RegionLawFamily`].
     pub fn from_toml_str(name: &'static str, text: &str) -> std::io::Result<Self> {
         let parsed: RuleFile = toml::from_str(text)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        if parsed.schema != 1 {
+        if parsed.schema != EQSAT_TOML_SCHEMA_VERSION {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 format!(
-                    "Fix: TOML rule file declares schema = {}, expected schema = 1.",
+                    "Fix: TOML rule file declares schema = {}, expected schema = {EQSAT_TOML_SCHEMA_VERSION}. Schema {EQSAT_TOML_SCHEMA_VERSION} requires a `law` key naming the law family that authorizes each equivalence.",
                     parsed.schema
                 ),
             ));
         }
-        Ok(Self {
-            name,
-            rules: parsed.equivalence,
-        })
+        let mut rules = Vec::with_capacity(parsed.equivalence.len());
+        for row in parsed.equivalence {
+            let law = RegionLawFamily::from_name(&row.law).ok_or_else(|| {
+                let known = RegionLawFamily::all()
+                    .iter()
+                    .map(|family| family.name())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!(
+                        "TOML rule file cites law `{}` for `{}` == `{}`, which is not a registered law family. Fix: cite one of {known}.",
+                        row.law, row.left, row.right
+                    ),
+                )
+            })?;
+            rules.push(EquivalenceRule {
+                left: row.left,
+                right: row.right,
+                law,
+            });
+        }
+        Ok(Self { name, rules })
     }
 
     /// Number of equivalence rules loaded.
@@ -188,6 +231,15 @@ where
 {
     fn name(&self) -> &'static str {
         self.name
+    }
+
+    /// Every loaded pair cites a registered law family, checked at load, so
+    /// the rule set is authorized by the laws it names rather than by the file
+    /// that declared it.
+    fn witness(&self) -> RewriteWitness {
+        RewriteWitness::Structural(
+            "each equivalence pair cites a registered region law, resolved when the file is loaded",
+        )
     }
 
     fn matches(&self, egraph: &EGraph<L>) -> Vec<(EClassId, EClassId)> {
@@ -282,29 +334,38 @@ mod tests {
     #[test]
     fn from_toml_str_parses_equivalence_pairs() {
         let toml = r#"
-schema = 1
+schema = 2
 [[equivalence]]
 left = "a"
 right = "b"
+law = "algebraic"
 [[equivalence]]
 left = "c"
 right = "d"
+law = "layout"
 "#;
         let rules = TomlEquivalenceRules::from_toml_str("test", toml).unwrap();
         assert_eq!(rules.len(), 2);
-        assert_eq!(rules.iter().next().unwrap().left, "a");
+        let first = rules.iter().next().unwrap();
+        assert_eq!(first.left, "a");
+        assert_eq!(first.law, RegionLawFamily::Algebraic);
+        assert_eq!(
+            rules.iter().nth(1).unwrap().law,
+            RegionLawFamily::Layout,
+            "each row resolves its own cited law"
+        );
     }
 
     #[test]
     fn from_toml_str_rejects_wrong_schema() {
         let toml = "schema = 99\nequivalence = []\n";
         let err = TomlEquivalenceRules::from_toml_str("test", toml).unwrap_err();
-        assert!(format!("{err}").contains("schema = 1"));
+        assert!(format!("{err}").contains("expected schema = 2"));
     }
 
     #[test]
     fn from_toml_str_accepts_empty_equivalence() {
-        let toml = "schema = 1\n";
+        let toml = "schema = 2\n";
         let rules = TomlEquivalenceRules::from_toml_str("test", toml).unwrap();
         assert!(rules.is_empty());
     }
@@ -323,7 +384,8 @@ right = "d"
         let mut egraph: EGraph<Toy> = EGraph::new();
         let a = egraph.add(Toy::Named("a", vec![]));
         let b = egraph.add(Toy::Named("b", vec![]));
-        let toml = "schema = 1\n[[equivalence]]\nleft = \"a\"\nright = \"b\"\n";
+        let toml =
+            "schema = 2\n[[equivalence]]\nleft = \"a\"\nright = \"b\"\nlaw = \"algebraic\"\n";
         let rules = TomlEquivalenceRules::from_toml_str("test", toml).unwrap();
         let pairs = rules.matches(&egraph);
         assert_eq!(pairs.len(), 1);
@@ -338,7 +400,8 @@ right = "d"
         let mut egraph: EGraph<Toy> = EGraph::new();
         let _ = egraph.add(Toy::Named("a", vec![]));
         // "b" is absent.
-        let toml = "schema = 1\n[[equivalence]]\nleft = \"a\"\nright = \"b\"\n";
+        let toml =
+            "schema = 2\n[[equivalence]]\nleft = \"a\"\nright = \"b\"\nlaw = \"algebraic\"\n";
         let rules = TomlEquivalenceRules::from_toml_str("test", toml).unwrap();
         assert!(rules.matches(&egraph).is_empty());
     }
@@ -350,7 +413,8 @@ right = "d"
         let _ = egraph.add(Toy::Lit(8));
         // Lit has no op_id, so a rule keying on "anything" finds
         // nothing.
-        let toml = "schema = 1\n[[equivalence]]\nleft = \"7\"\nright = \"8\"\n";
+        let toml =
+            "schema = 2\n[[equivalence]]\nleft = \"7\"\nright = \"8\"\nlaw = \"algebraic\"\n";
         let rules = TomlEquivalenceRules::from_toml_str("test", toml).unwrap();
         assert!(rules.matches(&egraph).is_empty());
     }
@@ -360,5 +424,41 @@ right = "d"
         let rules: TomlEquivalenceRules = TomlEquivalenceRules::new("algebra_v1");
         let r: &dyn Rule<Toy> = &rules;
         assert_eq!(r.name(), "algebra_v1");
+    }
+
+    #[test]
+    fn from_toml_str_rejects_a_row_without_a_law() {
+        let toml = "schema = 2\n[[equivalence]]\nleft = \"a\"\nright = \"b\"\n";
+        let err = TomlEquivalenceRules::from_toml_str("test", toml).unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::InvalidData);
+        assert!(
+            format!("{err}").contains("law"),
+            "the decode error must name the missing key: {err}"
+        );
+    }
+
+    #[test]
+    fn from_toml_str_rejects_an_unregistered_law() {
+        let toml = "schema = 2\n[[equivalence]]\nleft = \"a\"\nright = \"b\"\nlaw = \"vibes\"\n";
+        let err = TomlEquivalenceRules::from_toml_str("test", toml).unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::InvalidData);
+        let rendered = format!("{err}");
+        assert!(rendered.contains("vibes"), "{rendered}");
+        for family in RegionLawFamily::all() {
+            assert!(
+                rendered.contains(family.name()),
+                "the rejection must list every citable law: {rendered}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_loaded_rule_set_is_admissible_in_candidate_search() {
+        let rules = TomlEquivalenceRules::new("algebra_v1");
+        let rule: &dyn Rule<Toy> = &rules;
+        assert!(
+            rule.witness().admits_candidate_search(),
+            "a law-citing rule set must be admissible"
+        );
     }
 }

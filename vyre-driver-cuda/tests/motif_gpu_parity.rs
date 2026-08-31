@@ -1,13 +1,33 @@
 //! Parity test: GPU motif matching matches the reference oracle.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
-use vyre_primitives::graph::motif::MotifEdge;
-use vyre_self_substrate::motif::{match_motif as reference_match_motif, match_motif_via};
+use harness::with_cuda_optimizer_dispatcher;
+use vyre_libs::graph::dispatch::motif::match_motif_via;
+use vyre_libs::graph::motif::MotifEdge;
+use vyre_reference::composition_witness::motif_witness;
 
+fn reference_match_motif(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    motif: &[MotifEdge],
+) -> Vec<u32> {
+    let motif_tuples: Vec<(u32, u32, u32)> = motif
+        .iter()
+        .map(|edge| (edge.from, edge.kind_mask, edge.to))
+        .collect();
+    motif_witness(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        &motif_tuples,
+    )
+}
 #[test]
 fn cuda_match_motif_via_triangle_full_match() {
     // 0 -> 1 -> 2 -> 0, all kind 1.
@@ -31,9 +51,10 @@ fn cuda_match_motif_via_triangle_full_match() {
             to: 0,
         },
     ];
-    with_cuda_optimizer_dispatcher("triangle motif", |dispatcher| {
+    with_cuda_optimizer_dispatcher("triangle motif", |dispatcher, policy| {
         let gpu = match_motif_via(
             dispatcher,
+            policy,
             3,
             &edge_offsets,
             &edge_targets,
@@ -64,9 +85,10 @@ fn cuda_match_motif_via_partial_match_returns_zero() {
             to: 2,
         }, // missing
     ];
-    with_cuda_optimizer_dispatcher("partial motif", |dispatcher| {
+    with_cuda_optimizer_dispatcher("partial motif", |dispatcher, policy| {
         let gpu = match_motif_via(
             dispatcher,
+            policy,
             3,
             &edge_offsets,
             &edge_targets,
@@ -92,9 +114,10 @@ fn cuda_match_motif_via_kind_mask_filter() {
         kind_mask: 0b0001,
         to: 1,
     }];
-    with_cuda_optimizer_dispatcher("kind-mask motif", |dispatcher| {
+    with_cuda_optimizer_dispatcher("kind-mask motif", |dispatcher, policy| {
         let gpu = match_motif_via(
             dispatcher,
+            policy,
             2,
             &edge_offsets,
             &edge_targets,

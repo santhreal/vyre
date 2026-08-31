@@ -1,9 +1,9 @@
 //! Hashmap reference interpreter buffer-size contracts.
 //!
 //! Every buffer a caller hands the interpreter must be at least as large as
-//! its declaration says. This file owns that contract for both ways a Value
-//! reaches the interpreter: an ordinary input, and a legacy output
-//! initializer.
+//! its declaration says, and the caller supplies exactly one Value per buffer
+//! accepted by `vyre_reference::is_reference_input`. This file owns both
+//! halves of that ABI: the arity and the per-buffer size.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::{reference_eval, value::Value};
@@ -23,11 +23,8 @@ fn huge_declared_buffer_size_returns_structured_error() {
         )],
     );
 
-    let error = reference_eval(
-        &program,
-        &[Value::from(vec![0u8; 16]), Value::from(vec![0u8; 4])],
-    )
-    .expect_err("oversized declared input must not panic or allocate implicitly");
+    let error = reference_eval(&program, &[Value::from(vec![0u8; 16])])
+        .expect_err("oversized declared input must not panic or allocate implicitly");
     let message = error.to_string();
     assert!(
         message.contains("huge") && message.contains("requires at least"),
@@ -36,27 +33,19 @@ fn huge_declared_buffer_size_returns_structured_error() {
 }
 
 // ---------------------------------------------------------------------------
-// Legacy output-initializer sizing
+// Input arity and sizing
 //
-// The interpreter accepts two input conventions. In LOGICAL mode a caller
-// passes one Value per non-output buffer and the interpreter allocates the
-// outputs itself. In LEGACY mode a caller passes one Value per non-workgroup
-// buffer, outputs included, and those output Values are placeholders: the
-// interpreter still zero-fills backend-allocated outputs, so their CONTENTS
-// are unused.
+// The interpreter takes one Value per `is_reference_input` buffer, in
+// `Program::buffers` order, and allocates every backend-allocated output
+// itself. It once also accepted a vector sized to every non-workgroup buffer,
+// treating the trailing entries as output initializers whose contents were
+// discarded. That convention let a fixture carry a placeholder the artifact
+// ABI rejects on a device, so the CPU oracle certified a program the device
+// refused, which is the wrong place and the wrong run to find that out.
 //
-// Their SIZE was unused too, and that was the bug. The legacy placeholder was
-// bound to `_legacy_output_initializer` and dropped without a single check, so
-// a caller who passed a 12-byte output buffer for a 16-byte declaration got a
-// full 16-byte result and no diagnostic at all. That is a Law 10 fail-open:
-// the caller's contract was violated and the interpreter silently substituted
-// its own buffer. Five `vyre-libs` guard tests (`and`/`or`/`xor`/`nand`/`nor`
-// output-size mismatch) asserted the error and had been failing unnoticed.
-//
-// What breaks if this regresses: an undersized output goes undetected on the
-// CPU reference, then the same program on a real GPU writes past the caller's
-// allocation. The reference oracle exists to catch exactly that before it
-// reaches a device.
+// What breaks if this regresses: a fixture that is one Value long passes every
+// CPU lens, and the same program fails on a real GPU with an argument-count
+// error that names neither the fixture nor the buffer.
 // ---------------------------------------------------------------------------
 
 /// Two read-only inputs and one backend-allocated output, all `count` u32s.
@@ -83,29 +72,24 @@ fn elementwise_program(count: u32) -> Program {
     )
 }
 
-/// An undersized legacy output initializer is rejected, not silently replaced.
+/// An undersized input is rejected, not silently replaced.
 ///
-/// This is the exact case the five `logical_should_panic` guards assert: four
-/// u32 elements declared (16 bytes), twelve bytes supplied.
+/// Four u32 elements declared (16 bytes), eight bytes supplied for `b`.
 #[test]
-fn an_undersized_legacy_output_initializer_is_an_error() {
+fn an_undersized_input_is_an_error() {
     let error = reference_eval(
         &elementwise_program(4),
-        &[
-            Value::from(vec![0u8; 16]),
-            Value::from(vec![0u8; 16]),
-            Value::from(vec![0u8; 12]),
-        ],
+        &[Value::from(vec![0u8; 16]), Value::from(vec![0u8; 8])],
     )
-    .expect_err("an undersized legacy output initializer must be rejected");
+    .expect_err("an undersized input must be rejected");
 
     let message = error.to_string();
     assert!(
-        message.contains("`out`"),
+        message.contains("`b`"),
         "the diagnostic must name the offending buffer, got: {message}"
     );
     assert!(
-        message.contains("12 bytes") && message.contains("16 bytes"),
+        message.contains("8 bytes") && message.contains("16 bytes"),
         "the diagnostic must state both the supplied and the required size, got: {message}"
     );
     assert!(
@@ -114,21 +98,17 @@ fn an_undersized_legacy_output_initializer_is_an_error() {
     );
 }
 
-/// The rejection is on SIZE, not on the mode: an exactly-sized initializer runs.
+/// The rejection is on SIZE: an exactly-sized input set runs.
 ///
-/// Without this, a fix that simply refused every legacy output initializer
-/// would make the test above pass while breaking every existing legacy caller.
+/// Without this, a fix that simply refused every input Value would make the
+/// test above pass while breaking every caller.
 #[test]
-fn an_exactly_sized_legacy_output_initializer_is_accepted() {
+fn an_exactly_sized_input_set_is_accepted() {
     let outputs = reference_eval(
         &elementwise_program(4),
-        &[
-            Value::from(vec![0xFFu8; 16]),
-            Value::from(vec![0x0Fu8; 16]),
-            Value::from(vec![0u8; 16]),
-        ],
+        &[Value::from(vec![0xFFu8; 16]), Value::from(vec![0x0Fu8; 16])],
     )
-    .expect("an exactly-sized legacy output initializer must be accepted");
+    .expect("an exactly-sized input set must be accepted");
 
     assert_eq!(outputs.len(), 1, "the program declares one output buffer");
     assert_eq!(
@@ -138,104 +118,77 @@ fn an_exactly_sized_legacy_output_initializer_is_accepted() {
     );
 }
 
-/// An oversized legacy output initializer is accepted.
-///
-/// The contract is a MINIMUM. A caller who reuses one large scratch Value
-/// across several programs is not doing anything wrong, and rejecting that
-/// would be a gratuitous break.
-#[test]
-fn an_oversized_legacy_output_initializer_is_accepted() {
-    let outputs = reference_eval(
-        &elementwise_program(4),
-        &[
-            Value::from(vec![0xFFu8; 16]),
-            Value::from(vec![0x0Fu8; 16]),
-            Value::from(vec![0u8; 64]),
-        ],
-    )
-    .expect("an oversized legacy output initializer must be accepted");
-    assert_eq!(outputs[0].to_bytes(), vec![0x0Fu8; 16]);
-}
-
 /// A single missing byte is caught.
 ///
 /// Boundary case. An off-by-one in the comparison (`<=` written for `<`) would
 /// let the most common real undersize slip through while every coarse test
 /// still passed.
 #[test]
-fn a_legacy_output_initializer_one_byte_short_is_an_error() {
+fn an_input_one_byte_short_is_an_error() {
     let error = reference_eval(
         &elementwise_program(4),
-        &[
-            Value::from(vec![0u8; 16]),
-            Value::from(vec![0u8; 16]),
-            Value::from(vec![0u8; 15]),
-        ],
+        &[Value::from(vec![0u8; 16]), Value::from(vec![0u8; 15])],
     )
-    .expect_err("a legacy output initializer one byte short must be rejected");
+    .expect_err("an input one byte short must be rejected");
     assert!(
         error.to_string().contains("15 bytes"),
         "the diagnostic must report the actual supplied size, got: {error}"
     );
 }
 
-/// An empty legacy output initializer is caught.
+/// An empty input is caught.
 ///
 /// The degenerate end of the same range. `vec![]` is the placeholder a caller
-/// reaches for once they have concluded the Value is ignored, which is
-/// precisely the misunderstanding the old code encouraged.
+/// reaches for once they have concluded the Value is ignored.
 #[test]
-fn an_empty_legacy_output_initializer_is_an_error() {
+fn an_empty_input_is_an_error() {
+    let error = reference_eval(
+        &elementwise_program(4),
+        &[Value::from(vec![0u8; 16]), Value::from(Vec::<u8>::new())],
+    )
+    .expect_err("an empty input must be rejected");
+    assert!(error.to_string().contains("`b`"), "got: {error}");
+}
+
+/// A Value for the backend-allocated output is refused, and the diagnostic
+/// says which value went unused.
+///
+/// This is the placeholder convention the artifact ABI rejects on a device.
+/// Accepting it here is what let a malformed fixture reach hardware.
+#[test]
+fn an_output_placeholder_is_refused() {
     let error = reference_eval(
         &elementwise_program(4),
         &[
+            Value::from(vec![0xFFu8; 16]),
+            Value::from(vec![0x0Fu8; 16]),
             Value::from(vec![0u8; 16]),
-            Value::from(vec![0u8; 16]),
-            Value::from(Vec::<u8>::new()),
         ],
     )
-    .expect_err("an empty legacy output initializer must be rejected");
-    assert!(error.to_string().contains("`out`"), "got: {error}");
+    .expect_err("a Value for a backend-allocated output must be refused");
+    let message = error.to_string();
+    assert!(
+        message.contains("unused input"),
+        "the diagnostic must say the extra value went unused, got: {message}"
+    );
+    assert!(
+        message.contains("is_reference_input"),
+        "the diagnostic must name the predicate that selects inputs, got: {message}"
+    );
 }
 
-/// Logical mode is unaffected: no output Value is passed, so none is checked.
+/// The interpreter allocates its own output.
 ///
-/// The size check must live on the legacy branch only. If it leaked onto the
-/// logical path it would demand an output Value that the convention says the
-/// caller never supplies.
+/// The size check must apply to supplied inputs only. If it leaked onto the
+/// output it would demand a Value the ABI says the caller never supplies.
 #[test]
-fn logical_mode_still_allocates_its_own_output() {
+fn the_interpreter_allocates_its_own_output() {
     let outputs = reference_eval(
         &elementwise_program(4),
         &[Value::from(vec![0xFFu8; 16]), Value::from(vec![0x0Fu8; 16])],
     )
-    .expect("logical mode passes one Value per input buffer only");
+    .expect("one Value per input buffer is the whole ABI");
     assert_eq!(outputs[0].to_bytes(), vec![0x0Fu8; 16]);
-}
-
-/// An undersized ORDINARY input is still rejected with the same wording.
-///
-/// The two paths now share one diagnostic helper. This pins that they report
-/// the same contract the same way, so a reader who has seen one message can
-/// recognise the other.
-#[test]
-fn an_undersized_ordinary_input_reports_the_same_contract() {
-    let error = reference_eval(
-        &elementwise_program(4),
-        &[
-            Value::from(vec![0u8; 16]),
-            Value::from(vec![0u8; 8]),
-            Value::from(vec![0u8; 16]),
-        ],
-    )
-    .expect_err("an undersized ordinary input must be rejected");
-
-    let message = error.to_string();
-    assert!(
-        message.contains("`b`") && message.contains("8 bytes") && message.contains("16 bytes"),
-        "input and output undersize must read identically, got: {message}"
-    );
-    assert!(message.contains("Fix:"), "got: {message}");
 }
 
 /// The required size tracks the declaration, it is not a fixed constant.
@@ -250,11 +203,10 @@ fn the_required_size_tracks_the_declared_element_count() {
             &elementwise_program(count),
             &[
                 Value::from(vec![0u8; required]),
-                Value::from(vec![0u8; required]),
                 Value::from(vec![0u8; required - 1]),
             ],
         )
-        .expect_err("an undersized output must be rejected at every element count");
+        .expect_err("an undersized input must be rejected at every element count");
         let message = error.to_string();
         assert!(
             message.contains(&format!("{required} bytes")),

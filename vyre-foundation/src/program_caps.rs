@@ -21,7 +21,7 @@ use crate::ir::Program;
 /// universal diff harness asks `scan(program)` which bits the program
 /// needs, asks the backend which bits it advertises, and skips the pair
 /// when they disagree. The result reasons are attached for telemetry.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct RequiredCapabilities {
     /// The program invokes `Expr::SubgroupAdd`, `SubgroupBallot`, or
@@ -42,6 +42,10 @@ pub struct RequiredCapabilities {
     pub tensor_ops: bool,
     /// The program uses a `Node::Trap`  -  backend needs trap propagation.
     pub trap: bool,
+    /// The program contains a grid-scope barrier. The backend must offer a
+    /// cooperative launch; a workgroup-scoped barrier cannot stand in for one,
+    /// so a target without it cannot emit the program at any geometry.
+    pub grid_sync: bool,
     /// The program uses collective communication nodes that require transport.
     pub distributed_collectives: bool,
     /// Count of collective nodes that can lower to local single-rank IR.
@@ -57,37 +61,147 @@ pub struct RequiredCapabilities {
 }
 
 impl RequiredCapabilities {
+    /// Empty capability set.
+    pub const NONE: Self = Self {
+        subgroup_ops: false,
+        f16: false,
+        bf16: false,
+        f64: false,
+        async_dispatch: false,
+        indirect_dispatch: false,
+        tensor_ops: false,
+        trap: false,
+        grid_sync: false,
+        distributed_collectives: false,
+        local_single_rank_collectives: 0,
+        transport_collectives: 0,
+        max_workgroup_size: [0, 0, 0],
+        static_storage_bytes: 0,
+    };
+
     /// Empty set  -  the Program needs nothing beyond the minimum substrate.
     #[must_use]
-    pub fn none() -> Self {
-        Self::default()
+    pub const fn none() -> Self {
+        Self::NONE
+    }
+
+    /// Enable subgroup operations.
+    #[must_use]
+    pub const fn with_subgroup_ops(mut self) -> Self {
+        self.subgroup_ops = true;
+        self
+    }
+    /// Strongest applicable capability set (all capability flags active, maximum limits).
+    #[must_use]
+    pub fn all() -> Self {
+        Self {
+            subgroup_ops: true,
+            f16: true,
+            bf16: true,
+            f64: true,
+            async_dispatch: true,
+            indirect_dispatch: true,
+            tensor_ops: true,
+            trap: true,
+            grid_sync: true,
+            distributed_collectives: true,
+            local_single_rank_collectives: 1,
+            transport_collectives: 1,
+            max_workgroup_size: [1024, 1024, 64],
+            static_storage_bytes: u64::MAX,
+        }
+    }
+
+    /// Monotonic lattice join for transitive call-graph fixed-point propagation.
+    ///
+    /// Computes the supremum of two capability requirements using boolean OR
+    /// and component-wise maximums, guaranteeing idempotence (`a.join(a) == a`)
+    /// and finite monotonic convergence on cyclic and multi-path call graphs.
+    #[must_use]
+    pub fn join(mut self, other: RequiredCapabilities) -> Self {
+        // Destructured exhaustively: a new capability field fails to compile
+        // here rather than being silently dropped from the lattice.
+        let RequiredCapabilities {
+            subgroup_ops,
+            f16,
+            bf16,
+            f64,
+            async_dispatch,
+            indirect_dispatch,
+            tensor_ops,
+            trap,
+            grid_sync,
+            distributed_collectives,
+            local_single_rank_collectives,
+            transport_collectives,
+            max_workgroup_size,
+            static_storage_bytes,
+        } = other;
+        self.subgroup_ops |= subgroup_ops;
+        self.f16 |= f16;
+        self.bf16 |= bf16;
+        self.f64 |= f64;
+        self.async_dispatch |= async_dispatch;
+        self.indirect_dispatch |= indirect_dispatch;
+        self.tensor_ops |= tensor_ops;
+        self.trap |= trap;
+        self.grid_sync |= grid_sync;
+        self.distributed_collectives |= distributed_collectives;
+        self.local_single_rank_collectives = self
+            .local_single_rank_collectives
+            .max(local_single_rank_collectives);
+        self.transport_collectives = self.transport_collectives.max(transport_collectives);
+        for axis in 0..3 {
+            self.max_workgroup_size[axis] =
+                self.max_workgroup_size[axis].max(max_workgroup_size[axis]);
+        }
+        self.static_storage_bytes = self.static_storage_bytes.max(static_storage_bytes);
+        self
     }
 
     /// Build the union of two capability sets (field-wise `OR` and `max`).
     #[must_use]
     pub fn union(mut self, other: RequiredCapabilities) -> Self {
-        self.subgroup_ops |= other.subgroup_ops;
-        self.f16 |= other.f16;
-        self.bf16 |= other.bf16;
-        self.f64 |= other.f64;
-        self.async_dispatch |= other.async_dispatch;
-        self.indirect_dispatch |= other.indirect_dispatch;
-        self.tensor_ops |= other.tensor_ops;
-        self.trap |= other.trap;
-        self.distributed_collectives |= other.distributed_collectives;
+        // Destructured exhaustively: see `join`.
+        let RequiredCapabilities {
+            subgroup_ops,
+            f16,
+            bf16,
+            f64,
+            async_dispatch,
+            indirect_dispatch,
+            tensor_ops,
+            trap,
+            grid_sync,
+            distributed_collectives,
+            local_single_rank_collectives,
+            transport_collectives,
+            max_workgroup_size,
+            static_storage_bytes,
+        } = other;
+        self.subgroup_ops |= subgroup_ops;
+        self.f16 |= f16;
+        self.bf16 |= bf16;
+        self.f64 |= f64;
+        self.async_dispatch |= async_dispatch;
+        self.indirect_dispatch |= indirect_dispatch;
+        self.tensor_ops |= tensor_ops;
+        self.trap |= trap;
+        self.grid_sync |= grid_sync;
+        self.distributed_collectives |= distributed_collectives;
         self.local_single_rank_collectives = self
             .local_single_rank_collectives
-            .saturating_add(other.local_single_rank_collectives);
+            .saturating_add(local_single_rank_collectives);
         self.transport_collectives = self
             .transport_collectives
-            .saturating_add(other.transport_collectives);
+            .saturating_add(transport_collectives);
         for axis in 0..3 {
             self.max_workgroup_size[axis] =
-                self.max_workgroup_size[axis].max(other.max_workgroup_size[axis]);
+                self.max_workgroup_size[axis].max(max_workgroup_size[axis]);
         }
         self.static_storage_bytes = self
             .static_storage_bytes
-            .saturating_add(other.static_storage_bytes);
+            .saturating_add(static_storage_bytes);
         self
     }
 }
@@ -138,6 +252,7 @@ pub fn scan(program: &Program) -> RequiredCapabilities {
         indirect_dispatch: stats.indirect_dispatch(),
         tensor_ops: stats.tensor_ops(),
         trap: stats.trap(),
+        grid_sync: stats.grid_sync(),
         distributed_collectives: collective_plan.requires_transport(),
         local_single_rank_collectives: collective_plan.local_single_rank_collectives(),
         transport_collectives: collective_plan.transport_collectives(),
@@ -146,25 +261,66 @@ pub fn scan(program: &Program) -> RequiredCapabilities {
     }
 }
 
-/// Return `Ok(())` when a backend with the given advertised capabilities
-/// can run a program whose required set is `required`, otherwise return
-/// the missing-capability explanation.
+/// What a backend advertises, as named fields.
 ///
-/// The caller passes in the boolean capability queries from
-/// [`crate::ir::Program`]'s backend trait (`supports_subgroup_ops`,
-/// `supports_f16`, etc.) so this function stays free of the
-/// `VyreBackend` trait import and can live in vyre-foundation.
+/// This used to be eight `bool` parameters in a row on
+/// [`check_backend_capabilities`]. Every call site had to get eight
+/// same-typed arguments in the right order, and transposing two of them
+/// compiles, runs, and silently admits a program the device cannot execute or
+/// refuses one it can. Naming them makes the transposition unspellable.
+// Deliberately neither `#[non_exhaustive]` nor `Default`. Every backend crate
+// builds this literal, so an added capability must fail to compile at each one
+// until that backend states its answer. `#[non_exhaustive]` would forbid the
+// literal outright and force a default-then-assign that absorbs a new field in
+// silence, which is the failure this struct exists to prevent.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct BackendSupport {
+    /// Wave/subgroup collectives are available.
+    pub subgroup_ops: bool,
+    /// IEEE 754 binary16 operands are available.
+    pub half_precision: bool,
+    /// bfloat16 operands are available.
+    pub brain_float: bool,
+    /// `Node::IndirectDispatch` can be lowered.
+    pub indirect_dispatch: bool,
+    /// A `Node::Trap` propagates out of the kernel.
+    pub trap_propagation: bool,
+    /// Collective communication has real transport behind it.
+    pub distributed_collectives: bool,
+    /// A grid-scope barrier can be executed by some route the backend permits.
+    ///
+    /// Either the backend lowers a cooperative launch itself, or it accepts
+    /// the host split that turns one barrier into sequential dispatches. This
+    /// is not the same question as which route to take: it is whether any
+    /// exists. A backend that lowers no whole-grid barrier and also refuses
+    /// the split cannot run the program at any geometry, and a workgroup
+    /// barrier cannot stand in for one, so refusing it here is what makes
+    /// grid synchronisation a planning decision rather than an emitter
+    /// failure discovered after a target has been chosen.
+    pub grid_sync: bool,
+    /// Largest workgroup the device accepts, per axis. A zero axis is unknown
+    /// and never fires the size check.
+    pub max_workgroup_size: [u32; 3],
+}
+
+/// Return `Ok(())` when a backend that advertises `support` can run a program
+/// whose required set is `required`, otherwise return the missing-capability
+/// explanation.
 pub fn check_backend_capabilities(
     backend_id: &str,
-    supports_subgroup_ops: bool,
-    supports_half_precision: bool,
-    supports_brain_float: bool,
-    supports_indirect_dispatch: bool,
-    supports_trap_propagation: bool,
-    supports_distributed_collectives: bool,
-    max_workgroup_size: [u32; 3],
+    support: &BackendSupport,
     required: &RequiredCapabilities,
 ) -> Result<(), MissingCapability> {
+    let BackendSupport {
+        subgroup_ops: supports_subgroup_ops,
+        half_precision: supports_half_precision,
+        brain_float: supports_brain_float,
+        indirect_dispatch: supports_indirect_dispatch,
+        trap_propagation: supports_trap_propagation,
+        distributed_collectives: supports_distributed_collectives,
+        grid_sync: supports_grid_sync,
+        max_workgroup_size,
+    } = *support;
     let mut missing: Vec<String> = Vec::new();
     if required.subgroup_ops && !supports_subgroup_ops {
         missing.push("subgroup_ops".to_string());
@@ -180,6 +336,9 @@ pub fn check_backend_capabilities(
     }
     if required.trap && !supports_trap_propagation {
         missing.push("trap_propagation".to_string());
+    }
+    if required.grid_sync && !supports_grid_sync {
+        missing.push("grid_sync".to_string());
     }
     if required.distributed_collectives && !supports_distributed_collectives {
         missing.push("distributed_collectives".to_string());
@@ -214,250 +373,7 @@ pub fn check_backend_capabilities(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use proptest::prelude::*;
-
-    use crate::ir::{
-        BufferAccess, BufferDecl, CollectiveOp, CommGroup, DataType, Expr as IrExpr,
-        Node as IrNode, Program,
-    };
-
-    fn empty_program() -> Program {
-        Program::wrapped(
-            vec![BufferDecl::storage(
-                "out",
-                0,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )],
-            [1, 1, 1],
-            vec![IrNode::let_bind("x", IrExpr::u32(0))],
-        )
-    }
-
-    #[test]
-    fn scan_scalar_program_declares_no_capabilities() {
-        let caps = scan(&empty_program());
-        assert!(!caps.subgroup_ops);
-        assert!(!caps.f16);
-        assert!(!caps.async_dispatch);
-        assert_eq!(caps.local_single_rank_collectives, 0);
-        assert_eq!(caps.transport_collectives, 0);
-    }
-
-    #[test]
-    fn scan_mixed_collectives_preserves_transport_shape() {
-        let program = Program::wrapped(
-            vec![
-                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(16),
-                BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32)
-                    .with_count(16),
-            ],
-            [64, 1, 1],
-            vec![IrNode::Block(vec![
-                IrNode::AllGather {
-                    input: "input".into(),
-                    output: "out".into(),
-                    group: CommGroup::WORLD,
-                },
-                IrNode::Broadcast {
-                    buffer: "out".into(),
-                    root: 3,
-                    group: CommGroup::WORLD,
-                },
-                IrNode::ReduceScatter {
-                    input: "input".into(),
-                    output: "out".into(),
-                    op: CollectiveOp::Sum,
-                    group: CommGroup(9),
-                },
-            ])],
-        );
-
-        let caps = scan(&program);
-
-        assert!(caps.distributed_collectives);
-        assert_eq!(caps.local_single_rank_collectives, 1);
-        assert_eq!(caps.transport_collectives, 2);
-    }
-
-    #[test]
-    fn missing_collective_capability_reports_transport_shape() {
-        let mut required = RequiredCapabilities::none();
-        required.distributed_collectives = true;
-        required.local_single_rank_collectives = 5;
-        required.transport_collectives = 8;
-
-        let error = check_backend_capabilities(
-            "test-backend",
-            true,
-            true,
-            true,
-            true,
-            true,
-            false,
-            [64, 64, 64],
-            &required,
-        )
-        .expect_err("Fix: backend without collective transport must fail capability checks.");
-
-        assert!(error
-            .missing
-            .iter()
-            .any(|item| item == "distributed_collectives"));
-        assert!(error
-            .missing
-            .iter()
-            .any(|item| item.contains("transport_collectives=8")));
-        assert!(error
-            .missing
-            .iter()
-            .any(|item| item.contains("local_single_rank_collectives=5")));
-    }
-
-    proptest! {
-        #![proptest_config(ProptestConfig::with_cases(2048))]
-
-        #[test]
-        fn scan_collective_counts_match_generated_transport_shape(
-            local_count in 0usize..32,
-            transport_count in 0usize..32,
-        ) {
-            let mut nodes = Vec::with_capacity(local_count + transport_count);
-            for _ in 0..local_count {
-                nodes.push(IrNode::AllGather {
-                    input: "input".into(),
-                    output: "out".into(),
-                    group: CommGroup::WORLD,
-                });
-            }
-            for root in 1..=transport_count {
-                nodes.push(IrNode::Broadcast {
-                    buffer: "out".into(),
-                    root: root as u32,
-                    group: CommGroup::WORLD,
-                });
-            }
-            let program = Program::wrapped(
-                vec![
-                    BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
-                        .with_count(16),
-                    BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32)
-                        .with_count(16),
-                ],
-                [64, 1, 1],
-                nodes,
-            );
-
-            let caps = scan(&program);
-
-            prop_assert_eq!(caps.local_single_rank_collectives, local_count);
-            prop_assert_eq!(caps.transport_collectives, transport_count);
-            prop_assert_eq!(caps.distributed_collectives, transport_count != 0);
-        }
-    }
-
-    #[test]
-    fn scan_subgroup_add_requires_subgroup_ops() {
-        let program = Program::wrapped(
-            vec![BufferDecl::storage(
-                "out",
-                0,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )],
-            [1, 1, 1],
-            vec![IrNode::let_bind("s", IrExpr::subgroup_add(IrExpr::u32(1)))],
-        );
-        let caps = scan(&program);
-        assert!(caps.subgroup_ops);
-    }
-
-    #[test]
-    fn scan_call_to_subgroup_intrinsic_requires_subgroup_ops() {
-        let program = Program::wrapped(
-            vec![BufferDecl::storage(
-                "out",
-                0,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )],
-            [1, 1, 1],
-            vec![IrNode::let_bind(
-                "s",
-                IrExpr::call(
-                    "vyre-intrinsics::math::subgroup_inclusive_add",
-                    vec![IrExpr::u32(1)],
-                ),
-            )],
-        );
-        let caps = scan(&program);
-        assert!(caps.subgroup_ops);
-    }
-
-    #[test]
-    fn check_backend_reports_every_missing_bit() {
-        let required = RequiredCapabilities {
-            subgroup_ops: true,
-            f16: true,
-            trap: true,
-            ..RequiredCapabilities::default()
-        };
-        let error = check_backend_capabilities(
-            "test_backend",
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            [64, 1, 1],
-            &required,
-        )
-        .unwrap_err();
-        assert_eq!(error.backend, "test_backend");
-        assert!(error.missing.iter().any(|s| s == "subgroup_ops"));
-        assert!(error.missing.iter().any(|s| s == "f16"));
-        assert!(error.missing.iter().any(|s| s == "trap_propagation"));
-    }
-
-    #[test]
-    fn scan_world_single_rank_collective_does_not_require_transport() {
-        let program = Program::wrapped(
-            vec![
-                BufferDecl::read("input", 0, DataType::U32).with_count(4),
-                BufferDecl::output("out", 1, DataType::U32).with_count(4),
-            ],
-            [64, 1, 1],
-            vec![IrNode::AllGather {
-                input: "input".into(),
-                output: "out".into(),
-                group: crate::ir::CommGroup::WORLD,
-            }],
-        );
-
-        let caps = scan(&program);
-
-        assert!(!caps.distributed_collectives);
-    }
-
-    #[test]
-    fn scan_nonzero_world_broadcast_requires_transport() {
-        let program = Program::wrapped(
-            vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
-            [64, 1, 1],
-            vec![IrNode::Broadcast {
-                buffer: "out".into(),
-                root: 1,
-                group: crate::ir::CommGroup::WORLD,
-            }],
-        );
-
-        let caps = scan(&program);
-
-        assert!(caps.distributed_collectives);
-    }
-}
+// The capability contract suite lives in
+// `vyre-foundation/tests/capability_contracts.rs`: `scan`,
+// `check_backend_capabilities`, `RequiredCapabilities` and `MissingCapability`
+// are all public, so an inline copy would test the same surface twice.

@@ -4,7 +4,7 @@ evidence_artifact = "release/evidence/hygiene/threshold-policy.json"
 
 [[threshold]]
 id = "VX475-STAGING_BUFFER_POOL_CLASS_CAP"
-path = "vyre-driver-wgpu/src/buffer/handle.rs"
+path = "vyre-driver-wgpu/src/buffer/staging/mod.rs"
 name = "STAGING_BUFFER_POOL_CLASS_CAP"
 unit = "pool classes"
 provenance = "Existing WGPU staging buffer pool class bound; prevents unbounded class fanout in descriptor allocation."
@@ -15,7 +15,7 @@ release_rule = "VX-475"
 
 [[threshold]]
 id = "VX475-BIND_GROUP_CACHE_CAP"
-path = "vyre-driver-wgpu/src/buffer/handle.rs"
+path = "vyre-driver-wgpu/src/buffer/bind_group_cache/mod.rs"
 name = "BIND_GROUP_CACHE_CAP"
 unit = "bind group entries"
 provenance = "Existing WGPU bind-group cache bound; controls memory growth from descriptor reuse."
@@ -59,7 +59,7 @@ release_rule = "VX-475"
 
 [[threshold]]
 id = "VX475-EMPTY_TEMPLATE_CACHE_CAP"
-path = "vyre-runtime/src/megakernel/builder/cache.rs"
+path = "vyre-runtime/src/resident_work_queue/builder/cache.rs"
 name = "EMPTY_TEMPLATE_CACHE_CAP"
 unit = "template entries"
 provenance = "Existing empty-template cache bound for megakernel builder reuse."
@@ -70,7 +70,7 @@ release_rule = "VX-475"
 
 [[threshold]]
 id = "VX475-LAUNCH_RECOMMENDATION_CACHE_CAP"
-path = "vyre-runtime/src/megakernel/policy/cache.rs"
+path = "vyre-runtime/src/resident_work_queue/policy/cache.rs"
 name = "LAUNCH_RECOMMENDATION_CACHE_CAP"
 unit = "recommendation entries"
 provenance = "Existing megakernel launch recommendation cache bound; caps policy-memory growth."
@@ -81,7 +81,7 @@ release_rule = "VX-475"
 
 [[threshold]]
 id = "VX475-GRID_PLAN_CACHE_CAP"
-path = "vyre-runtime/src/megakernel/planner/grid.rs"
+path = "vyre-runtime/src/resident_work_queue/planner/grid.rs"
 name = "GRID_PLAN_CACHE_CAP"
 unit = "grid plans"
 provenance = "Existing grid-plan cache bound for megakernel planner reuse."
@@ -92,7 +92,7 @@ release_rule = "VX-475"
 
 [[threshold]]
 id = "VX475-RESERVED_MAX_RANGE_MIN"
-path = "vyre-runtime/src/megakernel/protocol/opcode.rs"
+path = "vyre-runtime/src/resident_work_queue/protocol/opcode.rs"
 name = "RESERVED_MAX_RANGE_MIN"
 unit = "opcode value"
 provenance = "Megakernel protocol reserved opcode range floor; part of the wire protocol, not a runtime tuning knob."
@@ -103,7 +103,7 @@ release_rule = "VX-475"
 
 [[threshold]]
 id = "VX475-STARVATION_THRESHOLD"
-path = "vyre-runtime/src/megakernel/scheduler.rs"
+path = "vyre-runtime/src/resident_work_queue/scheduler/mod.rs"
 name = "STARVATION_THRESHOLD"
 unit = "scheduler ticks"
 provenance = "Existing scheduler starvation threshold; controls tenant fairness intervention."
@@ -114,7 +114,7 @@ release_rule = "VX-475"
 
 [[threshold]]
 id = "VX475-TENANT_FAIRNESS_THRESHOLD"
-path = "vyre-runtime/src/megakernel/scheduler.rs"
+path = "vyre-runtime/src/resident_work_queue/scheduler/mod.rs"
 name = "TENANT_FAIRNESS_THRESHOLD"
 unit = "scheduler ticks"
 provenance = "Existing scheduler tenant fairness threshold; controls cross-tenant intervention."
@@ -147,7 +147,7 @@ release_rule = "VX-475"
 
 [[threshold]]
 id = "VX475-DEFAULT_EXTRACTION_ITER_BUDGET"
-path = "vyre-foundation/src/optimizer/eqsat.rs"
+path = "vyre-foundation/src/optimizer/eqsat/mod.rs"
 name = "DEFAULT_EXTRACTION_ITER_BUDGET"
 unit = "extraction iterations"
 provenance = "Existing equality-saturation extraction iteration budget; bounds optimizer compile time."

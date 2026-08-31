@@ -1,6 +1,6 @@
 [package]
 name = "vyre-runtime"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -21,20 +21,27 @@ rustdoc-args = ["--cfg", "docsrs"]
 default = []
 megakernel-batch = []
 subgroup-ops = []
-self-substrate-adapters = [
-    "dep:vyre-self-substrate",
-    "vyre-self-substrate/analysis",
-    "vyre-self-substrate/data",
-    "vyre-self-substrate/math-solvers",
-    "vyre-self-substrate/telemetry",
+# The megakernel planner's program builders, each a vyre-libs composition.
+# Named `self-substrate-adapters` until the crate it was named for,
+# vyre-self-substrate, became vyre-pass-engine; the feature never depended on
+# that crate, so the name described nothing.
+libs-compositions = [
+    "dep:vyre-libs",
+    "vyre-libs/analysis",
+    "vyre-libs/encoding",
+    "vyre-libs/solvers",
+    "vyre-libs/math",
 ]
-remote-cache = ["ureq"]
+# `dep:` and not a bare name: a bare optional dependency also publishes a
+# feature of its own, so `remote-cache = ["ureq"]` made `--features ureq` a
+# second, undeclared way to turn the same code on.
+remote-cache = ["dep:ureq"]
 # Opt-in NVMe passthrough via `IORING_OP_URING_CMD` (Linux kernel 6.0+).
 uring-cmd-nvme = []
 
 [dependencies]
 vyre-driver.workspace = true
-vyre-self-substrate = { workspace = true, optional = true }
+vyre-libs = { workspace = true, optional = true }
 vyre-foundation.workspace = true
 vyre-megakernel.workspace = true
 thiserror.workspace = true
@@ -43,7 +50,6 @@ blake3.workspace = true
 bytemuck.workspace = true
 rustc-hash.workspace = true
 smallvec.workspace = true
-arc-swap = { workspace = true }
 ureq = { workspace = true, optional = true }
 dashmap.workspace = true
 
@@ -51,11 +57,9 @@ dashmap.workspace = true
 libc.workspace = true
 
 [dev-dependencies]
-vyre-test-support.workspace = true
-vyre-driver-reference = { path = "../vyre-driver-reference" }
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 tempfile.workspace = true
 serde_json.workspace = true
-criterion.workspace = true
 proptest.workspace = true
 
 
@@ -77,3 +81,4 @@ path = "tests/sweep_tenant_policy_oracle_matrix.rs"
 [[test]]
 name = "sweep_ring_buffer_oracle_matrix"
 path = "tests/sweep_ring_buffer_oracle_matrix.rs"
+

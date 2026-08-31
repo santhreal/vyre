@@ -14,127 +14,64 @@
 //! had ever dispatched a 64-bit-output buffer, so a wrong `cvt`, a mis-sized
 //! 8-byte element store, or a high-word leak would be invisible.
 //!
-//! These tests dispatch the cast on the 5090, read back BOTH 32-bit words of each
+//! These tests dispatch the cast on the live CUDA device, read back BOTH 32-bit words of each
 //! 64-bit element, and assert the full `u64` byte-for-byte against Rust `as`. The
 //! Law-10 case is a NEGATIVE `i32` widened into an UNSIGNED `u64`: it must STILL
 //! sign-extend (`-7i32 as u64 == 0xFFFF_FFFF_FFFF_FFF9`), driven by the SOURCE
 //! signedness, not the target's.
 
-mod common;
-use common::live_backend;
+#![cfg(feature = "device-tests")]
 
+mod harness;
+use harness::live_backend;
+
+use vyre_driver::parity_harness::{
+    dispatch_single_output, elementwise_program, u64_words, ParityInput,
+};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{DataType, Expr};
+use vyre_test_support::cast_parity::{
+    I32_TO_I64_EXPECTED, SIGNED_WIDENING_INPUTS, UNSIGNED_TO_SIGNED_WIDENING_INPUTS,
+    UNSIGNED_WIDENING_INPUTS,
+};
 
-/// Little-endian `u32` words -> bytes (self-contained; no dependency on the
-/// shared matrix helpers' word-packing).
-fn u32_bytes(words: &[u32]) -> Vec<u8> {
-    let mut bytes = Vec::with_capacity(words.len() * 4);
-    for &w in words {
-        bytes.extend_from_slice(&w.to_le_bytes());
-    }
-    bytes
-}
-
-/// `out[i] = cast(target64, load(src, i))`: `src` is a 32-bit buffer (signed or
-/// unsigned per `src_ty`), `out` is the 64-bit `target64` buffer (8 bytes/elem).
-/// One thread ([1,1,1]) writes every element, mirroring the wgpu gate so the
-/// only moving part is the backend.
-fn widen_program(src_ty: DataType, target64: DataType, n: u32) -> Program {
-    let mut body = Vec::new();
-    for i in 0..n {
-        body.push(Node::store(
-            "out",
-            Expr::u32(i),
-            Expr::cast(target64.clone(), Expr::load("src", Expr::u32(i))),
-        ));
-    }
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, target64).with_count(n),
-            BufferDecl::storage("src", 1, BufferAccess::ReadOnly, src_ty).with_count(n),
-        ],
-        [1, 1, 1],
-        body,
-    )
-}
-
-/// Dispatch and reconstruct each 64-bit element from its two little-endian words.
+/// Dispatch `out[i] = cast(target64, src[i])` and reconstruct each 64-bit
+/// element from its two little-endian words.
+///
+/// `src` is a 32-bit buffer typed by `src_ty` so the widening convert is driven
+/// by the SOURCE signedness, and `out` is an 8-byte-per-element `target64`
+/// buffer, which is the sizing no earlier CUDA test had ever dispatched.
 fn run(backend: &CudaBackend, src_ty: DataType, target64: DataType, words: &[u32]) -> Vec<u64> {
-    let n = words.len() as u32;
-    let program = widen_program(src_ty, target64, n);
-    let src_bytes = u32_bytes(words);
-    // 8 bytes per 64-bit output element => 2 zero u32 words each.
-    let out_init = u32_bytes(&vec![0u32; words.len() * 2]);
-    let outputs = backend
-        .dispatch_borrowed(
-            &program,
-            &[out_init.as_slice(), src_bytes.as_slice()],
-            &DispatchConfig::default(),
-        )
-        .expect("Fix: CUDA must dispatch the 64-bit widening-cast contract.");
-    assert_eq!(
-        outputs.len(),
-        1,
-        "widening program declares one ReadWrite output (out); CUDA returned {} buffer(s)",
-        outputs.len()
-    );
-    assert_eq!(
-        outputs[0].len(),
+    let buffers = vec![ParityInput::packed(
+        "src",
+        src_ty,
+        vyre_driver::parity_harness::u32_bytes(words),
+    )];
+    let count = words.len() as u32;
+    let program = elementwise_program(target64.clone(), &buffers, count, &|loads| {
+        Expr::cast(target64.clone(), loads[0].clone())
+    });
+    let bytes = dispatch_single_output(
+        &|program, inputs| backend.dispatch_borrowed(program, inputs, &DispatchConfig::default()),
+        &program,
+        &buffers,
         words.len() * 8,
-        "CUDA 64-bit output buffer must be 8 bytes per element; got {} bytes for {} elements",
-        outputs[0].len(),
-        words.len()
+        "64-bit widening-cast parity",
     );
-    outputs[0]
-        .chunks_exact(8)
-        .map(|c| {
-            let low = u32::from_le_bytes([c[0], c[1], c[2], c[3]]);
-            let high = u32::from_le_bytes([c[4], c[5], c[6], c[7]]);
-            (u64::from(high) << 32) | u64::from(low)
-        })
-        .collect()
-}
-
-/// Bit patterns spanning the sign boundary and the extremes.
-fn signed_inputs() -> Vec<i32> {
-    vec![
-        -7,
-        7,
-        -1,
-        0,
-        1,
-        i32::MIN,
-        i32::MAX,
-        -128,
-        0x4000_0000,
-        -0x4000_0000,
-    ]
+    u64_words(&bytes)
 }
 
 #[test]
 fn i32_to_i64_sign_extends_high_word_on_cuda() {
     let backend = live_backend();
-    let ins = signed_inputs();
+    let ins = SIGNED_WIDENING_INPUTS;
     let words: Vec<u32> = ins.iter().map(|&v| v as u32).collect();
     let gpu = run(&backend, DataType::I32, DataType::I64, &words);
     let expected: Vec<u64> = ins.iter().map(|&v| (v as i64) as u64).collect();
     // Pin the contract literally: negatives MUST carry a 0xFFFF_FFFF high word.
     assert_eq!(
-        expected,
-        vec![
-            0xFFFF_FFFF_FFFF_FFF9,
-            0x0000_0000_0000_0007,
-            0xFFFF_FFFF_FFFF_FFFF,
-            0x0000_0000_0000_0000,
-            0x0000_0000_0000_0001,
-            0xFFFF_FFFF_8000_0000,
-            0x0000_0000_7FFF_FFFF,
-            0xFFFF_FFFF_FFFF_FF80,
-            0x0000_0000_4000_0000,
-            0xFFFF_FFFF_C000_0000,
-        ],
+        expected, I32_TO_I64_EXPECTED,
         "reference i32->i64 sign-extension drifted"
     );
     assert_eq!(
@@ -152,7 +89,7 @@ fn i32_to_u64_sign_extends_high_word_on_cuda() {
     // 0x0000_0000_FFFF_FFF9). The target's unsignedness does not change the
     // SOURCE-driven high word.
     let backend = live_backend();
-    let ins = signed_inputs();
+    let ins = SIGNED_WIDENING_INPUTS;
     let words: Vec<u32> = ins.iter().map(|&v| v as u32).collect();
     let gpu = run(&backend, DataType::I32, DataType::U64, &words);
     let expected: Vec<u64> = ins.iter().map(|&v| v as u64).collect();
@@ -174,7 +111,7 @@ fn u32_to_u64_zero_extends_high_word_on_cuda() {
     // 0x0000_0000_FFFF_FFFF, NOT sign-extended, proves the signedness gate keys
     // on the SOURCE, not the value's top bit.
     let backend = live_backend();
-    let words: Vec<u32> = vec![0xFFFF_FFFF, 0x8000_0000, 7, 0, 1, 0x7FFF_FFFF, 0xDEAD_BEEF];
+    let words = UNSIGNED_WIDENING_INPUTS;
     let gpu = run(&backend, DataType::U32, DataType::U64, &words);
     let expected: Vec<u64> = words.iter().map(|&w| u64::from(w)).collect();
     assert_eq!(
@@ -196,7 +133,7 @@ fn u32_to_i64_zero_extends_into_signed_target_on_cuda() {
     // PTX route reaches I64 via `from_dtype(I64) -> U64`, so this must select the
     // `cvt.u64.u32` zero-extend arm off the SOURCE, not the I64 target name.
     let backend = live_backend();
-    let words: Vec<u32> = vec![0xFFFF_FFFF, 0x8000_0000, 7, 0, 0x7FFF_FFFF];
+    let words = UNSIGNED_TO_SIGNED_WIDENING_INPUTS;
     let gpu = run(&backend, DataType::U32, DataType::I64, &words);
     let expected: Vec<u64> = words
         .iter()

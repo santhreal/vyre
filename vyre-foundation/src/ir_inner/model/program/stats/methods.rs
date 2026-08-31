@@ -1,8 +1,8 @@
 use super::{
     ProgramStats, CAP_ASYNC_DISPATCH, CAP_BF16, CAP_DISTRIBUTED_COLLECTIVES, CAP_F16, CAP_F64,
-    CAP_INDIRECT_DISPATCH, CAP_SUBGROUP_OPS, CAP_TENSOR_OPS, CAP_TRAP, NODE_KIND_ASSIGN,
-    NODE_KIND_BARRIER, NODE_KIND_IF, NODE_KIND_LET, NODE_KIND_LOOP, NODE_KIND_REGION,
-    NODE_KIND_STORE,
+    CAP_GRID_SYNC, CAP_INDIRECT_DISPATCH, CAP_SUBGROUP_OPS, CAP_TENSOR_OPS, CAP_TRAP,
+    CAP_WORKGROUP_GEOMETRY, NODE_KIND_ASSIGN, NODE_KIND_BARRIER, NODE_KIND_IF, NODE_KIND_LET,
+    NODE_KIND_LOOP, NODE_KIND_REGION, NODE_KIND_STORE,
 };
 
 impl ProgramStats {
@@ -69,6 +69,21 @@ impl ProgramStats {
         self.capability_bits & CAP_DISTRIBUTED_COLLECTIVES != 0
     }
 
+    /// True when the program synchronizes at grid scope.
+    #[inline]
+    #[must_use]
+    pub fn grid_sync(&self) -> bool {
+        self.capability_bits & CAP_GRID_SYNC != 0
+    }
+
+    /// True when local/workgroup/subgroup identity makes workgroup geometry
+    /// observable to the program.
+    #[inline]
+    #[must_use]
+    pub fn workgroup_geometry(&self) -> bool {
+        self.capability_bits & CAP_WORKGROUP_GEOMETRY != 0
+    }
+
     /// True when at least one node of any kind in `mask` was observed
     /// in the stats walk. Use the `NODE_KIND_*` constants to compose
     /// the mask:
@@ -109,7 +124,7 @@ impl ProgramStats {
     pub fn has_node_store(&self) -> bool {
         self.has_any_node_kind(NODE_KIND_STORE)
     }
-    /// True when the program contains at least one `Node::Barrier`.
+    /// True when the program contains at least one physical or logical barrier.
     #[inline]
     #[must_use]
     pub fn has_node_barrier(&self) -> bool {

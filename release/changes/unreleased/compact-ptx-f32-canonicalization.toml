@@ -1,0 +1,2 @@
+category = "Changed"
+text = "PTX f32 canonicalization now uses native flush-to-zero multiplication plus NaN selection, preserving signed zero and canonical NaN semantics with fewer instructions and registers."

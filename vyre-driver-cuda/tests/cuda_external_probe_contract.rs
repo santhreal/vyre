@@ -4,6 +4,8 @@
 //! and the internal CUDA capability probe must both see a real GPU and produce
 //! actionable diagnostics when the host is misconfigured.
 
+#![cfg(feature = "device-tests")]
+
 use std::process::Command;
 
 use vyre_driver_cuda::CudaDeviceCaps;

@@ -20,21 +20,16 @@
 //!
 //! Both paths produce the same IR.
 
+use crate::builder::reduction::ReductionComposer;
+use crate::builder::{check_same_shape, check_tensors, checked_element_count, BuildOptions};
+use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
+use vyre_foundation::composition::{trap_program, wrap_region};
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
-
-use crate::builder::{
-    check_tensors, strided_accumulate_child, strided_writeback_child, BuildOptions,
-};
-use crate::nn::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
-use crate::region::wrap;
-use crate::tensor_ref::{TensorRef, TensorRefError};
 
 /// Canonical op id; matches the region generator name so conformance
 /// certificates stay self-describing.
 const OP_ID: &str = "vyre-libs::nn::softmax";
 const REFERENCE_OP_ID: &str = "vyre-libs::nn::softmax_reference";
-const SOFTMAX_TILE: u32 = 256;
 
 /// Typed Cat-A builder for [`softmax`]. Future knobs (workgroup size,
 /// region generator override, tenant id) land as [`BuildOptions`]
@@ -74,39 +69,18 @@ impl Softmax {
             OP_ID,
             &[(&self.input, DataType::F32), (&self.output, DataType::F32)],
         )?;
-        if self.input.shape != self.output.shape {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.output.name.as_str().to_string(),
-                found: self.output.shape.to_vec(),
-                expected: self.input.shape.to_vec(),
-                op: OP_ID,
-            });
-        }
-        let n = self
-            .input
-            .element_count()
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: self.input.name_str().to_string(),
-                shape: self.input.shape.to_vec(),
-            })?;
-        // V7-CORR-012: reject n=0 so the first Expr::load(input, 0)
-        // sentinel is not an out-of-bounds read. softmax(∅) is
-        // undefined; the builder surfaces the error explicitly.
-        if n == 0 {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.input.name.as_str().to_string(),
-                found: self.input.shape.to_vec(),
-                expected: vec![1],
-                op: OP_ID,
-            });
-        }
+        check_same_shape(OP_ID, &self.input, &self.output)?;
+        // V7-CORR-012: the nonzero floor `checked_element_count` enforces is what
+        // keeps the first `Expr::load(input, 0)` sentinel in bounds. softmax(∅)
+        // is undefined; the builder surfaces the error explicitly.
+        let n = checked_element_count(OP_ID, &self.input)?;
 
         let generator = self.options.region_generator.unwrap_or(OP_ID);
         Ok(softmax_tiled_program(
             self.input.name_str(),
             self.output.name_str(),
             n,
-            self.options.workgroup_size.unwrap_or([SOFTMAX_TILE, 1, 1]),
+            self.options.workgroup_size.unwrap_or([256, 1, 1]),
             generator,
         ))
     }
@@ -121,10 +95,9 @@ pub fn softmax(input: &str, output: &str, n: u32) -> Program {
     Softmax::new(TensorRef::f32_1d(input, n), TensorRef::f32_1d(output, n))
         .build()
         .unwrap_or_else(|err| {
-            crate::builder::invalid_builder_trap_program(
+            trap_program(
                 OP_ID,
-                output,
-                DataType::F32,
+                Some((output, DataType::F32)),
                 format!("Fix: softmax build failed: {err}"),
             )
         })
@@ -134,10 +107,9 @@ pub fn softmax(input: &str, output: &str, n: u32) -> Program {
 #[must_use]
 pub fn softmax_reference(input: &str, output: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::builder::invalid_builder_trap_program(
+        return trap_program(
             REFERENCE_OP_ID,
-            output,
-            DataType::F32,
+            Some((output, DataType::F32)),
             "Fix: softmax_reference requires n > 0, got 0.".to_string(),
         );
     }
@@ -151,109 +123,7 @@ fn softmax_tiled_program(
     workgroup: [u32; 3],
     generator: &'static str,
 ) -> Program {
-    let tile = workgroup[0].max(1);
-    let chunks = n.div_ceil(tile);
-    let max_pass = ReducePhase {
-        accumulate: strided_accumulate_child(
-            OP_ID,
-            tile,
-            chunks,
-            n,
-            "local_max",
-            Expr::f32(f32::MIN),
-            "softmax_scratch",
-            |idx, acc| {
-                let loaded = Expr::load(input, idx);
-                Expr::select(
-                    Expr::BinOp {
-                        op: BinOp::Gt,
-                        left: Box::new(loaded.clone()),
-                        right: Box::new(acc.clone()),
-                    },
-                    loaded,
-                    acc,
-                )
-            },
-        ),
-        reductions: vec![workgroup_tree::max_f32_child(
-            OP_ID,
-            tile,
-            "softmax_scratch",
-            WorkgroupReductionScope::FirstWorkgroup,
-        )],
-        publish: vec![Node::Store {
-            buffer: "softmax_max".into(),
-            index: Expr::u32(0),
-            value: Expr::load("softmax_scratch", Expr::u32(0)),
-        }],
-    };
-    // The sum pass reuses `softmax_scratch`, so it publishes nothing: the
-    // writeback reads the reduced sum straight out of scratch slot zero.
-    let sum_pass = ReducePhase {
-        accumulate: strided_accumulate_child(
-            OP_ID,
-            tile,
-            chunks,
-            n,
-            "local_sum",
-            Expr::f32(0.0),
-            "softmax_scratch",
-            |idx, acc| {
-                Expr::add(
-                    acc,
-                    Expr::UnOp {
-                        op: UnOp::Exp,
-                        operand: Box::new(Expr::BinOp {
-                            op: BinOp::Sub,
-                            left: Box::new(Expr::load(input, idx)),
-                            right: Box::new(Expr::load("softmax_max", Expr::u32(0))),
-                        }),
-                    },
-                )
-            },
-        ),
-        reductions: vec![workgroup_tree::sum_f32_child(
-            OP_ID,
-            tile,
-            "softmax_scratch",
-            WorkgroupReductionScope::FirstWorkgroup,
-        )],
-        publish: Vec::new(),
-    };
-    tiled_reduce_program(TiledReduceProgram {
-        generator,
-        buffers: vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::workgroup("softmax_scratch", tile, DataType::F32),
-            BufferDecl::workgroup("softmax_max", 1, DataType::F32),
-            BufferDecl::output(output, 1, DataType::F32).with_count(n),
-        ],
-        workgroup,
-        phases: vec![max_pass, sum_pass],
-        writeback: strided_writeback_child(
-            OP_ID,
-            tile,
-            chunks,
-            n,
-            output,
-            vec![
-                Node::let_bind("sum_val", Expr::load("softmax_scratch", Expr::u32(0))),
-                Node::let_bind("max_val", Expr::load("softmax_max", Expr::u32(0))),
-            ],
-            |idx| Expr::BinOp {
-                op: BinOp::Div,
-                left: Box::new(Expr::UnOp {
-                    op: UnOp::Exp,
-                    operand: Box::new(Expr::BinOp {
-                        op: BinOp::Sub,
-                        left: Box::new(Expr::load(input, idx)),
-                        right: Box::new(Expr::var("max_val")),
-                    }),
-                }),
-                right: Box::new(Expr::var("sum_val")),
-            },
-        ),
-    })
+    ReductionComposer::tiled_softmax(generator, input, output, n, workgroup)
 }
 
 fn softmax_reference_program(
@@ -323,7 +193,7 @@ fn softmax_reference_program(
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         workgroup,
-        vec![wrap(
+        vec![wrap_region(
             generator,
             vec![
                 Node::let_bind("max_val", Expr::load(input, Expr::u32(0))),
@@ -338,56 +208,72 @@ fn softmax_reference_program(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(1),
-        id: "vyre-libs::nn::softmax",
-        build: Some(|| softmax("input", "output", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        "vyre-libs::nn::softmax",
+        || softmax("input", "output", 4),
+        Some(|| {
             let input = [0.5f32, -1.0, 1.5, 0.25];
             vec![vec![
                 vyre_primitives::wire::pack_f32_slice(&input),
-                vec![0u8; input.len() * core::mem::size_of::<f32>()],
             ]]
         }),
-        expected_output: Some(|| vec![
+        Some(|| vec![
             vec![
                 vec![0x7b, 0xf0, 0x58, 0x3e, 0x74, 0x9f, 0x41, 0x3d, 0xf3, 0x6c, 0x13, 0x3f, 0xdb, 0xf3, 0x28, 0x3e, ],
             ],
         ]),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
+    .with_numeric(vyre_foundation::numeric::NumericContract::ieee_f32(1))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::assert_tiled_matches_reference;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
+    use crate::fixture_bytes::eval_f32;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
+    /// A library op states what it needs and stops there. What the region
+    /// marker prints in one dialect's text is that emitter's contract, not
+    /// this op's, so the assertion is against the lowered descriptor: the
+    /// generator label must survive lowering so any emitter can carry it.
     #[test]
-    fn softmax_lowers_and_emits_sm80_kernel() {
+    fn softmax_lowers_and_keeps_its_region_generator_in_the_descriptor() {
         let program = softmax("input", "output", 4);
-        let descriptor = vyre_lower::lower_verified(&program)
-            .map(|lowered| lowered.descriptor)
-            .unwrap();
-        let ptx = vyre_emit_ptx::emit_with_options(
-            &descriptor,
-            vyre_emit_ptx::PtxEmitOptions {
-                target: vyre_emit_ptx::ComputeCapability::SM_80,
-                subgroup_size: 32,
-                ulp_budget: Some(128),
-                cooperative_grid_sync: false,
-            },
+        let graph = vyre_foundation::ir::ProgramGraph::from_program(
+            "vyre-libs::nn::softmax",
+            program.clone(),
         )
-        .unwrap();
-        assert!(ptx.contains(".target sm_80"), "{ptx}");
-        assert!(ptx.contains(".visible .entry main("), "{ptx}");
-        assert!(ptx.contains("region: vyre-libs::nn::softmax"), "{ptx}");
+        .expect("Fix: softmax must form a valid program graph.");
+        let logical = vyre_foundation::logical::LogicalProgramGraph::validate(
+            &graph,
+            &std::collections::BTreeMap::new(),
+        )
+        .expect("Fix: softmax must have a valid logical domain.");
+        let schedule = vyre_megakernel::baseline_schedule(&logical);
+        let descriptor = vyre_lower::lower_scheduled(&program, &schedule, schedule.phases[0].id)
+            .map(|lowered| lowered.into_descriptor())
+            .expect("Fix: the softmax program must lower through a selected schedule.");
+
+        let generators: Vec<&str> = descriptor
+            .ops_iter()
+            .filter_map(|op| match &op.kind {
+                vyre_lower::KernelOpKind::Region { generator } => Some(generator.as_ref()),
+                _ => None,
+            })
+            .collect();
+
+        assert!(
+            generators.contains(&"vyre-libs::nn::softmax"),
+            "Fix: lowering dropped the softmax region generator; found {generators:?}"
+        );
+        assert!(
+            descriptor.bindings.slots.len() >= 2,
+            "Fix: softmax must lower one input and one output binding."
+        );
     }
 
     #[test]
@@ -459,26 +345,13 @@ mod tests {
         let input = (0..n)
             .map(|i| ((i as f32) * 0.03125).sin() * 4.0 - ((i % 7) as f32))
             .collect::<Vec<_>>();
-        let run = |program: Program| {
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[
-                    Value::from(f32_bytes(&input)),
-                    Value::from(vec![0u8; n as usize * 4]),
-                ],
-            )
-            .expect("Fix: softmax program must execute in the reference interpreter.");
-
-            decode_f32(&outputs[0].to_bytes())
-        };
-        let actual = run(softmax("input", "output", n));
-        let expected = run(softmax_reference("input", "output", n));
-        for (idx, (lhs, rhs)) in actual.iter().zip(expected.iter()).enumerate() {
-            assert!(
-                (lhs - rhs).abs() <= 1.0e-6,
-                "softmax mismatch at lane {idx}: tiled={lhs:?} reference={rhs:?}"
-            );
-        }
+        assert_tiled_matches_reference(
+            "softmax",
+            &input,
+            1.0e-6,
+            &softmax("input", "output", n),
+            &softmax_reference("input", "output", n),
+        );
     }
 
     #[test]
@@ -491,25 +364,13 @@ mod tests {
                 wave - saw
             })
             .collect::<Vec<_>>();
-        let run = |program: Program| {
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[
-                    Value::from(f32_bytes(&input)),
-                    Value::from(vec![0u8; n as usize * 4]),
-                ],
-            )
-            .expect("Fix: generated softmax program must execute in the reference interpreter.");
-            decode_f32(&outputs[0].to_bytes())
-        };
-        let actual = run(softmax("input", "output", n));
-        let expected = run(softmax_reference("input", "output", n));
-        for (idx, (lhs, rhs)) in actual.iter().zip(expected.iter()).enumerate() {
-            assert!(
-                (lhs - rhs).abs() <= 2.0e-5,
-                "generated softmax mismatch at lane {idx}: tiled={lhs:?} reference={rhs:?}"
-            );
-        }
+        assert_tiled_matches_reference(
+            "generated softmax",
+            &input,
+            2.0e-5,
+            &softmax("input", "output", n),
+            &softmax_reference("input", "output", n),
+        );
     }
 
     #[test]
@@ -518,12 +379,7 @@ mod tests {
         // This tests that the max-subtraction stabilizer works even at scale.
         let input = [88.0f32; 8];
         let program = softmax("input", "output", 8);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 32])],
-        )
-        .expect("Fix: softmax must not panic on all-large values");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("softmax", &program, &[&input[..]], 8);
         let expected = 1.0 / 8.0;
         for (i, &v) in out.iter().enumerate() {
             assert!(
@@ -545,12 +401,7 @@ mod tests {
     fn softmax_single_token() {
         let input = [2.5f32];
         let program = softmax("input", "output", 1);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: softmax single token must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("softmax", &program, &[&input[..]], 1);
         assert_eq!(out[0], 1.0, "softmax of a single element must be 1.0");
     }
 
@@ -558,12 +409,7 @@ mod tests {
     fn softmax_nan_in_input_propagates() {
         let input = [f32::NAN, 1.0, 2.0, 3.0];
         let program = softmax("input", "output", 4);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: softmax must not panic on NaN input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("softmax", &program, &[&input[..]], 4);
         // At least one output lane must be NaN because NaN poisons the sum.
         assert!(
             out.iter().any(|v| v.is_nan()),
@@ -579,12 +425,8 @@ mod tests {
         fn softmax_sums_to_one(input in prop::collection::vec(prop::num::f32::NORMAL, 1..16)) {
             let n = input.len() as u32;
             let program = softmax("input", "output", n);
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; input.len() * 4])],
-            )
-            .expect("Fix: softmax must execute");
-            let out = decode_f32(&outputs[0].to_bytes());
+            let outputs = eval_bytes("softmax", &program, vec![f32_bytes(&input), vec![0u8; input.len() * 4]]);
+            let out = decode_f32(&outputs[0]);
             let sum = out.iter().sum::<f32>();
             prop_assert!(
                 (sum - 1.0).abs() <= 1.0e-4,

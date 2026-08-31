@@ -11,10 +11,11 @@ use super::release_workloads::{
     validate_release_math_nn_kernel_evidence, ReleaseMathNnKernelEvidence,
 };
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as_mut, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase,
+    WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::resident::{
     dispatch_artifact_timed, input_bytes_total, resident_output_byte_lengths, transfer_accounting,
     ResidentInputPool,
@@ -34,7 +35,8 @@ const SIDECAR_WORDS: u32 = GROUP_COUNT * OUT_DIM;
 const MAC_COUNT: u64 = (IN_DIM as u64) * (OUT_DIM as u64);
 const CPU_BASELINE_SAMPLES: usize = 9;
 const RESIDENT_SAMPLE_SETS: usize = 8;
-const INFERENCE_BATCH_SIZE: u32 = 256;
+// Fifteen eight-row tiles keep the 4,096-output dispatch below the portable 65,535-axis limit.
+const INFERENCE_BATCH_SIZE: u32 = 120;
 
 const SUITES: &[SuiteKind] = &[
     SuiteKind::Release,
@@ -192,13 +194,7 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_mut::<QuantizedLinearPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "quantized linear prepared payload type mismatch".to_string(),
-                )
-            })?;
+        let prepared = prepared_as_mut::<QuantizedLinearPrepared>(prepared, "quantized linear")?;
 
         let dispatch = dispatch_artifact_timed(
             ctx,
@@ -475,7 +471,7 @@ fn measured_cpu_oracle_checked(
     for sample_idx in 0..CPU_BASELINE_SAMPLES {
         let baseline_start = std::time::Instant::now();
         let output = cpu_oracle_checked(x, packed, scale, zero_point, bias)?;
-        let elapsed_ns = u64::try_from(baseline_start.elapsed().as_nanos()).unwrap_or(u64::MAX);
+        let sample_wall_ns = elapsed_ns(baseline_start);
         if let Some(expected) = expected_output.as_ref() {
             if output != *expected {
                 return Err(BenchError::ExecutionFailed(format!(
@@ -485,7 +481,7 @@ fn measured_cpu_oracle_checked(
         } else {
             expected_output = Some(output);
         }
-        durations.push(elapsed_ns);
+        durations.push(sample_wall_ns);
     }
     durations.sort_unstable();
     let baseline_wall_ns = durations

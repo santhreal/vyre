@@ -6,9 +6,8 @@
 //!
 //! Category A composition.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 // ---------------------------------------------------------------------------
 // Q4_K: "type-1" 4-bit quantization
@@ -44,7 +43,7 @@ fn k_quant_unpack(
     let value_mask = (1_u32 << spec.bits_per_value) - 1;
     let row = Expr::var("i");
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(row.clone(), Expr::u32(n)),
             vec![
@@ -116,7 +115,7 @@ fn k_quant_unpack(
             BufferDecl::output(output, 3, DataType::F32).with_count(n),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(spec.unpack_op_id, body)],
+        vec![wrap_anonymous_region(spec.unpack_op_id, body)],
     ))
 }
 
@@ -230,7 +229,7 @@ fn k_quant_linear(
         .ok_or_else(|| format!("Fix: {} packed word count overflows u32", spec.op_id))?;
     let i = Expr::var("i");
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
             Expr::lt(i.clone(), Expr::u32(out_dim)),
             vec![
@@ -326,7 +325,7 @@ fn k_quant_linear(
             BufferDecl::output(out, 5, DataType::F32).with_count(out_dim),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(spec.op_id, body)],
+        vec![wrap_anonymous_region(spec.op_id, body)],
     ))
 }
 
@@ -386,9 +385,9 @@ pub fn q2_k_linear(
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
     use crate::fixture_bytes::u32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn q4_k_unpack_simple() {
@@ -400,17 +399,17 @@ mod tests {
         let mins = vec![0.0f32];
         let packed = vec![0x7654_3210u32, 0xFEDC_BA98, 0x0, 0x0];
         let program = q4_k_unpack("packed", "scales", "mins", "out", 16).unwrap();
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "ggml",
             &program,
-            &[
-                Value::from(u32_bytes(&packed)),
-                Value::from(f32_bytes(&scales)),
-                Value::from(f32_bytes(&mins)),
-                Value::from(vec![0u8; 64]),
+            vec![
+                u32_bytes(&packed),
+                f32_bytes(&scales),
+                f32_bytes(&mins),
+                vec![0u8; 64],
             ],
-        )
-        .expect("Fix: q4_k_unpack must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        );
+        let out = decode_f32(&outputs[0]);
         assert_eq!(out[0], 0.0);
         assert_eq!(out[1], 1.0);
         assert_eq!(out[2], 2.0);
@@ -427,17 +426,17 @@ mod tests {
         let mins = vec![0.0f32];
         let packed = vec![0xE4E4_E4E4u32]; // 11_10_01_00 repeated
         let program = q2_k_unpack("packed", "scales", "mins", "out", 16).unwrap();
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "ggml",
             &program,
-            &[
-                Value::from(u32_bytes(&packed)),
-                Value::from(f32_bytes(&scales)),
-                Value::from(f32_bytes(&mins)),
-                Value::from(vec![0u8; 64]),
+            vec![
+                u32_bytes(&packed),
+                f32_bytes(&scales),
+                f32_bytes(&mins),
+                vec![0u8; 64],
             ],
-        )
-        .expect("Fix: q2_k_unpack must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        );
+        let out = decode_f32(&outputs[0]);
         // Byte pattern: 0xE4 = 11_10_01_00 -> values 0,1,2,3
         assert_eq!(out[0], 0.0);
         assert_eq!(out[1], 1.0);
@@ -456,19 +455,19 @@ mod tests {
         let scales = vec![1.0f32, 2.0];
         let mins = vec![0.0f32, 0.0];
         let program = q4_k_linear("x", "packed", "scales", "mins", "b", "out", 32, 2).unwrap();
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "ggml",
             &program,
-            &[
-                Value::from(f32_bytes(&x)),
-                Value::from(u32_bytes(&packed)),
-                Value::from(f32_bytes(&scales)),
-                Value::from(f32_bytes(&mins)),
-                Value::from(f32_bytes(&b)),
-                Value::from(vec![0u8; 8]),
+            vec![
+                f32_bytes(&x),
+                u32_bytes(&packed),
+                f32_bytes(&scales),
+                f32_bytes(&mins),
+                f32_bytes(&b),
+                vec![0u8; 8],
             ],
-        )
-        .expect("Fix: q4_k_linear must read the second packed quantization block");
-        let out = decode_f32(&outputs[0].to_bytes());
+        );
+        let out = decode_f32(&outputs[0]);
         assert_eq!(out, vec![2.5, 3.5]);
     }
 }

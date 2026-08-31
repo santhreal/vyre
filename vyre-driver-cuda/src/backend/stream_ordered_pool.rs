@@ -16,10 +16,9 @@
 //! no `Drop` ordering hazard against the context teardown. The only state we own
 //! is the release-threshold policy, which we set on construction.
 //!
-//! This is a self-contained, hardware-tested allocator surface. It is **not** wired
-//! into the current hot dispatch path, and that is a deliberate, measured decision
-//! rather than a pending TODO: on the warm steady state the
-//! `DeviceAllocationPool` free list
+//! This is a self-contained, hardware-tested allocator surface. It is not wired
+//! into the current hot dispatch path, and measurement is the reason: on the
+//! warm steady state the `DeviceAllocationPool` free list
 //! serves an acquire from a lock-free `ArrayQueue::pop` and a release from a
 //! `queue.push`: **zero** CUDA driver calls per dispatch, and the release is
 //! already correctly stream-ordered because the owning `CudaPendingDispatch` holds
@@ -221,6 +220,17 @@ impl CudaStreamOrderedPool {
             "CU_MEMPOOL_ATTR_USED_MEM_CURRENT",
         )
     }
+    /// Physical memory release threshold currently configured on the pool (bytes).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] if the attribute read fails.
+    pub(crate) fn release_threshold(&self) -> Result<u64, BackendError> {
+        self.attr_u64(
+            CUmemPool_attribute_enum::CU_MEMPOOL_ATTR_RELEASE_THRESHOLD,
+            "CU_MEMPOOL_ATTR_RELEASE_THRESHOLD",
+        )
+    }
 
     fn attr_u64(
         &self,
@@ -240,14 +250,18 @@ impl CudaStreamOrderedPool {
         Ok(value)
     }
 
-    /// Release pooled memory back to the OS, keeping at least `min_keep_bytes`
-    /// reserved. Use this to bound resident VRAM after a burst of dispatches when
-    /// the retained reservation is no longer worth holding.
+    /// Request release of pooled memory back to the OS, keeping at least `min_keep_bytes`
+    /// reserved.
     ///
+    /// Configures the pool's release threshold attribute to `min_keep_bytes` and invokes
+    /// `cuMemPoolTrimTo`. For the context's default CUDA memory pool, the driver manages
+    /// virtual memory backing at device/context scope, so physical deallocation to the OS is
+    /// best-effort and the driver may retain mapped granules across dispatches.
     /// # Errors
     ///
     /// Returns [`BackendError`] if the trim fails.
     pub fn trim(&self, min_keep_bytes: usize) -> Result<(), BackendError> {
+        self.set_release_threshold(min_keep_bytes as u64)?;
         // SAFETY: FFI. `self.pool` is a live pool handle; the driver trims its
         // own reservation. cuda_check propagates failures.
         unsafe {
@@ -260,7 +274,9 @@ impl CudaStreamOrderedPool {
     }
 }
 
-#[cfg(test)]
+// Inline: `vyre_driver_cuda::backend` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
+#[cfg(all(test, feature = "device-tests"))]
 mod tests {
     use super::*;
     use crate::backend::dispatch::CudaBackend;
@@ -352,19 +368,29 @@ mod tests {
             reserved_after_realloc, reserved_after_free,
             "re-allocating a just-freed same-size block must reuse the reserved memory, not grow the pool's OS reservation (before={reserved_after_free}, after={reserved_after_realloc})"
         );
-
         pool.free_async(ptr2, stream.raw())
             .expect("free second allocation");
         stream.synchronize().expect("final sync");
-
-        // Trimming hands the reservation back to the OS: reserved must fall.
+        // Trimming configures the pool's release threshold down to min_keep_bytes
+        // and requests the driver to release unneeded reservation.
+        assert_eq!(
+            pool.release_threshold()
+                .expect("query release threshold before trim"),
+            RETAIN_ALL_FREED_BYTES,
+            "pool must retain all freed bytes by default before trim"
+        );
         pool.trim(0).expect("trim pool reservation to zero-keep");
+        assert_eq!(
+            pool.release_threshold().expect("query release threshold after trim"),
+            0,
+            "trim(0) must set the pool release threshold to 0 so the driver is permitted to release memory"
+        );
         let reserved_after_trim = pool
             .reserved_bytes()
             .expect("query reserved bytes after trim");
         assert!(
-            reserved_after_trim < reserved_after_realloc,
-            "trim(0) must release retained reservation back to the OS (before={reserved_after_realloc}, after={reserved_after_trim})"
+            reserved_after_trim <= reserved_after_realloc,
+            "trim(0) must not grow the pool reservation (before={reserved_after_realloc}, after={reserved_after_trim})"
         );
     }
 

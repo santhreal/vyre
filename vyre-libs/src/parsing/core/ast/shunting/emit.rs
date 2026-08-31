@@ -1,9 +1,14 @@
-use crate::parsing::c::lex::tokens::{TOK_INTEGER, TOK_LPAREN};
+//! The node bodies the shunting-yard reducer emits: value leaves, binary
+//! reductions, closing parentheses, and the final sweep.
+
 use crate::parsing::core::ast::node::{AST_CONST_INT, AST_VAR};
-use vyre_foundation::ir::{Expr, Node};
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_spec::c11_token::{TOK_INTEGER, TOK_LPAREN};
 
 use super::operator::{ast_opcode, precedence, should_pop_cached};
-use super::STACK_SLOTS_PER_STATEMENT;
+use super::{AST_SHUNTING_YARD_REDUCE_OP_ID, OP_ID, STACK_SLOTS_PER_STATEMENT};
 
 pub(super) fn emit_value_leaf(
     out_ast_nodes: &str,
@@ -169,7 +174,7 @@ pub(super) fn binary_token_body(
         op_stack_base.clone(),
     );
 
-    vec![
+    let reduce_loop = vec![
         Node::let_bind("done_bin", Expr::u32(0)),
         Node::loop_for(
             "pop",
@@ -185,6 +190,14 @@ pub(super) fn binary_token_body(
                     Node::if_then(Expr::ne(Expr::var("o_sp"), Expr::u32(0)), reduce_one),
                 ],
             )],
+        ),
+    ];
+
+    vec![
+        wrap_child_region(
+            AST_SHUNTING_YARD_REDUCE_OP_ID,
+            Ident::from(OP_ID),
+            reduce_loop,
         ),
         Node::store(
             scratch_op_stack,
@@ -235,7 +248,7 @@ fn operator_sweep_body(
             Expr::var("top_ast_opcode"),
         ),
     ));
-    vec![
+    let sweep_loop = vec![
         Node::let_bind(done_name, Expr::u32(0)),
         Node::loop_for(
             "pop",
@@ -252,9 +265,13 @@ fn operator_sweep_body(
                 ],
             )],
         ),
-    ]
+    ];
+    vec![wrap_child_region(
+        AST_SHUNTING_YARD_REDUCE_OP_ID,
+        Ident::from(OP_ID),
+        sweep_loop,
+    )]
 }
-
 pub(super) fn rparen_body(
     scratch_op_stack: &str,
     out_ast_nodes: &str,
@@ -292,5 +309,50 @@ pub(super) fn final_sweep_body(
         op_stack_base,
         "done_fs",
         false,
+    )
+}
+
+/// Build the standalone operator reduction sub-operation.
+#[must_use]
+pub fn ast_shunting_yard_reduce_program() -> Program {
+    let out_ast_nodes = "out_ast_nodes";
+    let out_ast_count = "out_ast_count";
+    let scratch_val_stack = "scratch_val_stack";
+    let scratch_op_stack = "scratch_op_stack";
+    let mut body = vec![
+        Node::let_bind("o_sp", Expr::u32(1)),
+        Node::let_bind("v_sp", Expr::u32(2)),
+        Node::let_bind("tok", Expr::u32(vyre_spec::c11_token::TOK_PLUS)),
+        Node::let_bind("tok_prec", precedence(Expr::var("tok"))),
+        Node::let_bind("tok_is_assignment", Expr::bool(false)),
+    ];
+    body.extend(binary_token_body(
+        scratch_op_stack,
+        out_ast_nodes,
+        out_ast_count,
+        scratch_val_stack,
+        Expr::u32(0),
+        Expr::u32(0),
+    ));
+    let guarded = vec![Node::if_then(
+        Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
+        body,
+    )];
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(scratch_op_stack, 0, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(STACK_SLOTS_PER_STATEMENT),
+            BufferDecl::storage(scratch_val_stack, 1, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(STACK_SLOTS_PER_STATEMENT),
+            BufferDecl::storage(out_ast_nodes, 2, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(64),
+            BufferDecl::storage(out_ast_count, 3, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(1),
+        ],
+        [1, 1, 1],
+        vec![wrap_anonymous_region(
+            AST_SHUNTING_YARD_REDUCE_OP_ID,
+            guarded,
+        )],
     )
 }

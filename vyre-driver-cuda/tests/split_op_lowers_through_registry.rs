@@ -2,8 +2,10 @@
 //!
 //! The canonical pre-emit pipeline must resolve composition calls through the
 //! sole semantic operation registry. These tests prove a split operation
-//! survives verified lowering and emits target code without a driver-owned
+//! survives physical lowering and emits target code without a driver-owned
 //! definition or provider installation.
+
+#![cfg(feature = "device-tests")]
 
 use vyre_driver::DispatchConfig;
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
@@ -70,7 +72,7 @@ const CALLEE_SIG: Signature = Signature {
 };
 
 inventory::submit! {
-    OperationRegistration::new(
+    OperationRegistration::new_unconstrained(
         CALLEE_OP_ID,
         OperationTier::External,
         Some(row_pair_sum),
@@ -85,8 +87,8 @@ inventory::submit! {
 /// `InlineUnknownOp` naming the callee.
 #[test]
 fn a_call_to_a_registered_op_resolves_in_the_pre_emit_pipeline() {
-    let prepared = vyre_lower::lower_verified(&caller())
-        .unwrap_or_else(|error| panic!("split op must survive verified lowering: {error}"))
+    let prepared = vyre_lower::lower_physical(&caller())
+        .unwrap_or_else(|error| panic!("split op must survive physical lowering: {error}"))
         .program;
     let dump = format!("{:?}", prepared.entry());
     assert!(
@@ -99,8 +101,8 @@ fn a_call_to_a_registered_op_resolves_in_the_pre_emit_pipeline() {
 /// argument replaces every read of it.
 #[test]
 fn the_callees_input_buffer_does_not_leak_into_the_caller() {
-    let prepared = vyre_lower::lower_verified(&caller())
-        .expect("verified lowering")
+    let prepared = vyre_lower::lower_physical(&caller())
+        .expect("physical lowering")
         .program;
     let dump = format!("{:?}", prepared.entry());
     assert!(

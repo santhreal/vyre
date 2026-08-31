@@ -1,6 +1,4 @@
-//! `bounded_by_comparison`  -  Tier-3 shim over
-//! [`vyre_primitives::graph::csr_backward_traverse`] with the
-//! `DOMINANCE` edge-kind mask.
+//! `bounded_by_comparison`  -  backward reachability along DOMINANCE edges.
 //!
 //! AUDIT_2026-04-24 F-BBC-02 (doc fix): the primitive computes
 //! reverse reachability along dominance edges  -  i.e. the set of
@@ -14,14 +12,15 @@
 //! then a bound-check intersects to prove the access is covered
 //! by some dominating bound-check."
 
+use crate::graph::program_graph::ProgramGraphShape;
+use crate::predicate::edge_kind;
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::csr_backward_traverse::csr_backward_traverse;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
 
-use crate::region::{reparent_program_children, wrap_anonymous};
+use crate::security::flow_composition::{
+    security_flow_program, FlowPredicate, SecurityFlowOptions,
+};
 
-const OP_ID: &str = "vyre-libs::security::bounded_by_comparison";
+pub(crate) const OP_ID: &str = "vyre-libs::security::bounded_by_comparison";
 
 /// Build one reverse-traversal step filtered to dominance edges.
 #[must_use]
@@ -30,82 +29,20 @@ pub fn bounded_by_comparison(
     frontier_in: &str,
     frontier_out: &str,
 ) -> Program {
-    crate::security::assert_security_inputs(
+    security_flow_program(SecurityFlowOptions::reach(
         OP_ID,
-        shape.node_count,
-        &[("frontier_in", frontier_in), ("frontier_out", frontier_out)],
-    );
-    let primitive = csr_backward_traverse(shape, frontier_in, frontier_out, edge_kind::DOMINANCE);
-    Program::wrapped(
-        primitive.buffers().to_vec(),
-        primitive.workgroup_size(),
-        vec![wrap_anonymous(
-            OP_ID,
-            reparent_program_children(&primitive, OP_ID),
-        )],
-    )
-}
-
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| bounded_by_comparison(ProgramGraphShape::new(4, 4), "fin", "fout")),
-        test_inputs: Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            // Diamond dominance tree: 0 dominates 1 and 2; both dominate 3.
-            // Backward from {3} reaches {1, 2} in one step.
-            vec![vec![
-                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
-                to_bytes(&[0, 2, 3, 4, 4]),       // pg_edge_offsets: 0→{1,2}, 1→{3}, 2→{3}, 3→{}
-                to_bytes(&[1, 2, 3, 3]),          // pg_edge_targets
-                to_bytes(&[
-                    edge_kind::DOMINANCE,
-                    edge_kind::DOMINANCE,
-                    edge_kind::DOMINANCE,
-                    edge_kind::DOMINANCE,
-                ]),                               // pg_edge_kind_mask  -  all DOMINANCE
-                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
-                to_bytes(&[0b1000]),              // fin = {3}
-                to_bytes(&[0b1000]),              // fout accumulator seed = {3}
-            ]]
-        }),
-        expected_output: Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            // One backward step from {3}: nodes 1 and 2 have edges to 3,
-            // so they light up. Accumulator preserves seed {3}.
-            vec![vec![to_bytes(&[0b1110])]]
-        }),
-        category: Some("security"),
-    }
-}
-
-inventory::submit! {
-    // AUDIT_2026-04-24 F-BBC-01: raised from 64 to 4096 so deep
-    // dominance trees don't silently truncate; same reasoning as
-    // dominator_tree.
-    crate::operation_catalog::ConvergenceContract {
-        op_id: OP_ID,
-        max_iterations: 4096,
-    }
+        shape,
+        FlowPredicate::backward(edge_kind::DOMINANCE),
+        frontier_in,
+        frontier_out,
+    ))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_primitives::graph::csr_backward_traverse::cpu_ref;
-
-    fn diamond_dominance_tree() -> (u32, Vec<u32>, Vec<u32>, Vec<u32>) {
-        let node_count = 4;
-        let edge_offsets = vec![0, 2, 3, 4, 4];
-        let edge_targets = vec![1, 2, 3, 3];
-        let edge_kind_mask = vec![edge_kind::DOMINANCE; 4];
-        (node_count, edge_offsets, edge_targets, edge_kind_mask)
-    }
+    use crate::security::flow_composition::diamond_dominance_tree;
+    use vyre_reference::composition_witness::csr_backward_traverse_witness as cpu_ref;
 
     #[test]
     fn bounded_by_comparison_mask_is_dominance_only() {

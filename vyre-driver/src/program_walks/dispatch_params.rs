@@ -15,13 +15,17 @@ pub fn dispatch_element_count(bindings: &[Binding]) -> u32 {
 /// Atomics and subgroup collectives execute over the logical input span even
 /// when they compact into a smaller output. Using the compact output length
 /// would suppress participating lanes before the atomic or collective runs.
+///
+/// Every other program is capped by the domain its own guards admit, so a
+/// scatter that moves a small source into a large destination launches over the
+/// source. This is the same narrowing target lowering applies, through the same
+/// analysis, so a below-admission dispatch and a compiled artifact agree on the
+/// span without either caller publishing a grid.
 #[must_use]
 pub fn dispatch_element_count_for_program(program: &Program, bindings: &[Binding]) -> u32 {
-    let capabilities = vyre_foundation::program_caps::scan(program);
-    dispatch_element_count_inner(
-        bindings,
-        program_contains_atomic(program) || capabilities.subgroup_ops,
-    )
+    let full_span = vyre_foundation::launch_covers_full_input_span(program);
+    let count = dispatch_element_count_inner(bindings, full_span);
+    vyre_foundation::admitted_logical_span(program, count)
 }
 
 fn dispatch_element_count_inner(bindings: &[Binding], force_full_span: bool) -> u32 {
@@ -54,14 +58,6 @@ fn dispatch_element_count_inner(bindings: &[Binding], force_full_span: bool) -> 
         return max_output;
     }
     max_non_shared.max(1)
-}
-
-fn program_contains_atomic(program: &Program) -> bool {
-    // ProgramStats::atomic_op_count is incremented exactly once per
-    // Expr::Atomic during the cached single-pass stats walk. Reading
-    // the cached count replaces the recursive node + expr scan this
-    // function previously performed.
-    program.stats().atomic_op_count > 0
 }
 
 /// Build per-buffer element-count parameter words for a dispatch with fallible
@@ -169,6 +165,8 @@ fn reserve_dispatch_param_words(words: &mut Vec<u32>, word_len: usize) -> Result
     })
 }
 
+// Inline: `vyre_driver::program_walks` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -239,7 +237,7 @@ mod tests {
         assert_eq!(words[10], 4);
         assert_eq!(
             words[8], 0,
-            "Fix: CUDA/PTX parameter words are indexed by binding slot, not buffer_index."
+            "Fix: dispatch parameter words are indexed by binding slot, not buffer_index."
         );
     }
 

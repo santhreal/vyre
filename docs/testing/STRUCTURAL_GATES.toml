@@ -1,0 +1,620 @@
+# Structural gates that read source text, and why each property they assert
+# cannot be observed from a running program.
+#
+# `cargo xtask hygiene-matrix` reports every test that reads Rust source and
+# then inspects the text. The default classification for one of those is a
+# release blocker, because the usual reason a test reads source is that nobody
+# worked out how to assert the behaviour. That rule is right for a test that
+# COULD run the code, and wrong for a property that has no run-time witness at
+# all: nothing a running program observes can tell you that some other file
+# failed to make a call, that a registration is visible from the crate root, or
+# that a table covers every variant of an enum. Rust has no reflection, so the
+# only witness for those is the source.
+#
+# A listed test is reclassified from `release_blocker` to `informational`.
+# This is not a suppression list: adding a gate still costs a reviewed entry
+# naming the file, the test, and the property, and both halves are checked
+# against the tree at run time. An entry whose test no longer exists, or whose
+# file no longer contains a source-inspecting test, fails the same gate, since
+# a stale registry is worth exactly as much as no registry.
+#
+# Before adding a row, answer this: could the test call the code and assert
+# what it does? If yes, write that test instead. The rows below are the cases
+# where the answer is no.
+
+schema = 2
+
+[[gate]]
+file = "vyre-spec/tests/token_ids_have_one_owner.rs"
+tests = ["no_file_outside_the_owner_declares_a_token_id"]
+reason = """
+Asserts that no file outside vyre-spec declares a `TOK_`-prefixed constant. A
+second numbering table in a crate vyre-spec does not depend on is not linked
+into any program this test could run, so no execution can witness it; the
+duplicate only shows up as a wrong parse on the GPU much later.
+"""
+
+[[gate]]
+file = "vyre-spec/tests/token_ids_have_one_owner.rs"
+tests = ["the_walk_actually_reaches_the_owner"]
+reason = """
+Floor check for the walk the gate above depends on. Its subject is the file set
+that walk produced, which exists only inside the source scan.
+"""
+
+[[gate]]
+file = "xtask/tests/tree_contracts/ci_workflow_references.rs"
+tests = ["every_target_a_workflow_names_exists_in_the_package_it_addresses"]
+reason = """
+Resolves every `--test`/`--bin` name a CI workflow step passes against the
+cargo targets that package declares or auto-discovers. A workflow step is text
+until CI runs it, and a target named by a step is not reachable from any
+process running locally.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/shared_owner_closure.rs"
+tests = ["no_operation_publishes_launch_geometry"]
+reason = """
+Asserts that no operation declares a launch grid a caller could pass back into a
+dispatch. A behavioural test observes one launch on one fixture; this observes
+the whole declaration surface, which is where the defect reappears. A scatter
+that published a cache-sized grid ran the entire cache per decoded chunk while
+every value it produced stayed correct.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/shared_owner_closure.rs"
+tests = ["no_binding_record_spells_its_full_name_set_twice"]
+reason = """
+Asserts that no file in the workspace respells a binding record's full name set
+instead of naming the record's canonical constant. Two spellings that agree
+produce identical behaviour, which is why the drift it exists for went
+unnoticed; only the source distinguishes them.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/shared_owner_closure.rs"
+tests = ["every_buffer_binding_record_publishes_canonical_names"]
+reason = """
+Asserts that every declared `*Buffers` record publishes canonical names. The
+subject is the set of declared types, which a running program cannot enumerate
+without reflection.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/shared_owner_closure.rs"
+tests = ["every_routed_convergence_op_registers_with_the_routing_contract"]
+reason = """
+Asserts that every op calling `routed_persistent_fixpoint` also registers with
+the shared routing contract. An op that never registers runs correctly on the
+inputs it does have, so the omission has no run-time symptom until a dispatch
+spans more than one workgroup in production.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/shared_owner_closure.rs"
+tests = ["no_op_re_asserts_the_routing_obligations_privately"]
+reason = """
+Asserts that no file outside the routing owner observes both halves of the
+routing obligation itself. A private copy of an assertion passes, which is the
+whole reason a copy survives; only the source shows there are two.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/shared_owner_closure.rs"
+tests = ["no_production_op_calls_unrouted_persistent_fixpoint"]
+reason = """
+Asserts that no production caller bypasses the shared persistent-fixpoint
+routing owner. The subject is source ownership: an unrouted direct call can
+execute correctly below one workgroup and exposes the race only on a wider
+dispatch.
+"""
+
+[[gate]]
+file = "xtask-registry/tests/registry_contracts/registration_visibility.rs"
+tests = ["every_submitted_registration_is_reachable_from_this_walker"]
+reason = """
+Asserts that no operation registration is gated behind a Cargo feature this
+crate's dependency edge leaves off. An invisible registration is
+indistinguishable from an absent one at run time: the walker reports a smaller
+registry and every document generated from it agrees.
+"""
+
+[[gate]]
+file = "xtask-registry/tests/registry_contracts/registration_visibility.rs"
+tests = ["each_source_aggregate_covers_every_feature_that_gates_a_registration"]
+reason = """
+Asserts that each source crate's widest aggregate feature turns on every
+feature that gates a registration. The subject is that crate's feature table,
+which is consumed by cargo before any code runs.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/quantized_dispatch_variant_coverage_gate.rs"
+tests = ["every_published_quantized_entry_point_has_a_readback_contract_row"]
+reason = """
+Derives the published quantized dispatch entry points from the `pub use
+..._via` re-exports that declare them, so an entry point shipped without a
+readback contract row is red on its first run. The subject is the public
+export list, which no run of the covered entry points can report on.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
+tests = ["no_production_crate_outside_the_oracle_executes_on_the_host"]
+reason = """
+Asserts that no crate except the parity oracle ships an execution-seam
+implementation a default build can construct on the host. The subject is the
+absence of a type in crates this test does not link, and a type nobody
+constructed is invisible to every running program; the failure it prevents is a
+consumer reaching host execution years later.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
+tests = ["the_walk_actually_reaches_the_implementors_it_judges"]
+reason = """
+Floor check for the walk the gate above depends on. Its subject is the file set
+that walk produced, which exists only inside the source scan.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
+tests = ["every_policed_seam_is_a_trait_this_tree_declares"]
+reason = """
+Requires every policed seam name to resolve to a trait declaration in tracked
+source. A renamed or retired seam leaves the walk searching for a string no file
+contains, and its empty offender set then reports that the scan found nothing
+rather than that nothing is wrong. The subject is the declaration set, which no
+run of the seam observes.
+"""
+
+[[gate]]
+file = "vyre-foundation/tests/expr_type_single_owner.rs"
+tests = ["owner_answers_every_expr_variant"]
+reason = """
+Requires a recorded type answer for every declared `Expr` variant, with the
+variant roster read from the source of the enum. Rust has no reflection, so a
+variant added without an answer cannot be observed at run time: the typecheck
+walk simply returns nothing for it, which is also what a legitimately untyped
+expression returns.
+"""
+
+[[gate]]
+file = "xtask/tests/tree_contracts/subcommand_dispatch.rs"
+tests = ["no_other_build_task_source_resolves_its_own_binary"]
+reason = """
+Asserts that no build-task source except the dispatcher resolves the running
+binary for itself. The wrong answer is only wrong in a binary that is not the
+dispatcher, where the subcommand it would run does not exist, so a passing run
+of the dispatcher witnesses nothing. The subject is a call another crate did not
+make, which no execution observes.
+"""
+
+[[gate]]
+file = "xtask/src/gates/host_oracle_elimination_tests_part1.rs"
+tests = [
+  "canonical_semantic_executor_exact_path_derives_execution_methods",
+  "cfg_test_cpu_ref_is_permitted_and_not_flagged",
+  "cfg_test_impl_block_is_scoped_as_test",
+  "cfg_test_item_level_function_body_vyre_reference_is_not_misclassified",
+  "cfg_test_trait_block_is_scoped_as_test",
+  "clean_dispatcher_allows_inter_dispatch_staging_loop",
+  "clean_dispatcher_allows_optional_local_and_capacity_reserve_decoder_loop",
+  "clean_dispatcher_allows_strict_fixed_width_decoder_only_return",
+  "clean_operation_registration_allows_literal_and_const_byte_array",
+  "clean_production_code_produces_no_findings",
+  "compiler_planner_reachable_from_builder_is_permitted",
+  "control_bogus_local_operation_registration_does_not_false_positive",
+  "every_registration_constructor_convicts_a_host_oracle_in_expected_output",
+  "expected_output_with_wire_pack_and_literal_helper_is_convicted",
+  "gpu_dispatcher_boundary_and_validation_functions_are_permitted",
+  "mutation_catches_crate_bogus_program_masquerade",
+  "mutation_catches_decoder_loop_bitshift_transform",
+  "mutation_catches_decoder_loop_independent_constant_append",
+  "mutation_catches_decoder_loop_subsliced_width_mismatch",
+  "mutation_catches_dispatch_error_and_resident_read_range_param_masquerade",
+  "mutation_catches_dispatcher_err_fallback_branch_oracle",
+  "mutation_catches_dispatcher_map_closure_post_dispatch_reduction",
+  "mutation_catches_dispatcher_match_ok_post_dispatch_iter_any",
+  "mutation_catches_dispatcher_post_dispatch_filter_count_reduction",
+  "mutation_catches_dispatcher_post_dispatch_iter_any_reduction",
+  "mutation_catches_dispatcher_post_dispatch_loop_accumulation",
+  "mutation_catches_dispatcher_unwrap_or_else_fallback_oracle",
+  "mutation_catches_escaped_cache_invalidation_post_dispatch_host_projection",
+  "mutation_catches_fake_dispatch_error_without_canonical_dispatcher",
+  "mutation_catches_glob_import_program_masquerade",
+  "mutation_catches_local_dummy_program_masquerade",
+  "mutation_catches_mixed_tuple_data_type_masquerade",
+  "mutation_catches_result_vec_with_fusion_error_masquerade",
+  "mutation_catches_sibling_imported_fake_dispatcher_trait_masquerade",
+  "mutation_catches_sibling_imported_fake_program_masquerade",
+  "mutation_catches_unqualified_or_custom_from_le_bytes_helper",
+  "mutation_operation_registration_aliased_as_or_catches_expected_output_oracle",
+  "mutation_operation_registration_allows_test_inputs_generator_and_catches_expected_output_oracle",
+  "mutation_operation_registration_catches_helper_function_in_expected_output",
+  "mutation_operation_registration_catches_inline_closure_loop_and_math",
+  "mutation_operation_registration_catches_local_closure_alias_in_expected_output",
+  "mutation_operation_registration_catches_wire_pack_in_expected_output",
+  "mutation_operation_registration_struct_literal_catches_expected_output_oracle",
+  "mutation_oracle_detection_catches_production_vyre_reference_usage",
+  "production_trait_default_method_uncalled_oracle_is_flagged",
+]
+reason = """
+Each fixture exercises a source-derived oracle-elimination rule while loading
+the exact canonical dispatcher trait. Dormant host semantic twins, source-level
+dataflow, and qualified type ownership have no run-time witness, so only
+structural analysis can prove their absence. The roster is the tests that reach
+the analyzer inside this file. A test in a sibling part file reaches it through
+a helper defined here, which the per-file scan does not follow, so it inspects
+no source of its own and is declared nowhere.
+"""
+
+[[gate]]
+file = "xtask/tests/tree_contracts/cargo_invocation_resolution.rs"
+tests = ["every_cargo_run_in_a_workflow_or_script_resolves_to_one_binary"]
+reason = """
+Resolves literal workflow and script invocations against Cargo target
+declarations. The complete command census and target roster exist only as
+source and manifest text.
+"""
+
+[[gate]]
+file = "structure-gate/tests/deletion_evidence_and_pass_registry.rs"
+tests = ["transform_mod_contains_classifications_for_every_transform_file"]
+reason = """
+Pairs the files under vyre-foundation/src/transform with the rows of
+FOUNDATION_TRANSFORM_CLASSIFICATIONS. A transform file whose row is missing
+still compiles and still runs; the classification table is what a release reads,
+and no running program enumerates the directory the table is supposed to cover.
+"""
+
+[[gate]]
+file = "structure-gate/tests/node_child_descent_owner.rs"
+tests = ["the_child_slot_vocabulary_is_read_off_the_enum_the_owner_walks"]
+reason = """
+Compares the child slots `Node` declares with the slots `child_bodies`
+destructures. Rust has no reflection over enum fields, so a slot the owner never
+names is a body no traversal reaches and no execution reports.
+"""
+
+[[gate]]
+file = "structure-gate/tests/checkout_provenance.rs"
+tests = ["no_source_file_resolves_the_checkout_from_a_compiled_in_path"]
+reason = """
+Asserts that no source file resolves the checkout from a path baked in at
+compile time. A binary built in one checkout and run against another reads the
+build-time tree and passes; the wrong tree is visible only in the text that
+names it.
+"""
+
+[[gate]]
+file = "vyre-driver/tests/vyre_backend_forwarding_closure.rs"
+tests = ["the_grid_sync_wrapper_decides_the_split_on_every_program_carrying_method"]
+reason = """
+Requires every dispatch method the forwarding macro emits to be specialized by
+GridSyncSplitBackend or recorded as routing through the default. Both spellings
+return the same type, so a method folded into the trait default is
+indistinguishable from a specialized one until a program carrying a GridSync
+barrier reaches a device with no cooperative launch. The method roster is a
+macro body, which nothing enumerates at run time.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/family_duplication_budget.rs"
+tests = [
+  "family_walk_finds_the_tree",
+  "no_cross_file_block_exceeds_the_cap",
+  "duplicated_line_budget_holds",
+  "no_new_file_pair_starts_duplicating",
+]
+reason = """
+Measures duplication between files: the longest shared block, the duplicated
+line total, and the pair count, plus the floor that proves the walk reached the
+tree. Duplication is a property of the text. Two copies that agree today behave
+identically, which is the defect, so no execution separates them.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/device_resident_token_fact_graph_ownership.rs"
+tests = ["device_module_names_no_concrete_backend"]
+reason = """
+Holds a shared crate's device module to backend-neutral vocabulary. A concrete
+backend name in a shared crate compiles and runs; what it costs is the ability
+to build without that backend, which no run of the built artifact reports.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/device_resident_token_fact_graph_ownership.rs"
+tests = ["the_resident_layout_is_declared_in_exactly_one_crate"]
+reason = """
+Asserts each resident layout declaration exists exactly once in the workspace and
+that the one site is in the owning device module. A second declaration in a crate
+this test does not depend on is linked into no program it could run, and diverges
+from the owner only once a device reads a buffer laid out by the other copy.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/graph_single_source_contracts.rs"
+tests = ["the_wrapper_set_is_derived_and_not_empty"]
+reason = """
+Floor check for the dispatch-wrapper pairing the rules below are taken over. Its
+subject is the file set that pairing produced, which exists only inside the
+source walk; without it every rule in the file would pass by judging nothing.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/graph_single_source_contracts.rs"
+tests = [
+  "every_dispatch_wrapper_names_the_graph_primitive_it_wraps",
+  "every_dispatch_wrapper_names_its_primitive_cpu_reference",
+]
+reason = """
+Requires each dispatch wrapper to name the graph primitive it wraps and the CPU
+reference that primitive publishes. A wrapper that reimplements the algorithm
+instead of delegating answers correctly today and drifts on the first fix to the
+primitive; a parity run cannot tell delegation from a copy that currently
+agrees.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/graph_single_source_contracts.rs"
+tests = ["no_dispatch_wrapper_is_shadowed_by_an_older_module_path"]
+reason = """
+Asserts the module a wrapper was migrated from no longer exists. A stale module
+that nothing declares is compiled into no program, so no execution observes it,
+and the next edit lands in whichever copy the author opens.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/graph_single_source_contracts.rs"
+tests = ["the_dispatch_module_declares_every_wrapper_once"]
+reason = """
+Counts the `mod` declaration for each wrapper in the dispatch module. Module
+declarations are consumed by the compiler and are not enumerable at run time; a
+wrapper declared twice or not at all is a source fact.
+"""
+
+[[gate]]
+file = "vyre-bench/tests/case_declaration_contracts.rs"
+tests = ["only_the_metric_owner_narrows_a_measured_span"]
+reason = """
+Holds the reading of a measured span to api::metric, which saturates. The
+truncation it prevents needs a count past u64::MAX nanoseconds, which no
+monotonic clock on this hardware reaches, so no benchmark run witnesses the wrong
+number. Which file reads the span has no run-time witness at all. The cast itself
+is forbidden workspace-wide by the truncating_duration_cast rule of
+hygiene-matrix.
+"""
+
+[[gate]]
+file = "vyre-bench/tests/case_declaration_contracts.rs"
+tests = ["only_the_case_api_words_a_failed_payload_downcast"]
+reason = """
+Holds the wording of a failed payload downcast to api::case. Every copy produces
+the same error type, so the drift this closes is in the sentence a caller reads,
+which no assertion over behavior distinguishes.
+"""
+
+[[gate]]
+file = "vyre-driver-cuda/tests/trap_readback_launch_coverage.rs"
+tests = ["every_cuda_dispatch_path_records_how_it_reports_a_device_trap"]
+reason = """
+Derives the CUDA dispatch paths from their calls to the launch helpers and
+requires a recorded trap-reporting decision for each. Reaching every path at run
+time takes a real device fault per path; a path added without a decision reports
+a trap as success, which is the case that must fail before the device runs.
+"""
+
+[[gate]]
+file = "vyre-foundation/tests/expr_type_single_owner.rs"
+tests = ["only_one_file_defines_expr_type"]
+reason = """
+Asserts one file defines `expr_type`. A second definition compiles, and its
+answers differ from the owner's only for the shapes the two happen to disagree
+on, so a behavioral sweep proves the copy it calls and nothing about the other.
+"""
+
+[[gate]]
+file = "vyre-foundation/tests/async_tag_discipline.rs"
+tests = ["every_async_rule_in_the_catalog_has_a_case"]
+reason = """
+Requires every async rule in the catalog to be named by a case somewhere in this
+crate's suite. The covered set is the suite's own sources: Rust exposes no
+run-time roster of tests, and the list this replaced went stale the day a rule
+landed with its case in another file.
+"""
+
+[[gate]]
+file = "vyre-foundation/tests/ir_variant_shape_owner_closure.rs"
+tests = ["the_node_visitor_trait_declares_one_hook_per_declared_variant"]
+reason = """
+Requires one NodeVisitor hook per declared `Node` variant, or a recorded reason
+for the fold. Exhaustive dispatch makes a new variant a compile error, and
+routing it into an existing hook silences that error just as well; a variant
+folded into somebody else's hook is invisible to every implementor and to every
+run.
+"""
+
+[[gate]]
+file = "vyre-foundation/tests/ir_variant_shape_owner_closure.rs"
+tests = ["every_node_visitor_implementation_in_the_workspace_is_recorded"]
+reason = """
+Reads the NodeVisitor implementations out of workspace source. An implementation
+in another crate is linked into nothing this test can run, and the stub bodies it
+copies are indistinguishable from deliberate no-ops when executed.
+"""
+
+[[gate]]
+file = "vyre-foundation/tests/scalar_operator_agreement.rs"
+tests = [
+  "folder_and_interpreter_agree_on_every_binary_operator_and_width",
+  "folder_and_interpreter_agree_on_every_unary_operator_and_width",
+]
+reason = """
+Compares the constant folder with the interpreter for every operator and width.
+The assertion is behavioral; the variant space is parsed from the operator enums
+because Rust cannot enumerate variants at run time, and a hand-written roster
+would let a new operator land proven nowhere while the suite stayed green.
+"""
+
+[[gate]]
+file = "vyre-test-support/tests/cast_parity_tables.rs"
+tests = ["the_matrix_covers_every_narrowing_target_the_cast_table_admits"]
+reason = """
+Takes the narrowing targets from the cast table that owns which integer casts
+the IR admits. The enum declares storage families the table excludes, so the
+population is the table's, and it is readable only as source.
+"""
+
+[[gate]]
+file = "vyre-registry-link/tests/registry_link_rules.rs"
+tests = [
+  "every_crate_that_submits_a_backend_registration_is_declared_here",
+  "every_crate_that_submits_a_level_stage_is_declared_here",
+]
+reason = """
+Requires every workspace member that submits a BackendRegistration or a
+LevelStageRegistration to be declared by this crate. An undeclared submitter is
+absent from the registry at run time, which reads exactly like a crate that
+submits nothing.
+"""
+
+[[gate]]
+file = "vyre-driver-wgpu/tests/shared_backend_contract.rs"
+tests = ["only_the_device_acquisition_module_constructs_a_wgpu_instance"]
+reason = """
+Asserts one module constructs the wgpu instance. A second construction site is a
+loader race: it works until two threads reach it at once, and then segfaults
+inside the driver rather than failing an assertion.
+"""
+
+[[gate]]
+file = "xtask/tests/tree_contracts/exit_states_a_cause.rs"
+tests = ["no_xtask_command_exits_nonzero_without_stating_a_cause"]
+reason = """
+Census of every nonzero exit in the xtask sources, each of which must state a
+cause. Reaching all of them at run time means provoking every failure path of
+every command; a silent exit is a source fact one parse reads completely.
+"""
+
+[[gate]]
+file = "xtask/tests/tree_contracts/test_mutation_hygiene.rs"
+tests = ["tests_contain_no_write_environment_triggers"]
+reason = """
+Asserts no test source names the write trigger that regenerates artifacts. A
+test that sets it passes; what it does is rewrite the evidence it was supposed to
+check, so the run it corrupts is the run that would have to observe it.
+"""
+
+[[gate]]
+file = "xtask/src/gate_proof_validation.rs"
+tests = ["all_descriptor_proofs_resolve_to_real_tests"]
+reason = """
+Resolves every gate descriptor's proof symbol to a unique `#[test]` function in
+the owning crate's source. Rust exposes no run-time roster of tests, so a
+descriptor naming a test that was renamed or deleted claims proof that nothing
+runs.
+"""
+
+[[gate]]
+file = "xtask/src/gates/ci_steps.rs"
+tests = ["every_selector_in_the_checkout_resolves"]
+reason = """
+Resolves every package selector in every workflow and script of this checkout
+against the manifests. A workflow step is text until CI runs it, and a selector
+that resolves to nothing fails there rather than here.
+"""
+
+[[gate]]
+file = "vyre-megakernel/tests/compile_objective.rs"
+tests = ["every_declared_metric_is_listed_once_at_its_own_index"]
+reason = """
+Asserts that `ObjectiveMetric::ALL` lists every declared variant at its own
+declaration index. `ObjectiveBounds` and `MetricFigures` are arrays sized by that
+list and indexed by `ObjectiveMetric::index`, so a variant missing from it shrinks
+both arrays while the index keeps counting. The enum is `#[non_exhaustive]`, so no
+exhaustive match outside the crate can witness the variant set, and Rust has no
+reflection: the declaration is the only witness.
+"""
+
+[[gate]]
+file = "vyre-megakernel/tests/compile_objective.rs"
+tests = ["every_declared_calibrated_fact_is_listed_and_names_its_builder"]
+reason = """
+Asserts that every declared `RequiredFact` is listed in `RequiredFact::ALL` and is
+required by some metric. A fact absent from the list is a fact no refusal can name,
+and a fact no metric requires is a check that never runs; neither state is
+observable from a running program, because both are about which variants exist.
+"""
+
+[[gate]]
+file = "vyre-megakernel/tests/compile_objective.rs"
+tests = ["every_declared_policy_variant_is_listed"]
+reason = """
+Same closure for `WorkloadAggregation`, `RiskStatistic` and `CoveragePolicy`.
+Validation and evidence projection read each through its own `ALL`, so a variant
+missing from one of those lists is a policy no compile can be validated against
+and no artifact can record.
+"""
+
+[[gate]]
+file = "vyre-bench/tests/feature_cfg_contract.rs"
+tests = ["every_benchmark_feature_guard_is_declared"]
+reason = """
+Resolves every `#[cfg(feature = ...)]` a benchmark module carries against the
+features the manifest declares. A module behind an undeclared feature is never
+compiled, so no run of the benchmark harness observes it: the absence is the
+defect and the source is the only place it exists.
+"""
+
+[[gate]]
+file = "vyre-foundation/tests/law_derived_region_alternatives.rs"
+tests = ["every_declared_law_has_a_recorded_derivation"]
+reason = """
+Asserts that every declared `AlgebraicLaw` variant has a row stating what it
+derives. `AlgebraicLaw` lives in vyre-spec and is read here through a match on
+names, so a variant added there is invisible to every execution this crate can
+run; Rust has no reflection and the declaration is the only witness.
+"""
+
+[[gate]]
+file = "vyre-foundation/tests/region_law_derivation.rs"
+tests = ["every_declared_family_cites_at_least_one_law"]
+reason = """
+Same closure for `RegionLawFamily`: a family absent from `all()` derives nothing
+and refuses nothing, and a family present in the list but not in the enum cannot
+exist. Neither state has a run-time witness, because both are about which
+variants were declared.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/shared_owner_closure.rs"
+tests = ["both_crate_directories_are_the_ones_this_workspace_holds"]
+reason = """
+Floor check for the two crate directories every gate in this file walks. A
+resolver that points at another checkout produces a clean sweep of the wrong
+tree, which is indistinguishable from a clean sweep of this one at run time.
+"""
+
+[[gate]]
+file = "vyre-test-support/src/monorepo.rs"
+tests = ["a_marker_quoted_inside_a_line_is_not_a_declaration"]
+reason = """
+Asserts that the marker resolver matches a declaration and not a mention of one.
+Its subject is this file, which quotes the marker mid-line and still resolves as
+the single declaring home; the distinction exists only in the source text the
+resolver reads.
+"""
+
+[[gate]]
+file = "xtask/src/gates/hygiene_matrix/tests.rs"
+tests = ["every_xtask_crate_carries_the_release_tooling_rules"]
+reason = """
+Derives the xtask crate list from the workspace manifest and checks that surface
+classification, owner attribution and the source walk key off that list rather
+than the literal name `xtask`. A crate added to the manifest is text until a
+build selects it, so no running process can report that a fourth xtask crate
+inherited production thresholds.
+"""

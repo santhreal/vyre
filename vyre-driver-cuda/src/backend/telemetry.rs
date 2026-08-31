@@ -2,10 +2,10 @@
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use vyre_driver::accounting::{atomic_max_u64, pinning_atomic_increment_u64};
+use vyre_driver::accounting::{
+    atomic_max_u64, checked_atomic_add_u64 as checked_add_u64, pinning_atomic_increment_u64,
+};
 use vyre_driver::LaunchPlan;
-
-use crate::backend::accounting::checked_add_u64;
 
 /// Point-in-time CUDA backend telemetry.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -591,6 +591,7 @@ fn elements_per_slot_bps(elements: u64, scheduled: u64) -> u64 {
     )
 }
 
+// Inline: covers `CudaTelemetry`, `snapshot`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{CudaTelemetry, CudaTelemetrySnapshot};

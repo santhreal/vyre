@@ -1,4 +1,5 @@
 {
+  "source_fingerprint": "git:3356274ef6472913070264718bbc2ed30b6b9490:dirty=true:worktree=59fc35f455859d98a29fddf840ef45b51758163a2e7fe10958fc497788707a74",
   "schema_version": 1,
   "scan": "no-hidden-fallback",
   "findings": [],

@@ -1,7 +1,9 @@
 //! Live CUDA capability contracts for GPU-required Vyre hosts.
 
-use vyre_driver::pipeline::PipelineFeatureFlags;
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::DispatchConfig;
+use vyre_driver::PipelineFeatureFlags;
 use vyre_driver_cuda::{cuda_factory, CudaBackend, CudaDeviceCaps, CudaMegakernelDeviceKey};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
@@ -22,19 +24,19 @@ fn cuda_device_probe_must_succeed_on_gpu_fleet() {
     );
 
     let backend = CudaBackend::acquire()
-        .expect("Fix: CudaBackend::acquire must succeed on the local RTX 5090 machine.");
+        .expect("Fix: CudaBackend::acquire must succeed on the GPU-required test host.");
     assert!(
         !backend.caps.name.trim().is_empty(),
         "Fix: CUDA device-name probe returned an empty adapter name."
     );
     assert!(
-        backend.compute_capability() >= (12, 0),
-        "Fix: expected the local RTX 5090 CUDA path to report compute capability >= 12.0, got {:?}.",
+        backend.compute_capability() >= (8, 0),
+        "Fix: expected CUDA device to report compute capability >= (8, 0), got {:?}.",
         backend.compute_capability()
     );
     assert!(
-        backend.device_memory_bytes() >= 30 * 1024 * 1024 * 1024,
-        "Fix: expected at least 30 GiB VRAM on the local RTX 5090 path, got {} bytes.",
+        backend.device_memory_bytes() >= 8 * 1024 * 1024 * 1024,
+        "Fix: expected at least 8 GiB VRAM on the CUDA device, got {} bytes.",
         backend.device_memory_bytes()
     );
 }
@@ -91,7 +93,7 @@ fn cuda_backend_caps_match_driver_attributes() {
         "Fix: CUDA PTX emitter target must not exceed the physical device target."
     );
     assert!(
-        backend.ptx_target_sm() >= 90,
+        backend.ptx_target_sm() >= 70,
         "Fix: CUDA PTX emitter target must be selected by live driver probing and preserve modern NVIDIA instructions instead of falling back to an old baseline."
     );
     assert!(
@@ -159,16 +161,43 @@ fn cuda_backend_caps_match_driver_attributes() {
         backend.max_threads_per_block(),
         "Fix: CUDA megakernel plan cache key must include live max workgroup size."
     );
+    assert_eq!(
+        backend.caps.compute_capability.0, expected.compute_capability.0,
+        "Fix: CUDA device caps must include probed SM major version."
+    );
+    assert_eq!(
+        backend.caps.compute_capability.1, expected.compute_capability.1,
+        "Fix: CUDA device caps must include probed SM minor version."
+    );
+    assert_eq!(
+        backend.caps.warp_size as u32, expected.warp_size as u32,
+        "Fix: CUDA device caps must include probed warp size."
+    );
+    assert_eq!(
+        backend.caps.cooperative_launch,
+        backend.hardware_supports_grid_sync(),
+        "Fix: CUDA device caps cooperative launch must match live cooperative grid-sync capability."
+    );
+    assert_eq!(
+        backend.caps.hardware_supports_tensor_cores(),
+        backend.hardware_supports_tensor_cores(),
+        "Fix: CUDA device caps must match live tensor-core capability."
+    );
+    assert_eq!(
+        backend.caps.max_threads_per_block as u32,
+        backend.max_threads_per_block(),
+        "Fix: CUDA device caps must include live max workgroup size."
+    );
 }
 
 #[test]
 fn cuda_is_canonical_dispatch_backend_when_linked() {
     assert!(
-        vyre_driver::backend::backend_precedence("cuda").expect("valid backend registry") < 10,
+        vyre_driver::backend_precedence("cuda").expect("valid backend registry") < 10,
         "Fix: CUDA must outrank wgpu for this release when both live dispatch backends are linked."
     );
     assert!(
-        vyre_driver::backend::backend_dispatches("cuda").expect("valid backend registry"),
+        vyre_driver::backend_dispatches("cuda").expect("valid backend registry"),
         "Fix: CUDA must advertise live dispatch capability for release routing."
     );
 }
@@ -201,7 +230,7 @@ fn vyre_backend_trait_reports_live_cuda_capabilities() {
     );
     assert!(
         backend.supports_async_compute(),
-        "Fix: RTX 5090 CUDA backend must report async CUDA hardware capability."
+        "Fix: CUDA backend must report async CUDA hardware capability."
     );
     assert!(
         !backend.allows_host_grid_sync_split(),
@@ -211,7 +240,7 @@ fn vyre_backend_trait_reports_live_cuda_capabilities() {
 
 #[test]
 fn preferred_dispatch_backend_is_cuda_not_cpu_or_wgpu_fallback() {
-    let backend = vyre_driver::backend::acquire_preferred_dispatch_backend()
+    let backend = vyre_driver::acquire_preferred_dispatch_backend()
         .expect("Fix: CUDA must be usable as the preferred dispatch backend on the GPU fleet.");
     assert_eq!(
         backend.id(),

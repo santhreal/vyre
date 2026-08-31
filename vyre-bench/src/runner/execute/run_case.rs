@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::time::Instant;
 
 use crate::api::case::{BenchContext, Correctness, PerformanceContract, PerformanceEvaluation};
-use crate::api::metric::{digest64_buffers, MetricStats};
+use crate::api::metric::{digest64_buffers, elapsed_ns, MetricStats};
 use crate::api::suite::SuiteKind;
 use crate::report::json::{benchmark_device_signature, benchmark_held_out_corpus_id, CaseReport};
 
@@ -31,28 +31,38 @@ pub(super) fn run_case(
             base
         }
     });
+    if matches!(suite, SuiteKind::Release) && target_samples < 30 {
+        return Err(format!(
+            "release suite measured_samples must unconditionally be >= 30 for CLT validity; got {target_samples}. Fix: pass --measured-samples 30 or higher."
+        ));
+    }
     if std::env::var("VYRE_ALLOW_FEW_SAMPLES").is_err() && target_samples < 30 {
         return Err(format!(
-                "measured_samples must be >= 30 for CLT validity; got {target_samples}. Fix: pass --measured-samples 30 or set VYRE_ALLOW_FEW_SAMPLES=1 for local smoke-only debugging."
-            ));
+            "measured_samples must be >= 30 for CLT validity; got {target_samples}. Fix: pass --measured-samples 30 or set VYRE_ALLOW_FEW_SAMPLES=1 for local smoke-only debugging."
+        ));
     }
     let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
     let mut correctness = None;
-    // ROADMAP M3 cold-vs-warm separation: capture the first warmup
+    // Cold-vs-warm separation: capture the first warmup
     // sample's wall-clock and per-stage breakdown so the report can
     // attribute time to cold-start (compile / cache miss / first
     // dispatch) versus warm steady-state. Subsequent warmup runs are
     // discarded as before.
     let mut cold_metrics: Option<crate::api::metric::BenchMetrics> = None;
     let mut cold_wall_ns: Option<u64> = None;
+    let effective_warmup_samples = if matches!(suite, SuiteKind::Release) {
+        config.warmup_samples.max(300)
+    } else {
+        config.warmup_samples
+    };
 
-    for warmup_index in 0..config.warmup_samples {
+    for warmup_index in 0..effective_warmup_samples {
         let started = Instant::now();
         ctx.include_baseline_outputs = warmup_index == 0;
         let run_result = case
             .run(ctx, prepared)
             .map_err(|error| format!("Warmup error on sample {warmup_index}: {error}"))?;
-        let elapsed_ns = u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX);
+        let elapsed_ns = elapsed_ns(started);
         if warmup_index == 0 {
             case.verify(ctx, &run_result)
                 .map_err(|error| format!("Warmup verify error: {error}"))?;
@@ -95,7 +105,10 @@ pub(super) fn run_case(
                     .get_or_insert(read + written);
             }
             if started.elapsed() > config.sample_timeout {
-                break;
+                return Err(format!(
+                    "Measured sample {sample_index} exceeded timeout {:?}",
+                    config.sample_timeout
+                ));
             }
             if sample_index == 0 {
                 correctness = Some(
@@ -124,7 +137,9 @@ pub(super) fn run_case(
 
         // B-4: Ensure we got enough samples before timing out
         let actual_samples = samples.get("wall_ns").map(|v| v.len()).unwrap_or(0);
-        if actual_samples < 30 && std::env::var("VYRE_ALLOW_FEW_SAMPLES").is_err() {
+        let allow_few =
+            !matches!(suite, SuiteKind::Release) && std::env::var("VYRE_ALLOW_FEW_SAMPLES").is_ok();
+        if actual_samples < 30 && !allow_few {
             let requirements = case.requirements();
             let case_id = meta.id.0;
             let workload_fingerprint = workload_fingerprint(case_id.as_str(), None);
@@ -193,7 +208,7 @@ pub(super) fn run_case(
             metrics.insert(name.to_string(), compute_stats(&values));
         }
     }
-    // ROADMAP M3: surface the cold (first-warmup) sample as
+    // surface the cold (first-warmup) sample as
     // synthetic-stat rows under `cold_*` keys. Stats are degenerate
     // (one sample → min == p50 == max) but they share the
     // MetricStats schema so downstream consumers (flamegraph
@@ -387,25 +402,12 @@ fn sum_metric_stats(left: &MetricStats, right: &MetricStats) -> MetricStats {
     }
 }
 
-/// ROADMAP M3 helper: produce a degenerate `MetricStats` for a single
+/// Produce a degenerate `MetricStats` for a single
 /// observation. Used to surface the cold (first-warmup) sample
 /// alongside the warm-batch stats without inventing a separate
 /// schema. min == p50 == max, samples == 1, stddev == 0.
 fn single_sample_stats(value: u64) -> MetricStats {
-    MetricStats {
-        min: value,
-        p50: value,
-        p90: value,
-        p95: value,
-        p99: value,
-        p999: value,
-        p9999: value,
-        max: value,
-        mean: value as f64,
-        stddev: 0.0,
-        samples: 1,
-        determinism_cv: None,
-    }
+    MetricStats::single(value)
 }
 
 fn normalize_release_evidence_metrics(
@@ -541,7 +543,7 @@ fn workload_fingerprint(case_id: &str, program_fingerprint: Option<[u8; 32]>) ->
     encoded
 }
 
-pub(super) fn evaluate_contract(
+pub(crate) fn evaluate_contract(
     contract: &PerformanceContract,
     metrics: &BTreeMap<String, MetricStats>,
     backend_id: &str,
@@ -791,6 +793,18 @@ mod tests {
         normalize_release_evidence_metrics(&mut metrics, "cuda");
 
         assert_eq!(metrics["kernel_launches"].p50, 1);
+    }
+
+    /// WHY: an explicit zero identifies compiler-only evidence. It is a real
+    /// observation, unlike a zero backend counter that means telemetry is absent.
+    #[test]
+    fn explicit_zero_launch_metric_bypasses_single_submission_fallback() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("kernel_launches".to_string(), stats(0));
+
+        normalize_release_evidence_metrics(&mut metrics, "cuda");
+
+        assert_eq!(metrics["kernel_launches"].p50, 0);
     }
 
     #[test]

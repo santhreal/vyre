@@ -1,4 +1,4 @@
-//! ROADMAP A1  -  hash-consed Expr arena.
+//! hash-consed Expr arena.
 //!
 //! Op id: `vyre-foundation::optimizer::expr_arena`. Soundness: read-only
 //! over the input `Expr`; produces an additive side-table that does not
@@ -58,7 +58,7 @@
 //!   extensions needs an `ExprNode::content_hash` API that does not
 //!   exist today.
 
-use crate::ir::model::expr::ExprNode;
+use crate::ir::ExprNode;
 use crate::ir::{AtomicOp, BinOp, DataType, Expr, Ident, MemoryOrdering, SubgroupReduceOp, UnOp};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
@@ -118,6 +118,15 @@ pub enum FlatExpr {
         axis: u8,
     },
     LocalId {
+        axis: u8,
+    },
+    LogicalIndex {
+        axis: u8,
+    },
+    LogicalTileId {
+        axis: u8,
+    },
+    LogicalWithinTileId {
         axis: u8,
     },
     BinOp {
@@ -263,6 +272,9 @@ impl ExprArena {
             FlatExpr::InvocationId { axis } => Expr::InvocationId { axis },
             FlatExpr::WorkgroupId { axis } => Expr::WorkgroupId { axis },
             FlatExpr::LocalId { axis } => Expr::LocalId { axis },
+            FlatExpr::LogicalIndex { axis } => Expr::LogicalIndex { axis },
+            FlatExpr::LogicalTileId { axis } => Expr::LogicalTileId { axis },
+            FlatExpr::LogicalWithinTileId { axis } => Expr::LogicalWithinTileId { axis },
             FlatExpr::BinOp { op, left, right } => Expr::BinOp {
                 op,
                 left: Box::new(self.rebuild(left)),
@@ -370,6 +382,9 @@ impl ExprArena {
             Expr::InvocationId { axis } => FlatExpr::InvocationId { axis: *axis },
             Expr::WorkgroupId { axis } => FlatExpr::WorkgroupId { axis: *axis },
             Expr::LocalId { axis } => FlatExpr::LocalId { axis: *axis },
+            Expr::LogicalIndex { axis } => FlatExpr::LogicalIndex { axis: *axis },
+            Expr::LogicalTileId { axis } => FlatExpr::LogicalTileId { axis: *axis },
+            Expr::LogicalWithinTileId { axis } => FlatExpr::LogicalWithinTileId { axis: *axis },
             Expr::BinOp { op, left, right } => FlatExpr::BinOp {
                 op: *op,
                 left: self.intern(left),
@@ -577,8 +592,8 @@ mod tests {
     fn opaque_expr_interning_via_arc_identity() {
         // Build two `Arc`s pointing at the same allocation; their
         // OpaqueIds must collapse.
-        use crate::ir::model::expr::ExprNode;
         use crate::ir::DataType;
+        use crate::ir::ExprNode;
         use std::any::Any;
 
         #[derive(Debug)]

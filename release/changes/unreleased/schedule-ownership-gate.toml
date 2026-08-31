@@ -1,0 +1,2 @@
+category = "Added"
+text = "A `schedule-ownership` gate derives the schedule decision roster from the selected plan's own fields and the registered crate layers, and reports any crate outside the compiler boundary that builds a decision, writes geometry the artifact froze, or maps a device capability record to a launch shape."

@@ -20,16 +20,26 @@ pub(super) fn simplify_fma(a: &Expr, b: &Expr, c: &Expr) -> Option<Expr> {
     if matches!(b, Expr::LitF32(v) if lit_f32_eq(*v, 1.0)) {
         return Some(Expr::add(a.clone(), c.clone()));
     }
-    // fma(0, finite_literal, c) → c. Do not apply when the other
-    // multiplier is non-literal: `0 * NaN` and `0 * inf` must stay NaN.
-    if matches!((a, b), (Expr::LitF32(v), Expr::LitF32(other)) if lit_f32_eq(*v, 0.0) && other.is_finite())
-    {
-        return Some(c.clone());
+    // A zero product is an additive identity only when its sign is negative.
+    // Folding a positive-zero product to `c` changes `c = -0.0` into `+0.0`.
+    // Both factors must be literals so the product sign and finiteness are known.
+    if let (Expr::LitF32(zero), Expr::LitF32(other)) = (a, b) {
+        if zero.is_finite()
+            && other.is_finite()
+            && *zero == 0.0
+            && zero.is_sign_negative() != other.is_sign_negative()
+        {
+            return Some(c.clone());
+        }
     }
-    // fma(finite_literal, 0, c) → c under the same NaN/inf guard.
-    if matches!((a, b), (Expr::LitF32(other), Expr::LitF32(v)) if other.is_finite() && lit_f32_eq(*v, 0.0))
-    {
-        return Some(c.clone());
+    if let (Expr::LitF32(other), Expr::LitF32(zero)) = (a, b) {
+        if other.is_finite()
+            && zero.is_finite()
+            && *zero == 0.0
+            && other.is_sign_negative() != zero.is_sign_negative()
+        {
+            return Some(c.clone());
+        }
     }
     None
 }

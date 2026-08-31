@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The unbounded-read rule in `xtask::gates::hygiene_matrix` matches a call to `fs::read` rather than the text `fs::read(`, which also matched `BufferRefs::read(count_buffer)` and reported a graph accessor as an unbounded filesystem read. The release-tooling scan reads `.py` alongside `.sh` and `.yml`, so a rule that a shell script cannot evade cannot be evaded by moving the body into a Python file beside it."

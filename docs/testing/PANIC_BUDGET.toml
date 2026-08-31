@@ -1,0 +1,85 @@
+# The per-crate ceiling on panics that fail closed without saying so.
+#
+# `cargo xtask hygiene-matrix` classifies every panicking call it finds. A call
+# whose function documents a `# Panics` section is a documented contract and is
+# not counted here. A call on a file listed in `docs/optimization/HOT_PATHS.toml`
+# is a release blocker whatever its documentation says. A call in a module its
+# parent declares under `#[cfg(test)]` is test code, because no build outside
+# `cargo test` compiles it; a module a feature can also turn on is not. What is
+# left is a panic that is neither documented nor on the release surface, and
+# until this file existed nothing bounded it.
+#
+# The ceiling is per crate because the crate is who fixes it, and it is checked
+# in both directions. A crate over its ceiling fails: document the contract,
+# return an error, or delete the panic. A crate under its ceiling also fails,
+# with the count to write here, because a ceiling above the tree covers the next
+# panic added to that crate instead of reporting it. So the numbers only move
+# down.
+#
+# A crate carrying such a panic with no row fails. A zero row remains as an
+# explicit ratchet; a positive row for a crate that carries none fails as stale.
+# Both halves come from the same scan, so neither side can go quietly out of date.
+#
+# Three ways to spend a number down, in the order to try them. Return a `Result`
+# and let the caller decide, which is right whenever the caller can do anything
+# about it. Write the `# Panics` section, which is right when failing closed IS
+# the contract, and moves the site into the documented population instead.
+# Delete the call, which is right when the value cannot be absent and the code
+# says so through the type.
+
+schema = 1
+
+# Measured 2026-08-17 by `cargo xtask hygiene-matrix`. Every recorded ceiling
+# reached zero after fallible paths propagated errors and intentional
+# infallible wrappers documented their panic contracts.
+
+[[crate_budget]]
+name = "vyre-driver"
+ceiling = 0
+
+[[crate_budget]]
+name = "vyre-foundation"
+ceiling = 0
+
+[[crate_budget]]
+name = "vyre-libs"
+ceiling = 0
+
+[[crate_budget]]
+name = "vyre-lower"
+ceiling = 0
+
+[[crate_budget]]
+name = "vyre-primitives"
+# 1 -> 0 measured 2026-08-16 by hygiene-matrix: the crate carries no undocumented
+# panic outside the release surface since the composition domains moved to
+# vyre-libs and left only the hardware intrinsics, the catalog and the markers.
+ceiling = 0
+
+[[crate_budget]]
+name = "vyre-reference"
+ceiling = 0
+
+[[crate_budget]]
+name = "vyre-runtime"
+# 4 -> 0 measured 2026-08-15 by hygiene-matrix: the four sites are in
+# `pipeline_cache/test_artifact_fixtures.rs`, a module `pipeline_cache/mod.rs`
+# declares under `#[cfg(test)]`, so no build outside `cargo test` holds them.
+ceiling = 0
+
+[[crate_budget]]
+name = "xtask"
+# 8 -> 0 measured 2026-08-17 by hygiene-matrix: release-tooling invariants now
+# fail with explicit process errors or document the intentional fail-closed
+# contract.
+ceiling = 0
+
+[[crate_budget]]
+name = "xtask-evidence"
+# 1 -> 0 measured 2026-08-17 by hygiene-matrix: malformed benchmark evidence
+# now returns the producer's existing error instead of panicking.
+ceiling = 0
+
+[[crate_budget]]
+name = "xtask-registry"
+ceiling = 0

@@ -13,11 +13,11 @@
 
 #![cfg(feature = "crypto-blake3")]
 #![allow(deprecated)]
-mod common;
-use common::{decode_u32_words, u32_bytes};
+mod wire_words;
 use vyre::ir::Program;
 use vyre_libs::hash::blake3_compress;
 use vyre_reference::value::Value;
+use wire_words::{decode_u32_words, u32_bytes};
 
 /// BLAKE3 IV  -  matches `vyre-libs::crypto::blake3::IV` by spec.
 const IV: [u32; 8] = [
@@ -46,7 +46,6 @@ fn run_compress(
         Value::from(u32_bytes(cv_in)),
         Value::from(u32_bytes(msg)),
         Value::from(u32_bytes(params)),
-        Value::from(vec![0u8; 8 * 4]),
     ];
     let outputs =
         vyre_reference::reference_eval(program, &inputs).expect("blake3_compress must execute");

@@ -4,9 +4,9 @@
 //! Category A composition. Recipe rotates first 16 of 64 head dims.
 //! Standard RoPE: `[x1*cos - x2*sin, x1*sin + x2*cos]` on pairs.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
+use super::layout::{layout_move_program, IndexMap, LayoutMove};
+use vyre_foundation::composition::trap_program;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 const OP_ID: &str = "vyre-libs::nn::partial_rope";
 
@@ -117,31 +117,22 @@ fn build_partial_rope_at_offset(
     activation_dtype: DataType,
 ) -> Program {
     if num_heads == 0 || seq_len == 0 || head_dim == 0 {
-        return crate::builder::invalid_builder_trap_program(OP_ID,
-        output,
-        activation_dtype.clone(),
-        format!(
+        return trap_program(OP_ID, Some((output, activation_dtype.clone())), format!(
             "Fix: partial_rope requires positive num_heads, seq_len, and head_dim; got num_heads={num_heads}, seq_len={seq_len}, head_dim={head_dim}."
-        ),);
+        ));
     }
     if rope_dims > head_dim || rope_dims % 2 != 0 {
-        return crate::builder::invalid_builder_trap_program(OP_ID,
-        output,
-        activation_dtype.clone(),
-        format!(
+        return trap_program(OP_ID, Some((output, activation_dtype.clone())), format!(
             "Fix: partial_rope requires an even rope_dims <= head_dim; got rope_dims={rope_dims}, head_dim={head_dim}."
-        ),);
+        ));
     }
     if position_offset
         .checked_add(seq_len)
         .is_none_or(|end| end > table_seq_len)
     {
-        return crate::builder::invalid_builder_trap_program(OP_ID,
-        output,
-        activation_dtype.clone(),
-        format!(
+        return trap_program(OP_ID, Some((output, activation_dtype.clone())), format!(
             "Fix: partial_rope position range offset={position_offset}, seq_len={seq_len} exceeds table_seq_len={table_seq_len}."
-        ),);
+        ));
     }
     let total = match num_heads
         .checked_mul(seq_len)
@@ -149,28 +140,22 @@ fn build_partial_rope_at_offset(
     {
         Some(total) => total,
         None => {
-            return crate::builder::invalid_builder_trap_program(OP_ID,
-            output,
-            activation_dtype.clone(),
-            format!(
+            return trap_program(OP_ID, Some((output, activation_dtype.clone())), format!(
                 "Fix: partial_rope total element count overflows u32 for num_heads={num_heads}, seq_len={seq_len}, head_dim={head_dim}."
-            ),);
+            ));
         }
     };
     let half_rope = rope_dims / 2;
     let table_count = match table_seq_len.checked_mul(half_rope) {
         Some(count) => count,
         None => {
-            return crate::builder::invalid_builder_trap_program(OP_ID,
-            output,
-            activation_dtype.clone(),
-            format!(
+            return trap_program(OP_ID, Some((output, activation_dtype.clone())), format!(
                 "Fix: partial_rope table element count overflows u32 for table_seq_len={table_seq_len}, rope_dims={rope_dims}."
-            ),);
+            ));
         }
     };
 
-    let i = Expr::var("i");
+    let i = Expr::var("index");
     let dim = Expr::rem(i.clone(), Expr::u32(head_dim));
     let token = Expr::rem(
         Expr::div(i.clone(), Expr::u32(head_dim)),
@@ -178,7 +163,17 @@ fn build_partial_rope_at_offset(
     );
     let pair = Expr::div(dim.clone(), Expr::u32(2));
     let parity = Expr::rem(dim.clone(), Expr::u32(2));
-    let pair_base = Expr::sub(i.clone(), parity.clone());
+    // Every read below feeds a rotation the element-wise select discards for a
+    // dimension outside the rotary span, and a select evaluates both arms. The
+    // indices are therefore folded into the span before the loads: inside it the
+    // pair and the table entry are in range by construction, outside it the
+    // value is unused and reading element zero costs nothing.
+    let in_rope = Expr::lt(dim.clone(), Expr::u32(rope_dims));
+    let pair_base = Expr::select(
+        in_rope.clone(),
+        Expr::sub(i.clone(), parity.clone()),
+        Expr::u32(0),
+    );
     let x0 = Expr::cast(DataType::F32, Expr::load(input, pair_base.clone()));
     let x1 = Expr::cast(
         DataType::F32,
@@ -189,15 +184,22 @@ fn build_partial_rope_at_offset(
             Expr::add(token, Expr::u32(position_offset)),
             Expr::u32(half_rope),
         ),
-        pair,
+        Expr::select(in_rope, pair, Expr::u32(0)),
     );
     let cos_v = Expr::load(cos_table, table_idx.clone());
     let sin_v = Expr::load(sin_table, table_idx);
-    let rotated_even = Expr::sub(
+    // Each rotation states one fused multiply-add. The pair a backend would
+    // otherwise contract on its own is the product feeding the sum, and the
+    // reference takes two roundings where a device takes one. Negating the
+    // operand instead of the sum keeps the subtraction exact: multiplying by
+    // -1.0 is representable, so the even rotation is the odd one with a flipped
+    // sine operand.
+    let rotated_even = Expr::fma(
+        Expr::mul(x1.clone(), Expr::f32(-1.0)),
+        sin_v.clone(),
         Expr::mul(x0.clone(), cos_v.clone()),
-        Expr::mul(x1.clone(), sin_v.clone()),
     );
-    let rotated_odd = Expr::add(Expr::mul(x0, sin_v), Expr::mul(x1, cos_v));
+    let rotated_odd = Expr::fma(x0, sin_v, Expr::mul(x1, cos_v));
     let rotated = Expr::select(Expr::eq(parity, Expr::u32(0)), rotated_even, rotated_odd);
     let value = Expr::cast(
         activation_dtype.clone(),
@@ -208,20 +210,9 @@ fn build_partial_rope_at_offset(
         ),
     );
 
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(total)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value,
-            }],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
+    layout_move_program(LayoutMove {
+        op_id: OP_ID,
+        buffers: vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, activation_dtype.clone())
                 .with_count(total),
             BufferDecl::storage(cos_table, 1, BufferAccess::ReadOnly, DataType::F32)
@@ -230,43 +221,40 @@ fn build_partial_rope_at_offset(
                 .with_count(table_count),
             BufferDecl::output(output, 3, activation_dtype).with_count(total),
         ],
-        [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
-    )
+        write: output,
+        count: total,
+        map: IndexMap::Element { value },
+    })
 }
 
+const EXPECTED_PARTIAL_ROPE_OUTPUT_BYTES: [u8; 32] = [
+    0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x40, 0x40, 0x00, 0x00, 0x80, 0x40,
+    0x00, 0x00, 0xA0, 0x40, 0x00, 0x00, 0xC0, 0x40, 0x00, 0x00, 0xE0, 0x40, 0x00, 0x00, 0x00, 0x41,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| partial_rope("input", "cos", "sin", "output", 1, 2, 4, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        OP_ID,
+        || partial_rope("input", "cos", "sin", "output", 1, 2, 4, 2),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]), // input
                 to_f32(&[1.0, 1.0]),  // cos table
                 to_f32(&[0.0, 0.0]),  // sin table
-                vec![0u8; 4 * 8],     // output
             ]]
         }),
-        expected_output: Some(|| {
-            let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![to_f32(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])]]
+        Some(|| {
+            vec![vec![EXPECTED_PARTIAL_ROPE_OUTPUT_BYTES.to_vec()]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
     #[test]
     fn rejects_invalid_rope_dims_without_panicking() {
@@ -292,17 +280,12 @@ mod tests {
         let cos = [1.0f32, 1.0];
         let sin = [0.0f32, 0.0];
         let program = partial_rope("input", "cos", "sin", "output", 1, 2, 4, 2);
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "partial_rope",
             &program,
-            &[
-                Value::from(f32_bytes(&input)),
-                Value::from(f32_bytes(&cos)),
-                Value::from(f32_bytes(&sin)),
-                Value::from(vec![0u8; 32]),
-            ],
-        )
-        .expect("Fix: partial_rope must not panic on NaN input");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&input[..], &cos[..], &sin[..]],
+            8,
+        );
         assert!(
             out[0].is_nan(),
             "partial_rope must propagate NaN from input"
@@ -334,17 +317,12 @@ mod tests {
         let cos = [1.0f32, 1.0];
         let sin = [0.0f32, 0.0];
         let program = partial_rope("input", "cos", "sin", "output", 1, 1, 4, 2);
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "partial_rope",
             &program,
-            &[
-                Value::from(f32_bytes(&input)),
-                Value::from(f32_bytes(&cos)),
-                Value::from(f32_bytes(&sin)),
-                Value::from(vec![0u8; 16]),
-            ],
-        )
-        .expect("Fix: partial_rope single token must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&input[..], &cos[..], &sin[..]],
+            4,
+        );
         // With sin=0, cos=1, RoPE is identity on pairs.
         assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0]);
     }
@@ -355,17 +333,12 @@ mod tests {
         let cos = [f32::NAN, 1.0];
         let sin = [0.0f32, 0.0];
         let program = partial_rope("input", "cos", "sin", "output", 1, 1, 4, 2);
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "partial_rope",
             &program,
-            &[
-                Value::from(f32_bytes(&input)),
-                Value::from(f32_bytes(&cos)),
-                Value::from(f32_bytes(&sin)),
-                Value::from(vec![0u8; 16]),
-            ],
-        )
-        .expect("Fix: partial_rope must not panic on NaN cos table");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&input[..], &cos[..], &sin[..]],
+            4,
+        );
         assert!(
             out[0].is_nan() || out[1].is_nan(),
             "partial_rope NaN in cos table must propagate to rotated pair"

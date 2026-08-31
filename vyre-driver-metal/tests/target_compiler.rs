@@ -1,15 +1,24 @@
 //! Metal target-compiler registry and immutable module-bundle contracts.
 
-use std::collections::BTreeMap;
+#![cfg(feature = "device-tests")]
+
+// Everything below the registry check builds and compiles an artifact, which
+// only the Apple-gated tests do. The non-Apple test asserts the absence of a
+// registration and reaches for none of it.
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use vyre_driver::BindingSet;
-
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
-    ValueContract, ValueLifetime,
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ValueLifetime,
 };
-use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget, TargetModuleBundle};
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+use vyre_megakernel::{SearchBudget, TargetModuleBundle};
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+use vyre_test_support::graph_values::{graph_output, u32_scalar};
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+use vyre_test_support::semantic_requests::validated_unknown_request;
 
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 fn artifact() -> vyre_megakernel::Artifact {
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
@@ -22,27 +31,13 @@ fn artifact() -> vyre_megakernel::Artifact {
             "main",
             program,
             Vec::new(),
-            vec![GraphOutput {
-                buffer: "out".into(),
-                name: "out".into(),
-                contract: ValueContract {
-                    dtype: DataType::U32,
-                    shape: vec![ShapeDim::Known(1)],
-                    access: BufferAccess::ReadWrite,
-                    lifetime: ValueLifetime::Output,
-                },
-                retained_successor_of: None,
-            }],
+            vec![graph_output(
+                "out",
+                u32_scalar(BufferAccess::ReadWrite, ValueLifetime::Output),
+            )],
         )
         .unwrap();
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 0, 0, 1),
-        1_000_000,
-    )
-    .validate()
-    .unwrap();
+    let request = validated_unknown_request(graph, SearchBudget::new(1, 1, 0, 0, 1), 1_000_000);
     vyre_megakernel::compile(&request).unwrap()
 }
 
@@ -50,7 +45,7 @@ fn artifact() -> vyre_megakernel::Artifact {
 /// WHY: pure Metal target compilation remains available without acquiring a device on Apple hosts.
 #[test]
 fn registered_target_compiler_emits_selected_metal_bundle() {
-    let registration = vyre_driver::backend::registered_backends()
+    let registration = vyre_driver::registered_backends()
         .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_metal::METAL_BACKEND_ID)
@@ -74,8 +69,7 @@ fn registered_target_compiler_emits_selected_metal_bundle() {
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 #[test]
 fn non_apple_hosts_publish_no_metal_registration() {
-    let registrations =
-        vyre_driver::backend::registered_backends().expect("valid backend registry");
+    let registrations = vyre_driver::registered_backends().expect("valid backend registry");
     assert!(registrations
         .iter()
         .all(|registration| registration.id != vyre_driver_metal::METAL_BACKEND_ID));
@@ -85,7 +79,7 @@ fn non_apple_hosts_publish_no_metal_registration() {
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 #[test]
 fn registered_materializer_executes_authenticated_msl() {
-    let registration = vyre_driver::backend::registered_backends()
+    let registration = vyre_driver::registered_backends()
         .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_metal::METAL_BACKEND_ID)

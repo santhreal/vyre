@@ -18,15 +18,15 @@
 #![forbid(unsafe_code)]
 
 use std::path::Path;
+#[cfg(target_os = "linux")]
 use std::process::Command;
 use std::sync::{Arc, Barrier};
 use std::thread;
 
 use proptest::prelude::*;
 use tempfile::TempDir;
-use vyre_runtime::pipeline_cache::DiskCache;
-use vyre_runtime::{
-    InMemoryPipelineCache, LayeredPipelineCache, PipelineCacheStore, PipelineFingerprint,
+use vyre_runtime::pipeline_cache::{
+    DiskCache, InMemoryPipelineCache, LayeredPipelineCache, PipelineCacheStore, PipelineFingerprint,
 };
 
 // ---------------------------------------------------------------------------
@@ -163,10 +163,12 @@ proptest! {
 
 /// Attempt to mount a tmpfs of a given size onto a temporary directory.
 /// On drop it lazily unmounts so `TempDir` can clean up the empty folder.
+#[cfg(target_os = "linux")]
 struct TmpfsGuard {
     dir: TempDir,
 }
 
+#[cfg(target_os = "linux")]
 impl TmpfsGuard {
     fn with_size_kb(size_kb: usize) -> Result<Self, String> {
         let dir = TempDir::new().map_err(|e| e.to_string())?;
@@ -214,6 +216,7 @@ impl TmpfsGuard {
     }
 }
 
+#[cfg(target_os = "linux")]
 impl Drop for TmpfsGuard {
     fn drop(&mut self) {
         // Lazy unmount detaches immediately so `TempDir` can `rmdir` the
@@ -231,6 +234,14 @@ impl Drop for TmpfsGuard {
     }
 }
 
+/// A full filesystem is a Linux fact here: `tmpfs` with a byte budget is a
+/// Linux filesystem, and the macOS and Windows legs of the matrix have no
+/// equivalent to mount. On Linux a missing mount privilege stays a loud
+/// failure, because a hosted Linux runner has passwordless sudo and a
+/// developer machine that cannot mount is a configuration to repair.
+/// [`put_under_a_root_that_is_not_a_directory_is_not_served`] carries the same
+/// contract on every platform, through a write that fails for another reason.
+#[cfg(target_os = "linux")]
 #[test]
 fn disk_full_tmpfs_put_no_panic() {
     let guard = TmpfsGuard::with_size_kb(4).expect(
@@ -251,6 +262,33 @@ fn disk_full_tmpfs_put_no_panic() {
     assert!(
         cache.get(&fp).is_none(),
         "get() returned Some after a disk-full put  -  partial artifact must not be served"
+    );
+}
+
+/// The contract under a failed write is that nothing is served, whatever the
+/// write failed with. ENOSPC needs a mount and states that only on Linux, so
+/// the same rule is proven here by replacing the cache root with a regular
+/// file: every path under it is then ENOTDIR, on every platform, and no
+/// privilege bypasses it. Serving a partial artifact after either failure
+/// hands the driver a truncated pipeline, so the two cases are one contract
+/// and both run.
+#[test]
+fn put_under_a_root_that_is_not_a_directory_is_not_served() {
+    let dir = TempDir::new().unwrap();
+    let root = dir.path().join("cache");
+    let cache = DiskCache::new(&root).unwrap();
+    let fp = fp_from_seed(2);
+
+    std::fs::remove_dir(&root).unwrap();
+    std::fs::write(&root, b"not a directory").unwrap();
+
+    cache.put(fp, vec![0xCDu8; 4096]);
+    let served = cache.get(&fp);
+
+    assert!(
+        served.is_none(),
+        "get() returned Some({} bytes) after a put the filesystem refused",
+        served.map(|bytes| bytes.len()).unwrap_or(0)
     );
 }
 
@@ -417,7 +455,9 @@ fn compiles_without_remote_cache_feature() {
 fn remote_cache_in_layered_cache_put_and_get() {
     let dir = TempDir::new().unwrap();
     let disk = Arc::new(DiskCache::new(dir.path()).unwrap());
-    let remote = Arc::new(vyre_runtime::RemoteCache::new("http://127.0.0.1:1"));
+    let remote = Arc::new(vyre_runtime::pipeline_cache::RemoteCache::new(
+        "http://127.0.0.1:1",
+    ));
 
     let fp = fp_from_seed(3);
 

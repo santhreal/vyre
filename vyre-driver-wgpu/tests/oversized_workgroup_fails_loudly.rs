@@ -7,8 +7,10 @@
 //!   before any GPU work is submitted
 //! - The error message contains "workgroup_size" so callers know what to fix
 
-mod common;
-use common::acquire_live_backend as live_backend;
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};

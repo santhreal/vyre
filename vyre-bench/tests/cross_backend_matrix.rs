@@ -1,0 +1,94 @@
+//! Cross-backend matrix.
+//!
+//! Verifies that registered dispatch-capable backends can each run
+//! the elementwise case independently, producing consistent results.
+//!
+//! `execute_suite` runs a real benchmark case, which dispatches on the device
+//! the case selects. On a hosted runner with no CUDA driver and no Vulkan
+//! adapter that is not a defect in what this file asserts: the run either
+//! aborts inside the driver or reports a failed case that a weaker assertion
+//! reads as a pass. Gated on `device-tests`, which `gpu-parity.yml` enables on
+//! the runner that owns the GPU.
+#![cfg(feature = "device-tests")]
+#![allow(clippy::field_reassign_with_default)]
+use vyre_bench::api::suite::SuiteKind;
+use vyre_bench::runner::{execute_suite, RunConfig};
+
+const ELEMENTWISE_CASE_ID: &str = "foundation.elementwise.add.1m";
+
+#[test]
+fn test_cross_backend_elementwise() {
+    let registry = vyre_bench::registry::collect_all();
+
+    // Only registrations with the complete artifact compiler/materializer route
+    // can satisfy this production-path benchmark contract.
+    let backends: Vec<&str> = vyre_registry_link::backend::live_backend_registry_by_precedence()
+        .expect("valid backend registry")
+        .iter()
+        .filter(|registration| {
+            if !vyre_driver::backend_dispatches(registration.id).expect("valid backend registry")
+                || registration.reference_oracle
+                || registration.target_compiler.is_none()
+                || registration.materializer.is_none()
+            {
+                return false;
+            }
+            registration
+                .acquire()
+                .is_ok_and(|backend| backend.supports_resident_dispatch())
+        })
+        .map(|registration| registration.id)
+        .collect();
+
+    if backends.is_empty() {
+        panic!(
+            "g10_cross_backend: no dispatch-capable backend registered. Fix: enable and register a real GPU backend for this test lane; do not treat missing GPU features as a skip."
+        );
+    }
+
+    let mut results = Vec::new();
+    for backend_id in &backends {
+        let mut config = RunConfig::default();
+        config.warmup_samples = 1;
+        config.measured_samples = Some(30);
+        config.determinism_runs = 1;
+        config.backend_id = Some(backend_id.to_string());
+        config.case_ids = vec![ELEMENTWISE_CASE_ID.to_string()];
+
+        let report = execute_suite(&registry, &SuiteKind::Smoke, &config);
+
+        assert_eq!(
+            report.cases.len(),
+            1,
+            "backend {backend_id} must produce exactly one benchmark case for {ELEMENTWISE_CASE_ID}. Fix: keep the smoke suite registry wired for every dispatch-capable backend instead of silently dropping or duplicating the case."
+        );
+
+        let case = &report.cases[0];
+        assert_eq!(
+            case.id, ELEMENTWISE_CASE_ID,
+            "backend {backend_id} must preserve the requested benchmark case id"
+        );
+        assert_eq!(
+            case.backend_id.as_deref(),
+            Some(*backend_id),
+            "benchmark report must retain the selected backend id for {ELEMENTWISE_CASE_ID}"
+        );
+        results.push((backend_id.to_string(), case.status.clone()));
+    }
+
+    // At least one backend should produce a result
+    assert_eq!(
+        results.len(),
+        backends.len(),
+        "Every dispatch-capable backend must produce results for elementwise.add"
+    );
+
+    // All backends that produced a result should pass
+    for (backend, status) in &results {
+        assert_ne!(
+            status, "failed",
+            "Backend {} should not fail elementwise.add",
+            backend
+        );
+    }
+}

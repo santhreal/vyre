@@ -69,7 +69,7 @@ impl std::fmt::Display for Semver {
 
 /// Typed attribute value carried in an [`AttrMap`].
 ///
-/// The tags match [`vyre_foundation::AttrType`] one-to-one so
+/// The tags match [`vyre_foundation::dialect_lookup::AttrType`] one-to-one so
 /// a migration can round-trip an attribute through the op's schema
 /// without losing type information.
 #[derive(Debug, Clone, PartialEq)]
@@ -212,7 +212,7 @@ impl std::error::Error for MigrationError {}
 /// Dialect crates register migrations via:
 ///
 /// ```
-/// use vyre_driver::registry::{AttrMap, Migration, MigrationError, Semver};
+/// use vyre_driver::{AttrMap, Migration, MigrationError, Semver};
 ///
 /// fn rename_mode(attrs: &mut AttrMap) -> Result<(), MigrationError> {
 ///     attrs.rename("mode", "overflow_behavior");
@@ -374,16 +374,21 @@ impl MigrationRegistry {
     }
 }
 
+/// Diagnostic code for an op resolved through a deprecation marker.
+///
+/// The catalog renderer reads this constant, so the string has one owner.
+pub const DEPRECATED_OP_CODE: &str = "W-OP-DEPRECATED";
+
 /// Build a `Severity::Warning` diagnostic for a deprecated op.
 ///
 /// The decoder calls this after resolving a deprecated op and pushes
 /// the result onto its diagnostic buffer. The caller sees a
-/// machine-readable `W-OP-DEPRECATED` warning with the op location
+/// machine-readable [`DEPRECATED_OP_CODE`] warning with the op location
 /// and migration note attached as the suggested fix.
 #[must_use]
 pub fn deprecation_diagnostic(dep: &Deprecation) -> Diagnostic {
     Diagnostic::warning(
-        "W-OP-DEPRECATED",
+        DEPRECATED_OP_CODE,
         format!(
             "op `{}` is deprecated since version {}",
             dep.op_id, dep.deprecated_since
@@ -393,6 +398,8 @@ pub fn deprecation_diagnostic(dep: &Deprecation) -> Diagnostic {
     .with_fix(dep.note)
 }
 
+// Inline: `vyre_driver::registry` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

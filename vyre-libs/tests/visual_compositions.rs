@@ -8,8 +8,16 @@
 //! - **Pixel math correctness**: fixed-point arithmetic, clamp boundaries
 
 #![allow(deprecated)]
+
 #[cfg(feature = "visual")]
-mod tests {
-    include!("contract_cases/visual_compositions__program_has_correct_buffers.rs");
-    include!("contract_cases/visual_compositions__default_params.rs");
-}
+#[path = "contract_cases/visual_compositions__cell_grid.rs"]
+mod visual_compositions_cell_grid;
+#[cfg(feature = "visual")]
+#[path = "contract_cases/visual_compositions__default_params.rs"]
+mod visual_compositions_default_params;
+#[cfg(feature = "visual")]
+#[path = "contract_cases/visual_compositions__glyph_grid.rs"]
+mod visual_compositions_glyph_grid;
+#[cfg(feature = "visual")]
+#[path = "contract_cases/visual_compositions__program_has_correct_buffers.rs"]
+mod visual_compositions_program_has_correct_buffers;

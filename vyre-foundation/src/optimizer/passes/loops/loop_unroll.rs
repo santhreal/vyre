@@ -1,11 +1,12 @@
-use super::substitution::{body_writes_loop_var, substitute_node, substitute_nodes};
+use super::substitution::body_writes_loop_var;
 use crate::ir::{Expr, Node, Program};
 use crate::optimizer::rewrite::rewrite_node_slices;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::subst::{substitute_node, substitute_nodes};
+use crate::visit::map_bodies_cow;
 use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::ops::Range;
-use std::sync::Arc;
 
 const MAX_UNROLL_TRIP_COUNT: u32 = 16;
 const MAX_UNROLLED_BODY_COST: u32 = 64;
@@ -118,19 +119,14 @@ fn rewrite_node(node: &Node) -> Cow<'_, [Node]> {
             Cow::Borrowed(_) => Cow::Borrowed(std::slice::from_ref(node)),
             Cow::Owned(body) => Cow::Owned(vec![Node::block(body)]),
         },
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => match rewrite_nodes(body) {
-            Cow::Borrowed(_) => Cow::Borrowed(std::slice::from_ref(node)),
-            Cow::Owned(body) => Cow::Owned(vec![Node::Region {
-                generator: generator.clone(),
-                source_region: source_region.clone(),
-                body: Arc::new(body),
-            }]),
+        // A `Region`, and every other body-bearing variant this match does not
+        // name, is rewritten through the one owner of the slot list, so the
+        // unroller reaches every nested loop the applicability search reports
+        // and an unchanged subtree still costs no clone.
+        other => match map_bodies_cow(other, &mut |body| rewrite_nodes(body)) {
+            Cow::Borrowed(_) => Cow::Borrowed(std::slice::from_ref(other)),
+            Cow::Owned(rebuilt) => Cow::Owned(vec![rebuilt]),
         },
-        _ => Cow::Borrowed(std::slice::from_ref(node)),
     }
 }
 
@@ -183,18 +179,34 @@ fn literal_u32(expr: &Expr) -> Option<u32> {
 // `body_contains_assign` below is unroll-specific (any Assign at all is unsafe
 // to duplicate across unrolled copies, not just an assign to the loop var).
 
+/// True when any statement under `nodes` assigns to a binding. Child
+/// enumeration comes from
+/// [`child_bodies`](crate::visit::child_bodies) so a future nesting
+/// variant cannot hide an assignment from the unroll safety check.
 fn body_contains_assign(nodes: &[Node]) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Assign { .. } => true,
-        Node::If {
-            then, otherwise, ..
-        } => body_contains_assign(then) || body_contains_assign(otherwise),
-        Node::Loop { body, .. } | Node::Block(body) => body_contains_assign(body),
-        Node::Region { body, .. } => body_contains_assign(body),
-        _ => false,
+    nodes.iter().any(|node| {
+        matches!(node, Node::Assign { .. })
+            || crate::visit::child_bodies(node)
+                .into_iter()
+                .any(body_contains_assign)
     })
 }
 
+/// True when unrolling `nodes` would produce a duplicate sibling binding.
+///
+/// The hazard is V032, a duplicate `Let` among siblings in one scope, so what
+/// matters is whether a copy of a binding lands beside the original rather than
+/// whether a binding exists anywhere below. `If` arms, `Block` bodies and
+/// `Loop` bodies each open a scope, so a `Let` inside one is a sibling of the
+/// other copies' equivalents, not of the original; descending into `If` and
+/// `Block` is therefore stricter than V032 requires and stays only because
+/// dropping it would let loops unroll that do not unroll today. `Node::Loop` is
+/// excluded and pinned by `does_not_substitute_shadowed_inner_loop_body`.
+///
+/// `Node::Region` is included because a region body is walked without a fresh
+/// scope frame (`validate::nodes`), so on the reading that its bindings are
+/// siblings of the surrounding sequence, isolation is required. No test
+/// observes a failure without it, so this is conservatism, not a fix.
 fn body_declares_locals(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| match node {
         Node::Let { .. } => true,
@@ -202,6 +214,9 @@ fn body_declares_locals(nodes: &[Node]) -> bool {
             then, otherwise, ..
         } => body_declares_locals(then) || body_declares_locals(otherwise),
         Node::Block(body) => body_declares_locals(body),
+        Node::Region { body, .. } => body_declares_locals(body),
+        // Any other variant either opens its own scope or holds no statements,
+        // so a copy of it cannot introduce a sibling binding at this level.
         _ => false,
     })
 }
@@ -239,6 +254,7 @@ fn node_unroll_cost(node: &Node) -> Option<u32> {
         Node::Region { body, .. } => unroll_body_cost(body),
         Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::IndirectDispatch { .. }
         | Node::AsyncLoad { .. }
         | Node::AsyncStore { .. }
@@ -249,6 +265,12 @@ fn node_unroll_cost(node: &Node) -> Option<u32> {
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => None,
     }
 }
@@ -304,7 +326,7 @@ mod tests {
         .run(program)
         .expect("Fix: loop unroll should converge");
 
-        let body = crate::test_util::region_body(&optimized);
+        let body = crate::test_ir_inspect::region_body(&optimized);
         assert_eq!(body.len(), 3);
         for (index, node) in body.iter().enumerate() {
             assert!(matches!(
@@ -353,7 +375,7 @@ mod tests {
         );
 
         let optimized = LoopUnroll::transform(program).program;
-        let body = crate::test_util::region_body(&optimized);
+        let body = crate::test_ir_inspect::region_body(&optimized);
         assert_eq!(body.len(), 12);
         assert!(matches!(
             &body[11],
@@ -380,7 +402,7 @@ mod tests {
 
         let result = LoopUnroll::transform(program);
         assert!(!result.changed);
-        let body = crate::test_util::region_body(&result.program);
+        let body = crate::test_ir_inspect::region_body(&result.program);
 
         assert!(matches!(&body[0], Node::Loop { .. }));
     }
@@ -400,7 +422,7 @@ mod tests {
 
         let result = LoopUnroll::transform(program);
         assert!(!result.changed);
-        let body = crate::test_util::region_body(&result.program);
+        let body = crate::test_ir_inspect::region_body(&result.program);
         assert!(matches!(&body[0], Node::Loop { .. }));
     }
 
@@ -423,7 +445,7 @@ mod tests {
         );
 
         let optimized = LoopUnroll::transform(program).program;
-        let body = crate::test_util::region_body(&optimized);
+        let body = crate::test_ir_inspect::region_body(&optimized);
         assert_eq!(body.len(), 2);
         assert!(matches!(
             &body[0],

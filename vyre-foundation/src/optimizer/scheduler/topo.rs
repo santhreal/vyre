@@ -9,6 +9,7 @@ use std::collections::VecDeque;
 use std::hash::{BuildHasher, Hash};
 
 use crate::allocation::{try_reserve_hash_map_to_capacity, try_reserve_vec_to_capacity};
+use crate::optimizer::rewrite_contract::contract_for_pass;
 use crate::optimizer::{PassMetadata, ProgramPassRegistration};
 
 /// Describes errors that can occur during pass scheduling.
@@ -112,8 +113,9 @@ pub(crate) fn schedule_pass_metadata_indices(
             }
         }
     }
+    let ranks = level_ranks(passes);
     for children in &mut dependents {
-        children.sort_unstable_by_key(|&child| passes[child].name);
+        children.sort_unstable_by_key(|&child| (ranks[child], passes[child].name));
     }
 
     let mut initial_ready = Vec::new();
@@ -124,7 +126,7 @@ pub(crate) fn schedule_pass_metadata_indices(
             .enumerate()
             .filter_map(|(id, &degree)| (degree == 0).then_some(id)),
     );
-    initial_ready.sort_unstable_by_key(|&id| passes[id].name);
+    initial_ready.sort_unstable_by_key(|&id| (ranks[id], passes[id].name));
     let mut ready = VecDeque::from(initial_ready);
 
     let mut ordered = Vec::new();
@@ -134,10 +136,10 @@ pub(crate) fn schedule_pass_metadata_indices(
         for &child in &dependents[id] {
             indegree[child] -= 1;
             if indegree[child] == 0 {
-                let child_name = passes[child].name;
+                let child_key = (ranks[child], passes[child].name);
                 let pos = ready
                     .iter()
-                    .position(|&existing| child_name < passes[existing].name)
+                    .position(|&existing| child_key < (ranks[existing], passes[existing].name))
                     .unwrap_or(ready.len());
                 ready.insert(pos, child);
             }
@@ -161,6 +163,30 @@ pub(crate) fn schedule_pass_metadata_indices(
     }
 
     Ok(ordered)
+}
+
+/// Level rank per pass, so a ready pass at an earlier level is scheduled first.
+///
+/// The rank is the position of the level the pass's rewrite contract declares
+/// in `IrLevel::all()`, which orders whole program before logical before
+/// schedule before physical kernel. A pass that declares no contract ranks
+/// last: nothing states the level it rewrites, so it cannot be placed among the
+/// levels, and `pass_invariants` reports the missing contract.
+///
+/// Declared requirements still decide the order. This is the tie break between
+/// passes that are ready at the same time, which was the pass name alone, so a
+/// synchronization rewrite named early in the alphabet ran before every logical
+/// rewrite.
+fn level_ranks(passes: &[PassMetadata]) -> Vec<usize> {
+    let levels = vyre_spec::IrLevel::all();
+    passes
+        .iter()
+        .map(|pass| {
+            contract_for_pass(pass.name)
+                .and_then(|contract| levels.iter().position(|level| *level == contract.level))
+                .unwrap_or(levels.len())
+        })
+        .collect()
 }
 
 pub(super) fn reserve_vec_capacity<T>(
@@ -193,4 +219,48 @@ where
             message: source.to_string(),
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{level_ranks, schedule_pass_metadata_indices};
+    use crate::optimizer::PassMetadata;
+
+    /// A pass with no declared contract ranks after every level.
+    ///
+    /// Nothing states the level such a pass rewrites, so placing it among the
+    /// levels would order it against a claim nobody made. Every registered pass
+    /// declares a contract, which is why this is stated here rather than
+    /// observed through the registry: `pass_invariants` reports the missing
+    /// contract, and this fixes what the order does until it is declared.
+    #[test]
+    fn a_pass_with_no_contract_ranks_after_every_level() {
+        let levels = vyre_spec::IrLevel::all().len();
+        let unknown = PassMetadata::new("topo_test_pass_with_no_contract", &[], &[]);
+        let declared = PassMetadata::new("canonicalize", &[], &[]);
+        let ranks = level_ranks(&[unknown, declared]);
+        assert_eq!(ranks[0], levels);
+        assert!(
+            ranks[1] < levels,
+            "the canonicalize pass declares a level, so its rank is one of them"
+        );
+    }
+
+    /// A ready pass at an earlier level is scheduled before a deeper one
+    /// whatever the names say.
+    #[test]
+    fn the_tie_break_prefers_the_earlier_level() {
+        // `atomic_minimize` declares the schedule level and sorts first by name;
+        // `canonicalize` declares the logical level and sorts second.
+        let order = schedule_pass_metadata_indices(&[
+            PassMetadata::new("atomic_minimize", &[], &[]),
+            PassMetadata::new("canonicalize", &[], &[]),
+        ])
+        .expect("two independent passes schedule");
+        assert_eq!(
+            order,
+            vec![1, 0],
+            "the logical pass runs first because its level precedes the schedule level"
+        );
+    }
 }

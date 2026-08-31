@@ -1,12 +1,17 @@
 # vyre-bench
 
-Canonical benchmarking and performance-regression infrastructure for the [Vyre](../README.md) GPU compiler.
+The cross-backend benchmark and parity harness for the
+[Vyre](../README.md) GPU compiler.
+
+Not here: a benchmark whose baseline is vyre's own unfused output.
+Beating your own slow path is not a result. The baseline is the best
+available native implementation for that class.
 
 ## Architecture
 
 ```
 vyre-bench
-├── api/           # Core types: BenchCase trait, metrics, suites, competitor API
+├── api/           # Core types: BenchCase trait, metrics, candidates, suites
 ├── cases/         # Benchmark implementations (one file per workload)
 ├── runner/        # Execution engine, snapshot diffing, execute_suite()
 ├── report/        # JSON schema, scorecard generation
@@ -32,7 +37,7 @@ cargo_full run -p vyre-bench --release -- run --suite honest --measured-samples 
 # Generate CUDA release evidence
 cargo_full run -p vyre-bench --release -- run --backend cuda --suite release --measured-samples 30 --warmup-samples 300 --enforce-budgets
 
-# Generate WGPU fallback evidence
+# Generate WGPU release evidence
 cargo_full run -p vyre-bench --release -- run --backend wgpu --suite release --measured-samples 30 --warmup-samples 300 --enforce-budgets
 
 # Compare two runs
@@ -71,23 +76,23 @@ These benchmarks use CPU baselines that run the same algorithm or contract shape
 
 ## Release Workloads
 
-The `release` suite must cover at least 12 workload families before Vyre can ship. CUDA is the preferred release backend; WGPU is the portable GPU fallback. Every row below has exact output parity against a CPU baseline and a performance contract against a serious CPU baseline class.
+The `release` suite must cover at least 12 workload families before Vyre can ship. CUDA is the preferred release backend; WGPU is the portable GPU fallback. Every row below has exact output parity against a CPU baseline that runs in this process. The enforced speedup threshold and the CPU baseline each row is judged against live in `docs/optimization/BENCH_TARGETS.toml`, and the measured numbers live under `release/evidence/benchmarks/`; a threshold repeated here would be a second owner that drifts.
 
-| Workload family | Case id | Contract |
+| Workload family | Case id | Owner crate |
 |---|---|---|
-| Conditional rule evaluation | `release.condition_eval.1m` | 100× vs optimized CPU rule-condition evaluator |
-| String bitmap scatter | `release.string_bitmap_scatter.1m` | 100× vs Hyperscan/ripgrep-class CPU bitmap materialization |
-| Offset/count aggregation | `release.offset_count_aggregation.1m` | 100× vs SIMD CPU aggregation over match streams |
-| PE/header metadata predicates | `metadata.condition.filesize_header.1m` | 50× vs optimized CPU PE-header predicate evaluator |
-| Entropy/window predicates | `release.entropy_window.1m` | 100× vs SIMD CPU rolling entropy baseline |
-| Quantified condition loops | `release.quantified_condition_loops.1m` | 100× vs optimized CPU quantified-condition evaluator |
-| Alias/reaching-definition predicates | `release.alias_reaching_def.1m` | 25× vs LLVM-style sparse dataflow and alias baseline |
-| IFDS witness predicates | `release.ifds_witness.1m` | 25× vs optimized CPU graph reachability/witness baseline |
-| C AST traversal predicates | `release.c_ast_traversal.1m` | 25× vs tree-sitter/libclang-class CPU AST traversal |
-| Persistent megakernel queued batches | `release.megakernel_queue.1m` | 100× vs optimized CPU batched condition evaluator |
-| E-graph saturation predicates | `release.egraph_saturation.1m` | 10× vs egg/egraph CPU saturation baseline |
-| Sparse fired-rule readback | `sparse.compaction.count.1m` | 100× vs optimized CPU fired-rule collection |
-| Callgraph reachability | `callgraph.reachability.step.262k` | 25× vs optimized CPU graph reachability |
+| Conditional rule evaluation | `release.condition_eval.1m` | vyre |
+| String bitmap scatter | `release.string_bitmap_scatter.1m` | vyre-libs |
+| Offset/count aggregation | `release.offset_count_aggregation.1m` | vyre-libs |
+| PE/header metadata predicates | `metadata.condition.filesize_header.1m` | vyre-libs |
+| Entropy/window predicates | `release.entropy_window.1m` | vyre-libs |
+| Quantified condition loops | `release.quantified_condition_loops.1m` | vyre |
+| Alias/reaching-definition predicates | `release.alias_reaching_def.1m` | vyre-bench |
+| IFDS witness predicates | `release.ifds_witness.1m` | vyre-bench |
+| AST motif traversal predicates | `release.ast_motif_traversal.1m` | vyre-libs |
+| Persistent megakernel queued batches | `release.megakernel_queue.1m` | vyre-runtime |
+| E-graph saturation predicates | `release.egraph_saturation.1m` | vyre-lower |
+| Sparse fired-rule readback | `sparse.compaction.count.1m` | vyre-runtime |
+| Callgraph reachability | `callgraph.reachability.step.262k` | vyre-primitives |
 
 ## Verification Gates
 
@@ -111,25 +116,11 @@ The `bench-regression.yml` workflow runs on every PR and push to `main`:
 2. Runs smoke and honest suites with 30 measured samples
 3. Compares against the baseline snapshot (if available)
 4. Comments the comparison on the PR
-5. Fails if any case regresses by > 1σ
+5. Fails if any case loses significantly outside the band the comparison artifact records
 
 ## Schema
 
 Result JSON follows the `vyre-bench.result.v1` schema. See [SCHEMA.md](SCHEMA.md) for full documentation.
-
-## Competitor Matrix
-
-Competitors are declared in `competitors.toml` with pinned versions:
-
-```toml
-[[competitor]]
-name = "hashbrown"
-crate = "hashbrown"
-version = "=0.16.1"
-workloads = ["hashtable.openaddr.build_probe.10m"]
-```
-
-The `CompetitorRun` trait in `src/api/competitor.rs` enables side-by-side A/B comparisons.
 
 ## Dashboard
 
@@ -145,8 +136,7 @@ The `CompetitorRun` trait in `src/api/competitor.rs` enables side-by-side A/B co
 1. Create `src/cases/<workload>.rs` implementing `BenchCase`
 2. Add `inventory::submit! { &MyWorkload as &'static dyn BenchCase }` at the bottom
 3. Register in `src/cases/mod.rs`
-4. Run `cargo_full test -p vyre-bench` to verify integration
-5. Add the competitor entry to `competitors.toml` if applicable
+4. Run `./cargo_full test -p vyre-bench` to verify integration
 
 ## Release evidence
 
@@ -226,17 +216,17 @@ Exit codes: 0 on success or help, 1 on benchmark or validation failure, 2 on inv
 <!-- BEGIN GENERATED CRATE CONTRACT -->
 ## Crate contract
 
-This section is generated by `python3 scripts/crate_readmes.py --write` from
+This section is generated by `xtask crate-readmes --write` from
 the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark evidence.
+Own reproducible workload benchmarks against the best available native baseline for each class, not against vyre's own unfused output.
 
 ### Boundaries
 
 The `benchmarks` owner maintains this `tooling` crate at `vyre-bench`.
-Its allowed internal production dependencies are: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-frontend-c`, `vyre-frontend-rust`, `vyre-intrinsics`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`, `xtask`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
@@ -244,12 +234,12 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `vyre-bench/src/main.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-bench -- --help
+./cargo_full run -p vyre-bench -- --help
 ```
 
 ### Features
 
-- Manifest features: `cli`, `default`
+- Manifest features: `cli`, `default`, `device-tests`
 - Default feature members: `cli`
 
 ### Errors and unsupported behavior
@@ -258,18 +248,18 @@ Invalid arguments, stale evidence, violated repository contracts, and failed com
 
 ### Testing
 
-Use [`docs/testing/vyre-bench.md`](../docs/testing/vyre-bench.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/vyre-bench.md`](../docs/testing/vyre-bench.md) for the crate's test command,
+hardware contract, expected skips, and failure semantics. It is generated
+from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-This crate is internal benchmark tooling for the 0.7.2 train and is not published to crates.io.
+This crate is internal benchmark tooling for the 0.8.0 train and is not published to crates.io.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

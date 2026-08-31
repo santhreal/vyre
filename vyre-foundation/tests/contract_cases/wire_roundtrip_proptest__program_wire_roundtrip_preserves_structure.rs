@@ -1,4 +1,4 @@
-// (use super::* removed  -  flat-included into wire_roundtrip_proptest_suite scope)
+use super::*;
 
 proptest! {
     #![proptest_config(ProptestConfig {
@@ -295,25 +295,12 @@ fn reserved_opaque_datatype_id_is_rejected_at_decode_time() {
 
 #[test]
 fn datatype_strategy_enumerates_every_wire_supported_terminal_variant() {
-    let sample = vec![
-        DataType::U8,
-        DataType::U16,
-        DataType::U32,
-        DataType::I8,
-        DataType::I16,
-        DataType::I32,
-        DataType::I64,
-        DataType::U64,
-        DataType::Vec2U32,
-        DataType::Vec4U32,
-        DataType::Bool,
-        DataType::Bytes,
-        DataType::Array { element_size: 8 },
-        DataType::F16,
-        DataType::BF16,
-        DataType::F32,
-        DataType::F64,
-        DataType::Tensor,
+    // The flat leaves are the shared table. This test's set is wider than a
+    // buffer element set: a cast target may also be a `Handle`, a nested `Vec`
+    // or `TensorShaped`, or an `Opaque` extension type, and those four are the
+    // reason this list exists at all.
+    let mut sample = flat_buffer_element_types(8);
+    sample.extend([
         DataType::Handle(TypeId(7)),
         DataType::Vec {
             element: Box::new(DataType::U32),
@@ -324,7 +311,7 @@ fn datatype_strategy_enumerates_every_wire_supported_terminal_variant() {
             shape: smallvec![2, 3],
         },
         DataType::Opaque(ExtensionDataTypeId(0x8000_0001)),
-    ];
+    ]);
 
     for target in sample {
         let program = Program::wrapped(
@@ -351,4 +338,3 @@ fn datatype_strategy_enumerates_every_wire_supported_terminal_variant() {
         assert_eq!(decoded, program);
     }
 }
-

@@ -1,13 +1,28 @@
-use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
-use thiserror::Error;
-use vyre_foundation::{execution_plan::fusion::merge_programs_shared, ir::Program};
-use vyre_lower::{KernelDescriptor, MemoryClass};
+//! Target compilation: the boundary from one authenticated neutral artifact to
+//! immutable target-native bytes.
 
+use std::collections::BTreeSet;
+
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+use vyre_foundation::{
+    execution_plan::fusion::merge_programs_shared,
+    fp_parity::approximable_operations,
+    ir::{Expr, Program},
+    numeric::{ScalarFormat, NUMERIC_CONTRACT_VERSION},
+    schedule::SchedulePhase,
+    visit::walk_exprs,
+};
+use vyre_lower::{KernelDescriptor, MemoryClass, PhysicalSchedule};
+
+use crate::candidate::ExecutionTopology;
+use crate::target_bindings::{
+    selected_abi, selected_logical_element_count, selected_resource_bindings,
+};
 use crate::{
     Artifact, ArtifactAbi, ArtifactEnvelope, ArtifactNodeId, CompileError, FusionGroupId,
-    FusionRecord, ResourceLifetime, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
-    TargetProfile, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    FusionRecord, GeometryRecord, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
+    TargetProfile, TargetResourceBinding,
 };
 
 /// One compiler-selected group decoded into verified semantic modules.
@@ -35,19 +50,76 @@ pub struct SelectedLowering {
     pub stage: u32,
     /// Typed graph node identities in deterministic emission order.
     pub nodes: Vec<ArtifactNodeId>,
-    /// Verified backend-neutral descriptor consumed by concrete emitters.
-    pub descriptor: KernelDescriptor,
+    /// Exact backend-neutral selected schedule phase lowered into this kernel.
+    pub schedule_phase: SchedulePhase,
+    /// Verified backend-neutral physical kernel consumed by concrete emitters.
+    physical: vyre_lower::PhysicalKernel,
     /// Canonical ABI slice for this selected group.
     pub abi: ArtifactAbi,
     /// Canonical descriptor-to-artifact resource association.
     pub canonical_bindings: Vec<TargetResourceBinding>,
     /// Authoritative logical invocation span before target grid projection.
     pub logical_element_count: u32,
+    /// Selected frontier-density traversal topology.
+    pub frontier_topology: crate::candidate::FrontierTopology,
     program: Program,
 }
 
+impl SelectedLowering {
+    /// Borrow the verified physical descriptor.
+    #[must_use]
+    pub const fn descriptor(&self) -> &KernelDescriptor {
+        self.physical.descriptor()
+    }
+}
+
 /// Canonical target-module bundle schema carried inside one target payload.
-pub const TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16 = 2;
+///
+/// Version 5 carries the selected execution topology and the arm every module
+/// is submitted on, so a concurrent or resident selection cannot be claimed by
+/// an artifact whose modules record no executable topology. Version 4 carries
+/// the numeric choices lowering made for the module. Version 3 encodes an f32
+/// literal by its IEEE-754 bits. Version 2 wrote the number, which JSON cannot
+/// spell for a non-finite value: a bundle carrying an infinity was written with
+/// `null` in its place and refused on decode. A stored bundle of an older
+/// version is refused by version rather than reinterpreted, because the
+/// encodings read the same field differently.
+pub const TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16 = 5;
+
+/// Which executable arm one selected module is submitted on.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TargetArmAssignment {
+    /// Selected fusion group this assignment binds.
+    pub group: FusionGroupId,
+    /// Dependency stage the group executes in.
+    pub stage: u32,
+    /// Queue or spatial partition index carrying the module.
+    pub arm: u32,
+}
+
+/// What one lowered module does to the numbers it computes.
+///
+/// A caller comparing a device result against a bound needs to know what the
+/// module actually did, not what the program asked for: which formats it held
+/// values in, which conversions it performed, which operations it computed
+/// through an approximation the parity window admits, and how wide a combine it
+/// was cut into. Every field is read from the lowered program and the frozen
+/// schedule phase, so it states the module that was emitted rather than an
+/// intention recorded beside it.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ModuleNumericRecord {
+    /// Numeric contract shape this record is stated under.
+    pub version: u32,
+    /// Scalar formats the module holds values in, in ascending order.
+    pub formats: Vec<ScalarFormat>,
+    /// Scalar formats the module converts values to, in ascending order.
+    pub conversions: Vec<ScalarFormat>,
+    /// Operations the module computes through the approximation window, named
+    /// by their neutral IR variant, in ascending order.
+    pub approximations: Vec<String>,
+    /// Elements one invocation combines, when the phase selected more than one.
+    pub chunk: Option<u32>,
+}
 
 /// One generated target module corresponding to one selected fusion group.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -60,12 +132,39 @@ pub struct TargetModuleImage {
     pub nodes: Vec<ArtifactNodeId>,
     /// Canonical optimized Program wire consumed without semantic re-lowering.
     pub program: Vec<u8>,
-    /// Verified lowering product consumed by materializers without re-lowering.
+    /// Verified physical descriptor consumed by materializers without re-lowering.
     pub descriptor: KernelDescriptor,
     /// Target entry-point name.
     pub entry_point: String,
+    /// Numeric choices lowering made for this module.
+    pub numeric: ModuleNumericRecord,
     /// Immutable target-native module bytes.
     pub bytes: Vec<u8>,
+}
+
+impl TargetModuleImage {
+    /// Resolve a Program buffer name to the exact target `(group, slot)`.
+    ///
+    /// Shared and scratch storage are not externally bound. Duplicate names are
+    /// ambiguous and fail closed as `None`.
+    #[must_use]
+    pub fn binding_slot(&self, name: &str) -> Option<(u32, u32)> {
+        let mut found = None;
+        for slot in &self.descriptor.bindings.slots {
+            if slot.name != name {
+                continue;
+            }
+            let group = match slot.memory_class {
+                MemoryClass::Shared | MemoryClass::Scratch => continue,
+                MemoryClass::Uniform => 1,
+                MemoryClass::Global | MemoryClass::Constant => 0,
+            };
+            if found.replace((group, slot.slot)).is_some() {
+                return None;
+            }
+        }
+        found
+    }
 }
 
 /// Canonical ordered target modules for one neutral artifact.
@@ -73,17 +172,58 @@ pub struct TargetModuleImage {
 pub struct TargetModuleBundle {
     /// Bundle schema.
     pub schema_version: u16,
+    /// Execution topology the compiler selected for this artifact.
+    pub topology: ExecutionTopology,
+    /// Arm carrying each module, ordered with `modules`.
+    pub arms: Vec<TargetArmAssignment>,
     /// Modules ordered by dependency stage and fusion-group identity.
     pub modules: Vec<TargetModuleImage>,
 }
 
+/// Bind each module to an executable arm under `topology`.
+///
+/// Modules sharing a dependency stage are independent, so they spread across
+/// the available arms and may overlap on device. Modules in different stages
+/// are dependent, and stage order separates them whatever arm they land on.
+fn assign_arms(
+    topology: ExecutionTopology,
+    modules: &[TargetModuleImage],
+) -> Vec<TargetArmAssignment> {
+    let width = topology.arm_width();
+    let mut arms = Vec::with_capacity(modules.len());
+    let mut stage = None;
+    let mut within = 0u32;
+    for module in modules {
+        if stage != Some(module.stage) {
+            stage = Some(module.stage);
+            within = 0;
+        }
+        arms.push(TargetArmAssignment {
+            group: module.group,
+            stage: module.stage,
+            arm: within % width,
+        });
+        within = within.saturating_add(1);
+    }
+    arms
+}
+
 impl TargetModuleBundle {
-    /// Construct and canonically order target modules.
+    /// Construct and canonically order target modules on the sequential baseline.
     #[must_use]
-    pub fn new(mut modules: Vec<TargetModuleImage>) -> Self {
+    pub fn new(modules: Vec<TargetModuleImage>) -> Self {
+        Self::with_topology(ExecutionTopology::Sequential, modules)
+    }
+
+    /// Construct and canonically order target modules under a selected topology.
+    #[must_use]
+    pub fn with_topology(topology: ExecutionTopology, mut modules: Vec<TargetModuleImage>) -> Self {
         modules.sort_by_key(|module| (module.stage, module.group));
+        let arms = assign_arms(topology, &modules);
         Self {
             schema_version: TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+            topology,
+            arms,
             modules,
         }
     }
@@ -112,6 +252,15 @@ impl TargetModuleBundle {
         }
         let bundle: Self = serde_json::from_slice(body)
             .map_err(|error| TargetCompileError::ModuleBundle(error.to_string()))?;
+        // Before any module content: the version says which encoding the fields
+        // were written in, so a stale bundle is refused by version rather than
+        // reported as a malformed descriptor it is not.
+        if bundle.schema_version != TARGET_MODULE_BUNDLE_SCHEMA_VERSION {
+            return Err(TargetCompileError::ModuleBundle(format!(
+                "schema {} is unsupported; expected {}",
+                bundle.schema_version, TARGET_MODULE_BUNDLE_SCHEMA_VERSION
+            )));
+        }
         for module in &bundle.modules {
             if module.nodes.is_empty() {
                 return Err(TargetCompileError::ModuleBundle(format!(
@@ -132,17 +281,19 @@ impl TargetModuleBundle {
                 ))
             })?;
         }
-        if bundle.schema_version != TARGET_MODULE_BUNDLE_SCHEMA_VERSION {
-            return Err(TargetCompileError::ModuleBundle(format!(
-                "schema {} is unsupported; expected {}",
-                bundle.schema_version, TARGET_MODULE_BUNDLE_SCHEMA_VERSION
-            )));
-        }
         if bundle.modules.windows(2).any(|modules| {
             (modules[0].stage, modules[0].group) >= (modules[1].stage, modules[1].group)
         }) {
             return Err(TargetCompileError::ModuleBundle(
                 "module bundle is not in canonical stage/group order".to_string(),
+            ));
+        }
+        // The arms are the executable form of the selected topology, so they are
+        // checked against it rather than trusted: a bundle whose arm records are
+        // stripped or rewritten claims a topology it cannot submit.
+        if bundle.arms != assign_arms(bundle.topology, &bundle.modules) {
+            return Err(TargetCompileError::ModuleBundle(
+                "module bundle arms are not the selected topology's assignment".to_string(),
             ));
         }
         let canonical = bundle.to_bytes()?;
@@ -187,18 +338,27 @@ pub trait TargetCompiler: Send + Sync {
     /// Compile every selected module and project the canonical artifact ABI.
     fn compile(&self, artifact: &Artifact) -> Result<TargetPayload, TargetCompileError>;
 }
-/// Compile and attach one target payload to its exact neutral artifact.
+/// Compile one target payload and attach it for every device the artifact places
+/// work on.
 ///
 /// This is the only orchestration boundary from a pure target compiler facet to
 /// an authenticated deployable envelope. It does not acquire a device or
 /// materialize native handles.
+///
+/// A target compiler is device-neutral: it compiles the format once for the
+/// artifact. The mesh topology states which devices submit those bytes, so the
+/// compiled payload is rebound once per topology device and the envelope carries
+/// the complete per-device set.
 pub fn attach_target(
     artifact: Artifact,
     compiler: &dyn TargetCompiler,
 ) -> Result<ArtifactEnvelope, TargetCompileError> {
     let payload = compiler.compile(&artifact)?;
+    let devices = artifact.topology().submission_devices();
     let mut envelope = ArtifactEnvelope::new(artifact);
-    envelope.attach_target_payload(payload)?;
+    for device in devices {
+        envelope.attach_target_payload(payload.for_device(device)?)?;
+    }
     Ok(envelope)
 }
 
@@ -232,24 +392,22 @@ fn fuse_selected_module(module: &SelectedModule) -> Result<Program, TargetCompil
 }
 
 /// Target-native bytes and the exact emitted entry metadata.
+///
+/// An emitter reports what it produced, never how it is launched. Geometry
+/// reported here was geometry the emitter chose, and an emitter that chose one
+/// could disagree with the artifact that authenticated it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EmittedTargetModule {
     /// Entry point exported by the target-native module.
     pub entry_point: String,
-    /// Exact target grid dimensions.
-    pub grid_size: [u32; 3],
-    /// Entry-local dynamic shared byte requirement.
-    pub dynamic_shared_bytes: u32,
-    /// Exact target workgroup dimensions.
-    pub workgroup_size: [u32; 3],
     /// Exact target resource projection.
     pub resource_bindings: Vec<TargetResourceBinding>,
     /// Immutable target-native module bytes.
     pub bytes: Vec<u8>,
 }
 
-/// Compile all selected groups through one verified lowering boundary and
-/// package canonical target bytes.
+/// Compile all selected groups through the validated physical-kernel boundary
+/// and package canonical target bytes.
 pub fn compile_selected_modules(
     artifact: &Artifact,
     format: TargetPayloadFormat,
@@ -264,13 +422,31 @@ pub fn compile_selected_modules(
     let mut entries = Vec::with_capacity(modules.len());
     for module in modules {
         let program = fuse_selected_module(&module)?;
-        let lowered = vyre_lower::lower_verified(&program).map_err(|error| {
-            TargetCompileError::Emission(format!(
-                "verified lowering failed for fusion group {}: {error}",
+        let source_region = module.nodes.first().ok_or_else(|| {
+            TargetCompileError::InvalidArtifact(format!(
+                "fusion group {} has no source region for schedule lowering",
                 module.group.0
             ))
         })?;
-        let bindings = selected_resource_bindings(artifact, &module, &lowered.descriptor)?;
+        let schedule = &artifact.selected_plan().schedule;
+        let schedule_phase = schedule
+            .phase_for_region(source_region.0)
+            .cloned()
+            .ok_or_else(|| {
+                TargetCompileError::InvalidArtifact(format!(
+                    "fusion group {} has no selected schedule phase",
+                    module.group.0
+                ))
+            })?;
+        let lowered = vyre_lower::lower_scheduled(&program, schedule, schedule_phase.id).map_err(
+            |error| {
+                TargetCompileError::Emission(format!(
+                    "verified physical lowering failed for fusion group {}: {error}",
+                    module.group.0
+                ))
+            },
+        )?;
+        let bindings = selected_resource_bindings(artifact, &module, lowered.kernel.descriptor())?;
         let abi = selected_abi(artifact, &module);
         let logical_element_count =
             selected_logical_element_count(artifact, &module, &lowered.program);
@@ -279,10 +455,12 @@ pub fn compile_selected_modules(
             group: module.group,
             stage: module.stage,
             nodes: module.nodes,
-            descriptor: lowered.descriptor,
+            schedule_phase,
+            physical: lowered.kernel,
             abi,
             canonical_bindings: bindings,
             logical_element_count,
+            frontier_topology: artifact.selected_plan().frontier_topology,
             program: lowered.program,
         };
         let emitted = emit(&selected, &profile)?;
@@ -292,13 +470,30 @@ pub fn compile_selected_modules(
                 selected.group.0
             ))
         })?;
+        let geometry = artifact
+            .geometry()
+            .iter()
+            .find(|geometry| geometry.node == node)
+            .ok_or_else(|| {
+                TargetCompileError::InvalidArtifact(format!(
+                    "node {} has no selected launch geometry",
+                    node.0
+                ))
+            })?;
+        let frozen = selected.physical.schedule().ok_or_else(|| {
+            TargetCompileError::Emission(format!(
+                "fusion group {} emitted without the frozen schedule facts. Fix: lower every emitted module through lower_scheduled.",
+                selected.group.0
+            ))
+        })?;
+        geometry_matches_frozen_schedule(geometry, frozen, node)?;
         let entry_point = emitted.entry_point;
         entries.push(TargetEntryPoint {
             name: entry_point.clone(),
             node,
-            workgroup_size: emitted.workgroup_size,
-            grid_size: emitted.grid_size,
-            dynamic_shared_bytes: emitted.dynamic_shared_bytes,
+            workgroup_size: geometry.workgroup_size,
+            grid_size: geometry.grid,
+            dynamic_shared_bytes: geometry.dynamic_shared_bytes,
             resource_bindings: emitted.resource_bindings,
         });
         let program = selected.program.to_wire().map_err(|error| {
@@ -307,177 +502,148 @@ pub fn compile_selected_modules(
                 selected.group.0
             ))
         })?;
+        let numeric = ModuleNumericRecord::of(&selected.program, &selected.schedule_phase);
         images.push(TargetModuleImage {
             group: selected.group,
             stage: selected.stage,
             nodes: selected.nodes.clone(),
             program,
-            descriptor: selected.descriptor.clone(),
+            descriptor: selected.descriptor().clone(),
             entry_point,
+            numeric,
             bytes: emitted.bytes,
         });
     }
-    let bytes = TargetModuleBundle::new(images).to_bytes()?;
+    let bytes =
+        TargetModuleBundle::with_topology(artifact.selected_plan().topology, images).to_bytes()?;
     TargetPayload::new(artifact, format, profile, entries, bytes).map_err(Into::into)
 }
 
-/// Projects verified descriptor bindings onto the selected artifact resources.
-fn selected_resource_bindings(
-    artifact: &Artifact,
-    module: &SelectedModule,
-    descriptor: &KernelDescriptor,
-) -> Result<Vec<TargetResourceBinding>, TargetCompileError> {
-    let canonical_by_name = module
-        .nodes
-        .iter()
-        .filter_map(|node| {
-            artifact
-                .abi()
-                .entries
-                .iter()
-                .find(|entry| entry.node == *node)
-        })
-        .flat_map(|entry| entry.inputs.iter().chain(entry.outputs.iter()).copied())
-        .filter_map(|value| {
-            artifact
-                .resources()
-                .iter()
-                .find(|resource| resource.value == value)
-                .map(|resource| (resource.name.as_str(), value))
-        })
-        .collect::<HashMap<_, _>>();
-    let constant_values = artifact
-        .resources()
-        .iter()
-        .filter(|resource| resource.lifetime == ResourceLifetime::Constant)
-        .map(|resource| resource.value)
-        .collect::<HashSet<_>>();
-    descriptor
-        .bindings
-        .slots
-        .iter()
-        .filter(|slot| {
-            !matches!(
-                slot.memory_class,
-                MemoryClass::Shared | MemoryClass::Scratch
-            ) && slot.name != vyre_lower::TRAP_SIDECAR_NAME
-        })
-        .map(|slot| {
-            let resource = canonical_by_name
-                .get(slot.name.as_str())
-                .copied()
-                .ok_or_else(|| {
-                    TargetCompileError::InvalidArtifact(format!(
-                    "fusion group {} descriptor binding `{}` has no canonical artifact resource",
-                    module.group.0, slot.name
-                ))
-                })?;
-            Ok(TargetResourceBinding {
-                resource,
-                group: if matches!(slot.memory_class, MemoryClass::Uniform) {
-                    1
-                } else {
-                    0
-                },
-                slot: slot.slot,
-                memory: if matches!(
-                    slot.memory_class,
-                    MemoryClass::Constant | MemoryClass::Uniform
-                ) || constant_values.contains(&resource)
-                {
-                    TargetResourceMemory::Constant
-                } else {
-                    TargetResourceMemory::Global
-                },
-                access: match slot.visibility {
-                    vyre_lower::BindingVisibility::ReadOnly => TargetResourceAccess::ReadOnly,
-                    vyre_lower::BindingVisibility::WriteOnly => TargetResourceAccess::WriteOnly,
-                    vyre_lower::BindingVisibility::ReadWrite => TargetResourceAccess::ReadWrite,
-                },
-            })
-        })
-        .collect()
-}
-
-fn selected_logical_element_count(
-    artifact: &Artifact,
-    module: &SelectedModule,
-    program: &Program,
-) -> u32 {
-    let nodes = module.nodes.iter().copied().collect::<HashSet<_>>();
-    let values = artifact
-        .abi()
-        .entries
-        .iter()
-        .filter(|entry| nodes.contains(&entry.node))
-        .flat_map(|entry| entry.inputs.iter().chain(&entry.outputs))
-        .copied()
-        .collect::<HashSet<_>>();
-    let full_span = program.stats().atomic_op_count > 0
-        || vyre_foundation::program_caps::scan(program).subgroup_ops;
-    let selected = artifact
-        .resources()
-        .iter()
-        .filter(|resource| values.contains(&resource.value));
-    let count = if full_span {
-        selected.map(|resource| resource.element_count).max()
-    } else {
-        selected
-            .filter(|resource| {
-                artifact
-                    .abi()
-                    .resources
-                    .iter()
-                    .find(|abi| abi.value == resource.value)
-                    .is_some_and(|abi| {
-                        matches!(
-                            abi.access,
-                            crate::AbiAccess::WriteOnly | crate::AbiAccess::ReadWrite
-                        )
-                    })
-            })
-            .map(|resource| resource.element_count)
-            .max()
-            .or_else(|| {
-                artifact
-                    .resources()
-                    .iter()
-                    .filter(|resource| values.contains(&resource.value))
-                    .map(|resource| resource.element_count)
-                    .max()
-            })
-    }
-    .unwrap_or(1)
-    .max(1);
-    u32::try_from(count).unwrap_or(u32::MAX)
-}
-
-fn selected_abi(artifact: &Artifact, module: &SelectedModule) -> ArtifactAbi {
-    let nodes = module.nodes.iter().copied().collect::<HashSet<_>>();
-    let entries = artifact
-        .abi()
-        .entries
-        .iter()
-        .filter(|entry| nodes.contains(&entry.node))
-        .cloned()
-        .collect::<Vec<_>>();
-    let values = entries
-        .iter()
-        .flat_map(|entry| entry.inputs.iter().chain(&entry.outputs))
-        .copied()
-        .collect::<HashSet<_>>();
-    ArtifactAbi {
-        resources: artifact
-            .abi()
-            .resources
-            .iter()
-            .filter(|resource| values.contains(&resource.value))
-            .cloned()
-            .collect(),
-        entries,
+impl ModuleNumericRecord {
+    /// The numeric choices lowering made for one emitted module.
+    ///
+    /// Every answer is read from the lowered program and the frozen phase, so
+    /// the record cannot state a choice the module does not carry. A format
+    /// appears because a buffer holds it or a conversion produces it, an
+    /// approximation appears because the parity window admits one for that
+    /// operation, and a chunk appears because the phase combines more than one
+    /// element per invocation. A consumer holding a bundle and the artifact it
+    /// was emitted from re-derives the record here and compares.
+    #[must_use]
+    pub fn of(program: &Program, phase: &SchedulePhase) -> Self {
+        let mut formats = BTreeSet::new();
+        let mut conversions = BTreeSet::new();
+        for buffer in program.buffers() {
+            if let Some(format) = ScalarFormat::of(&buffer.element()) {
+                formats.insert(format);
+            }
+        }
+        walk_exprs(program, |expr| {
+            if let Expr::Cast { target, .. } = expr {
+                if let Some(format) = ScalarFormat::of(target) {
+                    conversions.insert(format);
+                    formats.insert(format);
+                }
+            }
+        });
+        Self {
+            version: NUMERIC_CONTRACT_VERSION,
+            formats: formats.into_iter().collect(),
+            conversions: conversions.into_iter().collect(),
+            approximations: approximable_operations(program),
+            chunk: (phase.vector_width > 1).then_some(phase.vector_width),
+        }
     }
 }
 
+/// Refuse an entry point whose recorded geometry is not the schedule the
+/// emitted module was lowered under.
+///
+/// The artifact record and the lowering projection state the same selected
+/// facts. Two statements of one fact drift, and the drift is invisible: the
+/// runtime launches the recorded shape while the module was compiled for the
+/// projected one. Checking them here makes emission the seam where a
+/// disagreement stops.
+fn geometry_matches_frozen_schedule(
+    geometry: &GeometryRecord,
+    frozen: &PhysicalSchedule,
+    node: ArtifactNodeId,
+) -> Result<(), TargetCompileError> {
+    let disagreement = |field: &str, recorded: String, projected: String| {
+        TargetCompileError::InvalidArtifact(format!(
+            "node {} records {field} {recorded} but was lowered under {projected}. Fix: project artifact geometry and physical lowering from the same selected phase.",
+            node.0
+        ))
+    };
+    if geometry.phase.0 != frozen.phase {
+        return Err(disagreement(
+            "schedule phase",
+            geometry.phase.0.to_string(),
+            frozen.phase.to_string(),
+        ));
+    }
+    if geometry.logical_coverage != frozen.logical_coverage {
+        return Err(disagreement(
+            "logical coverage",
+            format!("{:?}", geometry.logical_coverage),
+            format!("{:?}", frozen.logical_coverage),
+        ));
+    }
+    if geometry.workgroup_size != frozen.workgroup {
+        return Err(disagreement(
+            "workgroup",
+            format!("{:?}", geometry.workgroup_size),
+            format!("{:?}", frozen.workgroup),
+        ));
+    }
+    if geometry.vector_width != frozen.vector_width {
+        return Err(disagreement(
+            "vector width",
+            geometry.vector_width.to_string(),
+            frozen.vector_width.to_string(),
+        ));
+    }
+    if geometry.ring_slots != frozen.ring_slots || geometry.roles != frozen.roles {
+        return Err(disagreement(
+            "pipeline",
+            format!(
+                "{} slots across {} roles",
+                geometry.ring_slots,
+                geometry.roles.len()
+            ),
+            format!(
+                "{} slots across {} roles",
+                frozen.ring_slots,
+                frozen.roles.len()
+            ),
+        ));
+    }
+    if geometry.barrier_phases.len() != frozen.barriers.len() {
+        return Err(disagreement(
+            "barrier boundaries",
+            geometry.barrier_phases.len().to_string(),
+            frozen.barriers.len().to_string(),
+        ));
+    }
+    for (recorded, projected) in geometry.barrier_phases.iter().zip(&frozen.barriers) {
+        if recorded.scope != projected.scope {
+            return Err(disagreement(
+                "barrier scope",
+                format!("{:?}", recorded.scope),
+                format!("{:?}", projected.scope),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Decode one selected group's programs and refuse a program whose declared
+/// geometry is not the one the artifact authenticated.
+///
+/// The artifact freezes every node program at the selected workgroup, so this
+/// boundary has nothing to choose. It used to rewrite the shape here instead,
+/// which meant the authenticated bytes and the emitted module could disagree on
+/// the one field a launch cannot recover from.
 fn decode_group(
     artifact: &Artifact,
     group: &FusionRecord,
@@ -497,12 +663,29 @@ fn decode_group(
                         group.id.0, node.0
                     ))
                 })?;
-            Program::from_wire(&record.program).map_err(|error| {
+            let program = Program::from_wire(&record.program).map_err(|error| {
                 TargetCompileError::InvalidArtifact(format!(
                     "node {} canonical Program failed to decode: {error}",
                     node.0
                 ))
-            })
+            })?;
+            let geometry = artifact
+                .geometry()
+                .iter()
+                .find(|geometry| geometry.node == *node)
+                .ok_or_else(|| {
+                    TargetCompileError::InvalidArtifact(format!(
+                        "node {} has no selected launch geometry",
+                        node.0
+                    ))
+                })?;
+            if program.workgroup_size != geometry.workgroup_size {
+                return Err(TargetCompileError::InvalidArtifact(format!(
+                    "node {} declares workgroup {:?} and the artifact selected {:?}",
+                    node.0, program.workgroup_size, geometry.workgroup_size
+                )));
+            }
+            Ok::<Program, TargetCompileError>(program)
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(SelectedModule {
@@ -511,4 +694,207 @@ fn decode_group(
         nodes,
         programs,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    //! WHY: the allocation plan states where every value lives and which stages
+    //! hold it. Lowering binds storage, so a binding the plan does not authorize
+    //! is a device that reads bytes nobody wrote or writes storage the caller
+    //! owns read-only. Each case below mutates one plan field of an otherwise
+    //! selected artifact and requires the projection to refuse it.
+    //!
+    //! What this does NOT catch: a plan that disagrees with the resource records
+    //! it was derived from. Decode rejects that before a module is projected.
+
+    use std::collections::BTreeMap;
+
+    use vyre_foundation::ir::{BufferAccess, GraphInput, GraphOutput, ProgramGraph, ValueLifetime};
+    use vyre_test_support::graph_values::{graph_output, u32_symbolic};
+    use vyre_test_support::pass_programs::copy_program;
+
+    use super::{
+        compile_selected_modules, Artifact, TargetCompileError, TargetPayloadFormat, TargetProfile,
+        TargetResourceBinding,
+    };
+    use crate::allocation::{AddressSpace, RegionOwner};
+    use crate::schema::ResourceLifetime;
+    use crate::{
+        compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
+        ObjectiveMetric, SearchBudget,
+    };
+
+    /// Two chained nodes: `middle` is written at one stage and read at the next,
+    /// so the plan owns one region and the caller owns the rest.
+    fn chained_artifact() -> Artifact {
+        let mut graph = ProgramGraph::new();
+        let input = graph
+            .add_external_value(
+                "input",
+                u32_symbolic(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+            )
+            .expect("Fix: keep the fixture input value acceptable.");
+        let (_, produced) = graph
+            .add_node(
+                "alpha",
+                copy_program("input", "middle"),
+                vec![GraphInput {
+                    buffer: "input".into(),
+                    value: input,
+                    contract: u32_symbolic(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                }],
+                vec![graph_output(
+                    "middle",
+                    u32_symbolic(BufferAccess::ReadWrite, ValueLifetime::Invocation),
+                )],
+            )
+            .expect("Fix: keep the fixture producer node acceptable.");
+        graph
+            .add_node(
+                "beta",
+                copy_program("middle", "result"),
+                vec![GraphInput {
+                    buffer: "middle".into(),
+                    value: produced[0],
+                    contract: u32_symbolic(BufferAccess::ReadWrite, ValueLifetime::Invocation),
+                }],
+                vec![GraphOutput {
+                    buffer: "result".into(),
+                    name: "result".into(),
+                    contract: u32_symbolic(BufferAccess::ReadWrite, ValueLifetime::Output),
+                    retained_successor_of: None,
+                }],
+            )
+            .expect("Fix: keep the fixture consumer node acceptable.");
+        let request = CompileRequest::new(
+            graph,
+            ExternalFacts::new(Digest([0xA5; 32]), BTreeMap::from([("items".into(), 24)])),
+            DeviceFacts::unknown(),
+            SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+            CompileObjective::minimize_latency()
+                .with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+        )
+        .validate()
+        .expect("Fix: keep the fixture request validatable.");
+        compile(&request).expect("Fix: keep the fixture request compilable.")
+    }
+
+    /// Index of the first region `owner` holds whose placement has `lifetime`.
+    fn region_of(artifact: &Artifact, owner: RegionOwner, lifetime: ResourceLifetime) -> usize {
+        artifact
+            .allocation()
+            .regions
+            .iter()
+            .position(|region| {
+                region.owner == owner
+                    && region
+                        .placements
+                        .iter()
+                        .any(|placement| placement.lifetime == lifetime)
+            })
+            .expect("Fix: keep the fixture graph producing one such region.")
+    }
+
+    /// Sentinel the fixture emitter fails with once projection has happened.
+    const PROJECTED: &str = "fixture emitter stops once bindings are projected";
+
+    /// Projects the bindings of every selected group through the real boundary.
+    fn project(artifact: &Artifact) -> Result<Vec<TargetResourceBinding>, TargetCompileError> {
+        let mut projected = Vec::new();
+        let outcome = compile_selected_modules(
+            artifact,
+            TargetPayloadFormat::new("test.target-binary", 1)
+                .expect("Fix: keep the fixture format valid."),
+            TargetProfile::new("test.target-binary", 1, [64, 1, 1], 64, 1_024, 0)
+                .expect("Fix: keep the fixture profile valid."),
+            |selected, _| {
+                projected.extend(selected.canonical_bindings.iter().cloned());
+                Err(TargetCompileError::Unsupported(PROJECTED.into()))
+            },
+        );
+        match outcome {
+            Ok(_) => Ok(projected),
+            Err(TargetCompileError::Unsupported(message)) if message == PROJECTED => Ok(projected),
+            Err(other) => Err(other),
+        }
+    }
+
+    fn refusal(artifact: &Artifact) -> String {
+        project(artifact)
+            .expect_err("Fix: refuse a binding the allocation plan does not authorize.")
+            .to_string()
+    }
+
+    #[test]
+    fn every_projected_binding_addresses_storage_the_plan_placed() {
+        let artifact = chained_artifact();
+        let bindings = project(&artifact).expect("Fix: keep a consistent plan projectable.");
+        assert!(!bindings.is_empty());
+        for binding in &bindings {
+            let placed = artifact.allocation().placement(binding.resource).is_some();
+            let empty = artifact
+                .resources()
+                .iter()
+                .find(|record| record.value == binding.resource)
+                .is_none_or(|record| record.byte_count == 0);
+            assert!(
+                placed || empty,
+                "value {} is bound with no placement",
+                binding.resource.0
+            );
+        }
+    }
+
+    #[test]
+    fn a_value_the_plan_places_nowhere_has_no_storage_to_bind() {
+        let mut artifact = chained_artifact();
+        let region = region_of(
+            &artifact,
+            RegionOwner::Artifact,
+            ResourceLifetime::Invocation,
+        );
+        artifact.payload.allocation.regions.remove(region);
+        let message = refusal(&artifact);
+        assert!(
+            message.contains("the allocation plan places nowhere"),
+            "the refusal must name the unplaced value: {message}"
+        );
+    }
+
+    #[test]
+    fn a_group_outside_a_placement_live_range_binds_reused_bytes() {
+        let mut artifact = chained_artifact();
+        let last = artifact
+            .allocation()
+            .regions
+            .iter()
+            .flat_map(|region| &region.placements)
+            .map(|placement| placement.last_stage)
+            .max()
+            .expect("Fix: keep the fixture plan placing at least one value.");
+        for group in &mut artifact.payload.selected_plan.fusion {
+            group.stage = last + 1;
+        }
+        let message = refusal(&artifact);
+        assert!(
+            message.contains("which the allocation plan holds over stages"),
+            "the refusal must name the live range: {message}"
+        );
+    }
+
+    #[test]
+    fn constant_space_storage_is_never_bound_writable() {
+        let mut artifact = chained_artifact();
+        let region = region_of(
+            &artifact,
+            RegionOwner::Artifact,
+            ResourceLifetime::Invocation,
+        );
+        artifact.payload.allocation.regions[region].address_space = AddressSpace::Constant;
+        let message = refusal(&artifact);
+        assert!(
+            message.contains("writable"),
+            "the refusal must name the writable constant bind: {message}"
+        );
+    }
 }

@@ -1,6 +1,6 @@
 //! Polyhedral / affine fusion queries over pass dependency graphs.
 
-use super::dataflow_fixpoint::reachability_closure_into;
+use super::semiring_closure::reachability_closure_into;
 
 /// Return an `n x n` mask of independently fusable pass pairs.
 ///

@@ -1,11 +1,15 @@
-//! Scaffold one launch-rule contract and its truth-test directories.
+//! Scaffold one launch-rule contract and its truth-data directories.
 //!
-//! Run via `cargo xtaskbin scaffold_rule -- <slug>`.
-//! The command writes a contract and positive, negative, evasion, cross-file,
-//! CVE replay, property, differential, and end-to-end test placeholders.
+//! Run via `./cargo_full run -p xtask --bin scaffold_rule -- <slug>`.
+//! The command writes a contract plus positive, negative, evasion and
+//! cross-file case directories and the CVE replay, property, differential and
+//! end-to-end truth manifests, all under `rules/launch/<slug>/` in this
+//! repository. `rule_tree` owns the layout and refuses any path outside it.
 
 use std::fs;
 use std::path::Path;
+
+use xtask::rule_tree;
 
 fn fatal(message: &str) -> ! {
     eprintln!("Fix: {message}");
@@ -13,6 +17,7 @@ fn fatal(message: &str) -> ! {
 }
 
 fn create_dir(path: &Path) {
+    rule_tree::require_inside_repository(path);
     if let Err(error) = fs::create_dir_all(path) {
         eprintln!("Fix: failed to create `{}`: {error}", path.display());
         std::process::exit(1);
@@ -20,6 +25,7 @@ fn create_dir(path: &Path) {
 }
 
 fn write_file(path: &Path, contents: &str) {
+    rule_tree::require_inside_repository(path);
     if let Err(error) = fs::write(path, contents) {
         eprintln!("Fix: failed to write `{}`: {error}", path.display());
         std::process::exit(1);
@@ -80,22 +86,21 @@ fn main() {
         std::process::exit(2);
     }
 
-    let launch_dir = Path::new("../../../../../rules/launch").join(&slug);
+    let launch_dir = rule_tree::launch_dir().join(&slug);
     create_dir(&launch_dir);
 
     write_file(&launch_dir.join("CONTRACT.md"), "# Rule Contract\n");
 
-    let test_dir = Path::new("../../../../../tests/launch_rule_truth").join(&slug);
-    create_dir(&test_dir);
+    let truth_dir = rule_tree::truth_dir(&slug);
+    create_dir(&truth_dir);
 
-    for d in &["positives", "negatives", "evasions", "cross_file"] {
-        create_dir(&test_dir.join(d));
+    for case_class in rule_tree::TRUTH_DIRS {
+        create_dir(&truth_dir.join(case_class));
     }
 
-    write_file(&test_dir.join("cve_replay.toml"), "");
-    write_file(&test_dir.join("property.rs"), "");
-    write_file(&test_dir.join("differential.toml"), "");
-    write_file(&test_dir.join("e2e_cli.rs"), "");
+    for manifest in rule_tree::TRUTH_FILES {
+        write_file(&truth_dir.join(manifest), "");
+    }
 
     println!("Scaffolded rule {}", slug);
 }

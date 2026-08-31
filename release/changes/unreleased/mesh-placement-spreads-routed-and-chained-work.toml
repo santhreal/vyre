@@ -1,0 +1,2 @@
+category = "Added"
+text = "Mesh placement cuts a routed region across shards, runs a chain of regions as a pipeline of stage devices, and ranks both against the single-device placement."

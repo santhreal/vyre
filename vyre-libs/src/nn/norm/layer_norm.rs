@@ -12,19 +12,22 @@
 //!
 //! Both paths emit byte-identical IR.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
-
-use crate::builder::{check_tensors, strided_accumulate2_child, BuildOptions};
-use crate::nn::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
+use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
+use vyre_foundation::composition::trap_program;
 #[cfg(test)]
-use crate::region::wrap;
-use crate::tensor_ref::{TensorRef, TensorRefError};
+use vyre_foundation::composition::wrap_region;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+
+use crate::builder::reduction::{ReductionComposer, ReductionPhase};
+use crate::builder::{
+    check_same_shape, check_tensors, checked_element_count, strided_accumulate2_child,
+    strided_writeback_child, BuildOptions,
+};
+use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
 const OP_ID: &str = "vyre-libs::nn::layer_norm";
 #[cfg(test)]
 const LAYER_NORM_REFERENCE_OP_ID: &str = "vyre-libs::nn::layer_norm_reference";
-const LAYER_NORM_TILE: u32 = 256;
 
 /// Typed Cat-A builder for [`layer_norm`].
 #[derive(Debug, Clone)]
@@ -59,14 +62,7 @@ impl LayerNorm {
             OP_ID,
             &[(&self.input, DataType::F32), (&self.output, DataType::F32)],
         )?;
-        if self.input.shape != self.output.shape {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.output.name.as_str().to_string(),
-                found: self.output.shape.to_vec(),
-                expected: self.input.shape.to_vec(),
-                op: OP_ID,
-            });
-        }
+        check_same_shape(OP_ID, &self.input, &self.output)?;
         // V7-CORR-008: reject negative or NaN eps so sqrt(var + eps) never
         // poisons the output with NaN. Positive zero is allowed (the
         // caller accepts exact-divide-by-zero risk on zero-variance input).
@@ -78,27 +74,10 @@ impl LayerNorm {
                 op: OP_ID,
             });
         }
-        let n = self
-            .input
-            .element_count()
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: self.input.name_str().to_string(),
-                shape: self.input.shape.to_vec(),
-            })?;
-        // V7-CORR-012/013 parallel: reject n=0 so the first `Expr::load(input, 0)`
-        // is not out-of-bounds.
-        if n == 0 {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.input.name.as_str().to_string(),
-                found: self.input.shape.to_vec(),
-                expected: vec![1],
-                op: OP_ID,
-            });
-        }
-        let workgroup = self
-            .options
-            .workgroup_size
-            .unwrap_or([LAYER_NORM_TILE, 1, 1]);
+        // V7-CORR-012/013 parallel: the nonzero floor `checked_element_count`
+        // enforces is what keeps the first `Expr::load(input, 0)` in bounds.
+        let n = checked_element_count(OP_ID, &self.input)?;
+        let workgroup = self.options.workgroup_size.unwrap_or([256, 1, 1]);
         let tile = workgroup[0].max(1).min(n);
         let workgroup = [tile, workgroup[1], workgroup[2]];
         let chunks = n.div_ceil(tile);
@@ -152,9 +131,7 @@ fn layer_norm_tiled_program(spec: &LayerNormTiledSpec<'_>) -> Program {
         workgroup,
         generator,
     } = *spec;
-    let local = Expr::var("local");
-    let idx = Expr::var("idx");
-    let moments = ReducePhase {
+    let moments = ReductionPhase {
         accumulate: strided_accumulate2_child(
             OP_ID,
             tile,
@@ -224,43 +201,27 @@ fn layer_norm_tiled_program(spec: &LayerNormTiledSpec<'_>) -> Program {
             },
         ],
     };
-    // Layer norm keeps its own writeback loop instead of the shared
-    // `strided_writeback_child`: the reduced statistics are read once per
-    // workgroup rather than once per lane, so the guard is a single
-    // first-workgroup branch with no child region around it.
-    let writeback = Node::if_then(
-        Expr::is_first_workgroup(),
+    let writeback = strided_writeback_child(
+        OP_ID,
+        tile,
+        chunks,
+        n,
+        output,
         vec![
             Node::let_bind("mean", Expr::load("ln_stats", Expr::u32(0))),
             Node::let_bind("scale", Expr::load("ln_stats", Expr::u32(1))),
-            Node::loop_for(
-                "chunk",
-                Expr::u32(0),
-                Expr::u32(chunks),
-                vec![
-                    Node::let_bind(
-                        "idx",
-                        Expr::add(Expr::mul(Expr::var("chunk"), Expr::u32(tile)), local),
-                    ),
-                    Node::if_then(
-                        Expr::lt(idx.clone(), Expr::u32(n)),
-                        vec![Node::Store {
-                            buffer: output.into(),
-                            index: idx.clone(),
-                            value: Expr::mul(
-                                Expr::sub(Expr::load(input, idx), Expr::var("mean")),
-                                Expr::var("scale"),
-                            ),
-                        }],
-                    ),
-                ],
-            ),
         ],
+        |idx| {
+            Expr::mul(
+                Expr::sub(Expr::load(input, idx), Expr::var("mean")),
+                Expr::var("scale"),
+            )
+        },
     );
 
-    tiled_reduce_program(TiledReduceProgram {
+    ReductionComposer::new(
         generator,
-        buffers: vec![
+        vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
             BufferDecl::workgroup("ln_sum_scratch", tile, DataType::F32),
             BufferDecl::workgroup("ln_sq_scratch", tile, DataType::F32),
@@ -268,9 +229,10 @@ fn layer_norm_tiled_program(spec: &LayerNormTiledSpec<'_>) -> Program {
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         workgroup,
-        phases: vec![moments],
-        writeback,
-    })
+    )
+    .with_phase(moments)
+    .with_writeback(writeback)
+    .build()
 }
 
 #[cfg(test)]
@@ -369,7 +331,7 @@ fn layer_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> 
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         [1, 1, 1],
-        vec![wrap(LAYER_NORM_REFERENCE_OP_ID, body, None)],
+        vec![wrap_region(LAYER_NORM_REFERENCE_OP_ID, body, None)],
     )
 }
 
@@ -384,45 +346,38 @@ pub fn layer_norm(input: &str, output: &str, n: u32, eps: f32) -> Program {
     )
     .build()
     .unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             OP_ID,
-            output,
-            DataType::F32,
+            Some((output, DataType::F32)),
             format!("Fix: layer_norm build failed: {err}"),
         )
     })
 }
 
+const EXPECTED_LAYER_NORM_OUTPUT_BYTES: [u8; 16] = [0u8; 16];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(1),
-        id: "vyre-libs::nn::layer_norm",
-        build: Some(|| layer_norm("input", "output", 4, 1e-5)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        "vyre-libs::nn::layer_norm",
+        || layer_norm("input", "output", 4, 1e-5),
+        Some(|| {
             let input = [2.0f32, 2.0, 2.0, 2.0];
             vec![vec![
                 vyre_primitives::wire::pack_f32_slice(&input),
             ]]
         }),
-        expected_output: Some(|| vec![
-            vec![
-                vec![0; 16],
-            ],
-        ]),
-        category: Some("nn"),
-    }
+        Some(|| vec![vec![EXPECTED_LAYER_NORM_OUTPUT_BYTES.to_vec()]]),
+    )
+    .with_category("nn")
+    .with_numeric(vyre_foundation::numeric::NumericContract::ieee_f32(1))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::assert_tiled_matches_reference;
+    use crate::fixture_bytes::eval_f32;
+    use crate::fixture_bytes::try_eval_bytes;
 
     #[test]
     fn builder_rejects_dtype_mismatch() {
@@ -493,25 +448,13 @@ mod tests {
         let input = (0..n)
             .map(|i| ((i as f32) * 0.031).sin() * 2.5 + (i % 13) as f32 * 0.0625)
             .collect::<Vec<_>>();
-        let run = |program: Program| {
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[
-                    Value::from(f32_bytes(&input)),
-                    Value::from(vec![0u8; n as usize * 4]),
-                ],
-            )
-            .expect("Fix: layer_norm program must execute in the reference interpreter.");
-            decode_f32(&outputs[0].to_bytes())
-        };
-        let actual = run(layer_norm("input", "output", n, eps));
-        let expected = run(layer_norm_reference_program("input", "output", n, eps));
-        for (idx, (lhs, rhs)) in actual.iter().zip(expected.iter()).enumerate() {
-            assert!(
-                (lhs - rhs).abs() <= 1.0e-4,
-                "layer_norm mismatch at lane {idx}: tiled={lhs:?} reference={rhs:?}"
-            );
-        }
+        assert_tiled_matches_reference(
+            "layer_norm",
+            &input,
+            1.0e-4,
+            &layer_norm("input", "output", n, eps),
+            &layer_norm_reference_program("input", "output", n, eps),
+        );
     }
 
     // Adversarial float tests: expose tolerance misconfiguration gaps.
@@ -524,12 +467,7 @@ mod tests {
         let eps = 1e-5_f32;
         let input = [3.0f32; 4];
         let program = layer_norm("input", "output", n, eps);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: layer_norm must not panic on zero-variance input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("layer_norm", &program, &[&input[..]], 4);
         for (i, &v) in out.iter().enumerate() {
             assert!(
                 v.abs() <= 1.0e-4,
@@ -546,12 +484,7 @@ mod tests {
         let eps = 1e-5_f32;
         let input = [1e20f32, -1e20, 1e20, -1e20];
         let program = layer_norm("input", "output", n, eps);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: layer_norm must not panic on large-variance input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("layer_norm", &program, &[&input[..]], 4);
         for (i, &v) in out.iter().enumerate() {
             assert!(
                 v.is_finite(),
@@ -570,12 +503,7 @@ mod tests {
         // output = (x - x) / sqrt(eps) = 0.
         let input = [5.0f32];
         let program = layer_norm("input", "output", 1, 1e-5);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: layer_norm single element must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("layer_norm", &program, &[&input[..]], 1);
         assert!(
             out[0].abs() <= 1.0e-4,
             "layer_norm single element must be ~0, got {}",
@@ -598,11 +526,8 @@ mod tests {
             "layer_norm n=0 shape error: {err:?}"
         );
         let program = layer_norm("input", "output", 0, 1e-5);
-        let eval_err = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(vec![0u8; 4]), Value::from(vec![0u8; 4])],
-        )
-        .expect_err("layer_norm n=0 must trap instead of producing output");
+        let eval_err = try_eval_bytes(&program, vec![vec![0u8; 4], vec![0u8; 4]])
+            .expect_err("layer_norm n=0 must trap instead of producing output");
         let msg = eval_err.to_string();
         assert!(
             msg.contains("trap") || msg.contains("Fix:"),
@@ -617,12 +542,7 @@ mod tests {
         fn layer_norm_output_mean_is_zero(input in prop::collection::vec(-1e10f32..1e10f32, 2..32)) {
             let n = input.len() as u32;
             let program = layer_norm("input", "output", n, 1e-5);
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; input.len() * 4])],
-            )
-            .expect("Fix: layer_norm must execute");
-            let out = decode_f32(&outputs[0].to_bytes());
+            let out = eval_f32("layer_norm", &program, &[&input[..]], input.len());
             let mean = out.iter().sum::<f32>() / out.len() as f32;
             prop_assert!(
                 mean.abs() <= 1.0e-3 || mean.is_nan(),

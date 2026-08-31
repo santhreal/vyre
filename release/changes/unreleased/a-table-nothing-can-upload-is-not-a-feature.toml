@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The `intern` feature and its CHD perfect-hash module are gone. The module documented GPU consumers uploading its three buffers and never exposed them, no operation or program consumed it, and its host `lookup` was a CPU implementation of the device semantics the crate is forbidden to carry. Shipping it a release earlier turned five host semantic twins reachable from no production root into `host-oracle-elimination` findings."

@@ -183,6 +183,15 @@ impl Node {
         Self::Return
     }
 
+    /// Schedule-free synchronization boundary.
+    ///
+    /// Selected-schedule lowering chooses the physical barrier represented by
+    /// this semantic ordering boundary before descriptor construction.
+    #[must_use]
+    pub const fn logical_barrier(ordering: MemoryOrdering) -> Self {
+        Self::LogicalBarrier { ordering }
+    }
+
     /// Workgroup barrier statement.
     ///
     /// # Examples
@@ -249,19 +258,20 @@ impl Node {
         }
     }
 
-    /// Begin an asynchronous transfer stream region (GPU-driven).
+    /// Begin an asynchronous transfer stream region that names its own
+    /// operands, so the GPU drives the transfer.
     ///
     /// # Examples
     ///
     /// ```
     /// use vyre::ir::{Node, Expr};
     ///
-    /// let node = Node::async_load_ext("ssd", "vram", Expr::u32(0), Expr::u32(1024), "tag-0");
+    /// let node = Node::async_load_gpu_driven("ssd", "vram", Expr::u32(0), Expr::u32(1024), "tag-0");
     /// assert!(matches!(node, Node::AsyncLoad { .. }));
     /// ```
     #[must_use]
     #[inline]
-    pub fn async_load_ext(
+    pub fn async_load_gpu_driven(
         source: impl Into<Ident>,
         destination: impl Into<Ident>,
         offset: Expr,
@@ -277,11 +287,16 @@ impl Node {
         }
     }
 
-    /// Begin an asynchronous transfer stream region (legacy/host-driven).
+    /// Begin an asynchronous transfer stream region carrying only a tag.
+    ///
+    /// The host drives the transfer and knows the buffers out of band, so the
+    /// node records placeholder operands. Emit
+    /// [`Node::async_load_gpu_driven`] when the source, destination, offset,
+    /// and size are known in the IR.
     #[must_use]
     #[inline]
     pub fn async_load(tag: impl Into<Ident>) -> Self {
-        Self::async_load_ext(
+        Self::async_load_gpu_driven(
             "__legacy_src__",
             "__legacy_dst__",
             Expr::u32(0),
@@ -340,6 +355,85 @@ impl Node {
     #[inline]
     pub fn resume(tag: impl Into<Ident>) -> Self {
         Self::Resume { tag: tag.into() }
+    }
+
+    /// Load a tile from a buffer: `tile = load_tile(buffer, origin, layout);`
+    #[must_use]
+    #[inline]
+    pub fn tile_load(
+        tile: impl Into<Ident>,
+        tile_type: crate::ir_inner::model::tile::Tile,
+        buffer: impl Into<Ident>,
+        origin: Vec<Expr>,
+        layout: crate::ir_inner::model::tile::Layout,
+    ) -> Self {
+        Self::TileLoad {
+            tile: tile.into(),
+            tile_type,
+            buffer: buffer.into(),
+            origin,
+            layout,
+        }
+    }
+
+    /// Store a tile to a buffer: `store_tile(buffer, origin, tile);`
+    #[must_use]
+    #[inline]
+    pub fn tile_store(buffer: impl Into<Ident>, origin: Vec<Expr>, tile: impl Into<Ident>) -> Self {
+        Self::TileStore {
+            buffer: buffer.into(),
+            origin,
+            tile: tile.into(),
+        }
+    }
+
+    /// Accumulate matrix product: `acc += a x b;`
+    #[must_use]
+    #[inline]
+    pub fn tile_matmul(acc: impl Into<Ident>, a: impl Into<Ident>, b: impl Into<Ident>) -> Self {
+        Self::TileMatmul {
+            acc: acc.into(),
+            a: a.into(),
+            b: b.into(),
+        }
+    }
+
+    /// Reduce tile along axis: `out = reduce_tile(tile, op, axis);`
+    #[must_use]
+    #[inline]
+    pub fn tile_reduce(
+        out: impl Into<Ident>,
+        tile: impl Into<Ident>,
+        op: crate::ir_inner::model::op_signature::SubgroupReduceOp,
+        axis: u32,
+    ) -> Self {
+        Self::TileReduce {
+            out: out.into(),
+            tile: tile.into(),
+            op,
+            axis,
+        }
+    }
+
+    /// Apply elementwise body: `out = elementwise(inputs, body);`
+    #[must_use]
+    #[inline]
+    pub fn tile_elementwise(out: impl Into<Ident>, inputs: Vec<Ident>, body: Vec<Node>) -> Self {
+        Self::TileElementwise {
+            out: out.into(),
+            inputs,
+            body,
+        }
+    }
+
+    /// Declare a tile binding: `tile name: Tile;`
+    #[must_use]
+    #[inline]
+    pub fn tile_decl(name: impl Into<Ident>, tile: crate::ir_inner::model::tile::Tile) -> Self {
+        Self::TileDecl {
+            name: name.into(),
+            tile,
+        }
     }
 
     /// Wrap a downstream extension statement node.

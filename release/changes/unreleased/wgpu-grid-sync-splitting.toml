@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "WGPU resident dispatch now splits `GridSync` programs at launch boundaries before compilation, preventing oversized resident fixed-point grids from deadlocking inside a software global barrier."

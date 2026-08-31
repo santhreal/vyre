@@ -8,32 +8,33 @@
 //! avoid producing duplicate / shadowing bindings that the block-scoped IR
 //! validator rejects (V008 / V032).
 //!
-//! Traversal descends into `If`/`Loop`/`Block`/`Region` bodies. Names that
-//! appear only inside expressions (e.g. `Expr::Var`) are *uses*, not bindings,
+//! Traversal descends through `child_bodies`, the exhaustive owner of which
+//! variants nest statements, and the per-node answer comes from `node_scalars`,
+//! the exhaustive owner of the scalar namespace, so a new nesting variant
+//! cannot hide a binding and a new binding form cannot be classified as "binds
+//! nothing" by a catch-all arm.
+//! Names that appear only inside expressions (e.g. `Expr::Var`) are *uses*, not bindings,
 //! and are intentionally skipped.
 
 use crate::ir::{Ident, Node};
+use crate::visit::{child_bodies, node_scalars, NameBinding};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Invoke `visit` once for every binding name introduced by `nodes`
 /// (recursively): each `Let` name and each `Loop` variable.
+///
+/// A `Node::Assign` writes a name the enclosing scope already declares, so it
+/// reports [`NameBinding::Reassign`] and is not a binding here. Counting it as
+/// one would show a scope-extension pass a duplicate declaration and make it
+/// refuse a legal rewrite.
 pub(crate) fn for_each_bound_name(nodes: &[Node], visit: &mut impl FnMut(&Ident)) {
     for node in nodes {
-        match node {
-            Node::Let { name, .. } => visit(name),
-            Node::Loop { var, body, .. } => {
-                visit(var);
-                for_each_bound_name(body, visit);
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                for_each_bound_name(then, visit);
-                for_each_bound_name(otherwise, visit);
-            }
-            Node::Block(body) => for_each_bound_name(body, visit),
-            Node::Region { body, .. } => for_each_bound_name(body, visit),
-            _ => {}
+        match node_scalars(node).binding {
+            Some((NameBinding::Declare | NameBinding::Induction, name)) => visit(name),
+            Some((NameBinding::Reassign, _)) | None => {}
+        }
+        for body in child_bodies(node) {
+            for_each_bound_name(body, visit);
         }
     }
 }

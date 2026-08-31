@@ -1,16 +1,16 @@
 //! Parity test: vyre-primitives predicate size_argument_of matches CPU oracle.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::graph::csr_backward_traverse::csr_backward_traverse_dispatch_grid;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
-use vyre_primitives::predicate::node_kind;
-use vyre_primitives::predicate::size_argument_of::{cpu_ref as size_arg_cpu, size_argument_of};
+use vyre_libs::graph::program_graph::ProgramGraphShape;
+use vyre_libs::predicate::edge_kind;
+use vyre_libs::predicate::node_kind;
+use vyre_libs::predicate::size_argument_of::size_argument_of;
+use vyre_reference::composition_witness::csr_backward_traverse_witness;
 
 fn run(
     node_count: u32,
@@ -38,8 +38,7 @@ fn run(
         // frontier_out: zero-init.
         vec![0u8; words as usize * 4],
     ];
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some(csr_backward_traverse_dispatch_grid(node_count));
+    let config = DispatchConfig::default();
     let outputs = with_live_backend("predicate size argument", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -64,13 +63,13 @@ fn cuda_size_arg_marks_callers_of_callee_set() {
     let edge_targets = vec![1u32, 2, 3, 0];
     let edge_kind_mask = vec![edge_kind::CALL_ARG, 0, edge_kind::CALL_ARG, 0];
     let frontier_in = vec![0b1010u32];
-    let cpu = size_arg_cpu(
+    let cpu = csr_backward_traverse_witness(
         4,
-        &nodes,
         &edge_offsets,
         &edge_targets,
         &edge_kind_mask,
         &frontier_in,
+        edge_kind::CALL_ARG,
     );
     let gpu = run(
         4,
@@ -92,13 +91,13 @@ fn cuda_size_arg_no_call_arg_edges_yields_zero() {
     // ASSIGNMENT, not CALL_ARG  -  should be filtered.
     let edge_kind_mask = vec![edge_kind::ASSIGNMENT, edge_kind::ASSIGNMENT];
     let frontier_in = vec![0b110u32];
-    let cpu = size_arg_cpu(
+    let cpu = csr_backward_traverse_witness(
         3,
-        &nodes,
         &edge_offsets,
         &edge_targets,
         &edge_kind_mask,
         &frontier_in,
+        edge_kind::CALL_ARG,
     );
     let gpu = run(
         3,
@@ -119,13 +118,13 @@ fn cuda_size_arg_empty_frontier_yields_zero() {
     let edge_targets = vec![1u32];
     let edge_kind_mask = vec![edge_kind::CALL_ARG];
     let frontier_in = vec![0u32];
-    let cpu = size_arg_cpu(
+    let cpu = csr_backward_traverse_witness(
         2,
-        &nodes,
         &edge_offsets,
         &edge_targets,
         &edge_kind_mask,
         &frontier_in,
+        edge_kind::CALL_ARG,
     );
     let gpu = run(
         2,
@@ -154,13 +153,13 @@ fn cuda_size_arg_marks_argument_past_first_workgroup() {
     let mut frontier_in = vec![0u32; words];
     frontier_in[512 / 32] |= 1u32 << (512 % 32);
 
-    let cpu = size_arg_cpu(
+    let cpu = csr_backward_traverse_witness(
         node_count,
-        &nodes,
         &edge_offsets,
         &edge_targets,
         &edge_kind_mask,
         &frontier_in,
+        edge_kind::CALL_ARG,
     );
     let gpu = run(
         node_count,

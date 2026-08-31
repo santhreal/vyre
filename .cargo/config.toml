@@ -1,8 +1,15 @@
 [build]
-jobs = 16
+# Parallelism is deliberately unset. Cargo's default is the host's logical CPU
+# count, which is right on a 32-thread workstation and on a 4-vCPU hosted
+# runner alike. A fixed 16 under-uses the first and starves the second: it put
+# sixteen concurrent linkers against 16 GiB of hosted-runner memory.
 
 [env]
 PROPTEST_DISABLE_FAILURE_PERSISTENCE = "1"
+
+# The target directory is host configuration. Keeping it outside this tracked
+# file lets each checkout and CI runner choose an isolated writable directory
+# without exporting a build override from this wrapper.
 
 [alias]
 xtask = "run -p xtask --bin xtask --"

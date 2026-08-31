@@ -329,19 +329,7 @@ mod tests {
         use super::collect_custom_metrics;
         // Verify the collect path: build BenchMetrics with custom points for each
         // synthetic workload name and confirm they appear in the sample map.
-        let names = [
-            "condition_records",
-            "quantified_records",
-            "scatter_records",
-            "aggregation_records",
-            "entropy_records",
-            "alias_records",
-            "ifds_records",
-            "ast_nodes",
-            "queued_records",
-            "rewrite_records",
-            "callgraph_witness_digest",
-        ];
+        let names = crate::runner::execute::metric_keys::SYNTHETIC_COUNT_METRIC_NAMES;
         let mut metrics = BenchMetrics::default();
         for (i, name) in names.iter().enumerate() {
             metrics.custom.push(MetricPoint {
@@ -361,5 +349,24 @@ mod tests {
                  got {actual:?}"
             );
         }
+    }
+    /// WHY: a non-dispatch evidence case reports an explicit zero launch count.
+    /// Dropping zero here makes release normalization invent one launch.
+    #[test]
+    fn collect_custom_metrics_preserves_explicit_zero_kernel_launches() {
+        use super::collect_custom_metrics;
+
+        let metrics = BenchMetrics {
+            custom: vec![MetricPoint {
+                name: "kernel_launches".to_string(),
+                value: 0,
+            }],
+            ..Default::default()
+        };
+        let mut samples = BTreeMap::new();
+
+        collect_custom_metrics("", &metrics, &mut samples);
+
+        assert_eq!(samples.get("kernel_launches"), Some(&vec![0]));
     }
 }

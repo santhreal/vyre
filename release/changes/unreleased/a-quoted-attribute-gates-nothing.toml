@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A cfg attribute quoted inside a comment or a string literal no longer gates the item written after it, so a file that documents the scanner keeps its production code in the scanned text and its test fixtures out of it, and a malformed attribute no longer leaves every later test item classed as production."

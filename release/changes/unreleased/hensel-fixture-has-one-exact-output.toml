@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The registered Hensel lift operation now supplies one exact output buffer, preserves signed fixed-point fixture inputs, and matches the kernel's truncation semantics."

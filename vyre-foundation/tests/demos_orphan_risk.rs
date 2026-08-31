@@ -1,127 +1,89 @@
-//! Demos / examples orphan-risk contract.
+//! What the root manifest must say about the example crates.
 //!
-//! Example crates must not silently drift from the workspace. They must either
-//! be workspace members, declare themselves as standalone workspaces, or be
-//! explicitly baselined as external. Removed demos must not leave stale
-//! references in the root Cargo.toml.
+//! An example directory that becomes a workspace member drags an out-of-tree
+//! demonstrator into every workspace build and lets it inherit the workspace
+//! lints, patches and features it exists to prove a consumer does not need.
+//! `exclude` is what keeps it out, so the manifest is the contract and this is
+//! where it is read.
+//!
+//! Whether each example carries a manifest, declares its own workspace, builds
+//! outside this tree and passes what it asserts belongs to the
+//! `example-capability` gate, which builds them. Nothing here restates it.
 
-use std::collections::HashSet;
-use std::path::PathBuf;
+use std::collections::BTreeSet;
+use std::path::Path;
+
+use vyre_test_support::monorepo::{vyre_workspace_root, vyre_workspace_rosters};
+
+/// Directory names under `examples/` that carry at least one file.
+fn example_directories(examples: &Path) -> BTreeSet<String> {
+    let Ok(entries) = std::fs::read_dir(examples) else {
+        return BTreeSet::new();
+    };
+    entries
+        .flatten()
+        .filter(|entry| entry.path().is_dir())
+        .filter(|entry| {
+            entry.path().read_dir().is_ok_and(|files| {
+                files
+                    .flatten()
+                    .any(|file| file.file_type().is_ok_and(|kind| kind.is_file()))
+            })
+        })
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect()
+}
 
 #[test]
-fn examples_are_in_workspace_or_standalone() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
-    let examples_dir = workspace_root.join("examples");
-    if !examples_dir.is_dir() {
-        return;
-    }
-
-    let root_toml = std::fs::read_to_string(workspace_root.join("Cargo.toml")).unwrap();
+fn every_example_directory_is_excluded_from_the_workspace() {
+    let root = vyre_workspace_root();
+    let directories = example_directories(&root.join("examples"));
+    assert!(
+        !directories.is_empty(),
+        "the checkout tracks no example, so this contract has no subject"
+    );
+    let rosters = vyre_workspace_rosters();
 
     let mut violations = Vec::new();
-    for entry in std::fs::read_dir(&examples_dir).unwrap().flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
+    for name in &directories {
+        let path = format!("examples/{name}");
+        if !rosters.excluded.contains(&path) {
+            violations.push(format!("{path} is missing from workspace exclude"));
         }
-        let name = path.file_name().unwrap().to_string_lossy().to_string();
-        let cargo_toml = path.join("Cargo.toml");
-        let template_toml = path.join("Cargo.toml.liquid");
-        if !cargo_toml.exists() {
-            if name != "three_substrate_parity"
-                && !template_toml.is_file()
-                && path.read_dir().is_ok_and(|entries| {
-                    entries
-                        .flatten()
-                        .any(|entry| entry.file_type().is_ok_and(|kind| kind.is_file()))
+        if rosters.members.contains(&path) {
+            violations.push(format!("{path} is a workspace member"));
+        }
+    }
+
+    assert!(
+        violations.is_empty(),
+        "every example directory is excluded and none is a member. Violations:\n{}",
+        violations.join("\n")
+    );
+}
+
+#[test]
+fn every_example_path_the_root_manifest_names_exists() {
+    let root = vyre_workspace_root();
+    let text = std::fs::read_to_string(root.join("Cargo.toml"))
+        .expect("the workspace root carries a manifest");
+
+    let mut violations = Vec::new();
+    for (number, line) in text.lines().enumerate() {
+        for prefix in ["examples/", "demos/"] {
+            let Some(at) = line.find(prefix) else {
+                continue;
+            };
+            let named: String = line[at..]
+                .chars()
+                .take_while(|character| {
+                    character.is_ascii_alphanumeric() || "/_-.".contains(*character)
                 })
-            {
-                violations.push(format!("{}: missing Cargo.toml", name));
-            }
-            continue;
-        }
-        let content = std::fs::read_to_string(&cargo_toml).unwrap();
-        let in_workspace = root_toml.contains(&format!("\"examples/{}\"", name));
-        let is_standalone = content.contains("[workspace]");
-        if !in_workspace && !is_standalone {
-            violations.push(format!(
-                "{}: not in workspace members and missing [workspace] declaration",
-                name
-            ));
-        }
-    }
-
-    assert!(
-        violations.is_empty(),
-        "example crates must be workspace members or standalone. Violations:\n{}",
-        violations.join("\n")
-    );
-}
-
-#[test]
-fn examples_have_tests_or_are_exempt() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
-    let examples_dir = workspace_root.join("examples");
-    if !examples_dir.is_dir() {
-        return;
-    }
-
-    let exempt: HashSet<String> = [
-        "external_ir_extension".to_string(), // demo extension, not test-bearing
-        "libs-template".to_string(),         // cargo-generate template, not buildable
-        "three_substrate_parity".to_string(), // manifest-only parity demo
-    ]
-    .iter()
-    .cloned()
-    .collect();
-
-    let mut violations = Vec::new();
-    for entry in std::fs::read_dir(&examples_dir).unwrap().flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-        let name = path.file_name().unwrap().to_string_lossy().to_string();
-        if exempt.contains(&name) {
-            continue;
-        }
-        let tests_dir = path.join("tests");
-        if !tests_dir.exists() {
-            violations.push(format!("{}: missing tests/ directory", name));
-        }
-    }
-
-    assert!(
-        violations.is_empty(),
-        "example crates must have tests/ or be exempt. Violations:\n{}",
-        violations.join("\n")
-    );
-}
-
-#[test]
-fn no_stale_demo_references_in_workspace_toml() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
-    let root_toml = std::fs::read_to_string(workspace_root.join("Cargo.toml")).unwrap();
-
-    // Stale references to removed demo directories should not persist forever.
-    // Baseline: these demos were removed in 0.6 but are still mentioned in
-    // workspace Cargo.toml comments. The references serve as historical context.
-    let known_stale: HashSet<String> = ["demos/rust_lexer_gpu", "demos/rust_parser_gpu"]
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
-
-    let mut violations = Vec::new();
-    for line in root_toml.lines() {
-        if line.contains("demos/") {
-            let is_known = known_stale.iter().any(|pat| line.contains(pat));
-            if !is_known {
+                .collect();
+            if !root.join(&named).exists() {
                 violations.push(format!(
-                    "workspace Cargo.toml references unexpected demo path: {}",
-                    line.trim()
+                    "Cargo.toml:{} names `{named}`, which does not exist",
+                    number + 1
                 ));
             }
         }
@@ -129,7 +91,7 @@ fn no_stale_demo_references_in_workspace_toml() {
 
     assert!(
         violations.is_empty(),
-        "workspace Cargo.toml must not reference unexpected demo paths. Violations:\n{}",
+        "the root manifest names no path that was deleted. Violations:\n{}",
         violations.join("\n")
     );
 }

@@ -1226,13 +1226,13 @@
     {
       "backend_id": "cpu-ref",
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch",
-      "op_id": "vyre-libs::substrate::indexed_map",
+      "op_id": "vyre-libs::builder::indexed_map",
       "passed": true
     },
     {
       "backend_id": "cpu-ref",
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch",
-      "op_id": "vyre-libs::substrate::strided_accumulate",
+      "op_id": "vyre-libs::builder::strided_accumulate",
       "passed": true
     },
     {
@@ -3380,13 +3380,13 @@
     {
       "backend_id": "cuda",
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch",
-      "op_id": "vyre-libs::substrate::indexed_map",
+      "op_id": "vyre-libs::builder::indexed_map",
       "passed": true
     },
     {
       "backend_id": "cuda",
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch",
-      "op_id": "vyre-libs::substrate::strided_accumulate",
+      "op_id": "vyre-libs::builder::strided_accumulate",
       "passed": true
     },
     {
@@ -5534,13 +5534,13 @@
     {
       "backend_id": "wgpu",
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch",
-      "op_id": "vyre-libs::substrate::indexed_map",
+      "op_id": "vyre-libs::builder::indexed_map",
       "passed": true
     },
     {
       "backend_id": "wgpu",
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch",
-      "op_id": "vyre-libs::substrate::strided_accumulate",
+      "op_id": "vyre-libs::builder::strided_accumulate",
       "passed": true
     },
     {

@@ -1,107 +1,77 @@
-#[non_exhaustive] pub struct vyre_debug::ScanExplainReport
-#[non_exhaustive] pub struct vyre_debug::scan_explain::ScanExplainReport
-impl core::default::Default for vyre_debug::descriptor_dump::DescriptorDumpOptions
-impl core::error::Error for vyre_debug::scan_explain::ScanExplainError
-impl core::fmt::Display for vyre_debug::scan_explain::ScanExplainError
-impl vyre_debug::artifact_report::ArtifactReport
-impl vyre_debug::naga_dump::NagaDump
-impl vyre_debug::scan_explain::ScanExplainReport
-pub const vyre_debug::SCAN_EXPLAIN_REPORT_SCHEMA_VERSION: u32
-pub const vyre_debug::scan_explain::SCAN_EXPLAIN_REPORT_SCHEMA_VERSION: u32
+impl core::default::Default for vyre_debug::DescriptorDumpOptions
+impl core::error::Error for vyre_debug::PmuWarning
+impl core::fmt::Display for vyre_debug::PmuWarning
+impl vyre_debug::ArtifactReport
+impl vyre_debug::NagaDump
+impl vyre_debug::PmuExpectation
+impl vyre_debug::PmuMeasurement
+impl vyre_debug::SanitizerFailure
+impl vyre_debug::SanitizerKind
+pub const fn vyre_debug::SanitizerKind::code(self) -> &'static str
+pub const fn vyre_debug::SanitizerKind::suggested_fix(self) -> &'static str
+pub const vyre_debug::DEBUG_CAPABILITIES: &[vyre_debug::DebugCapabilityInfo]
 pub enum vyre_debug::BindResultLogError
-pub enum vyre_debug::ScanExplainError
-pub enum vyre_debug::ScanExplainExactnessClass
-pub enum vyre_debug::ScanFactorRole
-pub enum vyre_debug::naga_trace::BindResultLogError
-pub enum vyre_debug::scan_explain::ScanExplainError
-pub enum vyre_debug::scan_explain::ScanExplainExactnessClass
-pub enum vyre_debug::scan_explain::ScanFactorRole
-pub fn vyre_debug::artifact_report::ArtifactReport::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::CompileError>
-pub fn vyre_debug::artifact_report::ArtifactReport::from_envelope(envelope: &vyre_megakernel::envelope::ArtifactEnvelope) -> Self
-pub fn vyre_debug::carrier_summary(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::carriers::CarrierSummary
-pub fn vyre_debug::carriers::carrier_summary(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::carriers::CarrierSummary
-pub fn vyre_debug::carriers::find_uncarriered_assigns(program: &vyre_foundation::ir_inner::model::program::core::Program, desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::carriers::UncarrieredAssign>
-pub fn vyre_debug::dangling::find_dangling_refs(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::dangling::DanglingRef>
-pub fn vyre_debug::descriptor_diff::diff_descriptors(before: &vyre_lower::descriptor::KernelDescriptor, after: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::descriptor_diff::DescriptorDiff
-pub fn vyre_debug::descriptor_dump::DescriptorDumpOptions::default() -> Self
-pub fn vyre_debug::descriptor_dump::dump_descriptor(desc: &vyre_lower::descriptor::KernelDescriptor, options: &vyre_debug::descriptor_dump::DescriptorDumpOptions) -> vyre_debug::descriptor_dump::DescriptorDump
-pub fn vyre_debug::diff_descriptors(before: &vyre_lower::descriptor::KernelDescriptor, after: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::descriptor_diff::DescriptorDiff
-pub fn vyre_debug::dump_descriptor(desc: &vyre_lower::descriptor::KernelDescriptor, options: &vyre_debug::descriptor_dump::DescriptorDumpOptions) -> vyre_debug::descriptor_dump::DescriptorDump
-pub fn vyre_debug::dump_naga_module(module: &naga::ir::Module) -> vyre_debug::naga_dump::NagaDump
-pub fn vyre_debug::dump_wgsl(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
-pub fn vyre_debug::dump_wgsl_with_lines(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
-pub fn vyre_debug::failure_trace(module: &naga::ir::Module, error: &naga::valid::ValidationError) -> vyre_debug::naga_trace::FailureTrace
-pub fn vyre_debug::failure_trace_wgsl(module: &naga::ir::Module, info: &naga::valid::ModuleInfo, err: &naga::back::wgsl::Error) -> vyre_debug::naga_trace::FailureTrace
-pub fn vyre_debug::find_dangling_refs(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::dangling::DanglingRef>
-pub fn vyre_debug::find_uncarriered_assigns(program: &vyre_foundation::ir_inner::model::program::core::Program, desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::carriers::UncarrieredAssign>
-pub fn vyre_debug::fixtures::loop_carry_smoke() -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_debug::load_bind_result_log(path: &str) -> core::result::Result<alloc::vec::Vec<vyre_emit_naga::BindResultEntry>, vyre_debug::naga_trace::BindResultLogError>
-pub fn vyre_debug::naga_dump::NagaDump::find(&self, handle: u32) -> core::option::Option<&alloc::vec::Vec<alloc::string::String>>
-pub fn vyre_debug::naga_dump::dump_naga_module(module: &naga::ir::Module) -> vyre_debug::naga_dump::NagaDump
-pub fn vyre_debug::naga_trace::failure_trace(module: &naga::ir::Module, error: &naga::valid::ValidationError) -> vyre_debug::naga_trace::FailureTrace
-pub fn vyre_debug::naga_trace::failure_trace_wgsl(module: &naga::ir::Module, info: &naga::valid::ModuleInfo, err: &naga::back::wgsl::Error) -> vyre_debug::naga_trace::FailureTrace
-pub fn vyre_debug::naga_trace::load_bind_result_log(path: &str) -> core::result::Result<alloc::vec::Vec<vyre_emit_naga::BindResultEntry>, vyre_debug::naga_trace::BindResultLogError>
-pub fn vyre_debug::scan_explain::ScanExplainError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_debug::scan_explain::ScanExplainReport::is_complete(&self) -> bool
-pub fn vyre_debug::scan_explain::scan_explain_report(pattern_set_id: impl core::convert::Into<alloc::string::String>, extracted_factors: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainFactor>, descriptor: &vyre_lower::descriptor::IntentAnnotatedDescriptor, scan_database: &vyre_scan::database::header::ScanDatabaseHeader, baseline_id: impl core::convert::Into<alloc::string::String>, artifact_links: alloc::vec::Vec<alloc::string::String>) -> core::result::Result<vyre_debug::scan_explain::ScanExplainReport, vyre_debug::scan_explain::ScanExplainError>
-pub fn vyre_debug::scan_explain_report(pattern_set_id: impl core::convert::Into<alloc::string::String>, extracted_factors: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainFactor>, descriptor: &vyre_lower::descriptor::IntentAnnotatedDescriptor, scan_database: &vyre_scan::database::header::ScanDatabaseHeader, baseline_id: impl core::convert::Into<alloc::string::String>, artifact_links: alloc::vec::Vec<alloc::string::String>) -> core::result::Result<vyre_debug::scan_explain::ScanExplainReport, vyre_debug::scan_explain::ScanExplainError>
-pub fn vyre_debug::source_walker::walk_source_assigns<F>(program: &vyre_foundation::ir_inner::model::program::core::Program, callback: F) where F: core::ops::function::FnMut(&str, alloc::vec::Vec<alloc::string::String>)
-pub fn vyre_debug::wgsl::dump_wgsl(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
-pub fn vyre_debug::wgsl::dump_wgsl_with_lines(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
+pub enum vyre_debug::DebugCapabilityKind
+pub enum vyre_debug::PmuWarning
+pub enum vyre_debug::PmuWorkloadClass
+pub enum vyre_debug::SanitizerKind
+pub fn vyre_debug::ArtifactReport::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::error::CompileError>
+pub fn vyre_debug::ArtifactReport::from_envelope(envelope: &vyre_megakernel::envelope::ArtifactEnvelope) -> Self
+pub fn vyre_debug::DescriptorDumpOptions::default() -> Self
+pub fn vyre_debug::NagaDump::find(&self, handle: u32) -> core::option::Option<&alloc::vec::Vec<alloc::string::String>>
+pub fn vyre_debug::PmuExpectation::dense_regular() -> Self
+pub fn vyre_debug::PmuExpectation::reduction_tree() -> Self
+pub fn vyre_debug::PmuExpectation::sparse_or_gather() -> Self
+pub fn vyre_debug::PmuMeasurement::evaluate(&self, expectation: &vyre_debug::PmuExpectation) -> alloc::vec::Vec<vyre_debug::PmuWarning>
+pub fn vyre_debug::PmuWarning::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_debug::SanitizerFailure::compute_sanitizer(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_debug::SanitizerFailure::data_race(message: impl core::convert::Into<alloc::string::String>, address: u64, thread: [u32; 3]) -> Self
+pub fn vyre_debug::SanitizerFailure::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
+pub fn vyre_debug::SanitizerFailure::out_of_bounds(message: impl core::convert::Into<alloc::string::String>, address: u64) -> Self
+pub fn vyre_debug::SanitizerFailure::vulkan_validation(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_debug::carrier_summary(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::CarrierSummary
+pub fn vyre_debug::diff_descriptors(before: &vyre_lower::descriptor::KernelDescriptor, after: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::DescriptorDiff
+pub fn vyre_debug::dump_descriptor(desc: &vyre_lower::descriptor::KernelDescriptor, options: &vyre_debug::DescriptorDumpOptions) -> vyre_debug::DescriptorDump
+pub fn vyre_debug::dump_naga_module(module: &naga::ir::Module) -> vyre_debug::NagaDump
+pub fn vyre_debug::dump_wgsl(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::WgslDump, alloc::string::String>
+pub fn vyre_debug::dump_wgsl_with_lines(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::WgslDump, alloc::string::String>
+pub fn vyre_debug::failure_trace(module: &naga::ir::Module, error: &naga::valid::ValidationError) -> vyre_debug::FailureTrace
+pub fn vyre_debug::failure_trace_wgsl(module: &naga::ir::Module, info: &naga::valid::ModuleInfo, err: &naga::back::wgsl::Error) -> vyre_debug::FailureTrace
+pub fn vyre_debug::find_dangling_refs(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::DanglingRef>
+pub fn vyre_debug::find_uncarriered_assigns(program: &vyre_foundation::ir_inner::model::program::definition::Program, desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::UncarrieredAssign>
+pub fn vyre_debug::fixtures::loop_carry_smoke() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_debug::load_bind_result_log(path: &str) -> core::result::Result<alloc::vec::Vec<vyre_emit_naga::BindResultEntry>, vyre_debug::BindResultLogError>
+pub fn vyre_debug::neutral_debug_capabilities() -> alloc::vec::Vec<&'static vyre_debug::DebugCapabilityInfo>
+pub fn vyre_debug::source_assignments::walk_source_assigns<F>(program: &vyre_foundation::ir_inner::model::program::definition::Program, callback: F) where F: core::ops::function::FnMut(&str, alloc::vec::Vec<alloc::string::String>)
 pub mod vyre_debug
-pub mod vyre_debug::artifact_report
-pub mod vyre_debug::carriers
-pub mod vyre_debug::dangling
-pub mod vyre_debug::descriptor_diff
-pub mod vyre_debug::descriptor_dump
 pub mod vyre_debug::fixtures
-pub mod vyre_debug::naga_dump
-pub mod vyre_debug::naga_trace
-pub mod vyre_debug::scan_explain
-pub mod vyre_debug::source_walker
-pub mod vyre_debug::wgsl
+pub mod vyre_debug::source_assignments
 pub struct vyre_debug::ArtifactReport
 pub struct vyre_debug::CarrierSummary
 pub struct vyre_debug::DanglingRef
+pub struct vyre_debug::DebugCapabilityInfo
 pub struct vyre_debug::DescriptorDiff
 pub struct vyre_debug::DescriptorDump
 pub struct vyre_debug::DescriptorDumpOptions
 pub struct vyre_debug::FailureTrace
 pub struct vyre_debug::NagaDump
-pub struct vyre_debug::ScanExplainEngine
-pub struct vyre_debug::ScanExplainFactor
-pub struct vyre_debug::ScanExplainRejectedEngine
-pub struct vyre_debug::ScanExplainRouteEvidence
-pub struct vyre_debug::ScanExplainVerifierFragment
+pub struct vyre_debug::PmuExpectation
+pub struct vyre_debug::PmuMeasurement
+pub struct vyre_debug::SanitizerFailure
 pub struct vyre_debug::TargetPayloadReport
 pub struct vyre_debug::UncarrieredAssign
 pub struct vyre_debug::WgslDump
-pub struct vyre_debug::artifact_report::ArtifactReport
-pub struct vyre_debug::artifact_report::TargetPayloadReport
-pub struct vyre_debug::carriers::CarrierSummary
-pub struct vyre_debug::carriers::UncarrieredAssign
-pub struct vyre_debug::dangling::DanglingRef
-pub struct vyre_debug::descriptor_diff::DescriptorDiff
-pub struct vyre_debug::descriptor_dump::DescriptorDump
-pub struct vyre_debug::descriptor_dump::DescriptorDumpOptions
-pub struct vyre_debug::naga_dump::NagaDump
-pub struct vyre_debug::naga_trace::FailureTrace
-pub struct vyre_debug::scan_explain::ScanExplainEngine
-pub struct vyre_debug::scan_explain::ScanExplainFactor
-pub struct vyre_debug::scan_explain::ScanExplainRejectedEngine
-pub struct vyre_debug::scan_explain::ScanExplainRouteEvidence
-pub struct vyre_debug::scan_explain::ScanExplainVerifierFragment
-pub struct vyre_debug::wgsl::WgslDump
-pub vyre_debug::ArtifactReport::abi: vyre_megakernel::ArtifactAbi
+pub vyre_debug::ArtifactReport::abi: vyre_megakernel::schema::records::ArtifactAbi
 pub vyre_debug::ArtifactReport::artifact: alloc::string::String
 pub vyre_debug::ArtifactReport::compiler_version: alloc::string::String
 pub vyre_debug::ArtifactReport::request: alloc::string::String
-pub vyre_debug::ArtifactReport::selected_plan: vyre_megakernel::SelectedPlan
+pub vyre_debug::ArtifactReport::selected_plan: vyre_megakernel::schema::plan::SelectedPlan
+pub vyre_debug::ArtifactReport::semantic_graph: alloc::string::String
 pub vyre_debug::ArtifactReport::source_graph: alloc::string::String
-pub vyre_debug::ArtifactReport::targets: alloc::vec::Vec<vyre_debug::artifact_report::TargetPayloadReport>
-pub vyre_debug::BindResultLogError::Open(std::io::error::Error)
+pub vyre_debug::ArtifactReport::targets: alloc::vec::Vec<vyre_debug::TargetPayloadReport>
+pub vyre_debug::BindResultLogError::Open(core::io::error::Error)
 pub vyre_debug::BindResultLogError::Parse(usize, serde_json::error::Error)
-pub vyre_debug::BindResultLogError::Read(std::io::error::Error)
+pub vyre_debug::BindResultLogError::Read(core::io::error::Error)
 pub vyre_debug::CarrierSummary::carrier_finals: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
 pub vyre_debug::CarrierSummary::carrier_reads: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
 pub vyre_debug::CarrierSummary::carrier_writes: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
@@ -115,6 +85,15 @@ pub vyre_debug::DanglingRef::ref_id: u32
 pub vyre_debug::DanglingRef::referenced_in_body_path: alloc::vec::Vec<usize>
 pub vyre_debug::DanglingRef::referencing_op_index: usize
 pub vyre_debug::DanglingRef::referencing_op_kind: alloc::string::String
+pub vyre_debug::DebugCapabilityInfo::is_binary_safe: bool
+pub vyre_debug::DebugCapabilityInfo::kind: vyre_debug::DebugCapabilityKind
+pub vyre_debug::DebugCapabilityInfo::name: &'static str
+pub vyre_debug::DebugCapabilityInfo::requires_target_emitter: bool
+pub vyre_debug::DebugCapabilityKind::NeutralArtifact
+pub vyre_debug::DebugCapabilityKind::NeutralDescriptor
+pub vyre_debug::DebugCapabilityKind::TargetBinaryPayload
+pub vyre_debug::DebugCapabilityKind::TargetBinaryPayload::format: alloc::string::String
+pub vyre_debug::DebugCapabilityKind::TargetNagaWgsl
 pub vyre_debug::DescriptorDiff::bindings_added: alloc::vec::Vec<u32>
 pub vyre_debug::DescriptorDiff::bindings_dropped: alloc::vec::Vec<u32>
 pub vyre_debug::DescriptorDiff::op_count_delta: alloc::collections::btree::map::BTreeMap<alloc::vec::Vec<usize>, i64>
@@ -126,49 +105,41 @@ pub vyre_debug::DescriptorDumpOptions::show_literals: bool
 pub vyre_debug::DescriptorDumpOptions::show_result_ids: bool
 pub vyre_debug::FailureTrace::text: alloc::string::String
 pub vyre_debug::NagaDump::text: alloc::string::String
-pub vyre_debug::ScanExplainEngine::reason: alloc::string::String
-pub vyre_debug::ScanExplainEngine::strategy: vyre_lower::descriptor::DescriptorIntentStrategy
-pub vyre_debug::ScanExplainError::MissingArtifactLinks
-pub vyre_debug::ScanExplainError::MissingBaselineId
-pub vyre_debug::ScanExplainError::MissingDescriptorIntents
-pub vyre_debug::ScanExplainError::MissingFactors
-pub vyre_debug::ScanExplainError::MissingPatternSetId
-pub vyre_debug::ScanExplainError::MissingScanDatabase
-pub vyre_debug::ScanExplainExactnessClass::Exact
-pub vyre_debug::ScanExplainExactnessClass::PrefilterVerified
-pub vyre_debug::ScanExplainExactnessClass::Unsupported
-pub vyre_debug::ScanExplainExactnessClass::VerifierRequired
-pub vyre_debug::ScanExplainFactor::bytes: alloc::vec::Vec<u8>
-pub vyre_debug::ScanExplainFactor::digest: u64
-pub vyre_debug::ScanExplainFactor::pattern_index: u32
-pub vyre_debug::ScanExplainFactor::role: vyre_debug::scan_explain::ScanFactorRole
-pub vyre_debug::ScanExplainRejectedEngine::engine_id: alloc::string::String
-pub vyre_debug::ScanExplainRejectedEngine::exactness_class: vyre_debug::scan_explain::ScanExplainExactnessClass
-pub vyre_debug::ScanExplainRejectedEngine::pattern_index: u32
-pub vyre_debug::ScanExplainRejectedEngine::reason: alloc::string::String
-pub vyre_debug::ScanExplainReport::artifact_links: alloc::vec::Vec<alloc::string::String>
-pub vyre_debug::ScanExplainReport::baseline_id: alloc::string::String
-pub vyre_debug::ScanExplainReport::extracted_factors: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainFactor>
-pub vyre_debug::ScanExplainReport::pattern_set_id: alloc::string::String
-pub vyre_debug::ScanExplainReport::rejected_engines: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainRejectedEngine>
-pub vyre_debug::ScanExplainReport::route_evidence: vyre_debug::scan_explain::ScanExplainRouteEvidence
-pub vyre_debug::ScanExplainReport::schema_version: u32
-pub vyre_debug::ScanExplainReport::selected_engines: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainEngine>
-pub vyre_debug::ScanExplainReport::streaming_state_bytes: u64
-pub vyre_debug::ScanExplainReport::table_bytes: u64
-pub vyre_debug::ScanExplainReport::unsupported_features: alloc::vec::Vec<vyre_scan::database::header::UnsupportedScanFeature>
-pub vyre_debug::ScanExplainReport::verifier_fragments: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainVerifierFragment>
-pub vyre_debug::ScanExplainRouteEvidence::exactness_class: vyre_debug::scan_explain::ScanExplainExactnessClass
-pub vyre_debug::ScanExplainRouteEvidence::literal_selectivity_basis: alloc::string::String
-pub vyre_debug::ScanExplainRouteEvidence::verifier_cost_estimate_bytes: u64
-pub vyre_debug::ScanExplainVerifierFragment::bytes: u64
-pub vyre_debug::ScanExplainVerifierFragment::digest: u64
-pub vyre_debug::ScanExplainVerifierFragment::source: alloc::string::String
-pub vyre_debug::ScanFactorRole::Infix
-pub vyre_debug::ScanFactorRole::Literal
-pub vyre_debug::ScanFactorRole::Outfix
-pub vyre_debug::ScanFactorRole::Prefix
-pub vyre_debug::ScanFactorRole::Suffix
+pub vyre_debug::PmuExpectation::allow_uncoalesced_traffic: bool
+pub vyre_debug::PmuExpectation::max_bank_conflicts: u64
+pub vyre_debug::PmuExpectation::max_spill_bytes: u64
+pub vyre_debug::PmuExpectation::min_occupancy_pct: f64
+pub vyre_debug::PmuExpectation::workload: vyre_debug::PmuWorkloadClass
+pub vyre_debug::PmuMeasurement::achieved_bandwidth_gb_s: f64
+pub vyre_debug::PmuMeasurement::bank_conflicts: u64
+pub vyre_debug::PmuMeasurement::occupancy_pct: f64
+pub vyre_debug::PmuMeasurement::spill_bytes: u64
+pub vyre_debug::PmuMeasurement::uncoalesced_transactions: u64
+pub vyre_debug::PmuWarning::BankConflictExceeded
+pub vyre_debug::PmuWarning::BankConflictExceeded::allowed: u64
+pub vyre_debug::PmuWarning::BankConflictExceeded::observed: u64
+pub vyre_debug::PmuWarning::LowOccupancy
+pub vyre_debug::PmuWarning::LowOccupancy::expected: f64
+pub vyre_debug::PmuWarning::LowOccupancy::observed: f64
+pub vyre_debug::PmuWarning::SpillExceeded
+pub vyre_debug::PmuWarning::SpillExceeded::allowed: u64
+pub vyre_debug::PmuWarning::SpillExceeded::observed: u64
+pub vyre_debug::PmuWarning::UncoalescedTrafficOnDenseWorkload
+pub vyre_debug::PmuWarning::UncoalescedTrafficOnDenseWorkload::observed: u64
+pub vyre_debug::PmuWorkloadClass::DenseRegular
+pub vyre_debug::PmuWorkloadClass::ReductionTree
+pub vyre_debug::PmuWorkloadClass::SparseOrGather
+pub vyre_debug::SanitizerFailure::device_address: core::option::Option<u64>
+pub vyre_debug::SanitizerFailure::instruction_offset: core::option::Option<u32>
+pub vyre_debug::SanitizerFailure::invocation_coords: core::option::Option<[u32; 3]>
+pub vyre_debug::SanitizerFailure::kind: vyre_debug::SanitizerKind
+pub vyre_debug::SanitizerFailure::message: alloc::string::String
+pub vyre_debug::SanitizerFailure::raw_tool_output: core::option::Option<alloc::string::String>
+pub vyre_debug::SanitizerKind::ComputeSanitizer
+pub vyre_debug::SanitizerKind::DataRace
+pub vyre_debug::SanitizerKind::IllegalInstruction
+pub vyre_debug::SanitizerKind::OutOfBoundsMemory
+pub vyre_debug::SanitizerKind::VulkanValidation
 pub vyre_debug::TargetPayloadReport::bytes: usize
 pub vyre_debug::TargetPayloadReport::digest: alloc::string::String
 pub vyre_debug::TargetPayloadReport::entries: usize
@@ -180,91 +151,3 @@ pub vyre_debug::UncarrieredAssign::loop_path: alloc::vec::Vec<alloc::string::Str
 pub vyre_debug::UncarrieredAssign::name: alloc::string::String
 pub vyre_debug::WgslDump::text: alloc::string::String
 pub vyre_debug::WgslDump::variable_lines: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
-pub vyre_debug::artifact_report::ArtifactReport::abi: vyre_megakernel::ArtifactAbi
-pub vyre_debug::artifact_report::ArtifactReport::artifact: alloc::string::String
-pub vyre_debug::artifact_report::ArtifactReport::compiler_version: alloc::string::String
-pub vyre_debug::artifact_report::ArtifactReport::request: alloc::string::String
-pub vyre_debug::artifact_report::ArtifactReport::selected_plan: vyre_megakernel::SelectedPlan
-pub vyre_debug::artifact_report::ArtifactReport::source_graph: alloc::string::String
-pub vyre_debug::artifact_report::ArtifactReport::targets: alloc::vec::Vec<vyre_debug::artifact_report::TargetPayloadReport>
-pub vyre_debug::artifact_report::TargetPayloadReport::bytes: usize
-pub vyre_debug::artifact_report::TargetPayloadReport::digest: alloc::string::String
-pub vyre_debug::artifact_report::TargetPayloadReport::entries: usize
-pub vyre_debug::artifact_report::TargetPayloadReport::format: alloc::string::String
-pub vyre_debug::artifact_report::TargetPayloadReport::format_version: u16
-pub vyre_debug::carriers::CarrierSummary::carrier_finals: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
-pub vyre_debug::carriers::CarrierSummary::carrier_reads: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
-pub vyre_debug::carriers::CarrierSummary::carrier_writes: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
-pub vyre_debug::carriers::CarrierSummary::function_locals: alloc::vec::Vec<alloc::string::String>
-pub vyre_debug::carriers::CarrierSummary::total_ops_observed: usize
-pub vyre_debug::carriers::UncarrieredAssign::has_carrier_op: bool
-pub vyre_debug::carriers::UncarrieredAssign::has_final_op: bool
-pub vyre_debug::carriers::UncarrieredAssign::loop_path: alloc::vec::Vec<alloc::string::String>
-pub vyre_debug::carriers::UncarrieredAssign::name: alloc::string::String
-pub vyre_debug::dangling::DanglingRef::operand_position: usize
-pub vyre_debug::dangling::DanglingRef::produced_in_body_path: alloc::vec::Vec<usize>
-pub vyre_debug::dangling::DanglingRef::producing_op_index: usize
-pub vyre_debug::dangling::DanglingRef::producing_op_kind: alloc::string::String
-pub vyre_debug::dangling::DanglingRef::ref_id: u32
-pub vyre_debug::dangling::DanglingRef::referenced_in_body_path: alloc::vec::Vec<usize>
-pub vyre_debug::dangling::DanglingRef::referencing_op_index: usize
-pub vyre_debug::dangling::DanglingRef::referencing_op_kind: alloc::string::String
-pub vyre_debug::descriptor_diff::DescriptorDiff::bindings_added: alloc::vec::Vec<u32>
-pub vyre_debug::descriptor_diff::DescriptorDiff::bindings_dropped: alloc::vec::Vec<u32>
-pub vyre_debug::descriptor_diff::DescriptorDiff::op_count_delta: alloc::collections::btree::map::BTreeMap<alloc::vec::Vec<usize>, i64>
-pub vyre_debug::descriptor_diff::DescriptorDiff::root_shape_changed: bool
-pub vyre_debug::descriptor_dump::DescriptorDump::op_counts_by_path: alloc::collections::btree::map::BTreeMap<alloc::vec::Vec<usize>, usize>
-pub vyre_debug::descriptor_dump::DescriptorDump::text: alloc::string::String
-pub vyre_debug::descriptor_dump::DescriptorDumpOptions::max_ops_per_body: usize
-pub vyre_debug::descriptor_dump::DescriptorDumpOptions::show_literals: bool
-pub vyre_debug::descriptor_dump::DescriptorDumpOptions::show_result_ids: bool
-pub vyre_debug::naga_dump::NagaDump::text: alloc::string::String
-pub vyre_debug::naga_trace::BindResultLogError::Open(std::io::error::Error)
-pub vyre_debug::naga_trace::BindResultLogError::Parse(usize, serde_json::error::Error)
-pub vyre_debug::naga_trace::BindResultLogError::Read(std::io::error::Error)
-pub vyre_debug::naga_trace::FailureTrace::text: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainEngine::reason: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainEngine::strategy: vyre_lower::descriptor::DescriptorIntentStrategy
-pub vyre_debug::scan_explain::ScanExplainError::MissingArtifactLinks
-pub vyre_debug::scan_explain::ScanExplainError::MissingBaselineId
-pub vyre_debug::scan_explain::ScanExplainError::MissingDescriptorIntents
-pub vyre_debug::scan_explain::ScanExplainError::MissingFactors
-pub vyre_debug::scan_explain::ScanExplainError::MissingPatternSetId
-pub vyre_debug::scan_explain::ScanExplainError::MissingScanDatabase
-pub vyre_debug::scan_explain::ScanExplainExactnessClass::Exact
-pub vyre_debug::scan_explain::ScanExplainExactnessClass::PrefilterVerified
-pub vyre_debug::scan_explain::ScanExplainExactnessClass::Unsupported
-pub vyre_debug::scan_explain::ScanExplainExactnessClass::VerifierRequired
-pub vyre_debug::scan_explain::ScanExplainFactor::bytes: alloc::vec::Vec<u8>
-pub vyre_debug::scan_explain::ScanExplainFactor::digest: u64
-pub vyre_debug::scan_explain::ScanExplainFactor::pattern_index: u32
-pub vyre_debug::scan_explain::ScanExplainFactor::role: vyre_debug::scan_explain::ScanFactorRole
-pub vyre_debug::scan_explain::ScanExplainRejectedEngine::engine_id: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainRejectedEngine::exactness_class: vyre_debug::scan_explain::ScanExplainExactnessClass
-pub vyre_debug::scan_explain::ScanExplainRejectedEngine::pattern_index: u32
-pub vyre_debug::scan_explain::ScanExplainRejectedEngine::reason: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainReport::artifact_links: alloc::vec::Vec<alloc::string::String>
-pub vyre_debug::scan_explain::ScanExplainReport::baseline_id: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainReport::extracted_factors: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainFactor>
-pub vyre_debug::scan_explain::ScanExplainReport::pattern_set_id: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainReport::rejected_engines: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainRejectedEngine>
-pub vyre_debug::scan_explain::ScanExplainReport::route_evidence: vyre_debug::scan_explain::ScanExplainRouteEvidence
-pub vyre_debug::scan_explain::ScanExplainReport::schema_version: u32
-pub vyre_debug::scan_explain::ScanExplainReport::selected_engines: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainEngine>
-pub vyre_debug::scan_explain::ScanExplainReport::streaming_state_bytes: u64
-pub vyre_debug::scan_explain::ScanExplainReport::table_bytes: u64
-pub vyre_debug::scan_explain::ScanExplainReport::unsupported_features: alloc::vec::Vec<vyre_scan::database::header::UnsupportedScanFeature>
-pub vyre_debug::scan_explain::ScanExplainReport::verifier_fragments: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainVerifierFragment>
-pub vyre_debug::scan_explain::ScanExplainRouteEvidence::exactness_class: vyre_debug::scan_explain::ScanExplainExactnessClass
-pub vyre_debug::scan_explain::ScanExplainRouteEvidence::literal_selectivity_basis: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainRouteEvidence::verifier_cost_estimate_bytes: u64
-pub vyre_debug::scan_explain::ScanExplainVerifierFragment::bytes: u64
-pub vyre_debug::scan_explain::ScanExplainVerifierFragment::digest: u64
-pub vyre_debug::scan_explain::ScanExplainVerifierFragment::source: alloc::string::String
-pub vyre_debug::scan_explain::ScanFactorRole::Infix
-pub vyre_debug::scan_explain::ScanFactorRole::Literal
-pub vyre_debug::scan_explain::ScanFactorRole::Outfix
-pub vyre_debug::scan_explain::ScanFactorRole::Prefix
-pub vyre_debug::scan_explain::ScanFactorRole::Suffix
-pub vyre_debug::wgsl::WgslDump::text: alloc::string::String
-pub vyre_debug::wgsl::WgslDump::variable_lines: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>

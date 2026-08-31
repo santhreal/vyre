@@ -2,10 +2,42 @@
 
 use std::thread;
 
-use vyre_libs::parsing::lr_tables::{
-    parse_lr, Action, ParseError, C11_EXPR, TOK_EOF, TOK_ID, TOK_LPAREN, TOK_MINUS, TOK_NUM,
-    TOK_PLUS, TOK_RPAREN, TOK_STAR,
+use vyre_libs::parsing::lr_tables::{Action, LrTables, C11_EXPR};
+use vyre_reference::composition_witness::{parse_lr_witness, LrProduction, ParseLrWitnessError};
+use vyre_spec::c11_expr_token::{
+    TOK_EOF, TOK_ID, TOK_LPAREN, TOK_MINUS, TOK_NUM, TOK_PLUS, TOK_RPAREN, TOK_STAR,
 };
+
+fn parse_lr(tables: &LrTables, tokens: &[u32]) -> Result<Vec<u32>, ParseLrWitnessError> {
+    let action_witness: Vec<u32> = tables
+        .action
+        .iter()
+        .map(|&word| match Action::unpack(word) {
+            Action::Error => 0,
+            Action::Shift(s) => (1 << 30) | (s & 0x3FFF_FFFF),
+            Action::Reduce(r) => (2 << 30) | (r & 0x3FFF_FFFF),
+            Action::Accept => 3 << 30,
+        })
+        .collect();
+
+    let prods: Vec<LrProduction> = tables
+        .productions
+        .iter()
+        .map(|p| LrProduction {
+            lhs: p.lhs,
+            rhs_len: p.rhs_len,
+        })
+        .collect();
+
+    parse_lr_witness(
+        &action_witness,
+        tables.goto,
+        &prods,
+        tables.num_tokens,
+        tables.num_nonterminals,
+        tokens,
+    )
+}
 
 #[test]
 fn action_table_length_matches_dimensions() {
@@ -116,7 +148,7 @@ fn empty_input_is_error() {
     assert!(
         matches!(
             err,
-            ParseError::UnexpectedToken {
+            ParseLrWitnessError::UnexpectedToken {
                 state: 0,
                 token: TOK_EOF,
                 pos: 0
@@ -133,7 +165,7 @@ fn double_operator_is_error() {
     assert!(
         matches!(
             err,
-            ParseError::UnexpectedToken {
+            ParseLrWitnessError::UnexpectedToken {
                 state: 7,
                 token: TOK_PLUS,
                 pos: 2
@@ -150,7 +182,7 @@ fn unmatched_lparen_is_error() {
     assert!(
         matches!(
             err,
-            ParseError::UnexpectedToken {
+            ParseLrWitnessError::UnexpectedToken {
                 state: 11,
                 token: TOK_EOF,
                 pos: 2
@@ -167,7 +199,7 @@ fn unmatched_rparen_is_error() {
     assert!(
         matches!(
             err,
-            ParseError::UnexpectedToken {
+            ParseLrWitnessError::UnexpectedToken {
                 state: 0,
                 token: TOK_RPAREN,
                 pos: 0
@@ -184,7 +216,7 @@ fn trailing_operator_is_error() {
     assert!(
         matches!(
             err,
-            ParseError::UnexpectedToken {
+            ParseLrWitnessError::UnexpectedToken {
                 state: 7,
                 token: TOK_EOF,
                 pos: 2
@@ -201,7 +233,7 @@ fn unknown_token_is_structured_error_not_panic() {
     assert!(
         matches!(
             err,
-            ParseError::UnexpectedToken {
+            ParseLrWitnessError::UnexpectedToken {
                 state: 4,
                 token: u32::MAX,
                 pos: 1

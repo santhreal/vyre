@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The grid-sync split registry suite drives one `GridSyncProbe` whose four capability fields describe the backend under test, replacing three near-identical probe types that each restated the same trait impl."

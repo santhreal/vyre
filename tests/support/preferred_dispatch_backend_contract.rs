@@ -1,7 +1,5 @@
 /// Shared preferred-dispatch backend registry contracts for driver crates.
-use vyre_driver::backend::{
-    acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
-};
+use vyre_driver::{acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence};
 
 pub(crate) fn assert_backend_registry_metadata<LinkRegistration: 'static>(
     backend_id: &str,

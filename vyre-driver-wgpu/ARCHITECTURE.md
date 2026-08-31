@@ -10,34 +10,34 @@ against this one's CPU-reference oracle.
 Top-level wiring of the backend trait, the public `WgpuBackend`
 type, and the registration token.
 
-### `runtime/` + `runtime.rs`
-Adapter discovery, device creation, queue management. Caches the
-adapter info so the conformance certificate stays stable across
-runs.
+### `runtime/`
+Adapter discovery, device creation, queue management, indirect dispatch, and
+the prerecorded command path. Caches the adapter info so the conformance
+certificate stays stable across runs.
 
-### `engine/` + `engine.rs`
-The dispatch hot path: command-encoder allocation, bind-group
-layout caching, queue submission, fence-wait, readback.
+### `engine/`
+The dispatch hot path: command-encoder allocation, dispatch scratch, graph
+execution, record-and-readback, and multi-GPU submission.
 
-### `lowering/`
-vyre IR → naga (WGSL AST) lowering. Per-Node and per-Expr arms.
-The Node::Region wrapping invariant is enforced here.
+### `emit/`
+vyre IR to naga (WGSL AST) lowering, and the descriptor gate that admits a
+lowered program.
 
-### `pipeline.rs` + `pipeline_*.rs`
-Pipeline cache (compiled compute pipelines keyed on
-program-fingerprint). Variants:
-- `pipeline_binding.rs`  -  per-binding metadata.
-- `pipeline_bindings.rs`  -  bind-group layout.
-- `pipeline_compound.rs`  -  multi-output pipelines.
-- `pipeline_disk_cache.rs`  -  on-disk pipeline persistence.
-- `pipeline_persistent.rs`  -  persistent-residency hot path.
+### `pipeline/`
+Pipeline cache (compiled compute pipelines keyed on program fingerprint).
+Parts:
+- `binding.rs` and `bindings_reflection.rs`  -  per-binding metadata and
+  bind-group layout.
+- `compound.rs`  -  multi-output pipelines.
+- `disk_cache/` and `disk_cache_entries.rs`  -  on-disk pipeline persistence.
+- `persistent.rs` and `persistent_resources.rs`  -  persistent-residency hot
+  path.
+- `output_slots.rs` and `output_readback.rs`  -  output slot mapping and
+  readback.
+- `tuning.rs`  -  workgroup selection.
 
 ### `buffer/`
-Buffer pool, residency tracker, GpuBufferHandle lifecycle.
-
-### `megakernel.rs`
-Megakernel-specific dispatch helpers (the runtime wrapper lives
-in `vyre-runtime::megakernel`).
+Buffer pool, bind-group cache, staging, and GpuBufferHandle lifecycle.
 
 ### `async_dispatch.rs` + `resident_dispatch.rs`
 Queue submission and pending readback paths. Resident dispatch keeps resource
@@ -47,9 +47,8 @@ handles, output maps, trap state, and timestamp queries alive until retirement.
 Adapter-cap probe  -  returns the adapter's max workgroup size,
 storage-buffer count, subgroup support, etc.
 
-### `config.rs`
-Backend config knobs (backend selection, validation level,
-disk-cache path).
+### `target_compiler.rs`
+Compiles a program into the backend's target payload.
 
 ### `ext.rs`
 Extension hooks for vendor-specific intrinsics.

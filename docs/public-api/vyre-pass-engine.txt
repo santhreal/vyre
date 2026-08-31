@@ -1,0 +1,197 @@
+impl core::error::Error for vyre_pass_engine::optimizer::canonicalize_via_encoded::CanonicalizeError
+impl core::error::Error for vyre_pass_engine::optimizer::const_fold_via_encoded::ConstFoldError
+impl core::error::Error for vyre_pass_engine::optimizer::cse_via_encoded::CseError
+impl core::error::Error for vyre_pass_engine::optimizer::dce_via_encoded::DceError
+impl core::error::Error for vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError
+impl core::error::Error for vyre_pass_engine::optimizer::pipeline::GpuOptimizeError
+impl core::error::Error for vyre_pass_engine::optimizer::validate_via_encoded::ValidateError
+impl core::fmt::Display for vyre_pass_engine::optimizer::canonicalize_via_encoded::CanonicalizeError
+impl core::fmt::Display for vyre_pass_engine::optimizer::const_fold_via_encoded::ConstFoldError
+impl core::fmt::Display for vyre_pass_engine::optimizer::cse_via_encoded::CseError
+impl core::fmt::Display for vyre_pass_engine::optimizer::dce_via_encoded::DceError
+impl core::fmt::Display for vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError
+impl core::fmt::Display for vyre_pass_engine::optimizer::pipeline::GpuOptimizeError
+impl core::fmt::Display for vyre_pass_engine::optimizer::validate_via_encoded::ValidateError
+impl vyre_pass_engine::optimizer::combined_decode::ArenaDeltaLookup for vyre_pass_engine::optimizer::combined_decode::BitsetArenaDeltas<'_>
+impl vyre_pass_engine::optimizer::combined_decode::ArenaDeltaLookup for vyre_pass_engine::optimizer::combined_decode::SparseArenaDeltas
+impl vyre_pass_engine::optimizer::combined_decode::SparseArenaDeltas
+impl vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup for [u32]
+impl vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup for vyre_pass_engine::optimizer::cse_via_encoded::SparseCanonicalMap
+impl vyre_pass_engine::optimizer::cse_via_encoded::SparseCanonicalMap
+impl<'a> vyre_pass_engine::optimizer::combined_decode::BitsetArenaDeltas<'a>
+pub const vyre_pass_engine::optimizer::cse_via_encoded::WORKGROUP_X: u32
+pub const vyre_pass_engine::optimizer::dce_program::OP_ID: &str
+pub const vyre_pass_engine::optimizer::encode::ROOT_GRAPH_ID: u32
+pub const vyre_pass_engine::optimizer::encode::edge_kind::ROOT_FRONTIER: u32
+pub const vyre_pass_engine::optimizer::encode::edge_kind::USE_DEF: u32
+pub const vyre_pass_engine::optimizer::encode::node_tag::LET: u32
+pub const vyre_pass_engine::optimizer::encode::node_tag::RETURN: u32
+pub const vyre_pass_engine::optimizer::encode::node_tag::ROOT: u32
+pub const vyre_pass_engine::optimizer::encode::node_tag::SIDE_EFFECT: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::BIN_OP: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::BUF_LEN: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::FMA: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::INVOCATION_ID: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::LIT_BOOL: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::LIT_F32: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::LIT_I32: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::LIT_U32: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::LOAD: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::LOCAL_ID: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::SELECT: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::SUBGROUP_LOCAL_ID: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::SUBGROUP_SIZE: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::UN_OP: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::VAR: u32
+pub const vyre_pass_engine::optimizer::expr_arena::expr_kind::WORKGROUP_ID: u32
+pub const vyre_pass_engine::optimizer::pattern_match_via_encoded::rewrite_action::NONE: u32
+pub const vyre_pass_engine::optimizer::pattern_match_via_encoded::rewrite_action::REPLACE_WITH_GRAND_OPERAND: u32
+pub const vyre_pass_engine::optimizer::pattern_match_via_encoded::rewrite_action::REPLACE_WITH_LEFT: u32
+pub const vyre_pass_engine::optimizer::pattern_match_via_encoded::rewrite_action::REPLACE_WITH_LEFT_INNER_LEFT: u32
+pub const vyre_pass_engine::optimizer::pattern_match_via_encoded::rewrite_action::REPLACE_WITH_LEFT_INNER_RIGHT: u32
+pub const vyre_pass_engine::optimizer::pattern_match_via_encoded::rewrite_action::REPLACE_WITH_LIT_FALSE: u32
+pub const vyre_pass_engine::optimizer::pattern_match_via_encoded::rewrite_action::REPLACE_WITH_LIT_TRUE: u32
+pub const vyre_pass_engine::optimizer::pattern_match_via_encoded::rewrite_action::REPLACE_WITH_LIT_ZERO: u32
+pub const vyre_pass_engine::optimizer::pattern_match_via_encoded::rewrite_action::REPLACE_WITH_RIGHT: u32
+pub const vyre_pass_engine::optimizer::validate_via_encoded::DEFAULT_MAX_EXPR_DEPTH: u32
+pub const vyre_pass_engine::optimizer::validate_via_encoded::DEFAULT_MAX_NODE_COUNT: u32
+pub const vyre_pass_engine::optimizer::validate_via_encoded::VIOLATION_INDEX_V019: u32
+pub const vyre_pass_engine::optimizer::validate_via_encoded::VIOLATION_INDEX_V033: u32
+pub enum vyre_pass_engine::optimizer::canonicalize_via_encoded::CanonicalizeError
+pub enum vyre_pass_engine::optimizer::const_fold_via_encoded::ConstFoldError
+pub enum vyre_pass_engine::optimizer::cse_via_encoded::CseError
+pub enum vyre_pass_engine::optimizer::dce_via_encoded::DceError
+pub enum vyre_pass_engine::optimizer::encode::EncodeError
+pub enum vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError
+pub enum vyre_pass_engine::optimizer::pipeline::GpuOptimizeError
+pub enum vyre_pass_engine::optimizer::validate_via_encoded::ValidateError
+pub fn [u32]::canonical_of(&self, id: u32) -> u32
+pub fn [u32]::is_empty(&self) -> bool
+pub fn vyre_pass_engine::optimizer::canonicalize_via_encoded::CanonicalizeError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_pass_engine::optimizer::canonicalize_via_encoded::build_canonicalize_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::canonicalize_via_encoded::gpu_canonicalize(program: vyre_foundation::ir_inner::model::program::definition::Program, executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_pass_engine::optimizer::canonicalize_via_encoded::CanonicalizeError>
+pub fn vyre_pass_engine::optimizer::combined_decode::ArenaDeltaLookup::foldable(&self, id: usize) -> u32
+pub fn vyre_pass_engine::optimizer::combined_decode::ArenaDeltaLookup::rewrite_action(&self, id: usize) -> u32
+pub fn vyre_pass_engine::optimizer::combined_decode::ArenaDeltaLookup::swap_mask(&self, id: usize) -> u32
+pub fn vyre_pass_engine::optimizer::combined_decode::ArenaDeltaLookup::value(&self, id: usize) -> u32
+pub fn vyre_pass_engine::optimizer::combined_decode::BitsetArenaDeltas<'_>::foldable(&self, id: usize) -> u32
+pub fn vyre_pass_engine::optimizer::combined_decode::BitsetArenaDeltas<'_>::rewrite_action(&self, id: usize) -> u32
+pub fn vyre_pass_engine::optimizer::combined_decode::BitsetArenaDeltas<'_>::swap_mask(&self, id: usize) -> u32
+pub fn vyre_pass_engine::optimizer::combined_decode::BitsetArenaDeltas<'_>::value(&self, id: usize) -> u32
+pub fn vyre_pass_engine::optimizer::combined_decode::BitsetArenaDeltas<'a>::new(swap_bits: &'a [u32], fold_bits: &'a [u32], value: &'a [u32], rewrite_action: &'a [u32]) -> Self
+pub fn vyre_pass_engine::optimizer::combined_decode::SparseArenaDeltas::foldable(&self, id: usize) -> u32
+pub fn vyre_pass_engine::optimizer::combined_decode::SparseArenaDeltas::from_compacted_record_words(expr_count: u32, record_count: u32, record_words: &[u32], context: &str) -> core::result::Result<Self, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_pass_engine::optimizer::combined_decode::SparseArenaDeltas::override_count(&self) -> usize
+pub fn vyre_pass_engine::optimizer::combined_decode::SparseArenaDeltas::rewrite_action(&self, id: usize) -> u32
+pub fn vyre_pass_engine::optimizer::combined_decode::SparseArenaDeltas::swap_mask(&self, id: usize) -> u32
+pub fn vyre_pass_engine::optimizer::combined_decode::SparseArenaDeltas::value(&self, id: usize) -> u32
+pub fn vyre_pass_engine::optimizer::combined_decode::apply_combined_arena_deltas(program: &vyre_foundation::ir_inner::model::program::definition::Program, swap_mask: &[u32], foldable: &[u32], value: &[u32], rewrite_action: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::combined_decode::apply_combined_arena_deltas_bitsets(program: &vyre_foundation::ir_inner::model::program::definition::Program, swap_bits: &[u32], fold_bits: &[u32], value: &[u32], rewrite_action: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::combined_decode::apply_combined_arena_deltas_with_lookup<D: vyre_pass_engine::optimizer::combined_decode::ArenaDeltaLookup + ?core::marker::Sized>(program: &vyre_foundation::ir_inner::model::program::definition::Program, deltas: &D) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::combined_decode::build_resident_delta_bitset_pack_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::combined_decode::build_resident_delta_compact_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::const_fold_via_encoded::ConstFoldError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_pass_engine::optimizer::const_fold_via_encoded::build_const_fold_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::const_fold_via_encoded::build_const_fold_program_fused(expr_count: u32, max_depth_iter_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::const_fold_via_encoded::gpu_const_fold(program: vyre_foundation::ir_inner::model::program::definition::Program, executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_pass_engine::optimizer::const_fold_via_encoded::ConstFoldError>
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup::canonical_of(&self, id: u32) -> u32
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup::is_empty(&self) -> bool
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::CseError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::SparseCanonicalMap::canonical_of(&self, id: u32) -> u32
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::SparseCanonicalMap::from_compacted_pair_words(expr_count: u32, pair_count: u32, pair_words: &[u32], context: &str) -> core::result::Result<Self, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::SparseCanonicalMap::is_empty(&self) -> bool
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::SparseCanonicalMap::override_count(&self) -> usize
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::apply_cross_scope_cse(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::apply_cross_scope_cse_with_lookup<C: vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup + ?core::marker::Sized>(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &C) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::apply_cse_canonicals(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::apply_cse_let_dedupe(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::apply_cse_let_dedupe_with_lookup<C: vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup + ?core::marker::Sized>(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &C) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::build_canonical_delta_compact_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::build_canonical_id_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::build_structural_hash_program(expr_count: u32, max_depth_iter_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::cse_via_encoded::gpu_cse_canonicals(program: &vyre_foundation::ir_inner::model::program::definition::Program, executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<(vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, alloc::vec::Vec<u32>), vyre_pass_engine::optimizer::cse_via_encoded::CseError>
+pub fn vyre_pass_engine::optimizer::dce_program::build_dce_bfs_program(shape: vyre_libs::graph::program_graph::ProgramGraphShape, max_iters: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::dce_program::build_persistent_bfs_program(shape: vyre_libs::graph::program_graph::ProgramGraphShape, max_iters: u32, allow_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::dce_via_encoded::DceError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_pass_engine::optimizer::dce_via_encoded::gpu_dce(program: vyre_foundation::ir_inner::model::program::definition::Program, executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_pass_engine::optimizer::dce_via_encoded::DceError>
+pub fn vyre_pass_engine::optimizer::encode::apply_live_bitset_mask(program: &vyre_foundation::ir_inner::model::program::definition::Program, encoded: &vyre_pass_engine::optimizer::encode::EncodedProgram, live_words: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::encode::apply_live_mask(program: &vyre_foundation::ir_inner::model::program::definition::Program, encoded: &vyre_pass_engine::optimizer::encode::EncodedProgram, live: &[bool]) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::encode::collect_expr_var_refs(expr: &vyre_foundation::ir_inner::model::generated::Expr, out: &mut alloc::vec::Vec<vyre_foundation::ir_inner::model::expr::ident::Ident>)
+pub fn vyre_pass_engine::optimizer::encode::encode_program(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_pass_engine::optimizer::encode::EncodedProgram, vyre_pass_engine::optimizer::encode::EncodeError>
+pub fn vyre_pass_engine::optimizer::encode::reachable_prefix_len(entry: &[vyre_foundation::ir_inner::model::generated::Node]) -> usize
+pub fn vyre_pass_engine::optimizer::expr_arena::bin_op_from_tag(tag: u32) -> core::option::Option<vyre_spec::bin_op::BinOp>
+pub fn vyre_pass_engine::optimizer::expr_arena::encode_expr_arena(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, vyre_pass_engine::optimizer::encode::EncodeError>
+pub fn vyre_pass_engine::optimizer::expr_arena::structural_hashes(arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding) -> alloc::vec::Vec<u64>
+pub fn vyre_pass_engine::optimizer::expr_arena::un_op_from_tag(tag: u32) -> core::option::Option<vyre_spec::un_op::UnOp>
+pub fn vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_pass_engine::optimizer::pattern_match_via_encoded::build_pattern_match_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::pattern_match_via_encoded::build_pattern_match_program_with_cse(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::pattern_match_via_encoded::gpu_algebraic_identities(program: vyre_foundation::ir_inner::model::program::definition::Program, executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError>
+pub fn vyre_pass_engine::optimizer::pipeline::GpuOptimizeError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_pass_engine::optimizer::pipeline::gpu_optimize(program: vyre_foundation::ir_inner::model::program::definition::Program, executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_pass_engine::optimizer::pipeline::GpuOptimizeError>
+pub fn vyre_pass_engine::optimizer::validate_via_encoded::ValidateError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_pass_engine::optimizer::validate_via_encoded::build_validate_limits_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_pass_engine::optimizer::validate_via_encoded::gpu_validate_limits(program: &vyre_foundation::ir_inner::model::program::definition::Program, executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<[bool; 2], vyre_pass_engine::optimizer::validate_via_encoded::ValidateError>
+pub fn vyre_pass_engine::optimizer::validate_via_encoded::gpu_validate_limits_from_encoding(arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, node_count: u32, executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<[bool; 2], vyre_pass_engine::optimizer::validate_via_encoded::ValidateError>
+pub mod vyre_pass_engine
+pub mod vyre_pass_engine::optimizer
+pub mod vyre_pass_engine::optimizer::canonicalize_via_encoded
+pub mod vyre_pass_engine::optimizer::combined_decode
+pub mod vyre_pass_engine::optimizer::const_fold_via_encoded
+pub mod vyre_pass_engine::optimizer::cse_via_encoded
+pub mod vyre_pass_engine::optimizer::dce_program
+pub mod vyre_pass_engine::optimizer::dce_via_encoded
+pub mod vyre_pass_engine::optimizer::encode
+pub mod vyre_pass_engine::optimizer::encode::edge_kind
+pub mod vyre_pass_engine::optimizer::encode::node_tag
+pub mod vyre_pass_engine::optimizer::expr_arena
+pub mod vyre_pass_engine::optimizer::expr_arena::expr_kind
+pub mod vyre_pass_engine::optimizer::pattern_match_via_encoded
+pub mod vyre_pass_engine::optimizer::pattern_match_via_encoded::rewrite_action
+pub mod vyre_pass_engine::optimizer::pipeline
+pub mod vyre_pass_engine::optimizer::validate_via_encoded
+pub struct vyre_pass_engine::optimizer::combined_decode::BitsetArenaDeltas<'a>
+pub struct vyre_pass_engine::optimizer::combined_decode::SparseArenaDeltas
+pub struct vyre_pass_engine::optimizer::cse_via_encoded::SparseCanonicalMap
+pub struct vyre_pass_engine::optimizer::encode::EncodedProgram
+pub struct vyre_pass_engine::optimizer::encode::WrappingRegion
+pub struct vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding
+pub trait vyre_pass_engine::optimizer::combined_decode::ArenaDeltaLookup
+pub trait vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup
+pub vyre_pass_engine::optimizer::canonicalize_via_encoded::CanonicalizeError::Encode(vyre_pass_engine::optimizer::encode::EncodeError)
+pub vyre_pass_engine::optimizer::canonicalize_via_encoded::CanonicalizeError::Semantic(vyre_megakernel::execution::SemanticExecutionError)
+pub vyre_pass_engine::optimizer::const_fold_via_encoded::ConstFoldError::Encode(vyre_pass_engine::optimizer::encode::EncodeError)
+pub vyre_pass_engine::optimizer::const_fold_via_encoded::ConstFoldError::Semantic(vyre_megakernel::execution::SemanticExecutionError)
+pub vyre_pass_engine::optimizer::cse_via_encoded::CseError::Encode(vyre_pass_engine::optimizer::encode::EncodeError)
+pub vyre_pass_engine::optimizer::cse_via_encoded::CseError::Semantic(vyre_megakernel::execution::SemanticExecutionError)
+pub vyre_pass_engine::optimizer::dce_via_encoded::DceError::Encode(vyre_pass_engine::optimizer::encode::EncodeError)
+pub vyre_pass_engine::optimizer::dce_via_encoded::DceError::Semantic(vyre_megakernel::execution::SemanticExecutionError)
+pub vyre_pass_engine::optimizer::encode::EncodeError::Unsupported(&'static str)
+pub vyre_pass_engine::optimizer::encode::EncodedProgram::edge_count: u32
+pub vyre_pass_engine::optimizer::encode::EncodedProgram::edge_kind_mask: alloc::vec::Vec<u32>
+pub vyre_pass_engine::optimizer::encode::EncodedProgram::edge_offsets: alloc::vec::Vec<u32>
+pub vyre_pass_engine::optimizer::encode::EncodedProgram::edge_targets: alloc::vec::Vec<u32>
+pub vyre_pass_engine::optimizer::encode::EncodedProgram::node_count: u32
+pub vyre_pass_engine::optimizer::encode::EncodedProgram::node_tags: alloc::vec::Vec<u32>
+pub vyre_pass_engine::optimizer::encode::EncodedProgram::nodes: alloc::vec::Vec<u32>
+pub vyre_pass_engine::optimizer::encode::EncodedProgram::wrapping: core::option::Option<vyre_pass_engine::optimizer::encode::WrappingRegion>
+pub vyre_pass_engine::optimizer::encode::WrappingRegion::generator: vyre_foundation::ir_inner::model::expr::ident::Ident
+pub vyre_pass_engine::optimizer::encode::WrappingRegion::source_region: core::option::Option<vyre_foundation::ir_inner::model::expr::ident::Ident>
+pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::arg0: alloc::vec::Vec<u32>
+pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::arg1: alloc::vec::Vec<u32>
+pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::arg2: alloc::vec::Vec<u32>
+pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::arg3: alloc::vec::Vec<u32>
+pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::depths: alloc::vec::Vec<u32>
+pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::expr_count: u32
+pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::kinds: alloc::vec::Vec<u32>
+pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::max_depth: u32
+pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::node_top_level_exprs: alloc::vec::Vec<alloc::vec::Vec<u32>>
+pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::post_order: alloc::vec::Vec<u32>
+pub vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError::Encode(vyre_pass_engine::optimizer::encode::EncodeError)
+pub vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError::Semantic(vyre_megakernel::execution::SemanticExecutionError)
+pub vyre_pass_engine::optimizer::pipeline::GpuOptimizeError::AlgebraicIdentities(vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError)
+pub vyre_pass_engine::optimizer::pipeline::GpuOptimizeError::Canonicalize(vyre_pass_engine::optimizer::canonicalize_via_encoded::CanonicalizeError)
+pub vyre_pass_engine::optimizer::pipeline::GpuOptimizeError::ConstFold(vyre_pass_engine::optimizer::const_fold_via_encoded::ConstFoldError)
+pub vyre_pass_engine::optimizer::pipeline::GpuOptimizeError::Dce(vyre_pass_engine::optimizer::dce_via_encoded::DceError)
+pub vyre_pass_engine::optimizer::validate_via_encoded::ValidateError::Encode(vyre_pass_engine::optimizer::encode::EncodeError)
+pub vyre_pass_engine::optimizer::validate_via_encoded::ValidateError::Semantic(vyre_megakernel::execution::SemanticExecutionError)

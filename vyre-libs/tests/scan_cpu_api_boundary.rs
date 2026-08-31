@@ -1,13 +1,13 @@
 //! API-boundary regression tests for production scan paths.
 
-mod support;
+mod harness;
 
 #[test]
 fn scan_layer_does_not_export_cpu_named_execution_paths() {
-    support::assert_no_cpu_named_api_exports(
-        "src/scan",
-        "scan",
+    harness::assert_no_cpu_named_api_exports(
+        "src/pattern",
+        "pattern",
         &["scan_cpu"],
-        "scan-layer CPU-named APIs must be explicit reference/parity internals",
+        "pattern-layer CPU-named APIs must be explicit reference/parity internals",
     );
 }

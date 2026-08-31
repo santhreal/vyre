@@ -1,0 +1,19 @@
+lane = "release-evidence-evidence"
+workflow = ".github/workflows/release-evidence.yml"
+job = "evidence"
+state = "live"
+required_status = "release-evidence / Generate release evidence"
+triggers = ["workflow_dispatch", "push"]
+steps = [
+  { gate = "metadata-matrix", args = ["--write"] },
+  { gate = "version-matrix", args = ["--write"] },
+  { gate = "feature-matrix", args = ["--write"] },
+  { gate = "package-readiness", args = ["--write"] },
+  { gate = "backend-matrix", args = ["--write"] },
+  { gate = "release-workload-matrix", args = ["--write"] },
+  { gate = "op-matrix", args = ["--write"] },
+  { gate = "optimization-matrix", args = ["--write"] },
+  { gate = "optimization-corpus", args = ["--write"] },
+  { gate = "launch-state", args = ["--write"] },
+  { gate = "release-evidence", args = ["--write"] },
+]

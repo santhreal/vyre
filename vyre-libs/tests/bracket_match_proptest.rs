@@ -1,0 +1,86 @@
+//! Property: proptest over random brace-token sequences for `matching::bracket_match`,
+//! driving the ACTUAL GPU IR through `reference_eval` vs `reference_bracket_match`. The shipped file value-checks
+//! only the reference oracle's self-consistency (`generated_uncapped_cases_match_stack_reference_contract`
+//! asserts pair symmetry, NOT the IR) plus a SINGLE balanced inventory fixture — so neither GPU IR
+//! path is validated against the oracle over real inputs.
+//!
+//! `bracket_match` chooses ONE of two structurally-different kernels by `max_depth` vs `n`:
+//! - `max_depth >= n` → the PARALLEL per-lane matcher (each open scans forward for its close, each
+//!   close scans backward), which must reproduce full bounded-stack matching (no overflow possible).
+//! - `max_depth < n`  → the single-lane BOUNDED-STACK walk, where overflow opens are deliberately
+//!   dropped.
+//! This sweep draws `max_depth in 1..=(n+2)` so BOTH kernels are exercised, over sequences that are
+//! balanced, nested, unbalanced (extra opens AND extra closes), and depth-overflowing — the exact
+//! cases a single hand fixture cannot reach. Each result is asserted BIT-EXACT vs `reference_bracket_match`
+//! (`match_pairs`: bidirectional links, `BRACKET_MATCH_NONE` for unmatched). Any divergence is a real
+//! IR/oracle defect.
+#![cfg(feature = "pattern")]
+
+use proptest::prelude::*;
+use vyre_libs::pattern::{
+    bracket_match, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_OTHER, BRACKET_MATCH_NONE,
+};
+use vyre_reference::composition_witness::bracket_match_witness as reference_bracket_match;
+use vyre_reference::value::Value;
+
+/// Run the IR and return the `match_pairs` output (results[1]: the RW buffers are `stack`(1) then
+/// `match_pairs`(2), in binding order).
+fn run_ir(kinds: &[u32], max_depth: u32) -> Vec<u32> {
+    let n = kinds.len() as u32;
+    let program = bracket_match("kinds", "stack", "match_pairs", n, max_depth);
+    let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
+    let outputs = vyre_reference::reference_eval(
+        &program,
+        &[
+            pack(kinds),                                  // kinds (binding 0, RO)
+            pack(&vec![0u32; max_depth.max(1) as usize]), // stack (binding 1, RW)
+        ],
+    )
+    .expect("bracket_match reference evaluation must succeed");
+    // results[0] = stack (RW), results[1] = match_pairs (output).
+    outputs[1]
+        .to_bytes()
+        .chunks_exact(4)
+        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+        .collect()
+}
+
+prop_compose! {
+    /// A random brace-token sequence (length 1..=64, each token BRACKET_KIND_OTHER/OPEN/CLOSE) and a `max_depth`
+    /// drawn to straddle `n` so both the parallel (`>= n`) and bounded-stack (`< n`) kernels fire.
+    fn arb_case()(len in 1usize..=64)
+        (kinds in prop::collection::vec(
+            prop_oneof![Just(BRACKET_KIND_OTHER), Just(BRACKET_KIND_OPEN), Just(BRACKET_KIND_CLOSE)], len),
+         max_depth in 1u32..=(len as u32 + 2))
+        -> (Vec<u32>, u32) {
+        (kinds, max_depth)
+    }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(3000))]
+
+    #[test]
+    fn bracket_match_ir_matches_reference_across_both_kernels(
+        (kinds, max_depth) in arb_case()
+    ) {
+        let got = run_ir(&kinds, max_depth);
+        let want = reference_bracket_match(&kinds, max_depth);
+        prop_assert_eq!(
+            &got, &want,
+            "kinds={:?} max_depth={} (n={}, kernel={}): IR {:?} != reference_bracket_match {:?}",
+            kinds, max_depth, kinds.len(),
+            if max_depth >= kinds.len() as u32 { "parallel" } else { "bounded-stack" },
+            got, want
+        );
+        // Structural invariant on the IR output itself: every non-BRACKET_MATCH_NONE link is symmetric and
+        // in range (a real GPU write of a stale/OOB index would break this even if it matched a
+        // buggy oracle).
+        for (i, &p) in got.iter().enumerate() {
+            if p != BRACKET_MATCH_NONE {
+                prop_assert!((p as usize) < got.len(), "link {} at {} out of range", p, i);
+                prop_assert_eq!(got[p as usize], i as u32, "asymmetric link at {}", i);
+            }
+        }
+    }
+}

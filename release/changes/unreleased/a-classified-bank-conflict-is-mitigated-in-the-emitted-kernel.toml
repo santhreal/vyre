@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The PTX backend applies the bank-conflict strategy it selects to each permutable shared binding, rewriting the element index at the one shared address site and declaring a padded binding at its grown extent."

@@ -3,12 +3,14 @@
 //! This covers the large-input route that must dispatch through the
 //! multi-block scan chain rather than the historical single-lane loop.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::ir::{BufferAccess, Program};
+use harness::{
+    bytes_u32, find_output_buffer_index, is_required_input_buffer, u32_bytes, with_live_backend,
+};
+use vyre::ir::Program;
 use vyre_driver::DispatchConfig;
 use vyre_libs::math::scan::scan_prefix_sum;
 
@@ -16,39 +18,15 @@ fn scan_inputs_for_program(program: &Program, input: &[u32]) -> Vec<Vec<u8>> {
     program
         .buffers()
         .iter()
-        .filter_map(|buffer| {
-            let backend_allocated = buffer.is_output() || buffer.is_pipeline_live_out();
-            let needs_input = matches!(
-                buffer.access(),
-                BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
-            ) && !backend_allocated
-                && buffer.access() != BufferAccess::Workgroup;
-            if !needs_input {
-                return None;
-            }
+        .filter(|buffer| is_required_input_buffer(buffer))
+        .map(|buffer| {
             if buffer.name() == "input" {
-                Some(u32_bytes(input))
+                u32_bytes(input)
             } else {
-                Some(vec![0u8; buffer.count().max(1) as usize * 4])
+                vec![0u8; buffer.count().max(1) as usize * 4]
             }
         })
         .collect()
-}
-
-fn produced_buffer_index(program: &Program, name: &str) -> usize {
-    program
-        .buffers()
-        .iter()
-        .filter(|buffer| {
-            buffer.is_output()
-                || buffer.is_pipeline_live_out()
-                || matches!(
-                    buffer.access(),
-                    BufferAccess::ReadWrite | BufferAccess::WriteOnly
-                )
-        })
-        .position(|buffer| buffer.name() == name)
-        .unwrap_or_else(|| panic!("Fix: CUDA scan output buffer `{name}` must be declared"))
 }
 
 fn cpu_wrapping_prefix_sum(input: &[u32]) -> Vec<u32> {
@@ -66,7 +44,7 @@ fn run_scan_prefix_sum(input: &[u32]) -> Vec<u32> {
     let n = input.len() as u32;
     let program = scan_prefix_sum("input", "output", n);
     let inputs = scan_inputs_for_program(&program, input);
-    let output_index = produced_buffer_index(&program, "output");
+    let output_index = find_output_buffer_index(&program, "output");
     let outputs = with_live_backend("vyre-libs scan_prefix_sum", |backend| {
         backend
             .dispatch(&program, &inputs, &DispatchConfig::default())

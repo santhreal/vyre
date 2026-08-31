@@ -1,4 +1,4 @@
 /// docs
-pub mod blake3;
+pub(crate) mod blake3;
 /// docs
-pub mod fnv1a;
+pub(crate) mod fnv1a;

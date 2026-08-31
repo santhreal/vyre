@@ -6,7 +6,7 @@
 //! (`CountOneBits`, `CountLeadingZeros`, `CountTrailingZeros`, `ReverseBits`).
 //! The naga signed-`Modulo` bug proved that even a native/intrinsic naga op can
 //! silently pick the wrong semantics on hardware, so these are dispatched on the
-//! 5090 and asserted byte-for-byte against the oracle contract:
+//! live GPU and asserted byte-for-byte against the oracle contract:
 //!   * `negate(u32)` = `0u32.wrapping_sub(v)` = `v.wrapping_neg()`. NOTE: vyre's
 //!     typecheck legalises integer `Negate` only for `u32` (and `f32`); RAW
 //!     `i32` negate is REJECTED upstream precisely because of the `i32::MIN`
@@ -23,8 +23,10 @@
 //! (Integer `abs`/`sign` are intentionally absent: the oracle's integer unary
 //! dispatch errors on them, they are float-only ops by contract.)
 
-mod common;
-use common::u32_bytes;
+#![cfg(feature = "device-tests")]
+
+mod harness;
+use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;

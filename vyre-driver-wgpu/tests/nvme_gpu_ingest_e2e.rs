@@ -1,5 +1,6 @@
 //! Linux ingest loop smoke/e2e: file -> io_uring -> mapped slot -> live GPU.
 
+#![cfg(feature = "device-tests")]
 #![cfg(target_os = "linux")]
 #![allow(unsafe_code)]
 
@@ -12,7 +13,7 @@ use tempfile::tempdir;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_runtime::resident_work_queue::ResidentIoQueue;
+use vyre_runtime::resident_work_queue::io::ResidentIoQueue;
 use vyre_runtime::uring::{
     AsyncUringStream, GpuMappedBuffer, IoUringState, NativeReadPath, NvmeGpuIngestDriver,
 };
@@ -132,7 +133,7 @@ fn ingests_file_and_surfaces_hash_through_live_backend() {
             .expect("Fix: the ingest fixture must remain readable for CPU hashing"),
     );
     let backend = WgpuBackend::acquire()
-        .expect("Fix: the local RTX 5090 backend must be available for the ingest e2e test");
+        .expect("Fix: the live GPU backend must be available for the ingest e2e test");
     let gpu_bytes = backend
         .dispatch(
             &copy_hash_program(),

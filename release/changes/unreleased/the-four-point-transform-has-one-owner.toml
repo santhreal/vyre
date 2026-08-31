@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`fft4_complex` builds through the radix-2 transform at N=4 instead of carrying a hand-expanded copy of the four butterflies. The radix-2 module's doc claimed it was built on top of the verified 4-point base case and never called it, so the 4-point DFT had two implementations and no test that they agreed. A parity case now asserts the two entry points produce identical bytes."

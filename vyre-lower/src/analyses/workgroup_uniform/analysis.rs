@@ -7,7 +7,7 @@
 
 use super::report::{BranchSite, BranchUniformity, WorkgroupUniformReport};
 use crate::analyses::structured_walk::{branch_at, walk_structured, ArmDescent, StructuredVisitor};
-use crate::analyses::{producer_map, ProducerMap};
+use crate::analyses::ProducerMap;
 use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 use rustc_hash::FxHashSet;
 
@@ -23,30 +23,27 @@ pub fn analyze(desc: &KernelDescriptor) -> WorkgroupUniformReport {
 }
 
 /// Classifies each branch against the producer map of the body that holds it.
-///
-/// The map is rebuilt whenever the walk moves to a different body, including
-/// on the way back up out of a child, so a branch is never classified against
-/// a nested body's producers. Consecutive branches in one body reuse it.
+/// The walk owns that map, so this holds only the sites it has judged.
 #[derive(Default)]
-struct BranchCollector<'a> {
-    mapped_body: Option<&'a KernelBody>,
-    producers: ProducerMap<'a>,
+struct BranchCollector {
     branches: Vec<BranchSite>,
 }
 
-impl<'a> StructuredVisitor<'a> for BranchCollector<'a> {
-    fn visit_op(&mut self, body: &'a KernelBody, op_index: usize, op: &'a KernelOp) {
+impl<'a> StructuredVisitor<'a> for BranchCollector {
+    fn visit_op(
+        &mut self,
+        body: &'a KernelBody,
+        producers: &ProducerMap<'a>,
+        op_index: usize,
+        op: &'a KernelOp,
+    ) {
         let Some(branch) = branch_at(body, op) else {
             return;
         };
-        if !self.mapped_body.is_some_and(|held| std::ptr::eq(held, body)) {
-            self.mapped_body = Some(body);
-            self.producers = producer_map(body);
-        }
         self.branches.push(BranchSite {
             op_index,
             cond_operand_id: branch.cond_operand_id,
-            uniformity: classify(&self.producers, branch.cond_operand_id),
+            uniformity: classify(producers, branch.cond_operand_id),
         });
     }
 }
@@ -132,61 +129,39 @@ fn visit(producers: &ProducerMap<'_>, operand_id: u32, visited: &mut FxHashSet<u
     info
 }
 
+// Inline: covers the crate-private `analyze`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
+    use crate::descriptor_builder::{
+        binop, body, descriptor, global_ro, if_then, if_then_else, lit, load_global, op,
     };
-    use vyre_foundation::ir::BinOp;
+    use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
+    use vyre_foundation::ir::{BinOp, DataType};
 
-    fn empty_kernel() -> KernelDescriptor {
-        KernelDescriptor {
-            id: "empty".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        }
+    /// A 64-thread kernel with no bindings, which is every case here that is
+    /// not specifically about a load-derived condition.
+    fn kernel(id: &str, body: impl Into<KernelBody>) -> KernelDescriptor {
+        descriptor(id).dispatch(64, 1, 1).body(body).build()
     }
 
     #[test]
     fn empty_kernel_has_no_branches() {
-        let r = analyze(&empty_kernel());
+        let r = analyze(&kernel("empty", body()));
         assert!(r.branches.is_empty());
     }
 
     #[test]
     fn if_with_constant_condition_is_uniform() {
-        let kernel = KernelDescriptor {
-            id: "uniform".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StructuredIfThen,
-                        operands: vec![0, 0],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![KernelBody {
-                    ops: vec![],
-                    child_bodies: vec![],
-                    literals: vec![],
-                }],
-                literals: vec![LiteralValue::Bool(true)],
-            },
-        };
-        let r = analyze(&kernel);
+        let k = kernel(
+            "uniform",
+            body()
+                .op(lit(0, 0))
+                .op(if_then(0, 0))
+                .child(body())
+                .literal(LiteralValue::Bool(true)),
+        );
+        let r = analyze(&k);
         assert_eq!(r.branches.len(), 1);
         assert_eq!(r.branches[0].uniformity, BranchUniformity::Uniform);
         assert_eq!(r.uniform_count(), 1);
@@ -194,42 +169,17 @@ mod tests {
 
     #[test]
     fn if_with_local_invocation_id_condition_is_divergent() {
-        let kernel = KernelDescriptor {
-            id: "divergent".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::LocalInvocationId,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Lt),
-                        operands: vec![0, 1],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StructuredIfThen,
-                        operands: vec![2, 0],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![KernelBody {
-                    ops: vec![],
-                    child_bodies: vec![],
-                    literals: vec![],
-                }],
-                literals: vec![LiteralValue::U32(32)],
-            },
-        };
-        let r = analyze(&kernel);
+        let k = kernel(
+            "divergent",
+            body()
+                .op(op(KernelOpKind::LocalInvocationId, [0], 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Lt, 0, 1, 2))
+                .op(if_then(2, 0))
+                .child(body())
+                .literal(LiteralValue::U32(32)),
+        );
+        let r = analyze(&k);
         assert_eq!(r.branches.len(), 1);
         assert_eq!(r.branches[0].uniformity, BranchUniformity::Divergent);
         assert_eq!(r.divergent_count(), 1);
@@ -238,164 +188,65 @@ mod tests {
     #[test]
     fn if_with_workgroup_id_only_is_uniform() {
         // workgroup_id is the same for every thread in the workgroup.
-        let kernel = KernelDescriptor {
-            id: "wid_uniform".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::WorkgroupId,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Eq),
-                        operands: vec![0, 1],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StructuredIfThen,
-                        operands: vec![2, 0],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![KernelBody {
-                    ops: vec![],
-                    child_bodies: vec![],
-                    literals: vec![],
-                }],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
-        let r = analyze(&kernel);
+        let k = kernel(
+            "wid_uniform",
+            body()
+                .op(op(KernelOpKind::WorkgroupId, [0], 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Eq, 0, 1, 2))
+                .op(if_then(2, 0))
+                .child(body())
+                .literal(LiteralValue::U32(0)),
+        );
+        let r = analyze(&k);
         assert_eq!(r.branches[0].uniformity, BranchUniformity::Uniform);
     }
 
     #[test]
     fn nested_arithmetic_propagates_divergence() {
         // (tid + 5) > 0  -  divergent because tid is in the chain.
-        let kernel = KernelDescriptor {
-            id: "nested".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::LocalInvocationId,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![0, 1],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(3),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Gt),
-                        operands: vec![2, 3],
-                        result: Some(4),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StructuredIfThen,
-                        operands: vec![4, 0],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![KernelBody {
-                    ops: vec![],
-                    child_bodies: vec![],
-                    literals: vec![],
-                }],
-                literals: vec![LiteralValue::U32(5), LiteralValue::U32(0)],
-            },
-        };
-        let r = analyze(&kernel);
+        let k = kernel(
+            "nested",
+            body()
+                .op(op(KernelOpKind::LocalInvocationId, [0], 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Add, 0, 1, 2))
+                .op(lit(1, 3))
+                .op(binop(BinOp::Gt, 2, 3, 4))
+                .op(if_then(4, 0))
+                .child(body())
+                .literals([LiteralValue::U32(5), LiteralValue::U32(0)]),
+        );
+        let r = analyze(&k);
         assert_eq!(r.branches[0].uniformity, BranchUniformity::Divergent);
     }
 
     #[test]
     fn no_branches_means_no_report_entries() {
-        let kernel = KernelDescriptor {
-            id: "no_branch".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![0, 1],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(3), LiteralValue::U32(4)],
-            },
-        };
-        let r = analyze(&kernel);
+        let k = kernel(
+            "no_branch",
+            body()
+                .op(lit(0, 0))
+                .op(lit(1, 1))
+                .op(binop(BinOp::Add, 0, 1, 2))
+                .literals([LiteralValue::U32(3), LiteralValue::U32(4)]),
+        );
+        let r = analyze(&k);
         assert!(r.branches.is_empty());
     }
 
     #[test]
     fn if_else_branch_classified_separately() {
-        let kernel = KernelDescriptor {
-            id: "if_else".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StructuredIfThenElse,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![
-                    KernelBody {
-                        ops: vec![],
-                        child_bodies: vec![],
-                        literals: vec![],
-                    },
-                    KernelBody {
-                        ops: vec![],
-                        child_bodies: vec![],
-                        literals: vec![],
-                    },
-                ],
-                literals: vec![LiteralValue::Bool(false)],
-            },
-        };
-        let r = analyze(&kernel);
+        let k = kernel(
+            "if_else",
+            body()
+                .op(lit(0, 0))
+                .op(if_then_else(0, 0, 1))
+                .child(body())
+                .child(body())
+                .literal(LiteralValue::Bool(false)),
+        );
+        let r = analyze(&k);
         assert_eq!(r.branches.len(), 1);
         assert_eq!(r.branches[0].uniformity, BranchUniformity::Uniform);
     }
@@ -405,48 +256,19 @@ mod tests {
         // We can't know at compile time whether two threads read the
         // same value from memory  -  phase 1 marks load-derived
         // conditions as Unknown.
-        use crate::{BindingSlot, BindingVisibility, MemoryClass};
-        use vyre_foundation::ir::DataType;
-        let kernel = KernelDescriptor {
-            id: "load_cond".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::Bool,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "flag".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StructuredIfThen,
-                        operands: vec![1, 0],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![KernelBody {
-                    ops: vec![],
-                    child_bodies: vec![],
-                    literals: vec![],
-                }],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
-        let r = analyze(&kernel);
+        let k = descriptor("load_cond")
+            .slot(global_ro(0, DataType::Bool, "flag"))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .op(lit(0, 0))
+                    .op(load_global(0, 0, 1))
+                    .op(if_then(1, 0))
+                    .child(body())
+                    .literal(LiteralValue::U32(0)),
+            )
+            .build();
+        let r = analyze(&k);
         // Documented phase-1 behavior: Loads → Unknown rather than Uniform.
         assert_eq!(r.branches[0].uniformity, BranchUniformity::Unknown);
     }

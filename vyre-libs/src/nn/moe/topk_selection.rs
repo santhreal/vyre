@@ -1,3 +1,8 @@
+//! Top-k slot selection for mixture-of-experts routing.
+//!
+//! The slots are kept in registers and updated in rank order, so a router picks
+//! its experts without a sort over the full expert axis.
+
 use vyre_foundation::ir::{Expr, Node};
 
 pub(super) const BEST_VALS: &str = "best_vals";
@@ -148,4 +153,12 @@ mod tests {
         }
         assert_eq!(checked, 2_049);
     }
+}
+#[cfg(test)]
+pub(super) fn u32_from_bytes(bytes: &[u8]) -> Vec<u32> {
+    vyre_primitives::wire::decode_u32_le_bytes_all(bytes)
+}
+#[cfg(test)]
+pub(super) fn f32_from_bytes(bytes: &[u8]) -> Vec<f32> {
+    vyre_primitives::wire::decode_f32_le_bytes_all(bytes)
 }

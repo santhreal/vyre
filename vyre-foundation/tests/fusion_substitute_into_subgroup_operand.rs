@@ -8,7 +8,7 @@
 //! VERBATIM in its terminal arm -- so `v` was never inlined.
 //!
 //! The asymmetry is what made this a miscompile rather than a missed
-//! optimization: the use-counter (`fact_substrate::use_facts`) and
+//! optimization: the use-counter (`fact_cache::use_facts`) and
 //! `collect_used_vars` BOTH descend into the subgroup operand (via
 //! `push_expr_children`), so `v` was counted as a single use (selecting the
 //! fusable path that drops the `let`) and then dropped from the pending map by

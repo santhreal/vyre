@@ -6,8 +6,10 @@
 //! Every op here is a pure Category A composition over foundation IR primitives.
 
 use crate::builder::{build_elementwise_unary, BuildOptions};
-use crate::region::wrap_anonymous;
-use crate::tensor_ref::{check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError};
+use crate::plumbing::operand::tensor_ref::{
+    check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError,
+};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const JOIN_OP_ID: &str = "vyre-libs::math::algebra::join";
@@ -24,10 +26,9 @@ const SKETCH_MIX_OP_ID: &str = "vyre-libs::math::algebra::sketch_mix";
 #[must_use]
 pub fn lattice_join(a: &str, b: &str, out: &str, size: u32) -> Program {
     try_lattice_join(a, b, out, size).unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             JOIN_OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: {err}"),
         )
     })
@@ -40,7 +41,14 @@ pub fn lattice_join(a: &str, b: &str, out: &str, size: u32) -> Program {
 /// Returns [`TensorRefError`] when buffer names alias, dtypes are wrong, or the
 /// element count cannot be represented by the IR.
 pub fn try_lattice_join(a: &str, b: &str, out: &str, size: u32) -> Result<Program, TensorRefError> {
-    super::elementwise::try_u32_elementwise_binary(JOIN_OP_ID, a, b, out, size, Expr::bitor)
+    crate::builder::elementwise::try_u32_elementwise_binary(
+        JOIN_OP_ID,
+        a,
+        b,
+        out,
+        size,
+        Expr::bitor,
+    )
 }
 
 /// Lattice Meet (Infimum) for u32.
@@ -51,10 +59,9 @@ pub fn try_lattice_join(a: &str, b: &str, out: &str, size: u32) -> Result<Progra
 #[must_use]
 pub fn lattice_meet(a: &str, b: &str, out: &str, size: u32) -> Program {
     try_lattice_meet(a, b, out, size).unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             MEET_OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: {err}"),
         )
     })
@@ -67,7 +74,14 @@ pub fn lattice_meet(a: &str, b: &str, out: &str, size: u32) -> Program {
 /// Returns [`TensorRefError`] when buffer names alias, dtypes are wrong, or the
 /// element count cannot be represented by the IR.
 pub fn try_lattice_meet(a: &str, b: &str, out: &str, size: u32) -> Result<Program, TensorRefError> {
-    super::elementwise::try_u32_elementwise_binary(MEET_OP_ID, a, b, out, size, Expr::bitand)
+    crate::builder::elementwise::try_u32_elementwise_binary(
+        MEET_OP_ID,
+        a,
+        b,
+        out,
+        size,
+        Expr::bitand,
+    )
 }
 
 /// Min-Plus Semiring Multiplication.
@@ -80,10 +94,9 @@ pub fn try_lattice_meet(a: &str, b: &str, out: &str, size: u32) -> Result<Progra
 #[must_use]
 pub fn semiring_min_plus_mul(a: &str, b: &str, out: &str, size: u32) -> Program {
     try_semiring_min_plus_mul(a, b, out, size).unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             MINPLUS_MUL_OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: {err}"),
         )
     })
@@ -101,13 +114,18 @@ pub fn try_semiring_min_plus_mul(
     out: &str,
     size: u32,
 ) -> Result<Program, TensorRefError> {
-    super::elementwise::try_u32_elementwise_binary(MINPLUS_MUL_OP_ID, a, b, out, size, |lx, rx| {
-        Expr::BinOp {
+    crate::builder::elementwise::try_u32_elementwise_binary(
+        MINPLUS_MUL_OP_ID,
+        a,
+        b,
+        out,
+        size,
+        |lx, rx| Expr::BinOp {
             op: BinOp::SaturatingAdd,
             left: Box::new(lx),
             right: Box::new(rx),
-        }
-    })
+        },
+    )
 }
 
 /// Boolean-semiring dense matrix multiplication.
@@ -125,10 +143,9 @@ pub fn bool_semiring_matmul(
     cols: u32,
 ) -> Program {
     try_bool_semiring_matmul(a, b, out, rows, inner, cols).unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             BOOL_MATMUL_OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: {err}"),
         )
     })
@@ -226,16 +243,16 @@ pub fn try_bool_semiring_matmul(
                 BufferDecl::output(out, 2, DataType::U32).with_count(out_count.max(1)),
             ],
             [1, 1, 1],
-            vec![wrap_anonymous(
+            vec![wrap_anonymous_region(
                 BOOL_MATMUL_OP_ID,
                 vec![Node::if_then(
-                    Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                    Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),
                     stores,
                 )],
             )],
         ));
     }
-    let cell = Expr::InvocationId { axis: 0 };
+    let cell = Expr::LogicalIndex { axis: 0 };
     let row = Expr::div(cell.clone(), Expr::u32(cols.max(1)));
     let col = Expr::rem(cell.clone(), Expr::u32(cols.max(1)));
     let body = vec![Node::if_then(
@@ -297,7 +314,7 @@ pub fn try_bool_semiring_matmul(
             BufferDecl::output(out, 2, DataType::U32).with_count(out_count.max(1)),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(BOOL_MATMUL_OP_ID, body)],
+        vec![wrap_anonymous_region(BOOL_MATMUL_OP_ID, body)],
     ))
 }
 
@@ -310,10 +327,9 @@ pub fn try_bool_semiring_matmul(
 #[must_use]
 pub fn sketch_mix(input: &str, out: &str, size: u32) -> Program {
     try_sketch_mix(input, out, size).unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             SKETCH_MIX_OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: {err}"),
         )
     })
@@ -346,133 +362,112 @@ pub fn try_sketch_mix(input: &str, out: &str, size: u32) -> Result<Program, Tens
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: JOIN_OP_ID,
-        build: Some(|| lattice_join("a", "b", "out", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        JOIN_OP_ID,
+        || lattice_join("a", "b", "out", 4),
+        Some(|| {
             let a = [0x0000FFFFu32, 0xAAAAAAAA, 0x00000000, 0xFFFFFFFF];
             let b = [0xFFFF0000u32, 0x55555555, 0x00000000, 0x00000000];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&a), to_bytes(&b)]]
         }),
-        expected_output: Some(|| {
-            let expected = [0xFFFFFFFFu32, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+        Some(|| {
+            vec![vec![vec![
+                0xff, 0xff, 0xff, 0xff,
+                0xff, 0xff, 0xff, 0xff,
+                0x00, 0x00, 0x00, 0x00,
+                0xff, 0xff, 0xff, 0xff,
+            ]]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: MEET_OP_ID,
-        build: Some(|| lattice_meet("a", "b", "out", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        MEET_OP_ID,
+        || lattice_meet("a", "b", "out", 4),
+        Some(|| {
             let a = [0x0000FFFFu32, 0xAAAAAAAA, 0x00000000, 0xFFFFFFFF];
             let b = [0xFFFF0000u32, 0x55555555, 0x00000000, 0x00000000];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&a), to_bytes(&b)]]
         }),
-        expected_output: Some(|| {
-            let expected = [0x00000000u32, 0x00000000, 0x00000000, 0x00000000];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+        Some(|| {
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+            ]]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: MINPLUS_MUL_OP_ID,
-        build: Some(|| semiring_min_plus_mul("a", "b", "out", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        MINPLUS_MUL_OP_ID,
+        || semiring_min_plus_mul("a", "b", "out", 4),
+        Some(|| {
             let a = [10u32, 20, u32::MAX, u32::MAX - 1];
             let b = [1u32, 2, 3, 4];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&a), to_bytes(&b)]]
         }),
-        expected_output: Some(|| {
-            let expected = [11u32, 22, u32::MAX, u32::MAX];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+        Some(|| {
+            vec![vec![vec![
+                0x0b, 0x00, 0x00, 0x00, // 11
+                0x16, 0x00, 0x00, 0x00, // 22
+                0xff, 0xff, 0xff, 0xff, // u32::MAX
+                0xff, 0xff, 0xff, 0xff, // u32::MAX
+            ]]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: BOOL_MATMUL_OP_ID,
-        build: Some(|| bool_semiring_matmul("a", "b", "out", 2, 3, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        BOOL_MATMUL_OP_ID,
+        || bool_semiring_matmul("a", "b", "out", 2, 3, 2),
+        Some(|| {
             let a = [1u32, 0, 1, 0, 1, 0];
             let b = [0u32, 1, 1, 0, 0, 0];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&a), to_bytes(&b)]]
         }),
-        expected_output: Some(|| {
-            let expected = [0u32, 1, 1, 0];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+        Some(|| {
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x00, // 0
+                0x01, 0x00, 0x00, 0x00, // 1
+                0x01, 0x00, 0x00, 0x00, // 1
+                0x00, 0x00, 0x00, 0x00, // 0
+            ]]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: SKETCH_MIX_OP_ID,
-        build: Some(|| sketch_mix("input", "out", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        SKETCH_MIX_OP_ID,
+        || sketch_mix("input", "out", 4),
+        Some(|| {
             let input = [1u32, 2, 3, 4];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&input)]]
         }),
-        expected_output: Some(|| {
-            // We'll let the reference interpreter verify the mix logic matches.
-            // Thomas Wang's 32 bit mix:
-            let mix = |mut h: u32| {
-                h = h.wrapping_add(!(h << 15));
-                h ^= h >> 12;
-                h = h.wrapping_add(h << 2);
-                h ^= h >> 4;
-                h = h.wrapping_mul(2057);
-                h ^= h >> 16;
-                h
-            };
-            let expected = [mix(1), mix(2), mix(3), mix(4)];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+        Some(|| {
+            vec![vec![vec![
+                0x18, 0xfc, 0x55, 0xbd, // mix(1) = 0xbd55fc18
+                0xf1, 0x52, 0x4f, 0xf0, // mix(2) = 0xf04f52f1
+                0x2c, 0x71, 0xef, 0xd2, // mix(3) = 0xd2ef712c
+                0x3b, 0xa8, 0x5a, 0x85, // mix(4) = 0x855aa83b
+            ]]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]

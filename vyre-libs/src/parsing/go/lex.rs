@@ -1,58 +1,19 @@
-use crate::region::wrap_anonymous;
+//! The Go lexer program.
+//!
+//! Token numbering is owned by `vyre_spec::go_token`, which is the wire contract
+//! between this program and every host matcher that reads its rows.
+
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-/// Sparse-token sentinel: non-token byte positions stay zeroed.
-pub const TOK_NONE: u32 = 0;
-/// Identifier token.
-pub const TOK_IDENTIFIER: u32 = 1;
-/// Double-quoted string literal token.
-pub const TOK_STRING: u32 = 2;
-/// `(` token.
-pub const TOK_LPAREN: u32 = 10;
-/// `)` token.
-pub const TOK_RPAREN: u32 = 11;
-/// `{` token.
-pub const TOK_LBRACE: u32 = 12;
-/// `}` token.
-pub const TOK_RBRACE: u32 = 13;
-/// `[` token.
-pub const TOK_LBRACKET: u32 = 14;
-/// `]` token.
-pub const TOK_RBRACKET: u32 = 15;
-/// `,` token.
-pub const TOK_COMMA: u32 = 16;
-/// `.` token.
-pub const TOK_DOT: u32 = 17;
-/// `;` token.
-pub const TOK_SEMICOLON: u32 = 18;
-/// `:` token.
-pub const TOK_COLON: u32 = 19;
-/// `=` token.
-pub const TOK_ASSIGN: u32 = 20;
-/// `*` token.
-pub const TOK_STAR: u32 = 21;
-/// `<-` token.
-pub const TOK_ARROW: u32 = 22;
-/// Statement terminator: a line break, which Go treats as an implicit semicolon.
-///
-/// Emitting this is not cosmetic. Go separates statements by newline, and the
-/// lexer emits no token for a numeric literal, so without a terminator two
-/// consecutive receive statements
-///
-/// ```go
-/// <-input
-/// <-output
-/// ```
-///
-/// tokenize as `ARROW IDENT ARROW IDENT`, which is indistinguishable from the
-/// single send `input <- output`. The channel matchers then read the second
-/// receive as a send. That is exactly how the fixture corpus came to report 35
-/// sends and 14 receives where Go has 25 and 24: ten receives had been
-/// swallowed by the statement before them.
-pub const TOK_NEWLINE: u32 = 23;
+// `vyre_spec::go_token` owns the numbering of these ids. They are the wire
+// contract between the GPU lexer program below and every host matcher that
+// reads its sparse token rows, so a caller that reads a token kind names that
+// module rather than this one.
+use vyre_spec::go_token::*;
 
 fn byte_load(buffer: &str, index: Expr) -> Expr {
-    Expr::bitand(Expr::load(buffer, index), Expr::u32(0xFF))
+    crate::builder::state_machine::TableStateMachineComposer::masked_byte_load(buffer, index)
 }
 
 fn byte_eq(expr: Expr, byte: u8) -> Expr {
@@ -137,7 +98,7 @@ pub fn go_lexer(
     out_emit_flags: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
 
     let mut body = vec![
         Node::let_bind("byte", byte_load(haystack, t.clone())),
@@ -338,7 +299,7 @@ pub fn go_lexer(
                 .with_count(haystack_len),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_lexer",
             vec![Node::if_then(Expr::lt(t, Expr::u32(haystack_len)), body)],
         )],
@@ -365,7 +326,7 @@ pub fn go_lexer(
 /// other.
 #[must_use]
 pub fn go_quote_flags(haystack: &str, out_quote_flags: &str, haystack_len: u32) -> Program {
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     // Count the run of backslashes ending at `t - 1`. The lane walks the whole
     // prefix because the IR has no backward loop; the string scan in `go_lexer`
     // already has the same per-lane cost profile.
@@ -406,7 +367,7 @@ pub fn go_quote_flags(haystack: &str, out_quote_flags: &str, haystack_len: u32) 
                 .with_count(haystack_len),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_quote_flags",
             vec![Node::if_then(
                 Expr::lt(t.clone(), Expr::u32(haystack_len)),
@@ -424,7 +385,7 @@ pub fn go_quote_flags(haystack: &str, out_quote_flags: &str, haystack_len: u32) 
 /// so each stage of the Go pipeline reads as what it is.
 #[must_use]
 pub fn go_scan_quote_flags(quote_flags: &str, quote_ranks: &str, haystack_len: u32) -> Program {
-    vyre_primitives::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32(
+    crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32(
         quote_flags,
         quote_ranks,
         haystack_len,
@@ -440,7 +401,7 @@ pub fn go_scan_quote_flags(quote_flags: &str, quote_ranks: &str, haystack_len: u
 /// position `i`'s token belongs at.
 #[must_use]
 pub fn go_scan_emit_flags(emit_flags: &str, emit_offsets: &str, haystack_len: u32) -> Program {
-    vyre_primitives::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32(
+    crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32(
         emit_flags,
         emit_offsets,
         haystack_len,
@@ -473,7 +434,7 @@ pub fn go_compact_tokens(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::gid_x();
+    let t = Expr::logical_index(0);
     let last = haystack_len.saturating_sub(1);
 
     let body = vec![
@@ -534,7 +495,7 @@ pub fn go_compact_tokens(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_compact_tokens",
             vec![Node::if_then(Expr::lt(t, Expr::u32(haystack_len)), body)],
         )],

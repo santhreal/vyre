@@ -2,10 +2,10 @@
 //!
 //! `clip_threshold = k * std(row)`  -  int6 uses k=12.85, int8 uses k=20.0.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{DataType, Expr, Program};
 
-use crate::region::wrap_anonymous;
-use vyre_primitives::nn::f32_stability::{finite_or, positive_finite_or_min as positive_scale};
+use crate::nn::f32_stability::{finite_or, positive_finite_or_min as positive_scale};
 
 const ROUND_OP_ID: &str = "vyre-libs::quant::gptq_round";
 const SDCLIP_OP_ID: &str = "vyre-libs::quant::gptq_sdclip";
@@ -23,37 +23,24 @@ fn clamp_f32(value: Expr, lo: f32, hi: f32) -> Expr {
 /// GPTQ rounding: `q = clamp(round(x / scale), 0, max_val)` (F32→F32).
 #[must_use]
 pub fn gptq_round(input: &str, scale: &str, output: &str, n: u32, max_val: f32) -> Program {
-    let i = Expr::var("i");
-    let x = finite_or(Expr::load(input, i.clone()), Expr::f32(0.0));
-    let s = positive_scale(Expr::load(scale, i.clone()));
-
-    let divided = Expr::select(
-        Expr::eq(x.clone(), s.clone()),
-        Expr::f32(1.0),
-        Expr::div(x, s),
-    );
-    let clamped = clamp_f32(divided, 0.0, max_val);
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value: clamped,
-            }],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(scale, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(output, 2, DataType::F32).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous(ROUND_OP_ID, body)],
+    ElementwiseComposer::binary(
+        ROUND_OP_ID,
+        input,
+        scale,
+        DataType::F32,
+        output,
+        DataType::F32,
+        n,
+        |raw_x, raw_s| {
+            let x = finite_or(raw_x, Expr::f32(0.0));
+            let s = positive_scale(raw_s);
+            let divided = Expr::select(
+                Expr::eq(x.clone(), s.clone()),
+                Expr::f32(1.0),
+                Expr::div(x, s),
+            );
+            clamp_f32(divided, 0.0, max_val)
+        },
     )
 }
 
@@ -63,79 +50,46 @@ pub fn gptq_round(input: &str, scale: &str, output: &str, n: u32, max_val: f32) 
 /// This per-element clamp is a correct first-pass.
 #[must_use]
 pub fn gptq_sdclip(input: &str, output: &str, n: u32, k: f32) -> Program {
-    let i = Expr::var("i");
-    let x = finite_or(Expr::load(input, i.clone()), Expr::f32(0.0));
-    let clamped = clamp_f32(x, -k, k);
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value: clamped,
-            }],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(output, 1, DataType::F32).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous(SDCLIP_OP_ID, body)],
-    )
+    ElementwiseComposer::f32_unary(SDCLIP_OP_ID, input, output, n, |raw_x| {
+        let x = finite_or(raw_x, Expr::f32(0.0));
+        clamp_f32(x, -k, k)
+    })
 }
 
+const EXPECTED_GPTQ_ROUND_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x48, 0x42, 0x00, 0x00, 0x7C, 0x42, 0x00, 0x00, 0x48, 0x42, 0x00, 0x00, 0x00, 0x40,
+];
+const EXPECTED_GPTQ_SDCLIP_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x20, 0x41, 0x00, 0x00, 0xF0, 0x41, 0x00, 0x00, 0xF0, 0xC1, 0x00, 0x00, 0xC8, 0x41,
+];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: ROUND_OP_ID,
-        build: Some(|| gptq_round("input", "scale", "output", 4, 63.0)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        ROUND_OP_ID,
+        || gptq_round("input", "scale", "output", 4, 63.0),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[100.0, 200.0, 50.0, 10.0]),
                 to_f32(&[2.0, 3.0, 1.0, 5.0]),
             ]]
         }),
-        expected_output: Some(|| {
-            // 100/2=50, 200/3=66.7→63(clamped), 50/1=50, 10/5=2
-            let out = [50.0_f32, 63.0, 50.0, 2.0];
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
-        }),
-        category: Some("nn"),
-    }
+        Some(|| vec![vec![EXPECTED_GPTQ_ROUND_OUTPUT_BYTES.to_vec()]]),
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: SDCLIP_OP_ID,
-        build: Some(|| gptq_sdclip("input", "output", 4, 30.0)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        SDCLIP_OP_ID,
+        || gptq_sdclip("input", "output", 4, 30.0),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[10.0, 50.0, -40.0, 25.0]),
             ]]
         }),
-        expected_output: Some(|| {
-            // clamp: 10, 30, -30, 25
-            let out = [10.0_f32, 30.0, -30.0, 25.0];
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
-        }),
-        category: Some("nn"),
-    }
+        Some(|| vec![vec![EXPECTED_GPTQ_SDCLIP_OUTPUT_BYTES.to_vec()]]),
+    )
+    .with_category("nn")
 }

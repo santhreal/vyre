@@ -14,30 +14,16 @@
 
 use std::collections::BTreeMap;
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_conform::fp_parity::{f32_ulp_tolerance, ulp_distance};
+use vyre::ir::{DataType, Program};
 use vyre_conform::production::ProductionSession;
+use vyre_conform::witness_plan::{
+    plan_witness_inputs_into, plan_witness_inputs_owned_into, WitnessInputPlan,
+};
+use vyre_foundation::fp_parity::{f32_ulp_tolerance, max_output_ulp};
 use vyre_reference::value::Value;
-
-#[cfg(feature = "gpu")]
-use vyre_driver_cuda as _;
-#[cfg(feature = "gpu")]
-use vyre_driver_metal as _;
-#[cfg(feature = "gpu")]
-use vyre_driver_wgpu as _;
-use vyre_intrinsics as _;
-use vyre_libs as _;
-use vyre_primitives as _;
 
 type FixtureCases = Vec<Vec<Vec<u8>>>;
 type FixtureFn = fn() -> FixtureCases;
-
-const TRANSCENDENTAL_F32_ULP_BUDGET: u32 = 128;
-
-#[path = "contract_cases/ulp_audit_input_plan.rs"]
-mod ulp_audit_input_plan;
-
-pub(crate) use ulp_audit_input_plan::*;
 
 struct UnifiedEntry {
     id: &'static str,
@@ -53,15 +39,17 @@ impl UnifiedEntry {
 }
 
 fn all_entries() -> Vec<UnifiedEntry> {
-    vyre_foundation::operation::OperationRegistry::global()
-        .iter()
-        .map(|entry| UnifiedEntry {
+    let registry = vyre_registry_link::operation::live_operation_registry();
+    let mut entries = Vec::with_capacity(registry.iter().len());
+    for entry in registry.iter() {
+        entries.push(UnifiedEntry {
             id: entry.id,
             build: entry.build,
             test_inputs: entry.test_inputs,
             expected_output: entry.expected_output,
-        })
-        .collect()
+        });
+    }
+    entries
 }
 
 fn run_cpu_from_slices<'a>(
@@ -83,158 +71,6 @@ fn run_cpu_from_slices<'a>(
 fn backend_inputs_from_vectors<'a>(buffers: &'a [Vec<u8>], outputs: &mut Vec<&'a [u8]>) {
     outputs.clear();
     outputs.extend(buffers.iter().map(Vec::as_slice));
-}
-
-fn max_ulp_delta(reference: &[Vec<u8>], backend: &[Vec<u8>], program: &Program) -> Option<u32> {
-    if reference.len() != backend.len() {
-        return None;
-    }
-    let output_indices = program.output_buffer_indices();
-    if reference.len() != output_indices.len() {
-        return None;
-    }
-    let mut max_ulp = 0u32;
-    for (slot, &buf_idx) in output_indices.iter().enumerate() {
-        let bytes_a = reference.get(slot)?;
-        let bytes_b = backend.get(slot)?;
-        if program.buffers()[buf_idx as usize].element() != DataType::F32 {
-            continue;
-        }
-        if bytes_a.len() != bytes_b.len() || bytes_a.len() % 4 != 0 {
-            return None;
-        }
-        for (a, b) in bytes_a.chunks_exact(4).zip(bytes_b.chunks_exact(4)) {
-            let fa = f32::from_bits(u32::from_le_bytes(a.try_into().unwrap()));
-            let fb = f32::from_bits(u32::from_le_bytes(b.try_into().unwrap()));
-            if fa.to_bits() == fb.to_bits() {
-                continue;
-            }
-            if fa.is_nan() && fb.is_nan() {
-                continue;
-            }
-            // Extreme inputs (inf, NaN) often diverge between CPU reference
-            // and GPU due to fast-math / FTZ. Only same-signed infinities
-            // and same-class non-finite values are comparable for ULP.
-            if !fa.is_finite() && !fb.is_finite() {
-                if fa.is_infinite()
-                    && fb.is_infinite()
-                    && fa.is_sign_positive() == fb.is_sign_positive()
-                {
-                    continue;
-                }
-                if fa.is_nan() && fb.is_nan() {
-                    continue;
-                }
-                return Some(u32::MAX);
-            }
-            if fa.is_nan() || fb.is_nan() {
-                return Some(u32::MAX);
-            }
-            match ulp_distance(fa, fb) {
-                Some(ulp) => max_ulp = max_ulp.max(ulp),
-                None => return Some(u32::MAX),
-            }
-        }
-    }
-    Some(max_ulp)
-}
-
-fn audit_f32_ulp_budget(program: &Program) -> u32 {
-    if program_has_transcendental(program) {
-        TRANSCENDENTAL_F32_ULP_BUDGET
-    } else {
-        f32_ulp_tolerance(program)
-    }
-}
-
-fn program_has_transcendental(program: &Program) -> bool {
-    program.entry().iter().any(node_has_transcendental)
-}
-
-fn expr_has_transcendental(expr: &Expr) -> bool {
-    match expr {
-        Expr::UnOp { op, operand } => {
-            matches!(
-                op,
-                UnOp::Sqrt
-                    | UnOp::InverseSqrt
-                    | UnOp::Sin
-                    | UnOp::Cos
-                    | UnOp::Exp
-                    | UnOp::Log
-                    | UnOp::Log2
-                    | UnOp::Exp2
-                    | UnOp::Tan
-                    | UnOp::Acos
-                    | UnOp::Asin
-                    | UnOp::Atan
-                    | UnOp::Tanh
-                    | UnOp::Sinh
-                    | UnOp::Cosh
-            ) || expr_has_transcendental(operand)
-        }
-        Expr::BinOp { left, right, .. } => {
-            expr_has_transcendental(left) || expr_has_transcendental(right)
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_has_transcendental(cond)
-                || expr_has_transcendental(true_val)
-                || expr_has_transcendental(false_val)
-        }
-        Expr::Cast { value, .. } => expr_has_transcendental(value),
-        Expr::Fma { a, b, c } => {
-            expr_has_transcendental(a) || expr_has_transcendental(b) || expr_has_transcendental(c)
-        }
-        Expr::Load { index, .. } => expr_has_transcendental(index),
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            expr_has_transcendental(index)
-                || expected.as_deref().is_some_and(expr_has_transcendental)
-                || expr_has_transcendental(value)
-        }
-        Expr::SubgroupReduce { value, .. } | Expr::SubgroupBallot { cond: value } => {
-            expr_has_transcendental(value)
-        }
-        Expr::SubgroupShuffle { value, lane } => {
-            expr_has_transcendental(value) || expr_has_transcendental(lane)
-        }
-        Expr::Call { args, .. } => args.iter().any(expr_has_transcendental),
-        _ => false,
-    }
-}
-
-fn node_has_transcendental(node: &Node) -> bool {
-    match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => expr_has_transcendental(value),
-        Node::Store { index, value, .. } => {
-            expr_has_transcendental(index) || expr_has_transcendental(value)
-        }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            expr_has_transcendental(cond)
-                || then.iter().any(node_has_transcendental)
-                || otherwise.iter().any(node_has_transcendental)
-        }
-        Node::Loop { from, to, body, .. } => {
-            expr_has_transcendental(from)
-                || expr_has_transcendental(to)
-                || body.iter().any(node_has_transcendental)
-        }
-        Node::Block(body) => body.iter().any(node_has_transcendental),
-        Node::Region { body, .. } => body.iter().any(node_has_transcendental),
-        _ => false,
-    }
 }
 
 fn make_adversarial_inputs_into(
@@ -302,37 +138,14 @@ fn adversarial_value_requires_ulp(value: f32) -> bool {
 }
 
 fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
-    force_link_backend_inventory();
-    let selected = std::env::var("VYRE_BACKEND")
-        .ok()
-        .filter(|value| !value.trim().is_empty());
-    vyre_driver::backend::registered_backends()
-        .expect("valid backend registry")
-        .iter()
-        .find(|registration| {
-            vyre_driver::backend::backend_dispatches(registration.id)
-                .expect("valid backend registry")
-                && selected
-                    .as_deref()
-                    .is_none_or(|backend| registration.id == backend)
-        })
-        .expect(
-            "Fix: a dispatch-capable backend must be registered for ULP audit. \
-             Link a concrete driver crate into the test binary.",
-        )
-}
-
-fn force_link_backend_inventory() {
-    #[cfg(feature = "gpu")]
-    {
-        std::hint::black_box(vyre_driver_metal::METAL_BACKEND_ID);
-    }
+    vyre_conform::production::live_test_backend().expect(
+        "Fix: a dispatch-capable backend must be registered for ULP audit. \
+         Link a concrete driver crate into the test binary.",
+    )
 }
 
 // ULP audit dispatches every registered op through a real dispatch-capable
 // backend. Missing concrete GPU drivers must fail loudly instead of compiling
 // this module out.
-mod ulp_audit_release_per_op_f32_ulp_audit {
-
-    include!("contract_cases/ulp_audit__release_per_op_f32_ulp_audit.rs");
-}
+#[path = "contract_cases/ulp_audit__release_per_op_f32_ulp_audit.rs"]
+mod ulp_audit_release_per_op_f32_ulp_audit;

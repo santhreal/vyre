@@ -1,28 +1,23 @@
 //! Live CUDA validation for generated compiler-grade release macro workloads.
+//
+// `device-tests` because this acquires a real CUDA backend. On a hosted runner
+// with no driver `CudaBackend::acquire` does not return an error this test can
+// report: cudarc aborts the process, so the whole matrix leg went red with a
+// panic from inside a dependency. `gpu-parity.yml` enables the feature on the
+// runner that has the device.
+//
+// vyre-driver-cuda is a vyre-bench dependency only under
+// cfg(not(target_os = "macos")), so this file cannot name it on macOS.
+#![cfg(all(not(target_os = "macos"), feature = "device-tests"))]
 
-use vyre::ir::BufferAccess;
 use vyre_bench::cases::release_workloads::{
     build_release_macro_case_for_records, release_macro_program_specs_for_records,
-    ReleaseMacroGeneratedCase,
 };
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 
 const REDUCED_RECORDS: u32 = 512;
 const RELEASE_MACRO_CASES: usize = 10;
-
-fn dispatch_input_buffer_count(case: &ReleaseMacroGeneratedCase) -> usize {
-    case.program
-        .buffers()
-        .iter()
-        .filter(|buffer| {
-            matches!(
-                buffer.access(),
-                BufferAccess::ReadOnly | BufferAccess::Uniform
-            ) || matches!(buffer.access(), BufferAccess::ReadWrite) && !buffer.is_output
-        })
-        .count()
-}
 
 fn output_summary(bytes: &[u8]) -> String {
     let first_words = bytes
@@ -49,7 +44,7 @@ fn reduced_release_macro_workloads_match_cpu_oracles_on_live_cuda() {
             .expect("Fix: every advertised release macro spec must build a generated case.");
         assert_eq!(
             case.inputs.len(),
-            dispatch_input_buffer_count(&case),
+            case.dispatch_input_buffer_count(),
             "Fix: generated release macro dispatch inputs must match non-write-only buffers for {}.",
             case.spec.id
         );

@@ -11,19 +11,11 @@ authority = "ARCHITECTURE.md"
 
 [[owner]]
 id = "benchmark"
-authority = "PERF.md"
+authority = "optimization/BENCH_TARGETS.toml"
 
 [[owner]]
 id = "docs-governance"
-authority = "DOCUMENTATION_GOVERNANCE.md"
-
-[[owner]]
-id = "frontend"
-authority = "../vyre-frontend-c/src/lib.rs"
-
-[[owner]]
-id = "foundation"
-authority = "../vyre-foundation/src/lib.rs"
+authority = "DOCS.toml"
 
 [[owner]]
 id = "historical"
@@ -31,11 +23,11 @@ authority = "DOCS.toml"
 
 [[owner]]
 id = "operation-registry"
-authority = "../vyre-foundation/src/operation.rs"
+authority = "../vyre-foundation/src/operation/mod.rs"
 
 [[owner]]
 id = "optimization"
-authority = "optimization/README.md"
+authority = "optimization/OWNERSHIP.toml"
 
 [[owner]]
 id = "public-facade"
@@ -43,19 +35,48 @@ authority = "../vyre/src/lib.rs"
 
 [[owner]]
 id = "release-tooling"
-authority = "../scripts/release_docs.py"
+authority = "../xtask/src/release/release_docs.rs"
 
 [[owner]]
 id = "runtime"
 authority = "../vyre-runtime/src/lib.rs"
 
 [[owner]]
-id = "safetensors-adapter"
-authority = "../vyre-safetensors/src/lib.rs"
-
-[[owner]]
 id = "testing"
 authority = "testing/TESTING.toml"
+
+# The Markdown at the repository root. A `[[page]]` path is rooted at `docs/`
+# and cannot reach these, so they are declared here and the `docs-register`
+# gate holds the root to them.
+[[root_page]]
+path = "README.md"
+title = "vyre"
+audience = "user"
+
+[[root_page]]
+path = "CHANGELOG.md"
+title = "Changelog"
+audience = "user"
+
+[[root_page]]
+path = "CODE_OF_CONDUCT.md"
+title = "Code of conduct"
+audience = "contributor"
+
+[[root_page]]
+path = "CONTRIBUTING.md"
+title = "Contributing"
+audience = "contributor"
+
+[[root_page]]
+path = "SECURITY.md"
+title = "Security policy"
+audience = "user"
+
+[[root_page]]
+path = "THESIS.md"
+title = "Vyre thesis"
+audience = "contributor"
 
 [[page]]
 path = "ARCHITECTURE.md"
@@ -67,19 +88,7 @@ kind = "ownership"
 section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
-nav = true
-
-[[page]]
-path = "CLI.md"
-title = "Command-line interfaces"
-status = "generated"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "CLI.toml"
-generation = "generated"
-generator = "../scripts/cli_docs.py"
+covers = ["docs/CRATE_OWNERSHIP.toml"]
 nav = true
 
 [[page]]
@@ -92,43 +101,7 @@ kind = "ownership"
 section = "Architecture and ownership"
 authority = "CRATE_OWNERSHIP.toml"
 generation = "generated"
-generator = "../scripts/crate_ownership.py"
-nav = true
-
-[[page]]
-path = "DOCUMENTATION_COVERAGE.md"
-title = "Documentation coverage"
-status = "current"
-audience = "contributor"
-owner = "docs-governance"
-kind = "governance"
-section = "Documentation authority"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "DOCUMENTATION_GOVERNANCE.md"
-title = "Documentation Governance"
-status = "current"
-audience = "contributor"
-owner = "docs-governance"
-kind = "governance"
-section = "Documentation authority"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "ERROR_SURFACE.md"
-title = "Error Surface Contract"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
+generator = "../xtask/src/gates/crate_registry.rs"
 nav = true
 
 [[page]]
@@ -141,43 +114,7 @@ kind = "governance"
 section = "Documentation authority"
 authority = "DOCS.toml"
 generation = "generated"
-generator = "../scripts/docs_manifest.py"
-nav = true
-
-[[page]]
-path = "LAW7_ORGANIZATION.md"
-title = "LAW 7 Organization Sweep"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "MATH_FRONTIER.md"
-title = "Math frontier  -  what we could revolutionize via primitives"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "OPTIMIZATION_ARCHITECTURE.md"
-title = "Optimization architecture"
-status = "current"
-audience = "extension"
-owner = "optimization"
-kind = "optimization"
-section = "Optimization"
-authority = "self"
-generation = "manual"
+generator = "../xtask/src/docs/docs_check.rs"
 nav = true
 
 [[page]]
@@ -190,1072 +127,669 @@ kind = "ownership"
 section = "Architecture and ownership"
 authority = "CRATE_OWNERSHIP.toml"
 generation = "generated"
-generator = "../scripts/crate_ownership.py"
+generator = "../xtask/src/gates/crate_registry.rs"
 nav = true
 
 [[page]]
-path = "PERF.md"
-title = "Build Performance and Optimization"
-status = "current"
-audience = "release"
-owner = "benchmark"
-kind = "release"
-section = "Performance and release"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "PREDICATE_EXPR_DUALITY.md"
-title = "Predicate vs Expr Duality"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "RELEASE.md"
-title = "Vyre release process"
-status = "current"
-audience = "release"
-owner = "release-tooling"
-kind = "release"
-section = "Performance and release"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "RELEASE_CHECKLIST.md"
-title = "Vyre release checklist"
-status = "generated"
-audience = "release"
-owner = "release-tooling"
-kind = "release"
-section = "Performance and release"
-authority = "../release/release-train.toml"
-generation = "generated"
-generator = "../scripts/release_docs.py"
-nav = true
-
-[[page]]
-path = "RUNTIME_PIPELINE.md"
-title = "Runtime pipeline"
-status = "current"
-audience = "extension"
-owner = "runtime"
-kind = "lifecycle"
-section = "Lifecycle and extension contracts"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "SUBSTRATE_RFCS.md"
-title = "Substrate RFCs  -  IR enrichments and lowering passes"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "THESIS.md"
-title = "Vyre Thesis"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "archive/HEURISTIC_TO_MATH_TRACKER.md"
-title = "Heuristic to math substrate tracker"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "archive/INNOVATION_SWEEP.md"
-title = "Missing-Innovation Sweep"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "archive/JULES_PRIMITIVE_MANIFEST.md"
-title = "Jules dispatch manifest  -  vyre-libs / vyre-primitives 30-primitive wave"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "archive/MICRO_FLAW_LOG.md"
-title = "Micro-Flaw Log"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "archive/MIGRATION_0.6_TO_0.7.md"
-title = "Migration tracker: substrate packaging changes (downstream consumer view)"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "archive/NAGA_CRITICAL_HOLES.md"
-title = "F-NAGA  -  Critical Naga Lowering Holes (tracking doc)"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "archive/README.md"
-title = "Archived documents"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "archive/UX_SWEEP.md"
-title = "UX Sweep  -  confusing surfaces and how they were fixed"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "archive/vision-2026-04-27-essay.md"
-title = "vyre  -  Vision"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "catalog/README.md"
-title = "Vyre operation catalog"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/bitset.md"
-title = "`bitset` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/core.md"
-title = "`core` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/decode.md"
-title = "`decode` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/fixpoint.md"
-title = "`fixpoint` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/geom.md"
-title = "`geom` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/graph.md"
-title = "`graph` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/hardware.md"
-title = "`hardware` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/hash.md"
-title = "`hash` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/io.md"
-title = "`io` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/label.md"
-title = "`label` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/logical.md"
-title = "`logical` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/matching.md"
-title = "`matching` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/math.md"
-title = "`math` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/mem.md"
-title = "`mem` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/nn.md"
-title = "`nn` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/opt.md"
-title = "`opt` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/optim.md"
-title = "`optim` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/parsing.md"
-title = "`parsing` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/predicate.md"
-title = "`predicate` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/quant.md"
-title = "`quant` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/reduce.md"
-title = "`reduce` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/representation.md"
-title = "`representation` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/scan.md"
-title = "`scan` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/security.md"
-title = "`security` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/substrate.md"
-title = "`substrate` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/text.md"
-title = "`text` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/vfs.md"
-title = "`vfs` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/visual.md"
-title = "`visual` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/catalog.rs"
-nav = true
-
-[[page]]
-path = "code-style.md"
-title = "Vyre Code Style"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "consumer-integration.md"
-title = "Downstream analyzer integration"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "consumer-showcase.md"
-title = "Named external integration"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "error-codes.md"
-title = "vyre Error Codes"
-status = "current"
-audience = "extension"
-owner = "foundation"
-kind = "reference"
-section = "Extension contracts"
-authority = "../vyre-foundation/src/validate/validation_error.rs"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "faq.md"
-title = "Vyre FAQ"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "frozen-traits/README.md"
-title = "Frozen trait snapshots"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "generated/OP_INVENTORY.md"
-title = "Vyre operation inventory"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/list_ops.rs"
-nav = true
-
-[[page]]
-path = "generated/README.md"
-title = "Generated operation documentation"
-status = "current"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "inventory-contract.md"
-title = "Linked Registration Contract"
-status = "current"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "Lifecycle and extension contracts"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "ir-semantics.md"
-title = "vyre IR statement semantics"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "legacy/README.md"
-title = "Legacy documents"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "lego-block-rule.md"
-title = "LEGO-block rule: composition is the architecture"
+path = "architecture/artifact.md"
+title = "The artifact is the output type"
 status = "current"
 audience = "contributor"
 owner = "architecture"
 kind = "architecture"
-section = "Architecture"
+section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
+covers = ["vyre-megakernel/src/envelope.rs", "vyre-megakernel/src/artifact.rs"]
 nav = true
 
 [[page]]
-path = "lower-vs-emit.md"
-title = "Lowering vs emission ownership"
+path = "architecture/compile-search.md"
+title = "Whole-program compile search"
 status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
+audience = "contributor"
+owner = "architecture"
+kind = "architecture"
+section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
+covers = ["vyre-megakernel/src/search.rs", "vyre-megakernel/src/cost/mod.rs", "vyre-megakernel/src/select.rs", "vyre-megakernel/src/legality.rs", "vyre-megakernel/src/candidate.rs"]
 nav = true
 
 [[page]]
-path = "megakernel-wiring.md"
-title = "Megakernel wiring"
+path = "architecture/crates.md"
+title = "Crate boundaries"
 status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
+audience = "contributor"
+owner = "architecture"
+kind = "architecture"
+section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
+covers = ["Cargo.toml"]
 nav = true
 
 [[page]]
-path = "memory-model.md"
-title = "vyre Memory Model"
+path = "architecture/parsing.md"
+title = "Parsing"
 status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
+audience = "contributor"
+owner = "architecture"
+kind = "architecture"
+section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
+covers = ["vyre-libs/src/parsing/**"]
 nav = true
 
 [[page]]
-path = "migration-vyre-ops-to-intrinsics.md"
-title = "Migration  -  `vyre-ops` → `vyre-intrinsics` + library relocation"
+path = "design/tile-values.md"
+title = "Tile values in the IR"
+status = "current"
+audience = "contributor"
+owner = "architecture"
+kind = "architecture"
+section = "Architecture and ownership"
+authority = "self"
+generation = "manual"
+covers = ["vyre-foundation/src/ir_inner/model/tile.rs"]
+nav = true
+
+[[page]]
+path = "archive/0.7-2026-08-15/ARCHITECTURE.md"
+title = "Vyre architecture (0.7 archive)"
 status = "archived"
 audience = "contributor"
 owner = "historical"
 kind = "history"
-section = "History"
+section = "Historical record"
 authority = "self"
 generation = "manual"
 nav = false
 
 [[page]]
-path = "observability.md"
-title = "vyre observability"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "op-naming.md"
-title = "vyre-libs op naming"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "ops-catalog.md"
-title = "Operation catalog"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "optimization/LEGACY_DOCS.md"
-title = "Legacy optimization and performance documents"
-status = "superseded"
+path = "archive/0.7-2026-08-15/CONVENTIONS.md"
+title = "vyre code organization conventions (0.7 archive)"
+status = "archived"
 audience = "contributor"
 owner = "historical"
 kind = "history"
-section = "History"
+section = "Historical record"
 authority = "self"
 generation = "manual"
 nav = false
 
 [[page]]
-path = "optimization/PASSES.md"
-title = "Optimizer pass reference"
-status = "generated"
+path = "archive/0.7-2026-08-15/CPU_GPU_CONVERGENCE.md"
+title = "CPU/GPU Convergence Lens  -  Security Ops (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/GATE_CLOSURE.md"
+title = "Gate Closure Mechanics (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/HOT_PATH_PROOFS.md"
+title = "Hot-Path O(1) Proofs (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/MATH_PRIMITIVES_PLACEMENT.md"
+title = "Math primitives  -  placement map (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/MIGRATION.md"
+title = "vyre  -  Migration Path (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/OPS.md"
+title = "Operation List (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/PER_OP_SURFACE.md"
+title = "Per-op Surface Contract (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/PRIMITIVES.md"
+title = "Primitive Operation Inventory (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/PUBLISH_GATE.md"
+title = "vyre-libs publish gate (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/README.md"
+title = "Archived book, vyre 0.7 (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/RECURSION_THESIS.md"
+title = "Recursive Composition Thesis (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/RELEASE_1_0_GATE.md"
+title = "Release 1.0 Gate Checklist (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/RELEASE_ENGINEERING.md"
+title = "Release engineering (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/TESTING_PROGRAM.md"
+title = "Testing Program  -  SQLite / NASA JPL / Linux / Chromium Standard (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/VISION.md"
+title = "vyre  -  vision (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/dialect-cookbook.md"
+title = "dialect cookbook (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/frozen-traits/AlgebraicLaw.md"
+title = "AlgebraicLaw historical reference (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/frozen-traits/EnforceGate.md"
+title = "EnforceGate historical reference (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/frozen-traits/ExprVisitor.md"
+title = "ExprVisitor historical reference (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/frozen-traits/Lowerable.md"
+title = "Lowerable historical reference (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/frozen-traits/MutationClass.md"
+title = "MutationClass historical reference (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/frozen-traits/VyreBackend.md"
+title = "VyreBackend historical reference (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/lego-block-rule.md"
+title = "LEGO-block rule: composition is the architecture (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/library-tiers.md"
+title = "Library tiers  -  the long-term organization (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/occ.md"
+title = "Open Conformance Certificates (OCC) (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/parity/three_substrate.md"
+title = "Three Substrate Parity (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/parsing-and-frontends.md"
+title = "Parsing & frontends  -  where source-language parsers live (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/primitives-tier.md"
+title = "Tier 2.5  -  `vyre-primitives` (the LEGO block layer) (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/santh-standard.md"
+title = "Santh Rust Engineering Standard (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/stability.md"
+title = "vyre  -  Stability Policy (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "archive/0.7-2026-08-15/wire-format-0.6-reservations.md"
+title = "Wire-format tag reservations  -  vyre 0.6 terminal allocation (0.7 archive)"
+status = "archived"
+audience = "contributor"
+owner = "historical"
+kind = "history"
+section = "Historical record"
+authority = "self"
+generation = "manual"
+nav = false
+
+[[page]]
+path = "conformance/program.md"
+title = "Conformance"
+status = "current"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "self"
+generation = "manual"
+covers = ["conform/README.md", "conform/vyre-conform/src/**"]
+nav = true
+
+[[page]]
+path = "design/geometry-lowering.md"
+title = "Launch geometry is a lowering decision"
+status = "current"
+audience = "contributor"
+owner = "architecture"
+kind = "architecture"
+section = "Architecture and ownership"
+authority = "self"
+generation = "manual"
+covers = ["vyre-foundation/src/geometry/**", "vyre-driver/src/device_profile.rs"]
+nav = true
+
+[[page]]
+path = "extending/backend.md"
+title = "Add a backend"
+status = "current"
 audience = "extension"
-owner = "optimization"
+owner = "architecture"
+kind = "lifecycle"
+section = "Lifecycle and extension contracts"
+authority = "self"
+generation = "manual"
+covers = [
+    "examples/external_backend_extension/**",
+    "vyre-driver/BACKEND_CONTRACT.md",
+]
+nav = true
+
+[[page]]
+path = "extending/operation.md"
+title = "Add an operation from outside the workspace"
+status = "current"
+audience = "extension"
+owner = "operation-registry"
+kind = "lifecycle"
+section = "Lifecycle and extension contracts"
+authority = "self"
+generation = "manual"
+covers = [
+    "examples/external_ir_extension/**",
+    "examples/libs-template/**",
+]
+nav = true
+
+[[page]]
+path = "guide/backends.md"
+title = "Run an artifact on a device"
+status = "current"
+audience = "user"
+owner = "public-facade"
+kind = "guide"
+section = "User workflows"
+authority = "self"
+generation = "manual"
+covers = ["vyre-driver/src/backend/registry/**"]
+nav = true
+
+[[page]]
+path = "guide/first-program.md"
+title = "Compile a graph to an artifact"
+status = "current"
+audience = "user"
+owner = "public-facade"
+kind = "guide"
+section = "User workflows"
+authority = "self"
+generation = "manual"
+covers = ["vyre/tests/artifact_workflow.rs", "vyre/src/lib.rs"]
+nav = true
+
+[[page]]
+path = "guide/install.md"
+title = "Install"
+status = "current"
+audience = "user"
+owner = "public-facade"
+kind = "guide"
+section = "User workflows"
+authority = "self"
+generation = "manual"
+covers = ["vyre/Cargo.toml", "rust-toolchain.toml", "vyre-registry-link/src/**"]
+nav = true
+
+[[page]]
+path = "lego-block-rule.md"
+title = "LEGO-block rule"
+status = "current"
+audience = "extension"
+owner = "architecture"
+kind = "ownership"
+section = "Architecture and ownership"
+authority = "self"
+generation = "manual"
+covers = ["xtask-registry/src/gates/composition_budget.rs", "vyre-foundation/src/composition.rs"]
+nav = true
+
+[[page]]
+path = "reference/diagnostics.md"
+title = "Diagnostics"
+status = "current"
+audience = "user"
+owner = "public-facade"
 kind = "reference"
-section = "Optimization"
-authority = "../vyre-foundation/src/optimizer.rs"
-generation = "generated"
-generator = "../xtask/src/optimization_docs.rs"
-nav = true
-
-[[page]]
-path = "optimization/README.md"
-title = "Vyre optimization control plane"
-status = "current"
-audience = "contributor"
-owner = "optimization"
-kind = "optimization"
-section = "Optimization"
+section = "API and operation reference"
 authority = "self"
 generation = "manual"
+covers = ["vyre-foundation/src/validate/catalog.rs", "vyre-driver/src/backend/error_catalog.rs"]
 nav = true
 
 [[page]]
-path = "optimization/START_HERE.md"
-title = "Start Here for Optimization Work"
-status = "current"
-audience = "contributor"
-owner = "optimization"
-kind = "optimization"
-section = "Optimization"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "optimization/TAXONOMY.md"
-title = "Optimization Taxonomy"
-status = "current"
-audience = "contributor"
-owner = "optimization"
-kind = "optimization"
-section = "Optimization"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "reference-interpreter-witness-limits.md"
-title = "What the reference interpreter can and cannot witness"
+path = "reference/numeric-contracts.md"
+title = "Numeric contracts"
 status = "current"
 audience = "user"
 owner = "public-facade"
-kind = "guide"
-section = "User workflows"
+kind = "reference"
+section = "API and operation reference"
 authority = "self"
 generation = "manual"
+covers = ["vyre-foundation/src/numeric/**", "vyre-foundation/src/operation/mod.rs", "vyre-megakernel/src/target.rs"]
 nav = true
 
 [[page]]
-path = "region-chain.md"
-title = "Region chain  -  the compositional back-pointer invariant"
+path = "reference/operations.md"
+title = "The operation registry"
+status = "current"
+audience = "user"
+owner = "operation-registry"
+kind = "reference"
+section = "API and operation reference"
+authority = "self"
+generation = "manual"
+covers = ["vyre-foundation/src/operation/mod.rs"]
+nav = true
+
+[[page]]
+path = "reference/values.md"
+title = "Value contracts"
 status = "current"
 audience = "user"
 owner = "public-facade"
-kind = "guide"
-section = "User workflows"
+kind = "reference"
+section = "API and operation reference"
 authority = "self"
 generation = "manual"
+covers = ["vyre-foundation/src/ir_inner/model/program_graph.rs", "vyre-spec/src/buffer_access.rs", "vyre-spec/src/data_type/**"]
 nav = true
 
 [[page]]
-path = "release/v0.4.1.md"
-title = "Vyre 0.4.1 / Weir 0.0.1 release notes"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
+path = "reference/wire-format.md"
+title = "Program wire format"
+status = "current"
+audience = "user"
+owner = "public-facade"
+kind = "reference"
+section = "API and operation reference"
 authority = "self"
 generation = "manual"
-nav = false
+covers = ["vyre-foundation/src/serial/wire/**"]
+nav = true
 
 [[page]]
-path = "release/v0.4.2.md"
-title = "Vyre 0.4.2 / Weir 0.1.0 release notes"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "release/v0.7.0.md"
-title = "Vyre 0.7.0 / Weir 0.1.1 release notes"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "release/v0.7.1.md"
-title = "Vyre 0.7.1 / Weir 0.1.2 release notes"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "release/v0.7.2.md"
-title = "Vyre 0.7.2 release notes"
-status = "generated"
+path = "release/process.md"
+title = "Release"
+status = "current"
 audience = "release"
 owner = "release-tooling"
 kind = "release"
 section = "Performance and release"
-authority = "../release/release-train.toml"
-generation = "generated"
-generator = "../scripts/release_docs.py"
-nav = true
-
-[[page]]
-path = "rfcs/0001-region-inline-pass.md"
-title = "RFC 0001  -  Region inline pass"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
 authority = "self"
 generation = "manual"
+covers = ["release/release-train.toml", "xtask/src/release/**"]
 nav = true
 
 [[page]]
-path = "rfcs/0002-autodiff-ir-transform.md"
-title = "RFC 0002  -  Reverse-mode autodiff as an IR transform"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "rfcs/0003-datatype-quantized.md"
-title = "RFC 0003  -  DataType::Quantized"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "rfcs/0004-collective-ops.md"
-title = "RFC 0004  -  Collective ops (AllReduce, AllGather, ReduceScatter)"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "rfcs/0005-persistent-megakernel.md"
-title = "RFC 0005: Persistent megakernel and ring-buffer submission"
-status = "superseded"
+path = "testing/structure-gate.md"
+title = "Testing `structure-gate`"
+status = "generated"
 audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "scanning-a-corpus-the-right-way.md"
-title = "Scanning a corpus the right way"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "semver-policy.md"
-title = "vyre Semver Policy"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "support.md"
-title = "Getting Support"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "targets.md"
-title = "Vyre Targets"
-status = "current"
-audience = "extension"
-owner = "architecture"
-kind = "reference"
-section = "Lifecycle and extension contracts"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "test-layout.md"
-title = "Test layout convention"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1268,7 +802,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1281,7 +815,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1294,7 +828,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1307,7 +841,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1320,7 +854,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1333,7 +867,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1346,7 +880,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1359,7 +893,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1372,7 +906,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1385,7 +919,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1398,7 +932,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1411,7 +945,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1424,7 +958,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1437,7 +971,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1450,7 +984,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1463,59 +997,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
-nav = true
-
-[[page]]
-path = "testing/vyre-frontend-c.md"
-title = "Testing `vyre-frontend-c`"
-status = "generated"
-audience = "contributor"
-owner = "testing"
-kind = "testing"
-section = "Testing and conformance"
-authority = "testing/TESTING.toml"
-generation = "generated"
-generator = "../scripts/testing_guides.py"
-nav = true
-
-[[page]]
-path = "testing/vyre-frontend-rust.md"
-title = "Testing `vyre-frontend-rust`"
-status = "generated"
-audience = "contributor"
-owner = "testing"
-kind = "testing"
-section = "Testing and conformance"
-authority = "testing/TESTING.toml"
-generation = "generated"
-generator = "../scripts/testing_guides.py"
-nav = true
-
-[[page]]
-path = "testing/vyre-grammar-gen.md"
-title = "Testing `vyre-grammar-gen`"
-status = "generated"
-audience = "contributor"
-owner = "testing"
-kind = "testing"
-section = "Testing and conformance"
-authority = "testing/TESTING.toml"
-generation = "generated"
-generator = "../scripts/testing_guides.py"
-nav = true
-
-[[page]]
-path = "testing/vyre-intrinsics.md"
-title = "Testing `vyre-intrinsics`"
-status = "generated"
-audience = "contributor"
-owner = "testing"
-kind = "testing"
-section = "Testing and conformance"
-authority = "testing/TESTING.toml"
-generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1528,7 +1010,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1541,7 +1023,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1554,7 +1036,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1567,7 +1049,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1580,7 +1062,20 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-pass-engine.md"
+title = "Testing `vyre-pass-engine`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1593,7 +1088,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1606,7 +1101,20 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-registry-link.md"
+title = "Testing `vyre-registry-link`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1619,7 +1127,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1632,20 +1140,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
-nav = true
-
-[[page]]
-path = "testing/vyre-self-substrate.md"
-title = "Testing `vyre-self-substrate`"
-status = "generated"
-audience = "contributor"
-owner = "testing"
-kind = "testing"
-section = "Testing and conformance"
-authority = "testing/TESTING.toml"
-generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1658,7 +1153,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1671,7 +1166,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1684,7 +1179,33 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/xtask-evidence.md"
+title = "Testing `xtask-evidence`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/xtask-registry.md"
+title = "Testing `xtask-registry`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1697,53 +1218,5 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../scripts/testing_guides.py"
-nav = true
-
-[[page]]
-path = "threat-model.md"
-title = "vyre threat model"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "trust-model.md"
-title = "Trust Model"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "vyre-libs-features.md"
-title = "vyre-libs Feature Matrix"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
-nav = true
-
-[[page]]
-path = "wire-format.md"
-title = "vyre Wire Format (VIR0)"
-status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
-generation = "manual"
+generator = "../xtask/src/gates/testing_guides.rs"
 nav = true

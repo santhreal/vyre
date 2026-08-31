@@ -2,7 +2,7 @@
 //!
 //! Background: `audits/VYRE_OPTIMIZER.md` documents an O(n²) hazard when
 //! frequent `flush_for_buffer` calls interact with a large pending-replacement
-//! set. `FactSubstrate` fixed use-count recomputation, but the replacement
+//! set. `FactCache` fixed use-count recomputation, but the replacement
 //! flush path may still be quadratic. These tests exercise the pass on shapes
 //! that historically triggered the slowdown.
 

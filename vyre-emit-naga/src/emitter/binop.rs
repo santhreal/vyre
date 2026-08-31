@@ -18,6 +18,26 @@ use vyre_foundation::ir::BinOp;
 
 use super::BodyBuilder;
 
+/// Whether `op` produces a bool whatever its operand types are: the six
+/// comparisons and the two logical connectives.
+///
+/// Two type probes read this. A comparison left out of the list makes them
+/// report its result as the operand's kind, which reaches naga as a bool value
+/// stored into a numeric local and is rejected as `InvalidStoreTypes`.
+pub(super) fn yields_bool(op: BinaryOperator) -> bool {
+    matches!(
+        op,
+        BinaryOperator::Equal
+            | BinaryOperator::NotEqual
+            | BinaryOperator::Less
+            | BinaryOperator::LessEqual
+            | BinaryOperator::Greater
+            | BinaryOperator::GreaterEqual
+            | BinaryOperator::LogicalAnd
+            | BinaryOperator::LogicalOr
+    )
+}
+
 impl<'a> BodyBuilder<'a> {
     /// Heuristic: does this expression handle name a bool-typed value
     /// from a shape we can infer locally? Mirrors common bool-producing
@@ -55,21 +75,14 @@ impl<'a> BodyBuilder<'a> {
             Expression::Literal(Literal::U32(_)) => Some(ScalarKind::Uint),
             Expression::Literal(Literal::I32(_)) => Some(ScalarKind::Sint),
             Expression::Literal(Literal::F32(_)) => Some(ScalarKind::Float),
-            Expression::ZeroValue(ty_handle) => match self.binding_types_lookup(*ty_handle) {
-                Some(scalar) => Some(scalar),
-                None => None,
-            },
-            Expression::Binary { op, left, .. } => match op {
-                BinaryOperator::Equal
-                | BinaryOperator::NotEqual
-                | BinaryOperator::Less
-                | BinaryOperator::LessEqual
-                | BinaryOperator::Greater
-                | BinaryOperator::GreaterEqual
-                | BinaryOperator::LogicalAnd
-                | BinaryOperator::LogicalOr => Some(ScalarKind::Bool),
-                _ => self.scalar_kind_of_expression(*left, depth + 1),
-            },
+            Expression::ZeroValue(ty_handle) => self.scalar_kind_of_type(*ty_handle),
+            Expression::Binary { op, left, .. } => {
+                if yields_bool(*op) {
+                    Some(ScalarKind::Bool)
+                } else {
+                    self.scalar_kind_of_expression(*left, depth + 1)
+                }
+            }
             Expression::Unary { op, expr } => match op {
                 UnaryOperator::LogicalNot => Some(ScalarKind::Bool),
                 _ => self.scalar_kind_of_expression(*expr, depth + 1),
@@ -78,7 +91,7 @@ impl<'a> BodyBuilder<'a> {
             Expression::As { kind, .. } => Some(*kind),
             Expression::LocalVariable(handle) => {
                 let local = self.function.local_variables.try_get(*handle).ok()?;
-                self.binding_types_lookup(local.ty)
+                self.scalar_kind_of_type(local.ty)
             }
             Expression::Load { pointer } => self.scalar_kind_of_expression(*pointer, depth + 1),
             Expression::Math { arg, .. } => self.scalar_kind_of_expression(*arg, depth + 1),
@@ -101,7 +114,7 @@ impl<'a> BodyBuilder<'a> {
                 .iter()
                 .find(|(_, g)| **g == *handle)
                 .and_then(|(slot, _)| self.binding_types.get(slot).copied())
-                .and_then(|ty| self.binding_types_lookup(ty)),
+                .and_then(|ty| self.scalar_kind_of_type(ty)),
             Expression::FunctionArgument(_) => Some(ScalarKind::Uint),
             _ => None,
         }
@@ -145,22 +158,12 @@ impl<'a> BodyBuilder<'a> {
         value: naga::Handle<Expression>,
         target: naga::Handle<naga::Type>,
     ) -> naga::Handle<Expression> {
-        let target_kind = if target == self.types.bool_ty {
-            ScalarKind::Bool
-        } else if target == self.types.u32_ty || target == self.types.u64_ty {
-            ScalarKind::Uint
-        } else if target == self.types.i32_ty || target == self.types.i64_ty {
-            ScalarKind::Sint
-        } else if target == self.types.f32_ty || target == self.types.f64_ty {
-            ScalarKind::Float
-        } else {
-            // A non-scalar target (atomic<T>, vector, pointer, …) has no scalar
-            // kind to coerce toward, so the value is emitted unchanged. This is
-            // the correct identity, e.g. an atomic result feeding a later
-            // descriptor op (atomic_result_can_feed_later_descriptor_ops). NOT a
-            // silent miscompile: scalar coercion simply does not apply to these
-            // handles. The bool/u32/u64/i32/i64/f32/f64 arms above cover every
-            // scalar kind vyre coerces between.
+        // A non-scalar target (atomic<T>, vector, pointer, …) has no scalar
+        // kind to coerce toward, so the value is emitted unchanged. This is the
+        // correct identity, e.g. an atomic result feeding a later descriptor op
+        // (atomic_result_can_feed_later_descriptor_ops). NOT a silent
+        // miscompile: scalar coercion simply does not apply to these handles.
+        let Some(target_kind) = self.scalar_kind_of_type(target) else {
             return value;
         };
         if std::env::var("VYRE_COERCE_TRACE").is_ok() {
@@ -203,21 +206,12 @@ impl<'a> BodyBuilder<'a> {
             (ScalarKind::Uint | ScalarKind::Sint, ScalarKind::Bool) => {
                 self.ensure_bool_condition(value)
             }
-            (_, ScalarKind::Uint) => self.append_expr(Expression::As {
-                expr: value,
-                kind: ScalarKind::Uint,
-                convert: Some(4),
-            }),
-            (_, ScalarKind::Sint) => self.append_expr(Expression::As {
-                expr: value,
-                kind: ScalarKind::Sint,
-                convert: Some(4),
-            }),
-            (_, ScalarKind::Float) => self.append_expr(Expression::As {
-                expr: value,
-                kind: ScalarKind::Float,
-                convert: Some(4),
-            }),
+            (_, kind @ (ScalarKind::Uint | ScalarKind::Sint | ScalarKind::Float)) => self
+                .append_expr(Expression::As {
+                    expr: value,
+                    kind,
+                    convert: Some(4),
+                }),
             _ => value,
         }
     }
@@ -296,10 +290,16 @@ impl<'a> BodyBuilder<'a> {
         None
     }
 
-    fn binding_types_lookup(&self, ty: naga::Handle<naga::Type>) -> Option<naga::ScalarKind> {
-        // BodyBuilder doesn't own the type arena directly  -  we read
-        // from `self.types` which holds all canonical scalar-type handles
-        // vyre creates upfront. Match against all seven.
+    /// Scalar kind of a canonical type handle, or `None` for a handle with no
+    /// scalar kind to name: an atomic, vector, pointer, array or struct type.
+    ///
+    /// `BodyBuilder` does not own the type arena, so this reads `self.types`,
+    /// which holds every canonical scalar handle vyre creates upfront. The
+    /// seven arms cover every scalar kind vyre converts between.
+    pub(super) fn scalar_kind_of_type(
+        &self,
+        ty: naga::Handle<naga::Type>,
+    ) -> Option<naga::ScalarKind> {
         if ty == self.types.bool_ty {
             Some(ScalarKind::Bool)
         } else if ty == self.types.u32_ty || ty == self.types.u64_ty {
@@ -313,6 +313,21 @@ impl<'a> BodyBuilder<'a> {
         }
     }
 
+    /// Canonical type handle vyre uses for `kind`. The inverse of
+    /// [`Self::scalar_kind_of_type`] over the four widths vyre emits, so a
+    /// kind with no 32-bit canonical handle resolves to u32.
+    pub(super) fn canonical_type_for_scalar_kind(
+        &self,
+        kind: ScalarKind,
+    ) -> naga::Handle<naga::Type> {
+        match kind {
+            ScalarKind::Bool => self.types.bool_ty,
+            ScalarKind::Sint => self.types.i32_ty,
+            ScalarKind::Float => self.types.f32_ty,
+            _ => self.types.u32_ty,
+        }
+    }
+
     /// Bounded recursion: a Select / Load chain whose terminal is a
     /// bool comparison still names a bool value. Cap depth at 6 so a
     /// pathological IR doesn't burn the stack.
@@ -322,17 +337,7 @@ impl<'a> BodyBuilder<'a> {
         }
         match self.function.expressions[value] {
             Expression::Literal(Literal::Bool(_)) => true,
-            Expression::Binary { op, .. } => matches!(
-                op,
-                BinaryOperator::Equal
-                    | BinaryOperator::NotEqual
-                    | BinaryOperator::Less
-                    | BinaryOperator::LessEqual
-                    | BinaryOperator::Greater
-                    | BinaryOperator::GreaterEqual
-                    | BinaryOperator::LogicalAnd
-                    | BinaryOperator::LogicalOr
-            ),
+            Expression::Binary { op, .. } => yields_bool(op),
             Expression::Unary {
                 op: UnaryOperator::LogicalNot,
                 ..

@@ -6,16 +6,16 @@
 
 /// Effects-typed lowering pipeline (P-1.0-V1.3): walks a `Program`
 /// and computes the row of effect kinds the backend will see.
-pub mod effects;
+pub(crate) mod effects;
 
 /// Subgroup-first lowering (Phase 2.3): converts workgroup-tree reductions
 /// to `subgroup_add` / `subgroup_shuffle` when the backend supports them.
-pub mod subgroup_lowering;
+pub(crate) mod subgroup_lowering;
 
 pub use effects::{compute_program_effects, ProgramEffects};
 pub use subgroup_lowering::lower_subgroup_reductions;
 
-use crate::ir_inner::model::types::DataType;
+use crate::ir_inner::model::op_signature::DataType;
 use std::{error::Error, fmt};
 
 /// Error raised while progressively lowering a [`crate::ir::Program`] into a backend IR
@@ -106,8 +106,8 @@ mod tests {
 
     #[test]
     fn unsupported_op_message() {
-        let err = LoweringError::unsupported_op("warp_shuffle");
-        assert!(err.message().contains("warp_shuffle"));
+        let err = LoweringError::unsupported_op("unsupported_shuffle");
+        assert!(err.message().contains("unsupported_shuffle"));
         assert!(err.message().contains("Fix:"));
     }
 

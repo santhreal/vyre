@@ -1,18 +1,23 @@
 //! Regression contracts for canonical neutral artifacts with attached target payloads.
 
-use std::collections::BTreeMap;
-
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ValueLifetime,
 };
+use vyre_foundation::numeric::ScalarFormat;
+use vyre_foundation::schedule::{SchedulePhase, SchedulePhaseId, ScheduleResourceBounds};
 use vyre_megakernel::{
-    attach_target, compile, Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId,
-    CompileError, CompileRequest, Digest, ExternalFacts, FusionGroupId, SearchBudget,
+    attach_target, compile_selected_modules, Artifact, ArtifactEnvelope, ArtifactNodeId,
+    ArtifactValueId, CompileError, EmittedTargetModule, FusionGroupId, ModuleNumericRecord,
     TargetCompileError, TargetCompiler, TargetEntryPoint, TargetModuleBundle, TargetModuleImage,
     TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
-    TargetResourceMemory,
+    TargetResourceMemory, TARGET_PAYLOAD_SCHEMA_VERSION,
 };
+
+#[path = "../../tests/support/artifact_fixtures.rs"]
+mod artifact_fixtures;
+
+use artifact_fixtures::{entry_over, entry_point, neutral_artifact};
 
 fn diagnostic_path(error: &CompileError) -> Option<&str> {
     error
@@ -20,42 +25,6 @@ fn diagnostic_path(error: &CompileError) -> Option<&str> {
         .location
         .as_ref()
         .and_then(|location| location.path.as_deref())
-}
-
-fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
-    let mut graph = ProgramGraph::new();
-    graph
-        .add_external_value(
-            "input",
-            ValueContract {
-                dtype: DataType::U32,
-                shape: vec![ShapeDim::Known(8)],
-                access: BufferAccess::ReadOnly,
-                lifetime: ValueLifetime::Invocation,
-            },
-        )
-        .expect("fixture resource must be valid");
-    graph
-        .add_node(
-            "entry",
-            Program::wrapped(
-                vec![BufferDecl::read("input", 0, DataType::U32).with_count(8)],
-                workgroup_size,
-                Vec::new(),
-            ),
-            Vec::new(),
-            Vec::new(),
-        )
-        .expect("fixture node must be valid");
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
-        1_000_000,
-    )
-    .validate()
-    .expect("fixture request must validate");
-    compile(&request).expect("fixture request must compile")
 }
 
 fn format(version: u16) -> TargetPayloadFormat {
@@ -88,14 +57,42 @@ impl TargetCompiler for FixtureCompiler {
     }
 
     fn compile(&self, artifact: &Artifact) -> Result<TargetPayload, TargetCompileError> {
+        let entries = vec![entry_point(artifact)];
         TargetPayload::new(
             artifact,
             self.format.clone(),
             self.profile.clone(),
-            vec![entry()],
+            entries,
             vec![4, 2],
         )
         .map_err(Into::into)
+    }
+}
+
+/// WHY: absent geometry cannot be represented by a zero extent and later
+/// defaulted to one. The artifact records a launchable shape for every node, so
+/// a zero extent in a payload entry is a shape the compiler never selected and
+/// admission refuses it at the field that states it.
+#[test]
+fn target_payload_rejects_every_zero_geometry_class() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    for (field, workgroup_size, grid_size) in [
+        ("workgroup_size", [0, 1, 1], [1, 1, 1]),
+        ("grid_size", [8, 1, 1], [0, 1, 1]),
+    ] {
+        let mut entry = entry_point(&neutral);
+        entry.workgroup_size = workgroup_size;
+        entry.grid_size = grid_size;
+        let error = TargetPayload::new(&neutral, format(1), profile(1), vec![entry], vec![1])
+            .expect_err("zero target geometry must fail instead of defaulting to one");
+        assert_eq!(
+            diagnostic_path(&error),
+            Some(format!("target_payload.entries[0].{field}").as_str())
+        );
+        assert!(error.to_string().contains("the artifact selected"));
+        assert!(error
+            .to_string()
+            .contains("attach the geometry the neutral artifact recorded"));
     }
 }
 
@@ -119,23 +116,6 @@ fn target_compiler_attaches_exactly_one_authenticated_payload() {
     assert_eq!(payload.bytes(), &[4, 2]);
 }
 
-fn entry() -> TargetEntryPoint {
-    TargetEntryPoint {
-        name: "entry".into(),
-        node: ArtifactNodeId(0),
-        workgroup_size: [8, 1, 1],
-        grid_size: [4, 1, 1],
-        dynamic_shared_bytes: 64,
-        resource_bindings: vec![TargetResourceBinding {
-            resource: ArtifactValueId(0),
-            group: 0,
-            slot: 3,
-            memory: TargetResourceMemory::Global,
-            access: TargetResourceAccess::ReadOnly,
-        }],
-    }
-}
-
 /// Regression: packaging target bytes must retain the exact neutral artifact, entry IDs, and bytes.
 #[test]
 fn neutral_envelope_and_target_payload_round_trip_exactly() {
@@ -145,7 +125,7 @@ fn neutral_envelope_and_target_payload_round_trip_exactly() {
         &neutral,
         format(7),
         profile(7),
-        vec![entry()],
+        vec![entry_point(&neutral)],
         vec![0, 3, 7, 255],
     )
     .expect("valid target payload must bind");
@@ -173,14 +153,46 @@ fn neutral_envelope_and_target_payload_round_trip_exactly() {
     assert_eq!(decoded.neutral().geometry()[0].workgroup_size, [8, 1, 1]);
 }
 
+/// WHY: a target payload implements one selected neutral schedule. Changing
+/// that schedule must change target identity even when emitted bytes match.
+#[test]
+fn target_identity_includes_the_neutral_schedule() {
+    let first = neutral_artifact([8, 1, 1]);
+    let second = neutral_artifact([16, 1, 1]);
+    let first_payload = TargetPayload::new(
+        &first,
+        format(1),
+        profile(1),
+        vec![entry_point(&first)],
+        vec![9, 8, 7],
+    )
+    .expect("first target payload must validate");
+    let second_payload = TargetPayload::new(
+        &second,
+        format(1),
+        profile(1),
+        vec![entry_point(&second)],
+        vec![9, 8, 7],
+    )
+    .expect("second target payload must validate");
+
+    assert_ne!(first_payload.digest(), second_payload.digest());
+}
+
 /// Regression: target bytes materialized from one neutral artifact must not attach to another digest.
 #[test]
 fn target_payload_rejects_a_different_neutral_artifact_digest() {
     let first = neutral_artifact([8, 1, 1]);
     let second = neutral_artifact([16, 1, 1]);
     assert_ne!(first.digest(), second.digest());
-    let payload = TargetPayload::new(&first, format(1), profile(1), vec![entry()], vec![9, 8, 7])
-        .expect("payload must bind to its source artifact");
+    let payload = TargetPayload::new(
+        &first,
+        format(1),
+        profile(1),
+        vec![entry_point(&first)],
+        vec![9, 8, 7],
+    )
+    .expect("payload must bind to its source artifact");
     let mut wrong_envelope = ArtifactEnvelope::new(second);
 
     let error = wrong_envelope
@@ -204,12 +216,12 @@ fn target_payload_schema_and_format_version_skew_are_rejected() {
         &neutral,
         format(2),
         profile(2),
-        vec![entry()],
+        vec![entry_point(&neutral)],
         vec![1, 2, 3],
     )
     .expect("payload must construct");
     let mut payload_bytes = payload.to_bytes().expect("payload must encode");
-    payload_bytes[4..6].copy_from_slice(&4u16.to_le_bytes());
+    payload_bytes[4..6].copy_from_slice(&(TARGET_PAYLOAD_SCHEMA_VERSION + 1).to_le_bytes());
     let schema_error = TargetPayload::from_bytes(&payload_bytes)
         .expect_err("unsupported attachment schema must fail before body admission");
     assert_eq!(
@@ -246,7 +258,7 @@ fn corrupted_target_payload_identity_is_rejected() {
         &neutral,
         format(1),
         profile(1),
-        vec![entry()],
+        vec![entry_point(&neutral)],
         vec![11, 22, 33],
     )
     .expect("payload must construct");
@@ -266,9 +278,9 @@ fn corrupted_target_payload_identity_is_rejected() {
 #[test]
 fn target_module_bundle_rejects_noncanonical_module_order() {
     let program = Program::wrapped(Vec::new(), [1, 1, 1], Vec::new());
-    let descriptor = vyre_lower::lower_verified(&program)
+    let descriptor = vyre_lower::lower_physical(&program)
         .expect("fixture lowering must succeed")
-        .descriptor;
+        .into_descriptor();
     let program = program.to_wire().expect("fixture Program must encode");
     let image = |stage, group| TargetModuleImage {
         group: FusionGroupId(group),
@@ -277,6 +289,7 @@ fn target_module_bundle_rejects_noncanonical_module_order() {
         program: program.clone(),
         descriptor: descriptor.clone(),
         entry_point: format!("group_{group}"),
+        numeric: vyre_megakernel::ModuleNumericRecord::default(),
         bytes: vec![group as u8],
     };
     for modules in [
@@ -286,6 +299,8 @@ fn target_module_bundle_rejects_noncanonical_module_order() {
     ] {
         let bytes = TargetModuleBundle {
             schema_version: vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+            topology: vyre_megakernel::ExecutionTopology::Sequential,
+            arms: Vec::new(),
             modules,
         }
         .to_bytes()
@@ -295,6 +310,838 @@ fn target_module_bundle_rejects_noncanonical_module_order() {
         assert!(
             error.to_string().contains("canonical stage/group order"),
             "unexpected admission error: {error}"
+        );
+    }
+}
+/// WHY: fused multi-node modules where individual node programs declare buffers at colliding local binding slots (e.g. both slot 0) must resolve descriptor bindings by exact buffer name ownership, never cross-node slot index collisions.
+#[test]
+fn fused_multi_node_binding_resolution_uses_exact_name_ownership_over_colliding_slots() {
+    let mut graph = vyre_foundation::ir::ProgramGraph::new();
+    let val_a = graph
+        .add_external_value(
+            "a",
+            vyre_foundation::ir::ValueContract {
+                dtype: vyre_foundation::ir::DataType::U32,
+                shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+            },
+        )
+        .unwrap();
+    let val_b = graph
+        .add_external_value(
+            "b",
+            vyre_foundation::ir::ValueContract {
+                dtype: vyre_foundation::ir::DataType::U32,
+                shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+            },
+        )
+        .unwrap();
+
+    let prog0 = Program::wrapped(
+        vec![
+            vyre_foundation::ir::BufferDecl::storage(
+                "node0_in",
+                0,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+            vyre_foundation::ir::BufferDecl::storage(
+                "mid_out",
+                1,
+                vyre_foundation::ir::BufferAccess::WriteOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+        ],
+        [32, 1, 1],
+        vec![vyre_foundation::ir::Node::store(
+            "mid_out",
+            vyre_foundation::ir::Expr::u32(0),
+            vyre_foundation::ir::Expr::load("node0_in", vyre_foundation::ir::Expr::u32(0)),
+        )],
+    );
+
+    let prog1 = Program::wrapped(
+        vec![
+            vyre_foundation::ir::BufferDecl::storage(
+                "node1_in",
+                0,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+            vyre_foundation::ir::BufferDecl::storage(
+                "mid_in",
+                1,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+            vyre_foundation::ir::BufferDecl::storage(
+                "node1_out",
+                2,
+                vyre_foundation::ir::BufferAccess::WriteOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+        ],
+        [32, 1, 1],
+        vec![vyre_foundation::ir::Node::store(
+            "node1_out",
+            vyre_foundation::ir::Expr::u32(0),
+            vyre_foundation::ir::Expr::add(
+                vyre_foundation::ir::Expr::load("node1_in", vyre_foundation::ir::Expr::u32(0)),
+                vyre_foundation::ir::Expr::load("mid_in", vyre_foundation::ir::Expr::u32(0)),
+            ),
+        )],
+    );
+
+    let (_node0, outputs0) = graph
+        .add_node(
+            "node0",
+            prog0,
+            vec![vyre_foundation::ir::GraphInput {
+                buffer: "node0_in".into(),
+                value: val_a,
+                contract: vyre_foundation::ir::ValueContract {
+                    dtype: vyre_foundation::ir::DataType::U32,
+                    shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                    access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                    lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+                },
+            }],
+            vec![vyre_foundation::ir::GraphOutput {
+                buffer: "mid_out".into(),
+                name: "mid".into(),
+                contract: vyre_foundation::ir::ValueContract {
+                    dtype: vyre_foundation::ir::DataType::U32,
+                    shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                    access: vyre_foundation::ir::BufferAccess::WriteOnly,
+                    lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+    let mid_val = outputs0[0];
+
+    let (_node1, outputs1) = graph
+        .add_node(
+            "node1",
+            prog1,
+            vec![
+                vyre_foundation::ir::GraphInput {
+                    buffer: "node1_in".into(),
+                    value: val_b,
+                    contract: vyre_foundation::ir::ValueContract {
+                        dtype: vyre_foundation::ir::DataType::U32,
+                        shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                        access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                        lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+                    },
+                },
+                vyre_foundation::ir::GraphInput {
+                    buffer: "mid_in".into(),
+                    value: mid_val,
+                    contract: vyre_foundation::ir::ValueContract {
+                        dtype: vyre_foundation::ir::DataType::U32,
+                        shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                        access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                        lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+                    },
+                },
+            ],
+            vec![vyre_foundation::ir::GraphOutput {
+                buffer: "node1_out".into(),
+                name: "out1".into(),
+                contract: vyre_foundation::ir::ValueContract {
+                    dtype: vyre_foundation::ir::DataType::U32,
+                    shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                    access: vyre_foundation::ir::BufferAccess::WriteOnly,
+                    lifetime: vyre_foundation::ir::ValueLifetime::Output,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+    let out_val = outputs1[0];
+
+    let mut symbols = std::collections::BTreeMap::new();
+    symbols.insert("items".into(), 32);
+    let req = vyre_megakernel::CompileRequest::new(
+        graph,
+        vyre_megakernel::ExternalFacts::new(vyre_megakernel::Digest([0; 32]), symbols),
+        vyre_megakernel::DeviceFacts::unknown(),
+        vyre_megakernel::SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+        vyre_megakernel::CompileObjective::minimize_latency()
+            .with_bound(vyre_megakernel::ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .unwrap();
+
+    let artifact = vyre_megakernel::compile(&req).expect("compilation must succeed");
+
+    let mut module_count = 0;
+    let mut captured_bindings = Vec::new();
+    let _payload = compile_selected_modules(&artifact, format(1), profile(1), |selected, _prof| {
+        module_count += 1;
+        assert_eq!(
+            selected.nodes.len(),
+            2,
+            "producer and consumer must fuse into a 2-node module"
+        );
+        captured_bindings = selected.canonical_bindings.clone();
+        Ok(EmittedTargetModule {
+            entry_point: "fused_entry".into(),
+            resource_bindings: selected.canonical_bindings.clone(),
+            bytes: vec![1, 2, 3],
+        })
+    })
+    .expect("selected module compilation must succeed");
+
+    assert_eq!(module_count, 1, "exactly one fused module must be compiled");
+
+    let node0_in_binding = captured_bindings
+        .iter()
+        .find(|b| b.resource == ArtifactValueId(val_a.0));
+    let node1_in_binding = captured_bindings
+        .iter()
+        .find(|b| b.resource == ArtifactValueId(val_b.0));
+    let out_binding = captured_bindings
+        .iter()
+        .find(|b| b.resource == ArtifactValueId(out_val.0));
+
+    assert!(
+        node0_in_binding.is_some(),
+        "node0_in must be bound to val_a"
+    );
+    assert!(
+        node1_in_binding.is_some(),
+        "node1_in must be bound to val_b"
+    );
+    assert!(out_binding.is_some(), "node1_out must be bound to out_val");
+    assert_ne!(
+        node0_in_binding.unwrap().slot,
+        node1_in_binding.unwrap().slot,
+        "descriptor slots in fused kernel must be distinct"
+    );
+}
+/// WHY: entry metadata must reject duplicate (group, slot) bindings.
+#[test]
+fn target_payload_rejects_duplicate_slot_within_entry() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let bindings = vec![
+        TargetResourceBinding {
+            resource: ArtifactValueId(0),
+            group: 0,
+            slot: 0,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::ReadOnly,
+        },
+        TargetResourceBinding {
+            resource: ArtifactValueId(0),
+            group: 0,
+            slot: 0,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::WriteOnly,
+        },
+    ];
+    let error = TargetPayload::new(
+        &neutral,
+        format(1),
+        profile(1),
+        vec![entry_over(
+            &neutral,
+            "dup_slot",
+            ArtifactNodeId(0),
+            bindings,
+        )],
+        vec![1, 2, 3],
+    )
+    .expect_err("duplicate (group, slot) must fail admission");
+    assert_eq!(
+        error.diagnostic.code.as_str(),
+        "MKC017_MALFORMED_TARGET_PAYLOAD"
+    );
+}
+
+/// WHY: fused modules where a canonical resource is bound at distinct slots (e.g. producer output and consumer input) must be accepted.
+#[test]
+fn target_payload_accepts_same_resource_at_distinct_slots() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let bindings = vec![
+        TargetResourceBinding {
+            resource: ArtifactValueId(0),
+            group: 0,
+            slot: 0,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::ReadOnly,
+        },
+        TargetResourceBinding {
+            resource: ArtifactValueId(0),
+            group: 0,
+            slot: 1,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::WriteOnly,
+        },
+    ];
+    let payload = TargetPayload::new(
+        &neutral,
+        format(1),
+        profile(1),
+        vec![entry_over(
+            &neutral,
+            "distinct_slots_same_res",
+            ArtifactNodeId(0),
+            bindings,
+        )],
+        vec![1, 2, 3],
+    )
+    .expect("same resource at distinct slots must be admitted");
+    assert_eq!(payload.entries()[0].resource_bindings.len(), 2);
+}
+
+/// WHY: target payload must fail closed when referencing an unknown canonical resource.
+#[test]
+fn target_payload_rejects_unknown_canonical_resource() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let bindings = vec![TargetResourceBinding {
+        resource: ArtifactValueId(999),
+        group: 0,
+        slot: 0,
+        memory: TargetResourceMemory::Global,
+        access: TargetResourceAccess::ReadOnly,
+    }];
+    let error = TargetPayload::new(
+        &neutral,
+        format(1),
+        profile(1),
+        vec![entry_over(
+            &neutral,
+            "unknown_res",
+            ArtifactNodeId(0),
+            bindings,
+        )],
+        vec![1, 2, 3],
+    )
+    .expect_err("unknown resource must fail admission");
+    assert_eq!(
+        error.diagnostic.code.as_str(),
+        "MKC020_TARGET_PAYLOAD_ASSOCIATION_MISMATCH"
+    );
+}
+
+/// Build a one-node graph whose program writes `destination` under an optional
+/// constant guard on axis-0 logical index, and return its selected launch span.
+///
+/// `source` is `chunk` elements and `destination` is `cache` elements, so the
+/// buffer-derived span and the guarded span differ by construction.
+fn selected_span(chunk: u32, cache: u32, guard: Option<u32>) -> u32 {
+    use vyre_foundation::ir::{
+        BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, ProgramGraph,
+        ShapeDim, ValueContract, ValueLifetime,
+    };
+
+    let contract = |access, lifetime, symbol: &str| ValueContract {
+        dtype: DataType::U32,
+        shape: vec![ShapeDim::Symbol(symbol.into())],
+        access,
+        lifetime,
+    };
+
+    let mut graph = ProgramGraph::new();
+    let source_value = graph
+        .add_external_value(
+            "chunk",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, "chunk"),
+        )
+        .expect("external chunk value must be accepted");
+
+    let index = Expr::var("index");
+    let store = Node::store(
+        "cache_out",
+        Expr::add(index.clone(), Expr::u32(1)),
+        Expr::load("chunk_in", index.clone()),
+    );
+    let body = match guard {
+        Some(limit) => vec![
+            Node::let_bind("index", Expr::LogicalIndex { axis: 0 }),
+            Node::if_then(Expr::lt(index, Expr::u32(limit)), vec![store]),
+        ],
+        None => vec![
+            Node::let_bind("index", Expr::LogicalIndex { axis: 0 }),
+            store,
+        ],
+    };
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("chunk_in", 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("cache_out", 1, BufferAccess::WriteOnly, DataType::U32),
+        ],
+        [32, 1, 1],
+        body,
+    );
+
+    graph
+        .add_node(
+            "scatter",
+            program,
+            vec![GraphInput {
+                buffer: "chunk_in".into(),
+                value: source_value,
+                contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, "chunk"),
+            }],
+            vec![GraphOutput {
+                buffer: "cache_out".into(),
+                name: "cache".into(),
+                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output, "cache"),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("scatter node must be accepted");
+
+    let mut symbols = std::collections::BTreeMap::new();
+    symbols.insert("chunk".into(), u64::from(chunk));
+    symbols.insert("cache".into(), u64::from(cache));
+    let request = vyre_megakernel::CompileRequest::new(
+        graph,
+        vyre_megakernel::ExternalFacts::new(vyre_megakernel::Digest([0; 32]), symbols),
+        vyre_megakernel::DeviceFacts::unknown(),
+        vyre_megakernel::SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+        vyre_megakernel::CompileObjective::minimize_latency()
+            .with_bound(vyre_megakernel::ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("scatter request must validate");
+    let artifact = vyre_megakernel::compile(&request).expect("scatter must compile");
+
+    let mut span = None;
+    compile_selected_modules(&artifact, format(1), profile(1), |selected, _prof| {
+        span = Some(selected.logical_element_count);
+        Ok(EmittedTargetModule {
+            entry_point: "scatter_entry".into(),
+            resource_bindings: selected.canonical_bindings.clone(),
+            bytes: vec![1],
+        })
+    })
+    .expect("selected module compilation must succeed");
+    span.expect("one module must be compiled")
+}
+
+/// WHY: a launch span taken from the widest declared resource is right for a
+/// gather and wrong for a scatter, which guards on a small source and declares
+/// a much larger destination. The guard is in the IR, so the compiler reads it
+/// instead of firing one lane per destination element and letting the guard
+/// discard the rest. Without the guard the destination is the only bound left,
+/// which is the case the cap must not touch.
+#[test]
+fn a_constant_guard_caps_the_launch_span_at_the_domain_it_admits() {
+    assert_eq!(
+        selected_span(8, 1024, Some(8)),
+        8,
+        "a guarded scatter must launch over its guarded domain, not its destination"
+    );
+    assert_eq!(
+        selected_span(8, 1024, None),
+        1024,
+        "an unguarded write has no domain but its destination"
+    );
+}
+
+/// WHY: the cap is a minimum, not a replacement. A guard wider than anything
+/// the program can address must not raise the launch above the resources, and a
+/// guard of zero must not produce a launch of zero groups, which a driver
+/// rejects outright.
+#[test]
+fn a_guard_never_raises_the_span_above_the_resources_or_lowers_it_below_one() {
+    assert_eq!(
+        selected_span(8, 64, Some(4_000_000)),
+        64,
+        "a guard wider than the resources must not widen the launch"
+    );
+    assert_eq!(
+        selected_span(8, 64, Some(0)),
+        1,
+        "a zero-domain guard must still leave a launchable span"
+    );
+}
+
+/// WHY: the artifact records the geometry the search selected, and a target
+/// payload is what the device launches. Admission used to check only that each
+/// extent was positive, so a payload that stated a different shape attached and
+/// the launch disagreed with the authenticated schedule. Every field a launch
+/// reads is now compared against the record it projects.
+#[test]
+fn target_payload_rejects_geometry_the_artifact_did_not_select() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    TargetPayload::new(
+        &neutral,
+        format(1),
+        profile(1),
+        vec![entry_point(&neutral)],
+        vec![1],
+    )
+    .expect("the recorded geometry attaches");
+
+    let cases: Vec<(&str, fn(&mut TargetEntryPoint))> = vec![
+        ("workgroup_size", |entry| entry.workgroup_size = [4, 1, 1]),
+        ("grid_size", |entry| entry.grid_size[0] += 1),
+        ("dynamic_shared_bytes", |entry| {
+            entry.dynamic_shared_bytes += 32;
+        }),
+    ];
+    for (field, mutate) in cases {
+        let mut entry = entry_point(&neutral);
+        mutate(&mut entry);
+        let error = TargetPayload::new(&neutral, format(1), profile(1), vec![entry], vec![1])
+            .expect_err("emitted geometry the artifact did not select must not attach");
+        assert_eq!(
+            error.diagnostic.code.as_str(),
+            "MKC020_TARGET_PAYLOAD_ASSOCIATION_MISMATCH"
+        );
+        assert_eq!(
+            diagnostic_path(&error),
+            Some(format!("target_payload.entries[0].{field}").as_str())
+        );
+    }
+
+    let mut foreign = entry_point(&neutral);
+    foreign.node = ArtifactNodeId(9);
+    let error = TargetPayload::new(&neutral, format(1), profile(1), vec![foreign], vec![1])
+        .expect_err("an entry for a node the artifact does not carry must not attach");
+    assert_eq!(
+        diagnostic_path(&error),
+        Some("target_payload.entries[0].node")
+    );
+}
+
+/// WHY: an emitter reports bytes and bindings; it no longer reports a shape.
+/// The entry the seam packages therefore has to come from the artifact record,
+/// and the module it packages beside it has to be the program the artifact froze
+/// at that same workgroup.
+#[test]
+fn emission_packages_exactly_the_recorded_launch() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let recorded = neutral.geometry()[0].clone();
+    let payload =
+        compile_selected_modules(&neutral, format(1), profile(1), |selected, _profile| {
+            Ok(EmittedTargetModule {
+                entry_point: "entry".into(),
+                resource_bindings: selected.canonical_bindings.clone(),
+                bytes: vec![7],
+            })
+        })
+        .expect("selected module compilation must succeed");
+
+    let entry = &payload.entries()[0];
+    assert_eq!(entry.node, recorded.node);
+    assert_eq!(entry.workgroup_size, recorded.workgroup_size);
+    assert_eq!(entry.grid_size, recorded.grid);
+    assert_eq!(entry.dynamic_shared_bytes, recorded.dynamic_shared_bytes);
+
+    let bundle =
+        TargetModuleBundle::from_bytes(payload.bytes()).expect("packaged bundle must be canonical");
+    let program = Program::from_wire(&bundle.modules[0].program).expect("module program decodes");
+    assert_eq!(program.workgroup_size, recorded.workgroup_size);
+}
+
+/// One node that reads binary16, converts to binary32, and exponentiates.
+///
+/// Every numeric choice the record claims to carry is present exactly once:
+/// two storage formats, one conversion, one approximable operation.
+fn mixed_precision_artifact() -> Artifact {
+    let input = artifact_fixtures::contract(
+        DataType::F16,
+        8,
+        BufferAccess::ReadOnly,
+        ValueLifetime::Invocation,
+    );
+    let output = artifact_fixtures::contract(
+        DataType::F32,
+        8,
+        BufferAccess::WriteOnly,
+        ValueLifetime::Output,
+    );
+    let mut graph = ProgramGraph::new();
+    let value = graph
+        .add_external_value("input", input.clone())
+        .expect("fixture external value must be valid");
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::F16).with_count(8),
+            BufferDecl::output("out", 1, DataType::F32).with_count(8),
+        ],
+        [8, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::LocalId { axis: 0 },
+            Expr::exp(Expr::cast(
+                DataType::F32,
+                Expr::load("input", Expr::LocalId { axis: 0 }),
+            )),
+        )],
+    );
+    graph
+        .add_node(
+            "entry",
+            program,
+            vec![GraphInput {
+                buffer: "input".into(),
+                value,
+                contract: input,
+            }],
+            vec![GraphOutput {
+                buffer: "out".into(),
+                name: "out".into(),
+                contract: output,
+                retained_successor_of: None,
+            }],
+        )
+        .expect("fixture node must be valid");
+    artifact_fixtures::compile_graph(graph, 0)
+}
+
+/// Package `artifact` through the emission seam and return the module bundle.
+fn emitted_bundle(artifact: &Artifact) -> TargetModuleBundle {
+    let payload =
+        compile_selected_modules(artifact, format(1), profile(1), |selected, _profile| {
+            Ok(EmittedTargetModule {
+                entry_point: "entry".into(),
+                resource_bindings: selected.canonical_bindings.clone(),
+                bytes: vec![1],
+            })
+        })
+        .expect("selected module compilation must succeed");
+    TargetModuleBundle::from_bytes(payload.bytes()).expect("packaged bundle must be canonical")
+}
+
+/// WHY: a numeric contract is proven on the IR, and lowering is where the proof
+/// stops applying unless the module states what it actually did. A module that
+/// stores binary16, widens to binary32 and reaches an approximable instruction
+/// has three separate error sources, none of which the neutral artifact records.
+/// A record derived from the lowered program cannot claim a choice the module
+/// does not carry, and cannot omit one it does.
+#[test]
+fn an_emitted_module_records_the_precision_and_approximation_it_lowered() {
+    let bundle = emitted_bundle(&mixed_precision_artifact());
+    let record = &bundle.modules[0].numeric;
+
+    assert_eq!(
+        record.formats,
+        vec![ScalarFormat::F16, ScalarFormat::F32],
+        "a module must record every storage format it holds and produces"
+    );
+    assert_eq!(
+        record.conversions,
+        vec![ScalarFormat::F32],
+        "a widening conversion is a numeric choice, not a free move"
+    );
+    assert_eq!(
+        record.approximations,
+        vec!["Exp".to_string()],
+        "an operation a backend may approximate must be named"
+    );
+}
+
+/// WHY: a module with nothing to approximate must record nothing, or the record
+/// says only that a program exists. The neutral fixture stores one integer
+/// format, converts nothing and reaches no transcendental.
+#[test]
+fn a_module_with_no_numeric_latitude_records_none() {
+    let bundle = emitted_bundle(&neutral_artifact([8, 1, 1]));
+    let record = &bundle.modules[0].numeric;
+
+    assert!(
+        record.conversions.is_empty(),
+        "a module that converts nothing must not record a conversion, got {:?}",
+        record.conversions
+    );
+    assert!(
+        record.approximations.is_empty(),
+        "a module with no approximable operation must not record one, got {:?}",
+        record.approximations
+    );
+}
+
+/// WHY: chunking is stated twice, once in the geometry the artifact selected and
+/// once in the module the launch loads. Two statements of one fact drift, and a
+/// module chunked differently from the recorded geometry computes a different
+/// combine order than the one legality priced.
+#[test]
+fn every_emitted_module_records_the_chunking_the_artifact_selected() {
+    for artifact in [mixed_precision_artifact(), neutral_artifact([8, 1, 1])] {
+        let bundle = emitted_bundle(&artifact);
+        for module in &bundle.modules {
+            let width = artifact
+                .geometry()
+                .iter()
+                .find(|record| module.nodes.contains(&record.node))
+                .map(|record| record.vector_width)
+                .expect("every emitted module packages a node the artifact recorded");
+            assert_eq!(
+                module.numeric.chunk,
+                (width > 1).then_some(width),
+                "module chunking must be the vector width the artifact selected"
+            );
+        }
+    }
+}
+
+/// A frozen phase that combines `vector_width` elements per invocation.
+fn phase(vector_width: u32) -> SchedulePhase {
+    SchedulePhase {
+        id: SchedulePhaseId(0),
+        source_regions: vec![0],
+        axes: Vec::new(),
+        grid: [8, 1, 1],
+        workgroup: [8, 1, 1],
+        vector_width,
+        mappings: Vec::new(),
+        predecessors: Vec::new(),
+        resources: ScheduleResourceBounds::default(),
+    }
+}
+
+/// WHY: a chunked phase computes a combine over several elements per
+/// invocation, which is a different order from one element per invocation. The
+/// search never selects a width above one for the fixtures here, so driving the
+/// record through emission cannot reach the arm. The derivation is asked
+/// directly, at both widths, so the arm is proven rather than assumed.
+#[test]
+fn a_module_records_the_chunk_the_frozen_phase_states() {
+    let program = Program::wrapped(
+        vec![BufferDecl::read("input", 0, DataType::F32).with_count(8)],
+        [8, 1, 1],
+        Vec::new(),
+    );
+
+    assert_eq!(
+        ModuleNumericRecord::of(&program, &phase(1)).chunk,
+        None,
+        "one element per invocation is not a chunk"
+    );
+    assert_eq!(
+        ModuleNumericRecord::of(&program, &phase(4)).chunk,
+        Some(4),
+        "a chunked phase must record the width it combines over"
+    );
+}
+
+fn topology_fixture_images(stages: &[(u32, u32)]) -> Vec<TargetModuleImage> {
+    let program = Program::wrapped(Vec::new(), [1, 1, 1], Vec::new());
+    let descriptor = vyre_lower::lower_physical(&program)
+        .expect("fixture lowering must succeed")
+        .into_descriptor();
+    let program = program.to_wire().expect("fixture Program must encode");
+    stages
+        .iter()
+        .map(|&(stage, group)| TargetModuleImage {
+            group: FusionGroupId(group),
+            stage,
+            nodes: vec![ArtifactNodeId(group)],
+            program: program.clone(),
+            descriptor: descriptor.clone(),
+            entry_point: format!("group_{group}"),
+            numeric: ModuleNumericRecord::default(),
+            bytes: vec![group as u8],
+        })
+        .collect()
+}
+
+/// WHY: a concurrent winner is only executable if the bundle records which arm each
+/// module is submitted on. Independent modules sharing a dependency stage must land on
+/// distinct arms so they overlap on device, a dependent module must stay in a later
+/// stage so it cannot, and both facts must survive encode and admission.
+#[test]
+fn concurrent_topology_records_overlapping_arms_and_keeps_dependent_stages_ordered() {
+    use vyre_megakernel::{ExecutionTopology, TargetArmAssignment};
+
+    let images = topology_fixture_images(&[(0, 0), (0, 1), (0, 2), (1, 3)]);
+    let topology = ExecutionTopology::ConcurrentQueue { queues: 2 };
+    let bundle = TargetModuleBundle::with_topology(topology, images);
+    assert_eq!(
+        bundle.arms,
+        vec![
+            TargetArmAssignment {
+                group: FusionGroupId(0),
+                stage: 0,
+                arm: 0
+            },
+            TargetArmAssignment {
+                group: FusionGroupId(1),
+                stage: 0,
+                arm: 1
+            },
+            TargetArmAssignment {
+                group: FusionGroupId(2),
+                stage: 0,
+                arm: 0
+            },
+            TargetArmAssignment {
+                group: FusionGroupId(3),
+                stage: 1,
+                arm: 0
+            },
+        ],
+        "two-queue topology must spread one stage across both arms and restart per stage"
+    );
+    let bytes = bundle.to_bytes().expect("fixture bundle must encode");
+    let decoded = TargetModuleBundle::from_bytes(&bytes).expect("valid bundle must be admitted");
+    assert_eq!(decoded.topology, topology);
+    assert_eq!(decoded.arms, bundle.arms);
+    assert_eq!(
+        decoded.schema_version,
+        vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION
+    );
+
+    let sequential =
+        TargetModuleBundle::new(topology_fixture_images(&[(0, 0), (0, 1), (0, 2), (1, 3)]))
+            .to_bytes()
+            .expect("baseline bundle must encode");
+    assert_ne!(
+        sequential, bytes,
+        "the selected topology must change the bundle digest"
+    );
+}
+
+/// WHY: removing topology lowering must fail rather than degrade silently. A bundle whose
+/// arm records are stripped, or whose topology no longer matches them, claims a schedule it
+/// cannot submit and is refused on admission.
+#[test]
+fn bundle_admission_rejects_arm_records_that_are_not_the_selected_topology() {
+    use vyre_megakernel::ExecutionTopology;
+
+    let stages = [(0u32, 0u32), (0, 1), (0, 2), (1, 3)];
+    let concurrent = ExecutionTopology::ConcurrentQueue { queues: 2 };
+    let assigned = TargetModuleBundle::with_topology(concurrent, topology_fixture_images(&stages));
+
+    for (case, bundle) in [
+        (
+            "stripped arm records",
+            TargetModuleBundle {
+                schema_version: vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+                topology: concurrent,
+                arms: Vec::new(),
+                modules: assigned.modules.clone(),
+            },
+        ),
+        (
+            "topology rewritten under kept arms",
+            TargetModuleBundle {
+                schema_version: vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+                topology: ExecutionTopology::Sequential,
+                arms: assigned.arms.clone(),
+                modules: assigned.modules.clone(),
+            },
+        ),
+    ] {
+        let bytes = bundle.to_bytes().expect("fixture bundle must encode");
+        let error = TargetModuleBundle::from_bytes(&bytes)
+            .expect_err("bundle without executable topology must fail admission");
+        assert!(
+            error
+                .to_string()
+                .contains("arms are not the selected topology's assignment"),
+            "{case}: unexpected admission error: {error}"
         );
     }
 }

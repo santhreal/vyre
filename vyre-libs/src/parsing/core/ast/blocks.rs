@@ -1,6 +1,11 @@
-use crate::parsing::c::lex::tokens::*;
-use crate::region::wrap_anonymous;
+//! Control-flow assembly from flattened statements.
+//!
+//! Each statement resolves its own header token and conditional expression from
+//! spatial boundaries computed earlier, so no host-side tree is built.
+
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_spec::c11_token::*;
 
 /// Topological CFG Assembly (Agent A - Frontend)
 ///
@@ -23,7 +28,7 @@ pub fn ast_cfg_blocks(
     num_statements: Expr,
     out_block_headers: &str, // Maps stmt -> enclosing control flow keyword token index
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let t = Expr::LogicalIndex { axis: 0 };
 
     // We assume `statements` provides [start_tok, end_tok].
     // If start_tok is immediately preceded by an `if (expr)` or `while (expr)`,
@@ -87,7 +92,7 @@ pub fn ast_cfg_blocks(
                 .with_count(stmt_count),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::ast_cfg_blocks",
             vec![Node::if_then(
                 Expr::lt(t.clone(), num_statements),
@@ -98,39 +103,39 @@ pub fn ast_cfg_blocks(
     .with_entry_op_id("vyre-libs::parsing::ast_cfg_blocks")
     .with_non_composable_with_self(true)
 }
+const EXPECTED_AST_CFG_BLOCKS_BYTES: [u8; 8] = [0, 0, 0, 0, 255, 255, 255, 255];
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::ast_cfg_blocks",
-        build: Some(|| ast_cfg_blocks(
+    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+        "vyre-libs::parsing::ast_cfg_blocks",
+        || ast_cfg_blocks(
             "tok_types", "out_scope_parents", "statements",
             Expr::u32(2), "out_block_headers"
-        )),
+        ),
         // 2-statement fixture. tok_types[0] = TOK_IF, followed by
         // a body token at index 1; statements = [(1, 1), (0, 0)].
         // Statement 0 starts at token 1; the backward lookback finds
         // TOK_IF at check_idx=0 and writes header_tok=0. Statement 1
         // starts at 0 so the `stmt_start >= i` guard never fires and
         // header_tok stays u32::MAX.
-        test_inputs: Some(|| {
+        Some(|| {
             let mut tok_types = vec![0u32; 8];
             tok_types[0] = TOK_IF;
             // statements is [start_tok, end_tok] per statement:
             //   stmt 0 → (1, 1), stmt 1 → (0, 0)
             let statements: [u32; 4] = [1, 1, 0, 0];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            vec![vec![to_bytes(&tok_types), to_bytes(&statements), vec![0u8; 4 * 2]]]
+            // `out_block_headers` is read-write storage, so the reference takes
+            // one seeded Value for it exactly as a device takes one bound buffer.
+            vec![vec![
+                to_bytes(&tok_types),
+                to_bytes(&statements),
+                to_bytes(&[0u32; 2]),
+            ]]
         }),
-        expected_output: Some(|| {
-            let headers: [u32; 2] = [0, u32::MAX];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&headers);
-            vec![vec![bytes]]
+        Some(|| {
+            vec![vec![EXPECTED_AST_CFG_BLOCKS_BYTES.to_vec()]]
         }),
-        category: Some("parsing"),
-    }
+    )
+    .with_category("parsing")
 }

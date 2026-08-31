@@ -1,0 +1,20 @@
+lane = "ci-matrix"
+workflow = ".github/workflows/ci.yml"
+job = "matrix"
+state = "live"
+required_status = "CI / ${{ matrix.os }} / ${{ matrix.rust-toolchain }}"
+triggers = ["push", "pull_request"]
+steps = [
+  { command = '''rustup toolchain install "${{ matrix.rust-toolchain }}" \
+  --profile minimal \
+  --component clippy \
+  --component rustfmt
+rustup default "${{ matrix.rust-toolchain }}"''' },
+  { command = "./cargo_full fmt --check" },
+  { gate = "abstraction-gate" },
+  { command = "./cargo_full clippy --workspace" },
+  { command = "./cargo_full test --workspace" },
+  { command = "./cargo_full test -p vyre-libs --features analysis,encoding,graph-dispatch,reasoning,scheduling,solvers,test-fixtures --test sweep_graph_cpu_oracle_matrix --test do_calculus_surgery_via_reference_parity --test functor_apply_via_reference_parity --test vsa_fingerprint_via_reference_parity --test mz_project_via_reference_parity --test sheaf_spectrum_via_reference_parity --test vietoris_rips_via_reference_parity --test natural_gradient_via_reference_parity --test tensor_train_compress_via_reference_parity --test kfac_via_reference_parity --test sinkhorn_via_reference_parity --test matching_diagnostic_via_reference_parity --test quantized_via_reference_parity --test tensor_train_chain_fusion_via_reference_parity --test sheaf_heterophilic_via_reference_parity --test string_diagram_via_reference_parity --test planar_rewrite_via_reference_parity --test multigrid_matroid_via_reference_parity --test semiring_gemm_via_reference_parity --test bellman_shortest_path_via_reference_parity --test reduction_metrics_via_reference_parity --test bitset_mask_algebra_via_reference_parity --test bitset_summary_via_reference_parity --test scallop_provenance_via_reference_parity --test softmax_pick_config_via_reference_parity --test fmm_polyhedral_via_reference_parity --test natural_config_gradient_via_reference_parity --test cost_model_predict_runtime_via_reference_parity --test union_find_alias_via_reference_parity --test matroid_exact_subset_via_reference_parity --test submodular_retention_via_reference_parity --test fmm_compress_pairwise_via_reference_parity --test fusion_scores_via_reference_parity --test shape_spectrum_via_reference_parity --test smooth_latency_trace_via_reference_parity --test predict_impact_via_reference_parity --test transport_residual_via_reference_parity --test reconstruct_path_via_reference_parity --test match_motif_via_reference_parity --test smooth_matroid_flow_via_reference_parity" },
+  { command = "./cargo_full test -p vyre-pass-engine --features all-solvers --test optimizer_bfs_and_softmax_parity" },
+  { command = "./cargo_full doc --workspace" },
+]

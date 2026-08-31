@@ -5,15 +5,8 @@
 use vyre_reference::value::Value;
 
 fn assert_size_mismatch_is_result_error(program: vyre::Program) {
-    let error = vyre_reference::reference_eval(
-        &program,
-        &[
-            Value::from(vec![0u8; 16]),
-            Value::from(vec![0u8; 16]),
-            Value::from(vec![0u8; 12]),
-        ],
-    )
-    .expect_err("Fix: output buffer size mismatch must return a reference_eval error");
+    let error = vyre_reference::reference_eval(&program, &[Value::from(vec![0u8; 16])])
+        .expect_err("Fix: output buffer size mismatch must return a reference_eval error");
     let message = error.to_string();
     assert!(
         message.contains("out") || message.contains("buffer"),
@@ -23,17 +16,17 @@ fn assert_size_mismatch_is_result_error(program: vyre::Program) {
 
 #[test]
 fn and_errors_on_output_buffer_size_mismatch() {
-    assert_size_mismatch_is_result_error(vyre_libs::logical::and("a", "b", "out", 4));
+    assert_size_mismatch_is_result_error(vyre_libs::bitset::and::bitset_and("a", "b", "out", 4));
 }
 
 #[test]
 fn or_errors_on_output_buffer_size_mismatch() {
-    assert_size_mismatch_is_result_error(vyre_libs::logical::or("a", "b", "out", 4));
+    assert_size_mismatch_is_result_error(vyre_libs::bitset::or::bitset_or("a", "b", "out", 4));
 }
 
 #[test]
 fn xor_errors_on_output_buffer_size_mismatch() {
-    assert_size_mismatch_is_result_error(vyre_libs::logical::xor("a", "b", "out", 4));
+    assert_size_mismatch_is_result_error(vyre_libs::bitset::xor::bitset_xor("a", "b", "out", 4));
 }
 
 #[test]

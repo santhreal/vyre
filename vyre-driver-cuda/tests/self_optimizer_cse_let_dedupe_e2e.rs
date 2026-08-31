@@ -4,26 +4,18 @@
 //! rewritten as `Var` references to the original. Verified on real
 //! CUDA hardware.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::live_backend;
+use harness::cuda_semantic_execution;
+use harness::self_optimizer::body_of;
 use vyre::ir::{Expr, Node, Program};
-use vyre_driver_cuda::CudaOptimizerDispatcher;
-use vyre_self_substrate::optimizer::cse_via_encoded::{apply_cse_let_dedupe, gpu_cse_canonicals};
-
-fn body_of(out: &Program) -> Vec<Node> {
-    match out.entry() {
-        [Node::Region { body, .. }] => body.as_ref().clone(),
-        entry => entry.to_vec(),
-    }
-}
+use vyre_pass_engine::optimizer::cse_via_encoded::{apply_cse_let_dedupe, gpu_cse_canonicals};
 
 #[test]
 fn cuda_let_dedupe_collapses_duplicate_literal_let_pairs() {
-    let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
 
     // Two lets with the same literal RHS:
     //   let a = 5
@@ -45,8 +37,8 @@ fn cuda_let_dedupe_collapses_duplicate_literal_let_pairs() {
         ],
     );
 
-    let (arena, canonical) =
-        gpu_cse_canonicals(&p, &dispatcher).expect("gpu_cse_canonicals must succeed");
+    let (arena, canonical) = gpu_cse_canonicals(&p, &dispatcher.0, &dispatcher.1)
+        .expect("gpu_cse_canonicals must succeed");
     let rewritten = apply_cse_let_dedupe(&p, &arena, &canonical);
 
     let body = body_of(&rewritten);
@@ -80,8 +72,7 @@ fn cuda_let_dedupe_collapses_duplicate_literal_let_pairs() {
 
 #[test]
 fn cuda_let_dedupe_collapses_duplicate_binop_let_pairs() {
-    let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
 
     // Two lets with `1 + 2`; the second is rewritten.
     let p = Program::wrapped(
@@ -98,8 +89,8 @@ fn cuda_let_dedupe_collapses_duplicate_binop_let_pairs() {
         ],
     );
 
-    let (arena, canonical) =
-        gpu_cse_canonicals(&p, &dispatcher).expect("gpu_cse_canonicals must succeed");
+    let (arena, canonical) = gpu_cse_canonicals(&p, &dispatcher.0, &dispatcher.1)
+        .expect("gpu_cse_canonicals must succeed");
     let rewritten = apply_cse_let_dedupe(&p, &arena, &canonical);
 
     let body = body_of(&rewritten);
@@ -117,8 +108,7 @@ fn cuda_let_dedupe_collapses_duplicate_binop_let_pairs() {
 
 #[test]
 fn cuda_let_dedupe_no_change_for_distinct_lets() {
-    let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = cuda_semantic_execution();
 
     // No duplicates  -  every let has a different value. Rewrite must
     // leave each let's RHS untouched.
@@ -137,8 +127,8 @@ fn cuda_let_dedupe_no_change_for_distinct_lets() {
         ],
     );
 
-    let (arena, canonical) =
-        gpu_cse_canonicals(&p, &dispatcher).expect("gpu_cse_canonicals must succeed");
+    let (arena, canonical) = gpu_cse_canonicals(&p, &dispatcher.0, &dispatcher.1)
+        .expect("gpu_cse_canonicals must succeed");
     let rewritten = apply_cse_let_dedupe(&p, &arena, &canonical);
 
     let body = body_of(&rewritten);

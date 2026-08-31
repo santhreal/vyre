@@ -23,14 +23,13 @@
 //! `rest` on iteration 0). `var := 0` is substituted into both halves because
 //! `var` is no longer an induction variable in the lifted block.
 //!
-//! ## ROADMAP
-//!
-//! A28  -  loop peeling first iteration when guarded.
+//! Peels the first iteration when it is guarded.
 
-use super::substitution::{body_writes_loop_var, substitute_nodes};
+use super::substitution::body_writes_loop_var;
 use crate::ir::{BinOp, Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
+use crate::transform::subst::substitute_nodes;
 
 /// Peel the first iteration of guarded loops.
 #[derive(Debug, Default)]
@@ -45,67 +44,41 @@ impl LoopPeelPass {
     /// Quick scan: skip programs without any peelable loop.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        // O(1) fast-path via the cached node-kind bitset.
-        if !program.stats().has_node_loop() {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_peelable_loop))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_LOOP],
+            &mut is_peelable_loop,
+        )
     }
 
     /// Walk the entry tree; peel every peelable loop.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .flat_map(|node| peel_node(node, &mut changed))
-                .collect()
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_nodes(program, &mut peel_node)
     }
 }
 
-/// Recurse into `node`'s descendants, then try to peel this node itself.
-/// Returns one or two nodes (peeled body + remaining loop).
-fn peel_node(node: Node, changed: &mut bool) -> Vec<Node> {
-    let recursed = node_map::map_children(node, &mut |child| {
-        let peeled = peel_node(child, changed);
-        if peeled.len() == 1 {
-            peeled.into_iter().next().unwrap_or(Node::Block(Vec::new()))
-        } else {
-            Node::Block(peeled)
-        }
-    });
-
-    if let Node::Loop {
-        ref var,
-        ref from,
-        ref to,
-        ref body,
-    } = recursed
-    {
-        if let Some((peeled_body, rest_body)) = try_peel(var, from, to, body) {
-            *changed = true;
-            let remaining = Node::Loop {
-                var: var.clone(),
-                from: Expr::u32(1),
-                to: to.clone(),
-                body: rest_body,
-            };
-            return vec![Node::Block(peeled_body), remaining];
-        }
-    }
-
-    vec![recursed]
+/// The peeled first iteration followed by the loop over the remaining range.
+fn peel_node(node: &Node) -> Option<Vec<Node>> {
+    let Node::Loop {
+        var,
+        from,
+        to,
+        body,
+    } = node
+    else {
+        return None;
+    };
+    let (peeled_body, rest_body) = try_peel(var, from, to, body)?;
+    Some(vec![
+        Node::Block(peeled_body),
+        Node::Loop {
+            var: var.clone(),
+            from: Expr::u32(1),
+            to: to.clone(),
+            body: rest_body,
+        },
+    ])
 }
 
 /// Try to match the A28 peeling pattern:
@@ -201,6 +174,7 @@ fn is_peelable_loop(node: &Node) -> bool {
 mod tests {
     use super::*;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node};
+    use crate::visit::for_each_node;
 
     fn buf() -> BufferDecl {
         BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
@@ -211,18 +185,9 @@ mod tests {
     }
 
     fn count_loops(node: &Node) -> usize {
-        match node {
-            Node::Loop { body, .. } => 1 + body.iter().map(count_loops).sum::<usize>(),
-            Node::If {
-                then, otherwise, ..
-            } => {
-                then.iter().map(count_loops).sum::<usize>()
-                    + otherwise.iter().map(count_loops).sum::<usize>()
-            }
-            Node::Block(body) => body.iter().map(count_loops).sum(),
-            Node::Region { body, .. } => body.iter().map(count_loops).sum(),
-            _ => 0,
-        }
+        crate::test_ir_inspect::count_nodes(std::slice::from_ref(node), |candidate| {
+            matches!(candidate, Node::Loop { .. })
+        })
     }
 
     /// Positive: peel fires for Loop(i, 0, 10, [If(Eq(i, 0), [store], []), rest])
@@ -323,23 +288,19 @@ mod tests {
     }
 
     /// Collect every `(index, value)` Store pair in document order.
+    ///
+    /// Descent comes from `visit::for_each_node`, the one owner of
+    /// which node variants nest. The hand-written match this replaces ended in
+    /// `_ => {}`, so a store inside a fifth body-bearing variant would have been
+    /// missing from the pair list and the peeled-prologue assertion would have
+    /// passed on a prologue that dropped it.
     fn store_pairs(nodes: &[Node]) -> Vec<(Expr, Expr)> {
         let mut out = Vec::new();
-        for n in nodes {
-            match n {
-                Node::Store { index, value, .. } => out.push((index.clone(), value.clone())),
-                Node::Block(b) => out.extend(store_pairs(b)),
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    out.extend(store_pairs(then));
-                    out.extend(store_pairs(otherwise));
-                }
-                Node::Loop { body, .. } => out.extend(store_pairs(body)),
-                Node::Region { body, .. } => out.extend(store_pairs(body)),
-                _ => {}
+        for_each_node(nodes, |n| {
+            if let Node::Store { index, value, .. } = n {
+                out.push((index.clone(), value.clone()));
             }
-        }
+        });
         out
     }
 
@@ -370,7 +331,7 @@ mod tests {
         let result = LoopPeelPass::transform(program_with_entry(entry));
         assert!(result.changed, "peeling must fire");
 
-        let body = crate::test_util::region_body(&result.program);
+        let body = crate::test_ir_inspect::region_body(&result.program);
 
         // Full store sequence across the peeled program, in document order.
         // The peeled prologue runs `then[i:=0]` (store 0,99) then `rest[i:=0]`
@@ -387,28 +348,15 @@ mod tests {
             "peel must materialize then++rest at i = 0, then loop rest over 1..N"
         );
 
-        // The remainder loop must start at i = 1 and keep `rest` with the
-        // induction variable (search through the Block nesting the rewrite adds).
-        fn find_loop(nodes: &[Node]) -> Option<(&Expr, &[Node])> {
-            for n in nodes {
-                match n {
-                    Node::Loop { from, body, .. } => return Some((from, body)),
-                    Node::Block(b) => {
-                        if let Some(x) = find_loop(b) {
-                            return Some(x);
-                        }
-                    }
-                    Node::Region { body, .. } => {
-                        if let Some(x) = find_loop(body) {
-                            return Some(x);
-                        }
-                    }
-                    _ => {}
+        let mut loop_found = None;
+        crate::visit::for_each_node(&body, |n: &Node| {
+            if let Node::Loop { from, body, .. } = n {
+                if loop_found.is_none() {
+                    loop_found = Some((from, body.as_slice()));
                 }
             }
-            None
-        }
-        let (from, lbody) = find_loop(&body).expect("remainder loop present");
+        });
+        let (from, lbody) = loop_found.expect("remainder loop present");
         assert_eq!(from, &Expr::u32(1), "remainder loop starts at i = 1");
         assert_eq!(
             store_pairs(lbody),

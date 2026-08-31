@@ -155,7 +155,7 @@ pub(crate) fn cooperative_matmul_body(
                     ),
                 ],
             ),
-            Node::barrier(),
+            Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
             Node::loop_for(
                 "tile_k",
                 Expr::u32(0),
@@ -186,7 +186,7 @@ pub(crate) fn cooperative_matmul_body(
                     )],
                 )],
             ),
-            Node::barrier(),
+            Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         ],
     ));
     body.push(Node::if_then(

@@ -6,13 +6,10 @@
 #![allow(deprecated)]
 use blake3::Hash;
 use vyre::ir::Program;
-use vyre_driver::{
-    backend::{backend_dispatches, registered_backends},
-    BackendRegistration, DispatchConfig,
-};
+use vyre_driver::{backend_dispatches, registered_backends, BackendRegistration, DispatchConfig};
 use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::optimizer::optimize;
-use vyre_foundation::validate::{BackendCapabilities, ValidationOptions};
+use vyre_foundation::validate::ValidationOptions;
 use vyre_libs::operation_catalog::fixture_entries;
 use vyre_reference::value::Value;
 
@@ -68,20 +65,8 @@ fn registered_optimizer_is_idempotent_for_all_cat_a_entries() {
 fn assert_valid(program: &Program, id: &str) {
     let errors = vyre_foundation::validate::validate_with_options(
         program,
-        ValidationOptions::universal().with_backend_capabilities(BackendCapabilities {
-            supports_subgroup_ops: true,
-            supports_indirect_dispatch: true,
-            supports_specialization_constants: true,
-            has_mul_high: true,
-            has_dual_issue_fp32_int32: true,
-            has_tensor_core_int: true,
-            has_native_f16: true,
-            has_warp_shuffle: true,
-            has_shared_memory: true,
-            has_transcendental_polynomial_emit: true,
-            supports_distributed_collectives: true,
-            max_native_int_width: 64,
-        }),
+        ValidationOptions::universal()
+            .with_backend_capabilities(vyre_test_support::backend_capabilities::all_granted()),
     )
     .errors;
     assert!(
@@ -125,6 +110,20 @@ fn check_oracle(entry: &SemanticOperation, program: &Program, _fingerprint: Hash
         .zip(expected_cases.into_iter())
         .enumerate()
     {
+        let reference_input_count = program
+            .buffers()
+            .iter()
+            .filter(|buffer| vyre_reference::is_reference_input(buffer))
+            .count();
+        assert_eq!(
+            input_bytes.len(),
+            reference_input_count,
+            "[harness] {} (case {}): test_inputs must supply exactly one value per \
+             vyre_reference::is_reference_input buffer",
+            entry.id,
+            case_idx
+        );
+
         let reference_inputs = input_bytes
             .iter()
             .map(|bytes| Value::Bytes(bytes.as_slice().into()))

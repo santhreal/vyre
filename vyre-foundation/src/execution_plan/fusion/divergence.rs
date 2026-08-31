@@ -40,12 +40,21 @@ pub(super) fn has_divergent_invocation_gated_store(
         | Node::Broadcast { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::AsyncLoad { .. }
         | Node::AsyncStore { .. }
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => false,
+        Node::TileElementwise { body, .. } => body
+            .iter()
+            .any(|n| has_divergent_invocation_gated_store(n, inside_invocation_gate)),
     }
 }
 
@@ -139,11 +148,20 @@ fn node_has_launch_geometry_dependent_write(
         | Node::Broadcast { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::AsyncLoad { .. }
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. }
         | Node::Opaque(_) => false,
+        Node::TileElementwise { body, .. } => {
+            nodes_have_launch_geometry_dependent_write(body, launch_vars, inside_launch_gate)
+        }
     }
 }
 
@@ -155,6 +173,9 @@ fn cond_depends_on_invocation_id(expr: &Expr) -> bool {
         Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize => true,
         Expr::BinOp { left, right, .. } => {
@@ -212,6 +233,9 @@ fn expr_depends_on_launch_geometry(expr: &Expr, launch_vars: &FxHashSet<Ident>) 
         Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize => true,
         Expr::Var(name) => launch_vars.contains(name),

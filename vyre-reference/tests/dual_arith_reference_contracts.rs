@@ -2,12 +2,10 @@
 
 use vyre_reference::{dual_op_ids, resolve_dual};
 
-fn binary_input(left: u32, right: u32) -> Vec<u8> {
-    let mut input = Vec::with_capacity(8);
-    input.extend_from_slice(&left.to_le_bytes());
-    input.extend_from_slice(&right.to_le_bytes());
-    input
-}
+#[path = "support/dual_operands.rs"]
+mod dual_operands;
+
+use dual_operands::{binary_input, hostile_pair};
 
 #[test]
 fn arithmetic_dual_references_are_registered_in_the_public_oracle() {
@@ -28,12 +26,7 @@ fn arithmetic_dual_references_are_registered_in_the_public_oracle() {
 fn generated_arithmetic_dual_matrix_matches_wrapping_u32_contracts() {
     let mut assertions = 0usize;
     for seed in 0..8192u32 {
-        let left = seed
-            .wrapping_mul(0x85eb_ca6b)
-            .rotate_left((seed ^ 0x13) & 31);
-        let right = seed
-            .wrapping_mul(0xc2b2_ae35)
-            .rotate_right((seed ^ 0x29) & 31);
+        let (left, right) = hostile_pair(seed);
         let input = binary_input(left, right);
 
         for (op_id, expected) in [

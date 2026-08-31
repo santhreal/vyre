@@ -87,6 +87,8 @@ pub(crate) fn reserve_multi_gpu_vec<T>(
     )
 }
 
+// Inline: covers `reserve_smallvec`, `reserve_vec`, `reserve_vec_exact_for_len`, which no
+// integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{reserve_smallvec, reserve_vec, reserve_vec_exact_for_len};

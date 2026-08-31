@@ -2,15 +2,18 @@
 //! both the small-input fast path (n ≤ BLOCK_LANES) and the multi-pass
 //! Blelloch chain.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::reduce::multi_block_prefix_scan::{
-    cpu_ref as mbps_cpu, multi_block_prefix_scan_sum_u32, pass_c_broadcast_offsets, BLOCK_LANES,
+use vyre_libs::reduce::multi_block_prefix_scan::{
+    multi_block_prefix_scan_sum_u32, pass_c_broadcast_offsets,
 };
+use vyre_reference::composition_witness::inclusive_prefix_sum_witness;
+
+const BLOCK_LANES: u32 = vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
 
 fn run_mbps(input: &[u32]) -> Vec<u32> {
     use vyre::ir::BufferAccess;
@@ -72,7 +75,7 @@ fn run_mbps(input: &[u32]) -> Vec<u32> {
 #[test]
 fn cuda_mbps_small_inclusive_sum() {
     let input = vec![1u32, 2, 3, 4, 5];
-    let cpu = mbps_cpu(&input);
+    let cpu = inclusive_prefix_sum_witness(&input);
     let gpu = run_mbps(&input);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![1, 3, 6, 10, 15]);
@@ -81,7 +84,7 @@ fn cuda_mbps_small_inclusive_sum() {
 #[test]
 fn cuda_mbps_zeros() {
     let input = vec![0u32; 16];
-    let cpu = mbps_cpu(&input);
+    let cpu = inclusive_prefix_sum_witness(&input);
     let gpu = run_mbps(&input);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0u32; 16]);
@@ -91,7 +94,7 @@ fn cuda_mbps_zeros() {
 fn cuda_mbps_one_full_block() {
     // Exactly BLOCK_LANES elements, all ones; inclusive scan = 1..=BLOCK_LANES.
     let input = vec![1u32; BLOCK_LANES as usize];
-    let cpu = mbps_cpu(&input);
+    let cpu = inclusive_prefix_sum_witness(&input);
     let gpu = run_mbps(&input);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu[BLOCK_LANES as usize - 1], BLOCK_LANES);
@@ -106,7 +109,7 @@ fn cuda_mbps_crosses_block_boundary() {
             index.wrapping_mul(1_664_525).wrapping_add(1_013_904_223)
         })
         .collect();
-    let cpu = mbps_cpu(&input);
+    let cpu = inclusive_prefix_sum_witness(&input);
     let gpu = run_mbps(&input);
 
     assert_eq!(gpu, cpu);

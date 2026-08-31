@@ -2,81 +2,84 @@
 
 #![forbid(unsafe_code)]
 
+mod wire_words;
+use wire_words::{
+    bf16_bytes, bf16_word, default_gated_delta_spec, f32_bytes as bytes, f32_words,
+    f32_words_of as decode, u16_words,
+};
+
 use vyre::ir::DataType;
-use vyre_libs::nn::attention::{chunked_gated_delta, recurrent_gated_delta};
+use vyre_libs::nn::attention::{chunked_gated_delta, recurrent_gated_delta, GatedDeltaSpec};
 use vyre_reference::value::Value;
 
-fn bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode(value: &Value) -> Vec<f32> {
-    value
-        .to_bytes()
-        .chunks_exact(4)
-        .map(|word| f32::from_le_bytes(word.try_into().expect("Fix: exact f32 word")))
-        .collect()
-}
-
-fn execute(sequence: u32, chunked: bool, state: &[f32], seed: usize) -> (Vec<f32>, Vec<f32>) {
+/// One gated-delta schedule run: build at `source` dtype, evaluate over the
+/// five source lanes, and return the raw output-lane bytes with the F32 final
+/// state. Every arm of this file's contract goes through here, so the schedule
+/// selection and the build spec are stated once.
+fn run_schedule(
+    sequence: u32,
+    chunked: bool,
+    state: &[f32],
+    lanes: &[Vec<f32>; 5],
+    source: DataType,
+) -> (Vec<u8>, Vec<f32>) {
     let len = sequence as usize;
-    let query = (0..len)
-        .map(|index| 0.5 + ((index + seed) % 7) as f32 / 8.0)
-        .collect::<Vec<_>>();
-    let key = (0..len)
-        .map(|index| 0.25 + ((index + seed * 3) % 5) as f32 / 6.0)
-        .collect::<Vec<_>>();
-    let value = (0..len)
-        .map(|index| ((index + seed) % 13) as f32 - 4.0)
-        .collect::<Vec<_>>();
-    let decay = (0..len)
-        .map(|index| -0.01 * (1 + (index % 3)) as f32)
-        .collect::<Vec<_>>();
-    let beta = (0..len)
-        .map(|index| -1.5 + (index % 11) as f32 / 4.0)
-        .collect::<Vec<_>>();
+    let (encode, lane_width) = match source {
+        DataType::BF16 => (bf16_bytes as fn(&[f32]) -> Vec<u8>, 2),
+        DataType::F32 => (bytes as fn(&[f32]) -> Vec<u8>, 4),
+        other => panic!("Fix: gated delta contract covers BF16 and F32 sources, not {other:?}"),
+    };
+    let spec = default_gated_delta_spec(sequence, 1, 1, 1, 1, source);
     let program = if chunked {
-        chunked_gated_delta
+        chunked_gated_delta(&spec)
     } else {
-        recurrent_gated_delta
-    }(
-        "query",
-        "key",
-        "value",
-        "decay",
-        "beta",
-        "state.in",
-        "output",
-        "state.out",
-        1,
-        sequence,
-        1,
-        1,
-        1,
-        1,
-        0.0,
-        DataType::F32,
-    )
+        recurrent_gated_delta(&spec)
+    }
     .expect("Fix: valid delta fixture must build");
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
-            Value::from(bytes(&query)),
-            Value::from(bytes(&key)),
-            Value::from(bytes(&value)),
-            Value::from(bytes(&decay)),
-            Value::from(bytes(&beta)),
+            Value::from(encode(&lanes[0])),
+            Value::from(encode(&lanes[1])),
+            Value::from(encode(&lanes[2])),
+            Value::from(encode(&lanes[3])),
+            Value::from(encode(&lanes[4])),
             Value::from(bytes(state)),
-            Value::from(vec![0; len * 4]),
-            Value::from(vec![0; state.len() * 4]),
+            // `state_output` is a plain ReadWrite result: one host input slot
+            // whose incoming contents the schedule overwrites.
+            Value::from(bytes(&vec![0.0f32; state.len()])),
         ],
     )
     .expect("Fix: delta schedule must execute");
     assert_eq!(decode(&outputs[0]), state);
-    (decode(&outputs[1]), decode(&outputs[2]))
+    (outputs[1].to_bytes(), decode(&outputs[2]))
+}
+
+/// The seeded F32 parity fixture.
+fn seeded_lanes(len: usize, seed: usize) -> [Vec<f32>; 5] {
+    [
+        (0..len)
+            .map(|index| 0.5 + ((index + seed) % 7) as f32 / 8.0)
+            .collect(),
+        (0..len)
+            .map(|index| 0.25 + ((index + seed * 3) % 5) as f32 / 6.0)
+            .collect(),
+        (0..len)
+            .map(|index| ((index + seed) % 13) as f32 - 4.0)
+            .collect(),
+        (0..len)
+            .map(|index| -0.01 * (1 + (index % 3)) as f32)
+            .collect(),
+        (0..len)
+            .map(|index| -1.5 + (index % 11) as f32 / 4.0)
+            .collect(),
+    ]
+}
+
+fn execute(sequence: u32, chunked: bool, state: &[f32], seed: usize) -> (Vec<f32>, Vec<f32>) {
+    let lanes = seeded_lanes(sequence as usize, seed);
+    let (output, final_state) = run_schedule(sequence, chunked, state, &lanes, DataType::F32);
+    (f32_words(&output), final_state)
 }
 
 fn assert_close(actual: &[f32], expected: &[f32], sequence: u32, label: &str) {
@@ -145,25 +148,9 @@ fn execute_chunk_fixture(
     key_dim: u32,
     value_dim: u32,
 ) -> (Vec<f32>, Vec<f32>) {
-    let program = chunked_gated_delta(
-        "query",
-        "key",
-        "value",
-        "decay",
-        "beta",
-        "state.in",
-        "output",
-        "state.out",
-        1,
-        sequence,
-        1,
-        1,
-        key_dim,
-        value_dim,
-        1e-6,
-        DataType::F32,
-    )
-    .expect("Fix: authoritative chunk fixture must build");
+    let mut spec = default_gated_delta_spec(sequence, 1, 1, key_dim, value_dim, DataType::F32);
+    spec.eps = 1e-6;
+    let program = chunked_gated_delta(&spec).expect("Fix: authoritative chunk fixture must build");
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -173,8 +160,9 @@ fn execute_chunk_fixture(
             Value::from(bytes(decay)),
             Value::from(bytes(beta_logits)),
             Value::from(bytes(state)),
-            Value::from(vec![0; value.len() * 4]),
-            Value::from(vec![0; state.len() * 4]),
+            // `state_output` is a plain ReadWrite result: one host input slot
+            // whose incoming contents the schedule overwrites.
+            Value::from(bytes(&vec![0.0f32; state.len()])),
         ],
     )
     .expect("Fix: authoritative chunk fixture must execute");
@@ -389,81 +377,39 @@ fn triangular_matrix_formula_matches_transformers_across_chunk_boundary() {
     );
 }
 
-fn bf16_word(value: f32) -> u16 {
-    let bits = value.to_bits();
-    let bias = 0x7fff + ((bits >> 16) & 1);
-    bits.wrapping_add(bias).wrapping_shr(16) as u16
-}
-
-fn bf16_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| bf16_word(*value).to_le_bytes())
-        .collect()
-}
-
-fn decode_bf16(value: &Value) -> Vec<u16> {
-    value
-        .to_bytes()
-        .chunks_exact(2)
-        .map(|word| u16::from_le_bytes(word.try_into().expect("Fix: exact BF16 word")))
-        .collect()
+/// Lanes chosen so every value is exact in BF16: the F32 comparison arm reads
+/// the identical numbers, so the two runs differ only in the dtype the source
+/// and output lanes carry.
+fn bf16_exact_lanes(len: usize) -> [Vec<f32>; 5] {
+    [
+        (0..len)
+            .map(|index| 0.5 + (index % 5) as f32 * 0.125)
+            .collect(),
+        (0..len)
+            .map(|index| 0.25 + (index % 3) as f32 * 0.25)
+            .collect(),
+        (0..len).map(|index| (index % 9) as f32 - 3.0).collect(),
+        vec![-0.015625; len],
+        (0..len)
+            .map(|index| -1.0 + (index % 7) as f32 * 0.25)
+            .collect(),
+    ]
 }
 
 fn execute_bf16_schedule(sequence: u32, chunked: bool, state: &[f32]) -> (Vec<u16>, Vec<f32>) {
-    let len = sequence as usize;
-    let query = (0..len)
-        .map(|index| 0.5 + (index % 5) as f32 * 0.125)
-        .collect::<Vec<_>>();
-    let key = (0..len)
-        .map(|index| 0.25 + (index % 3) as f32 * 0.25)
-        .collect::<Vec<_>>();
-    let value = (0..len)
-        .map(|index| (index % 9) as f32 - 3.0)
-        .collect::<Vec<_>>();
-    let decay = vec![-0.015625; len];
-    let beta = (0..len)
-        .map(|index| -1.0 + (index % 7) as f32 * 0.25)
-        .collect::<Vec<_>>();
-    let program = if chunked {
-        chunked_gated_delta
-    } else {
-        recurrent_gated_delta
-    }(
-        "query",
-        "key",
-        "value",
-        "decay",
-        "beta",
-        "state.in",
-        "output",
-        "state.out",
-        1,
-        sequence,
-        1,
-        1,
-        1,
-        1,
-        0.0,
-        DataType::BF16,
-    )
-    .expect("Fix: BF16 delta schedule must build");
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[
-            Value::from(bf16_bytes(&query)),
-            Value::from(bf16_bytes(&key)),
-            Value::from(bf16_bytes(&value)),
-            Value::from(bf16_bytes(&decay)),
-            Value::from(bf16_bytes(&beta)),
-            Value::from(bytes(state)),
-            Value::from(vec![0; len * 2]),
-            Value::from(vec![0; state.len() * 4]),
-        ],
-    )
-    .expect("Fix: BF16 delta schedule must execute");
-    assert_eq!(decode(&outputs[0]), state);
-    (decode_bf16(&outputs[1]), decode(&outputs[2]))
+    let lanes = bf16_exact_lanes(sequence as usize);
+    let (output, final_state) = run_schedule(sequence, chunked, state, &lanes, DataType::BF16);
+    (u16_words(&output), final_state)
+}
+
+fn execute_f32_source_schedule(
+    sequence: u32,
+    chunked: bool,
+    state: &[f32],
+) -> (Vec<f32>, Vec<f32>) {
+    let lanes = bf16_exact_lanes(sequence as usize);
+    let (output, final_state) = run_schedule(sequence, chunked, state, &lanes, DataType::F32);
+    (f32_words(&output), final_state)
 }
 
 /// Locks source-dtype rounding while triangular reductions and state remain F32.
@@ -473,6 +419,29 @@ fn bf16_chunk_output_and_f32_state_match_recurrent_schedule() {
     let chunked = execute_bf16_schedule(65, true, &[0.5]);
     assert_eq!(chunked.0, recurrent.0);
     assert_close(&chunked.1, &recurrent.1, 65, "BF16 final state");
+
+    // Both BF16 arms agreeing does not say where the narrowing happened: a
+    // schedule that accumulated the triangular reduction in BF16 would also
+    // agree with itself. Against the same lanes at F32 source dtype, the BF16
+    // output words must be the F32 result rounded exactly once, at the write,
+    // and the final state must stay bit-comparable F32.
+    let f32_source = execute_f32_source_schedule(65, true, &[0.5]);
+    let narrowed_once = f32_source
+        .0
+        .iter()
+        .copied()
+        .map(bf16_word)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        chunked.0, narrowed_once,
+        "BF16 output must be the F32 reduction narrowed once at the write"
+    );
+    assert_close(
+        &chunked.1,
+        &f32_source.1,
+        65,
+        "BF16 source must leave the F32 state unnarrowed",
+    );
 }
 
 /// Proves grouped value heads share K/Q rows but retain independent values and matrix states.
@@ -495,24 +464,24 @@ fn grouped_value_heads_match_recurrent_without_cross_head_state() {
             chunked_gated_delta
         } else {
             recurrent_gated_delta
-        }(
-            "query",
-            "key",
-            "value",
-            "decay",
-            "beta",
-            "state.in",
-            "output",
-            "state.out",
-            1,
+        }(&GatedDeltaSpec {
+            query: "query",
+            key: "key",
+            value: "value",
+            decay_log: "decay",
+            beta_logits: "beta",
+            state_input: "state.in",
+            output: "output",
+            state_output: "state.out",
+            batch: 1,
             sequence,
-            1,
-            2,
-            1,
-            1,
-            0.0,
-            DataType::F32,
-        )
+            key_heads: 1,
+            value_heads: 2,
+            key_dim: 1,
+            value_dim: 1,
+            eps: 0.0,
+            dtype: DataType::F32,
+        })
         .expect("Fix: grouped delta schedule must build");
         let outputs = vyre_reference::reference_eval(
             &program,
@@ -523,8 +492,9 @@ fn grouped_value_heads_match_recurrent_without_cross_head_state() {
                 Value::from(bytes(&decay)),
                 Value::from(bytes(&beta)),
                 Value::from(bytes(&state)),
-                Value::from(vec![0; value.len() * 4]),
-                Value::from(vec![0; state.len() * 4]),
+                // `state_output` is a plain ReadWrite result: one host input
+                // slot whose incoming contents the schedule overwrites.
+                Value::from(bytes(&vec![0.0f32; state.len()])),
             ],
         )
         .expect("Fix: grouped delta schedule must execute");

@@ -5,68 +5,15 @@
 //! `is_ok()` checks.
 
 use naga::valid::{Capabilities, ValidationFlags, Validator};
-use naga::{AddressSpace, Block, Statement, TypeInner};
+use naga::{AddressSpace, TypeInner};
 use proptest::prelude::*;
 use vyre_lower::emit_adversarial_corpus::{
-    self, EmitAdversarialBackend, EmitAdversarialCase, EmitAdversarialFamily, EmitOutcome,
+    self, EmitAdversarialCase, EmitAdversarialFamily, EmitOutcome,
 };
 
-fn block_has_barrier(block: &Block) -> bool {
-    block.iter().any(|statement| match statement {
-        Statement::Barrier(_) => true,
-        Statement::Block(child) => block_has_barrier(child),
-        Statement::If { accept, reject, .. } => {
-            block_has_barrier(accept) || block_has_barrier(reject)
-        }
-        Statement::Loop {
-            body, continuing, ..
-        } => block_has_barrier(body) || block_has_barrier(continuing),
-        _ => false,
-    })
-}
-
-fn block_has_loop(block: &Block) -> bool {
-    block.iter().any(|statement| match statement {
-        Statement::Loop { .. } => true,
-        Statement::Block(child) => block_has_loop(child),
-        Statement::If { accept, reject, .. } => block_has_loop(accept) || block_has_loop(reject),
-        _ => false,
-    })
-}
-
-fn block_has_atomic(block: &Block) -> bool {
-    block.iter().any(|statement| match statement {
-        Statement::Atomic { .. } => true,
-        Statement::Block(child) => block_has_atomic(child),
-        Statement::If { accept, reject, .. } => {
-            block_has_atomic(accept) || block_has_atomic(reject)
-        }
-        Statement::Loop {
-            body, continuing, ..
-        } => block_has_atomic(body) || block_has_atomic(continuing),
-        _ => false,
-    })
-}
-
-fn block_if_count(block: &Block) -> usize {
-    block
-        .iter()
-        .map(|statement| match statement {
-            Statement::If { accept, reject, .. } => {
-                1 + block_if_count(accept) + block_if_count(reject)
-            }
-            Statement::Block(child) => block_if_count(child),
-            Statement::Loop {
-                body, continuing, ..
-            } => block_if_count(body) + block_if_count(continuing),
-            _ => 0,
-        })
-        .sum()
-}
-
-fn entry_body(module: &naga::Module) -> &Block {
-    &module.entry_points[0].function.body
-}
+#[path = "support/naga_probe.rs"]
+mod naga_probe;
+use naga_probe::{block_has_atomic, block_has_barrier, block_has_loop, block_if_count, entry_body};
 
 fn assert_naga_structure(case: &EmitAdversarialCase, module: &naga::Module) {
     let entry = &module.entry_points[0];
@@ -155,11 +102,6 @@ fn validate_module(module: &naga::Module, label: &str) {
 
 #[test]
 fn hostile_success_corpus_emits_structured_naga_modules() {
-    assert!(
-        emit_adversarial_corpus::required_backends().contains(&EmitAdversarialBackend::Naga),
-        "Fix: shared emit adversarial corpus must register Naga as a required consumer."
-    );
-
     for case in emit_adversarial_corpus::success_cases() {
         let module = vyre_emit_naga::emit(
             &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
@@ -184,7 +126,7 @@ fn rejection_corpus_fails_without_panic() {
         .expect_err("Fix: rejection corpus case must be rejected by naga emit");
         let msg = format!("{err:?}");
         assert!(
-            msg.contains(&case.id) || msg.contains("Fix:") || !msg.is_empty(),
+            msg.contains(&case.id) || msg.contains("Fix:") || msg.contains("unsupported"),
             "rejection for `{}` must carry diagnostic context: {msg}",
             case.id
         );

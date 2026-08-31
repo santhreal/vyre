@@ -2,11 +2,7 @@ use super::*;
 
 #[test]
 fn egraph_device_image_upload_plan_preserves_single_slab_layout() {
-    let snapshot = GpuEGraphSnapshot::build([
-        (2u32, "lit", &[][..]),
-        (1u32, "lit", &[][..]),
-        (2u32, "add", &[1u32, 2u32][..]),
-    ]);
+    let snapshot = shared_eclass_add_snapshot();
 
     let plan = plan_cuda_egraph_device_upload(&snapshot)
         .expect("Fix: valid foundation e-graph image must produce a CUDA upload plan");
@@ -32,11 +28,7 @@ fn egraph_device_image_upload_plan_preserves_single_slab_layout() {
 
 #[test]
 fn borrowed_egraph_device_image_upload_plan_matches_owned_plan_without_image_clone() {
-    let snapshot = GpuEGraphSnapshot::build([
-        (2u32, "lit", &[][..]),
-        (1u32, "lit", &[][..]),
-        (2u32, "add", &[1u32, 2u32][..]),
-    ]);
+    let snapshot = shared_eclass_add_snapshot();
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");
@@ -103,24 +95,11 @@ fn egraph_device_image_upload_plan_rejects_malformed_snapshot() {
     }
 }
 
-fn assert_span_matches_foundation(
-    cuda: CudaEGraphDeviceByteSpan,
-    foundation: vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceSpan,
-) {
-    assert_eq!(cuda.offset(), foundation.offset() * 4);
-    assert_eq!(cuda.byte_len(), foundation.len() * 4);
-}
-
 #[test]
 fn borrowed_egraph_device_image_upload_round_trips_through_cuda_resident_memory() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let snapshot = GpuEGraphSnapshot::build([
-        (10u32, "lit", &[][..]),
-        (20u32, "lit", &[][..]),
-        (30u32, "add", &[10u32, 20u32][..]),
-        (40u32, "add", &[10u32, 20u32][..]),
-    ]);
+    let snapshot = duplicate_add_snapshot();
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");
@@ -152,11 +131,7 @@ fn borrowed_egraph_device_image_upload_round_trips_through_cuda_resident_memory(
 fn egraph_device_image_upload_round_trips_through_cuda_resident_memory() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let snapshot = GpuEGraphSnapshot::build([
-        (2u32, "lit", &[][..]),
-        (1u32, "lit", &[][..]),
-        (2u32, "add", &[1u32, 2u32][..]),
-    ]);
+    let snapshot = shared_eclass_add_snapshot();
     let plan = plan_cuda_egraph_device_upload(&snapshot)
         .expect("Fix: valid foundation e-graph image must produce a CUDA upload plan");
     let expected_bytes = plan

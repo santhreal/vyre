@@ -6,13 +6,12 @@
 //! kernel body.  It is **not** the expression-level fusion pass
 //! (`optimizer::passes::fusion`)  -  that pass lives inside one Program.
 //!
-//! Audit-fix A31 split this module into:
+//! The module splits into:
 //!  - `mod.rs`: crate-level attribute + error types + module decls/re-exports
 //!  - `fuse.rs`: `fuse_programs` family + multi-program implementation
 //!  - `collectors.rs`: `collect_*_targets_*` walkers
 //!  - `divergence.rs`: divergence + invocation-gate analysis
-//!  - `helpers.rs`: misc small helpers
-//!  - `tests.rs`: full proptest + unit-test suite
+//!  - `tests/`: full proptest + unit-test suite
 //!
 //! # Safety invariants
 //!
@@ -20,8 +19,8 @@
 //!   *same* physical GPU buffer. The caller must ensure this is intentional.
 //! * Access-mode upgrades are applied automatically (`ReadOnly` -> `ReadWrite`)
 //!   when any arm needs to write.
-//! * A `Node::Barrier` is inserted between arms when a later arm writes a
-//!   buffer that an earlier arm reads, preventing write-after-read corruption.
+//! * A `Node::LogicalBarrier` is inserted between arms when a later arm writes
+//!   a buffer that an earlier arm reads, preventing write-after-read corruption.
 //! * Programs marked `non_composable_with_self` cannot be fused with another
 //!   copy of the same `entry_op_id`.
 
@@ -29,12 +28,14 @@ mod alpha_rename;
 mod collectors;
 mod divergence;
 mod fuse;
-mod helpers;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/execution_plan/fusion/mod.rs"]
 mod tests;
 
-pub use fuse::{fuse_programs, fuse_programs_vec, merge_programs_shared};
+pub use fuse::{
+    fuse_programs, fuse_programs_vec, merge_programs_shared, relies_on_single_invocation_workgroup,
+};
 
 /// Error returned when a fusion batch cannot be combined safely.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -3,9 +3,12 @@
 use std::collections::BTreeMap;
 
 use thiserror::Error;
-use vyre_foundation::ir::{inline_calls_with_resolver, OpResolver, Program, ProgramGraph};
+use vyre_foundation::ir::{Program, ProgramGraph};
+use vyre_foundation::transform::inline::inline_calls_with_resolver;
+use vyre_foundation::transform::inline::OpResolver;
 use vyre_megakernel::{
-    Artifact, ArtifactEnvelope, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetCompiler,
+    Artifact, ArtifactEnvelope, CompileObjective, CompileRequest, DeviceFacts, Digest,
+    ExternalFacts, ObjectiveMetric, SearchBudget, TargetCompiler,
 };
 
 use crate::artifact::{registration, TargetId};
@@ -80,8 +83,10 @@ fn compile_neutral_artifact(program: &Program) -> Result<Artifact, CompileError>
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
-        MAX_NEUTRAL_ARTIFACT_BYTES,
+        CompileObjective::minimize_latency()
+            .with_bound(ObjectiveMetric::ArtifactBytes, MAX_NEUTRAL_ARTIFACT_BYTES),
     )
     .validate()
     .map_err(|source| CompileError::CanonicalArtifact {
@@ -92,54 +97,4 @@ fn compile_neutral_artifact(program: &Program) -> Result<Artifact, CompileError>
         stage: "neutral-compile",
         source,
     })
-}
-
-#[cfg(test)]
-pub(crate) fn artifact_fixture(
-    program: &Program,
-    payload_format: &str,
-    target_bytes: Vec<u8>,
-) -> ArtifactEnvelope {
-    use vyre_megakernel::{
-        TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess,
-        TargetResourceBinding, TargetResourceMemory,
-    };
-
-    let neutral = compile_neutral_artifact(program).expect("test Program must compile neutrally");
-    let entry = TargetEntryPoint {
-        name: "main".to_string(),
-        node: neutral.nodes()[0].id,
-        workgroup_size: program.workgroup_size,
-        grid_size: [1, 1, 1],
-        dynamic_shared_bytes: 0,
-        resource_bindings: neutral
-            .abi()
-            .resources
-            .iter()
-            .map(|resource| TargetResourceBinding {
-                resource: resource.value,
-                group: 0,
-                slot: resource.slot,
-                memory: TargetResourceMemory::Global,
-                access: match resource.access {
-                    vyre_megakernel::AbiAccess::ReadOnly | vyre_megakernel::AbiAccess::Uniform => {
-                        TargetResourceAccess::ReadOnly
-                    }
-                    vyre_megakernel::AbiAccess::WriteOnly => TargetResourceAccess::WriteOnly,
-                    vyre_megakernel::AbiAccess::ReadWrite => TargetResourceAccess::ReadWrite,
-                },
-            })
-            .collect(),
-    };
-    let payload = TargetPayload::new(
-        &neutral,
-        TargetPayloadFormat::new(payload_format, 1).unwrap(),
-        TargetProfile::new(payload_format, 1, [1_024, 1_024, 64], 1_024, 65_536, 0).unwrap(),
-        vec![entry],
-        target_bytes,
-    )
-    .unwrap();
-    let mut envelope = ArtifactEnvelope::new(neutral);
-    envelope.attach_target_payload(payload).unwrap();
-    envelope
 }
