@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A dispatch asking for a float lowering mode the selected backend does not lower is refused by name at compilation across all backends rather than silently producing contracted arithmetic or creating distinct cache entries for identical kernels."

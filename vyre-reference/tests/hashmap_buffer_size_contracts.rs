@@ -150,6 +150,33 @@ fn an_empty_input_is_an_error() {
     assert!(error.to_string().contains("`b`"), "got: {error}");
 }
 
+/// A list one Value short is refused, and the diagnostic names the buffer that
+/// went unfilled and the predicate that selects inputs.
+///
+/// The long-list case above is the shape a caller reaches for when they believe
+/// backend-allocated outputs take a placeholder. This is the other end of the
+/// same disagreement: both device backends refuse a short list by count, so an
+/// oracle that accepted one would certify a fixture that cannot dispatch. The
+/// two diagnostics state one ABI, so this pins the same predicate name the
+/// long-list refusal states rather than a second sentence describing it.
+#[test]
+fn a_list_one_value_short_is_refused_by_name() {
+    let error = reference_eval(
+        &elementwise_program(4),
+        &[Value::from(vec![0xFFu8; 16])],
+    )
+    .expect_err("a list one Value short must be refused");
+    let message = error.to_string();
+    assert!(
+        message.contains("`b`"),
+        "the diagnostic must name the buffer left without a Value, got: {message}"
+    );
+    assert!(
+        message.contains("is_reference_input"),
+        "the diagnostic must name the predicate that selects inputs, got: {message}"
+    );
+}
+
 /// A Value for the backend-allocated output is refused, and the diagnostic
 /// says which value went unused.
 ///

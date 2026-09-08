@@ -277,7 +277,9 @@ pub(crate) fn run_hashmap_reference(
         let bytes = if is_reference_input(decl) {
             let value = inputs.get(input_index).ok_or_else(|| {
                 ReferenceError::new(format!(
-                    "missing input for buffer `{}`. Fix: pass one Value for each non-output, non-workgroup buffer in Program::buffers order.",
+                    "missing input for buffer `{}`. Fix: pass one Value per buffer accepted by \
+                     `vyre_reference::is_reference_input`, in `Program::buffers` order, and none \
+                     for a backend-allocated output.",
                     decl.name()
                 ))
             })?;
@@ -299,9 +301,10 @@ pub(crate) fn run_hashmap_reference(
             Buffer::new(bytes, decl.element().clone()),
         );
     }
-    if input_index != inputs.len() {
-        return Err(ReferenceError::new("unused input values supplied. Fix: pass exactly one Value per buffer accepted by `vyre_reference::is_reference_input`."));
-    }
+    // No count check closes the loop. The arm above refuses a longer vector and
+    // the per-buffer lookup refuses a shorter one, so by here `input_index` is
+    // the reference input count and equals `inputs.len()`. A third check on
+    // that pair could not fail, and a check that cannot fail certifies nothing.
     if program.workgroup_size().contains(&0) {
         return Err(ReferenceError::new(
             "workgroup size contains zero. Fix: all dimensions must be >= 1.",

@@ -147,6 +147,15 @@ fn state_machine_scan_bodies_bound_their_trip_counts() {
     );
 }
 
+/// Every registered program bounds its data-derived loops, and every
+/// registration that exposes no program says why it is exempt.
+///
+/// A registration with no builder has no composed body to scan. That is only
+/// true of an intrinsic, which is an emitter arm in each backend rather than
+/// IR, and the registry already refuses an entry carrying neither a builder nor
+/// a signature. Skipping an unbuilt registration in silence would let a
+/// composition that lost its builder go unscanned and keep this test green, so
+/// the exemption is asserted rather than assumed.
 #[test]
 fn every_registered_program_bounds_its_data_derived_loops() {
     let mut checked = 0_usize;
@@ -154,6 +163,13 @@ fn every_registered_program_bounds_its_data_derived_loops() {
 
     for registration in inventory::iter::<OperationRegistration> {
         let Some(build) = registration.build else {
+            assert!(
+                registration.signature.is_some(),
+                "`{}` exposes no program builder and no signature, so this scan cannot read its \
+                 loop bounds and nothing else states them. Give it a builder, or a signature if it \
+                 is an intrinsic.",
+                registration.id
+            );
             continue;
         };
         checked += 1;

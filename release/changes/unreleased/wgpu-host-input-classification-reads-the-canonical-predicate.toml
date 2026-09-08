@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The wgpu pipeline classifies host-fed bindings through `BufferDecl::consumes_host_input`, so a `Persistent`-kind buffer and a pipeline live-out whose access is not read-write no longer demand an input slot that the cuda backend and the reference interpreter never supply."

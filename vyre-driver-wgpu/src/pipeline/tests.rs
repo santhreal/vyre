@@ -502,6 +502,128 @@ mod layout_config_contracts {
     }
 }
 
+mod host_input_classification_contracts {
+    use rustc_hash::FxHashSet;
+    use vyre_foundation::ir::BufferAccess;
+
+    use super::*;
+    use crate::pipeline::descriptor_metadata::descriptor_buffer_bindings;
+    use crate::pipeline::host_input_slots;
+
+    /// WHY: `BufferDecl::consumes_host_input` is the single definition of the
+    /// host input ABI, and `inputs` carries one value per buffer it returns
+    /// true for. This backend spelled the rule out again and disagreed with
+    /// the reference oracle on a `Persistent`-kind buffer and on a pipeline
+    /// live-out whose access is not `ReadWrite`: both were demanded a host
+    /// value the oracle never supplies, so such a program could not pass
+    /// parity and nothing named why.
+    ///
+    /// A `Persistent` buffer is refused before wgpu lowering, so its clause is
+    /// proven at the derivation rather than through a descriptor.
+    #[test]
+    fn host_input_slots_are_the_canonical_answer() {
+        let buffers = vec![
+            BufferDecl::read("fed", 0, DataType::U32).with_count(4),
+            BufferDecl::storage("persist", 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_kind(MemoryKind::Persistent)
+                .with_count(4),
+            BufferDecl::storage("carried", 2, BufferAccess::ReadOnly, DataType::U32)
+                .with_pipeline_live_out(true)
+                .with_count(4),
+            BufferDecl::output("out", 3, DataType::U32).with_count(4),
+        ];
+        let canonical: FxHashSet<u32> = buffers
+            .iter()
+            .filter(|buffer| buffer.consumes_host_input())
+            .map(BufferDecl::binding)
+            .collect();
+        assert_eq!(
+            canonical,
+            FxHashSet::from_iter([0]),
+            "of these four only the plain read buffer takes host bytes: a \
+             persistent buffer is loaded on the device, a live-out is carried \
+             across segments, and an output is written by the dispatch"
+        );
+        assert_eq!(
+            host_input_slots(&buffers, None)
+                .expect("Fix: four buffers must not exhaust the host input set."),
+            canonical,
+            "the derivation must read the canonical answer rather than \
+             re-deriving it"
+        );
+    }
+
+    /// WHY: the recorded `BufferBindingInfo::consumes_host_input` is what both
+    /// the record path and the persistent slot walk read, so it has to equal
+    /// the owning `BufferDecl`'s answer for every binding of a real program,
+    /// not only for a set handed straight to `descriptor_buffer_bindings`.
+    #[test]
+    fn every_recorded_binding_matches_its_declaration() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::read("fed", 0, DataType::U32).with_count(4),
+                BufferDecl::storage("carried", 1, BufferAccess::ReadOnly, DataType::U32)
+                    .with_pipeline_live_out(true)
+                    .with_count(4),
+                BufferDecl::output("out", 2, DataType::U32).with_count(4),
+            ],
+            [1, 1, 1],
+            vec![Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::add(
+                    Expr::load("fed", Expr::u32(0)),
+                    Expr::load("carried", Expr::u32(0)),
+                ),
+            )],
+        );
+        let descriptor = crate::emit::descriptor_gate::validate_and_analyze(&program)
+            .expect("Fix: a program of plain storage buffers must analyze.");
+        let outputs: FxHashSet<u32> = program
+            .buffers()
+            .iter()
+            .filter(|buffer| buffer.is_output())
+            .map(BufferDecl::binding)
+            .collect();
+        let host_inputs = host_input_slots(program.buffers(), None)
+            .expect("Fix: three buffers must not exhaust the host input set.");
+        let bindings = descriptor_buffer_bindings(&descriptor, &outputs, &host_inputs)
+            .expect("Fix: binding metadata must derive for an analyzed descriptor.");
+
+        let mut checked = 0usize;
+        for info in &bindings {
+            // The trap sidecar is backend-allocated and has no declaration.
+            let Some(decl) = program
+                .buffers()
+                .iter()
+                .find(|buffer| buffer.binding() == info.binding)
+            else {
+                assert!(
+                    info.internal_trap,
+                    "binding {} has no declaration and is not the trap sidecar",
+                    info.binding
+                );
+                continue;
+            };
+            checked += 1;
+            assert_eq!(
+                info.consumes_host_input,
+                decl.consumes_host_input(),
+                "binding {} recorded {} where its declaration `{}` states {}",
+                info.binding,
+                info.consumes_host_input,
+                decl.name(),
+                decl.consumes_host_input()
+            );
+        }
+        assert_eq!(
+            checked, 3,
+            "every declared buffer must reach a bind group, so a program of \
+             three must record three bindings"
+        );
+    }
+}
+
 #[cfg(feature = "device-tests")]
 mod prerecorded_contracts {
     use super::*;

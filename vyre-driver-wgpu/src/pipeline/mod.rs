@@ -323,35 +323,8 @@ impl WgpuPipeline {
             "split the pipeline or reduce output binding fanout before compilation",
         )?;
         public_output_bindings.extend(output_bindings.iter().map(|output| output.binding));
-        let buffers = program.buffers();
-        let mut host_input_bindings = FxHashSet::default();
-        reserve_hash_set_to_capacity(
-            &mut host_input_bindings,
-            buffers.len(),
-            "WGPU pipeline binding classification",
-            "host input binding",
-            "split the pipeline or reduce input binding fanout before compilation",
-        )?;
-        if let Some(resource_bindings) = authenticated_resource_bindings {
-            host_input_bindings.extend(
-                resource_bindings
-                    .iter()
-                    .filter(|binding| {
-                        binding.access != vyre_megakernel::TargetResourceAccess::WriteOnly
-                    })
-                    .map(|binding| (binding.group, binding.slot)),
-            );
-        } else {
-            host_input_bindings.extend(
-                buffers
-                    .iter()
-                    .filter(|buffer| {
-                        buffer.kind() != vyre_foundation::ir::MemoryKind::Shared
-                            && !buffer.is_backend_allocated_output()
-                    })
-                    .map(|buffer| (0, buffer.binding())),
-            );
-        }
+        let host_input_bindings =
+            host_input_slots(program.buffers(), authenticated_resource_bindings)?;
 
         let buffer_bindings: Arc<[BufferBindingInfo]> =
             descriptor_buffer_bindings(&descriptor, &public_output_bindings, &host_input_bindings)?
@@ -674,6 +647,45 @@ impl WgpuPipeline {
         }
         Ok(())
     }
+}
+
+/// Binding slots a dispatch feeds bytes into before it runs.
+///
+/// An authenticated target records the answer per resource, so it is read as
+/// recorded. Absent one, the answer is
+/// [`vyre_foundation::ir::BufferDecl::consumes_host_input`], the single
+/// definition of the host input ABI. This backend re-derived it for years and
+/// disagreed with the reference oracle on a `Persistent`-kind buffer and on a
+/// pipeline live-out whose access is not `ReadWrite`.
+pub(crate) fn host_input_slots(
+    buffers: &[vyre_foundation::ir::BufferDecl],
+    authenticated_resource_bindings: Option<&[vyre_megakernel::TargetResourceBinding]>,
+) -> Result<FxHashSet<u32>, BackendError> {
+    let mut slots = FxHashSet::default();
+    reserve_hash_set_to_capacity(
+        &mut slots,
+        buffers.len(),
+        "WGPU pipeline binding classification",
+        "host input binding",
+        "split the pipeline or reduce input binding fanout before compilation",
+    )?;
+    match authenticated_resource_bindings {
+        Some(resource_bindings) => slots.extend(
+            resource_bindings
+                .iter()
+                .filter(|binding| {
+                    binding.access != vyre_megakernel::TargetResourceAccess::WriteOnly
+                })
+                .map(|binding| binding.slot),
+        ),
+        None => slots.extend(
+            buffers
+                .iter()
+                .filter(|buffer| buffer.consumes_host_input())
+                .map(vyre_foundation::ir::BufferDecl::binding),
+        ),
+    }
+    Ok(slots)
 }
 
 /// Decode a trap sidecar readback into this backend's refusal.

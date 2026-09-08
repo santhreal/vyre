@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A registration exposing no program builder states why the data-derived loop-bound scan skips it. The scan walked the operation registry and passed over an unbuilt registration in silence, so a composition that lost its builder was never scanned and the scan stayed green. Only an intrinsic has no IR body, and the registry already refuses an entry carrying neither a builder nor a signature, so the signature is what the exemption now asserts."

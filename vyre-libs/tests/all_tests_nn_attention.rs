@@ -80,3 +80,7 @@ pub mod qk_gain_zero_shape_contracts;
 /// Integration tests from `tests/recurrent_gated_delta_contract.rs`.
 #[path = "recurrent_gated_delta_contract.rs"]
 pub mod recurrent_gated_delta_contract;
+
+/// Integration tests from `tests/quest_paging_extent_contracts.rs`.
+#[path = "quest_paging_extent_contracts.rs"]
+pub mod quest_paging_extent_contracts;

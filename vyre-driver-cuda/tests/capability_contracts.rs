@@ -6,6 +6,7 @@ use vyre_driver::DispatchConfig;
 use vyre_driver::PipelineFeatureFlags;
 use vyre_driver_cuda::{cuda_factory, CudaBackend, CudaDeviceCaps, CudaMegakernelDeviceKey};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::fp_parity::FloatLoweringMode;
 
 #[test]
 fn cuda_device_probe_must_succeed_on_gpu_fleet() {
@@ -311,5 +312,39 @@ fn cuda_registration_dispatch_borrowed_into_reuses_caller_output_slot() {
         outputs[0].as_slice(),
         &0xfeed_beef_u32.to_le_bytes(),
         "Fix: CUDA output-slot reuse must preserve byte-exact dispatch results."
+    );
+}
+
+#[test]
+fn cuda_float_lowering_capability_honesty_and_refusal() {
+    let backend = cuda_factory()
+        .expect("Fix: CUDA backend factory must succeed on the GPU-required test host.");
+
+    assert!(
+        backend.honors_float_lowering(FloatLoweringMode::Contracted),
+        "Fix: CUDA must advertise support for FloatLoweringMode::Contracted."
+    );
+    assert!(
+        !backend.honors_float_lowering(FloatLoweringMode::StrictIeee),
+        "Fix: CUDA must not advertise support for FloatLoweringMode::StrictIeee."
+    );
+
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::F32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store("out", Expr::u32(0), Expr::f32(1.0))],
+    );
+    let mut config = DispatchConfig::default();
+    config.float_lowering = FloatLoweringMode::StrictIeee;
+
+    let result = backend.dispatch(&program, &[], &config);
+    assert!(
+        result.is_err(),
+        "Fix: CUDA backend must refuse strict IEEE float lowering mode."
+    );
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("strict-ieee") && err_msg.contains("cuda") && err_msg.contains("Fix:"),
+        "Fix: CUDA strict-mode refusal must name the mode, backend, and remediation: {err_msg}"
     );
 }

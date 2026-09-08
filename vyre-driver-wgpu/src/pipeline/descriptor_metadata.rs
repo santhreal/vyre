@@ -379,6 +379,17 @@ mod tests {
         );
     }
 
+    /// Preserved contents track read-write access and host input together, and
+    /// the answer does not depend on which bind group the binding lands in.
+    ///
+    /// The host input set is keyed on the binding slot alone. It was once keyed
+    /// on a bind group pair whose recorded half was a literal `0` while the
+    /// lookup asked `descriptor_bind_group`, so a `Uniform`-class binding was
+    /// written as group `0`, read as group `1`, and never matched. The grid
+    /// below crosses every memory class with every visibility, which reaches a
+    /// read-write binding in group `1`, and the count assertion holds that
+    /// coverage: a grid that stopped reaching a non-zero group would leave the
+    /// divergence unobserved rather than turn this red.
     #[test]
     fn preserved_contents_require_read_write_and_a_host_input() {
         let slots = full_grid();
@@ -399,5 +410,18 @@ mod tests {
                 binding.consumes_host_input
             );
         }
+        let preserved_outside_group_zero = bindings
+            .iter()
+            .filter(|binding| binding.group != 0 && binding.preserve_input_contents)
+            .count();
+        assert!(
+            preserved_outside_group_zero > 0,
+            "no read-write host input landed outside bind group 0, so this case cannot see a \
+             host input set that disagrees with the group its lookup reads. Bindings: {:?}",
+            bindings
+                .iter()
+                .map(|binding| (binding.group, binding.binding, binding.access))
+                .collect::<Vec<_>>()
+        );
     }
 }

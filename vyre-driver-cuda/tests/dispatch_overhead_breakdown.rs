@@ -238,12 +238,23 @@ fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() 
         .expect("Fix: the row-tile kernel must lower to PTX.");
     let baseline_text = vyre_driver_cuda::codegen::program_to_ptx(&baseline, &config)
         .expect("Fix: the masked row-tile kernel must lower to PTX.");
+    // The launch prologue emits `mad.lo.u32` for the global id on each axis, so
+    // the opcode alone identifies nothing. The padded-address site is the one
+    // whose multiplier is the immediate pad: the permutation adds the row count
+    // times the pad to the index the access already carries.
+    let padded_address_sites = |ptx: &str| {
+        ptx.lines()
+            .filter(|line| line.contains("mad.lo.u32") && line.contains(", 1, %r"))
+            .count()
+    };
     assert!(
-        mitigated_text.contains(", 33;"),
-        "Fix: the mitigated kernel scales its row by the padded row length."
+        padded_address_sites(&mitigated_text) > 0,
+        "Fix: the mitigated kernel must rewrite its shared index through the \
+         padded-row permutation."
     );
-    assert!(
-        !baseline_text.contains(", 33;"),
+    assert_eq!(
+        padded_address_sites(&baseline_text),
+        0,
         "Fix: the masked kernel states no stride, so nothing is permuted in \
          it. A permutation here means the mask was folded away and the before \
          measurement is the after measurement."
@@ -251,19 +262,34 @@ fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() 
 
     let backend = CudaBackend::acquire()
         .expect("Fix: CUDA backend acquisition must succeed on the GPU-required test host.");
-    let inputs: Vec<Vec<u8>> = Vec::new();
+    let inputs: Vec<&[u8]> = Vec::new();
 
-    let measure = |program: &Program, what: &str| -> (u128, Vec<Vec<u8>>) {
+    // Device time, not wall clock around `dispatch`. A host round trip on this
+    // kernel costs milliseconds in cache lookup, staging, launch, sync and
+    // readback, and the kernel itself costs microseconds, so a wall-clock
+    // comparison of a 128-thread tile reports the overhead and reports it as
+    // the mitigation's effect. The p50 is taken over the runs because a single
+    // sample carries the launch that warmed the module cache.
+    let measure = |program: &Program, what: &str| -> (u64, Vec<Vec<u8>>) {
         let first = backend
-            .dispatch(program, &inputs, &config)
+            .dispatch_borrowed_timed(program, &inputs, &config)
             .unwrap_or_else(|error| panic!("Fix: {what} row-tile dispatch failed: {error}"));
-        let start = Instant::now();
+        let mut samples = Vec::with_capacity(RUNS as usize);
         for _ in 0..RUNS {
-            backend
-                .dispatch(program, &inputs, &config)
+            let timed = backend
+                .dispatch_borrowed_timed(program, &inputs, &config)
                 .unwrap_or_else(|error| panic!("Fix: {what} row-tile dispatch failed: {error}"));
+            let device_ns = timed.device_ns.unwrap_or_else(|| {
+                panic!(
+                    "Fix: this host's CUDA backend reported no device time for the {what} row-tile \
+                     dispatch, so the mitigation cannot be judged. Enable the device timer rather \
+                     than comparing host round trips."
+                )
+            });
+            samples.push(device_ns);
         }
-        (start.elapsed().as_nanos() / u128::from(RUNS), first)
+        samples.sort_unstable();
+        (samples[samples.len() / 2], first.outputs)
     };
     let (baseline_ns, baseline_outputs) = measure(&baseline, "unmitigated");
     let (mitigated_ns, mitigated_outputs) = measure(&mitigated, "mitigated");
@@ -281,7 +307,19 @@ fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() 
     println!("row_length                   {ROW_LENGTH:>12}  (elements, = bank count)");
     println!("classified_sites             {:>12}", conflicts.len());
     println!("classified_32_way_sites      {thirty_two_way:>12}");
-    println!("unmitigated_per_dispatch_ns  {baseline_ns:>12}  ({RUNS}-run avg)");
-    println!("mitigated_per_dispatch_ns    {mitigated_ns:>12}  ({RUNS}-run avg)");
+    println!("unmitigated_device_ns_p50    {baseline_ns:>12}  ({RUNS} runs)");
+    println!("mitigated_device_ns_p50      {mitigated_ns:>12}  ({RUNS} runs)");
     println!("===");
+
+    // The mitigation exists to make a classified conflict cheaper. A permutation
+    // the device measures as slower is a cost model that ranked wrong, and
+    // shipping it applies that regression to every strided shared access.
+    assert!(
+        mitigated_ns <= baseline_ns,
+        "Fix: the selected mitigation measured slower than the unpermuted kernel \
+         ({mitigated_ns} ns vs {baseline_ns} ns device p50 over {RUNS} runs on a \
+         {THREADS}-thread {ROW_LENGTH}-element row tile). Either the selector must \
+         reject this candidate or the emitted permutation must stop costing more \
+         than the conflict it removes."
+    );
 }

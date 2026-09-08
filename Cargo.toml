@@ -329,7 +329,6 @@ wide = "=0.7.33"
 hex = "=0.4.3"
 clap = { version = "=4.6.4", features = ["derive"] }
 fs2 = "=0.4.3"
-stats_alloc = "=0.1.10"
 loom = "=0.7.2"
 regex = "=1.13.1"
 regex-automata = "=0.4.16"

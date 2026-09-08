@@ -226,13 +226,27 @@ fn column_walk_tile(element_count: u32) -> KernelDescriptor {
         .build()
 }
 
+/// Lines that add a row count times the pad to a shared element index.
+///
+/// The launch prologue emits `mad.lo.u32` too, three times, for the global id
+/// on each axis, so the opcode alone identifies nothing. The padded-address
+/// site is the one whose multiplier is the immediate pad.
+fn padded_address_sites(ptx: &str, pad_elements: u32) -> usize {
+    let immediate_pad = format!(", {pad_elements}, %r");
+    ptx.lines()
+        .filter(|line| line.contains("mad.lo.u32") && line.contains(&immediate_pad))
+        .count()
+}
+
 /// The classified 32-way conflict of a column walk is mitigated in the emitted
 /// kernel, not only in the selector's ranking.
 ///
 /// One element of padding per 32-element row is the cheapest accepted candidate
 /// for this geometry, so the tile is declared at 32 rows of 33 elements and the
-/// element index is rewritten to `(index >> 5) * 33 + (index & 31)` at the one
-/// shared address site both the store and the load pass through.
+/// element index is rewritten to `index + (index >> 5) * 1` at the one shared
+/// address site both the store and the load pass through. That is the same
+/// address as `(index >> 5) * 33 + (index & 31)` for every index inside the
+/// extent, in two instructions rather than four.
 #[test]
 fn a_permutable_shared_tile_is_padded_and_its_index_rewritten() {
     let ptx = emit(&column_walk_tile(1024), "column walk over a padded tile");
@@ -243,22 +257,17 @@ fn a_permutable_shared_tile_is_padded_and_its_index_rewritten() {
         "a padded tile is declared at its grown extent: 32 rows of 33 four-byte \
          elements is 4224 bytes, not 4096. Expected `{padded}`. PTX emitted:\n{ptx}"
     );
-    for instruction in ["shr.u32", "and.b32", "mul.lo.u32", "add.u32"] {
-        assert!(
-            ptx.contains(instruction),
-            "the row-padding rewrite emits `{instruction}`. PTX emitted:\n{ptx}"
-        );
-    }
     assert_eq!(
-        ptx.matches(", 33;").count(),
+        padded_address_sites(&ptx, 1),
         2,
-        "both the store and the load scale their row by the padded row length, \
-         so a rewrite applied at one site only is a wrong kernel. PTX emitted:\n{ptx}"
+        "both the store and the load add their row count times the pad, so a \
+         rewrite applied at one site only is a wrong kernel. PTX emitted:\n{ptx}"
     );
     assert_eq!(
         ptx.matches(", 31;").count(),
-        2,
-        "each rewrite keeps the within-row offset. PTX emitted:\n{ptx}"
+        0,
+        "the reduced form needs no within-row mask, so a mask by 31 here is the \
+         four-instruction rewrite the padding no longer emits. PTX emitted:\n{ptx}"
     );
 }
 
@@ -276,8 +285,9 @@ fn a_tile_that_is_not_a_whole_number_of_rows_is_not_padded() {
         "a refused strategy leaves the declared extent alone. Expected \
          `{declared}`. PTX emitted:\n{ptx}"
     );
-    assert!(
-        !ptx.contains(", 33;"),
+    assert_eq!(
+        padded_address_sites(&ptx, 1),
+        0,
         "no row-padding rewrite is emitted for a tile the strategy was refused \
          for. PTX emitted:\n{ptx}"
     );
@@ -293,7 +303,7 @@ fn a_real_lowered_conflicting_program_emits_permuted_ptx() {
         BufferDecl::workgroup("tile", 1024, DataType::U32),
     ];
     let tid = Expr::InvocationId { axis: 0 };
-    let stride_32 = Expr::from(32_u32);
+    let stride_32 = Expr::u32(32);
     let index = Expr::BinOp {
         op: BinOp::Mul,
         left: Box::new(tid.clone()),
@@ -311,11 +321,7 @@ fn a_real_lowered_conflicting_program_emits_permuted_ptx() {
         Node::Store {
             buffer: "out".into(),
             index: tid,
-            value: Expr::Load {
-                buffer: "tile".into(),
-                index,
-                data_type: DataType::U32,
-            },
+            value: Expr::load("tile", index),
         },
     ];
     let program = Program::wrapped(buffers, [32, 1, 1], nodes);
@@ -330,10 +336,13 @@ fn a_real_lowered_conflicting_program_emits_permuted_ptx() {
         ptx.contains("[4224]"),
         "the 1024-element U32 tile is grown to 4224 bytes under +1 padding per 32-element row. Emitted PTX:\n{ptx}"
     );
-    for instruction in ["shr.u32", "and.b32", "mul.lo.u32", "add.u32"] {
-        assert!(
-            ptx.contains(instruction),
-            "the permuted address calculation emits `{instruction}`. Emitted PTX:\n{ptx}"
-        );
-    }
+    assert_eq!(
+        padded_address_sites(&ptx, 1),
+        2,
+        "the store and the load both pass through the padded address. Emitted PTX:\n{ptx}"
+    );
+    assert!(
+        ptx.contains("shr.u32"),
+        "the padded address takes the row count from the index with a shift. Emitted PTX:\n{ptx}"
+    );
 }
