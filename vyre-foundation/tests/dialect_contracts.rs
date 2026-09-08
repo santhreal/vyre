@@ -64,6 +64,7 @@ static BLEND_RESOURCES: &[ResourceBinding] = &[
 
 static BLEND_ABI: ResourceAbi = ResourceAbi {
     resources: BLEND_RESOURCES,
+    layouts: &[],
 };
 
 define_dialect! {

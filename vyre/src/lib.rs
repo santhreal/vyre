@@ -29,6 +29,9 @@ static PORTABLE_PROVIDER_LINK: fn() -> Option<&'static str> =
 /// Public API re-export.
 pub use vyre_foundation::ir;
 
+/// Domain-neutral schema and dialect translation contracts.
+pub use vyre_foundation::dialect;
+
 /// Soundness markers and precision contracts from the frozen specification.
 /// Public API re-export.
 pub use vyre_spec::soundness;

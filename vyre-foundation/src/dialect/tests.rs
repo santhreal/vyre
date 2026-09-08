@@ -55,6 +55,7 @@ static ALPHA_RESOURCES: &[ResourceBinding] = &[ResourceBinding {
 
 static ALPHA_ABI: ResourceAbi = ResourceAbi {
     resources: ALPHA_RESOURCES,
+    layouts: &[],
 };
 
 crate::define_dialect! {
@@ -370,4 +371,146 @@ fn test_external_schema_adversarial_rejections() {
         SchemaTranslationError::IncompatibleIdentity { .. }
     ));
     assert!(id_err.to_string().contains("Fix:"));
+
+    // Adversarial Case 7: Overflowing field value
+    let overflowing_field_node = ExternalSchemaNode {
+        op_name: "vyre-unit::dialect::alpha".to_string(),
+        raw_fields: vec![
+            ("scale".to_string(), "999999999999999999999999".to_string()),
+            ("tag".to_string(), "active".to_string()),
+        ],
+        bound_resources: vec!["scratch_buf".to_string()],
+    };
+    let err = validate_external_node(&overflowing_field_node)
+        .expect_err("overflowing field value must be rejected");
+    assert!(matches!(err, SchemaTranslationError::OverflowingField { .. }));
+    assert!(err.to_string().contains("Fix:"));
+
+    // Complete external schema with unused declared resource
+    let unused_res_schema = ExternalSchema {
+        schema_id: "vyre-unit::dialect".to_string(),
+        version: 3,
+        nodes: vec![valid_node.clone()],
+        declared_resources: vec![
+            ExternalResourceDeclaration {
+                name: "scratch_buf".to_string(),
+                access: BufferAccess::ReadWrite,
+                element_type: DataType::U32,
+                alignment: 16,
+                byte_capacity: 64,
+            },
+            ExternalResourceDeclaration {
+                name: "unused_extra_buf".to_string(),
+                access: BufferAccess::ReadOnly,
+                element_type: DataType::U32,
+                alignment: 16,
+                byte_capacity: 128,
+            },
+        ],
+        declared_layouts: vec![],
+    };
+    let err = validate_external_schema(
+        "vyre-unit::dialect",
+        &unused_res_schema,
+        3,
+        |node| validate_external_node(node).map(|_| ()),
+    )
+    .expect_err("unused declared resource must be rejected");
+    assert!(matches!(err, SchemaTranslationError::UnusedResource { .. }));
+    assert!(err.to_string().contains("Fix:"));
+
+    // Complete external schema with overflowing layout
+    let overflowing_layout_schema = ExternalSchema {
+        schema_id: "vyre-unit::dialect".to_string(),
+        version: 3,
+        nodes: vec![valid_node.clone()],
+        declared_resources: vec![ExternalResourceDeclaration {
+            name: "scratch_buf".to_string(),
+            access: BufferAccess::ReadWrite,
+            element_type: DataType::U32,
+            alignment: 16,
+            byte_capacity: 64,
+        }],
+        declared_layouts: vec![ExternalLayoutDeclaration {
+            resource_name: "scratch_buf".to_string(),
+            element_type: DataType::U32,
+            shape: vec![u64::MAX, u64::MAX],
+            strides: vec![u64::MAX, 1],
+            alignment: 16,
+        }],
+    };
+    let err = validate_external_schema(
+        "vyre-unit::dialect",
+        &overflowing_layout_schema,
+        3,
+        |node| validate_external_node(node).map(|_| ()),
+    )
+    .expect_err("overflowing layout must be rejected");
+    assert!(matches!(err, SchemaTranslationError::OverflowingLayout { .. }));
+    assert!(err.to_string().contains("Fix:"));
+
+    // Complete external schema with incompatible layout element type
+    let incompatible_layout_schema = ExternalSchema {
+        schema_id: "vyre-unit::dialect".to_string(),
+        version: 3,
+        nodes: vec![valid_node.clone()],
+        declared_resources: vec![ExternalResourceDeclaration {
+            name: "scratch_buf".to_string(),
+            access: BufferAccess::ReadWrite,
+            element_type: DataType::U32,
+            alignment: 16,
+            byte_capacity: 64,
+        }],
+        declared_layouts: vec![ExternalLayoutDeclaration {
+            resource_name: "scratch_buf".to_string(),
+            element_type: DataType::F32,
+            shape: vec![16],
+            strides: vec![1],
+            alignment: 16,
+        }],
+    };
+    let err = validate_external_schema(
+        "vyre-unit::dialect",
+        &incompatible_layout_schema,
+        3,
+        |node| validate_external_node(node).map(|_| ()),
+    )
+    .expect_err("incompatible layout element type must be rejected");
+    assert!(matches!(err, SchemaTranslationError::IncompatibleLayout { .. }));
+    assert!(err.to_string().contains("Fix:"));
+
+    // Valid complete external schema
+    let valid_schema = ExternalSchema {
+        schema_id: "vyre-unit::dialect".to_string(),
+        version: 3,
+        nodes: vec![valid_node],
+        declared_resources: vec![ExternalResourceDeclaration {
+            name: "scratch_buf".to_string(),
+            access: BufferAccess::ReadWrite,
+            element_type: DataType::U32,
+            alignment: 16,
+            byte_capacity: 64,
+        }],
+        declared_layouts: vec![ExternalLayoutDeclaration {
+            resource_name: "scratch_buf".to_string(),
+            element_type: DataType::U32,
+            shape: vec![16],
+            strides: vec![1],
+            alignment: 16,
+        }],
+    };
+    let bound = validate_external_schema(
+        "vyre-unit::dialect",
+        &valid_schema,
+        3,
+        |node| validate_external_node(node).map(|_| ()),
+    )
+    .expect("valid complete schema must pass validation");
+    assert!(bound.contains("scratch_buf"));
+
+    // Canonical identity is deterministic and non-zero
+    let id1 = valid_schema.canonical_identity();
+    let id2 = valid_schema.canonical_identity();
+    assert_eq!(id1, id2);
+    assert_ne!(id1, [0; 32]);
 }

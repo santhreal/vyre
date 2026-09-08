@@ -20,8 +20,10 @@ pub use descriptor::{
     DialectDescriptor, DialectDescriptorRegistration, DialectOpDescriptor, DialectRegistry,
 };
 pub use schema::{
-    validate_node_fields, validate_node_resources, validate_schema_identity, ExternalSchemaNode,
-    FieldContract, FieldType, ResourceAbi, ResourceBinding, SchemaTranslationError,
+    validate_external_schema, validate_node_fields, validate_node_resources,
+    validate_schema_identity, ExternalLayoutDeclaration, ExternalResourceDeclaration,
+    ExternalSchema, ExternalSchemaNode, ExternalSchemaVisitor, FieldContract, FieldType,
+    LayoutBinding, LayoutContract, ResourceAbi, ResourceBinding, SchemaTranslationError,
 };
 pub use traits::{
     Dialect, DialectCodec, DialectMatcher, DialectOp, DialectValidator, DialectVisitor,

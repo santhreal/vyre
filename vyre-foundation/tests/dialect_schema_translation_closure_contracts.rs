@@ -1,14 +1,19 @@
-//! Dialect external schema, field contract, resource ABI, and translation error closure contracts.
+//! Dialect external schema, field contract, resource ABI, layout, and translation error closure contracts.
 //!
 //! BACKLOG row 55 requires versioned domain-neutral schema, field, resource, layout,
 //! and translation contracts with exhaustive visitors and canonical identity, proving
-//! unknown, duplicate, missing, incompatible, and unmapped members fail closed before compilation.
+//! unknown, duplicate, missing, incompatible, overflowing, unused, and unmapped members
+//! fail closed before compilation.
 
 #![forbid(unsafe_code)]
 
+use std::collections::BTreeSet;
+
 use vyre_foundation::dialect::{
-    validate_node_fields, validate_node_resources, validate_schema_identity, FieldContract,
-    FieldType, ResourceAbi, ResourceBinding, SchemaTranslationError,
+    validate_external_schema, validate_node_fields, validate_node_resources,
+    validate_schema_identity, ExternalLayoutDeclaration, ExternalResourceDeclaration,
+    ExternalSchema, ExternalSchemaNode, ExternalSchemaVisitor, FieldContract, FieldType,
+    LayoutContract, ResourceAbi, ResourceBinding, SchemaTranslationError,
 };
 use vyre_foundation::ir::{BufferAccess, DataType};
 
@@ -17,7 +22,10 @@ fn field_type_exhaustive_closure() {
     let types = [
         FieldType::U32,
         FieldType::I32,
+        FieldType::U64,
+        FieldType::I64,
         FieldType::F32,
+        FieldType::F64,
         FieldType::Bool,
         FieldType::String,
         FieldType::Bytes,
@@ -26,13 +34,16 @@ fn field_type_exhaustive_closure() {
 
     for ft in types {
         match ft {
-            FieldType::U32 => assert_eq!(ft, FieldType::U32),
-            FieldType::I32 => assert_eq!(ft, FieldType::I32),
-            FieldType::F32 => assert_eq!(ft, FieldType::F32),
-            FieldType::Bool => assert_eq!(ft, FieldType::Bool),
-            FieldType::String => assert_eq!(ft, FieldType::String),
-            FieldType::Bytes => assert_eq!(ft, FieldType::Bytes),
-            FieldType::Buffer => assert_eq!(ft, FieldType::Buffer),
+            FieldType::U32 => assert!(ft.parse_and_validate("123").is_ok()),
+            FieldType::I32 => assert!(ft.parse_and_validate("-123").is_ok()),
+            FieldType::U64 => assert!(ft.parse_and_validate("1234567890123").is_ok()),
+            FieldType::I64 => assert!(ft.parse_and_validate("-1234567890123").is_ok()),
+            FieldType::F32 => assert!(ft.parse_and_validate("3.14").is_ok()),
+            FieldType::F64 => assert!(ft.parse_and_validate("3.1415926535").is_ok()),
+            FieldType::Bool => assert!(ft.parse_and_validate("true").is_ok()),
+            FieldType::String => assert!(ft.parse_and_validate("hello").is_ok()),
+            FieldType::Bytes => assert!(ft.parse_and_validate("opaque").is_ok()),
+            FieldType::Buffer => assert!(ft.parse_and_validate("buf0").is_ok()),
         }
     }
 }
@@ -72,6 +83,32 @@ fn schema_translation_error_exhaustive_closure() {
             dialect: "d",
             node_op: "n".into(),
         },
+        SchemaTranslationError::OverflowingField {
+            dialect: "d",
+            node_op: "n".into(),
+            field: "f".into(),
+            field_type: FieldType::U32,
+            value: "99999999999999".into(),
+            reason: "overflow".into(),
+        },
+        SchemaTranslationError::OverflowingLayout {
+            dialect: "d",
+            resource: "r".into(),
+        },
+        SchemaTranslationError::UnusedResource {
+            schema_id: "s".into(),
+            resource: "r".into(),
+        },
+        SchemaTranslationError::UnusedLayout {
+            schema_id: "s".into(),
+            resource: "r".into(),
+        },
+        SchemaTranslationError::IncompatibleLayout {
+            dialect: "d",
+            resource: "r".into(),
+            declared_type: DataType::F32,
+            resource_type: DataType::U32,
+        },
     ];
 
     for err in &errors {
@@ -87,6 +124,11 @@ fn schema_translation_error_exhaustive_closure() {
             SchemaTranslationError::IncompleteResourceRoster { .. } => {}
             SchemaTranslationError::IncompatibleIdentity { .. } => {}
             SchemaTranslationError::UnmappedNode { .. } => {}
+            SchemaTranslationError::OverflowingField { .. } => {}
+            SchemaTranslationError::OverflowingLayout { .. } => {}
+            SchemaTranslationError::UnusedResource { .. } => {}
+            SchemaTranslationError::UnusedLayout { .. } => {}
+            SchemaTranslationError::IncompatibleLayout { .. } => {}
         }
     }
 }
@@ -160,7 +202,20 @@ fn synthetic_fixtures_fail_closed_on_invalid_fields_and_resources() {
         SchemaTranslationError::MissingRequiredField { .. }
     ));
 
-    // 5. Incomplete resource roster fails
+    // 5. Overflowing field value fails
+    let err_overflow = validate_node_fields(
+        "test::dialect",
+        "conv",
+        &[("stride".into(), "999999999999999".into())],
+        &declared_fields,
+    )
+    .expect_err("overflowing u32 value must fail");
+    assert!(matches!(
+        err_overflow,
+        SchemaTranslationError::OverflowingField { .. }
+    ));
+
+    // 6. Incomplete resource roster fails
     static RES_BINDINGS: &[ResourceBinding] = &[
         ResourceBinding {
             name: "input",
@@ -179,6 +234,7 @@ fn synthetic_fixtures_fail_closed_on_invalid_fields_and_resources() {
     ];
     let abi = ResourceAbi {
         resources: RES_BINDINGS,
+        layouts: &[],
     };
 
     assert!(validate_node_resources(
@@ -196,7 +252,7 @@ fn synthetic_fixtures_fail_closed_on_invalid_fields_and_resources() {
         SchemaTranslationError::IncompleteResourceRoster { .. }
     ));
 
-    // 6. Incompatible identity fails
+    // 7. Incompatible identity fails
     let err_id = validate_schema_identity(
         "test::dialect",
         "test::other_dialect",
@@ -208,5 +264,180 @@ fn synthetic_fixtures_fail_closed_on_invalid_fields_and_resources() {
     assert!(matches!(
         err_id,
         SchemaTranslationError::IncompatibleIdentity { .. }
+    ));
+}
+
+struct TestSchemaRecorder {
+    visited_nodes: Vec<String>,
+    visited_fields: Vec<String>,
+    visited_resources: Vec<String>,
+    visited_declarations: Vec<String>,
+    visited_layouts: Vec<String>,
+}
+
+impl ExternalSchemaVisitor for TestSchemaRecorder {
+    type Error = ();
+
+    fn visit_schema(&mut self, _schema_id: &str, _version: u32) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_node(&mut self, node: &ExternalSchemaNode) -> Result<(), Self::Error> {
+        self.visited_nodes.push(node.op_name.clone());
+        Ok(())
+    }
+
+    fn visit_field(
+        &mut self,
+        _node_op: &str,
+        field_name: &str,
+        _field_value: &str,
+    ) -> Result<(), Self::Error> {
+        self.visited_fields.push(field_name.to_string());
+        Ok(())
+    }
+
+    fn visit_resource_binding(
+        &mut self,
+        _node_op: &str,
+        resource_name: &str,
+    ) -> Result<(), Self::Error> {
+        self.visited_resources.push(resource_name.to_string());
+        Ok(())
+    }
+
+    fn visit_resource_declaration(
+        &mut self,
+        resource: &ExternalResourceDeclaration,
+    ) -> Result<(), Self::Error> {
+        self.visited_declarations.push(resource.name.clone());
+        Ok(())
+    }
+
+    fn visit_layout_declaration(
+        &mut self,
+        layout: &ExternalLayoutDeclaration,
+    ) -> Result<(), Self::Error> {
+        self.visited_layouts.push(layout.resource_name.clone());
+        Ok(())
+    }
+}
+
+#[test]
+fn external_schema_canonical_identity_and_visitor_closure() {
+    let schema = ExternalSchema {
+        schema_id: "vyre-test::generic".to_string(),
+        version: 1,
+        nodes: vec![
+            ExternalSchemaNode {
+                op_name: "vyre-test::generic::op_a".to_string(),
+                raw_fields: vec![("rate".to_string(), "10".to_string())],
+                bound_resources: vec!["buf_in".to_string(), "buf_out".to_string()],
+            },
+            ExternalSchemaNode {
+                op_name: "vyre-test::generic::op_b".to_string(),
+                raw_fields: vec![],
+                bound_resources: vec!["buf_out".to_string()],
+            },
+        ],
+        declared_resources: vec![
+            ExternalResourceDeclaration {
+                name: "buf_in".to_string(),
+                access: BufferAccess::ReadOnly,
+                element_type: DataType::U32,
+                alignment: 16,
+                byte_capacity: 128,
+            },
+            ExternalResourceDeclaration {
+                name: "buf_out".to_string(),
+                access: BufferAccess::WriteOnly,
+                element_type: DataType::U32,
+                alignment: 16,
+                byte_capacity: 128,
+            },
+        ],
+        declared_layouts: vec![
+            ExternalLayoutDeclaration {
+                resource_name: "buf_in".to_string(),
+                element_type: DataType::U32,
+                shape: vec![32],
+                strides: vec![1],
+                alignment: 16,
+            },
+            ExternalLayoutDeclaration {
+                resource_name: "buf_out".to_string(),
+                element_type: DataType::U32,
+                shape: vec![32],
+                strides: vec![1],
+                alignment: 16,
+            },
+        ],
+    };
+
+    let mut recorder = TestSchemaRecorder {
+        visited_nodes: Vec::new(),
+        visited_fields: Vec::new(),
+        visited_resources: Vec::new(),
+        visited_declarations: Vec::new(),
+        visited_layouts: Vec::new(),
+    };
+
+    schema
+        .accept(&mut recorder)
+        .expect("schema visitor traversal must succeed");
+
+    assert_eq!(recorder.visited_nodes.len(), 2);
+    assert_eq!(recorder.visited_fields, vec!["rate"]);
+    assert_eq!(recorder.visited_resources.len(), 3);
+    assert_eq!(recorder.visited_declarations, vec!["buf_in", "buf_out"]);
+    assert_eq!(recorder.visited_layouts, vec!["buf_in", "buf_out"]);
+
+    let id1 = schema.canonical_identity();
+    let id2 = schema.canonical_identity();
+    assert_eq!(id1, id2);
+    assert_ne!(id1, [0; 32]);
+
+    let bound = validate_external_schema("vyre-test::generic", &schema, 1, |_node| Ok(()))
+        .expect("validation must succeed on consistent schema");
+    let mut expected_bound = BTreeSet::new();
+    expected_bound.insert("buf_in".to_string());
+    expected_bound.insert("buf_out".to_string());
+    assert_eq!(bound, expected_bound);
+}
+
+#[test]
+fn layout_contract_capacity_and_overflow_closure() {
+    static SHAPE: &[u64] = &[8, 16];
+    static STRIDES: &[u64] = &[16, 1];
+    let layout = LayoutContract {
+        name: "tensor_2d",
+        element_type: DataType::F32,
+        shape: SHAPE,
+        strides: STRIDES,
+        alignment: 16,
+        contiguous: true,
+    };
+
+    let cap = layout
+        .compute_capacity("test::dialect")
+        .expect("valid layout capacity computation");
+    assert_eq!(cap, 8 * 16 * 4);
+
+    static OVERFLOW_SHAPE: &[u64] = &[u64::MAX, u64::MAX];
+    static OVERFLOW_STRIDES: &[u64] = &[u64::MAX, 1];
+    let overflow_layout = LayoutContract {
+        name: "overflow_tensor",
+        element_type: DataType::F32,
+        shape: OVERFLOW_SHAPE,
+        strides: OVERFLOW_STRIDES,
+        alignment: 16,
+        contiguous: false,
+    };
+    let err = overflow_layout
+        .compute_capacity("test::dialect")
+        .expect_err("overflowing layout must fail");
+    assert!(matches!(
+        err,
+        SchemaTranslationError::OverflowingLayout { .. }
     ));
 }
