@@ -33,6 +33,12 @@ pub use geometry::{
 
 /// Typed region-based SSA intermediate representation (Row 103).
 pub mod region_ssa;
+/// Canonical binary codec and verification for schema registry records (Row 121).
+pub mod canonical_codec;
+/// Explicit failure domains and recovery classes (Row 122).
+pub mod failure_domain;
+/// Typed configuration schema and resolution (Row 123).
+pub mod config_schema;
 
 pub mod ir {
     //! The vyre intermediate representation.
@@ -203,3 +209,12 @@ pub use error::{IrError, IrResult};
 /// outside vyre-foundation should depend on these helpers.
 #[cfg(test)]
 pub(crate) mod test_ir_inspect;
+pub use canonical_codec::{CanonicalDecoder, CanonicalEncoder, CanonicalRecord, CanonicalSigner, CanonicalValue, CodecError};
+pub use failure_domain::{FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError};
+pub use config_schema::{ConfigFieldDef, ConfigLayer, ConfigMutability, ConfigPartition, ConfigSecrecy, ConfigType, ConfigValue, IdentityImpact, ResolvedConfiguration, CANONICAL_CONFIG_FIELDS};
+pub use vyre_spec::{
+    CanonicalField, CompatibilityCell, CompatibilityDisposition, CompatibilityMatrix,
+    DefaultsPolicy, FieldType, NegotiatedContract, NegotiationError, ProtocolDomain,
+    ProtocolVersion, SchemaBounds, SchemaDefinition, SchemaId, SchemaRegistry,
+    CANONICAL_COMPATIBILITY_CELLS, CANONICAL_SCHEMA_REGISTRY,
+};

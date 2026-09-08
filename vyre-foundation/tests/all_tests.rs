@@ -797,3 +797,10 @@ pub mod platform_support_matrix;
 /// Integration tests from `tests/security_contracts.rs` (Row 119).
 #[path = "security_contracts.rs"]
 pub mod security_contracts;
+/// Integration tests from `tests/declarative_schema_registry_contracts.rs`.
+#[path = "declarative_schema_registry_contracts.rs"]
+pub mod declarative_schema_registry_contracts;
+
+/// Integration tests from `tests/typed_configuration_schema_contracts.rs`.
+#[path = "typed_configuration_schema_contracts.rs"]
+pub mod typed_configuration_schema_contracts;

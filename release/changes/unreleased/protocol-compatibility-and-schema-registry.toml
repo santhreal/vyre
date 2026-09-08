@@ -1,0 +1,2 @@
+category = "Added"
+text = "The vyre GPU compiler adds explicit protocol compatibility and rollout matrices, a declarative schema registry with canonical deterministic binary codecs and domain-separated identity digests, typed failure domains with atomic state recovery and prepare-commit journals, and a typed configuration schema partitioned by semantic compile input, operational policy, diagnostics, and credentials with secret redaction and behavioral hashing."
