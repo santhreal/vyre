@@ -532,6 +532,98 @@ fn scale_closure_bounding_one_node_in_large_graph() {
 }
 
 #[test]
+fn scale_closure_bounding_one_leaf_in_thousand_node_graph() {
+    let mut graph = ProgramGraph::new();
+    let root_val = graph
+        .add_external_value(
+            "shared_input",
+            tensor(
+                DataType::F32,
+                vec![ShapeDim::Known(128)],
+                BufferAccess::ReadOnly,
+                ValueLifetime::Invocation,
+            ),
+        )
+        .expect("Fix: shared input must register");
+
+    let count = 1000;
+    let mut leaf_nodes = Vec::with_capacity(count);
+
+    for i in 0..count {
+        let in_buf = format!("in_{i}");
+        let out_buf = format!("out_{i}");
+        let val_name = format!("val_{i}");
+
+        let (nid, _) = graph
+            .add_node(
+                &format!("leaf_{i}"),
+                make_unary_node(&in_buf, &out_buf),
+                vec![GraphInput {
+                    buffer: in_buf,
+                    value: root_val,
+                    contract: tensor(
+                        DataType::F32,
+                        vec![ShapeDim::Known(128)],
+                        BufferAccess::ReadOnly,
+                        ValueLifetime::Invocation,
+                    ),
+                }],
+                vec![GraphOutput {
+                    buffer: out_buf,
+                    name: val_name,
+                    contract: tensor(
+                        DataType::F32,
+                        vec![ShapeDim::Known(128)],
+                        BufferAccess::ReadWrite,
+                        ValueLifetime::Output,
+                    ),
+                    retained_successor_of: None,
+                }],
+            )
+            .expect("Fix: leaf node must connect");
+
+        leaf_nodes.push(nid);
+    }
+
+    // Mutate only leaf node 42
+    let target = leaf_nodes[42];
+    let delta = GraphDelta::new().with_op(GraphDeltaOp::ReplaceNode {
+        node_id: target,
+        program: make_unary_node_sized("in_42", "out_42", 64),
+        inputs: vec![GraphInput {
+            buffer: "in_42".into(),
+            value: root_val,
+            contract: tensor(
+                DataType::F32,
+                vec![ShapeDim::Known(128)],
+                BufferAccess::ReadOnly,
+                ValueLifetime::Invocation,
+            ),
+        }],
+        outputs: vec![GraphOutput {
+            buffer: "out_42".into(),
+            name: "val_42".into(),
+            contract: tensor(
+                DataType::F32,
+                vec![ShapeDim::Known(128)],
+                BufferAccess::ReadWrite,
+                ValueLifetime::Output,
+            ),
+            retained_successor_of: None,
+        }],
+    });
+
+    let (_, closure) = delta
+        .apply_transactional(&graph)
+        .expect("Fix: leaf mutation must apply");
+
+    assert_eq!(closure.dirty_nodes.len(), 1);
+    assert!(closure.dirty_nodes.contains(&target));
+    assert_eq!(closure.unchanged_nodes.len(), 999);
+    assert!(!closure.unchanged_nodes.contains(&target));
+}
+
+#[test]
 fn replacing_a_node_installs_the_new_program() {
     let (graph, input, node1, _) = build_pipeline_graph();
     let replacement = make_unary_node_sized("blur.in", "blur.out", 64);

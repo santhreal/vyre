@@ -225,6 +225,8 @@ pub mod numeric;
 /// Eliminates per-file kernel-launch overhead for streams of
 /// many small scan jobs.
 pub mod persistent;
+/// Domain-neutral semantic resource ABI, logical image/view types, and zero-copy timeline synchronization (Row 111).
+pub mod semantic_resource_abi;
 
 /// The `inventory` crate `register_backend!` submits through. A concrete
 /// driver expands the macro and needs no `inventory` dependency of its own.
@@ -267,6 +269,11 @@ pub use binding::{
     binding_plans_share_layout, dynamic_element_count_from_bytes, BackendLayoutClass,
     BackendLayoutFingerprint, BackendLayoutSlot, Binding, BindingPlan, BindingRole,
     BindingSetFingerprint,
+};
+pub use semantic_resource_abi::{
+    AdmittedResourceRecord, ColorInterpretation, ExternalMemoryCapability, ImageDimensions,
+    ImageFormat, ResourceAbiError, ResourceLayoutState, ResourceOwnershipState,
+    ResourcePermittedUsages, ResourceUsageTransition, SubresourceRange, TimelineSyncProtocol,
 };
 pub use device_extraction::{
     extract_best_for_device, extract_best_for_devices, DeviceExtraction, ExtractionDevice,

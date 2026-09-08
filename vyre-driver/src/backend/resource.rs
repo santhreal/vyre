@@ -4,6 +4,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::accounting::checked_atomic_next_u64_with_order;
 use crate::backend::error::BackendError;
+use serde::{Deserialize, Serialize};
 
 /// Process-wide source of backend instance identities.
 ///
@@ -18,7 +19,7 @@ static NEXT_RESIDENT_OWNER: AtomicU64 = AtomicU64::new(1);
 /// two live instances hand out the same ids for unrelated device memory. An
 /// owner makes those namespaces distinguishable, which is what lets a handle
 /// be checked instead of merely trusted.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct ResidentOwner(u64);
 
 impl ResidentOwner {
