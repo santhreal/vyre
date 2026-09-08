@@ -22,7 +22,6 @@ mod resident_download;
 mod resident_resource;
 mod resident_upload;
 pub mod runtime;
-pub mod spirv_backend;
 mod staging_reserve;
 mod stats;
 mod strict_float;

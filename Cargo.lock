@@ -3429,6 +3429,7 @@ dependencies = [
  "vyre-conform-spec",
  "vyre-driver",
  "vyre-driver-cuda",
+ "vyre-driver-spirv",
  "vyre-driver-wgpu",
  "vyre-foundation",
  "vyre-libs",
