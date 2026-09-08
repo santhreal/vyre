@@ -17,7 +17,7 @@ use vyre_foundation::ir::{
     ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{Artifact, ArtifactEnvelope, ArtifactValueId};
-use vyre_runtime::artifact_admission::ArtifactSession;
+use vyre_runtime::artifact_admission::{ArtifactSession, TypedResource, TypedResourceDataset};
 
 use vyre_test_support::artifact_fixtures;
 
@@ -202,19 +202,17 @@ fn a_caller_cannot_rebind_a_workspace_owned_value() {
         .allocate_workspace()
         .expect("the recorded workspace must allocate");
     let owned = workspace_value(&artifact);
-    let name = artifact
-        .resources()
-        .iter()
-        .find(|resource| resource.value == owned)
-        .expect("the workspace value is a canonical resource")
-        .name
-        .clone();
     let caller = session
         .allocate_resident(4)
         .expect("the fixture materializer must allocate");
 
+    let mut dataset = TypedResourceDataset::new();
+    dataset
+        .insert(TypedResource::resident(owned, caller))
+        .expect("insert dataset");
+
     let error = session
-        .resident_bindings_with_workspace(&workspace, [(name.as_str(), &caller)])
+        .ingest_with_workspace(&workspace, &dataset)
         .expect_err("a caller must not rebind a workspace-owned value");
 
     let text = error.to_string();
@@ -239,7 +237,7 @@ fn workspace_bindings_cover_the_workspace_and_demand_the_rest() {
         .resources()
         .iter()
         .filter(|resource| resource.value != owned)
-        .map(|resource| resource.name.clone())
+        .map(|resource| resource.value)
         .collect::<Vec<_>>();
     assert!(
         !caller_values.is_empty(),
@@ -250,21 +248,21 @@ fn workspace_bindings_cover_the_workspace_and_demand_the_rest() {
         .expect("the fixture materializer must allocate");
 
     let missing = session
-        .resident_bindings_with_workspace(&workspace, [])
+        .ingest_with_workspace(&workspace, &TypedResourceDataset::new())
         .expect_err("a caller-owned value must not be defaulted");
     assert!(
-        missing.to_string().contains("requires resident resource"),
+        missing.to_string().contains("requires resident resource")
+            || missing.to_string().contains("missing required resource"),
         "the refusal must name the unbound entry resource; got `{missing}`"
     );
 
+    let mut dataset = TypedResourceDataset::new();
+    for &val in &caller_values {
+        dataset.add_resident(val, caller.clone());
+    }
+
     let bound = session
-        .resident_bindings_with_workspace(
-            &workspace,
-            caller_values
-                .iter()
-                .map(|name| (name.as_str(), &caller))
-                .collect::<Vec<_>>(),
-        )
+        .ingest_with_workspace(&workspace, &dataset)
         .expect("the workspace plus every caller-owned value must bind");
 
     assert_eq!(
@@ -276,15 +274,9 @@ fn workspace_bindings_cover_the_workspace_and_demand_the_rest() {
             .as_ref(),
         "the workspace's own region must reach the binding set"
     );
-    for name in &caller_values {
-        let value = artifact
-            .resources()
-            .iter()
-            .find(|resource| &resource.name == name)
-            .expect("the caller value is a canonical resource")
-            .value;
+    for value in &caller_values {
         assert_eq!(
-            bound.resources().get(&value),
+            bound.resources().get(value),
             Some(&BoundResource::Resident(caller.clone()))
         );
     }
