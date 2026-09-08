@@ -31,6 +31,9 @@ pub use geometry::{
     ElementPolicy, GeometryConstraintConflict, GeometryRequirements, LaunchGeometry, Uniformity,
 };
 
+/// Typed region-based SSA intermediate representation (Row 103).
+pub mod region_ssa;
+
 pub mod ir {
     //! The vyre intermediate representation.
     /// Backend-neutral literal evaluation for optimizer passes and lowerings.
@@ -85,7 +88,20 @@ pub mod ir {
         SubgroupReduceOp, UnOp,
     };
     pub use crate::ir_inner::model::program::ProgramStats;
-    pub use crate::memory_model::MemoryOrdering;
+    pub use crate::memory_model::{
+        exhaustiveness_check_async_transaction_lifecycle,
+        exhaustiveness_check_atomic_ordering, exhaustiveness_check_barrier_participation,
+        exhaustiveness_check_collective_group,
+        exhaustiveness_check_execution_scope,
+        exhaustiveness_check_failure_cancellation_behavior,
+        exhaustiveness_check_fence_semantics, exhaustiveness_check_memory_scope,
+        exhaustiveness_check_storage_domain, AsyncTransactionLifecycle, AtomicOrdering,
+        BarrierParticipation, CollectiveGroup, ExecutionScope, FailureCancellationBehavior,
+        FenceSemantics, MemoryOrdering, MemoryScope, StorageDomain,
+    };
+    pub use crate::region_ssa;
+    pub use crate::types::*;
+    pub use crate::verifier::*;
 }
 
 /// CPU reference registration contract.
@@ -97,7 +113,11 @@ pub mod loop_bounds;
 /// Domain-neutral byte-range result types.
 pub mod match_result;
 /// Substrate-neutral memory ordering.
-pub(crate) mod memory_model;
+pub mod memory_model;
+/// Closed orthogonal semantic type system (Row 102).
+pub mod types;
+/// Single declarative verifier and certified compilation gate (Row 104).
+pub mod verifier;
 /// Optimizer performance counters.
 pub mod perf;
 /// Program capability analysis.

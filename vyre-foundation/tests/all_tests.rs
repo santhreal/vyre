@@ -355,6 +355,22 @@ pub mod memory_ordering;
 #[path = "memory_ordering_adversarial.rs"]
 pub mod memory_ordering_adversarial;
 
+/// Integration tests from `tests/memory_model_contracts.rs`.
+#[path = "memory_model_contracts.rs"]
+pub mod memory_model_contracts;
+
+/// Integration tests from `tests/orthogonal_types.rs`.
+#[path = "orthogonal_types.rs"]
+pub mod orthogonal_types;
+
+/// Integration tests from `tests/symbolic_shape_interner.rs`.
+#[path = "symbolic_shape_interner.rs"]
+pub mod symbolic_shape_interner;
+
+/// Integration tests from `tests/declarative_verifier.rs`.
+#[path = "declarative_verifier.rs"]
+pub mod declarative_verifier;
+
 /// Integration tests from `tests/memory_pass_alias_owner.rs`.
 #[path = "memory_pass_alias_owner.rs"]
 pub mod memory_pass_alias_owner;
@@ -532,6 +548,10 @@ pub mod region_inline_scope;
 /// Integration tests from `tests/region_law_derivation.rs`.
 #[path = "region_law_derivation.rs"]
 pub mod region_law_derivation;
+
+/// Integration tests from `tests/region_ssa_contracts.rs`.
+#[path = "region_ssa_contracts.rs"]
+pub mod region_ssa_contracts;
 
 /// Integration tests from `tests/registry_closure.rs`.
 #[path = "registry_closure.rs"]
@@ -753,3 +773,4 @@ pub mod wire_version_mismatch;
 /// Integration tests from `tests/workspace_naming_footguns.rs`.
 #[path = "workspace_naming_footguns.rs"]
 pub mod workspace_naming_footguns;
+
