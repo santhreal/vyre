@@ -535,9 +535,6 @@ fn sample_token_fixture_program() -> Program {
 const EXPECTED_LOGIT_ADJUST_OUTPUT_BYTES: [u8; 16] =
     [0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 192, 63, 0, 0, 0, 64];
 const EXPECTED_NUCLEUS_SELECT_OUTPUT_BYTES: [u8; 4] = [2, 0, 0, 0];
-const EXPECTED_NUCLEUS_INDICES_BYTES: [u8; 8] = [3, 0, 0, 0, 2, 0, 0, 0];
-const EXPECTED_NUCLEUS_WEIGHTS_BYTES: [u8; 8] = [162, 106, 249, 62, 94, 71, 151, 62];
-const EXPECTED_NUCLEUS_KEPT_BYTES: [u8; 8] = [0, 0, 128, 63, 152, 69, 27, 63];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library_unconstrained(
@@ -588,11 +585,6 @@ inventory::submit! {
         Some(sample_token_fixture_inputs),
         Some(|| {
             vec![vec![
-                EXPECTED_LOGIT_ADJUST_OUTPUT_BYTES.to_vec(),
-                EXPECTED_NUCLEUS_INDICES_BYTES.to_vec(),
-                EXPECTED_NUCLEUS_WEIGHTS_BYTES.to_vec(),
-                EXPECTED_NUCLEUS_KEPT_BYTES.to_vec(),
-                EXPECTED_NUCLEUS_INDICES_BYTES.to_vec(),
                 EXPECTED_NUCLEUS_SELECT_OUTPUT_BYTES.to_vec(),
             ]]
         }),

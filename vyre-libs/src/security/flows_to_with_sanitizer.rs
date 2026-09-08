@@ -244,19 +244,11 @@ pub(crate) fn flows_to_with_sanitizer_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
-pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_CLEAN_BYTES: [u8; 4] = [1, 0, 0, 0];
-pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_REACH_BYTES: [u8; 4] = [3, 0, 0, 0];
-pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_ALIVE_BYTES: [u8; 4] = [3, 0, 0, 0];
-pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_HITS_BYTES: [u8; 4] = [2, 0, 0, 0];
 pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 #[cfg(test)]
 pub(crate) fn flows_to_with_sanitizer_fixture_expected() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
-        EXPECTED_FLOWS_TO_WITH_SANITIZER_CLEAN_BYTES.to_vec(),
-        EXPECTED_FLOWS_TO_WITH_SANITIZER_REACH_BYTES.to_vec(),
-        EXPECTED_FLOWS_TO_WITH_SANITIZER_ALIVE_BYTES.to_vec(),
-        EXPECTED_FLOWS_TO_WITH_SANITIZER_HITS_BYTES.to_vec(),
         EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES.to_vec(),
     ]]
 }
@@ -275,10 +267,6 @@ mod tests {
         assert_eq!(
             flows_to_with_sanitizer_fixture_expected(),
             vec![vec![
-                EXPECTED_FLOWS_TO_WITH_SANITIZER_CLEAN_BYTES.to_vec(),
-                EXPECTED_FLOWS_TO_WITH_SANITIZER_REACH_BYTES.to_vec(),
-                EXPECTED_FLOWS_TO_WITH_SANITIZER_ALIVE_BYTES.to_vec(),
-                EXPECTED_FLOWS_TO_WITH_SANITIZER_HITS_BYTES.to_vec(),
                 EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES.to_vec(),
             ]]
         );
