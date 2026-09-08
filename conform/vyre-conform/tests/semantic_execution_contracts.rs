@@ -532,3 +532,71 @@ fn a_retained_read_write_value_crosses_the_production_boundary() {
         "Fix: the boundary must return the retained buffer's bytes in Program declaration order."
     );
 }
+
+/// WHY: every registered operation must project its declared outputs identically
+/// across target compilation with and without whole-grid sync cuts.
+#[test]
+fn every_registered_operation_reconciles_outputs_under_grid_sync_cuts() {
+    let registry = vyre_registry_link::operation::live_operation_registry();
+    let mut tested_count = 0;
+    for entry in registry.iter() {
+        let Some(build) = entry.build else {
+            continue;
+        };
+        let program = build();
+        let graph = match vyre::ir::ProgramGraph::from_program("main", program) {
+            Ok(graph) => graph,
+            Err(_) => continue,
+        };
+        let expected = vyre_megakernel::returned_graph_values(&graph);
+        let target_facts = DeviceFacts::unknown();
+        let request = vyre_megakernel::CompileRequest::new(
+            graph.clone(),
+            ExternalFacts::new(Digest([0xAA; 32]), BTreeMap::new()),
+            target_facts,
+            SearchBudget::new(1, 100_000, 1, 0, 100_000_000),
+            CompileObjective::minimize_latency()
+                .with_bound(ObjectiveMetric::ArtifactBytes, 100_000_000),
+        );
+        let Ok(validated) = request.validate() else {
+            continue;
+        };
+
+        let artifact = match vyre_megakernel::compile(&validated) {
+            Ok(artifact) => artifact,
+            Err(_) => continue,
+        };
+        let projection = vyre_driver::materialize::project_resources(&artifact);
+        let expected_artifact_values: BTreeSet<_> = expected
+            .iter()
+            .map(|val| {
+                let name = graph.values()[val.0 as usize].name.as_str();
+                artifact
+                    .resources()
+                    .iter()
+                    .find(|r| r.name == name)
+                    .map(|r| r.value)
+                    .unwrap_or_else(|| panic!("resource `{name}` must exist in artifact"))
+            })
+            .collect();
+        for expected_val in &expected_artifact_values {
+            assert!(
+                projection.outputs.contains(expected_val)
+                    || projection.retained.contains(expected_val),
+                "operation `{}` expected output resource {} is omitted from artifact completion",
+                entry.id,
+                expected_val.0
+            );
+        }
+        for output_val in &projection.outputs {
+            assert!(
+                expected_artifact_values.contains(output_val),
+                "operation `{}` has undeclared output resource {}",
+                entry.id,
+                output_val.0
+            );
+        }
+        tested_count += 1;
+    }
+    assert!(tested_count > 0, "must test at least one registered operation");
+}
