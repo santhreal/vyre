@@ -709,6 +709,10 @@ feature = "cuda"
 
 [[pair]]
 member = "vyre-registry-link"
+feature = "device-tests"
+
+[[pair]]
+member = "vyre-registry-link"
 feature = "metal"
 
 [[pair]]
