@@ -234,6 +234,8 @@ pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::fmt(&self, formatter: &mut core
 pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::id(&self) -> &str
 pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::prerecord_borrowed_dispatch(&self, inputs: &[&[u8]], workgroups: [u32; 3]) -> core::result::Result<vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::prerecord_persistent_dispatch(&self, inputs: &[vyre_driver_wgpu::buffer::GpuBufferHandle], outputs: &[vyre_driver_wgpu::buffer::GpuBufferHandle], params: core::option::Option<&vyre_driver_wgpu::buffer::GpuBufferHandle>, workgroups: [u32; 3]) -> core::result::Result<vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::descriptor_metadata::descriptor_buffer_bindings(descriptor: &vyre_lower::descriptor::KernelDescriptor, public_output_bindings: &rustc_hash::FxHashSet<u32>, host_input_bindings: &rustc_hash::FxHashSet<(u32, u32)>) -> core::result::Result<alloc::vec::Vec<vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::host_input_slots(descriptor: &vyre_lower::descriptor::KernelDescriptor, buffers: &[vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl], authenticated_resource_bindings: core::option::Option<&[vyre_megakernel::envelope::TargetResourceBinding]>) -> core::result::Result<rustc_hash::FxHashSet<(u32, u32)>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::registered_backend_id() -> core::option::Option<&'static str>
 pub fn vyre_driver_wgpu::runtime::AccessTracker::default() -> Self
 pub fn vyre_driver_wgpu::runtime::AccessTracker::hot_set(&self, n: usize) -> alloc::vec::Vec<u64>
@@ -311,6 +313,7 @@ pub mod vyre_driver_wgpu::engine
 pub mod vyre_driver_wgpu::engine::graph
 pub mod vyre_driver_wgpu::engine::multi_gpu
 pub mod vyre_driver_wgpu::pipeline
+pub mod vyre_driver_wgpu::pipeline::descriptor_metadata
 pub mod vyre_driver_wgpu::pipeline::persistent
 pub mod vyre_driver_wgpu::runtime
 pub mod vyre_driver_wgpu::runtime::adapter_caps_probe
@@ -345,7 +348,9 @@ pub struct vyre_driver_wgpu::engine::multi_gpu::MultiGpuExecutor
 pub struct vyre_driver_wgpu::engine::multi_gpu::Partition
 pub struct vyre_driver_wgpu::engine::multi_gpu::StreamShardAllocator
 pub struct vyre_driver_wgpu::engine::multi_gpu::WeightedWorkItem
+pub struct vyre_driver_wgpu::pipeline::BufferBindingInfo
 pub struct vyre_driver_wgpu::pipeline::WgpuPipeline
+pub struct vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo
 pub struct vyre_driver_wgpu::pipeline::persistent::DispatchItem<'a>
 pub struct vyre_driver_wgpu::runtime::AdapterCriteria
 pub struct vyre_driver_wgpu::runtime::AdapterProbeReport
@@ -427,6 +432,30 @@ pub vyre_driver_wgpu::engine::multi_gpu::Partition::item_ids: alloc::vec::Vec<us
 pub vyre_driver_wgpu::engine::multi_gpu::Partition::total_cost: u64
 pub vyre_driver_wgpu::engine::multi_gpu::WeightedWorkItem::cost: u64
 pub vyre_driver_wgpu::engine::multi_gpu::WeightedWorkItem::id: usize
+pub vyre_driver_wgpu::pipeline::BufferBindingInfo::access: vyre_spec::buffer_access::BufferAccess
+pub vyre_driver_wgpu::pipeline::BufferBindingInfo::binding: u32
+pub vyre_driver_wgpu::pipeline::BufferBindingInfo::consumes_host_input: bool
+pub vyre_driver_wgpu::pipeline::BufferBindingInfo::count: u32
+pub vyre_driver_wgpu::pipeline::BufferBindingInfo::element: vyre_spec::data_type::DataType
+pub vyre_driver_wgpu::pipeline::BufferBindingInfo::group: u32
+pub vyre_driver_wgpu::pipeline::BufferBindingInfo::hints: vyre_foundation::ir_inner::model::program::MemoryHints
+pub vyre_driver_wgpu::pipeline::BufferBindingInfo::internal_trap: bool
+pub vyre_driver_wgpu::pipeline::BufferBindingInfo::is_output: bool
+pub vyre_driver_wgpu::pipeline::BufferBindingInfo::kind: vyre_foundation::ir_inner::model::program::MemoryKind
+pub vyre_driver_wgpu::pipeline::BufferBindingInfo::name: alloc::sync::Arc<str>
+pub vyre_driver_wgpu::pipeline::BufferBindingInfo::preserve_input_contents: bool
+pub vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo::access: vyre_spec::buffer_access::BufferAccess
+pub vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo::binding: u32
+pub vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo::consumes_host_input: bool
+pub vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo::count: u32
+pub vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo::element: vyre_spec::data_type::DataType
+pub vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo::group: u32
+pub vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo::hints: vyre_foundation::ir_inner::model::program::MemoryHints
+pub vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo::internal_trap: bool
+pub vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo::is_output: bool
+pub vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo::kind: vyre_foundation::ir_inner::model::program::MemoryKind
+pub vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo::name: alloc::sync::Arc<str>
+pub vyre_driver_wgpu::pipeline::descriptor_metadata::BufferBindingInfo::preserve_input_contents: bool
 pub vyre_driver_wgpu::pipeline::persistent::DispatchItem::inputs: &'a [vyre_driver_wgpu::buffer::GpuBufferHandle]
 pub vyre_driver_wgpu::pipeline::persistent::DispatchItem::outputs: &'a [vyre_driver_wgpu::buffer::GpuBufferHandle]
 pub vyre_driver_wgpu::pipeline::persistent::DispatchItem::params: core::option::Option<&'a vyre_driver_wgpu::buffer::GpuBufferHandle>

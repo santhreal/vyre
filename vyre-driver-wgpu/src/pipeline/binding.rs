@@ -14,7 +14,7 @@ use crate::pipeline::{element_size_bytes, BufferBindingInfo, OutputBindingLayout
 /// not reproduce the canonical answer, because `BufferBindingInfo` carries no
 /// `pipeline_live_out`.
 pub(crate) fn consumes_host_input(info: &BufferBindingInfo) -> bool {
-    info.consumes_host_input
+    info.consumes_host_input && !info.internal_trap
 }
 
 /// Return true when a binding is the slot a single dispatch-parameter handle
@@ -161,4 +161,3 @@ where
     }
     Ok(())
 }
-
