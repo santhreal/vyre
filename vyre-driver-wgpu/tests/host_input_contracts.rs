@@ -1,7 +1,7 @@
 //! Host input classification and preserved-contents contract tests.
 
 use rustc_hash::FxHashSet;
-use vyre_driver_wgpu::pipeline::descriptor_metadata::descriptor_buffer_bindings;
+use vyre_driver_wgpu::pipeline::descriptor_buffer_bindings;
 use vyre_driver_wgpu::pipeline::host_input_slots;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, MemoryKind};
 use vyre_lower::{

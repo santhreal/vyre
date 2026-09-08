@@ -55,6 +55,9 @@ macro_rules! forward_vyre_backend_support {
         ) -> bool {
             self.inner.honors_float_lowering(mode)
         }
+        fn max_shared_memory_bytes(&self) -> u32 {
+            self.inner.max_shared_memory_bytes()
+        }
         fn allocate_resident(
             &self,
             byte_len: usize,

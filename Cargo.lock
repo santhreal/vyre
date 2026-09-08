@@ -3535,7 +3535,6 @@ dependencies = [
 name = "vyre-driver-metal"
 version = "0.8.0"
 dependencies = [
- "inventory",
  "metal",
  "serde_json",
  "toml",
@@ -3553,7 +3552,6 @@ dependencies = [
 name = "vyre-driver-reference"
 version = "0.8.0"
 dependencies = [
- "inventory",
  "vyre-driver",
  "vyre-foundation",
  "vyre-megakernel",
@@ -3566,7 +3564,6 @@ name = "vyre-driver-spirv"
 version = "0.8.0"
 dependencies = [
  "ash",
- "inventory",
  "tempfile",
  "vyre-driver",
  "vyre-emit-spirv",
@@ -3589,7 +3586,6 @@ dependencies = [
  "crossbeam-queue",
  "dashmap",
  "fs2",
- "inventory",
  "libc",
  "naga",
  "proptest",

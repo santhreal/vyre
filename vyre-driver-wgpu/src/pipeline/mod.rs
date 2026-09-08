@@ -9,7 +9,7 @@ pub(crate) mod bindings_reflection;
 pub(crate) mod cache_impact;
 pub(crate) mod compiled_dispatch;
 pub(crate) mod compound;
-pub mod descriptor_metadata;
+pub(crate) mod descriptor_metadata;
 pub(crate) mod disk_cache;
 pub(crate) mod disk_cache_entries;
 pub(crate) mod output_readback;
@@ -42,10 +42,9 @@ use vyre_lower::{TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
 
 pub(crate) use self::artifact::AuthenticatedTarget;
 use self::artifact::CachedPipelineArtifact;
-pub use self::descriptor_metadata::BufferBindingInfo;
+pub use self::descriptor_metadata::{descriptor_buffer_bindings, BufferBindingInfo};
 use self::descriptor_metadata::{
-    bind_group_layout_fingerprint, create_bind_group_layouts, descriptor_buffer_bindings,
-    descriptor_trap_tags,
+    bind_group_layout_fingerprint, create_bind_group_layouts, descriptor_trap_tags,
 };
 use self::tuning::wgpu_effective_dispatch_config;
 use crate::buffer::{BindGroupCache, StagingBufferPool};

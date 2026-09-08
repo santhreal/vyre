@@ -28,7 +28,7 @@ Run the checked-in behavior from `vyre-registry-link/tests/all_tests.rs`:
 
 ### Features
 
-- Manifest features: `cuda`, `default`, `metal`, `operations`, `reference`, `spirv`, `wgpu`
+- Manifest features: `cuda`, `default`, `device-tests`, `metal`, `operations`, `reference`, `spirv`, `wgpu`
 - Default feature members: `operations`, `cuda`, `metal`, `reference`, `spirv`, `wgpu`
 
 ### Errors and unsupported behavior
