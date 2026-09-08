@@ -1,5 +1,9 @@
 //! Actionable backend error taxonomy.
 
+use vyre_foundation::diagnostics::{
+    CompilerLevel, Diagnostic, DiagnosticStage, RetryClass, ToDiagnostic,
+};
+
 /// Machine-readable classification of a backend failure kind.
 ///
 /// Use this to drive retry logic, circuit breakers, and alerting rules
@@ -374,5 +378,157 @@ impl BackendError {
             Self::ExecutionAborted { .. } => ErrorCode::ExecutionAborted,
             Self::Other(_) => ErrorCode::Unknown,
         }
+    }
+}
+
+impl BackendError {
+    /// Project this error into the versioned structured diagnostic contract.
+    #[must_use]
+    pub fn diagnostic(&self) -> Diagnostic {
+        match self {
+            Self::DeviceOutOfMemory { requested, available } => Diagnostic::error(
+                "BACKEND_DEVICE_OOM",
+                format!("device out of memory: requested {requested} bytes, {available} available"),
+            )
+            .with_stage(DiagnosticStage::Submit)
+            .with_compiler_level(CompilerLevel::DriverRuntime)
+            .with_retry(RetryClass::SameDevice)
+            .with_fix("reduce buffer sizes or split the dispatch into smaller chunks")
+            .with_cause("out_of_memory", format!("requested {requested}B, available {available}B"))
+            .with_context_value("requested_bytes", requested.to_string())
+            .with_context_value("available_bytes", available.to_string()),
+
+            Self::DeviceLost { backend, device, generation, message } => Diagnostic::error(
+                "BACKEND_DEVICE_LOST",
+                format!("device generation {generation} was lost on backend `{backend}` device `{device}`: {message}"),
+            )
+            .with_stage(DiagnosticStage::Submit)
+            .with_compiler_level(CompilerLevel::DriverRuntime)
+            .with_target(backend.clone())
+            .with_device(device.clone())
+            .with_retry(RetryClass::NewDevice)
+            .with_fix("reacquire the registered materializer and rematerialize the authenticated artifact before retrying")
+            .with_cause("device_lost", message.clone())
+            .with_context_value("backend", backend.clone())
+            .with_context_value("device", device.clone())
+            .with_context_value("generation", generation.to_string()),
+
+            Self::UnsupportedFeature { name, backend } => Diagnostic::error(
+                "BACKEND_UNSUPPORTED_FEATURE",
+                format!("unsupported feature `{name}` on backend `{backend}`"),
+            )
+            .with_stage(DiagnosticStage::Validate)
+            .with_compiler_level(CompilerLevel::DriverRuntime)
+            .with_target(backend.clone())
+            .with_retry(RetryClass::Never)
+            .with_fix("check backend capability before using this feature, or select a backend that supports it")
+            .with_cause("unsupported_feature", format!("feature `{name}` on `{backend}`"))
+            .with_context_value("feature", name.clone())
+            .with_context_value("backend", backend.clone()),
+
+            Self::PoisonedLock { lock_error } => Diagnostic::error(
+                "BACKEND_POISONED_LOCK",
+                format!("backend lock poisoned: {lock_error}"),
+            )
+            .with_stage(DiagnosticStage::Submit)
+            .with_compiler_level(CompilerLevel::DriverRuntime)
+            .with_retry(RetryClass::Never)
+            .with_fix("report the panic origin, prevent panics on lock guards, and retry the backend operation")
+            .with_cause("lock_poisoned", lock_error.clone())
+            .with_context_value("lock_error", lock_error.clone()),
+
+            Self::KernelCompileFailed { backend, compiler_message } => Diagnostic::error(
+                "BACKEND_KERNEL_COMPILE_FAILED",
+                format!("kernel-source compile failed on backend `{backend}`: {compiler_message}"),
+            )
+            .with_stage(DiagnosticStage::Emit)
+            .with_compiler_level(CompilerLevel::Emission)
+            .with_target(backend.clone())
+            .with_retry(RetryClass::Never)
+            .with_fix("validate the vyre IR before lowering and check the lowered kernel source for type errors")
+            .with_cause("compiler_failure", compiler_message.clone())
+            .with_context_value("backend", backend.clone()),
+
+            Self::DispatchFailed { code, message } => {
+                let mut diag = Diagnostic::error(
+                    "BACKEND_DISPATCH_FAILED",
+                    format!("dispatch failed: {message}"),
+                )
+                .with_stage(DiagnosticStage::Submit)
+                .with_compiler_level(CompilerLevel::DriverRuntime)
+                .with_retry(RetryClass::SameDevice)
+                .with_fix("inspect the backend error code and queue state, reduce dispatch pressure, or reacquire the backend before retrying")
+                .with_cause("dispatch_error", message.clone());
+                if let Some(c) = code {
+                    diag = diag.with_context_value("backend_code", c.to_string());
+                }
+                diag
+            }
+
+            Self::Validation { source } => source.diagnostic(),
+
+            Self::InvalidProgram { fix } => Diagnostic::error(
+                "BACKEND_INVALID_PROGRAM",
+                format!("invalid program: {fix}"),
+            )
+            .with_stage(DiagnosticStage::Validate)
+            .with_compiler_level(CompilerLevel::FoundationIr)
+            .with_retry(RetryClass::RecompileSource)
+            .with_fix(fix.clone()),
+
+            Self::CooperativeResidencyExceeded { grid_blocks, resident_limit, detail } => Diagnostic::error(
+                "BACKEND_COOPERATIVE_RESIDENCY_EXCEEDED",
+                format!("cooperative grid-sync launch needs {grid_blocks} block(s), device resident limit is {resident_limit}"),
+            )
+            .with_stage(DiagnosticStage::Plan)
+            .with_compiler_level(CompilerLevel::DriverRuntime)
+            .with_retry(RetryClass::SameDevice)
+            .with_fix("route this dispatch to the resident-fixpoint or host-split grid-sync path, reduce the grid/workgroup size, or lower kernel register/shared-memory pressure")
+            .with_cause("residency_exceeded", detail.clone())
+            .with_context_value("grid_blocks", grid_blocks.to_string())
+            .with_context_value("resident_limit", resident_limit.to_string()),
+
+            Self::ExecutionAborted { stage, reason } => Diagnostic::error(
+                "BACKEND_EXECUTION_ABORTED",
+                format!("execution aborted at stage `{stage}`: {reason}"),
+            )
+            .with_stage(DiagnosticStage::Complete)
+            .with_compiler_level(CompilerLevel::DriverRuntime)
+            .with_retry(RetryClass::Never)
+            .with_fix("submit the next generation; the abandoned request produces no result")
+            .with_cause("aborted", reason.clone())
+            .with_context_value("lifecycle_stage", stage.to_string()),
+
+            Self::Other(message) => {
+                let (msg, fix) = if let Some((m, f)) = message.split_once(". Fix: ") {
+                    (m.to_string(), f.to_string())
+                } else {
+                    (message.clone(), "inspect backend error message for details".to_string())
+                };
+                Diagnostic::error("BACKEND_OTHER", msg)
+                    .with_stage(DiagnosticStage::Submit)
+                    .with_compiler_level(CompilerLevel::DriverRuntime)
+                    .with_cause("backend_error", message.clone())
+                    .with_fix(fix)
+            }
+        }
+    }
+}
+
+impl ToDiagnostic for BackendError {
+    fn to_diagnostic(&self) -> Diagnostic {
+        self.diagnostic()
+    }
+}
+
+impl From<&BackendError> for Diagnostic {
+    fn from(error: &BackendError) -> Self {
+        error.diagnostic()
+    }
+}
+
+impl From<BackendError> for Diagnostic {
+    fn from(error: BackendError) -> Self {
+        error.diagnostic()
     }
 }

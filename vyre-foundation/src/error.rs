@@ -4,7 +4,8 @@ use std::borrow::Cow;
 use thiserror::Error;
 
 use crate::diagnostics::{
-    Diagnostic, DiagnosticCode, DiagnosticStage, OpLocation, RetryClass, Severity,
+    CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, OpLocation, RetryClass, Severity,
+    ToDiagnostic,
 };
 
 /// Result for foundation-owned IR and Program wire operations.
@@ -146,122 +147,183 @@ impl IrError {
     #[must_use]
     pub fn diagnostic(&self) -> Diagnostic {
         match self {
-            Self::InlineCycle { op_id } => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("IRC001_INLINE_CYCLE"),
-                stage: DiagnosticStage::Optimize,
-                message: format!("IR inlining cycle at operation `{op_id}`").into(),
-                location: Some(OpLocation::op(op_id.clone())),
-                suggested_fix: Some(
-                    "remove the recursive Expr::Call chain or split the recursive algorithm into an explicit bounded Loop"
-                        .into(),
-                ),
-                cause: Some(crate::diagnostics::DiagnosticCause {
+            Self::InlineCycle { op_id } => {
+                let cause = crate::diagnostics::DiagnosticCause {
                     kind: "inlining".to_string(),
                     detail: format!("cyclic expansion of `{op_id}`"),
-                }),
-                retry: RetryClass::Never,
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::InlineUnknownOp { op_id } => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("IRC002_INLINE_UNKNOWN_OP"),
-                stage: DiagnosticStage::Optimize,
-                message: format!("IR inlining could not resolve operation `{op_id}`").into(),
-                location: Some(OpLocation::op(op_id.clone())),
-                suggested_fix: Some(
-                    "register a Category A operation with this id before lowering or replace the call with inline IR"
-                        .into(),
-                ),
-                cause: Some(crate::diagnostics::DiagnosticCause {
+                };
+                Diagnostic {
+                    severity: Severity::Error,
+                    code: DiagnosticCode::new("IRC001_INLINE_CYCLE"),
+                    stage: DiagnosticStage::Optimize,
+                    compiler_level: Some(CompilerLevel::Optimizer),
+                    message: format!("IR inlining cycle at operation `{op_id}`").into(),
+                    location: Some(OpLocation::op(op_id.clone())),
+                    artifact_id: None,
+                    target: None,
+                    device: None,
+                    suggested_fix: Some(
+                        "remove the recursive Expr::Call chain or split the recursive algorithm into an explicit bounded Loop"
+                            .into(),
+                    ),
+                    cause: Some(cause.clone()),
+                    cause_chain: vec![cause],
+                    retry: RetryClass::Never,
+                    context_values: vec![("op_id".to_string(), op_id.clone())],
+                    doc_url: None,
+                    notes: Vec::new(),
+                }
+            }
+            Self::InlineUnknownOp { op_id } => {
+                let cause = crate::diagnostics::DiagnosticCause {
                     kind: "inlining".to_string(),
                     detail: format!("unresolved operation `{op_id}`"),
-                }),
-                retry: RetryClass::Never,
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::InlineNonInlinable { op_id } => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("IRC003_INLINE_NON_INLINABLE"),
-                stage: DiagnosticStage::Optimize,
-                message: format!("IR inlining rejected non-inlinable operation `{op_id}`").into(),
-                location: Some(OpLocation::op(op_id.clone())),
-                suggested_fix: Some(
-                    "this op processes buffer inputs and must be dispatched as a separate kernel, not composed via Expr::Call"
-                        .into(),
-                ),
-                cause: Some(crate::diagnostics::DiagnosticCause {
+                };
+                Diagnostic {
+                    severity: Severity::Error,
+                    code: DiagnosticCode::new("IRC002_INLINE_UNKNOWN_OP"),
+                    stage: DiagnosticStage::Optimize,
+                    compiler_level: Some(CompilerLevel::Optimizer),
+                    message: format!("IR inlining could not resolve operation `{op_id}`").into(),
+                    location: Some(OpLocation::op(op_id.clone())),
+                    artifact_id: None,
+                    target: None,
+                    device: None,
+                    suggested_fix: Some(
+                        "register a Category A operation with this id before lowering or replace the call with inline IR"
+                            .into(),
+                    ),
+                    cause: Some(cause.clone()),
+                    cause_chain: vec![cause],
+                    retry: RetryClass::Never,
+                    context_values: vec![("op_id".to_string(), op_id.clone())],
+                    doc_url: None,
+                    notes: Vec::new(),
+                }
+            }
+            Self::InlineNonInlinable { op_id } => {
+                let cause = crate::diagnostics::DiagnosticCause {
                     kind: "inlining".to_string(),
                     detail: format!("op `{op_id}` cannot be inlined"),
-                }),
-                retry: RetryClass::Never,
-                doc_url: None,
-                notes: Vec::new(),
-            },
+                };
+                Diagnostic {
+                    severity: Severity::Error,
+                    code: DiagnosticCode::new("IRC003_INLINE_NON_INLINABLE"),
+                    stage: DiagnosticStage::Optimize,
+                    compiler_level: Some(CompilerLevel::Optimizer),
+                    message: format!("IR inlining rejected non-inlinable operation `{op_id}`").into(),
+                    location: Some(OpLocation::op(op_id.clone())),
+                    artifact_id: None,
+                    target: None,
+                    device: None,
+                    suggested_fix: Some(
+                        "this op processes buffer inputs and must be dispatched as a separate kernel, not composed via Expr::Call"
+                            .into(),
+                    ),
+                    cause: Some(cause.clone()),
+                    cause_chain: vec![cause],
+                    retry: RetryClass::Never,
+                    context_values: vec![("op_id".to_string(), op_id.clone())],
+                    doc_url: None,
+                    notes: Vec::new(),
+                }
+            }
             Self::InlineArgCountMismatch {
                 op_id,
                 expected,
                 got,
-            } => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("IRC004_INLINE_ARG_COUNT"),
-                stage: DiagnosticStage::Optimize,
-                message: format!(
-                    "IR inlining argument count mismatch for operation `{op_id}`: expected {expected}, got {got}"
-                )
-                .into(),
-                location: Some(OpLocation::op(op_id.clone())),
-                suggested_fix: Some(
-                    "pass exactly one argument for each ReadOnly or Uniform input buffer declared by the callee program"
-                        .into(),
-                ),
-                cause: Some(crate::diagnostics::DiagnosticCause {
+            } => {
+                let cause = crate::diagnostics::DiagnosticCause {
                     kind: "inlining".to_string(),
                     detail: format!("argument count mismatch: expected {expected}, got {got}"),
-                }),
-                retry: RetryClass::Never,
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::InlineNoOutput { op_id } => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("IRC005_INLINE_NO_OUTPUT"),
-                stage: DiagnosticStage::Optimize,
-                message: format!("IR inlining found no output write for operation `{op_id}`").into(),
-                location: Some(OpLocation::op(op_id.clone())),
-                suggested_fix: Some(
-                    "ensure the op's program() body writes to its output buffer at least once".into(),
-                ),
-                cause: Some(crate::diagnostics::DiagnosticCause {
+                };
+                Diagnostic {
+                    severity: Severity::Error,
+                    code: DiagnosticCode::new("IRC004_INLINE_ARG_COUNT"),
+                    stage: DiagnosticStage::Optimize,
+                    compiler_level: Some(CompilerLevel::Optimizer),
+                    message: format!(
+                        "IR inlining argument count mismatch for operation `{op_id}`: expected {expected}, got {got}"
+                    )
+                    .into(),
+                    location: Some(OpLocation::op(op_id.clone())),
+                    artifact_id: None,
+                    target: None,
+                    device: None,
+                    suggested_fix: Some(
+                        "pass exactly one argument for each ReadOnly or Uniform input buffer declared by the callee program"
+                            .into(),
+                    ),
+                    cause: Some(cause.clone()),
+                    cause_chain: vec![cause],
+                    retry: RetryClass::Never,
+                    context_values: vec![
+                        ("op_id".to_string(), op_id.clone()),
+                        ("expected".to_string(), expected.to_string()),
+                        ("got".to_string(), got.to_string()),
+                    ],
+                    doc_url: None,
+                    notes: Vec::new(),
+                }
+            }
+            Self::InlineNoOutput { op_id } => {
+                let cause = crate::diagnostics::DiagnosticCause {
                     kind: "inlining".to_string(),
                     detail: format!("no output write in `{op_id}`"),
-                }),
-                retry: RetryClass::Never,
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::InlineOutputCountMismatch { op_id, got } => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("IRC006_INLINE_OUTPUT_COUNT"),
-                stage: DiagnosticStage::Optimize,
-                message: format!(
-                    "IR inlining found {got} declared output buffers for operation `{op_id}`"
-                )
-                .into(),
-                location: Some(OpLocation::op(op_id.clone())),
-                suggested_fix: Some(
-                    "mark exactly one result buffer with BufferDecl::output(...)".into(),
-                ),
-                cause: Some(crate::diagnostics::DiagnosticCause {
+                };
+                Diagnostic {
+                    severity: Severity::Error,
+                    code: DiagnosticCode::new("IRC005_INLINE_NO_OUTPUT"),
+                    stage: DiagnosticStage::Optimize,
+                    compiler_level: Some(CompilerLevel::Optimizer),
+                    message: format!("IR inlining found no output write for operation `{op_id}`").into(),
+                    location: Some(OpLocation::op(op_id.clone())),
+                    artifact_id: None,
+                    target: None,
+                    device: None,
+                    suggested_fix: Some(
+                        "ensure the op's program() body writes to its output buffer at least once".into(),
+                    ),
+                    cause: Some(cause.clone()),
+                    cause_chain: vec![cause],
+                    retry: RetryClass::Never,
+                    context_values: vec![("op_id".to_string(), op_id.clone())],
+                    doc_url: None,
+                    notes: Vec::new(),
+                }
+            }
+            Self::InlineOutputCountMismatch { op_id, got } => {
+                let cause = crate::diagnostics::DiagnosticCause {
                     kind: "inlining".to_string(),
                     detail: format!("output count mismatch: got {got}"),
-                }),
-                retry: RetryClass::Never,
-                doc_url: None,
-                notes: Vec::new(),
-            },
+                };
+                Diagnostic {
+                    severity: Severity::Error,
+                    code: DiagnosticCode::new("IRC006_INLINE_OUTPUT_COUNT"),
+                    stage: DiagnosticStage::Optimize,
+                    compiler_level: Some(CompilerLevel::Optimizer),
+                    message: format!(
+                        "IR inlining found {got} declared output buffers for operation `{op_id}`"
+                    )
+                    .into(),
+                    location: Some(OpLocation::op(op_id.clone())),
+                    artifact_id: None,
+                    target: None,
+                    device: None,
+                    suggested_fix: Some(
+                        "mark exactly one result buffer with BufferDecl::output(...)".into(),
+                    ),
+                    cause: Some(cause.clone()),
+                    cause_chain: vec![cause],
+                    retry: RetryClass::Never,
+                    context_values: vec![
+                        ("op_id".to_string(), op_id.clone()),
+                        ("got".to_string(), got.to_string()),
+                    ],
+                    doc_url: None,
+                    notes: Vec::new(),
+                }
+            }
             Self::Validation { issues } => {
                 if let Some(first) = issues.first() {
                     let mut diag = first.diagnostic();
@@ -280,104 +342,166 @@ impl IrError {
                         "V000_GENERIC_VALIDATION",
                         "IR validation rejected the Program",
                     )
+                    .with_stage(DiagnosticStage::Validate)
+                    .with_compiler_level(CompilerLevel::FoundationIr)
                     .with_fix("inspect validation rules and program structure")
                 }
             }
-            Self::WireFormatValidation { message } => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("WIRE001_VALIDATION_FAILED"),
-                stage: DiagnosticStage::Validate,
-                message: message.clone().into(),
-                location: None,
-                suggested_fix: Some(
-                    "recompile the frontend program set and ensure the compiler only emits valid instructions"
-                        .into(),
-                ),
-                cause: Some(crate::diagnostics::DiagnosticCause {
+            Self::WireFormatValidation { message } => {
+                let cause = crate::diagnostics::DiagnosticCause {
                     kind: "wire_format".to_string(),
                     detail: message.clone(),
-                }),
-                retry: RetryClass::RecompileSource,
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::Lowering { message } => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("LOWER001_TARGET_TEXT_FAILED"),
-                stage: DiagnosticStage::Lower,
-                message: message.clone().into(),
-                location: None,
-                suggested_fix: Some(
-                    "inspect the Program shape, backend capability report, and emitted shader diagnostics before retrying"
-                        .into(),
-                ),
-                cause: Some(crate::diagnostics::DiagnosticCause {
+                };
+                Diagnostic {
+                    severity: Severity::Error,
+                    code: DiagnosticCode::new("WIRE001_VALIDATION_FAILED"),
+                    stage: DiagnosticStage::Validate,
+                    compiler_level: Some(CompilerLevel::Spec),
+                    message: message.clone().into(),
+                    location: None,
+                    artifact_id: None,
+                    target: None,
+                    device: None,
+                    suggested_fix: Some(
+                        "recompile the frontend program set and ensure the compiler only emits valid instructions"
+                            .into(),
+                    ),
+                    cause: Some(cause.clone()),
+                    cause_chain: vec![cause],
+                    retry: RetryClass::RecompileSource,
+                    context_values: Vec::new(),
+                    doc_url: None,
+                    notes: Vec::new(),
+                }
+            }
+            Self::Lowering { message } => {
+                let cause = crate::diagnostics::DiagnosticCause {
                     kind: "lowering".to_string(),
                     detail: message.clone(),
-                }),
-                retry: RetryClass::RecompileSource,
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::VersionMismatch { expected, found } => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("WIRE002_VERSION_MISMATCH"),
-                stage: DiagnosticStage::Admit,
-                message: format!(
-                    "Wire-format version mismatch: expected {expected}, found {found}"
-                )
-                .into(),
-                location: None,
-                suggested_fix: Some(
-                    "re-encode with a matching vyre version or upgrade this runtime".into(),
-                ),
-                cause: Some(crate::diagnostics::DiagnosticCause {
+                };
+                Diagnostic {
+                    severity: Severity::Error,
+                    code: DiagnosticCode::new("LOWER001_TARGET_TEXT_FAILED"),
+                    stage: DiagnosticStage::Lower,
+                    compiler_level: Some(CompilerLevel::Lowering),
+                    message: message.clone().into(),
+                    location: None,
+                    artifact_id: None,
+                    target: None,
+                    device: None,
+                    suggested_fix: Some(
+                        "inspect the Program shape, backend capability report, and emitted shader diagnostics before retrying"
+                            .into(),
+                    ),
+                    cause: Some(cause.clone()),
+                    cause_chain: vec![cause],
+                    retry: RetryClass::RecompileSource,
+                    context_values: Vec::new(),
+                    doc_url: None,
+                    notes: Vec::new(),
+                }
+            }
+            Self::VersionMismatch { expected, found } => {
+                let cause = crate::diagnostics::DiagnosticCause {
                     kind: "version_skew".to_string(),
                     detail: format!("expected wire version {expected}, got {found}"),
-                }),
-                retry: RetryClass::Never,
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::UnknownDialect { name, requested } => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("WIRE003_UNKNOWN_DIALECT"),
-                stage: DiagnosticStage::Admit,
-                message: format!("Unknown dialect `{name}` (requested version `{requested}`)").into(),
-                location: None,
-                suggested_fix: Some(
-                    format!(
-                        "link the dialect crate providing `{name}` into this runtime or drop the op that uses it before encoding"
+                };
+                Diagnostic {
+                    severity: Severity::Error,
+                    code: DiagnosticCode::new("WIRE002_VERSION_MISMATCH"),
+                    stage: DiagnosticStage::Admit,
+                    compiler_level: Some(CompilerLevel::Spec),
+                    message: format!(
+                        "Wire-format version mismatch: expected {expected}, found {found}"
                     )
                     .into(),
-                ),
-                cause: Some(crate::diagnostics::DiagnosticCause {
+                    location: None,
+                    artifact_id: None,
+                    target: None,
+                    device: None,
+                    suggested_fix: Some(
+                        "re-encode with a matching vyre version or upgrade this runtime".into(),
+                    ),
+                    cause: Some(cause.clone()),
+                    cause_chain: vec![cause],
+                    retry: RetryClass::Never,
+                    context_values: vec![
+                        ("expected".to_string(), expected.to_string()),
+                        ("found".to_string(), found.to_string()),
+                    ],
+                    doc_url: None,
+                    notes: Vec::new(),
+                }
+            }
+            Self::UnknownDialect { name, requested } => {
+                let cause = crate::diagnostics::DiagnosticCause {
                     kind: "unknown_dialect".to_string(),
                     detail: format!("dialect `{name}` v{requested}"),
-                }),
-                retry: RetryClass::Never,
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::UnknownOp { dialect, op } => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("WIRE004_UNKNOWN_OP"),
-                stage: DiagnosticStage::Admit,
-                message: format!("Unknown op `{op}` in dialect `{dialect}`").into(),
-                location: None,
-                suggested_fix: Some(
-                    "upgrade the runtime to a version that includes this op, or drop the op before encoding"
+                };
+                Diagnostic {
+                    severity: Severity::Error,
+                    code: DiagnosticCode::new("WIRE003_UNKNOWN_DIALECT"),
+                    stage: DiagnosticStage::Admit,
+                    compiler_level: Some(CompilerLevel::Spec),
+                    message: format!("Unknown dialect `{name}` (requested version `{requested}`)").into(),
+                    location: None,
+                    artifact_id: None,
+                    target: None,
+                    device: None,
+                    suggested_fix: Some(
+                        format!(
+                            "link the dialect crate providing `{name}` into this runtime or drop the op that uses it before encoding"
+                        )
                         .into(),
-                ),
-                cause: Some(crate::diagnostics::DiagnosticCause {
+                    ),
+                    cause: Some(cause.clone()),
+                    cause_chain: vec![cause],
+                    retry: RetryClass::Never,
+                    context_values: vec![
+                        ("dialect".to_string(), name.clone()),
+                        ("requested_version".to_string(), requested.to_string()),
+                    ],
+                    doc_url: None,
+                    notes: Vec::new(),
+                }
+            }
+            Self::UnknownOp { dialect, op } => {
+                let cause = crate::diagnostics::DiagnosticCause {
                     kind: "unknown_op".to_string(),
                     detail: format!("op `{op}` in dialect `{dialect}`"),
-                }),
-                retry: RetryClass::Never,
-                doc_url: None,
-                notes: Vec::new(),
-            },
+                };
+                Diagnostic {
+                    severity: Severity::Error,
+                    code: DiagnosticCode::new("WIRE004_UNKNOWN_OP"),
+                    stage: DiagnosticStage::Admit,
+                    compiler_level: Some(CompilerLevel::Spec),
+                    message: format!("Unknown op `{op}` in dialect `{dialect}`").into(),
+                    location: None,
+                    artifact_id: None,
+                    target: None,
+                    device: None,
+                    suggested_fix: Some(
+                        "upgrade the runtime to a version that includes this op, or drop the op before encoding"
+                            .into(),
+                    ),
+                    cause: Some(cause.clone()),
+                    cause_chain: vec![cause],
+                    retry: RetryClass::Never,
+                    context_values: vec![
+                        ("dialect".to_string(), dialect.clone()),
+                        ("op".to_string(), op.clone()),
+                    ],
+                    doc_url: None,
+                    notes: Vec::new(),
+                }
+            }
         }
+    }
+}
+
+impl ToDiagnostic for IrError {
+    fn to_diagnostic(&self) -> Diagnostic {
+        self.diagnostic()
     }
 }
 

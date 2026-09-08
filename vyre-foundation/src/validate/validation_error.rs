@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use super::catalog::{ValidationRule, VALIDATION_RULES};
 use crate::diagnostics::{
-    Diagnostic, DiagnosticCode, DiagnosticStage, OpLocation, RetryClass, Severity,
+    CompilerLevel, Diagnostic, DiagnosticCause, DiagnosticCode, DiagnosticStage, OpLocation,
+    RetryClass, Severity, ToDiagnostic,
 };
 
 /// Stable validation rule identity.
@@ -364,24 +365,37 @@ impl ValidationError {
     /// Project the issue into the shared diagnostic protocol.
     #[must_use]
     pub fn diagnostic(&self) -> Diagnostic {
+        let cause = DiagnosticCause {
+            kind: self.phase.as_str().to_string(),
+            detail: self.cause.to_string(),
+        };
         Diagnostic {
             severity: Severity::Error,
             code: DiagnosticCode::from_owned(self.code.as_str().to_string()),
             stage: DiagnosticStage::Validate,
+            compiler_level: Some(CompilerLevel::FoundationIr),
             message: self.cause.clone(),
             location: Some(self.location.diagnostic_location()),
+            artifact_id: None,
+            target: None,
+            device: None,
             suggested_fix: Some(self.corrective_action.clone()),
-            cause: Some(crate::diagnostics::DiagnosticCause {
-                kind: self.phase.as_str().to_string(),
-                detail: self.cause.to_string(),
-            }),
+            cause: Some(cause.clone()),
+            cause_chain: vec![cause],
             retry: self.retry,
+            context_values: Vec::new(),
             doc_url: Some(Cow::Owned(format!(
                 "https://docs.vyre.dev/validator-errors#{}",
                 self.code.as_str().to_ascii_lowercase()
             ))),
             notes: Vec::new(),
         }
+    }
+}
+
+impl ToDiagnostic for ValidationError {
+    fn to_diagnostic(&self) -> Diagnostic {
+        self.diagnostic()
     }
 }
 

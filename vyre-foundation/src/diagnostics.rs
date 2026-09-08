@@ -46,6 +46,52 @@ impl Severity {
     }
 }
 
+/// Architectural compiler tier or level producing a diagnostic.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum CompilerLevel {
+    /// Frozen specification and schema level (Tier 0).
+    Spec,
+    /// Semantic IR and type system level (Tier 1).
+    FoundationIr,
+    /// Optimizer and pass engine level (Tier 2).
+    Optimizer,
+    /// LEGO primitive and dialect level (Tier 2.5 / 3).
+    PrimitivesDialects,
+    /// Target lowering level (Tier 4).
+    Lowering,
+    /// Backend emission and codegen level (Tier 5).
+    Emission,
+    /// Driver, materialization, and runtime execution level (Tier 6).
+    DriverRuntime,
+    /// Tooling, conformance, and evidence verification level.
+    ToolingEvidence,
+}
+
+impl CompilerLevel {
+    /// Stable human-readable compiler level label.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Spec => "spec",
+            Self::FoundationIr => "foundation_ir",
+            Self::Optimizer => "optimizer",
+            Self::PrimitivesDialects => "primitives_dialects",
+            Self::Lowering => "lowering",
+            Self::Emission => "emission",
+            Self::DriverRuntime => "driver_runtime",
+            Self::ToolingEvidence => "tooling_evidence",
+        }
+    }
+}
+
+/// Trait for types that can be projected into a structured [`Diagnostic`].
+pub trait ToDiagnostic {
+    /// Convert this error or event into a structured diagnostic record.
+    fn to_diagnostic(&self) -> Diagnostic;
+}
+
 /// Compiler or workflow stage that produced a diagnostic.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -135,6 +181,13 @@ pub struct OpLocation {
         deserialize_with = "deserialize_optional_cow_static"
     )]
     pub attr_name: Option<Cow<'static, str>>,
+    /// Optional field or structural path within an attribute or node.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "deserialize_optional_cow_static"
+    )]
+    pub field_path: Option<Cow<'static, str>>,
     /// Typed graph node identity.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub graph_node: Option<u32>,
@@ -157,6 +210,7 @@ impl OpLocation {
             op_id: op_id.into(),
             operand_idx: None,
             attr_name: None,
+            field_path: None,
             graph_node: None,
             graph_value: None,
             path: None,
@@ -175,6 +229,13 @@ impl OpLocation {
     #[must_use]
     pub fn with_attr(mut self, name: impl Into<Cow<'static, str>>) -> Self {
         self.attr_name = Some(name.into());
+        self
+    }
+
+    /// Attach a specific field path.
+    #[must_use]
+    pub fn with_field_path(mut self, path: impl Into<Cow<'static, str>>) -> Self {
+        self.field_path = Some(path.into());
         self
     }
 
@@ -232,12 +293,24 @@ pub struct Diagnostic {
     pub code: DiagnosticCode,
     /// Stage that produced the diagnostic.
     pub stage: DiagnosticStage,
+    /// Architectural compiler level when known.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub compiler_level: Option<CompilerLevel>,
     /// Deterministic failure detail.
     #[serde(deserialize_with = "deserialize_cow_static")]
     pub message: Cow<'static, str>,
     /// Typed source, graph, operation, or artifact location.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub location: Option<OpLocation>,
+    /// Typed artifact identity or digest.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub artifact_id: Option<String>,
+    /// Compilation target identifier where admissible.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub target: Option<String>,
+    /// Target device identifier where admissible.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub device: Option<String>,
     /// Corrective action the caller can apply.
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -245,11 +318,17 @@ pub struct Diagnostic {
         deserialize_with = "deserialize_optional_cow_static"
     )]
     pub suggested_fix: Option<Cow<'static, str>>,
-    /// Structured cause retained from the owning stage.
+    /// Primary structured cause retained from the owning stage.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub cause: Option<DiagnosticCause>,
+    /// Complete structured cause chain from root cause to boundary.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cause_chain: Vec<DiagnosticCause>,
     /// Retry policy for this failure.
     pub retry: RetryClass,
+    /// Bounded key-value contextual metadata.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub context_values: Vec<(String, String)>,
     /// Optional stable documentation URL.
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -286,11 +365,17 @@ impl Diagnostic {
             severity,
             code: DiagnosticCode::new(code),
             stage: DiagnosticStage::Validate,
+            compiler_level: None,
             message: message.into(),
             location: None,
+            artifact_id: None,
+            target: None,
+            device: None,
             suggested_fix: None,
             cause: None,
+            cause_chain: Vec::new(),
             retry: RetryClass::Never,
+            context_values: Vec::new(),
             doc_url: None,
             notes: Vec::new(),
         }
@@ -300,6 +385,63 @@ impl Diagnostic {
     #[must_use]
     pub const fn with_stage(mut self, stage: DiagnosticStage) -> Self {
         self.stage = stage;
+        self
+    }
+
+    /// Set the architectural compiler level.
+    #[must_use]
+    pub const fn with_compiler_level(mut self, level: CompilerLevel) -> Self {
+        self.compiler_level = Some(level);
+        self
+    }
+
+    /// Attach an artifact identifier.
+    #[must_use]
+    pub fn with_artifact_id(mut self, artifact_id: impl Into<String>) -> Self {
+        self.artifact_id = Some(artifact_id.into());
+        self
+    }
+
+    /// Attach a target identity.
+    #[must_use]
+    pub fn with_target(mut self, target: impl Into<String>) -> Self {
+        self.target = Some(target.into());
+        self
+    }
+
+    /// Attach a device identity.
+    #[must_use]
+    pub fn with_device(mut self, device: impl Into<String>) -> Self {
+        self.device = Some(device.into());
+        self
+    }
+
+    /// Attach a bounded contextual key-value pair.
+    #[must_use]
+    pub fn with_context_value(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        if self.context_values.len() < 32 {
+            let mut k = key.into();
+            let mut v = value.into();
+            if k.len() > 1024 {
+                k.truncate(1024);
+            }
+            if v.len() > 1024 {
+                v.truncate(1024);
+            }
+            self.context_values.push((k, v));
+        }
+        self
+    }
+
+    /// Attach multiple bounded contextual key-value pairs.
+    #[must_use]
+    pub fn with_context_values(
+        mut self,
+        values: impl IntoIterator<Item = (impl Into<String>, impl Into<String>)>,
+    ) -> Self {
+        for (k, v) in values {
+            self = self.with_context_value(k, v);
+        }
         self
     }
 
@@ -320,10 +462,27 @@ impl Diagnostic {
     /// Attach a structured cause.
     #[must_use]
     pub fn with_cause(mut self, kind: impl Into<String>, detail: impl Into<String>) -> Self {
-        self.cause = Some(DiagnosticCause {
+        let cause = DiagnosticCause {
             kind: kind.into(),
             detail: detail.into(),
-        });
+        };
+        self.cause = Some(cause.clone());
+        self.cause_chain.push(cause);
+        self
+    }
+
+    /// Attach a structured cause chain.
+    #[must_use]
+    pub fn with_cause_chain(
+        mut self,
+        chain: impl IntoIterator<Item = DiagnosticCause>,
+    ) -> Self {
+        for cause in chain {
+            if self.cause.is_none() {
+                self.cause = Some(cause.clone());
+            }
+            self.cause_chain.push(cause);
+        }
         self
     }
 
@@ -369,6 +528,18 @@ impl Diagnostic {
             self.stage,
             self.message
         );
+        if let Some(level) = self.compiler_level {
+            let _ = write!(output, "\n  = level: {}", level.label());
+        }
+        if let Some(target) = &self.target {
+            let _ = write!(output, "\n  = target: {target}");
+        }
+        if let Some(device) = &self.device {
+            let _ = write!(output, "\n  = device: {device}");
+        }
+        if let Some(artifact_id) = &self.artifact_id {
+            let _ = write!(output, "\n  = artifact: {artifact_id}");
+        }
         if let Some(location) = &self.location {
             output.push_str("\n  --> op `");
             output.push_str(&location.op_id);
@@ -379,6 +550,11 @@ impl Diagnostic {
             if let Some(attribute) = &location.attr_name {
                 output.push_str(" attr `");
                 output.push_str(attribute);
+                output.push('`');
+            }
+            if let Some(field) = &location.field_path {
+                output.push_str(" field `");
+                output.push_str(field);
                 output.push('`');
             }
             if let Some(path) = &location.path {
@@ -395,8 +571,15 @@ impl Diagnostic {
             output.push_str("\n  = help: ");
             output.push_str(fix);
         }
-        if let Some(cause) = &self.cause {
+        if !self.cause_chain.is_empty() {
+            for cause in &self.cause_chain {
+                let _ = write!(output, "\n  = cause[{}]: {}", cause.kind, cause.detail);
+            }
+        } else if let Some(cause) = &self.cause {
             let _ = write!(output, "\n  = cause[{}]: {}", cause.kind, cause.detail);
+        }
+        for (k, v) in &self.context_values {
+            let _ = write!(output, "\n  = context `{k}`: {v}");
         }
         if let Some(url) = &self.doc_url {
             output.push_str("\n  = note: ");

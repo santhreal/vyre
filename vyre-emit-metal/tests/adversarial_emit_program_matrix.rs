@@ -86,8 +86,14 @@ fn assert_metal_artifact_structure(
 
 fn assert_structured_metal_error(case: &EmitAdversarialCase, error: EmitError) {
     match error {
-        EmitError::NagaEmit(message)
-        | EmitError::NagaValidation(message)
+        EmitError::NagaEmit(err) => {
+            assert!(
+                !err.to_string().is_empty(),
+                "Fix: `{}` Metal rejection must carry diagnostic text.",
+                case.id
+            );
+        }
+        EmitError::NagaValidation(message)
         | EmitError::MslWriter(message)
         | EmitError::DescriptorHash(message)
         | EmitError::ArtifactSerialization(message)

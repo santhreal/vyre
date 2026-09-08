@@ -27,7 +27,10 @@ mod prefix_cache_fixtures;
 mod pipeline_error_closure;
 
 use std::fmt;
-
+use vyre_foundation::diagnostics::{
+    CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, RetryClass, Severity,
+    ToDiagnostic,
+};
 /// Renders a permitted-status set as protocol status names, so a rejection
 /// message states `PUBLISHED, YIELD, REQUEUE` rather than raw words.
 struct SlotStatusList(&'static [u32]);
@@ -533,6 +536,515 @@ impl PipelineError {
     #[must_use]
     pub fn is_drain_incomplete(&self) -> bool {
         matches!(self, Self::DrainIncomplete { .. })
+    }
+
+    /// Project this error into the versioned structured diagnostic contract.
+    #[must_use]
+    pub fn diagnostic(&self) -> Diagnostic {
+        match self {
+            Self::IoUringSyscall { syscall, errno, fix } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE001_IO_URING_SYSCALL"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!("io_uring {syscall} failed: errno={errno}").into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some((*fix).into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "syscall_failed".to_string(),
+                    detail: format!("{syscall} errno={errno}"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "syscall_failed".to_string(),
+                    detail: format!("{syscall} errno={errno}"),
+                }],
+                retry: RetryClass::SameDevice,
+                context_values: vec![
+                    ("syscall".to_string(), (*syscall).to_string()),
+                    ("errno".to_string(), errno.to_string()),
+                ],
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::QueueFull { queue, depth, fix } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE002_QUEUE_FULL"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!("io_uring {queue} queue at capacity ({depth} entries)").into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some((*fix).into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "queue_capacity".to_string(),
+                    detail: format!("{queue} depth={depth}"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "queue_capacity".to_string(),
+                    detail: format!("{queue} depth={depth}"),
+                }],
+                retry: RetryClass::SameDevice,
+                context_values: vec![
+                    ("queue".to_string(), (*queue).to_string()),
+                    ("depth".to_string(), depth.to_string()),
+                ],
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::RegionBounds { region, offset, len, region_len, unit, fix } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE003_REGION_BOUNDS"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!(
+                    "{region} {unit} range [{offset}, {}) is outside the region's {region_len} {unit}",
+                    offset.saturating_add(*len)
+                ).into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some((*fix).into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "out_of_bounds".to_string(),
+                    detail: format!("{region} range extends past {region_len} {unit}"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "out_of_bounds".to_string(),
+                    detail: format!("{region} range extends past {region_len} {unit}"),
+                }],
+                retry: RetryClass::RecompileSource,
+                context_values: vec![
+                    ("region".to_string(), (*region).to_string()),
+                    ("offset".to_string(), offset.to_string()),
+                    ("len".to_string(), len.to_string()),
+                    ("region_len".to_string(), region_len.to_string()),
+                ],
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::IntegerWidth { quantity, value, bits, fix } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE004_INTEGER_WIDTH"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!("{quantity} {value} does not fit {bits} bits").into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some((*fix).into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "integer_overflow".to_string(),
+                    detail: format!("{quantity} {value} > {bits} bits"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "integer_overflow".to_string(),
+                    detail: format!("{quantity} {value} > {bits} bits"),
+                }],
+                retry: RetryClass::RecompileSource,
+                context_values: vec![
+                    ("quantity".to_string(), (*quantity).to_string()),
+                    ("value".to_string(), value.to_string()),
+                    ("bits".to_string(), bits.to_string()),
+                ],
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::CounterOverflow { scope, counter, arithmetic, lhs, rhs, bits, fix } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE005_COUNTER_OVERFLOW"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!("{scope:?} {counter} overflowed in {arithmetic:?}").into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some((*fix).into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "counter_overflow".to_string(),
+                    detail: format!("{counter} {arithmetic:?} {lhs} and {rhs} exceeds {bits} bits"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "counter_overflow".to_string(),
+                    detail: format!("{counter} {arithmetic:?} {lhs} and {rhs} exceeds {bits} bits"),
+                }],
+                retry: RetryClass::SameDevice,
+                context_values: vec![
+                    ("counter".to_string(), (*counter).to_string()),
+                    ("lhs".to_string(), lhs.to_string()),
+                    ("rhs".to_string(), rhs.to_string()),
+                ],
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::CounterOrder { scope, produced_counter, produced, consumed_counter, consumed, fix } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE006_COUNTER_ORDER"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!("{scope:?} counters out of order: {consumed_counter} {consumed} > {produced_counter} {produced}").into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some((*fix).into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "counter_order".to_string(),
+                    detail: format!("{consumed_counter} {consumed} exceeds {produced_counter} {produced}"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "counter_order".to_string(),
+                    detail: format!("{consumed_counter} {consumed} exceeds {produced_counter} {produced}"),
+                }],
+                retry: RetryClass::SameDevice,
+                context_values: vec![
+                    ("produced".to_string(), produced.to_string()),
+                    ("consumed".to_string(), consumed.to_string()),
+                ],
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::InvalidRequest { fault, quantity, observed, bound, fix } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE007_INVALID_REQUEST"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!("io_uring request rejected: {quantity} is {observed}, which {fault} {bound}").into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some((*fix).into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "invalid_request".to_string(),
+                    detail: format!("{quantity} {observed} violates {bound}"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "invalid_request".to_string(),
+                    detail: format!("{quantity} {observed} violates {bound}"),
+                }],
+                retry: RetryClass::RecompileSource,
+                context_values: vec![
+                    ("quantity".to_string(), (*quantity).to_string()),
+                    ("observed".to_string(), observed.to_string()),
+                    ("bound".to_string(), bound.to_string()),
+                ],
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::SlotInFlight { slot, slot_count, inflight_tag, fix } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE008_SLOT_IN_FLIGHT"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!("io_uring ingest slot {slot} of {slot_count} already in flight (tag {inflight_tag})").into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some((*fix).into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "slot_in_flight".to_string(),
+                    detail: format!("slot {slot} has tag {inflight_tag}"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "slot_in_flight".to_string(),
+                    detail: format!("slot {slot} has tag {inflight_tag}"),
+                }],
+                retry: RetryClass::SameDevice,
+                context_values: vec![
+                    ("slot".to_string(), slot.to_string()),
+                    ("inflight_tag".to_string(), inflight_tag.to_string()),
+                ],
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::RingEncoding { fault, fix } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE009_RING_ENCODING"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!("resident ring encode rejected: {fault:?}").into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some((*fix).into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "ring_encoding".to_string(),
+                    detail: format!("{fault:?}"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "ring_encoding".to_string(),
+                    detail: format!("{fault:?}"),
+                }],
+                retry: RetryClass::RecompileSource,
+                context_values: Vec::new(),
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::Protocol(err) => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE010_PROTOCOL_ERROR"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!("host protocol error: {err}").into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some("check host-device ring protocol headers and payload framing".into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "protocol_error".to_string(),
+                    detail: err.to_string(),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "protocol_error".to_string(),
+                    detail: err.to_string(),
+                }],
+                retry: RetryClass::RecompileSource,
+                context_values: Vec::new(),
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::NotLinux => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE011_NOT_LINUX"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: "io_uring is Linux-only".into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some("run on Linux 5.1+ and attach an AsyncUringStream to UringCompletionPump".into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "unsupported_os".to_string(),
+                    detail: "io_uring requires Linux".to_string(),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "unsupported_os".to_string(),
+                    detail: "io_uring requires Linux".to_string(),
+                }],
+                retry: RetryClass::Never,
+                context_values: Vec::new(),
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::NvmePassthroughDisabled => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE012_NVME_PASSTHROUGH_DISABLED"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: "NVMe passthrough requires the `uring-cmd-nvme` feature + Linux kernel 6.0+".into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some("add `features = [\"uring-cmd-nvme\"]` to your Cargo.toml".into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "feature_disabled".to_string(),
+                    detail: "uring-cmd-nvme not enabled".to_string(),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "feature_disabled".to_string(),
+                    detail: "uring-cmd-nvme not enabled".to_string(),
+                }],
+                retry: RetryClass::Never,
+                context_values: Vec::new(),
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::Backend(msg) => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE013_BACKEND_ERROR"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!("runtime backend failure: {msg}").into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some("inspect backend dispatch logs and device generation state".into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "backend_error".to_string(),
+                    detail: msg.clone(),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "backend_error".to_string(),
+                    detail: msg.clone(),
+                }],
+                retry: RetryClass::SameDevice,
+                context_values: Vec::new(),
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::DrainIncomplete { descriptor, claimed, expected, unit } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE014_DRAIN_INCOMPLETE"),
+                stage: DiagnosticStage::Complete,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!(
+                    "{descriptor} drain incomplete: only {claimed} of {expected} {unit} were claimed"
+                ).into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some(
+                    "raise the dispatch timeout (BatchDispatchConfig.timeout) or shard the batch into smaller queues".into(),
+                ),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "drain_incomplete".to_string(),
+                    detail: format!("claimed {claimed} of {expected} {unit}"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "drain_incomplete".to_string(),
+                    detail: format!("claimed {claimed} of {expected} {unit}"),
+                }],
+                retry: RetryClass::SameDevice,
+                context_values: vec![
+                    ("claimed".to_string(), claimed.to_string()),
+                    ("expected".to_string(), expected.to_string()),
+                ],
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::IllegalSlotTransition { transition, permitted: _, current_status, fix } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE015_ILLEGAL_SLOT_TRANSITION"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!("illegal ring slot transition `{transition}` from status {current_status}").into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some((*fix).into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "illegal_transition".to_string(),
+                    detail: format!("transition `{transition}` invalid from {current_status}"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "illegal_transition".to_string(),
+                    detail: format!("transition `{transition}` invalid from {current_status}"),
+                }],
+                retry: RetryClass::SameDevice,
+                context_values: vec![
+                    ("transition".to_string(), (*transition).to_string()),
+                    ("current_status".to_string(), current_status.to_string()),
+                ],
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::UnregisteredResource { request, resource, handle, slot, fix } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE016_UNREGISTERED_RESOURCE"),
+                stage: DiagnosticStage::Submit,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!("{request} in slot {slot} names unregistered {resource} handle {handle}").into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some((*fix).into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "unregistered_resource".to_string(),
+                    detail: format!("{resource} handle {handle} not registered"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "unregistered_resource".to_string(),
+                    detail: format!("{resource} handle {handle} not registered"),
+                }],
+                retry: RetryClass::SameDevice,
+                context_values: vec![
+                    ("resource".to_string(), (*resource).to_string()),
+                    ("handle".to_string(), handle.to_string()),
+                    ("slot".to_string(), slot.to_string()),
+                ],
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::WorkerThreadPanicked { worker, fix } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE017_WORKER_THREAD_PANICKED"),
+                stage: DiagnosticStage::Complete,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!("the {worker} thread panicked before it could be joined").into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some((*fix).into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "worker_panic".to_string(),
+                    detail: format!("worker {worker} panicked"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "worker_panic".to_string(),
+                    detail: format!("worker {worker} panicked"),
+                }],
+                retry: RetryClass::SameDevice,
+                context_values: vec![("worker".to_string(), (*worker).to_string())],
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::ReservedOpcode { tenant_id, local_opcode, global_opcode, fix } => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("PIPE018_RESERVED_OPCODE"),
+                stage: DiagnosticStage::Plan,
+                compiler_level: Some(CompilerLevel::DriverRuntime),
+                message: format!(
+                    "tenant {tenant_id} local opcode {local_opcode} maps to global opcode {global_opcode} in reserved system range"
+                ).into(),
+                location: None,
+                artifact_id: None,
+                target: None,
+                device: None,
+                suggested_fix: Some((*fix).into()),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "reserved_opcode".to_string(),
+                    detail: format!("opcode {global_opcode} in system range"),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "reserved_opcode".to_string(),
+                    detail: format!("opcode {global_opcode} in system range"),
+                }],
+                retry: RetryClass::Never,
+                context_values: vec![
+                    ("tenant_id".to_string(), tenant_id.to_string()),
+                    ("local_opcode".to_string(), local_opcode.to_string()),
+                    ("global_opcode".to_string(), global_opcode.to_string()),
+                ],
+                doc_url: None,
+                notes: Vec::new(),
+            },
+        }
+    }
+}
+
+impl ToDiagnostic for PipelineError {
+    fn to_diagnostic(&self) -> Diagnostic {
+        self.diagnostic()
+    }
+}
+
+impl From<&PipelineError> for Diagnostic {
+    fn from(error: &PipelineError) -> Self {
+        error.diagnostic()
+    }
+}
+
+impl From<PipelineError> for Diagnostic {
+    fn from(error: PipelineError) -> Self {
+        error.diagnostic()
     }
 }
 

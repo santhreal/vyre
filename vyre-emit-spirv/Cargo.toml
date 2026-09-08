@@ -22,6 +22,7 @@ path = "src/lib.rs"
 [dependencies]
 vyre-emit-naga = { workspace = true }
 vyre-lower = { workspace = true }
+vyre-foundation = { workspace = true }
 naga = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

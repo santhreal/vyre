@@ -23,8 +23,11 @@
 //! sits in the integration-test surface (added when CI has spirv-tools).
 
 use thiserror::Error;
+use vyre_foundation::diagnostics::{
+    CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, RetryClass, Severity,
+    ToDiagnostic,
+};
 use vyre_lower::KernelDescriptor;
-
 pub mod patterns;
 
 /// Errors produced while lowering and encoding a SPIR-V module.
@@ -47,6 +50,116 @@ pub enum EmitError {
     WriterWrite(String),
 }
 
+impl EmitError {
+    /// Project this error into the versioned structured diagnostic contract.
+    #[must_use]
+    pub fn diagnostic(&self) -> Diagnostic {
+        match self {
+            Self::NagaEmit(naga_err) => {
+                let mut diag = naga_err.diagnostic();
+                diag.target = Some("spirv".to_string());
+                diag.notes.push("during SPIR-V emission from Naga module".into());
+                diag
+            }
+            Self::NagaValidation(msg) => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("SPV001_NAGA_VALIDATION_FAILED"),
+                stage: DiagnosticStage::Emit,
+                compiler_level: Some(CompilerLevel::Emission),
+                message: format!("naga validation failed during SPIR-V emission: {msg}").into(),
+                location: None,
+                artifact_id: None,
+                target: Some("spirv".to_string()),
+                device: None,
+                suggested_fix: Some(
+                    "repair the shared descriptor/Naga emission path before emitting SPIR-V".into(),
+                ),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "naga_validation".to_string(),
+                    detail: msg.clone(),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "naga_validation".to_string(),
+                    detail: msg.clone(),
+                }],
+                retry: RetryClass::RecompileSource,
+                context_values: Vec::new(),
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::WriterConstruction(msg) => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("SPV002_WRITER_CONSTRUCTION_FAILED"),
+                stage: DiagnosticStage::Emit,
+                compiler_level: Some(CompilerLevel::Emission),
+                message: format!("SPIR-V writer construction failed: {msg}").into(),
+                location: None,
+                artifact_id: None,
+                target: Some("spirv".to_string()),
+                device: None,
+                suggested_fix: Some(
+                    "ensure Naga capabilities and SPIR-V writer options are compatible".into(),
+                ),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "writer_construction".to_string(),
+                    detail: msg.clone(),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "writer_construction".to_string(),
+                    detail: msg.clone(),
+                }],
+                retry: RetryClass::RecompileSource,
+                context_values: Vec::new(),
+                doc_url: None,
+                notes: Vec::new(),
+            },
+            Self::WriterWrite(msg) => Diagnostic {
+                severity: Severity::Error,
+                code: DiagnosticCode::new("SPV003_WRITER_WRITE_FAILED"),
+                stage: DiagnosticStage::Emit,
+                compiler_level: Some(CompilerLevel::Emission),
+                message: format!("SPIR-V writer.write failed: {msg}").into(),
+                location: None,
+                artifact_id: None,
+                target: Some("spirv".to_string()),
+                device: None,
+                suggested_fix: Some(
+                    "check Naga module instructions for SPIR-V encoding compatibility".into(),
+                ),
+                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "writer_write".to_string(),
+                    detail: msg.clone(),
+                }),
+                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
+                    kind: "writer_write".to_string(),
+                    detail: msg.clone(),
+                }],
+                retry: RetryClass::RecompileSource,
+                context_values: Vec::new(),
+                doc_url: None,
+                notes: Vec::new(),
+            },
+        }
+    }
+}
+
+impl ToDiagnostic for EmitError {
+    fn to_diagnostic(&self) -> Diagnostic {
+        self.diagnostic()
+    }
+}
+
+impl From<&EmitError> for Diagnostic {
+    fn from(error: &EmitError) -> Self {
+        error.diagnostic()
+    }
+}
+
+impl From<EmitError> for Diagnostic {
+    fn from(error: EmitError) -> Self {
+        error.diagnostic()
+    }
+}
 /// Emit a SPIR-V binary from a `KernelDescriptor`.
 ///
 /// Returns the raw SPIR-V words as a `Vec<u32>` (the canonical SPIR-V
