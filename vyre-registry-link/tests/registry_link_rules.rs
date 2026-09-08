@@ -86,10 +86,20 @@ fn owns_an_operation_catalog(src: &Path) -> bool {
     })
 }
 
-/// A submission is `inventory::submit!` followed by the registration type. The
-/// type is matched on the following lines rather than anywhere in the file, so a
-/// doc comment naming the type is not read as a registration.
+/// A submission is `inventory::submit!` followed by the registration type, or
+/// the `register_backend!` macro for backend registrations.
 fn submits(text: &str, registration_type: &str) -> bool {
+    if registration_type == "BackendRegistration" {
+        for line in text.lines() {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with("//") {
+                continue;
+            }
+            if trimmed.contains("register_backend!") && !trimmed.contains("macro_rules!") {
+                return true;
+            }
+        }
+    }
     let lines: Vec<&str> = text.lines().collect();
     for (index, line) in lines.iter().enumerate() {
         let trimmed = line.trim_start();
@@ -111,12 +121,16 @@ fn members_submitting(registration_type: &str) -> Vec<String> {
     let root = checkout_root();
     let mut submitters = Vec::new();
     for member in workspace_members(&root) {
+        let name = crate_name(&member);
+        if registration_type == "BackendRegistration" && (name == "vyre-driver" || name == "xtask" || name == "xtask-registry" || name == "xtask-evidence") {
+            continue;
+        }
         let mut files = Vec::new();
         rust_sources(&root.join(&member).join("src"), &mut files);
         if files.iter().any(|path| {
             std::fs::read_to_string(path).is_ok_and(|text| submits(&text, registration_type))
         }) {
-            submitters.push(crate_name(&member));
+            submitters.push(name);
         }
     }
     submitters.sort();

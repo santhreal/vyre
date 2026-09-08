@@ -30,7 +30,6 @@ vyre-megakernel = { workspace = true }
 vyre-spec = { workspace = true }
 vyre-driver-cuda = { workspace = true, optional = true }
 vyre-driver-metal = { workspace = true, optional = true }
-vyre-driver-reference = { workspace = true, optional = true }
 vyre-driver-spirv = { workspace = true, optional = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
 # `full` is what vyre-libs calls every domain that submits an
@@ -66,13 +65,12 @@ vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # The default is every registry and every declared driver, so this crate's own
 # rules judge the whole tree. A consumer that links a subset opts out of the
 # default and names what it links.
-default = ["operations", "cuda", "metal", "reference", "spirv", "wgpu"]
+default = ["operations", "cuda", "metal", "spirv", "wgpu"]
 # The two operation-owning crates. `docs/ARCHITECTURE.md` gives the workspace
 # exactly two, and the rules fail when the tree grows a third.
 operations = ["dep:vyre-libs", "dep:vyre-primitives"]
 cuda = ["dep:vyre-driver-cuda"]
 metal = ["dep:vyre-driver-metal"]
-reference = ["dep:vyre-driver-reference"]
 spirv = ["dep:vyre-driver-spirv"]
 wgpu = ["dep:vyre-driver-wgpu"]
 # Admits the suite that constructs a real backend. Off by default, so a hosted

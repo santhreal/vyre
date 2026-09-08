@@ -7,6 +7,7 @@ pub mod convergence_lens;
 pub mod law_proof;
 pub mod lens;
 pub mod minimizer;
+pub mod oracle;
 pub mod panic_payload;
 pub mod production;
 #[doc(hidden)]
@@ -27,3 +28,4 @@ pub use production::{
     ProductionExecution, ProductionSession, ReplayCapsule, ScheduleAgreement,
     ScheduleAgreementReport, ScheduleDisagreement, ScheduleOutcome, CONFORMANCE_SCHEDULES,
 };
+pub use oracle::{OracleError, OracleSession};

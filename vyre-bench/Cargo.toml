@@ -22,11 +22,9 @@ vyre-driver-wgpu = { workspace = true }
 vyre-registry-link = { workspace = true, features = [
     "cuda",
     "metal",
-    "reference",
     "spirv",
     "wgpu",
 ] }
-vyre-driver-reference = { workspace = true }
 vyre-reference = { workspace = true }
 vyre-runtime = { workspace = true }
 # vyre-libs provides domain Program builders for benchmarks and verification.

@@ -1,5 +1,5 @@
-use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_driver_reference::CpuRefBackend;
+use vyre_driver::DispatchConfig;
+use vyre_driver_reference::CpuRefEvaluator;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 /// A buffer the backend allocates and writes, so it takes no host input slot.
@@ -35,10 +35,9 @@ pub(crate) fn binary_program(expr: fn(Expr, Expr) -> Expr) -> Program {
 pub(crate) fn dispatch_no_input(program: &Program) -> Vec<Vec<u8>> {
     dispatch_with_inputs(program, &[])
 }
-
 pub(crate) fn dispatch_with_inputs(program: &Program, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
-    let backend = CpuRefBackend;
-    backend
-        .dispatch(program, inputs, &DispatchConfig::default())
-        .expect("Fix: cpu-ref dispatch must succeed for a valid Program.")
+    let inputs_slices: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
+    CpuRefEvaluator
+        .evaluate(program, &inputs_slices, &DispatchConfig::default())
+        .expect("Fix: cpu-ref evaluate must succeed for a valid Program.")
 }

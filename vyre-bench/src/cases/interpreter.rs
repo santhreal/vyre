@@ -259,6 +259,7 @@ mod tests {
     use super::*;
     #[cfg(feature = "device-tests")]
     use std::sync::Mutex;
+    #[cfg(feature = "device-tests")]
     use vyre_driver::{DispatchConfig, VyreBackend};
 
     /// Both device tests dispatch on the one physical adapter, so they take
@@ -292,9 +293,10 @@ mod tests {
         ];
         let inputs = vec![vyre_primitives::wire::pack_u32_slice(&instrs)];
         let program = bytecode_program(1, instrs.len() as u32);
-        let outputs = vyre_driver_reference::CpuRefBackend
-            .dispatch(&program, &inputs, &DispatchConfig::default())
-            .expect("Fix: cpu-ref bytecode VM dispatch must succeed");
+        let values = vec![vyre_reference::value::Value::from(inputs[0].clone())];
+        let raw_outputs = vyre_reference::reference_eval(&program, &values)
+            .expect("Fix: cpu-ref bytecode VM reference eval must succeed");
+        let outputs: Vec<Vec<u8>> = raw_outputs.into_iter().map(|v| v.to_bytes()).collect();
         let expected = cpu_interpret(&instrs, 1, instrs.len());
 
         assert_eq!(

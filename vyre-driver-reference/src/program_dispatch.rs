@@ -51,9 +51,8 @@ pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, vyre_
 {
     REFERENCE_DIALECT.compiler()
 }
-
 /// Compilation profile of the reference target.
-pub(crate) fn target_profile() -> Result<TargetProfile, vyre_driver::BackendError> {
+pub fn target_profile() -> Result<TargetProfile, vyre_driver::BackendError> {
     REFERENCE_DIALECT.profile()
 }
 
@@ -87,9 +86,7 @@ impl SemanticExecutor for ReferenceSemanticExecutor {
             .map_err(SemanticExecutionError::Compile)?;
         let artifact =
             vyre_megakernel::compile(&compile_request).map_err(SemanticExecutionError::Compile)?;
-        let registration = vyre_driver::backend_registration(CPU_REF_BACKEND_ID)
-            .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
-        let compiler = registration.target_compiler().map_err(|error| {
+        let compiler = target_compiler_factory().map_err(|error| {
             SemanticExecutionError::Target(TargetCompileError::Unsupported(error.to_string()))
         })?;
         let payload = compiler

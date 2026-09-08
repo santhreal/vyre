@@ -4,8 +4,8 @@
 //! harnesses, so this test drives the backend trait surface with thousands of
 //! generated edge-heavy inputs instead of only hand-picked examples.
 
-use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_driver_reference::CpuRefBackend;
+use vyre_driver::DispatchConfig;
+use vyre_driver_reference::CpuRefEvaluator;
 use vyre_foundation::ir::Expr;
 
 use crate::dispatch_fixtures;
@@ -117,7 +117,7 @@ fn generated_binary_operation_matrix_matches_host_wrapping_semantics() {
 
 #[test]
 fn generated_borrowed_dispatch_matrix_matches_owned_dispatch() {
-    let backend = CpuRefBackend;
+    let evaluator = CpuRefEvaluator;
     let config = DispatchConfig::default();
     let mut assertions = 0usize;
 
@@ -127,16 +127,15 @@ fn generated_borrowed_dispatch_matrix_matches_owned_dispatch() {
             let (a, b) = generated_pair(seed ^ 0x55aa_33cc);
             let a_bytes = a.to_le_bytes();
             let b_bytes = b.to_le_bytes();
-            let owned = backend
-                .dispatch(&program, &[a_bytes.to_vec(), b_bytes.to_vec()], &config)
-                .expect("Fix: owned cpu-ref dispatch must accept generated inputs.");
-            let borrowed = backend
-                .dispatch_borrowed(&program, &[&a_bytes[..], &b_bytes[..]], &config)
-                .expect("Fix: borrowed cpu-ref dispatch must accept generated inputs.");
+            let evaluated = evaluator
+                .evaluate(&program, &[&a_bytes[..], &b_bytes[..]], &config)
+                .expect("Fix: cpu-ref evaluate must accept generated inputs.");
+            let expected = (case.expected)(a, b).to_le_bytes().to_vec();
 
             assert_eq!(
-                borrowed, owned,
-                "{} borrowed dispatch drifted from owned dispatch for seed {seed}",
+                evaluated,
+                vec![expected],
+                "{} evaluate drifted from expected arithmetic for seed {seed}",
                 case.name
             );
             assertions += 1;
