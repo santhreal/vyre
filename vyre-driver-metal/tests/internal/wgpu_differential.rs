@@ -7,7 +7,7 @@
 
 use super::*;
 
-use vyre_driver::DispatchConfig;
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[test]
