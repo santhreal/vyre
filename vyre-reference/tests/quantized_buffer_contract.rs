@@ -6,9 +6,9 @@
 //! through empty `Bytes`.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_reference::{reference_eval, value::Value};
+use vyre_reference::{reference_eval, value::Value, ReferenceBudget, ReferenceRequest};
 
-fn run_single_load_store(ty: DataType, input: Vec<u8>, index: u32) -> Vec<u8> {
+fn run_single_load_store(ty: DataType, input: Vec<u8>, index: u32) -> Result<Vec<u8>, vyre_reference::ReferenceError> {
     let program = Program::wrapped(
         vec![
             BufferDecl::storage("input", 0, BufferAccess::ReadOnly, ty.clone()).with_count(1),
@@ -21,9 +21,10 @@ fn run_single_load_store(ty: DataType, input: Vec<u8>, index: u32) -> Vec<u8> {
             Expr::load("input", Expr::u32(index)),
         )],
     );
-    let outputs = reference_eval(&program, &[Value::Bytes(input.into())])
-        .expect("quantized load/store oracle program must execute");
-    outputs[0].to_bytes()
+    let inputs = [Value::Bytes(input.into())];
+    let req = ReferenceRequest::new(&program, &inputs, ReferenceBudget::standard());
+    let outputs = reference_eval(&req)?;
+    Ok(outputs[0].to_bytes())
 }
 
 #[test]
@@ -35,7 +36,8 @@ fn quantized_scalar_load_store_preserves_raw_storage_bits() {
         (DataType::F8E4M3, vec![0x7F]),
         (DataType::F8E5M2, vec![0x7B]),
     ] {
-        let out = run_single_load_store(ty.clone(), encoded.clone(), 0);
+        let out = run_single_load_store(ty.clone(), encoded.clone(), 0)
+            .expect("in-bounds load/store must succeed");
         assert_eq!(
             out.len(),
             encoded.len(),
@@ -46,7 +48,7 @@ fn quantized_scalar_load_store_preserves_raw_storage_bits() {
 }
 
 #[test]
-fn quantized_scalar_oob_load_returns_typed_zero_byte() {
+fn quantized_scalar_oob_load_is_refused() {
     for ty in [
         DataType::I4,
         DataType::FP4,
@@ -54,22 +56,22 @@ fn quantized_scalar_oob_load_returns_typed_zero_byte() {
         DataType::F8E4M3,
         DataType::F8E5M2,
     ] {
-        assert_eq!(
-            run_single_load_store(ty.clone(), vec![0xFF], 99),
-            vec![0],
-            "{ty} OOB load must return a one-byte typed zero, not empty Bytes"
-        );
+        let err = run_single_load_store(ty.clone(), vec![0xFF], 99)
+            .expect_err("OOB load must be refused");
+        let oob = err.out_of_bounds_source().expect("must carry OutOfBoundsAccess");
+        assert_eq!(oob.buffer, "input");
+        assert_eq!(oob.index, 99);
     }
 }
 
 #[test]
-fn half_and_bfloat_oob_loads_return_two_byte_typed_zero() {
+fn half_and_bfloat_oob_loads_are_refused() {
     for ty in [DataType::F16, DataType::BF16, DataType::I16, DataType::U16] {
-        assert_eq!(
-            run_single_load_store(ty.clone(), vec![0xFF, 0xFF], 99),
-            vec![0, 0],
-            "{ty} OOB load must preserve its two-byte storage shape"
-        );
+        let err = run_single_load_store(ty.clone(), vec![0xFF, 0xFF], 99)
+            .expect_err("OOB load must be refused");
+        let oob = err.out_of_bounds_source().expect("must carry OutOfBoundsAccess");
+        assert_eq!(oob.buffer, "input");
+        assert_eq!(oob.index, 99);
     }
 }
 
@@ -84,9 +86,10 @@ fn packed_i4_reference_buffer_len_reports_logical_elements() {
         vec![Node::store("out", Expr::u32(0), Expr::buf_len("input"))],
     );
 
-    let outputs = reference_eval(&program, &[Value::Bytes(vec![0u8; 4].into())])
+    let inputs = [Value::Bytes(vec![0u8; 4].into())];
+    let req = ReferenceRequest::new(&program, &inputs, ReferenceBudget::standard());
+    let outputs = reference_eval(&req)
         .expect("Fix: packed I4 buffer length oracle must execute.");
-
     assert_eq!(
         outputs[0].to_bytes(),
         8u32.to_le_bytes(),

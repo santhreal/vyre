@@ -5,9 +5,8 @@
 //! `Program::wrapped`, statement execution, typed stores, and output readback.
 
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_reference::reference_eval;
+use vyre_reference::{reference_eval, ReferenceBudget, ReferenceRequest};
 use vyre_reference::value::Value;
-
 fn output_program(element: DataType, count: u32, body: Vec<Node>) -> Program {
     Program::wrapped(
         vec![BufferDecl::output("out", 0, element).with_count(count)],
@@ -21,7 +20,8 @@ fn run_output_bytes(program: &Program) -> Vec<u8> {
 }
 
 fn run_output_bytes_with_inputs(program: &Program, inputs: &[Value]) -> Vec<u8> {
-    let outputs = reference_eval(program, inputs).expect("Fix: oracle edge program must execute");
+    let req = ReferenceRequest::new(program, inputs, ReferenceBudget::standard());
+    let outputs = reference_eval(&req).expect("Fix: oracle edge program must execute");
     assert_eq!(
         outputs.len(),
         1,
@@ -31,7 +31,8 @@ fn run_output_bytes_with_inputs(program: &Program, inputs: &[Value]) -> Vec<u8> 
 }
 
 fn run_program_error(program: &Program) -> String {
-    reference_eval(program, &[])
+    let req = ReferenceRequest::new(program, &[], ReferenceBudget::standard());
+    reference_eval(&req)
         .expect_err("Fix: oracle edge fixture must fail")
         .to_string()
 }

@@ -13,7 +13,7 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::value::Value;
-use vyre_reference::{is_reference_input, is_reference_output, reference_eval};
+use vyre_reference::{is_reference_input, is_reference_output, reference_eval, ReferenceBudget, ReferenceRequest};
 
 fn read_only(name: &str, binding: u32) -> BufferDecl {
     BufferDecl::read(name, binding, DataType::U32).with_count(4)
@@ -124,7 +124,9 @@ fn the_predicates_predict_the_shapes_reference_eval_uses() {
     );
 
     let pack = |words: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(words));
-    let outputs = reference_eval(&program, &[pack(&[1, 2, 3, 4]), pack(&[0, 0, 0, 0])])
+    let inputs = [pack(&[1, 2, 3, 4]), pack(&[0, 0, 0, 0])];
+    let req = ReferenceRequest::new(&program, &inputs, ReferenceBudget::standard());
+    let outputs = reference_eval(&req)
         .expect("one Value per is_reference_input decl is exactly what the interpreter wants");
     assert_eq!(
         outputs.len(),
@@ -155,15 +157,14 @@ fn supplying_one_value_too_many_is_rejected() {
     )];
     let program = Program::wrapped(buffers, [4, 1, 1], body);
     let pack = |words: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(words));
-    let error = reference_eval(
-        &program,
-        &[
-            pack(&[1, 2, 3, 4]),
-            pack(&[0, 0, 0, 0]),
-            pack(&[9, 9, 9, 9]),
-        ],
-    )
-    .expect_err("three values for two input decls is a contract violation");
+    let inputs = [
+        pack(&[1, 2, 3, 4]),
+        pack(&[0, 0, 0, 0]),
+        pack(&[9, 9, 9, 9]),
+    ];
+    let req = ReferenceRequest::new(&program, &inputs, ReferenceBudget::standard());
+    let error = reference_eval(&req)
+        .expect_err("three values for two input decls is a contract violation");
     assert!(
         error.to_string().contains("unused input"),
         "the diagnostic must say the extra value went unused: {error}"

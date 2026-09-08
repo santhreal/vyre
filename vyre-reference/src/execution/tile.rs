@@ -23,7 +23,7 @@ pub(crate) fn load_elements(
     origin_coords: &[u32],
     tile_type: &Tile,
     layout: &Layout,
-) -> Vec<Value> {
+) -> Result<Vec<Value>, crate::ReferenceError> {
     let total_elements = tile_type.element_count();
     let mut elements = vec![Value::Float(0.0); total_elements];
 
@@ -34,14 +34,14 @@ pub(crate) fn load_elements(
 
     if tile_type.extents.is_empty() {
         let global_idx = origin_coords.first().copied().unwrap_or(0);
-        let val = oob::load(target, global_idx);
+        let val = oob::load(target, global_idx)?;
         elements = vec![val];
     } else if tile_type.extents.len() == 1 {
         let n = tile_type.extents[0];
         let base = origin_coords.first().copied().unwrap_or(0);
         for i in 0..n {
             let global_idx = base + i;
-            let val = oob::load(target, global_idx);
+            let val = oob::load(target, global_idx)?;
             let local_idx = layout.linear_index(&[i], &tile_type.extents);
             if local_idx < elements.len() {
                 elements[local_idx] = val;
@@ -55,7 +55,7 @@ pub(crate) fn load_elements(
         for r in 0..rows {
             for c in 0..cols {
                 let global_idx = (r_base + r) * cols + (c_base + c);
-                let val = oob::load(target, global_idx);
+                let val = oob::load(target, global_idx)?;
                 let local_idx = layout.linear_index(&[r, c], &tile_type.extents);
                 if local_idx < elements.len() {
                     elements[local_idx] = val;
@@ -76,24 +76,30 @@ pub(crate) fn load_elements(
                 let base = origin_coords.get(i).copied().unwrap_or(0);
                 global_idx += (base + c) * strides[i];
             }
-            let val = oob::load(target, global_idx);
+            let val = oob::load(target, global_idx)?;
             let local_idx = layout.linear_index(&coords, &tile_type.extents);
             if local_idx < elements.len() {
                 elements[local_idx] = val;
             }
         }
     }
-    elements
+    Ok(elements)
 }
 
 /// Store tile elements sequentially into a backing buffer starting at `origin_coords`.
-pub(crate) fn store_elements(target: &mut Buffer, origin_coords: &[u32], elements: &[Value]) {
+pub(crate) fn store_elements(
+    target: &mut Buffer,
+    origin_coords: &[u32],
+    elements: &[Value],
+) -> Result<(), crate::ReferenceError> {
     let base = origin_coords.first().copied().unwrap_or(0);
     for (i, elem) in elements.iter().enumerate() {
         let global_idx = base + (i as u32);
-        oob::store(target, global_idx, elem);
+        oob::store(target, global_idx, elem)?;
     }
+    Ok(())
 }
+
 
 /// Accumulate a matrix product `A x B` into accumulator tile elements.
 pub(crate) fn matmul(acc_elems: &mut Vec<Value>, a_elems: &[Value], b_elems: &[Value]) {

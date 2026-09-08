@@ -35,8 +35,8 @@ use std::borrow::Cow;
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::{InterpCtx, Node, NodeId, NodeStorage, Program, Value as IrValue};
 
+use crate::request::{ReferenceRequest, ReferenceResponse, ScheduleExplorationPolicy};
 use crate::value::Value;
-
 /// If the program satisfies the public top-level-Region model, return a
 /// byte-identical clone. If not, the usual case is
 /// `optimizer::passes::cleanup::region_inline_engine` having flattened a Category-A wrapper;
@@ -126,216 +126,39 @@ pub fn reference_inputs(program: &Program, buffers: Vec<Vec<u8>>) -> Vec<Value> 
         .collect()
 }
 
-/// Execute a vyre IR program on the pure Rust reference interpreter.
+/// Execute a vyre IR program on the pure Rust reference interpreter according to [`ReferenceRequest`].
 ///
-/// The current public [`Program`] model is statement-oriented, so this stable
-/// entry point delegates to the statement evaluator. Graph-shaped extension
-/// nodes use [`run_storage_graph`].
+/// Single canonical entry point for semantic reference evaluation.
+///
+/// # Errors
+/// Returns [`crate::ReferenceError`] on validation failure, out-of-bounds access,
+/// or when exceeding the requested budget.
 pub fn reference_eval(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    run_arena_reference(program, inputs)
-}
-
-/// [`reference_eval`] plus an [`OobReport`](crate::oob::OobReport) of every
-/// out-of-bounds access the interpreter silently absorbed during the run.
-///
-/// The interpreter DEFINES OOB loads as zero-fill and OOB stores as a no-op so
-/// its output stays deterministic, but that silent absorption is exactly what
-/// masks a GPU/CPU parity hazard: an IR program with an ungated data-derived index
-/// "works" here yet a real GPU, which does no bounds-checking, reads garbage or
-/// corrupts memory. Use this to assert a program NEVER relies on that masking: a
-/// correctly bounds-gated program handles an out-of-contract index with explicit
-/// control flow, so it records `OobReport::total() == 0` even on hostile input. A
-/// nonzero total means the IR indexed past a buffer end and needs an explicit gate
-/// (the class of fix applied to ziftsieve/base64/sketch/simplicial).
-///
-/// The tally is per-thread and reset at the start of this call, so it measures
-/// exactly this run.
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_oob_report(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<(Vec<Value>, crate::oob::OobReport), crate::ReferenceError> {
+    request: &ReferenceRequest<'_>,
+) -> Result<ReferenceResponse, crate::ReferenceError> {
+    let runnable = program_for_interpreter(request.program)?;
+    let _guard = step_budget::arm_with(&runnable, request.budget.max_steps);
     crate::oob::reset_oob_report();
-    let outputs = reference_eval(program, inputs)?;
-    Ok((outputs, crate::oob::oob_report()))
+    let lane_order = match request.schedule {
+        ScheduleExplorationPolicy::Forward => hashmap::LaneOrder::Forward,
+        ScheduleExplorationPolicy::LaneReversed => hashmap::LaneOrder::Reversed,
+        ScheduleExplorationPolicy::LaneRotated(by) => hashmap::LaneOrder::Rotated(by),
+    };
+    let outputs = hashmap::run_hashmap_reference(
+        &runnable,
+        request.inputs,
+        request.envelope.min_dispatch_elements,
+        lane_order,
+        request.envelope.grid,
+    )?;
+    let steps_charged = step_budget::charged();
+    let oob_report = crate::oob::oob_report();
+    Ok(ReferenceResponse {
+        outputs,
+        steps_charged,
+        oob_report,
+    })
 }
-
-/// [`reference_eval_with_dispatch`] plus an [`OobReport`](crate::oob::OobReport).
-///
-/// The grid floor lets a caller deliberately OVER-FIRE the dispatch (more lanes
-/// than the buffer-inferred grid) to probe whether a primitive's per-lane guard
-/// actually protects the extra lanes. A guard written as `Expr::and(t < n, load(buf,
-/// t))` does NOT, the data-flow AND evaluates the load for `t >= n`, an OOB read
-/// (the ssa_dominance_scan bug). Running a valid fixture at an inflated grid and
-/// asserting `OobReport::total() == 0` catches that whole class registry-wide.
-///
-/// # Errors
-/// Same as [`reference_eval_with_dispatch`].
-pub fn reference_eval_with_dispatch_oob_report(
-    program: &Program,
-    inputs: &[Value],
-    min_dispatch_elements: u32,
-) -> Result<(Vec<Value>, crate::oob::OobReport), crate::ReferenceError> {
-    crate::oob::reset_oob_report();
-    let outputs = reference_eval_with_dispatch(program, inputs, min_dispatch_elements)?;
-    Ok((outputs, crate::oob::oob_report()))
-}
-
-/// [`reference_eval`] with an explicit grid floor.
-///
-/// The reference interpreter infers its dispatch grid from buffer SHAPES, which
-/// cannot express the per-invocation count of a byte-scan program (the haystack
-/// is packed 4 bytes/u32 and the scan length is a runtime value). Pass the true
-/// grid, e.g. `haystack_len` for a one-lane-per-byte scan, so the interpreter
-/// covers exactly what the real dispatch config would; otherwise high positions
-/// are silently skipped (the CPU-ref oracle under-fires while the GPU is correct).
-/// `min_dispatch_elements` is a FLOOR: the interpreter still runs at least the
-/// buffer-inferred grid, so passing `0` is identical to [`reference_eval`].
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_with_dispatch(
-    program: &Program,
-    inputs: &[Value],
-    min_dispatch_elements: u32,
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    run_arena_reference_with_dispatch(program, inputs, min_dispatch_elements)
-}
-
-/// [`reference_eval`] plus the interpreter steps the run charged.
-///
-/// The step count is what makes [`step_budget::MAX_REFERENCE_STEPS`] a measured
-/// number rather than a chosen one: the corpus measurement reads the heaviest
-/// legitimate run through this entry point and the ceiling is derived from it.
-///
-/// # Errors
-/// Same as [`reference_eval`], plus a refusal when the run exceeds the ceiling.
-pub fn reference_eval_step_count(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
-    reference_eval_with_step_ceiling(program, inputs, step_budget::MAX_REFERENCE_STEPS)
-}
-
-/// [`reference_eval`] under an explicit work ceiling, reporting steps charged.
-///
-/// A caller that must bound the oracle more tightly than the interpreter's own
-/// ceiling states the bound here instead of abandoning a thread that is still
-/// running the program.
-///
-/// # Errors
-/// Same as [`reference_eval`], plus a refusal naming the program and `ceiling`
-/// when the run exceeds it.
-pub fn reference_eval_with_step_ceiling(
-    program: &Program,
-    inputs: &[Value],
-    ceiling: u64,
-) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
-    let runnable = program_for_interpreter(program)?;
-    let budget = step_budget::arm_with(&runnable, ceiling);
-    let outputs =
-        hashmap::run_hashmap_reference(&runnable, inputs, 0, hashmap::LaneOrder::Forward, None)?;
-    let steps = step_budget::charged();
-    drop(budget);
-    Ok((outputs, steps))
-}
-
-/// Execute using the statement-IR reference evaluator.
-pub fn run_arena_reference(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    run_arena_reference_with_dispatch(program, inputs, 0)
-}
-
-/// [`run_arena_reference`] with an explicit grid floor (see
-/// [`reference_eval_with_dispatch`]).
-///
-/// # Errors
-/// Same as [`run_arena_reference`].
-pub fn run_arena_reference_with_dispatch(
-    program: &Program,
-    inputs: &[Value],
-    min_dispatch_elements: u32,
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(
-        &program,
-        inputs,
-        min_dispatch_elements,
-        hashmap::LaneOrder::Forward,
-        None,
-    )
-}
-
-/// [`reference_eval`] with an explicit workgroup grid `[x, y, z]`.
-///
-/// Buffer-shape inference distributes the dispatch only across workgroup axes
-/// whose size is greater than one, so a program that fans a `[256, 1, 1]`
-/// workgroup across `grid.y` (batched persistent-BFS runs one query per
-/// `grid.y` block) would collapse to `grid.y == 1` and silently compute only the
-/// first query. A caller that knows the real dispatch grid, e.g. one block per
-/// query alongside the node domain the program's guard admits, passes it here
-/// so the interpreter covers every workgroup the GPU would, per axis. This is the
-/// N-dimensional counterpart of [`reference_eval_with_dispatch`]'s 1-D floor.
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_with_grid(
-    program: &Program,
-    inputs: &[Value],
-    grid: [u32; 3],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Forward, Some(grid))
-}
-
-/// Execute a program with the workgroup/invocation STEP ORDER reversed.
-///
-/// The result is identical to [`reference_eval`] for any RACE-FREE program (every
-/// output slot is written by exactly one lane, or shared slots are touched only by
-/// commutative atomics). It DIFFERS only when a non-atomic cross-lane write-write
-/// race exists, two lanes plain-`store` the same slot, because the GPU leaves the
-/// winner driver-defined while the single-threaded reference otherwise resolves it
-/// deterministically (last stepped lane wins). Comparing this against
-/// [`reference_eval`] therefore surfaces a hidden race the same way a real GPU would
-/// nondeterministically diverge.
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_lane_reversed(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Reversed, None)
-}
-
-/// Execute a program with the workgroup/invocation STEP ORDER rotated left by `by`.
-///
-/// Same purpose as [`reference_eval_lane_reversed`], and strictly stronger on one axis:
-/// reversal is a symmetric permutation, so an implementation that confuses lane identity
-/// with step position can be made reversal-symmetric and still be wrong. A rotation is
-/// asymmetric, so it also catches a collective (ballot, shuffle, reduce) that reads its
-/// peers by step position rather than by lane index. `by` is taken modulo the list
-/// length, so any value is a legal schedule and `0` reproduces [`reference_eval`].
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_lane_rotated(
-    program: &Program,
-    inputs: &[Value],
-    by: u32,
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Rotated(by), None)
-}
-
 /// Interpret a compact [`NodeStorage`] graph and return output node values.
 pub fn run_storage_graph(
     nodes: &[(NodeId, NodeStorage)],
@@ -416,12 +239,47 @@ fn duplicate_node_error(id: NodeId) -> crate::ReferenceError {
     ))
 }
 
+/// Convenience helper for evaluating with a specific step ceiling.
+///
+/// # Errors
+///
+/// Returns [`ReferenceError`] on validation, execution failure, or step limit.
+pub fn reference_eval_with_step_ceiling(
+    program: &Program,
+    inputs: &[Value],
+    ceiling: u64,
+) -> Result<(ReferenceResponse, u64), crate::ReferenceError> {
+    let req = ReferenceRequest::new(
+        program,
+        inputs,
+        crate::ReferenceBudget::standard().with_max_steps(ceiling),
+    );
+    let resp = reference_eval(&req)?;
+    let steps = resp.steps_executed();
+    Ok((resp, steps))
+}
+
+/// Convenience helper for evaluating and reporting step count.
+///
+/// # Errors
+///
+/// Returns [`ReferenceError`] on validation or execution failure.
+pub fn reference_eval_step_count(
+    program: &Program,
+    inputs: &[Value],
+) -> Result<(ReferenceResponse, u64), crate::ReferenceError> {
+    let req = ReferenceRequest::new(program, inputs, crate::ReferenceBudget::standard());
+    let resp = reference_eval(&req)?;
+    let steps = resp.steps_executed();
+    Ok((resp, steps))
+}
+
 // Inline: covers the crate-private `missing_node_error`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{ReferenceBudget, WorkloadEnvelope};
     use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, NodeStorage};
-
     #[test]
     fn reference_eval_dispatches_singleton_atomic_flags_across_dynamic_byte_input() {
         let program = Program::wrapped(
@@ -452,7 +310,9 @@ mod tests {
         let mut bytes = vec![0u8; 4097];
         bytes[4096] = 1;
 
-        let outputs = reference_eval(&program, &[Value::from(bytes), Value::from(vec![0u8; 4])])
+        let inputs = [Value::from(bytes), Value::from(vec![0u8; 4])];
+        let req = ReferenceRequest::new(&program, &inputs, ReferenceBudget::standard());
+        let outputs = reference_eval(&req)
             .expect("Fix: reference interpreter should execute singleton atomic flag scans.");
         let flag = outputs[0].to_bytes();
 
@@ -526,7 +386,9 @@ mod tests {
         // Default grid: buffer-shape inference caps at the packed buffer's 1024
         // elements, so byte 4095 is never visited, the flag stays clear. This is
         // the SILENT under-coverage the region-presence gate hit.
-        let under = reference_eval(&program, &make_inputs())
+        let inputs_val = make_inputs();
+        let under_req = ReferenceRequest::new(&program, &inputs_val, ReferenceBudget::standard());
+        let under = reference_eval(&under_req)
             .expect("Fix: interpreter runs the packed byte-scan");
         assert_eq!(
             read_flag(&under),
@@ -536,7 +398,9 @@ mod tests {
 
         // Floor = true byte length: the interpreter now covers byte 4095 and the
         // marker is found (parity with what the real dispatch config produces).
-        let covered = reference_eval_with_dispatch(&program, &make_inputs(), BYTE_LEN)
+        let covered_req = ReferenceRequest::new(&program, &inputs_val, ReferenceBudget::standard())
+            .with_envelope(WorkloadEnvelope::new().with_min_dispatch_elements(BYTE_LEN));
+        let covered = reference_eval(&covered_req)
             .expect("Fix: interpreter runs the packed byte-scan with an explicit grid floor");
         assert_eq!(
             read_flag(&covered),

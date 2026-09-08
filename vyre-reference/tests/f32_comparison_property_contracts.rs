@@ -3,8 +3,7 @@
 use proptest::prelude::*;
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::ieee754::canonical_f32;
-use vyre_reference::reference_eval;
-
+use vyre_reference::{reference_eval, ReferenceBudget, ReferenceRequest};
 fn bool_output_program(expr: Expr) -> Program {
     Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::Bool).with_count(1)],
@@ -19,7 +18,9 @@ fn eval_compare_word(op: BinOp, left: f32, right: f32) -> u32 {
         left: Box::new(Expr::f32(left)),
         right: Box::new(Expr::f32(right)),
     };
-    let outputs = reference_eval(&bool_output_program(expr), &[])
+    let prog = bool_output_program(expr);
+    let req = ReferenceRequest::new(&prog, &[], ReferenceBudget::standard());
+    let outputs = reference_eval(&req)
         .expect("Fix: generated f32 comparison program must evaluate");
     let bytes = outputs[0].to_bytes();
     u32::from_le_bytes(

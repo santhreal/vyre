@@ -298,7 +298,7 @@ pub(crate) fn run_hashmap_reference(
         }
         storage.insert(
             decl.name().to_string(),
-            Buffer::new(bytes, decl.element().clone()),
+            Buffer::named(decl.name(), bytes, decl.element().clone()),
         );
     }
     // No count check closes the loop. The arm above refuses a longer vector and
@@ -499,7 +499,7 @@ fn eval_expr(
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
             )?;
-            Ok(oob::load(resolve_buffer(memory, buffer)?, idx))
+            oob::load(resolve_buffer(memory, buffer)?, idx)
         }
         Expr::BufLen { buffer } => Ok(Value::U32(resolve_buffer(memory, buffer)?.len())),
         Expr::InvocationId { axis } => axis_value(invocation.ids.global, *axis),
@@ -751,11 +751,9 @@ fn eval_atomic(
         )
     })?;
     let target = atomic_buffer_mut(memory, buffer)?;
-    let Some(old) = oob::atomic_load(target, idx) else {
-        return Ok(Value::U32(0));
-    };
+    let old = oob::atomic_load(target, idx)?;
     let (old, new) = atomics::apply(op, old, expected, value)?;
-    oob::atomic_store(target, idx, new);
+    oob::atomic_store(target, idx, new)?;
     Ok(Value::U32(old))
 }
 

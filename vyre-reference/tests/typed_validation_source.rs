@@ -1,8 +1,7 @@
 //! Structured validation-source preservation at the reference boundary.
 
 use vyre_foundation::ir::{BufferDecl, DataType, Program};
-use vyre_reference::reference_eval;
-
+use vyre_reference::{reference_eval, ReferenceBudget, ReferenceRequest};
 #[test]
 fn reference_error_preserves_structured_validation_source() {
     let program = Program::wrapped(
@@ -11,8 +10,9 @@ fn reference_error_preserves_structured_validation_source() {
         Vec::new(),
     );
 
+    let req = ReferenceRequest::new(&program, &[], ReferenceBudget::standard());
     let error =
-        reference_eval(&program, &[]).expect_err("zero workgroup axis must fail validation");
+        reference_eval(&req).expect_err("zero workgroup axis must fail validation");
     let source = error
         .validation_source()
         .expect("reference error must retain the foundation validation issue");

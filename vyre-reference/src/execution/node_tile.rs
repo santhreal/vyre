@@ -28,7 +28,7 @@ pub(crate) fn eval_tile_load(
         origin_coords.push(coord);
     }
     let target = eval_expr::buffer(memory, program, buffer)?;
-    let elements = tile::load_elements(target, &origin_coords, tile_type, layout);
+    let elements = tile::load_elements(target, &origin_coords, tile_type, layout)?;
     invocation.bind(tile_name, Value::Array(elements))
 }
 
@@ -58,7 +58,7 @@ pub(crate) fn eval_tile_store(
         single => vec![single.clone()],
     };
     let target = eval_expr::buffer_mut(memory, program, buffer)?;
-    tile::store_elements(target, &origin_coords, &elements);
+    tile::store_elements(target, &origin_coords, &elements)?;
     Ok(())
 }
 

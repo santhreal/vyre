@@ -66,8 +66,8 @@ pub fn run_flat(
             "flat CPU input has {trailing} trailing byte(s) after consuming declared ReadOnly/Uniform buffers. Fix: provide exactly one fixed-width element per flat input buffer or split multi-case payloads before invoking the reference backend."
         )));
     }
-    let values = reference_eval(program, &values)?;
-    output.clear();
+    let request = crate::ReferenceRequest::new(program, &values, crate::ReferenceBudget::standard());
+    let values = reference_eval(&request)?;
     for value in values {
         value.extend_bytes_width(0, output)?;
     }

@@ -336,7 +336,7 @@ fn eval_store(
         )))?;
     let value = eval_expr::eval(value, invocation, memory, program)?;
     let target = eval_expr::buffer_mut(memory, program, buffer)?;
-    oob::store(target, index, &value);
+    oob::store(target, index, &value)?;
     Ok(())
 }
 
@@ -715,7 +715,8 @@ mod tests {
 
         fn hashmap_executor(program: &Program) -> Result<(), crate::ReferenceError> {
             let inputs = vec![Value::from(vec![1_u8, 2, 3, 4])];
-            crate::reference_eval(program, &inputs).map(|_| ())
+            let req = crate::ReferenceRequest::new(program, &inputs, crate::ReferenceBudget::standard());
+            crate::reference_eval(&req).map(|_| ())
         }
 
         fn refusal(

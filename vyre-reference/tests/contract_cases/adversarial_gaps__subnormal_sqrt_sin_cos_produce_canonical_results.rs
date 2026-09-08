@@ -172,13 +172,12 @@ fn oob_load_returns_zero() {
         1,
         Node::store("out", Expr::u32(0), Expr::load("in", Expr::u32(999))),
     );
-    let outputs = reference_eval(&program, &[Value::from(vec![0xAB; 4])])
-        .expect("Fix: OOB load must not panic");
-    assert_eq!(
-        outputs[0].to_bytes(),
-        vec![0; 4],
-        "OOB load must return defined-type zero"
-    );
+    let err = eval_program(&program, &[Value::from(vec![0xAB; 4])])
+        .expect_err("Fix: OOB load must be refused");
+    let oob = err.out_of_bounds_source().expect("must carry OutOfBoundsAccess");
+    assert_eq!(oob.buffer, "in");
+    assert_eq!(oob.index, 999);
+    assert_eq!(oob.extent, 1);
 }
 
 #[test]
@@ -197,13 +196,12 @@ fn oob_store_is_silent_noop() {
             Expr::u32(0xDEAD_BEEF),
         )],
     );
-    let outputs = reference_eval(&program, &[Value::from(999u32.to_le_bytes().to_vec())])
-        .expect("Fix: OOB store must not panic");
-    assert_eq!(
-        outputs[0].to_bytes(),
-        vec![0; 4],
-        "OOB store must be silent no-op"
-    );
+    let err = eval_program(&program, &[Value::from(999u32.to_le_bytes().to_vec())])
+        .expect_err("Fix: OOB store must be refused");
+    let oob = err.out_of_bounds_source().expect("must carry OutOfBoundsAccess");
+    assert_eq!(oob.buffer, "out");
+    assert_eq!(oob.index, 999);
+    assert_eq!(oob.extent, 1);
 }
 
 #[test]
@@ -212,13 +210,12 @@ fn zero_sized_buffer_load_returns_zero() {
         0,
         Node::store("out", Expr::u32(0), Expr::load("in", Expr::u32(0))),
     );
-    let outputs = reference_eval(&program, &[Value::from(vec![])])
-        .expect("Fix: zero-sized buffer load must not panic");
-    assert_eq!(
-        outputs[0].to_bytes(),
-        vec![0; 4],
-        "load from zero-sized buffer must return zero"
-    );
+    let err = eval_program(&program, &[Value::from(vec![])])
+        .expect_err("Fix: zero-sized buffer load must be refused");
+    let oob = err.out_of_bounds_source().expect("must carry OutOfBoundsAccess");
+    assert_eq!(oob.buffer, "in");
+    assert_eq!(oob.index, 0);
+    assert_eq!(oob.extent, 0);
 }
 
 /// Proves that an explicitly empty readback range remains writable without allocating bytes.
@@ -229,7 +226,7 @@ fn zero_sized_buffer_store_is_noop() {
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(0xDEAD_BEEF))],
     );
-    let outputs = reference_eval(&program, &[])
+    let outputs = eval_program(&program, &[])
         .expect("Fix: an explicitly empty output range must accept a no-op store");
     assert_eq!(
         outputs.len(),
@@ -246,7 +243,7 @@ fn zero_sized_buffer_store_is_noop() {
 #[test]
 fn u32_max_index_load_returns_zero() {
     // u32::MAX as an index triggers offset overflow in byte_offset,
-    // which the interpreter treats as OOB and returns zero.
+    // which the interpreter treats as OOB and returns an error.
     let program = Program::wrapped(
         vec![
             BufferDecl::read("in", 0, DataType::U32).with_count(1),
@@ -259,11 +256,9 @@ fn u32_max_index_load_returns_zero() {
             Expr::load("in", Expr::u32(u32::MAX)),
         )],
     );
-    let outputs = reference_eval(&program, &[Value::from(vec![0xAB; 4])])
-        .expect("Fix: u32::MAX index load must not panic");
-    assert_eq!(
-        outputs[0].to_bytes(),
-        vec![0; 4],
-        "u32::MAX index load must return zero"
-    );
+    let err = eval_program(&program, &[Value::from(vec![0xAB; 4])])
+        .expect_err("Fix: u32::MAX index load must be refused");
+    let oob = err.out_of_bounds_source().expect("must carry OutOfBoundsAccess");
+    assert_eq!(oob.buffer, "in");
+    assert_eq!(oob.index, u32::MAX as u64);
 }

@@ -13,12 +13,50 @@ pub struct StepCeilingExceeded {
     pub ceiling: u64,
 }
 
+/// Operation kind that attempted an out-of-bounds access.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OutOfBoundsOp {
+    /// Buffer element or slice read.
+    Load,
+    /// Buffer element or slice write.
+    Store,
+    /// Atomic read operation.
+    AtomicLoad,
+    /// Atomic write operation.
+    AtomicStore,
+}
+
+impl fmt::Display for OutOfBoundsOp {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Load => write!(formatter, "load"),
+            Self::Store => write!(formatter, "store"),
+            Self::AtomicLoad => write!(formatter, "atomic load"),
+            Self::AtomicStore => write!(formatter, "atomic store"),
+        }
+    }
+}
+
+/// Structured record of an out-of-bounds buffer access.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OutOfBoundsAccess {
+    /// Name of the accessed buffer.
+    pub buffer: String,
+    /// Requested element or byte index.
+    pub index: u64,
+    /// Declared buffer extent (length in elements or bytes).
+    pub extent: u64,
+    /// Operation attempted.
+    pub operation: OutOfBoundsOp,
+}
+
 /// Reference-interpreter failure with owner-local recovery guidance.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ReferenceError {
     message: String,
     validation: Option<vyre_foundation::validate::ValidationError>,
     step_ceiling: Option<StepCeilingExceeded>,
+    out_of_bounds: Option<OutOfBoundsAccess>,
 }
 
 impl ReferenceError {
@@ -29,6 +67,7 @@ impl ReferenceError {
             message: message.into(),
             validation: None,
             step_ceiling: None,
+            out_of_bounds: None,
         }
     }
 
@@ -39,6 +78,7 @@ impl ReferenceError {
             message: source.to_string(),
             validation: Some(source),
             step_ceiling: None,
+            out_of_bounds: None,
         }
     }
 
@@ -53,7 +93,45 @@ impl ReferenceError {
             message,
             validation: None,
             step_ceiling: Some(source),
+            out_of_bounds: None,
         }
+    }
+
+    /// Report an out-of-bounds buffer access with exact buffer, index, and extent.
+    #[must_use]
+    pub fn out_of_bounds(
+        buffer: impl Into<String>,
+        index: u64,
+        extent: u64,
+        operation: OutOfBoundsOp,
+    ) -> Self {
+        let buffer = buffer.into();
+        let message = format!(
+            "out-of-bounds {operation} on buffer `{buffer}` at index {index} with extent {extent}. Fix: ensure buffer access is within declared bounds [0, {extent})."
+        );
+        Self {
+            message,
+            validation: None,
+            step_ceiling: None,
+            out_of_bounds: Some(OutOfBoundsAccess {
+                buffer,
+                index,
+                extent,
+                operation,
+            }),
+        }
+    }
+
+    /// Report an out-of-bounds load on `buffer` at `index` exceeding `extent`.
+    #[must_use]
+    pub fn out_of_bounds_load(buffer: impl Into<String>, index: u64, extent: u64) -> Self {
+        Self::out_of_bounds(buffer, index, extent, OutOfBoundsOp::Load)
+    }
+
+    /// Report an out-of-bounds store on `buffer` at `index` exceeding `extent`.
+    #[must_use]
+    pub fn out_of_bounds_store(buffer: impl Into<String>, index: u64, extent: u64) -> Self {
+        Self::out_of_bounds(buffer, index, extent, OutOfBoundsOp::Store)
     }
 
     /// Return the structured validation source when validation rejected input.
@@ -62,10 +140,16 @@ impl ReferenceError {
         self.validation.as_ref()
     }
 
-    /// Return the work ceiling this failure exceeded, when it exceeded one.
+    /// Return the structured step ceiling source when execution exceeded budget.
     #[must_use]
     pub fn step_ceiling_source(&self) -> Option<&StepCeilingExceeded> {
         self.step_ceiling.as_ref()
+    }
+
+    /// Return the structured out-of-bounds record if an out-of-bounds access occurred.
+    #[must_use]
+    pub fn out_of_bounds_source(&self) -> Option<&OutOfBoundsAccess> {
+        self.out_of_bounds.as_ref()
     }
 }
 

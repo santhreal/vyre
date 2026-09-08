@@ -298,3 +298,7 @@ pub mod value_write_bytes_width_generated;
 /// Integration tests from `tests/vector_cast_generated_matrix.rs`.
 #[path = "vector_cast_generated_matrix.rs"]
 pub mod vector_cast_generated_matrix;
+
+/// Integration tests from `tests/reference_request_and_oob_contracts.rs`.
+#[path = "reference_request_and_oob_contracts.rs"]
+pub mod reference_request_and_oob_contracts;

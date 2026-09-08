@@ -8,10 +8,12 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::value::Value;
+use vyre_reference::{ReferenceBudget, ReferenceRequest};
 
 fn run(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     let values: Vec<Value> = inputs.into_iter().map(Value::from).collect();
-    let outputs = vyre_reference::reference_eval(program, &values).expect("program must execute");
+    let req = ReferenceRequest::new(program, &values, ReferenceBudget::standard());
+    let outputs = req.execute().expect("program must execute");
     outputs.into_iter().map(|v| v.to_bytes()).collect()
 }
 

@@ -310,7 +310,7 @@ pub(crate) fn eval_frame_oracle(
                         "load index {value:?} cannot be represented as u32. Fix: use a non-negative scalar index within u32."
                     ))
                 })?;
-                values.push(oob::load(resolve_buffer(memory, program, buffer)?, idx));
+                values.push(oob::load(resolve_buffer(memory, program, buffer)?, idx)?);
             }
             Frame::AtomicIndex {
                 op,
@@ -381,12 +381,9 @@ pub(crate) fn eval_frame_oracle(
                     ReferenceError::new("atomic value cannot be represented as u32. Fix: use a scalar u32-compatible argument.")
                 })?;
                 let target = atomic_buffer_mut(memory, program, buffer)?;
-                let Some(old) = oob::atomic_load(target, index) else {
-                    values.push(Value::U32(0));
-                    continue;
-                };
+                let old = oob::atomic_load(target, index)?;
                 let (old, new) = atomics::apply(op, old, expected, value)?;
-                oob::atomic_store(target, index, new);
+                oob::atomic_store(target, index, new)?;
                 values.push(Value::U32(old));
             }
         }

@@ -25,7 +25,7 @@ use vyre_lower::artifact_golden::{
 };
 use vyre_lower::program_stability_corpus;
 use vyre_reference::value::Value;
-use vyre_reference::{dual_op_ids, reference_eval, resolve_dual};
+use vyre_reference::{dual_op_ids, reference_eval, resolve_dual, ReferenceBudget, ReferenceRequest};
 
 /// Fixed hostile seeds every dual facet is evaluated over.
 const FACET_SEEDS: [u32; 8] = [
@@ -97,7 +97,8 @@ fn render_program(case: &program_stability_corpus::StabilityCase) -> String {
         .iter()
         .map(|bytes| Value::Bytes(Arc::from(bytes.clone().into_boxed_slice())))
         .collect::<Vec<_>>();
-    let outputs = reference_eval(&case.program, &values).unwrap_or_else(|error| {
+    let req = ReferenceRequest::new(&case.program, &values, ReferenceBudget::standard());
+    let outputs = reference_eval(&req).unwrap_or_else(|error| {
         panic!(
             "Fix: shared stability case `{}` must evaluate: {error}",
             case.id

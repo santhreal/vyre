@@ -12,11 +12,15 @@ fn raw_program() -> Program {
 
 #[test]
 fn reference_eval_rejects_non_region_programs() {
-    let error = vyre_reference::reference_eval(
-        &raw_program(),
-        &[vyre_reference::value::Value::from(vec![0u8; 4])],
-    )
-    .expect_err("Fix: reference_eval must reject raw top-level statements");
+    let prog = raw_program();
+    let inputs = [vyre_reference::value::Value::from(vec![0u8; 4])];
+    let req = vyre_reference::ReferenceRequest::new(
+        &prog,
+        &inputs,
+        vyre_reference::ReferenceBudget::standard(),
+    );
+    let error = vyre_reference::reference_eval(&req)
+        .expect_err("Fix: reference_eval must reject raw top-level statements");
     assert!(
         error
             .to_string()

@@ -1,6 +1,7 @@
 //! Independent known-answer tests for composition witnesses.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_spec::Semiring;
 use vyre_reference::composition_witness::{
     adler32_chunk_witness, adler32_combine_chunks_witness, adler32_finalize_witness,
     adler32_witness, amg_solve_to_tolerance_witness_into,
@@ -95,8 +96,7 @@ use vyre_reference::composition_witness::{
     AmgSolveScratchWitness, ExplodedIfdsScratchWitness, NewtonSchulzScratchWitness,
     RuleConditionWitness, RuleEvaluationContextWitness, RuleFormulaWitness,
 };
-use vyre_reference::{reference_eval, value::Value};
-use vyre_spec::Semiring;
+use vyre_reference::{reference_eval, value::Value, ReferenceBudget, ReferenceRequest};
 
 #[test]
 fn prefix_scan_witness_known_answers() {
@@ -212,15 +212,13 @@ fn interpreter_matches_independent_witness_on_matrix_vector() {
     let mat = vec![2u32, 3, 4, 5];
     let v = vec![10u32, 20];
 
-    let outputs = reference_eval(
-        &program,
-        &[
-            Value::Bytes(bytemuck_slice(&mat)),
-            Value::Bytes(bytemuck_slice(&v)),
-        ],
-    )
-    .expect("reference evaluation must succeed");
-
+    let inputs = [
+        Value::Bytes(bytemuck_slice(&mat)),
+        Value::Bytes(bytemuck_slice(&v)),
+    ];
+    let req = ReferenceRequest::new(&program, &inputs, ReferenceBudget::standard());
+    let outputs = reference_eval(&req)
+        .expect("reference evaluation must succeed");
     // Independent witness calculation:
     let witness = semiring_gemm_witness(&mat, &v, 2, 1, 2, Semiring::Real);
     // [ 2*10 + 3*20 = 80, 4*10 + 5*20 = 140 ]

@@ -1,5 +1,5 @@
 use super::super::*;
-
+use crate::adversarial_gaps::eval_program;
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
 
@@ -13,7 +13,7 @@ proptest! {
             ],
         );
         let inputs: [Value; 0] = [];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
+        let outputs = eval_program(&program, &inputs)
             .expect("Fix: store program must execute successfully");
         prop_assert_eq!(outputs.len(), 1);
         let bytes = outputs[0].to_bytes();
@@ -22,7 +22,7 @@ proptest! {
 
     #[test]
     fn prop_store_oob_is_silent_noop(index in 1u32..) {
-        // Store past the end of a 1-element buffer must not panic or error.
+        // Store past the end of a 1-element buffer must return OutOfBoundsAccess.
         // Use a runtime-loaded index so this exercises OOB store semantics
         // instead of the validator's constant-index rejection.
         let program = Program::wrapped(
@@ -31,14 +31,19 @@ proptest! {
                 BufferDecl::output("out", 1, DataType::U32).with_count(1),
             ],
             [1, 1, 1],
-            vec![
-                Node::store("out", Expr::load("idx", Expr::u32(0)), Expr::u32(0xDEADBEEF)),
-            ],
+            vec![Node::store(
+                "out",
+                Expr::load("idx", Expr::u32(0)),
+                Expr::u32(0xDEAD_BEEF),
+            )],
         );
         let inputs = [Value::from(index.to_le_bytes().to_vec())];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: OOB store must be a silent no-op");
-        prop_assert_eq!(outputs[0].to_bytes(), vec![0; 4]);
+        let err = eval_program(&program, &inputs)
+            .expect_err("Fix: OOB store must be refused");
+        let oob = err.out_of_bounds_source().expect("must carry OutOfBoundsAccess");
+        prop_assert_eq!(&oob.buffer, "out");
+        prop_assert_eq!(oob.index, index as u64);
+        prop_assert_eq!(oob.extent, 1);
     }
 }
 

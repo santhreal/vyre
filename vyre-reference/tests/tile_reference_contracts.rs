@@ -4,7 +4,7 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Layout, Node, Program, Residency, SubgroupReduceOp,
     Tile,
 };
-use vyre_reference::reference_eval;
+use vyre_reference::{reference_eval, ReferenceBudget, ReferenceRequest};
 use vyre_reference::value::Value;
 
 fn decode_f32(bytes: &[u8]) -> Vec<f32> {
@@ -73,14 +73,12 @@ fn reference_eval_tile_matmul_2x2() {
         ],
     );
 
-    let outputs = reference_eval(
-        &prog,
-        &[
-            Value::from(encode_f32(&a_data)),
-            Value::from(encode_f32(&b_data)),
-        ],
-    )
-    .expect("reference_eval failed");
+    let inputs = [
+        Value::from(encode_f32(&a_data)),
+        Value::from(encode_f32(&b_data)),
+    ];
+    let req = ReferenceRequest::new(&prog, &inputs, ReferenceBudget::standard());
+    let outputs = reference_eval(&req).expect("reference_eval failed");
 
     let out_f32 = decode_f32(&outputs[0].to_bytes());
     assert_eq!(out_f32, vec![19.0, 22.0, 43.0, 50.0]);
@@ -115,8 +113,9 @@ fn reference_eval_tile_reduce_and_elementwise() {
         ],
     );
 
-    let outputs =
-        reference_eval(&prog, &[Value::from(encode_f32(&a_data))]).expect("reference_eval failed");
+    let inputs = [Value::from(encode_f32(&a_data))];
+    let req = ReferenceRequest::new(&prog, &inputs, ReferenceBudget::standard());
+    let outputs = reference_eval(&req).expect("reference_eval failed");
 
     let out_f32 = decode_f32(&outputs[0].to_bytes());
     assert_eq!(out_f32, vec![5.0, 8.0]);
@@ -152,8 +151,9 @@ fn reference_eval_tile_elementwise_scaling() {
         ],
     );
 
-    let outputs =
-        reference_eval(&prog, &[Value::from(encode_f32(&a_data))]).expect("reference_eval failed");
+    let inputs = [Value::from(encode_f32(&a_data))];
+    let req = ReferenceRequest::new(&prog, &inputs, ReferenceBudget::standard());
+    let outputs = reference_eval(&req).expect("reference_eval failed");
 
     let out_f32 = decode_f32(&outputs[0].to_bytes());
     assert_eq!(out_f32, vec![6.0, 12.0, 18.0, 24.0]);
@@ -194,8 +194,9 @@ fn reference_eval_tile_column_major_layout() {
         ],
     );
 
-    let outputs =
-        reference_eval(&prog, &[Value::from(encode_f32(&a_data))]).expect("reference_eval failed");
+    let inputs = [Value::from(encode_f32(&a_data))];
+    let req = ReferenceRequest::new(&prog, &inputs, ReferenceBudget::standard());
+    let outputs = reference_eval(&req).expect("reference_eval failed");
 
     let out_f32 = decode_f32(&outputs[0].to_bytes());
     assert_eq!(out_f32, vec![1.0, 3.0, 2.0, 4.0]);

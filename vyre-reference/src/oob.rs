@@ -98,20 +98,44 @@ pub(crate) fn oob_report() -> OobReport {
 /// handles buffer bounds.
 #[derive(Debug, Clone)]
 pub struct Buffer {
+    pub(crate) name: String,
     pub(crate) bytes: Arc<RwLock<Vec<u8>>>,
     pub(crate) element: IrDataType,
 }
 
 impl Buffer {
-    /// Create a buffer from typed bytes.
+    /// Create an unnamed buffer from typed bytes.
     #[must_use]
     pub fn new(bytes: Vec<u8>, element: DataType) -> Self {
         Self {
+            name: String::new(),
             bytes: Arc::new(RwLock::new(bytes)),
             element,
         }
     }
 
+    /// Create a named buffer from typed bytes.
+    #[must_use]
+    pub fn named(name: impl Into<String>, bytes: Vec<u8>, element: DataType) -> Self {
+        Self {
+            name: name.into(),
+            bytes: Arc::new(RwLock::new(bytes)),
+            element,
+        }
+    }
+
+    /// Set the buffer name.
+    #[must_use]
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.name = name.into();
+        self
+    }
+
+    /// Return the buffer name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
     /// Acquire the byte buffer for reading, failing closed on poison.
     ///
     /// A poisoned lock means a writer panicked mid-store, leaving the bytes
@@ -182,39 +206,56 @@ impl Buffer {
         self.write_bytes().fill(0);
     }
 
-    /// Copy `byte_count` bytes starting at `start`, zero-padding a short tail.
+    /// Copy `byte_count` bytes starting at `start`.
     ///
-    /// An async transfer names a byte span rather than an element index, so it
-    /// reads through here instead of the element-indexed [`load`]. A span that
-    /// starts past the end, or runs off the end, yields zeros for the part that
-    /// is not backed by bytes, which is the same silent absorption the module
-    /// docstring defines for an out-of-bounds load.
+    /// # Errors
+    /// Returns [`crate::ReferenceError`] when `start + byte_count` exceeds buffer extent.
     ///
     /// # Panics
     /// Panics when the byte lock is poisoned; see [`Buffer::read_bytes`].
-    pub(crate) fn read_window(&self, start: usize, byte_count: usize) -> Vec<u8> {
+    pub(crate) fn read_window(&self, start: usize, byte_count: usize) -> Result<Vec<u8>, crate::ReferenceError> {
         let bytes_guard = self.read_bytes();
-        let mut payload = vec![0; byte_count];
-        if start < bytes_guard.len() {
-            let available = (bytes_guard.len() - start).min(byte_count);
-            payload[..available].copy_from_slice(&bytes_guard[start..start + available]);
+        let buffer_name = if self.name.is_empty() {
+            "buffer"
+        } else {
+            &self.name
+        };
+        if start.checked_add(byte_count).map_or(true, |end| end > bytes_guard.len()) {
+            record_oob_load();
+            return Err(crate::ReferenceError::out_of_bounds_load(
+                buffer_name,
+                start as u64,
+                bytes_guard.len() as u64,
+            ));
         }
-        payload
+        Ok(bytes_guard[start..start + byte_count].to_vec())
     }
 
-    /// Write `payload` starting at `start`, dropping the part past the end.
+    /// Write `payload` starting at `start`.
+    ///
+    /// # Errors
+    /// Returns [`crate::ReferenceError`] when `start + payload.len()` exceeds buffer extent.
     ///
     /// # Panics
     /// Panics when the byte lock is poisoned; see [`Buffer::read_bytes`].
-    pub(crate) fn write_window(&self, start: usize, payload: &[u8]) {
+    pub(crate) fn write_window(&self, start: usize, payload: &[u8]) -> Result<(), crate::ReferenceError> {
         let mut bytes_guard = self.write_bytes();
-        if start >= bytes_guard.len() {
-            return;
+        let buffer_name = if self.name.is_empty() {
+            "buffer"
+        } else {
+            &self.name
+        };
+        if start.checked_add(payload.len()).map_or(true, |end| end > bytes_guard.len()) {
+            record_oob_store();
+            return Err(crate::ReferenceError::out_of_bounds_store(
+                buffer_name,
+                start as u64,
+                bytes_guard.len() as u64,
+            ));
         }
-        let write_len = payload.len().min(bytes_guard.len() - start);
-        bytes_guard[start..start + write_len].copy_from_slice(&payload[..write_len]);
+        bytes_guard[start..start + payload.len()].copy_from_slice(payload);
+        Ok(())
     }
-
     /// Consume the buffer and return its bytes.
     ///
     /// # Panics
@@ -242,87 +283,156 @@ impl Buffer {
     }
 }
 
-pub(crate) fn load(buffer: &Buffer, index: u32) -> Value {
+pub(crate) fn load(buffer: &Buffer, index: u32) -> Result<Value, crate::ReferenceError> {
     let bytes_guard = buffer.read_bytes();
     let stride = buffer.element.min_bytes();
+    let extent = buffer.len();
     let ty = ir_to_conform_type(buffer.element.clone());
+    let buffer_name = if buffer.name.is_empty() {
+        "buffer"
+    } else {
+        &buffer.name
+    };
     if matches!(buffer.element, IrDataType::Bytes) {
         let offset = index as usize;
         if offset > bytes_guard.len() {
             record_oob_load();
-            return Value::from(Vec::new());
+            return Err(crate::ReferenceError::out_of_bounds_load(
+                buffer_name,
+                index as u64,
+                bytes_guard.len() as u64,
+            ));
         }
-        return Value::from(&bytes_guard[offset..]);
+        return Ok(Value::from(&bytes_guard[offset..]));
     }
     let Some(offset) = byte_offset(index, stride) else {
         record_oob_load();
-        return Value::try_zero_for(ty).unwrap_or_else(|| Value::from(Vec::new()));
+        return Err(crate::ReferenceError::out_of_bounds_load(
+            buffer_name,
+            index as u64,
+            extent as u64,
+        ));
     };
     if stride == 0 || offset + stride > bytes_guard.len() {
         record_oob_load();
-        return Value::try_zero_for(ty).unwrap_or_else(|| Value::from(Vec::new()));
+        return Err(crate::ReferenceError::out_of_bounds_load(
+            buffer_name,
+            index as u64,
+            extent as u64,
+        ));
     }
     read_element(ty.clone(), &bytes_guard[offset..offset + stride])
-        .unwrap_or_else(|_| Value::try_zero_for(ty).unwrap_or_else(|| Value::from(Vec::new())))
+        .map_err(crate::ReferenceError::new)
 }
 
-pub(crate) fn store(buffer: &mut Buffer, index: u32, value: &Value) {
+pub(crate) fn store(buffer: &mut Buffer, index: u32, value: &Value) -> Result<(), crate::ReferenceError> {
     let mut bytes_guard = buffer.write_bytes();
     let stride = buffer.element.min_bytes();
+    let extent = buffer.len();
+    let buffer_name = if buffer.name.is_empty() {
+        "buffer"
+    } else {
+        &buffer.name
+    };
     if matches!(buffer.element, IrDataType::Bytes) {
         let offset = index as usize;
         if offset >= bytes_guard.len() {
             record_oob_store();
-            return;
+            return Err(crate::ReferenceError::out_of_bounds_store(
+                buffer_name,
+                index as u64,
+                bytes_guard.len() as u64,
+            ));
         }
         let bytes = value.to_bytes();
         let available = bytes_guard.len() - offset;
         let write_len = bytes.len().min(available);
         bytes_guard[offset..offset + write_len].copy_from_slice(&bytes[..write_len]);
-        return;
+        return Ok(());
     }
     let Some(offset) = byte_offset(index, stride) else {
         record_oob_store();
-        return;
+        return Err(crate::ReferenceError::out_of_bounds_store(
+            buffer_name,
+            index as u64,
+            extent as u64,
+        ));
     };
     if stride == 0 || offset + stride > bytes_guard.len() {
         record_oob_store();
-        return;
+        return Err(crate::ReferenceError::out_of_bounds_store(
+            buffer_name,
+            index as u64,
+            extent as u64,
+        ));
     }
     write_element(
         buffer.element.clone(),
         &mut bytes_guard[offset..offset + stride],
         value,
     );
+    Ok(())
 }
 
-pub(crate) fn atomic_load(buffer: &Buffer, index: u32) -> Option<u32> {
+pub(crate) fn atomic_load(buffer: &Buffer, index: u32) -> Result<u32, crate::ReferenceError> {
     let bytes_guard = buffer.read_bytes();
     let stride = buffer.element.min_bytes().max(4);
+    let extent = buffer.len();
+    let buffer_name = if buffer.name.is_empty() {
+        "buffer"
+    } else {
+        &buffer.name
+    };
     let Some(offset) = byte_offset(index, stride) else {
         record_oob_atomic();
-        return None;
+        return Err(crate::ReferenceError::out_of_bounds(
+            buffer_name,
+            index as u64,
+            extent as u64,
+            crate::error::OutOfBoundsOp::AtomicLoad,
+        ));
     };
     if offset + 4 > bytes_guard.len() {
         record_oob_atomic();
-        None
-    } else {
-        Some(read_u32(&bytes_guard[offset..offset + 4]))
+        return Err(crate::ReferenceError::out_of_bounds(
+            buffer_name,
+            index as u64,
+            extent as u64,
+            crate::error::OutOfBoundsOp::AtomicLoad,
+        ));
     }
+    Ok(read_u32(&bytes_guard[offset..offset + 4]))
 }
 
-pub(crate) fn atomic_store(buffer: &mut Buffer, index: u32, value: u32) {
+pub(crate) fn atomic_store(buffer: &mut Buffer, index: u32, value: u32) -> Result<(), crate::ReferenceError> {
     let mut bytes_guard = buffer.write_bytes();
     let stride = buffer.element.min_bytes().max(4);
+    let extent = buffer.len();
+    let buffer_name = if buffer.name.is_empty() {
+        "buffer"
+    } else {
+        &buffer.name
+    };
     let Some(offset) = byte_offset(index, stride) else {
         record_oob_atomic();
-        return;
+        return Err(crate::ReferenceError::out_of_bounds(
+            buffer_name,
+            index as u64,
+            extent as u64,
+            crate::error::OutOfBoundsOp::AtomicStore,
+        ));
     };
-    if offset + 4 <= bytes_guard.len() {
-        write_u32(&mut bytes_guard[offset..offset + 4], value);
-    } else {
+    if offset + 4 > bytes_guard.len() {
         record_oob_atomic();
+        return Err(crate::ReferenceError::out_of_bounds(
+            buffer_name,
+            index as u64,
+            extent as u64,
+            crate::error::OutOfBoundsOp::AtomicStore,
+        ));
     }
+    write_u32(&mut bytes_guard[offset..offset + 4], value);
+    Ok(())
 }
 
 fn byte_offset(index: u32, stride: usize) -> Option<usize> {
@@ -440,13 +550,13 @@ mod tests {
     #[test]
     fn f32_load_canonicalizes_subnormal_and_nan_payloads() {
         let positive_subnormal = Buffer::new(1u32.to_le_bytes().to_vec(), DataType::F32);
-        assert_eq!(f32_bits(load(&positive_subnormal, 0)), 0x0000_0000);
+        assert_eq!(f32_bits(load(&positive_subnormal, 0).expect("in-bounds load must succeed")), 0x0000_0000);
 
         let negative_subnormal = Buffer::new(0x8000_0001u32.to_le_bytes().to_vec(), DataType::F32);
-        assert_eq!(f32_bits(load(&negative_subnormal, 0)), 0x8000_0000);
+        assert_eq!(f32_bits(load(&negative_subnormal, 0).expect("in-bounds load must succeed")), 0x8000_0000);
 
         let payload_nan = Buffer::new(0x7fa0_0001u32.to_le_bytes().to_vec(), DataType::F32);
-        assert_eq!(f32_bits(load(&payload_nan, 0)), 0x7fc0_0000);
+        assert_eq!(f32_bits(load(&payload_nan, 0).expect("in-bounds load must succeed")), 0x7fc0_0000);
     }
 
     #[test]
@@ -456,43 +566,45 @@ mod tests {
             &mut subnormal,
             0,
             &Value::Float(f64::from(f32::from_bits(0x8000_0001))),
-        );
+        ).expect("in-bounds store must succeed");
         assert_eq!(f32_bits(subnormal.into_value()), 0x8000_0000);
 
         let mut payload_nan = Buffer::new(vec![0; 4], DataType::F32);
-        store(&mut payload_nan, 0, &Value::U32(0x7fa0_0001));
+        store(&mut payload_nan, 0, &Value::U32(0x7fa0_0001)).expect("in-bounds store must succeed");
         assert_eq!(f32_bits(payload_nan.into_value()), 0x7fc0_0000);
     }
 
     #[test]
-    fn oob_accesses_are_counted_and_in_bounds_are_not() {
-        // The OOB tally must count exactly the accesses the interpreter silently
-        // absorbs (zero-fill loads / dropped stores), and nothing in-bounds, this
-        // is the signal that reveals an ungated data-derived index.
+    fn oob_accesses_are_refused_and_in_bounds_succeed() {
         reset_oob_report();
-        let buf = Buffer::new(vec![0u8; 8], DataType::U32); // 2 elements
-        let _ = load(&buf, 0);
-        let _ = load(&buf, 1);
-        assert_eq!(oob_report().total(), 0, "in-bounds loads must not count");
+        let buf = Buffer::named("test_buf", vec![0u8; 8], DataType::U32); // 2 elements
+        assert!(load(&buf, 0).is_ok(), "in-bounds loads must succeed");
+        assert!(load(&buf, 1).is_ok(), "in-bounds loads must succeed");
+        assert_eq!(oob_report().total(), 0, "in-bounds loads must not count OOB");
 
-        let _ = load(&buf, 2); // element 2 of 2 → OOB
-        let _ = load(&buf, 99); // far OOB
-        let after_loads = oob_report();
-        assert_eq!(after_loads.oob_loads, 2, "two OOB loads counted");
-        assert_eq!(after_loads.oob_stores, 0);
+        let err_load = load(&buf, 2).expect_err("element 2 of 2 must fail out of bounds");
+        let oob_source = err_load.out_of_bounds_source().expect("must carry OutOfBoundsAccess");
+        assert_eq!(oob_source.buffer, "test_buf");
+        assert_eq!(oob_source.index, 2);
+        assert_eq!(oob_source.extent, 2);
+        assert_eq!(oob_source.operation, crate::error::OutOfBoundsOp::Load);
 
-        let mut wbuf = Buffer::new(vec![0u8; 8], DataType::U32);
-        store(&mut wbuf, 1, &Value::U32(7)); // in bounds
-        store(&mut wbuf, 5, &Value::U32(9)); // OOB → dropped
-        let after_store = oob_report();
-        assert_eq!(
-            after_store.oob_stores, 1,
-            "one OOB store counted, in-bounds not"
-        );
+        let mut wbuf = Buffer::named("wbuf", vec![0u8; 8], DataType::U32);
+        assert!(store(&mut wbuf, 1, &Value::U32(7)).is_ok());
+        let err_store = store(&mut wbuf, 5, &Value::U32(9)).expect_err("OOB store must fail");
+        let oob_store = err_store.out_of_bounds_source().expect("must carry OutOfBoundsAccess");
+        assert_eq!(oob_store.buffer, "wbuf");
+        assert_eq!(oob_store.index, 5);
+        assert_eq!(oob_store.extent, 2);
+        assert_eq!(oob_store.operation, crate::error::OutOfBoundsOp::Store);
 
-        let mut abuf = Buffer::new(vec![0u8; 8], DataType::U32);
-        atomic_store(&mut abuf, 7, 3); // OOB atomic
-        assert_eq!(oob_report().oob_atomics, 1, "OOB atomic store counted");
+        let mut abuf = Buffer::named("abuf", vec![0u8; 8], DataType::U32);
+        let err_atomic = atomic_store(&mut abuf, 7, 3).expect_err("OOB atomic must fail");
+        let oob_atomic = err_atomic.out_of_bounds_source().expect("must carry OutOfBoundsAccess");
+        assert_eq!(oob_atomic.buffer, "abuf");
+        assert_eq!(oob_atomic.index, 7);
+        assert_eq!(oob_atomic.extent, 2);
+        assert_eq!(oob_atomic.operation, crate::error::OutOfBoundsOp::AtomicStore);
 
         reset_oob_report();
         assert_eq!(oob_report().total(), 0, "reset clears the tally");
@@ -547,7 +659,7 @@ mod tests {
                 }) as fn(&Buffer),
             ),
             ("write_window", |buffer: &Buffer| {
-                buffer.write_window(0, &[1, 2, 3, 4]);
+                let _ = buffer.write_window(0, &[1, 2, 3, 4]);
             }),
         ] {
             let buffer = Buffer::new(vec![0u8; 8], DataType::U32);

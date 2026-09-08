@@ -11,13 +11,18 @@ pub mod dual_impls;
 mod dual_registry;
 pub use dual_registry::{dual_op_ids, resolve_dual, DualReferenceFacet};
 mod error;
-pub use error::{ReferenceError, StepCeilingExceeded};
+pub use error::{OutOfBoundsAccess, OutOfBoundsOp, ReferenceError, StepCeilingExceeded};
+mod request;
+pub use request::{
+    ReferenceBudget, ReferenceRequest, ReferenceRequestBuilder, ReferenceRequestError,
+    ReferenceResponse, ScheduleExplorationPolicy, WorkloadEnvelope,
+};
 mod reference_facet;
 pub use reference_facet::{reference_facets, reference_fn, ReferenceFacet};
 /// Independent sequential mathematical witnesses for composite operations.
 pub mod composition_witness;
-/// Runtime value representation for interpreter inputs and outputs.
 pub mod value;
+pub use value::Value;
 /// Re-exported versioned numeric semantics authority.
 pub use vyre_spec::{
     dequantize_grouped_f32, f32_to_f8e4m3, f32_to_f8e5m2, f32_to_fp4, f32_to_nf4,
@@ -52,9 +57,6 @@ mod float16;
 mod oob;
 mod ops;
 
-/// A tally of out-of-bounds accesses the interpreter silently absorbed during a
-/// tracked run, surfaces the masking that hides GPU/CPU parity hazards. See
-/// [`reference_eval_oob_report`].
 pub use oob::OobReport;
 
 pub use execution::{expr, node, op_count, sequential, step_budget};
@@ -65,11 +67,7 @@ pub use execution::{expr, node, op_count, sequential, step_budget};
 /// ABI, so test harnesses derive every ordering from the interpreter instead of
 /// re-deriving (and drifting from) them.
 pub use execution::{is_reference_input, is_reference_output, output_index, reference_inputs};
-/// Execute a vyre Program on the pure Rust reference interpreter.
+/// Execute a vyre Program on the pure Rust reference interpreter according to [`ReferenceRequest`].
 pub use execution::{
-    reference_eval, reference_eval_lane_reversed, reference_eval_lane_rotated,
-    reference_eval_oob_report, reference_eval_step_count, reference_eval_with_dispatch,
-    reference_eval_with_dispatch_oob_report, reference_eval_with_grid,
-    reference_eval_with_step_ceiling, run_arena_reference, run_arena_reference_with_dispatch,
-    run_storage_graph,
+    reference_eval, reference_eval_step_count, reference_eval_with_step_ceiling, run_storage_graph,
 };

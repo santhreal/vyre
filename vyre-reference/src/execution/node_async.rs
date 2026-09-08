@@ -110,7 +110,7 @@ fn read_bytes(
     start: usize,
     byte_count: usize,
 ) -> Result<Vec<u8>, ReferenceError> {
-    Ok(resolve_buffer(memory, program, source)?.read_window(start, byte_count))
+    resolve_buffer(memory, program, source)?.read_window(start, byte_count)
 }
 
 fn ensure_writable_buffer(
@@ -127,7 +127,7 @@ fn apply_async_transfer(
     program: &Program,
 ) -> Result<(), ReferenceError> {
     let buffer = eval_expr::buffer_mut(memory, program, transfer.destination())?;
-    transfer.apply_to(buffer);
+    transfer.apply_to(buffer)?;
     Ok(())
 }
 

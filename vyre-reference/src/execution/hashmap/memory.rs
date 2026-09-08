@@ -61,7 +61,7 @@ pub(crate) fn workgroup_memory(
         }
         workgroup.insert(
             decl.name().to_string(),
-            Buffer::new(vec![0; len], decl.element().clone()),
+            Buffer::named(decl.name(), vec![0; len], decl.element().clone()),
         );
     }
     Ok(workgroup)
@@ -185,8 +185,8 @@ mod tests {
             memory.workgroup.get_mut("scratch").unwrap(),
             0,
             &Value::U32(0xfeed_beef),
-        );
-
+        )
+        .unwrap();
         memory
             .reset_workgroup(&program)
             .expect("Fix: matching reset must reuse and zero the workgroup buffer.");
@@ -196,7 +196,7 @@ mod tests {
             "Fix: matching workgroup layout must not allocate a replacement buffer."
         );
         assert_eq!(
-            oob::load(memory.workgroup.get("scratch").unwrap(), 0),
+            oob::load(memory.workgroup.get("scratch").unwrap(), 0).unwrap(),
             Value::U32(0),
             "Fix: reused workgroup buffers must be zero-filled before the next workgroup."
         );

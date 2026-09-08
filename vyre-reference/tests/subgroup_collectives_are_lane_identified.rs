@@ -60,23 +60,40 @@ fn under_every_step_order(program: &Program, inputs: &[Value]) -> Vec<(String, V
     let mut runs = vec![(
         "forward".to_string(),
         unpack(
-            &vyre_reference::reference_eval(program, inputs)
-                .expect("forward evaluation must succeed"),
+            &vyre_reference::ReferenceRequest::new(
+                program,
+                inputs,
+                vyre_reference::ReferenceBudget::standard(),
+            )
+            .execute()
+            .expect("forward evaluation must succeed"),
         ),
     )];
     runs.push((
         "reversed".to_string(),
         unpack(
-            &vyre_reference::reference_eval_lane_reversed(program, inputs)
-                .expect("reversed evaluation must succeed"),
+            &vyre_reference::ReferenceRequest::new(
+                program,
+                inputs,
+                vyre_reference::ReferenceBudget::standard(),
+            )
+            .with_schedule(vyre_reference::ScheduleExplorationPolicy::LaneReversed)
+            .execute()
+            .expect("reversed evaluation must succeed"),
         ),
     ));
     for by in ROTATIONS {
         runs.push((
             format!("rotated by {by}"),
             unpack(
-                &vyre_reference::reference_eval_lane_rotated(program, inputs, by)
-                    .expect("rotated evaluation must succeed"),
+                &vyre_reference::ReferenceRequest::new(
+                    program,
+                    inputs,
+                    vyre_reference::ReferenceBudget::standard(),
+                )
+                .with_schedule(vyre_reference::ScheduleExplorationPolicy::LaneRotated(by))
+                .execute()
+                .expect("rotated evaluation must succeed"),
             ),
         ));
     }
