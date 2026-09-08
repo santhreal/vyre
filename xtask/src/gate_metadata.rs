@@ -102,6 +102,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "xtask_registry::gates::abstraction_gate::tests::a_finding_under_every_nesting_variant_is_reported",
     },
     GateDescriptor {
+        name: "application-runnable",
+        help: "Enforce whole-application production route and evidence receipts",
+        package: "xtask",
+        areas: &["prepublish"],
+        subject: "whole-application execution readiness",
+        artifacts: &[],
+        prerequisites: &[],
+        proof: "crate::gates::application_runnable::tests::application_runnable_proves_closure_and_receipts",
+    },
+    GateDescriptor {
         name: "architecture-contract",
         help: "Enforce architecture-contract contracts",
         package: "xtask",

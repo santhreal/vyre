@@ -18,6 +18,11 @@ subsets = ["prepublish"]
 workflows = ["ci.yml", "gates.yml", "release-evidence.yml", "strict.yml"]
 
 [[gate]]
+name = "application-runnable"
+subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
 name = "architecture-contract"
 subsets = ["docs"]
 workflows = ["architectural-invariants.yml", "gates.yml"]

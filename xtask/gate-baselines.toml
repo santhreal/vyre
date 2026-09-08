@@ -8,6 +8,10 @@ name = "abstraction-gate"
 findings = 0
 
 [[gate]]
+name = "application-runnable"
+findings = 0
+
+[[gate]]
 name = "architecture-contract"
 findings = 0
 

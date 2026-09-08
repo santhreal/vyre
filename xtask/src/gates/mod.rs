@@ -8,6 +8,7 @@
 //! `gates::sweep` is the runner and the wiring meta-check that keeps every
 //! registered gate connected to a pinned baseline and a workflow.
 
+pub mod application_runnable;
 pub mod architecture_contract;
 pub mod backend_parity;
 pub mod bench;
@@ -101,6 +102,10 @@ use crate::gate::GateBehavior;
 /// Every gate behavior this module implements, keyed only to pair it with its
 /// authoritative descriptor at registry construction.
 pub static GATES: &[(&str, &dyn GateBehavior)] = &[
+    (
+        "application-runnable",
+        &application_runnable::ApplicationRunnable,
+    ),
     (
         "architecture-contract",
         &architecture_contract::ArchitectureContract,
