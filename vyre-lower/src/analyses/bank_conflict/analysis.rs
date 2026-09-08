@@ -67,6 +67,7 @@ pub fn analyze(desc: &KernelDescriptor, banks: NonZeroU32) -> BankConflictReport
                 kind: access.kind,
                 binding_slot: access.binding_slot,
                 conflict: pattern.conflict,
+                stride_elements: pattern.stride_elements,
             });
         },
     );
@@ -352,6 +353,7 @@ mod tests {
         let r = analyze(&kk, BANKS);
         assert_eq!(r.sites.len(), 1);
         assert_eq!(r.sites[0].conflict, BankConflictKind::NoConflict);
+        assert_eq!(r.sites[0].stride_elements, Some(1));
     }
 
     #[test]
@@ -365,6 +367,7 @@ mod tests {
         let r = analyze(&kk, BANKS);
         assert_eq!(r.sites.len(), 1);
         assert_eq!(r.sites[0].conflict, BankConflictKind::Unknown);
+        assert_eq!(r.sites[0].stride_elements, None);
     }
 
     #[test]
@@ -381,7 +384,6 @@ mod tests {
         let r = analyze(&kk, BANKS);
         assert_eq!(r.sites[0].conflict, BankConflictKind::NoConflict);
     }
-
     #[test]
     fn positive_constant_index_is_broadcast_safe() {
         let kk = k(
@@ -393,10 +395,10 @@ mod tests {
         );
         let r = analyze(&kk, BANKS);
         assert_eq!(r.sites[0].conflict, BankConflictKind::BroadcastSafe);
+        assert_eq!(r.sites[0].stride_elements, Some(0));
     }
 
     // Conflict detection (the headline)
-
     #[test]
     fn conflict_stride_2_is_2_way() {
         assert_eq!(conflict_of(2), BankConflictKind::Conflict { way_count: 2 });
@@ -415,6 +417,7 @@ mod tests {
             r.sites[0].conflict,
             BankConflictKind::Conflict { way_count: 32 }
         );
+        assert_eq!(r.sites[0].stride_elements, Some(32));
         assert_eq!(r.problematic_count(), 1);
         assert_eq!(r.critical_count(), 1);
     }

@@ -206,6 +206,10 @@ pub mod composed_regions_resolve_in_the_catalog;
 #[path = "consumer_boundary.rs"]
 pub mod consumer_boundary;
 
+/// Integration tests from `tests/contraction_tiling_epilogue_closure_contracts.rs`.
+#[path = "contraction_tiling_epilogue_closure_contracts.rs"]
+pub mod contraction_tiling_epilogue_closure_contracts;
+
 /// Integration tests from `tests/corpus_privacy_retention_controls.rs`.
 #[path = "corpus_privacy_retention_controls.rs"]
 pub mod corpus_privacy_retention_controls;

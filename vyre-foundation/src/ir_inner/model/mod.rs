@@ -36,6 +36,7 @@ pub(crate) mod program_graph_analysis;
 /// Versioned content identity for connected Program compositions.
 pub(crate) mod program_graph_identity;
 mod program_graph_wire;
+pub(crate) mod program_graph_delta;
 
 /// The frozen IR vocabulary re-exported from `vyre-spec`.
 pub(crate) mod op_signature;

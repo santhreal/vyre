@@ -614,8 +614,10 @@ const fn bank_geometry() -> TargetBankGeometry {
 /// preconditions the binding does not meet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum SharedPermutation {
-    /// `(index >> row_log2) * (row + pad) + (index & (row - 1))`, which spreads
-    /// each row of a tile across one more bank than it occupied.
+    /// `index + (index >> row_log2) * pad`, which spreads each row of a tile
+    /// across one more bank than it occupied. That is the padded-row address
+    /// `(index >> row_log2) * (row + pad) + (index & (row - 1))` in two
+    /// instructions rather than four.
     PadRows {
         /// Log2 of the unpadded row length in elements.
         row_log2: u32,
@@ -641,10 +643,12 @@ impl SharedPermutation {
                 row_log2,
                 pad_elements,
             } => {
-                let row = 1_u32 << row_log2;
-                (index >> row_log2)
-                    .saturating_mul(row.saturating_add(pad_elements))
-                    .saturating_add(index & (row - 1))
+                // The same expression `emit_shared_permutation` writes, so the
+                // host model and the emitted kernel cannot drift apart: adding
+                // the row count times the pad to the index is the padded-row
+                // address `q * (row + pad) + r`, and
+                // `padded_address_matches_the_closed_form` pins the two equal.
+                index.saturating_add((index >> row_log2).saturating_mul(pad_elements))
             }
             Self::XorSwizzle { stride_shift, mask } => index ^ ((index >> stride_shift) & mask),
         }
@@ -788,20 +792,19 @@ impl BodyCtx<'_> {
                 row_log2,
                 pad_elements,
             } => {
-                let row = 1_u32 << row_log2;
-                let padded = row.saturating_add(pad_elements);
+                // `i = q * row + r` with `r < row`, so the padded address
+                // `q * (row + pad) + r` equals `i + q * pad`. Adding the row
+                // count times the pad to the index takes a shift and a
+                // multiply-add, where splitting the index and rebuilding it
+                // takes a shift, a mask, a multiply and an add at every
+                // shared access.
                 let rows = self.alloc(PtxType::U32);
-                let offset = self.alloc(PtxType::U32);
-                let scaled = self.alloc(PtxType::U32);
                 let permuted = self.alloc(PtxType::U32);
                 let _ = writeln!(self.text, "    shr.u32    {rows}, {index_reg}, {row_log2};");
                 let _ = writeln!(
                     self.text,
-                    "    and.b32    {offset}, {index_reg}, {};",
-                    row - 1
+                    "    mad.lo.u32    {permuted}, {rows}, {pad_elements}, {index_reg};"
                 );
-                let _ = writeln!(self.text, "    mul.lo.u32    {scaled}, {rows}, {padded};");
-                let _ = writeln!(self.text, "    add.u32    {permuted}, {scaled}, {offset};");
                 permuted
             }
             SharedPermutation::XorSwizzle { stride_shift, mask } => {
@@ -914,6 +917,51 @@ mod tests {
         );
     }
 
+    /// The reduced address `index + (index >> row_log2) * pad` that both
+    /// `apply` and the emitted kernel compute is the padded-row address
+    /// `q * (row + pad) + r`. The reduction saves two instructions at every
+    /// shared access, so it holds for every index inside the extent or the
+    /// kernel addresses the wrong element.
+    #[test]
+    fn padded_address_matches_the_closed_form() {
+        let mut cases = 0_usize;
+
+        for element_count in [256_u32, 1024, 2048, 4096] {
+            for strategy in CANDIDATE_MITIGATIONS {
+                let binding = profile(element_count, &[32]);
+                let Some(
+                    permutation @ SharedPermutation::PadRows {
+                        row_log2,
+                        pad_elements,
+                    },
+                ) = shared_permutation_for(&binding, strategy)
+                else {
+                    continue;
+                };
+                cases += 1;
+
+                let row = 1_u32 << row_log2;
+                for index in 0..element_count {
+                    let closed_form =
+                        (index >> row_log2) * (row + pad_elements) + (index & (row - 1));
+                    let reduced = permutation.apply(index);
+                    assert_eq!(
+                        reduced, closed_form,
+                        "{permutation:?} over {element_count} elements maps {index} to \
+                         {reduced} where the padded-row address is {closed_form}"
+                    );
+                }
+            }
+        }
+
+        assert!(
+            cases > 0,
+            "no padding permutation was derived over {} candidates, so the equality \
+             this test claims was never evaluated",
+            CANDIDATE_MITIGATIONS.len()
+        );
+    }
+
     /// The chain from bank geometry to emitted rewrite. A column walk over 32
     /// four-byte banks is a 32-way conflict, one element of padding per row is
     /// the cheapest accepted candidate, and that candidate becomes a row
@@ -990,6 +1038,89 @@ mod tests {
         assert_eq!(
             shared_permutation_for(&profile(1024, &[32]), BankConflictMitigation::NoRewrite),
             None
+        );
+    }
+
+    /// The permutation is value-preserving: storing values through the
+    /// permuted address and reading them back recovers the exact original
+    /// values for every element in the allocation.
+    #[test]
+    fn permutation_is_value_preserving_across_roundtrip() {
+        let extents = [256_u32, 1024, 2048, 4096];
+        for element_count in extents {
+            for strategy in CANDIDATE_MITIGATIONS {
+                let binding = profile(element_count, &[32]);
+                let Some(permutation) = shared_permutation_for(&binding, strategy) else {
+                    continue;
+                };
+                let extent = permutation.extent(element_count);
+                let mut buffer = vec![0xDEAD_BEEF_u32; extent as usize];
+                let original: Vec<u32> = (0..element_count)
+                    .map(|i| i.wrapping_mul(17) ^ 0x5555_AAAA)
+                    .collect();
+
+                // Store through the permutation
+                for i in 0..element_count {
+                    let addr = permutation.apply(i);
+                    assert!(addr < extent);
+                    buffer[addr as usize] = original[i as usize];
+                }
+
+                // Read back through the permutation
+                for i in 0..element_count {
+                    let addr = permutation.apply(i);
+                    assert_eq!(
+                        buffer[addr as usize], original[i as usize],
+                        "value mismatch after roundtrip through {strategy:?} for element {i}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// The strategy-variant space is derived from source at run time so a new
+    /// mitigation variant turns the suite red until the emitter records a
+    /// decision for it.
+    #[test]
+    fn every_declared_mitigation_strategy_has_an_emitter_decision() {
+        let path = vyre_test_support::monorepo::vyre_workspace_root()
+            .join("vyre-lower/src/analyses/bank_conflict/strategy.rs");
+        let source = vyre_test_support::read_source_file_bounded(&path).unwrap_or_else(|err| {
+            panic!("Fix: cannot read the BankConflictMitigation declaration at {path:?}: {err}")
+        });
+        let body = vyre_test_support::braced_body(&source, "pub enum BankConflictMitigation {")
+            .unwrap_or_else(|| {
+                panic!("Fix: no `pub enum BankConflictMitigation` declaration in {path:?}; update this enumeration")
+            });
+        let declared = vyre_test_support::top_level_variant_names(body);
+        assert!(
+            declared.len() >= 3,
+            "Fix: expected at least 3 declared variants, found {}",
+            declared.len()
+        );
+
+        let samples = [
+            BankConflictMitigation::NoRewrite,
+            BankConflictMitigation::PadLines {
+                pad_elements_per_row: 1,
+            },
+            BankConflictMitigation::XorSwizzle {
+                swizzle_bits: 2,
+                stride_shift: 3,
+            },
+        ];
+        let covered: std::collections::BTreeSet<String> = samples
+            .iter()
+            .map(|s| match s {
+                BankConflictMitigation::NoRewrite => "NoRewrite".to_string(),
+                BankConflictMitigation::PadLines { .. } => "PadLines".to_string(),
+                BankConflictMitigation::XorSwizzle { .. } => "XorSwizzle".to_string(),
+            })
+            .collect();
+        let missing: Vec<&String> = declared.difference(&covered).collect();
+        assert!(
+            missing.is_empty(),
+            "Fix: add emitter decision and coverage for newly declared BankConflictMitigation variant(s): {missing:?}"
         );
     }
 }

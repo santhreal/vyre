@@ -86,6 +86,13 @@ impl VyreBackend for SpirvBackendRegistration {
     fn version(&self) -> &'static str {
         env!("CARGO_PKG_VERSION")
     }
+    fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
+        match mode {
+            vyre_foundation::fp_parity::FloatLoweringMode::Contracted => true,
+            vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee => false,
+        }
+    }
+
 
     fn dispatch_borrowed(
         &self,
@@ -93,6 +100,12 @@ impl VyreBackend for SpirvBackendRegistration {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
+        if config.float_lowering.blocks_contraction() {
+            return Err(BackendError::UnsupportedFeature {
+                name: format!("float lowering mode `{}`", config.float_lowering.cache_label()),
+                backend: SPIRV_BACKEND_ID.to_string(),
+            });
+        }
         let spv_words = SpirvBackend::program_to_spv(program).map_err(|e| {
             BackendError::KernelCompileFailed {
                 backend: SPIRV_BACKEND_ID.to_string(),

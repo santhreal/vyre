@@ -42,8 +42,11 @@ impl VyreBackend for CpuRefBackend {
     /// approximable f32 operation with its exact expansion, which is the
     /// program a strict device kernel executes: the oracle has to run the same
     /// IR for a bit-identity comparison to mean anything.
-    fn honors_float_lowering(&self, _mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
-        true
+    fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
+        match mode {
+            vyre_foundation::fp_parity::FloatLoweringMode::Contracted
+            | vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee => true,
+        }
     }
 
     fn dispatch_borrowed(

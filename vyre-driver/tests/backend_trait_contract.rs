@@ -107,6 +107,12 @@ impl VyreBackend for FullBackend {
     fn max_storage_buffer_bytes(&self) -> u64 {
         1 << 40
     }
+    fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
+        match mode {
+            vyre_foundation::fp_parity::FloatLoweringMode::Contracted
+            | vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee => true,
+        }
+    }
 
     fn prepare(&self) -> Result<(), BackendError> {
         self.prepare_calls.fetch_add(1, Ordering::Relaxed);
@@ -193,6 +199,10 @@ fn every_capability_default_is_conservative() {
         !backend.device_lost(),
         "Fix: default device_lost must be false."
     );
+    assert!(
+        !backend.honors_float_lowering(vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee),
+        "Fix: default honors_float_lowering must be false for StrictIeee."
+    );
 }
 
 #[test]
@@ -252,6 +262,10 @@ fn every_override_is_observably_different_from_its_default() {
         full.max_storage_buffer_bytes()
     );
     assert_ne!(minimal.device_lost(), full.device_lost());
+    assert_ne!(
+        minimal.honors_float_lowering(vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee),
+        full.honors_float_lowering(vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee)
+    );
 
     assert!(full.supports_subgroup_ops());
     assert!(full.supports_f16());
@@ -263,6 +277,7 @@ fn every_override_is_observably_different_from_its_default() {
     assert_eq!(full.max_workgroup_size(), [1024, 1024, 64]);
     assert_eq!(full.max_storage_buffer_bytes(), 1u64 << 40);
     assert!(full.device_lost());
+    assert!(full.honors_float_lowering(vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee));
 }
 
 #[test]

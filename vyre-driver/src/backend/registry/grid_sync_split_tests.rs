@@ -128,8 +128,11 @@ impl VyreBackend for StrictCapableProbe {
         "strict-capable-probe"
     }
 
-    fn honors_float_lowering(&self, _mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
-        true
+    fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
+        match mode {
+            vyre_foundation::fp_parity::FloatLoweringMode::Contracted
+            | vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee => true,
+        }
     }
 
     fn dispatch_borrowed(

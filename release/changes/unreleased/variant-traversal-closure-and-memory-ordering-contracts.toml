@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre-foundation` closes `Expr` variant traversal, child operand reachability, magnitude classification, buffer reference classification, and cross-invocation combine classification against `EXPR_VARIANT_NAMES` in `tests/expr_variant_traversal_closure.rs`, `vyre-spec` closes `CollectiveOp` and `SubgroupReduceOp` tables against the public API snapshot, and `MemoryOrdering` completes round-trip, barrier/atomic validity, and lattice join contracts across all six variants."

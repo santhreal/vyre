@@ -294,7 +294,7 @@ fn real_lowered_strided_tile_program() -> Program {
         BufferDecl::workgroup("tile", 1024, DataType::U32),
     ];
     let tid = Expr::InvocationId { axis: 0 };
-    let stride_32 = Expr::from(32_u32);
+    let stride_32 = Expr::u32(32);
     let index = Expr::BinOp {
         op: BinOp::Mul,
         left: Box::new(tid.clone()),
@@ -312,11 +312,7 @@ fn real_lowered_strided_tile_program() -> Program {
         Node::Store {
             buffer: "out".into(),
             index: tid,
-            value: Expr::Load {
-                buffer: "tile".into(),
-                index,
-                data_type: DataType::U32,
-            },
+            value: Expr::load("tile", index),
         },
     ];
     Program::wrapped(buffers, [32, 1, 1], nodes)

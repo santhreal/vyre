@@ -71,7 +71,10 @@ impl FloatLoweringMode {
     /// True when the mode denies a target the fused multiply-add.
     #[must_use]
     pub const fn blocks_contraction(self) -> bool {
-        matches!(self, Self::StrictIeee)
+        match self {
+            Self::Contracted => false,
+            Self::StrictIeee => true,
+        }
     }
 
     /// Every mode, so a consumer sweeps the set instead of naming one member.

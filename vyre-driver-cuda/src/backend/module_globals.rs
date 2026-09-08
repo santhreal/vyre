@@ -787,4 +787,27 @@ mod tests {
         );
         drop(second);
     }
+
+    #[test]
+    fn module_globals_gate_acquire_reports_actionable_error_on_poison() {
+        let gate = Arc::new(ModuleGlobalsGate::default());
+        let gate_clone = Arc::clone(&gate);
+        let _ = std::thread::spawn(move || {
+            let _busy = gate_clone.busy.lock().unwrap();
+            panic!("simulated panic holding module globals gate mutex");
+        })
+        .join();
+
+        let result = ModuleGlobalsGate::acquire(&gate);
+        let error = result.expect_err("poisoned gate mutex must return BackendError");
+        let message = error.to_string();
+        assert!(
+            message.contains("CUDA module-globals gate mutex was poisoned"),
+            "error message must name the poisoned gate mutex; got: {message}"
+        );
+        assert!(
+            message.contains("Fix:"),
+            "error message must provide an actionable Fix: hint; got: {message}"
+        );
+    }
 }

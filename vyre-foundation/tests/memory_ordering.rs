@@ -51,6 +51,16 @@ fn seq_cst_wire_tag_roundtrips() {
 }
 
 #[test]
+fn grid_sync_wire_tag_roundtrips() {
+    let tag = MemoryOrdering::GridSync.wire_tag();
+    assert_eq!(tag, 5);
+    assert_eq!(
+        MemoryOrdering::from_wire_tag(tag).unwrap(),
+        MemoryOrdering::GridSync
+    );
+}
+
+#[test]
 fn from_wire_tag_rejects_unknown() {
     let err = MemoryOrdering::from_wire_tag(255).unwrap_err();
     assert!(err.contains("Fix:"));
@@ -64,6 +74,7 @@ fn all_tags_are_unique() {
         MemoryOrdering::Release,
         MemoryOrdering::AcqRel,
         MemoryOrdering::SeqCst,
+        MemoryOrdering::GridSync,
     ];
     let mut tags: Vec<u8> = orderings.iter().map(|o| o.wire_tag()).collect();
     tags.sort_unstable();
@@ -101,6 +112,11 @@ fn seq_cst_valid_for_atomic_rmw() {
 }
 
 #[test]
+fn grid_sync_not_valid_for_atomic_rmw() {
+    assert!(!MemoryOrdering::GridSync.is_valid_for_atomic_rmw());
+}
+
+#[test]
 fn relaxed_not_valid_for_barrier() {
     assert!(!MemoryOrdering::Relaxed.is_valid_for_barrier());
 }
@@ -126,10 +142,75 @@ fn seq_cst_valid_for_barrier() {
 }
 
 #[test]
+fn grid_sync_valid_for_barrier() {
+    assert!(MemoryOrdering::GridSync.is_valid_for_barrier());
+}
+
+#[test]
 fn only_grid_sync_requires_grid_sync() {
     assert!(!MemoryOrdering::Relaxed.requires_grid_sync());
     assert!(!MemoryOrdering::Acquire.requires_grid_sync());
     assert!(!MemoryOrdering::Release.requires_grid_sync());
     assert!(!MemoryOrdering::AcqRel.requires_grid_sync());
     assert!(!MemoryOrdering::SeqCst.requires_grid_sync());
+    assert!(MemoryOrdering::GridSync.requires_grid_sync());
+}
+
+#[test]
+fn default_memory_ordering_is_seq_cst() {
+    assert_eq!(MemoryOrdering::default(), MemoryOrdering::SeqCst);
+}
+
+#[test]
+fn memory_ordering_join_contracts() {
+    let all = [
+        MemoryOrdering::Relaxed,
+        MemoryOrdering::Acquire,
+        MemoryOrdering::Release,
+        MemoryOrdering::AcqRel,
+        MemoryOrdering::SeqCst,
+        MemoryOrdering::GridSync,
+    ];
+
+    // Identity element: join with Relaxed returns self.
+    for o in all {
+        assert_eq!(o.join(MemoryOrdering::Relaxed), o);
+        assert_eq!(MemoryOrdering::Relaxed.join(o), o);
+        // Idempotence: join with self returns self.
+        assert_eq!(o.join(o), o);
+        // Top element: join with GridSync returns GridSync.
+        assert_eq!(o.join(MemoryOrdering::GridSync), MemoryOrdering::GridSync);
+        assert_eq!(MemoryOrdering::GridSync.join(o), MemoryOrdering::GridSync);
+    }
+
+    // Commutativity across all pairs.
+    for a in all {
+        for b in all {
+            assert_eq!(a.join(b), b.join(a));
+        }
+    }
+
+    // Acquire and Release join to AcqRel.
+    assert_eq!(
+        MemoryOrdering::Acquire.join(MemoryOrdering::Release),
+        MemoryOrdering::AcqRel
+    );
+    assert_eq!(
+        MemoryOrdering::Release.join(MemoryOrdering::Acquire),
+        MemoryOrdering::AcqRel
+    );
+
+    // SeqCst dominates everything below GridSync.
+    assert_eq!(
+        MemoryOrdering::Acquire.join(MemoryOrdering::SeqCst),
+        MemoryOrdering::SeqCst
+    );
+    assert_eq!(
+        MemoryOrdering::Release.join(MemoryOrdering::SeqCst),
+        MemoryOrdering::SeqCst
+    );
+    assert_eq!(
+        MemoryOrdering::AcqRel.join(MemoryOrdering::SeqCst),
+        MemoryOrdering::SeqCst
+    );
 }

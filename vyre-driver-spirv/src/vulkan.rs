@@ -442,6 +442,12 @@ pub(crate) unsafe fn dispatch_program(
     inputs: &[&[u8]],
     config: &vyre_driver::DispatchConfig,
 ) -> Result<Vec<Vec<u8>>, BackendError> {
+    if config.float_lowering.blocks_contraction() {
+        return Err(BackendError::UnsupportedFeature {
+            name: format!("float lowering mode `{}`", config.float_lowering.cache_label()),
+            backend: crate::SPIRV_BACKEND_ID.to_string(),
+        });
+    }
     if config.cooperative {
         return Err(BackendError::UnsupportedFeature {
             name: "SPIR-V cooperative grid dispatch".to_string(),

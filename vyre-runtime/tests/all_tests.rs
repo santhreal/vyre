@@ -26,6 +26,10 @@ pub mod artifact_admission_contract;
 #[path = "artifact_workspace_contract.rs"]
 pub mod artifact_workspace_contract;
 
+/// Integration tests from `tests/artifact_typed_resource_ingestion_contracts.rs`.
+#[path = "artifact_typed_resource_ingestion_contracts.rs"]
+pub mod artifact_typed_resource_ingestion_contracts;
+
 /// Integration tests from `tests/cache_eviction_proptest.rs`.
 #[path = "cache_eviction_proptest.rs"]
 pub mod cache_eviction_proptest;
@@ -37,6 +41,10 @@ pub mod concurrency_invariants;
 /// Integration tests from `tests/driver_runtime_lifecycle_boundary.rs`.
 #[path = "driver_runtime_lifecycle_boundary.rs"]
 pub mod driver_runtime_lifecycle_boundary;
+/// Integration tests from `tests/interactive_session_contract.rs`.
+#[path = "interactive_session_contract.rs"]
+pub mod interactive_session_contract;
+
 
 /// Integration tests from `tests/multi_tenant_scheduler.rs`.
 #[allow(clippy::assertions_on_constants)]
@@ -51,6 +59,10 @@ pub mod paged_prefix_mtp_contracts;
 #[path = "pipeline_fingerprint_surface.rs"]
 pub mod pipeline_fingerprint_surface;
 
+
+/// Integration tests from `tests/pipeline_error_fault_classification.rs`.
+#[path = "pipeline_error_fault_classification.rs"]
+pub mod pipeline_error_fault_classification;
 /// Integration tests from `tests/portfolio_admission_contract.rs`.
 #[path = "portfolio_admission_contract.rs"]
 pub mod portfolio_admission_contract;
@@ -236,6 +248,10 @@ pub mod socket_ingest;
 /// Integration tests from `tests/sweep_ring_buffer_oracle_matrix.rs`.
 #[path = "sweep_ring_buffer_oracle_matrix.rs"]
 pub mod sweep_ring_buffer_oracle_matrix;
+
+/// Integration tests from `tests/session_state_machine_contracts.rs`.
+#[path = "session_state_machine_contracts.rs"]
+pub mod session_state_machine_contracts;
 
 /// Integration tests from `tests/sweep_tenant_policy_oracle_matrix.rs`.
 #[path = "sweep_tenant_policy_oracle_matrix.rs"]

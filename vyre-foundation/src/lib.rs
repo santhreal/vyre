@@ -63,6 +63,9 @@ pub mod ir {
     pub use crate::ir_inner::model::program_graph_identity::{
         ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
     };
+    pub use crate::ir_inner::model::program_graph_delta::{
+        AffectedGraphClosure, GraphDelta, GraphDeltaError, GraphDeltaOp, GRAPH_DELTA_VERSION,
+    };
     pub use crate::ir_inner::model::tile::{Layout, Residency, Tile};
     /// Per-Node-variant bit-position constants for `ProgramStats::node_kinds_present`.
     /// Compose with `ProgramStats::has_any_node_kind` for O(1) `analyze_impl` gates.

@@ -180,6 +180,25 @@ fn corrupted_magic_rejected() {
 }
 
 #[test]
+fn corrupted_version_rejected() {
+    use std::io::Write as _;
+
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("log.vrrl");
+    {
+        let mut f = std::fs::File::create(&path).unwrap();
+        f.write_all(LOG_MAGIC).unwrap();
+        f.write_all(&(LOG_VERSION + 1).to_le_bytes()).unwrap();
+        f.write_all(&0u32.to_le_bytes()).unwrap();
+        f.write_all(&4u64.to_le_bytes()).unwrap();
+        f.write_all(&0u64.to_le_bytes()).unwrap();
+        f.set_len(HEADER_BYTES + 4 * RECORD_BYTES).unwrap();
+    }
+    let err = RingLog::open(&path, 4).expect_err("unsupported version must reject");
+    assert!(matches!(err, ReplayLogError::HeaderMismatch { .. }));
+}
+
+#[test]
 fn existing_log_zero_capacity_rejected_before_cursor_modulo() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("log.vrrl");

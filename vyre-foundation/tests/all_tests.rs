@@ -156,6 +156,10 @@ pub mod diagnostic_protocol;
 #[path = "dialect_contracts.rs"]
 pub mod dialect_contracts;
 
+/// Integration tests from `tests/dialect_schema_translation_closure_contracts.rs`.
+#[path = "dialect_schema_translation_closure_contracts.rs"]
+pub mod dialect_schema_translation_closure_contracts;
+
 /// Integration tests from `tests/eqsat_gpu_mirror.rs`.
 #[path = "eqsat_gpu_mirror.rs"]
 pub mod eqsat_gpu_mirror;
@@ -175,6 +179,10 @@ pub mod expr_builder_surface;
 /// Integration tests from `tests/expr_type_single_owner.rs`.
 #[path = "expr_type_single_owner.rs"]
 pub mod expr_type_single_owner;
+
+/// Integration tests from `tests/expr_variant_traversal_closure.rs`.
+#[path = "expr_variant_traversal_closure.rs"]
+pub mod expr_variant_traversal_closure;
 
 /// Integration tests from `tests/extension_adversarial.rs`.
 #[path = "extension_adversarial.rs"]
@@ -215,6 +223,10 @@ pub mod geometry_foundation_contracts;
 /// Integration tests from `tests/graph_invariants.rs`.
 #[path = "graph_invariants.rs"]
 pub mod graph_invariants;
+/// Integration tests from `tests/graph_delta_contract.rs`.
+#[path = "graph_delta_contract.rs"]
+pub mod graph_delta_contract;
+
 
 /// Integration tests from `tests/inline_buffer_reference_arguments.rs`.
 #[path = "inline_buffer_reference_arguments.rs"]
@@ -279,6 +291,10 @@ pub mod logical_span_contracts;
 /// Integration tests from `tests/logical_stage_identity.rs`.
 #[path = "logical_stage_identity.rs"]
 pub mod logical_stage_identity;
+
+/// Integration tests from `tests/logical_region_closure_contracts.rs`.
+#[path = "logical_region_closure_contracts.rs"]
+pub mod logical_region_closure_contracts;
 
 /// Integration tests from `tests/loop_fusion_atomic_expected_scalar_dependency.rs`.
 #[path = "loop_fusion_atomic_expected_scalar_dependency.rs"]
@@ -464,6 +480,10 @@ pub mod program_graph_from_program;
 /// Integration tests from `tests/program_graph_identity_contract.rs`.
 #[path = "program_graph_identity_contract.rs"]
 pub mod program_graph_identity_contract;
+
+/// Integration tests from `tests/program_graph_multi_domain_contracts.rs`.
+#[path = "program_graph_multi_domain_contracts.rs"]
+pub mod program_graph_multi_domain_contracts;
 
 /// Integration tests from `tests/program_meta_surface.rs`.
 #[path = "program_meta_surface.rs"]

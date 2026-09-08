@@ -21,11 +21,11 @@
 
 use std::collections::BTreeSet;
 
+use vyre_spec::SubgroupReduceOp;
 use vyre_test_support::spec_variant_tables::{
-    builtin_atomic_ops, builtin_bin_ops, builtin_ternary_ops, builtin_un_ops,
-    public_api_variant_names,
+    builtin_atomic_ops, builtin_bin_ops, builtin_collective_ops, builtin_ternary_ops,
+    builtin_un_ops, public_api_variant_names,
 };
-
 fn debug_names<T: std::fmt::Debug>(variants: &[T]) -> BTreeSet<String> {
     variants
         .iter()
@@ -78,6 +78,20 @@ fn ternary_op_table_covers_every_frozen_builtin() {
 }
 
 #[test]
+fn collective_op_table_covers_every_frozen_builtin() {
+    let ops: Vec<_> = builtin_collective_ops()
+        .into_iter()
+        .map(|(op, _)| op)
+        .collect();
+    assert_table_matches_surface("CollectiveOp", &ops);
+}
+
+#[test]
+fn subgroup_reduce_op_table_covers_every_frozen_builtin() {
+    assert_table_matches_surface("SubgroupReduceOp", &SubgroupReduceOp::ALL);
+}
+
+#[test]
 fn every_table_entry_carries_a_reserved_builtin_wire_tag() {
     // A table entry that is not a builtin has no place here: `Opaque` is the
     // extension escape hatch and each suite draws its own id for it. This also
@@ -105,5 +119,14 @@ fn every_table_entry_carries_a_reserved_builtin_wire_tag() {
             panic!("Fix: TernaryOp table entry {op:?} has no builtin wire tag.")
         });
         assert!((1..=0x7f).contains(&tag), "TernaryOp {op:?} tag {tag:#04x}");
+    }
+    for (op, expected_tag) in builtin_collective_ops() {
+        let tag = op.builtin_wire_tag();
+        assert_eq!(tag, expected_tag);
+        assert!((1..=0x7f).contains(&tag), "CollectiveOp {op:?} tag {tag:#04x}");
+    }
+    for op in SubgroupReduceOp::ALL {
+        let tag = op.builtin_wire_tag();
+        assert!((1..=0x7f).contains(&tag), "SubgroupReduceOp {op:?} tag {tag:#04x}");
     }
 }

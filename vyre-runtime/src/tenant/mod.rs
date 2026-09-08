@@ -494,4 +494,43 @@ mod tests {
         let counters = handle.runtime_counters();
         assert_eq!(counters.quiesce_timeouts, 0);
     }
+
+    #[test]
+    fn tenant_registry_recovers_after_poisoned_free_list() {
+        use std::sync::atomic::Ordering;
+        let reg = Arc::new(TenantRegistry::new());
+        let t1 = reg.register("t1").unwrap();
+        let id1 = t1.id();
+        reg.unregister(id1).unwrap();
+
+        // Poison the free_list mutex from a panicking thread.
+        let reg_clone = Arc::clone(&reg);
+        let _ = std::thread::spawn(move || {
+            let _guard = reg_clone.free_list.lock().unwrap();
+            panic!("simulated panic holding free_list lock");
+        })
+        .join();
+
+        // The free_list mutex is now poisoned. register and unregister must still succeed.
+        let t2 = reg.register("t2").expect("Fix: register must recover poisoned free_list");
+        assert_eq!(t2.id(), id1, "recycled id must still be popped from poisoned free_list");
+        let unreg = reg.unregister(t2.id());
+        assert!(unreg.is_some(), "Fix: unregister must recover poisoned free_list");
+    }
+
+    #[test]
+    fn tenant_registry_exhaustion_reports_registry_full() {
+        use std::sync::atomic::Ordering;
+        let reg = TenantRegistry::new();
+        reg.next_id
+            .store(crate::tenant::registry::MAX_TENANT_OPCODE_WINDOWS, Ordering::SeqCst);
+
+        let err = reg
+            .register("overflow")
+            .expect_err("saturated registry must return RegistryFull");
+        assert!(
+            matches!(err, TenantError::RegistryFull { .. }),
+            "expected RegistryFull, got: {err:?}"
+        );
+    }
 }

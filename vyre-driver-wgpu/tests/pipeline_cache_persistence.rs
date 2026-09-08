@@ -171,6 +171,17 @@ fn helper_case(case_id: &str) -> SemanticOperation {
         .unwrap_or_else(|| panic!("Fix: no harness fixture registered for `{case_id}`"))
 }
 
+/// libtest names a test by its module path inside the test binary, and
+/// `module_path!()` carries a leading crate segment that name does not. This
+/// crate builds one `all_tests` target with a module per file, so a bare
+/// function name matches no test at all: libtest then exits 0 having run
+/// nothing and the helper writes no result for the parent to read.
+fn helper_test_filter() -> String {
+    let module = module_path!();
+    let module = module.split_once("::").map_or(module, |(_, rest)| rest);
+    format!("{module}::compiled_pipeline_cache_helper_process")
+}
+
 fn run_helper(cache_root: &Path, output_root: &Path, case_id: &str) -> (Duration, Vec<Vec<u8>>) {
     fs::create_dir_all(output_root).unwrap_or_else(|error| {
         panic!("Fix: failed to create `{}`: {error}", output_root.display())
@@ -178,7 +189,7 @@ fn run_helper(cache_root: &Path, output_root: &Path, case_id: &str) -> (Duration
     let mut child =
         Command::new(std::env::current_exe().expect("Fix: test binary path must exist"))
             .arg("--exact")
-            .arg("compiled_pipeline_cache_helper_process")
+            .arg(helper_test_filter())
             .arg("--nocapture")
             .env(HELPER_FLAG, output_root)
             .env(HELPER_CASE_ID, case_id)

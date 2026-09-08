@@ -404,3 +404,92 @@ fn a_strict_dispatch_matches_the_oracle_or_is_refused_by_name() {
     );
     eprintln!("strict lowering per backend:\n{}", judged.join("\n"));
 }
+
+/// For every (backend, mode) pair in the runtime registry, the backend either
+/// honors the mode or refuses it by name with remediation. No pair is silently
+/// accepted and ignored.
+#[test]
+fn every_backend_and_float_lowering_mode_pair_is_honored_or_refused_with_remediation() {
+    let program = f32_multiply_add_program(4, Some(UnOp::Sin));
+    let inputs = vec![
+        f32_bytes(&[0.5, 1.25, -2.5, 3.75]),
+        f32_bytes(&[1.000_244_2, 0.5, 2.0, -1.5]),
+        f32_bytes(&[-1.0, 0.25, 0.5, -0.125]),
+    ];
+    let registry = live_backend_registry().expect("the backend registry must be readable");
+    let mut findings = Vec::new();
+
+    for registration in registry {
+        let backend = match registration.acquire() {
+            Ok(backend) => backend,
+            Err(_) => continue,
+        };
+        for mode in FloatLoweringMode::EVERY {
+            let mut config = DispatchConfig::default();
+            config.float_lowering = *mode;
+            let honors = backend.honors_float_lowering(*mode);
+            match backend.dispatch(&program, &inputs, &config) {
+                Ok(_) => {
+                    if !honors {
+                        findings.push(format!(
+                            "  backend `{}` returned Ok for mode `{}` but honors_float_lowering returned false",
+                            registration.id,
+                            mode.cache_label()
+                        ));
+                    }
+                }
+                Err(error) => {
+                    if honors {
+                        findings.push(format!(
+                            "  backend `{}` failed dispatch for honored mode `{}`: {error}",
+                            registration.id,
+                            mode.cache_label()
+                        ));
+                    } else {
+                        let message = error.to_string();
+                        let names_mode = message.contains(mode.cache_label());
+                        let names_backend = message.contains(registration.id);
+                        let has_fix = message.contains("Fix:");
+                        if !names_mode || !names_backend || !has_fix {
+                            findings.push(format!(
+                                "  backend `{}` refused unhonored mode `{}` without naming mode, backend, and Fix: in error: {message}",
+                                registration.id,
+                                mode.cache_label()
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    assert!(
+        findings.is_empty(),
+        "Fix: every (backend, mode) pair must be honored or refused with actionable error naming mode and backend:\n{}",
+        findings.join("\n")
+    );
+}
+
+/// A backend that cannot honor strict IEEE lowering refuses compilation and
+/// cache-key construction rather than producing a separate cache entry for
+/// unhonored contracted code.
+#[test]
+fn unsupported_backend_refuses_strict_ieee_compilation_and_cache_key_generation() {
+    let program = f32_multiply_add_program(4, Some(UnOp::Sin));
+    let mut config = DispatchConfig::default();
+    config.float_lowering = FloatLoweringMode::StrictIeee;
+
+    #[cfg(feature = "cuda")]
+    {
+        let result = vyre_driver_cuda::codegen::program_to_ptx(&program, &config);
+        assert!(
+            result.is_err(),
+            "Fix: CUDA PTX codegen must reject strict IEEE lowering rather than emitting contracted PTX"
+        );
+        let error = result.unwrap_err();
+        assert!(
+            error.contains("strict-ieee") && error.contains("Fix:"),
+            "Fix: CUDA PTX codegen refusal must name the mode and corrective action: {error}"
+        );
+    }
+}

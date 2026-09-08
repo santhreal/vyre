@@ -34,6 +34,7 @@ use crate::bitset::or_into::bitset_or_into;
 use crate::bitset::zero::bitset_zero;
 use crate::graph::program_graph::ProgramGraphShape;
 use crate::predicate::edge_kind;
+use crate::plumbing::program::outputs::demote_intermediate_outputs;
 use vyre_foundation::composition::{tag_program, trap_program};
 use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
 use vyre_foundation::ir::Program;
@@ -159,19 +160,8 @@ pub fn try_aliases_dataflow(
         union_x,
         union_y,
     ])?;
-    let buffers = fused
-        .buffers()
-        .iter()
-        .cloned()
-        .map(|mut buffer| {
-            if buffer.name() == out_buf {
-                buffer.is_output = true;
-                buffer.pipeline_live_out = true;
-            }
-            buffer
-        })
-        .collect();
-    Ok(tag_program(OP_ID, fused.with_rewritten_buffers(buffers)))
+    let fused = demote_intermediate_outputs(fused, out_buf);
+    Ok(tag_program(OP_ID, fused))
 }
 
 /// CPU oracle. Mirrors the GPU semantic over a host-side dataflow

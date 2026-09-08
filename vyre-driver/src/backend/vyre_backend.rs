@@ -54,7 +54,10 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
     /// returns contracted arithmetic under a bit-identity request. A backend
     /// that implements a mode overrides this and states it.
     fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
-        !mode.blocks_contraction()
+        match mode {
+            vyre_foundation::fp_parity::FloatLoweringMode::Contracted => true,
+            vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee => false,
+        }
     }
 
     // Raw backend shader text is a concrete-driver implementation

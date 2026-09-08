@@ -26,6 +26,12 @@ pub fn program_to_ptx_for_sm_and_subgroup(
     target_sm: u32,
     subgroup_size: u32,
 ) -> Result<String, String> {
+    if config.float_lowering.blocks_contraction() {
+        return Err(format!(
+            "CUDA backend does not support float lowering mode `{}`. Fix: select FloatLoweringMode::Contracted or use a backend that supports strict IEEE lowering (such as wgpu or cpu-ref).",
+            config.float_lowering.cache_label()
+        ));
+    }
     let _profiler_range = crate::profiler::cuda_profiler_range(crate::profiler::CUDA_CODEGEN_RANGE);
     if target_sm == 0 {
         return Err(

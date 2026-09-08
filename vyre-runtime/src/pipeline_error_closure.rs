@@ -337,6 +337,26 @@ fn every_variant() -> Vec<PipelineError> {
 }
 
 #[test]
+fn every_declared_variant_is_in_tag_list() {
+    let path = vyre_test_support::monorepo::vyre_crate_directory("vyre-runtime")
+        .join("src")
+        .join("lib.rs");
+    let source = std::fs::read_to_string(&path)
+        .unwrap_or_else(|err| panic!("cannot read lib.rs at {path:?}: {err}"));
+    let body = vyre_test_support::braced_body(&source, "pub enum PipelineError {")
+        .unwrap_or_else(|| panic!("no `pub enum PipelineError` in {path:?}"));
+    let declared = vyre_test_support::top_level_variant_names(body);
+    let tagged: std::collections::BTreeSet<String> = Tag::ALL
+        .iter()
+        .map(|tag| format!("{tag:?}"))
+        .collect();
+    assert_eq!(
+        declared, tagged,
+        "Fix: Tag::ALL and the PipelineError declaration disagree; every variant must be in Tag::ALL"
+    );
+}
+
+#[test]
 fn every_tag_has_exactly_one_fixture_in_tag_order() {
     let variants = every_variant();
     assert_eq!(

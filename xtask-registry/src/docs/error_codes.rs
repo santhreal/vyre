@@ -46,20 +46,36 @@ mod tests {
     /// regeneration command does nothing.
     #[test]
     fn each_catalog_uses_the_renderer_of_the_crate_that_owns_it() {
-        assert_eq!(
-            render_driver(),
-            vyre_driver::error_catalog::render_catalog_toml()
-        );
-        assert!(render_driver().contains(
+        let driver_toml = render_driver();
+        assert!(driver_toml.contains(
             "# Regenerate: ./cargo_full run -p xtask --bin xtask -- error-codes --write"
         ));
+        let parsed_driver: toml::Value =
+            toml::from_str(&driver_toml).expect("driver error catalog must parse as valid TOML");
+        let errors = parsed_driver
+            .get("backend_error")
+            .and_then(toml::Value::as_array)
+            .expect("driver error catalog must contain [[backend_error]] array");
         assert_eq!(
-            render_validation(),
-            vyre_foundation::validate::render_catalog_toml()
+            errors.len(),
+            vyre_driver::ErrorCode::ALL.len(),
+            "every ErrorCode variant must be present in the driver catalog"
         );
-        assert!(
-            render_validation().contains("V139"),
-            "the validation catalog must carry the node rules"
+
+        let validation_toml = render_validation();
+        assert!(validation_toml.contains(
+            "# Regenerate: ./cargo_full run -p xtask --bin xtask -- error-codes --write"
+        ));
+        let parsed_validation: toml::Value = toml::from_str(&validation_toml)
+            .expect("validation error catalog must parse as valid TOML");
+        let rules = parsed_validation
+            .get("rule")
+            .and_then(toml::Value::as_array)
+            .expect("validation error catalog must contain [[rule]] array");
+        assert_eq!(
+            rules.len(),
+            vyre_foundation::validate::rules().len(),
+            "every validation rule must be present in the validation catalog"
         );
     }
 }

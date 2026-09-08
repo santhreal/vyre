@@ -48,7 +48,7 @@ pub fn quest_zero_fill(io_queue: &str, num_pages: u32) -> Program {
             BufferDecl::storage(io_queue, 0, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(num_pages),
         ],
-        [1, 1, 1],
+        [256, 1, 1],
         vec![wrap_anonymous_region(
             QUEST_ZERO_FILL_OP_ID,
             quest_zero_fill_body(io_queue, num_pages),
@@ -143,7 +143,7 @@ pub fn quest_score_pages(
             BufferDecl::storage(scores, 2, BufferAccess::ReadWrite, DataType::F32)
                 .with_count(num_pages),
         ],
-        [1, 1, 1],
+        [256, 1, 1],
         vec![wrap_anonymous_region(
             QUEST_SCORE_PAGES_OP_ID,
             quest_score_pages_body(query, page_metadata, scores, num_pages, d_head),
@@ -204,7 +204,7 @@ pub fn quest_select_top_k(
             BufferDecl::storage(io_queue, 1, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(num_pages),
         ],
-        [1, 1, 1],
+        [256, 1, 1],
         vec![wrap_anonymous_region(
             QUEST_SELECT_TOP_K_OP_ID,
             vec![Node::if_then(
