@@ -12,9 +12,10 @@ use vyre_driver::{BackendRegistration, BindingPlan};
 use vyre_foundation::ir::{BufferDecl, GraphValueId, Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_megakernel::{
-    is_required_schedule_unreachable, CompileObjective, Digest, ExternalFacts, ObjectiveMetric,
-    RequiredSchedule, ScheduleProduction, SearchBudget, SemanticExecutionError,
-    SemanticExecutionOutput, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
+    is_required_schedule_unreachable, writable_graph_values, CompileObjective, Digest,
+    ExternalFacts, ObjectiveMetric, RequiredSchedule, ScheduleProduction, SearchBudget,
+    SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
+    SemanticExecutionRequest, SemanticExecutor,
 };
 use vyre_runtime::RegisteredSemanticExecutor;
 
@@ -637,7 +638,9 @@ fn execute_program(
             )),
         ));
     }
-    let output_order = node.outputs.clone();
+    // The executor fills its map over every writable graph value, so draining
+    // `node.outputs` left a retained read-write buffer over as undeclared.
+    let output_order = writable_graph_values(node);
     let request_inputs = node
         .inputs
         .iter()

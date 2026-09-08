@@ -9,9 +9,9 @@ use vyre_conform::{
     ScheduleAgreement, ScheduleDisagreement, ScheduleOutcome, CONFORMANCE_SCHEDULES,
 };
 use vyre_megakernel::{
-    CompileObjective, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, RequiredSchedule,
-    ScheduleProduction, SearchBudget, SemanticExecutionError, SemanticExecutionOutput,
-    SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
+    writable_graph_values, CompileObjective, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
+    RequiredSchedule, ScheduleProduction, SearchBudget, SemanticExecutionError,
+    SemanticExecutionOutput, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -437,5 +437,98 @@ fn agreement_without_a_baseline_execution_is_refused() {
     assert_eq!(
         check_schedule_agreement(&outcomes, ScheduleAgreement::Exact),
         Err(ScheduleDisagreement::NoBaseline)
+    );
+}
+
+/// An executor that fills its result map over the canonical writable set.
+///
+/// `RecordingExecutor` above derives its own terminal set from producers and
+/// consumers, so it cannot see a value the caller seeded and the artifact wrote
+/// back. This one uses the single canonical derivation every executor is
+/// required to collect over.
+struct RetainedWriteExecutor {
+    written: Mutex<Vec<u32>>,
+    output: Vec<u8>,
+}
+
+impl SemanticExecutor for RetainedWriteExecutor {
+    fn execute(
+        &self,
+        request: &SemanticExecutionRequest<'_>,
+    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
+        let written = writable_graph_values(&request.logical().graph().nodes()[0]);
+        *self.written.lock().expect("retained write executor lock") =
+            written.iter().map(|value| value.0).collect();
+        Ok(SemanticExecutionOutput {
+            artifact: Digest([53; 32]),
+            payload: Digest([59; 32]),
+            outputs: written
+                .into_iter()
+                .map(|value| (value, self.output.clone()))
+                .collect(),
+        })
+    }
+}
+
+/// WHY: a `read_write` buffer that receives host bytes is an input port carrying
+/// a retained value, not a node output port, so it never appears in
+/// `node.outputs`. A boundary that drains `node.outputs` to collect results
+/// leaves that value in the executor's map and rejects the value the executor
+/// had just written as undeclared. The cross-backend read-write suite is
+/// device-gated, so no hardware-free leg exercised this shape and the refusal
+/// reached a device run instead of CI. This runs the retained write through the
+/// production boundary, where a second derivation of the returned set fails on
+/// every leg.
+#[test]
+fn a_retained_read_write_value_crosses_the_production_boundary() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("a", 0, DataType::U32).with_count(1),
+            BufferDecl::read_write("out", 1, DataType::U32).with_count(1),
+        ],
+        [64, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::bitxor(Expr::load("a", Expr::u32(0)), Expr::u32(0x0F)),
+        )],
+    );
+    let expected_output = 0x0F_u32.to_le_bytes().to_vec();
+    let executor = Arc::new(RetainedWriteExecutor {
+        written: Mutex::new(Vec::new()),
+        output: expected_output.clone(),
+    });
+    let policy = SemanticExecutionPolicy::new(
+        ExternalFacts::new(Digest([7; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        CompileObjective::minimize_latency(),
+        SearchBudget::new(19, 23, 1, 1, 31),
+    );
+    let session = ProductionSession::with_executor(
+        &program,
+        executor.clone(),
+        policy,
+        "retained-write-semantic-backend",
+    );
+    let a = 0_u32.to_le_bytes();
+    let seeded = 0_u32.to_le_bytes();
+
+    let execution = session.submit(&[&a, &seeded]).expect(
+        "Fix: the production boundary must return a retained read-write value, not reject the value the executor just wrote as undeclared.",
+    );
+
+    assert_eq!(
+        executor
+            .written
+            .lock()
+            .expect("retained write executor lock")
+            .len(),
+        1,
+        "Fix: the canonical writable set must carry the retained read-write buffer."
+    );
+    assert_eq!(
+        execution.outputs,
+        vec![expected_output],
+        "Fix: the boundary must return the retained buffer's bytes in Program declaration order."
     );
 }
