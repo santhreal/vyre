@@ -33,6 +33,9 @@ fn is_invocation_id_expr(expr: &crate::ir::Expr) -> bool {
 
 /// Deterministic semantic optimizer corpus used by release evidence.
 pub mod corpus;
+/// Deterministic compilation budget bounds and accounting.
+pub mod compile_budget;
+pub use compile_budget::CompileBudget;
 /// Cost certificates for cost-monotone-down pass enforcement.
 /// `CostCertificate::for_program` reads cached `ProgramStats`; the optimizer
 /// post-condition gate compares pre/post and refuses cost-up rewrites that
@@ -652,6 +655,18 @@ pub enum OptimizerError {
         phase: u32,
         /// Iteration cap that was reached.
         max: usize,
+    },
+    /// The deterministic compilation budget was exceeded.
+    #[error(
+        "compilation budget exceeded for {resource}: budget of {budget} exceeded with {consumed} consumed. Fix: raise the compilation budget or constrain the input program."
+    )]
+    BudgetExceeded {
+        /// Resource whose budget was exceeded.
+        resource: &'static str,
+        /// The budget ceiling.
+        budget: u64,
+        /// The amount consumed.
+        consumed: u64,
     },
 }
 

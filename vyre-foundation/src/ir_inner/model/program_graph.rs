@@ -217,6 +217,83 @@ pub enum ProgramGraphError {
     Wire(String),
 }
 
+/// Structural sharing metrics across a ProgramGraph.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProgramGraphSharingMetrics {
+    /// Total executable nodes in the graph.
+    pub total_nodes: usize,
+    /// Number of unique program bodies (by canonical fingerprint).
+    pub unique_program_bodies: usize,
+    /// Number of node instances sharing a body with another node.
+    pub shared_instances: usize,
+    /// Sharing ratio: total_nodes / unique_program_bodies.
+    pub sharing_ratio: f64,
+    /// Estimated unshared memory bytes if every node owned an independent copy.
+    pub unshared_estimated_bytes: usize,
+    /// Estimated memory bytes with structural sharing.
+    pub shared_estimated_bytes: usize,
+}
+
+/// Versioned parameterized template for subgraphs with immutable structural sharing.
+#[derive(Debug, Clone)]
+pub struct ProgramGraphTemplate {
+    /// Schema / template version.
+    pub version: u32,
+    /// Semantic template name.
+    pub name: String,
+    /// Underlying program body shared across all instantiations.
+    pub program: Program,
+    /// Expected input buffer names in declaration order.
+    pub input_ports: Vec<String>,
+    /// Expected output declarations in declaration order.
+    pub output_ports: Vec<GraphOutput>,
+}
+
+impl ProgramGraphTemplate {
+    /// Create a version-1 parameterized template from a certified Program body.
+    pub fn new(
+        name: impl Into<String>,
+        program: Program,
+        input_ports: Vec<String>,
+        output_ports: Vec<GraphOutput>,
+    ) -> Self {
+        Self {
+            version: 1,
+            name: name.into(),
+            program,
+            input_ports,
+            output_ports,
+        }
+    }
+
+    /// Instantiate this template into a target graph with input bindings and output name prefixes.
+    pub fn instantiate(
+        &self,
+        graph: &mut ProgramGraph,
+        instance_name: impl Into<String>,
+        input_bindings: Vec<(String, GraphValueId, ValueContract)>,
+        output_name_prefix: &str,
+    ) -> Result<(GraphNodeId, Vec<GraphValueId>), ProgramGraphError> {
+        let instance_name = instance_name.into();
+        let mut inputs = Vec::with_capacity(input_bindings.len());
+        for (buffer, value, contract) in input_bindings {
+            inputs.push(GraphInput {
+                buffer,
+                value,
+                contract,
+            });
+        }
+        let mut outputs = Vec::with_capacity(self.output_ports.len());
+        for port in &self.output_ports {
+            let mut out = port.clone();
+            out.name = format!("{output_name_prefix}_{}", port.name);
+            outputs.push(out);
+        }
+        // Clone of Program shares Arc<[BufferDecl]> and Arc<Vec<Node>> in O(1)
+        graph.add_node(instance_name, self.program.clone(), inputs, outputs)
+    }
+}
+
 /// Connected executable Programs with canonical typed values.
 #[derive(Debug, Default, Clone)]
 pub struct ProgramGraph {
@@ -714,6 +791,66 @@ impl ProgramGraph {
         }
         Ok(())
     }
+
+    /// Compute structural sharing metrics across all nodes in the graph.
+    #[must_use]
+    pub fn structural_sharing_metrics(&self) -> ProgramGraphSharingMetrics {
+        let total_nodes = self.nodes.len();
+        if total_nodes == 0 {
+            return ProgramGraphSharingMetrics {
+                total_nodes: 0,
+                unique_program_bodies: 0,
+                shared_instances: 0,
+                sharing_ratio: 1.0,
+                unshared_estimated_bytes: 0,
+                shared_estimated_bytes: 0,
+            };
+        }
+        let mut unique_fingerprints = rustc_hash::FxHashSet::default();
+        let mut unique_body_bytes = 0usize;
+        let mut total_unshared_bytes = 0usize;
+
+        for node in &self.nodes {
+            let fp = node.program.fingerprint();
+            let node_bytes = estimate_program_bytes(&node.program);
+            total_unshared_bytes = total_unshared_bytes.saturating_add(node_bytes);
+            if unique_fingerprints.insert(fp) {
+                unique_body_bytes = unique_body_bytes.saturating_add(node_bytes);
+            }
+        }
+        let unique_count = unique_fingerprints.len();
+        let shared_instances = total_nodes.saturating_sub(unique_count);
+        let sharing_ratio = if unique_count > 0 {
+            total_nodes as f64 / unique_count as f64
+        } else {
+            1.0
+        };
+        let shared_estimated_bytes = unique_body_bytes
+            .saturating_add(total_nodes.saturating_mul(std::mem::size_of::<ProgramGraphNode>()));
+
+        ProgramGraphSharingMetrics {
+            total_nodes,
+            unique_program_bodies: unique_count,
+            shared_instances,
+            sharing_ratio,
+            unshared_estimated_bytes: total_unshared_bytes,
+            shared_estimated_bytes,
+        }
+    }
+
+    /// Canonicalize and intern equivalent Program bodies across nodes so they
+    /// share immutable Arc references.
+    pub fn canonicalize_structural_sharing(&mut self) {
+        let mut interned: rustc_hash::FxHashMap<[u8; 32], Program> = rustc_hash::FxHashMap::default();
+        for node in &mut self.nodes {
+            let fp = node.program.fingerprint();
+            if let Some(canonical) = interned.get(&fp) {
+                node.program = canonical.clone();
+            } else {
+                interned.insert(fp, node.program.clone());
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -825,3 +962,138 @@ fn static_element_count(shape: &[ShapeDim]) -> Result<Option<u64>, String> {
     }
     Ok(Some(elements))
 }
+fn estimate_program_bytes(program: &Program) -> usize {
+    let base = std::mem::size_of::<Program>();
+    let buffer_bytes = program
+        .buffers()
+        .iter()
+        .map(|b| std::mem::size_of::<crate::ir::BufferDecl>() + b.name().len())
+        .sum::<usize>();
+    let mut node_bytes = program.entry().len() * std::mem::size_of::<crate::ir::Node>();
+    for node in program.entry() {
+        estimate_node_bytes(node, &mut node_bytes);
+    }
+    base + buffer_bytes + node_bytes
+}
+
+fn estimate_node_bytes(node: &crate::ir::Node, bytes: &mut usize) {
+    use crate::ir::Node;
+    *bytes += std::mem::size_of::<Node>();
+    match node {
+        Node::Let { name, value, .. } | Node::Assign { name, value, .. } => {
+            *bytes += name.as_str().len();
+            estimate_expr_bytes(value, bytes);
+        }
+        Node::Store { buffer, index, value, .. } => {
+            *bytes += buffer.as_str().len();
+            estimate_expr_bytes(index, bytes);
+            estimate_expr_bytes(value, bytes);
+        }
+        Node::If { cond, then, otherwise } => {
+            estimate_expr_bytes(cond, bytes);
+            for node in then.iter().chain(otherwise.iter()) {
+                estimate_node_bytes(node, bytes);
+            }
+        }
+        Node::Loop { from, to, body, .. } => {
+            estimate_expr_bytes(from, bytes);
+            estimate_expr_bytes(to, bytes);
+            for node in body {
+                estimate_node_bytes(node, bytes);
+            }
+        }
+        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
+            estimate_expr_bytes(offset, bytes);
+            estimate_expr_bytes(size, bytes);
+        }
+        Node::Trap { address, .. } => {
+            estimate_expr_bytes(address, bytes);
+        }
+        Node::Block(body) => {
+            for node in body {
+                estimate_node_bytes(node, bytes);
+            }
+        }
+        Node::Region { body, .. } => {
+            for node in body.iter() {
+                estimate_node_bytes(node, bytes);
+            }
+        }
+        Node::TileElementwise { body, .. } => {
+            for node in body {
+                estimate_node_bytes(node, bytes);
+            }
+        }
+        Node::Opaque(_) => {
+            *bytes += 64;
+        }
+        _ => {}
+    }
+}
+
+fn estimate_expr_bytes(expr: &crate::ir::Expr, bytes: &mut usize) {
+    use crate::ir::Expr;
+    *bytes += std::mem::size_of::<Expr>();
+    match expr {
+        Expr::Load { buffer, index, .. } => {
+            *bytes += buffer.as_str().len();
+            estimate_expr_bytes(index, bytes);
+        }
+        Expr::BinOp { left, right, .. } => {
+            estimate_expr_bytes(left, bytes);
+            estimate_expr_bytes(right, bytes);
+        }
+        Expr::UnOp { operand, .. }
+        | Expr::Cast { value: operand, .. }
+        | Expr::SubgroupBallot { cond: operand }
+        | Expr::SubgroupReduce { value: operand, .. } => {
+            estimate_expr_bytes(operand, bytes);
+        }
+        Expr::Call { args, .. } => {
+            for arg in args {
+                estimate_expr_bytes(arg, bytes);
+            }
+        }
+        Expr::Select {
+            cond,
+            true_val,
+            false_val,
+        } => {
+            estimate_expr_bytes(cond, bytes);
+            estimate_expr_bytes(true_val, bytes);
+            estimate_expr_bytes(false_val, bytes);
+        }
+        Expr::Fma { a, b, c } => {
+            estimate_expr_bytes(a, bytes);
+            estimate_expr_bytes(b, bytes);
+            estimate_expr_bytes(c, bytes);
+        }
+        Expr::Atomic {
+            index,
+            expected,
+            value,
+            ..
+        } => {
+            estimate_expr_bytes(index, bytes);
+            if let Some(expected) = expected {
+                estimate_expr_bytes(expected, bytes);
+            }
+            estimate_expr_bytes(value, bytes);
+        }
+        Expr::SubgroupShuffle { value, lane } => {
+            estimate_expr_bytes(value, bytes);
+            estimate_expr_bytes(lane, bytes);
+        }
+        Expr::Var(name) => {
+            *bytes += name.as_str().len();
+        }
+        Expr::BufLen { buffer, .. } => {
+            *bytes += buffer.as_str().len();
+        }
+        Expr::Opaque(_) => {
+            *bytes += 64;
+        }
+        _ => {}
+    }
+}
+

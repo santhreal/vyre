@@ -621,6 +621,10 @@ pub mod source_tree_digest;
 #[path = "store_to_load_forward_value_invalidation.rs"]
 pub mod store_to_load_forward_value_invalidation;
 
+/// Integration tests from `tests/structural_sharing_and_bounded_compilation_contracts.rs`.
+#[path = "structural_sharing_and_bounded_compilation_contracts.rs"]
+pub mod structural_sharing_and_bounded_compilation_contracts;
+
 /// Integration tests from `tests/strength_reduce_shift_fusion_overflow.rs`.
 #[path = "strength_reduce_shift_fusion_overflow.rs"]
 pub mod strength_reduce_shift_fusion_overflow;

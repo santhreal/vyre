@@ -89,6 +89,8 @@ pub struct PassScheduler {
     ///
     /// This is the production hook for P-1.0-V3 liquid BufferDecl shapes.
     enforce_shape_predicates: bool,
+    /// Deterministic compile budget limits if configured.
+    pub(crate) budget: Option<crate::optimizer::compile_budget::CompileBudget>,
 }
 
 pub(crate) const PASS_RESEARCH_TRACE_SCHEMA_VERSION: u32 = 1;
@@ -543,6 +545,7 @@ impl PassScheduler {
             enforce_effect_handlers: false,
             enforce_linear_types: false,
             enforce_shape_predicates: false,
+            budget: None,
         }
     }
 
@@ -598,6 +601,19 @@ impl PassScheduler {
     #[must_use]
     pub fn shape_predicate_enforcement(&self) -> bool {
         self.enforce_shape_predicates
+    }
+
+    /// Set a deterministic compilation budget for this scheduler.
+    #[must_use]
+    pub fn with_budget(mut self, budget: crate::optimizer::compile_budget::CompileBudget) -> Self {
+        self.budget = Some(budget);
+        self
+    }
+
+    /// The active compilation budget if set.
+    #[must_use]
+    pub fn budget(&self) -> Option<&crate::optimizer::compile_budget::CompileBudget> {
+        self.budget.as_ref()
     }
 }
 

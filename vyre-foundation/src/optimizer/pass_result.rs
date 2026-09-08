@@ -78,6 +78,15 @@ pub enum RefusalReason {
         /// Free-form description of the violation.
         detail: &'static str,
     },
+    /// The compilation exceeded the deterministic budget for a resource.
+    BudgetExceeded {
+        /// Resource kind that exceeded its limit.
+        resource: &'static str,
+        /// The budget ceiling.
+        budget: u64,
+        /// The amount consumed or demanded.
+        consumed: u64,
+    },
     /// Catch-all refusal with a free-form reason. Use this only when none of the above fits;
     /// preferred path is to add a typed variant.
     Other {
@@ -94,6 +103,7 @@ impl RefusalReason {
             Self::CostIncrease { .. } => "cost_increase",
             Self::EffectLatticeViolation { .. } => "effect_lattice_violation",
             Self::WireContractViolation { .. } => "wire_contract_violation",
+            Self::BudgetExceeded { .. } => "budget_exceeded",
             Self::Other { .. } => "other",
         }
     }
@@ -115,6 +125,9 @@ impl std::fmt::Display for RefusalReason {
             ),
             Self::WireContractViolation { detail } => {
                 write!(f, "wire_contract_violation: {detail}")
+            }
+            Self::BudgetExceeded { resource, budget, consumed } => {
+                write!(f, "budget_exceeded: resource={resource} budget={budget} consumed={consumed}")
             }
             Self::Other { detail } => write!(f, "other: {detail}"),
         }
