@@ -7,6 +7,7 @@
 //! with actionable `Fix:` diagnostics before compilation.
 
 use std::collections::BTreeSet;
+use std::num::ParseIntError;
 
 use crate::ir::{BufferAccess, DataType};
 
@@ -35,6 +36,45 @@ pub enum FieldType {
     Buffer,
 }
 
+/// One integer width an external schema field can declare.
+trait IntegerLiteral: Sized {
+    /// Width name as it appears in a diagnostic.
+    const NAME: &'static str;
+
+    fn from_decimal(raw: &str) -> Result<Self, ParseIntError>;
+
+    fn from_hex(digits: &str) -> Result<Self, ParseIntError>;
+}
+
+macro_rules! integer_literal {
+    ($($ty:ty),+ $(,)?) => {$(
+        impl IntegerLiteral for $ty {
+            const NAME: &'static str = stringify!($ty);
+
+            fn from_decimal(raw: &str) -> Result<Self, ParseIntError> {
+                raw.parse()
+            }
+
+            fn from_hex(digits: &str) -> Result<Self, ParseIntError> {
+                Self::from_str_radix(digits, 16)
+            }
+        }
+    )+};
+}
+
+integer_literal!(u32, i32, u64, i64);
+
+/// Accept a decimal literal or a `0x`-prefixed hexadecimal one, rejecting overflow.
+fn validate_integer<T: IntegerLiteral>(raw: &str) -> Result<(), String> {
+    let parsed = match raw.strip_prefix("0x").or_else(|| raw.strip_prefix("0X")) {
+        Some(digits) => T::from_hex(digits),
+        None => T::from_decimal(raw),
+    };
+    parsed
+        .map(|_| ())
+        .map_err(|e| format!("invalid {} value `{raw}`: {e}", T::NAME))
+}
+
 impl FieldType {
     /// Validate that a raw string value can be parsed into this field type without overflow.
     ///
@@ -43,22 +83,10 @@ impl FieldType {
     /// Returns a string describing the parse or bounds failure.
     pub fn parse_and_validate(&self, raw: &str) -> Result<(), String> {
         match self {
-            Self::U32 => raw
-                .parse::<u32>()
-                .map(|_| ())
-                .map_err(|e| format!("invalid u32 value `{raw}`: {e}")),
-            Self::I32 => raw
-                .parse::<i32>()
-                .map(|_| ())
-                .map_err(|e| format!("invalid i32 value `{raw}`: {e}")),
-            Self::U64 => raw
-                .parse::<u64>()
-                .map(|_| ())
-                .map_err(|e| format!("invalid u64 value `{raw}`: {e}")),
-            Self::I64 => raw
-                .parse::<i64>()
-                .map(|_| ())
-                .map_err(|e| format!("invalid i64 value `{raw}`: {e}")),
+            Self::U32 => validate_integer::<u32>(raw),
+            Self::I32 => validate_integer::<i32>(raw),
+            Self::U64 => validate_integer::<u64>(raw),
+            Self::I64 => validate_integer::<i64>(raw),
             Self::F32 => raw
                 .parse::<f32>()
                 .map_err(|e| format!("invalid f32 value `{raw}`: {e}"))

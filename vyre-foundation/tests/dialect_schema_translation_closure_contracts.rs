@@ -32,12 +32,37 @@ fn field_type_exhaustive_closure() {
         FieldType::Buffer,
     ];
 
+    // A field value arrives as text, so each integer width accepts a decimal or a
+    // `0x`-prefixed hexadecimal literal and rejects one that overflows the width.
     for ft in types {
         match ft {
-            FieldType::U32 => assert!(ft.parse_and_validate("123").is_ok()),
-            FieldType::I32 => assert!(ft.parse_and_validate("-123").is_ok()),
-            FieldType::U64 => assert!(ft.parse_and_validate("1234567890123").is_ok()),
-            FieldType::I64 => assert!(ft.parse_and_validate("-1234567890123").is_ok()),
+            FieldType::U32 => {
+                assert!(ft.parse_and_validate("123").is_ok());
+                assert!(ft.parse_and_validate("0xFFFFFFFF").is_ok());
+                assert!(ft.parse_and_validate("0Xff").is_ok());
+                assert!(ft.parse_and_validate("0x100000000").is_err());
+                assert!(ft.parse_and_validate("4294967296").is_err());
+                assert!(ft.parse_and_validate("-1").is_err());
+                assert!(ft.parse_and_validate("0xzz").is_err());
+            }
+            FieldType::I32 => {
+                assert!(ft.parse_and_validate("-123").is_ok());
+                assert!(ft.parse_and_validate("0x7FFFFFFF").is_ok());
+                assert!(ft.parse_and_validate("0x80000000").is_err());
+                assert!(ft.parse_and_validate("2147483648").is_err());
+            }
+            FieldType::U64 => {
+                assert!(ft.parse_and_validate("1234567890123").is_ok());
+                assert!(ft.parse_and_validate("0xFFFFFFFFFFFFFFFF").is_ok());
+                assert!(ft.parse_and_validate("0x10000000000000000").is_err());
+                assert!(ft.parse_and_validate("18446744073709551616").is_err());
+            }
+            FieldType::I64 => {
+                assert!(ft.parse_and_validate("-1234567890123").is_ok());
+                assert!(ft.parse_and_validate("0x7FFFFFFFFFFFFFFF").is_ok());
+                assert!(ft.parse_and_validate("0x8000000000000000").is_err());
+                assert!(ft.parse_and_validate("9223372036854775808").is_err());
+            }
             FieldType::F32 => assert!(ft.parse_and_validate("3.14").is_ok()),
             FieldType::F64 => assert!(ft.parse_and_validate("3.1415926535").is_ok()),
             FieldType::Bool => assert!(ft.parse_and_validate("true").is_ok()),

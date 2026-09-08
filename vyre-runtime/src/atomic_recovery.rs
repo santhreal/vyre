@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::format;
 use std::string::String;
 use core::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
+use std::sync::{Mutex, RwLock};
 
 use vyre_foundation::failure_domain::{
     FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError,
@@ -34,7 +34,7 @@ pub enum GuardedState<T> {
 
 /// Thread-safe atomic guarded container that eliminates uncoordinated lock poison.
 pub struct AtomicGuardedState<T> {
-    inner: Mutex<GuardedState<T>>,
+    inner: RwLock<Mutex<GuardedState<T>>>,
     domain: FailureDomain,
     recovery_class: RecoveryClass,
 }
@@ -44,10 +44,27 @@ impl<T> AtomicGuardedState<T> {
     #[must_use]
     pub fn new(initial: T, domain: FailureDomain, recovery_class: RecoveryClass) -> Self {
         Self {
-            inner: Mutex::new(GuardedState::Ready(initial)),
+            inner: RwLock::new(Mutex::new(GuardedState::Ready(initial))),
             domain,
             recovery_class,
         }
+    }
+
+    /// Inspect the current lifecycle state.
+    #[must_use]
+    pub fn current_state(&self) -> GuardedState<T>
+    where
+        T: Clone,
+    {
+        let read_slot = match self.inner.read() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
+        let guard = match read_slot.lock() {
+            Ok(g) => g,
+            Err(poison) => poison.into_inner(),
+        };
+        guard.clone()
     }
 
     /// Access the guarded state with an operational closure.
@@ -59,7 +76,12 @@ impl<T> AtomicGuardedState<T> {
         &self,
         op: impl FnOnce(&mut T) -> Result<R, String>,
     ) -> Result<R, TypedRecoveryError> {
-        let mut guard = match self.inner.lock() {
+        let read_slot = match self.inner.read() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
+
+        let mut guard = match read_slot.lock() {
             Ok(g) => g,
             Err(poison) => {
                 let mut inner_guard = poison.into_inner();
@@ -111,12 +133,11 @@ impl<T> AtomicGuardedState<T> {
 
     /// Explicitly recover and restore state to Ready.
     pub fn recover(&self, fresh_state: T) {
-        if let Ok(mut guard) = self.inner.lock() {
-            *guard = GuardedState::Ready(fresh_state);
-        } else if let Err(poison) = self.inner.lock() {
-            let mut guard = poison.into_inner();
-            *guard = GuardedState::Ready(fresh_state);
-        }
+        let mut write_slot = match self.inner.write() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
+        *write_slot = Mutex::new(GuardedState::Ready(fresh_state));
     }
 }
 
@@ -152,13 +173,19 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
     ///
     /// Returns error if key is already prepared by a concurrent operation.
     pub fn prepare(&self, key: K, value: V) -> Result<Option<PrepareTicket>, String> {
-        let committed = self.committed.lock().unwrap();
+        let committed = match self.committed.lock() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
         if committed.contains_key(&key) {
             return Ok(None); // Already committed; idempotent no-op
         }
         drop(committed);
 
-        let mut prepared = self.prepared.lock().unwrap();
+        let mut prepared = match self.prepared.lock() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
         if prepared.contains_key(&key) {
             return Err(String::from(
                 "Fix: operation with this idempotency key is already prepared in flight.",
@@ -177,7 +204,10 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
     ///
     /// Returns error if the ticket does not match the prepared entry.
     pub fn commit(&self, key: K, ticket: PrepareTicket) -> Result<V, String> {
-        let mut prepared = self.prepared.lock().unwrap();
+        let mut prepared = match self.prepared.lock() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
         let (saved_ticket, val) = prepared.remove(&key).ok_or_else(|| {
             String::from("Fix: no prepared transaction found for key during commit phase.")
         })?;
@@ -188,14 +218,20 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
             ));
         }
 
-        let mut committed = self.committed.lock().unwrap();
+        let mut committed = match self.committed.lock() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
         committed.insert(key, val.clone());
         Ok(val)
     }
 
     /// Abort and discard a prepared mutation.
     pub fn abort(&self, key: &K, ticket: PrepareTicket) {
-        let mut prepared = self.prepared.lock().unwrap();
+        let mut prepared = match self.prepared.lock() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
         if let Some((saved_ticket, _)) = prepared.get(key) {
             if saved_ticket.ticket_id == ticket.ticket_id {
                 prepared.remove(key);
@@ -206,7 +242,17 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
     /// Check if an idempotency key has been committed.
     #[must_use]
     pub fn is_committed(&self, key: &K) -> bool {
-        self.committed.lock().unwrap().contains_key(key)
+        let committed = match self.committed.lock() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
+        committed.contains_key(key)
+    }
+}
+
+impl<K: Ord + Clone, V: Clone> Default for PrepareCommitJournal<K, V> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -231,7 +277,10 @@ impl SupervisedRestartBudget {
     /// # Errors
     ///
     pub fn record_restart(&self, domain: FailureDomain) -> Result<u32, TypedRecoveryError> {
-        let mut count = self.restart_count.lock().unwrap();
+        let mut count = match self.restart_count.lock() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
         *count += 1;
         if *count > self.max_restarts {
             return Err(TypedRecoveryError::new(
@@ -250,6 +299,10 @@ impl SupervisedRestartBudget {
 
     /// Reset restart count after a sustained period of healthy operation.
     pub fn reset(&self) {
-        *self.restart_count.lock().unwrap() = 0;
+        let mut count = match self.restart_count.lock() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
+        *count = 0;
     }
 }
