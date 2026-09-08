@@ -826,24 +826,27 @@ fn reported_groups(
     groups
 }
 
-/// Reconciles the planned resident peak against what the launched instance held.
+/// Reconciles the artifact-owned resident peak against what the launched
+/// instance held.
 ///
 /// The allocation plan states the bytes that must be resident at once for the
-/// artifact to run. Every one of those bytes is on the device while an entry
-/// point of that artifact runs, so an instance holding fewer bytes than the plan
-/// requires is not running the selected plan, and a measurement taken there
-/// would rank a schedule nobody compiled. A backend with no memory query reports
-/// `None`, which leaves the planned figure unreconciled rather than
-/// contradicted.
+/// artifact to run. The artifact-owned half of those bytes is what a backend
+/// allocator holds, and all of it is on the device while an entry point runs,
+/// so an instance holding fewer is not running the selected plan and a
+/// measurement taken there would rank a schedule nobody compiled. A backend
+/// with no memory query reports `None`, which leaves the plan unreconciled
+/// rather than contradicted.
 ///
-/// The figure comes from the launch itself, because that is the only moment the
-/// artifact's storage is bound. Reading it from a separate resource query asked
-/// a freshly materialized instance what it held before anything bound it, and
-/// the answer was whatever the previous artifact had left in the allocator: a
-/// measured sweep refused 278 of 349 operations that way, every one of them for
-/// bytes no launch had requested.
+/// Two earlier shapes of this check refused work that was correct. It read the
+/// figure from a separate resource query, which asked a freshly materialized
+/// instance what it held before anything bound the plan, so it compared against
+/// the previous artifact's residue. It then compared against
+/// `aggregate_peak_bytes`, which counts caller-owned regions the backend
+/// allocator never holds: on a host-input launch the caller's bytes are staged,
+/// not resident, so every plan with a caller region failed by exactly the
+/// caller's share. A CUDA sweep refused 278 of 349 operations under each.
 fn reconcile_resident_bytes(artifact: &Artifact, observed: u64) -> Result<(), CompileError> {
-    let planned = artifact.allocation().aggregate_peak_bytes;
+    let planned = artifact.allocation().artifact_peak_bytes()?;
     if observed >= planned {
         return Ok(());
     }
@@ -851,7 +854,7 @@ fn reconcile_resident_bytes(artifact: &Artifact, observed: u64) -> Result<(), Co
         CompilerFailureKind::UnreconciledResidentBytes,
         "measurement.resident_device_bytes",
         format!(
-            "the launched instance held {observed} bytes while the selected allocation plan requires {planned}"
+            "the launched instance held {observed} bytes while the artifact-owned storage of the selected allocation plan requires {planned}"
         ),
         "bind the allocation plan the artifact records before measuring it",
     ))

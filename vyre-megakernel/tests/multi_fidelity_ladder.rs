@@ -307,7 +307,10 @@ impl FinalistEvaluator for LadderEvaluator {
             .lock()
             .expect("fixture state is not poisoned")
             .push(groups);
-        let planned = artifact.allocation().aggregate_peak_bytes;
+        let planned = artifact
+            .allocation()
+            .artifact_peak_bytes()
+            .expect("the fixture plan sums inside u64");
         let resident_device_bytes = match self.reported {
             Reported::ResidentBelowPlan => Some(planned.saturating_sub(1)),
             Reported::ResidentAtPlan => Some(planned),
@@ -846,6 +849,35 @@ fn every_reconciled_resident_figure_comes_from_a_counted_launch() {
         !refused.measured().is_empty(),
         "a refused resident figure must describe a finalist that launched, not an \
          allocator queried before anything bound the plan"
+    );
+}
+
+/// WHY: a backend allocator holds the artifact's storage, never the caller's.
+/// On a host-input launch the caller's bytes are staged into the launch rather
+/// than held in any allocator the backend can count, so reconciling against
+/// `aggregate_peak_bytes`, which sums both owners, demanded bytes no allocator
+/// was ever going to report. A CUDA sweep refused 278 of 349 operations by
+/// exactly the caller's share of plans the artifact was running correctly. The
+/// check reads `artifact_peak_bytes` now, and this fixture holds precisely that
+/// and no more.
+#[test]
+fn a_launch_holding_only_the_artifact_share_of_the_plan_compiles() {
+    let evaluator = LadderEvaluator::reporting(Reported::ResidentAtPlan);
+    let artifact = measured_compile(priced_device(), budget(LAUNCHES), &evaluator)
+        .expect("an instance holding the artifact-owned peak is running the selected plan");
+    let allocation = artifact.allocation();
+    let artifact_owned = allocation
+        .artifact_peak_bytes()
+        .expect("the fixture plan sums inside u64");
+    assert!(
+        artifact_owned > 0,
+        "the fixture plan must own bytes for the reconciliation to have a subject"
+    );
+    assert!(
+        artifact_owned < allocation.aggregate_peak_bytes,
+        "the fixture plan must carry caller-owned regions, or this case cannot tell the \
+         artifact-owned peak from the aggregate: artifact-owned {artifact_owned}, aggregate {}",
+        allocation.aggregate_peak_bytes
     );
 }
 

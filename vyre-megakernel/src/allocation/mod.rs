@@ -254,6 +254,40 @@ impl AllocationPlan {
         }
     }
 
+    /// Bytes the artifact's own storage must hold at once, summed over devices.
+    ///
+    /// [`Self::aggregate_peak_bytes`] counts caller-owned regions too, because
+    /// candidate ranking prices everything the device addresses. A backend
+    /// allocator owns only the artifact's half: the caller binds its own
+    /// buffers, and on a host-input launch those bytes are staged rather than
+    /// held in any allocator the backend can count. Reconciling a device figure
+    /// against the aggregate therefore compares two different quantities, and
+    /// on a CUDA sweep it refused 278 of 349 operations for the caller's share
+    /// of a plan the artifact was running correctly.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when a device's live placements sum past `u64`.
+    pub fn artifact_peak_bytes(&self) -> Result<u64, CompileError> {
+        let mut devices: Vec<DeviceSlot> = self
+            .regions
+            .iter()
+            .filter(|region| region.owner == RegionOwner::Artifact)
+            .map(|region| region.device)
+            .collect();
+        devices.sort_unstable();
+        devices.dedup();
+        devices.into_iter().try_fold(0u64, |total, device| {
+            let peak = self.live_peak(device, Some(RegionOwner::Artifact))?;
+            total.checked_add(peak).ok_or_else(|| {
+                overflow(
+                    "artifact.allocation.device_peaks",
+                    "artifact-owned device peak sum exceeds u64",
+                )
+            })
+        })
+    }
+
     /// Region and placement holding `value`, when the plan places it.
     #[must_use]
     pub fn placement(
