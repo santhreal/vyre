@@ -1,4 +1,5 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 use thiserror::Error;
@@ -6,13 +7,16 @@ use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, BindingSet,
     BoundResource, Completion, DeviceIdentity, Resource, Submission,
 };
-use vyre_foundation::ir::{BufferAccess, BufferDecl, Program};
+use vyre_foundation::ir::Program;
 use vyre_megakernel::{
     AbiAccess, ArtifactEnvelope, ArtifactValueId, CompileError, Digest, ResourceLifetime,
     TargetCompileError, TargetEntryPoint, ValidatedCompileRequest,
 };
 
 use super::finalist::{host_input_resources, validate_instance, DeviceFinalists};
+use super::ingestion::{
+    ResourceDataSource, ResourceIngestionError, ResourceManifest, TypedResourceDataset,
+};
 use super::workspace::ArtifactWorkspace;
 use super::{admit_envelope, AdmittedArtifact, ArtifactAdmissionError};
 
@@ -31,6 +35,9 @@ pub enum ArtifactSessionError {
     /// Registered device materialization or submission failed.
     #[error(transparent)]
     Backend(#[from] BackendError),
+    /// Typed resource ingestion or schema validation failed.
+    #[error(transparent)]
+    Ingestion(#[from] ResourceIngestionError),
     /// Runtime lifecycle state was poisoned by a panic while locked.
     #[error("artifact session state is poisoned: {0}. Fix: discard and rebuild the session")]
     State(String),
@@ -260,178 +267,298 @@ impl ArtifactSession {
         Ok(state.materializer.free_resident(resource)?)
     }
 
-    /// Bind backend-resident resources by canonical value identity.
-    pub fn resident_bindings(
-        &self,
-        resources: &[Resource],
-    ) -> Result<BindingSet, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
-        let canonical_resources = state.admitted.neutral().resources();
-        let target_entries = state.admitted.target_payload().entries();
-        if target_entries.len() != 1 {
-            return Err(BackendError::UnsupportedFeature {
-                name: "positional resident bindings for multi-entry artifacts".to_string(),
-                backend: state.instance.device().backend.to_string(),
-            }
-            .into());
-        }
-        if canonical_resources.len() != resources.len() {
-            return Err(BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: target entry requires {} resident resource(s), but the caller supplied {}.",
-                    canonical_resources.len(),
-                    resources.len()
-                ),
-            }
-            .into());
-        }
-        let mut typed = BindingSet::new(state.admitted.neutral().digest());
-        for (record, resource) in canonical_resources.iter().zip(resources) {
-            let bound = BoundResource::Resident(resource.clone());
-            if let Some(existing) = typed.resources().get(&record.value) {
-                if existing != &bound {
-                    return Err(BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: conflicting resident resources supplied for canonical value {}.",
-                            record.value.0
-                        ),
-                    }
-                    .into());
-                }
-            }
-            typed.insert(record.value, bound);
-        }
-        require_every_entry_binding(target_entries, &typed)?;
-        Ok(typed)
-    }
-
-    /// Bind resident resources matching the declared non-shared buffer order of `program`.
-    pub fn program_resident_bindings(
-        &self,
-        program: &Program,
-        resources: &[Resource],
-    ) -> Result<BindingSet, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
-        let target_entries = state.admitted.target_payload().entries();
-        if target_entries.len() != 1 {
-            return Err(BackendError::UnsupportedFeature {
-                name: "positional resident bindings for multi-entry artifacts".to_string(),
-                backend: state.instance.device().backend.to_string(),
-            }
-            .into());
-        }
-        let non_shared_buffers: Vec<&BufferDecl> = program
-            .buffers()
-            .iter()
-            .filter(|decl| decl.access != BufferAccess::Workgroup)
-            .collect();
-        if non_shared_buffers.len() != resources.len() {
-            return Err(BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: target entry requires {} resident resource(s), but the caller supplied {}.",
-                    non_shared_buffers.len(),
-                    resources.len()
-                ),
-            }
-            .into());
-        }
-        let canonical_by_name =
-            state
-                .admitted
-                .neutral()
-                .canonical_value_by_name()
-                .map_err(|collision| {
-                    ArtifactSessionError::from(BackendError::InvalidProgram {
-                        fix: collision.to_string(),
-                    })
-                })?;
-        let mut typed = BindingSet::new(state.admitted.neutral().digest());
-        for (buffer_decl, resource) in non_shared_buffers.into_iter().zip(resources) {
-            let value_id = canonical_by_name
-                .get(buffer_decl.name.as_ref())
-                .copied()
-                .ok_or_else(|| {
-                    ArtifactSessionError::from(BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: artifact resources must carry canonical value for Program buffer `{}`.",
-                            buffer_decl.name
-                        ),
-                    })
-                })?;
-            let bound = BoundResource::Resident(resource.clone());
-            if let Some(existing) = typed.resources().get(&value_id) {
-                if existing != &bound {
-                    return Err(BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: conflicting resident resources supplied for Program buffer `{}` (canonical value {}).",
-                            buffer_decl.name, value_id.0
-                        ),
-                    }
-                    .into());
-                }
-            }
-            typed.insert(value_id, bound);
-        }
-        require_every_entry_binding(target_entries, &typed)?;
-        Ok(typed)
-    }
-
-    /// Bind resident resources by exact resource name, over any entry count.
+    /// Ingest a typed resource dataset, validating against the artifact ABI before
+    /// performing any allocation, and publishing bindings only when the complete
+    /// ABI is satisfied.
     ///
-    /// Naming a value binds it for every entry point that declares it, so a
-    /// multi-entry artifact needs no per-entry binding call.
-    pub fn resident_bindings_by_name<'a, I>(
+    /// # Errors
+    ///
+    /// Returns a validation rejection before allocation if any required resource
+    /// is missing, unknown, or has a mismatched schema (dtype, element count,
+    /// lifetime, access, generation, byte length, or digest). Returns a driver
+    /// error if allocation or upload fails, rolling back all partial allocations.
+    pub fn ingest(&self, dataset: &TypedResourceDataset) -> Result<BindingSet, ArtifactSessionError> {
+        self.ingest_with_workspace_opt(None, dataset)
+    }
+
+    /// Ingest a typed resource dataset with an allocated artifact workspace.
+    ///
+    /// Values produced and consumed within the artifact are bound from `workspace`.
+    /// Caller dataset providing a resource for a workspace-owned value is rejected
+    /// rather than overridden.
+    ///
+    /// # Errors
+    ///
+    /// Returns a validation rejection if a workspace-owned value is overridden by
+    /// the caller, if any non-workspace required resource is missing, or if any
+    /// typed schema mismatches.
+    pub fn ingest_with_workspace(
         &self,
-        resources: I,
-    ) -> Result<BindingSet, ArtifactSessionError>
-    where
-        I: IntoIterator<Item = (&'a str, &'a Resource)>,
-    {
+        workspace: &ArtifactWorkspace,
+        dataset: &TypedResourceDataset,
+    ) -> Result<BindingSet, ArtifactSessionError> {
+        self.ingest_with_workspace_opt(Some(workspace), dataset)
+    }
+
+    /// Ingest from an AOT resource manifest.
+    pub fn ingest_manifest(
+        &self,
+        manifest: &ResourceManifest,
+    ) -> Result<BindingSet, ArtifactSessionError> {
+        let dataset = manifest.to_dataset()?;
+        self.ingest(&dataset)
+    }
+
+    /// Ingest from an AOT resource manifest relative to a custom base directory.
+    pub fn ingest_manifest_with_base_dir(
+        &self,
+        manifest: &ResourceManifest,
+        base_dir: &Path,
+    ) -> Result<BindingSet, ArtifactSessionError> {
+        let dataset = manifest.to_dataset_with_base_dir(base_dir)?;
+        self.ingest(&dataset)
+    }
+
+    /// Transactional implementation of typed resource ingestion.
+    fn ingest_with_workspace_opt(
+        &self,
+        workspace: Option<&ArtifactWorkspace>,
+        dataset: &TypedResourceDataset,
+    ) -> Result<BindingSet, ArtifactSessionError> {
         let state = self
             .state
             .read()
             .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
-        let target_entries = state.admitted.target_payload().entries();
-        let canonical_by_name =
-            state
-                .admitted
-                .neutral()
-                .canonical_value_by_name()
-                .map_err(|collision| {
-                    ArtifactSessionError::from(BackendError::InvalidProgram {
-                        fix: collision.to_string(),
-                    })
-                })?;
-        let mut typed = BindingSet::new(state.admitted.neutral().digest());
-        for (name, resource) in resources {
-            let value_id = canonical_by_name.get(name).copied().ok_or_else(|| {
-                ArtifactSessionError::from(BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: artifact resources do not carry a canonical value named `{name}`."
-                    ),
-                })
-            })?;
-            let bound = BoundResource::Resident(resource.clone());
-            if let Some(existing) = typed.resources().get(&value_id) {
-                if existing != &bound {
-                    return Err(BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: conflicting resident resources supplied for resource `{name}` (canonical value {}).",
-                            value_id.0
-                        ),
+
+        let neutral = state.admitted.neutral();
+        let target_payload = state.admitted.target_payload();
+        let entries = target_payload.entries();
+        let device_identity = state.instance.device();
+        let abi = neutral.abi();
+        let resources = neutral.resources();
+
+        // -------------------------------------------------------------------------
+        // Phase 1: Pre-validation (Zero driver allocations, Zero uploads)
+        // -------------------------------------------------------------------------
+
+        // 1. Gather all required resources across all target entries.
+        let mut required_by_entry: BTreeMap<ArtifactValueId, Vec<&TargetEntryPoint>> = BTreeMap::new();
+        for entry in entries {
+            for target_binding in &entry.resource_bindings {
+                required_by_entry
+                    .entry(target_binding.resource)
+                    .or_default()
+                    .push(entry);
+            }
+        }
+
+        // 2. Check workspace overlap and missing resources.
+        for (value_id, requesting_entries) in &required_by_entry {
+            if let Some(ws) = workspace {
+                if ws.owns(*value_id) {
+                    if dataset.get(*value_id).is_some() {
+                        return Err(ResourceIngestionError::WorkspaceOwnedCollision {
+                            value: *value_id,
+                        }
+                        .into());
+                    }
+                    continue;
+                }
+            }
+            if dataset.get(*value_id).is_none() {
+                let entry_name = requesting_entries
+                    .first()
+                    .map(|e| e.name.clone())
+                    .unwrap_or_default();
+                return Err(ResourceIngestionError::MissingResource {
+                    value: *value_id,
+                    entry_name,
+                }
+                .into());
+            }
+        }
+
+        // 3. Check all supplied resources in dataset against artifact ABI & schema.
+        let mut prepared_payloads: BTreeMap<ArtifactValueId, Option<Vec<u8>>> = BTreeMap::new();
+
+        for (val_id, typed_res) in dataset.iter() {
+            let resource_record = resources
+                .iter()
+                .find(|r| r.value == *val_id)
+                .ok_or(ResourceIngestionError::UnknownValue { value: *val_id })?;
+
+            let abi_record = abi.resources.iter().find(|r| r.value == *val_id);
+
+            if let Some(dtype) = &typed_res.dtype {
+                if let Some(abi_rec) = abi_record {
+                    if &abi_rec.dtype != dtype {
+                        return Err(ResourceIngestionError::DtypeMismatch {
+                            value: *val_id,
+                            expected: abi_rec.dtype.clone(),
+                            actual: dtype.clone(),
+                        }
+                        .into());
+                    }
+                }
+            }
+
+            if let Some(elem_count) = typed_res.element_count {
+                if resource_record.element_count != elem_count {
+                    return Err(ResourceIngestionError::ElementCountMismatch {
+                        value: *val_id,
+                        expected: resource_record.element_count,
+                        actual: elem_count,
                     }
                     .into());
                 }
             }
-            typed.insert(value_id, bound);
+
+            if let Some(lifetime) = typed_res.lifetime {
+                if resource_record.lifetime != lifetime {
+                    return Err(ResourceIngestionError::LifetimeMismatch {
+                        value: *val_id,
+                        expected: resource_record.lifetime,
+                        actual: lifetime,
+                    }
+                    .into());
+                }
+            }
+
+            if let Some(access) = typed_res.access {
+                if let Some(abi_rec) = abi_record {
+                    if abi_rec.access != access {
+                        return Err(ResourceIngestionError::AccessMismatch {
+                            value: *val_id,
+                            expected: abi_rec.access,
+                            actual: access,
+                        }
+                        .into());
+                    }
+                }
+            }
+
+            if let Some(gen) = typed_res.generation {
+                if device_identity.generation != gen {
+                    return Err(ResourceIngestionError::GenerationMismatch {
+                        value: *val_id,
+                        expected: device_identity.generation,
+                        actual: gen,
+                    }
+                    .into());
+                }
+            }
+
+            let bytes_opt = typed_res.source.fetch_bytes()?;
+            if let Some(bytes) = &bytes_opt {
+                if resource_record.byte_count > 0
+                    && bytes.len() as u64 != resource_record.byte_count
+                {
+                    return Err(ResourceIngestionError::ByteCountMismatch {
+                        value: *val_id,
+                        expected: resource_record.byte_count,
+                        actual: bytes.len() as u64,
+                    }
+                    .into());
+                }
+                if let Some(expected_identity) = typed_res.identity {
+                    let computed = Digest(*blake3::hash(bytes).as_bytes());
+                    if computed != expected_identity {
+                        return Err(ResourceIngestionError::IdentityMismatch {
+                            value: *val_id,
+                            expected: expected_identity,
+                            actual: computed,
+                        }
+                        .into());
+                    }
+                }
+            }
+
+            prepared_payloads.insert(*val_id, bytes_opt);
         }
-        require_every_entry_binding(target_entries, &typed)?;
+
+        // -------------------------------------------------------------------------
+        // Phase 2: Transactional Allocation & Upload with Rollback Guard
+        // -------------------------------------------------------------------------
+        struct RollbackGuard<'a> {
+            materializer: &'a dyn ArtifactMaterializer,
+            allocated: Vec<Resource>,
+            committed: bool,
+        }
+
+        impl<'a> Drop for RollbackGuard<'a> {
+            fn drop(&mut self) {
+                if !self.committed {
+                    for resource in self.allocated.drain(..) {
+                        let _ = self.materializer.free_resident(resource);
+                    }
+                }
+            }
+        }
+
+        let mut guard = RollbackGuard {
+            materializer: state.materializer.as_ref(),
+            allocated: Vec::new(),
+            committed: false,
+        };
+
+        let mut resolved_resources: BTreeMap<ArtifactValueId, Resource> = BTreeMap::new();
+
+        for (val_id, typed_res) in dataset.iter() {
+            match &typed_res.source {
+                ResourceDataSource::Resident(existing_res) => {
+                    resolved_resources.insert(*val_id, existing_res.clone());
+                }
+                _ => {
+                    let bytes = prepared_payloads
+                        .get(val_id)
+                        .and_then(|b| b.as_ref())
+                        .expect("payload must be prepared in phase 1");
+
+                    let resource = state
+                        .materializer
+                        .allocate_resident(bytes.len())
+                        .map_err(|err| {
+                            ResourceIngestionError::AllocationFailed {
+                                value: *val_id,
+                                error: err.to_string(),
+                            }
+                        })?;
+
+                    guard.allocated.push(resource.clone());
+
+                    state
+                        .materializer
+                        .upload_resident(&resource, bytes)
+                        .map_err(|err| {
+                            ResourceIngestionError::UploadFailed {
+                                value: *val_id,
+                                error: err.to_string(),
+                            }
+                        })?;
+
+                    resolved_resources.insert(*val_id, resource);
+                }
+            }
+        }
+
+        // -------------------------------------------------------------------------
+        // Phase 3: BindingSet Construction and Publication
+        // -------------------------------------------------------------------------
+        let mut typed = BindingSet::new(neutral.digest());
+
+        if let Some(ws) = workspace {
+            for (value, resource) in ws.bindings() {
+                typed.insert(*value, BoundResource::Resident(resource.clone()));
+            }
+        }
+
+        for (val_id, resource) in resolved_resources {
+            typed.insert(val_id, BoundResource::Resident(resource));
+        }
+
+        require_every_entry_binding(entries, &typed)?;
+
+        guard.committed = true;
         Ok(typed)
     }
 
@@ -465,128 +592,6 @@ impl ArtifactSession {
             .read()
             .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
         Ok(workspace.free(state.materializer.as_ref())?)
-    }
-
-    /// Bind caller-owned resources by name over one allocated workspace.
-    ///
-    /// A workspace-owned value is bound from `workspace`, and naming one in
-    /// `resources` is refused rather than overridden: the artifact allocated
-    /// that region for the entry points that pass a value between themselves,
-    /// and a caller buffer in its place is a wrong bind, not a substitution.
-    ///
-    /// # Errors
-    ///
-    /// Returns an invalid-program rejection when a named resource is not a
-    /// canonical value, when the caller names a workspace-owned value, when two
-    /// resources conflict for one value, and when an entry point declares a
-    /// binding neither the caller nor the workspace supplied.
-    pub fn resident_bindings_with_workspace<'a, I>(
-        &self,
-        workspace: &ArtifactWorkspace,
-        resources: I,
-    ) -> Result<BindingSet, ArtifactSessionError>
-    where
-        I: IntoIterator<Item = (&'a str, &'a Resource)>,
-    {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
-        let target_entries = state.admitted.target_payload().entries();
-        let canonical_by_name =
-            state
-                .admitted
-                .neutral()
-                .canonical_value_by_name()
-                .map_err(|collision| {
-                    ArtifactSessionError::from(BackendError::InvalidProgram {
-                        fix: collision.to_string(),
-                    })
-                })?;
-        let mut typed = BindingSet::new(state.admitted.neutral().digest());
-        for (value, resource) in workspace.bindings() {
-            typed.insert(*value, BoundResource::Resident(resource.clone()));
-        }
-        for (name, resource) in resources {
-            let value_id = canonical_by_name.get(name).copied().ok_or_else(|| {
-                ArtifactSessionError::from(BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: artifact resources do not carry a canonical value named `{name}`."
-                    ),
-                })
-            })?;
-            if workspace.owns(value_id) {
-                return Err(BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: resource `{name}` (canonical value {}) is workspace-owned; bind the artifact workspace and drop it from the caller bindings.",
-                        value_id.0
-                    ),
-                }
-                .into());
-            }
-            let bound = BoundResource::Resident(resource.clone());
-            if let Some(existing) = typed.resources().get(&value_id) {
-                if existing != &bound {
-                    return Err(BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: conflicting resident resources supplied for resource `{name}` (canonical value {}).",
-                            value_id.0
-                        ),
-                    }
-                    .into());
-                }
-            }
-            typed.insert(value_id, bound);
-        }
-        require_every_entry_binding(target_entries, &typed)?;
-        Ok(typed)
-    }
-
-    /// Bind resident resources by exact canonical value identity, over any
-    /// entry count.
-    pub fn resident_bindings_by_value<I>(
-        &self,
-        resources: I,
-    ) -> Result<BindingSet, ArtifactSessionError>
-    where
-        I: IntoIterator<Item = (ArtifactValueId, Resource)>,
-    {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
-        let target_entries = state.admitted.target_payload().entries();
-        let valid_values: BTreeSet<ArtifactValueId> = state
-            .admitted
-            .neutral()
-            .resources()
-            .iter()
-            .map(|r| r.value)
-            .collect();
-        let mut typed = BindingSet::new(state.admitted.neutral().digest());
-        for (value_id, resource) in resources {
-            if !valid_values.contains(&value_id) {
-                return Err(BackendError::InvalidProgram {
-                    fix: format!("Fix: artifact has no canonical value {}.", value_id.0),
-                }
-                .into());
-            }
-            let bound = BoundResource::Resident(resource);
-            if let Some(existing) = typed.resources().get(&value_id) {
-                if existing != &bound {
-                    return Err(BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: conflicting resident resources supplied for canonical value {}.",
-                            value_id.0
-                        ),
-                    }
-                    .into());
-                }
-            }
-            typed.insert(value_id, bound);
-        }
-        require_every_entry_binding(target_entries, &typed)?;
-        Ok(typed)
     }
 
     /// Bind host inputs in canonical ABI slot order.

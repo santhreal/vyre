@@ -49,7 +49,9 @@ pub use vyre_foundation::match_result;
 /// Authenticated artifact admission, materialization, and recovery.
 pub use vyre_runtime::artifact_admission::{
     admit_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession, ArtifactSessionError,
-    RetainedArtifactSession,
+    GeneratedDataSource, ResourceDataSource, ResourceIngestionError, ResourceManifest,
+    ResourceManifestEntry, ResourceManifestSource, RetainedArtifactSession, TypedResource,
+    TypedResourceDataset,
 };
 /// Resident-queue submission against an admitted artifact.
 pub use vyre_runtime::persistent_executor::PersistentExecutor;

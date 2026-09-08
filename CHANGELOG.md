@@ -223,6 +223,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   gets switched off. The conformance lenses spent the first three: an expect on
   a missing neutral builder, in three functions that already had a failure
   channel, now returns that failure with the operation named.
+- `vyre-aot` exposes `compile_request` accepting a validated compiler request
+  and registered target identity, allowing AOT compilation to consume the
+  canonical `ValidatedCompileRequest` without inventing default parameters.
 - The reference and SPIR-V backends carry a tracked hostile-input closure
   target, `vyre-driver-reference/tests/hostile_input_closure_contract.rs` and
   `vyre-driver-spirv/tests/hostile_input_closure_contract.rs`. Both backends
@@ -416,6 +419,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   through one owner, and the one place they legitimately differ is documented
   on the function: an audit treats two NaNs as agreeing because a backend
   chooses its own payload, and the gate does not.
+- Row 96, 100, 101: implemented declarative gate DAG kernel with topological
+  sorting, cycle detection, and prerequisite/cache enforcement; symbol-level IR
+  change-closure manifest gate; and live-registry dynamic engineering
+  scorecard.
 - The neural library now provides gated RMSNorm with float32 accumulation,
   source-dtype rounding, learned scaling, float32 SiLU gating, and exact
   last-dimension row isolation. The reference interpreter now executes
@@ -638,6 +645,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   identity with step position can be made reversal-symmetric and stay wrong; a
   rotation separates the two and catches a subgroup collective that resolves
   its peers by physical step position.
+- The reference interpreter bounds execution by a step ceiling that refuses
+  data-derived unbounded trip counts with a typed `ReferenceError` naming the
+  program and ceiling. Step counts are charged at statement evaluation and
+  invocation boundaries, the ceiling is derived from the heaviest measured
+  fixture in the registered corpus with 64x headroom, and the caller-side
+  timeout workaround in the stress sweep is removed.
 - Recurrence, reduction, layout, and numerical laws now derive equivalent
   programs through a bounded composition of the registered rewrites that
   realize them, and a law family with no derivation fails its closure suite.
@@ -815,6 +828,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   VGR0 wire format embeds existing VIR0 Programs and rejects implicit casts,
   rank drift, alias conflicts, dangling state, malformed framing, and hostile
   counts before mutation.
+- Artifact admission performs bounded transactional typed external-resource
+  ingestion against artifact ABI schemas with rollback on failure.
 - `vyre-foundation` closes `Expr` variant traversal, child operand
   reachability, magnitude classification, buffer reference classification, and
   cross-invocation combine classification against `EXPR_VARIANT_NAMES` in
@@ -5026,6 +5041,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   does not support operation `vyre.node.logical_barrier``, because capability
   validation and physical preparation now resolve logical execution markers
   before asking a backend what it supports.
+- Loop trip counts read from producer buffers across CSR traversal, state
+  machine scans, range ordering, graph passes, and reductions are clamped
+  against the extents of the buffers their bodies index, so an out-of-contract
+  count bounds its iterations in the reference interpreter and on devices.
 - A loop bound read from a buffer is clamped to the extent of the buffers its
   body indexes, so an out-of-contract offset, count, or token total cannot
   request four billion iterations.
@@ -6954,6 +6973,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   allocation. A kernel body restated per primitive drifts where no per-op
   oracle looks, because an oracle compares evaluated output and never sees the
   grid or the allocation size.
+- Graph and delta wire decoding checks bounds on operation, port, rank, and
+  string lengths before allocation and caps capacity pre-reservations by
+  remaining payload bytes.
 - Megakernel admission contracts cover both whole-grid fence outcomes: a fence
   the planner cuts compiles into fence-free segments, and a fence that survives
   the cut is refused on a device that cannot launch a cooperative grid.
@@ -7424,6 +7446,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   vkEnumerateInstanceExtensionProperties. Instance construction is now
   serialized process-wide, and the instance stays per acquisition because the
   GLES backend inside it owns a thread-current EGL context.
+- The wgpu backend builds one Vulkan instance for the process instead of one
+  per acquisition, so repeated backend acquisition no longer exhausts the
+  static TLS surplus the GPU driver ICD needs and loses the discrete adapter
+  partway through a run.
 - Op matrix rows no longer carry a bench_targets field that no producer fills;
   the benchmark roster owns the mapping from a target to the case it measures.
 - OP_MATRIX owner paths point at a directory that exists for the matching
@@ -7586,6 +7612,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   including read-write pipeline live-outs, as an output. Artifact submission no
   longer asks callers to provide internal fused-pipeline storage as a host
   input.
+- Process-owned caches, staging buffer pools, and tenant registries in
+  `vyre-driver-wgpu` and `vyre-runtime` now discard and clear half-mutated
+  internal state on lock poison recovery instead of reusing unvalidated
+  entries.
 - The structural-gate registry now declares every post-dispatch oracle mutation
   and decoder-boundary test added to the host-oracle elimination gate.
 - The `types` feature of `vyre-primitives` now depends on `vyre-foundation`,
@@ -8598,6 +8628,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   against the `WGPU pipeline` label and directs the caller to split the
   dispatch batch before readback, plus the grow, hold, shrink and empty
   boundaries of the resize itself.
+- The wgpu record-and-readback path binds exactly the host inputs
+  `BufferDecl::consumes_host_input` admits and refuses any other input count,
+  eliminating the length-based selection that accepted an output placeholder.
 - The WGPU release suite now completes on the portable target limits it
   records. The metadata workload uses a 256-lane workgroup, the grouped INT4
   workload keeps its one-dimensional dispatch below 65,535 workgroups without
