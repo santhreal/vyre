@@ -272,3 +272,6 @@ pub mod uring_ingest_telemetry_invariants;
 #[cfg(target_os = "linux")]
 #[path = "uring_smoke.rs"]
 pub mod uring_smoke;
+/// Integration tests from `tests/tenant_capability_contracts.rs` (Row 119).
+#[path = "tenant_capability_contracts.rs"]
+pub mod tenant_capability_contracts;

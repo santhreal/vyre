@@ -1443,6 +1443,7 @@ pub use vyre_driver::allocation::try_reserve_hash_map_to_capacity
 pub use vyre_driver::allocation::try_reserve_hash_set_to_capacity
 pub use vyre_driver::allocation::try_reserve_vec_to_capacity
 pub use vyre_driver::grid_sync::contains_grid_sync
+pub use vyre_driver::inventory
 pub use vyre_driver::megakernel_execution::FrontierExecutionSample
 pub use vyre_driver::megakernel_execution::FrontierGraphShape
 pub use vyre_driver::megakernel_execution::FrontierMemoryBudget

@@ -1,0 +1,2 @@
+category = "Added"
+text = "The foundation layer now provides a unified causal span and event schema shared across all compiler levels, lowering, driver, and runtime with critical-path reconstruction and counterfactual decision explanation."

@@ -17,6 +17,9 @@ publish = false
 # the runner, so name it here once instead of spelling `--bin xtask` at each
 # call site.
 default-run = "xtask"
+[lib]
+name = "xtask"
+path = "src/lib.rs"
 
 [lints]
 workspace = true

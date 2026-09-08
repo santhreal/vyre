@@ -118,6 +118,12 @@ pub mod memory_model;
 pub mod types;
 /// Single declarative verifier and certified compilation gate (Row 104).
 pub mod verifier;
+/// Causal Introspection & Unified Causal-Span Schema (Row 117).
+pub mod causal;
+/// Source-derived platform support matrix, wire types, and adapters (Row 118).
+pub mod platform;
+/// Security, Tenant Isolation, Capability Handles & Quota Authority (Row 119).
+pub mod security;
 /// Optimizer performance counters.
 pub mod perf;
 /// Program capability analysis.
