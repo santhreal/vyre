@@ -15,7 +15,7 @@ pub use interactive_session::{
 };
 pub use mesh::{MeshSession, MeshSessionError, MeshSubmission};
 pub use portfolio::{admit_portfolio, AdmittedPortfolio};
-pub use retained::RetainedArtifactSession;
+pub use retained::{RetainedArtifactSession, RetainedSessionPhase, RetainedSessionTransition};
 pub use session::{ArtifactSession, ArtifactSessionError};
 pub use workspace::ArtifactWorkspace;
 

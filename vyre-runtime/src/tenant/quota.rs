@@ -21,19 +21,14 @@ pub struct TenantQuota {
 }
 
 impl TenantQuota {
-    /// Unbounded tenant quota for compatibility with the legacy registration
-    /// API. Individual fields are still normalized to at least one resource
-    /// slot during registration.
-    #[must_use]
-    pub const fn unbounded() -> Self {
-        Self {
-            max_outstanding_slots: u64::MAX,
-            max_staging_bytes: u64::MAX,
-            max_resident_handles: u64::MAX,
-        }
-    }
+    /// Default finite outstanding slot limit (1024 slots).
+    pub const DEFAULT_MAX_OUTSTANDING_SLOTS: u64 = 1024;
+    /// Default finite staging byte limit (64 MiB).
+    pub const DEFAULT_MAX_STAGING_BYTES: u64 = 64 * 1024 * 1024;
+    /// Default finite resident handle limit (256 handles).
+    pub const DEFAULT_MAX_RESIDENT_HANDLES: u64 = 256;
 
-    /// Build a bounded tenant quota.
+    /// Build a bounded tenant quota with explicit finite limits.
     #[must_use]
     pub const fn bounded(
         max_outstanding_slots: u64,
@@ -45,6 +40,30 @@ impl TenantQuota {
             max_staging_bytes,
             max_resident_handles,
         }
+    }
+
+    /// Standard finite quota derived from runtime policy.
+    #[must_use]
+    pub const fn standard() -> Self {
+        Self {
+            max_outstanding_slots: Self::DEFAULT_MAX_OUTSTANDING_SLOTS,
+            max_staging_bytes: Self::DEFAULT_MAX_STAGING_BYTES,
+            max_resident_handles: Self::DEFAULT_MAX_RESIDENT_HANDLES,
+        }
+    }
+
+    /// Check if all quota limits are finite (strictly less than `u64::MAX`).
+    #[must_use]
+    pub const fn is_finite(&self) -> bool {
+        self.max_outstanding_slots < u64::MAX
+            && self.max_staging_bytes < u64::MAX
+            && self.max_resident_handles < u64::MAX
+    }
+}
+
+impl Default for TenantQuota {
+    fn default() -> Self {
+        Self::standard()
     }
 }
 

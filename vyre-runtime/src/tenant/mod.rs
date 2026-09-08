@@ -300,6 +300,54 @@ mod tests {
     }
 
     #[test]
+    fn tenant_registration_rejects_non_finite_quotas() {
+        let reg = TenantRegistry::new();
+
+        let err_max_slots = reg
+            .register_with_quotas("bad_slots", TenantQuota::bounded(u64::MAX, 1024, 10))
+            .unwrap_err();
+        assert!(matches!(
+            err_max_slots,
+            TenantError::NonFiniteQuota {
+                field: "max_outstanding_slots",
+                value: u64::MAX,
+                ..
+            }
+        ));
+
+        let err_max_staging = reg
+            .register_with_quotas("bad_staging", TenantQuota::bounded(10, u64::MAX, 10))
+            .unwrap_err();
+        assert!(matches!(
+            err_max_staging,
+            TenantError::NonFiniteQuota {
+                field: "max_staging_bytes",
+                value: u64::MAX,
+                ..
+            }
+        ));
+
+        let err_max_handles = reg
+            .register_with_quotas("bad_handles", TenantQuota::bounded(10, 1024, u64::MAX))
+            .unwrap_err();
+        assert!(matches!(
+            err_max_handles,
+            TenantError::NonFiniteQuota {
+                field: "max_resident_handles",
+                value: u64::MAX,
+                ..
+            }
+        ));
+
+        let err_bp_max = reg.register_with_backpressure("bp_max", u64::MAX).unwrap_err();
+        assert!(matches!(err_bp_max, TenantError::NonFiniteQuota { .. }));
+
+        // Finite registration succeeds
+        let valid = reg.register_with_quotas("valid", TenantQuota::standard());
+        assert!(valid.is_ok());
+    }
+
+    #[test]
     fn tenant_registry_registration_retry_uses_adaptive_idle_not_unbounded_spin() {
         for retry in [0, 1, 2, QUIESCE_SPIN_POLLS - 1, QUIESCE_SPIN_POLLS] {
             tenant_registry_retry_idle(retry);

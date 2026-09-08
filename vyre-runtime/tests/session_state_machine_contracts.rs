@@ -14,7 +14,9 @@ use vyre_foundation::ir::{
     ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{Artifact, ArtifactEnvelope, ArtifactValueId};
-use vyre_runtime::artifact_admission::{ArtifactSession, RetainedArtifactSession};
+use vyre_runtime::artifact_admission::{
+    ArtifactSession, RetainedArtifactSession, RetainedSessionPhase, RetainedSessionTransition,
+};
 use vyre_runtime::recovery::classify_backend_error;
 
 use vyre_test_support::artifact_fixtures;
@@ -194,6 +196,91 @@ fn retained_session_manages_state_machine_generations_atomically() {
     assert!(
         retained_session.replace_retained(bad_replacement).is_err(),
         "must reject invalid retained replacement keys"
+    );
+}
+
+#[test]
+fn retained_session_refuses_mutations_outside_valid_transitions() {
+    let artifact = stateful_accumulator_artifact();
+    let payload = fixture_target_payload(&artifact, FORMAT, vec![10, 20, 30]);
+    let mut envelope = ArtifactEnvelope::new(artifact.clone());
+    envelope
+        .attach_target_payload(payload)
+        .expect("envelope payload");
+    let materializer = SessionFixtureMaterializer::new("sm-backend", "sm-device", FORMAT);
+
+    let session = ArtifactSession::from_envelope_with_materializer(
+        &SM_REGISTRATION,
+        envelope,
+        materializer,
+    )
+    .expect("session");
+
+    let counter_0_id = session.resource("counter.0").expect("counter.0 resource");
+    let counter_1_id = session.resource("counter.1").expect("counter.1 resource");
+
+    let initial_state = BTreeMap::from([
+        (counter_0_id, 0_u32.to_le_bytes().to_vec()),
+        (counter_1_id, 0_u32.to_le_bytes().to_vec()),
+    ]);
+    let retained_session = RetainedArtifactSession::new(session, initial_state)
+        .expect("valid retained session initialization");
+
+    assert_eq!(retained_session.phase().unwrap(), RetainedSessionPhase::Ready);
+    assert_eq!(retained_session.generation().unwrap(), 1);
+
+    // Transition to InFlight
+    retained_session
+        .transition(RetainedSessionTransition::BeginSubmission)
+        .expect("transition to InFlight");
+    assert_eq!(retained_session.phase().unwrap(), RetainedSessionPhase::InFlight);
+
+    // Mutation (replace_retained) while InFlight MUST be refused
+    let replacement = BTreeMap::from([
+        (counter_0_id, 50_u32.to_le_bytes().to_vec()),
+        (counter_1_id, 50_u32.to_le_bytes().to_vec()),
+    ]);
+    let inflight_err = retained_session.replace_retained(replacement.clone());
+    assert!(
+        inflight_err.is_err(),
+        "mutation while in InFlight phase must be refused"
+    );
+
+    // Invalid transition while InFlight (e.g. attempting BeginSubmission again) must be refused
+    let invalid_trans = retained_session.transition(RetainedSessionTransition::BeginSubmission);
+    assert!(
+        invalid_trans.is_err(),
+        "double submission transition must be refused"
+    );
+
+    // Complete submission advances generation
+    retained_session
+        .transition(RetainedSessionTransition::CompleteSubmission { new_generation: 2 })
+        .expect("complete submission");
+    assert_eq!(retained_session.phase().unwrap(), RetainedSessionPhase::Ready);
+    assert_eq!(retained_session.generation().unwrap(), 2);
+
+    // Now state replacement succeeds in Ready phase
+    retained_session
+        .replace_retained(replacement.clone())
+        .expect("replace in Ready phase must succeed");
+
+    // Quarantine transition
+    retained_session
+        .transition(RetainedSessionTransition::Quarantine {
+            reason: "device failure injected".into(),
+        })
+        .expect("quarantine");
+    assert_eq!(
+        retained_session.phase().unwrap(),
+        RetainedSessionPhase::Quarantined
+    );
+
+    // Mutation while Quarantined MUST be refused
+    let quarantined_err = retained_session.replace_retained(replacement);
+    assert!(
+        quarantined_err.is_err(),
+        "mutation while in Quarantined phase must be refused"
     );
 }
 
