@@ -1,9 +1,9 @@
 {
-  "source_fingerprint": "git:e6b8a488d48bb8076217b25e91279ba53e809a5f:dirty=false",
+  "source_fingerprint": "git:a08d4b239de91dd83947eee6147624ce72a1aa3c:dirty=true:worktree=ed0c560d94f35bcf6677613b447b664c341a8379071622217aeba1468d231d97",
   "schema_version": 3,
   "publishable_package_count": 25,
   "vyre_package_count": 25,
-  "internal_tooling_count": 11,
+  "internal_tooling_count": 12,
   "root_patch_section_count": 0,
   "required_release_surfaces": [
     "vyre",
@@ -42,6 +42,22 @@
       "release_surface": "vyre-engine",
       "expected_version": "0.8.0",
       "publish_policy": "publishable release crate",
+      "blockers": []
+    },
+    {
+      "name": "vyre-alloc-probe",
+      "manifest": "vyre-alloc-probe/Cargo.toml",
+      "version": "0.8.0",
+      "description": "Per-thread heap traffic counters behind a GlobalAlloc wrapper. Measures allocation budgets in a harness binary or a test binary.",
+      "license": "MIT OR Apache-2.0",
+      "readme": "README.md",
+      "repository": "https://github.com/santhreal/vyre",
+      "publish": false,
+      "release_kind": "internal-tooling",
+      "release_group": "internal-tooling",
+      "release_surface": "internal-tooling",
+      "expected_version": null,
+      "publish_policy": "publish=false allowed for release tooling that is not a crates.io artifact",
       "blockers": []
     },
     {

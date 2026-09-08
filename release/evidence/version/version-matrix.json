@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:3cfaa0ef1ac2f973c5c9b7be833ce2c0d92fbb6a:dirty=true:worktree=3cbe563d46758ba403708b657afeb7c9809ec1784cce46e7bf700652e0bdaee0",
+  "source_fingerprint": "git:a08d4b239de91dd83947eee6147624ce72a1aa3c:dirty=true:worktree=ed0c560d94f35bcf6677613b447b664c341a8379071622217aeba1468d231d97",
   "schema_version": 2,
   "requested_vyre_release": "0.8.0",
   "tag_story": {
@@ -40,6 +40,13 @@
       "manifest": "vyre/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
+    },
+    {
+      "package": "vyre-alloc-probe",
+      "version": "0.8.0",
+      "manifest": "vyre-alloc-probe/Cargo.toml",
+      "release_group": "vyre",
+      "publishable": false
     },
     {
       "package": "vyre-aot",
@@ -454,6 +461,13 @@
     {
       "lockfile": "Cargo.lock",
       "package": "vyre",
+      "version": "0.8.0",
+      "expected": "0.8.0",
+      "release_group": "vyre"
+    },
+    {
+      "lockfile": "Cargo.lock",
+      "package": "vyre-alloc-probe",
       "version": "0.8.0",
       "expected": "0.8.0",
       "release_group": "vyre"

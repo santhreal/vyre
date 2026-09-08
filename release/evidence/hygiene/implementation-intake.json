@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:3cfaa0ef1ac2f973c5c9b7be833ce2c0d92fbb6a:dirty=true:worktree=2a1cb0a8a68b1071af1018b7631e9eb50b8549b16ba11caabae9cc0ed5f106bc",
+  "source_fingerprint": "git:a08d4b239de91dd83947eee6147624ce72a1aa3c:dirty=true:worktree=ed0c560d94f35bcf6677613b447b664c341a8379071622217aeba1468d231d97",
   "schema_version": 1,
   "release_blocker_count": 0,
   "intake_summary": [
@@ -37,7 +37,7 @@
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 3
+      "count": 4
     },
     {
       "owner_lane": "coordination",
@@ -46,7 +46,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 43
+      "count": 44
     },
     {
       "owner_lane": "coordination",
@@ -55,7 +55,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 49
+      "count": 47
     },
     {
       "owner_lane": "coordination",
@@ -73,7 +73,7 @@
       "hot_path": false,
       "pattern": "panic_macro",
       "release_blocker": false,
-      "count": 33
+      "count": 32
     },
     {
       "owner_lane": "coordination",
@@ -91,7 +91,7 @@
       "hot_path": false,
       "pattern": "unbounded_read",
       "release_blocker": false,
-      "count": 3
+      "count": 2
     },
     {
       "owner_lane": "coordination",
