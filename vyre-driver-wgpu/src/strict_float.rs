@@ -177,7 +177,7 @@ fn measure(backend: &WgpuBackend) -> Verdict {
 fn verdict(backend: &WgpuBackend) -> Verdict {
     let key = AdapterIdentity::from_info(&backend.adapter_info);
     {
-        let mut verdicts = match VERDICTS.lock() {
+        let verdicts = match VERDICTS.lock() {
             Ok(guard) => guard,
             Err(poisoned) => {
                 let mut guard = poisoned.into_inner();

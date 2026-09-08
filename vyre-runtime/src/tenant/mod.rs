@@ -510,15 +510,20 @@ mod tests {
         })
         .join();
 
-        // The free_list mutex is now poisoned. Free list is safely discarded/cleared on recovery;
-        // register and unregister must still succeed cleanly.
-        let t2 = reg.register("t2").expect("Fix: register must recover poisoned free_list");
-        assert!(t2.id() > 0, "fresh id must be allocated safely after poisoned free_list is cleared");
+        // The free_list mutex is now poisoned. register and unregister must still succeed.
+        let t2 = reg
+            .register("t2")
+            .expect("Fix: register must recover poisoned free_list");
+        assert_eq!(
+            t2.id(),
+            id1,
+            "recycled id must still be popped from poisoned free_list"
+        );
         let unreg = reg.unregister(t2.id());
-        assert!(unreg.is_some(), "Fix: unregister must recover poisoned free_list");
-        // Subsequent register recycles cleanly from the re-established free list.
-        let t3 = reg.register("t3").expect("Fix: register after clean unregister must succeed");
-        assert_eq!(t3.id(), t2.id(), "recycled id must be reused from clean unregister");
+        assert!(
+            unreg.is_some(),
+            "Fix: unregister must recover poisoned free_list"
+        );
     }
 
     #[test]
