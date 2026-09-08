@@ -13,6 +13,7 @@ pub mod architecture_contract;
 pub mod backend_parity;
 pub mod bench;
 pub mod check_tier_deps;
+pub mod change_closure;
 pub mod ci_contract;
 pub mod ci_registry;
 pub mod ci_steps;
@@ -37,6 +38,7 @@ pub mod finding_capability;
 #[cfg(test)]
 pub mod fixture_checkout;
 pub mod frozen_contract;
+pub mod gate_dag_gate;
 pub mod gate_canon;
 pub mod gpu_loudness;
 mod host_oracle_closure;
@@ -84,6 +86,7 @@ pub mod schedule_ownership;
 pub mod script_ledger;
 pub mod shader_source;
 pub mod source_reachability;
+pub mod scorecard;
 pub mod sweep;
 pub mod test_harness_isolation;
 pub mod test_material;
@@ -116,6 +119,8 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("bench-coverage", &bench::BenchCoverage),
     ("bench-smoke-runtime", &bench::BenchSmokeRuntime),
     ("check-tier-deps", &check_tier_deps::CheckTierDeps),
+    ("change-closure", &change_closure::ChangeClosure),
+    ("engineering-scorecard", &scorecard::ScorecardGate),
     ("ci-concurrency", &ci_contract::CiConcurrency),
     ("ci-matrix", &ci_contract::CiMatrix),
     ("ci-required", &ci_contract::CiRequired),
@@ -149,6 +154,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("program-wire-fields", &frozen_contract::ProgramWireFields),
     ("readback-ring", &frozen_contract::ReadbackRing),
     ("gate-canon", &gate_canon::GateCanon),
+    ("gate-dag", &gate_dag_gate::GateDagGate),
     ("gpu-loudness", &gpu_loudness::GpuLoudness),
     (
         "host-oracle-elimination",

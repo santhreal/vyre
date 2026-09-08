@@ -25,8 +25,12 @@ pub(crate) fn backend_registration(
         .iter()
         .find(|registration| registration.id == requested)
         .ok_or_else(|| {
+            let linked: Vec<&str> = registrations
+                .iter()
+                .map(|registration| registration.id)
+                .collect();
             format!(
-                "unknown backend `{requested}`. Fix: link a concrete driver crate that registers this backend id."
+                "unknown backend `{requested}`. This binary registers {linked:?}. Fix: link the concrete driver crate that registers `{requested}`, or name one of the registered ids."
             )
         })
 }

@@ -48,6 +48,10 @@ name = "catalog"
 findings = 0
 
 [[gate]]
+name = "change-closure"
+findings = 0
+
+[[gate]]
 name = "check-tier-deps"
 findings = 0
 
@@ -76,11 +80,11 @@ name = "ci-steps"
 findings = 0
 
 [[gate]]
-name = "codeowners"
+name = "cli-docs"
 findings = 0
 
 [[gate]]
-name = "cli-docs"
+name = "codeowners"
 findings = 0
 
 [[gate]]
@@ -152,15 +156,19 @@ name = "dup-scan"
 findings = 0
 
 [[gate]]
+name = "engineering-scorecard"
+findings = 0
+
+[[gate]]
+name = "error-codes"
+findings = 0
+
+[[gate]]
 name = "evidence-paths"
 findings = 0
 
 [[gate]]
 name = "evidence-provenance"
-findings = 0
-
-[[gate]]
-name = "error-codes"
 findings = 0
 
 [[gate]]
@@ -189,6 +197,10 @@ findings = 0
 
 [[gate]]
 name = "gate-canon"
+findings = 0
+
+[[gate]]
+name = "gate-dag"
 findings = 0
 
 [[gate]]

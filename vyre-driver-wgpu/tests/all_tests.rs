@@ -251,6 +251,11 @@ pub mod limits_from_adapter_device;
 #[path = "live_capability_honesty.rs"]
 pub mod live_capability_honesty;
 
+/// Integration tests from `tests/loader_instance_reuse.rs`.
+#[cfg(feature = "device-tests")]
+#[path = "loader_instance_reuse.rs"]
+pub mod loader_instance_reuse;
+
 /// Integration tests from `tests/loop_carrier_three_level_if_real_dispatch.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "loop_carrier_three_level_if_real_dispatch.rs"]
@@ -428,11 +433,6 @@ pub mod signed_modulo_parity;
 #[cfg(feature = "device-tests")]
 #[path = "sinkhorn_iterate_contract.rs"]
 pub mod sinkhorn_iterate_contract;
-
-/// Integration tests from `tests/spirv_backend_contracts.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "spirv_backend_contracts.rs"]
-pub mod spirv_backend_contracts;
 
 /// Integration tests from `tests/stream_shard_public_error_contracts.rs`.
 #[cfg(feature = "device-tests")]

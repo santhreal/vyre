@@ -595,15 +595,15 @@ pub fn validate_node_fields(
     let declared_names: BTreeSet<&'static str> = declared_fields.iter().map(|f| f.name).collect();
 
     for (field_name, field_val) in raw_fields {
-        if !declared_names.contains(field_name.as_str()) {
-            return Err(SchemaTranslationError::UnknownField {
+        if !seen_fields.insert(field_name.as_str()) {
+            return Err(SchemaTranslationError::DuplicateField {
                 dialect,
                 node_op: node_op.to_string(),
                 field: field_name.clone(),
             });
         }
-        if !seen_fields.insert(field_name.as_str()) {
-            return Err(SchemaTranslationError::DuplicateField {
+        if !declared_names.contains(field_name.as_str()) {
+            return Err(SchemaTranslationError::UnknownField {
                 dialect,
                 node_op: node_op.to_string(),
                 field: field_name.clone(),

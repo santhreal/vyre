@@ -54,8 +54,10 @@ mod class_index;
 mod device_aware_rule;
 mod egraph;
 mod extraction;
+mod hardware_rule;
 mod saturation;
 
+pub use hardware_rule::{CostModelFact, HardwarePropertyRule, TargetFact};
 #[cfg(test)]
 mod arith_fixture;
 

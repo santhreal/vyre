@@ -212,9 +212,7 @@ impl BenchContext {
         include_readback: bool,
     ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
         let session = self.artifact_session_for(prog)?;
-        let bindings = session
-            .program_resident_bindings(prog, resources)
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        let bindings = bindings_for_program_resources(&session, prog, resources)?;
         let start = Instant::now();
         let completion = session
             .submit_and_wait(bindings)
@@ -325,14 +323,41 @@ impl BenchContext {
             }
         }
         let session = self.artifact_session_for(step.program)?;
-        let bindings = session
-            .program_resident_bindings(step.program, step.resources)
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        let bindings = bindings_for_program_resources(&session, step.program, step.resources)?;
         let completion = session
             .submit_and_wait(bindings.clone())
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         Ok((bindings, completion))
     }
+}
+
+fn bindings_for_program_resources(
+    session: &vyre_runtime::artifact_admission::ArtifactSession,
+    prog: &vyre::ir::Program,
+    resources: &[vyre_driver::Resource],
+) -> Result<vyre_driver::BindingSet, vyre_driver::BackendError> {
+    let non_shared_buffers: Vec<&vyre_foundation::ir::BufferDecl> = prog
+        .buffers()
+        .iter()
+        .filter(|decl| decl.access != vyre_foundation::ir::BufferAccess::Workgroup)
+        .collect();
+    if non_shared_buffers.len() != resources.len() {
+        return Err(vyre_driver::BackendError::new(format!(
+            "program declares {} non-shared buffer(s), but {} resident resource(s) were supplied",
+            non_shared_buffers.len(),
+            resources.len()
+        )));
+    }
+    let mut dataset = vyre_runtime::artifact_admission::TypedResourceDataset::new();
+    for (decl, resource) in non_shared_buffers.into_iter().zip(resources) {
+        let value_id = session
+            .resource(decl.name())
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        dataset.add_resident(value_id, resource.clone());
+    }
+    session
+        .ingest(&dataset)
+        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))
 }
 
 pub(crate) fn sum_optional_device_ns(

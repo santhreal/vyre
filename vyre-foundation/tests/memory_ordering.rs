@@ -157,11 +157,6 @@ fn only_grid_sync_requires_grid_sync() {
 }
 
 #[test]
-fn default_memory_ordering_is_seq_cst() {
-    assert_eq!(MemoryOrdering::default(), MemoryOrdering::SeqCst);
-}
-
-#[test]
 fn memory_ordering_join_contracts() {
     let all = [
         MemoryOrdering::Relaxed,

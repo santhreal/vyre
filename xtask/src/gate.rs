@@ -512,6 +512,39 @@ impl GateCtx {
     }
 }
 
+/// Authoritative resource class for gate scheduling and concurrency limits.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub enum ResourceClass {
+    /// Pure in-process AST, syntax, or manifest inspection (CPU-bound).
+    #[default]
+    Cpu,
+    /// Disk I/O or filesystem scan operations.
+    Io,
+    /// Subprocess or compiler execution (cargo, rustc, delegated child processes).
+    Process,
+    /// Hardware device or accelerator execution (GPU, benchmark probes).
+    Device,
+}
+
+impl ResourceClass {
+    /// Stable string identifier for the resource class.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Cpu => "cpu",
+            Self::Io => "io",
+            Self::Process => "process",
+            Self::Device => "device",
+        }
+    }
+}
+
+impl fmt::Display for ResourceClass {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// Static contract that makes a gate discoverable and auditable.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GateDescriptor {
@@ -525,10 +558,14 @@ pub struct GateDescriptor {
     pub areas: &'static [&'static str],
     /// Authoritative class of subjects the gate judges.
     pub subject: &'static str,
+    /// Declared workspace-relative input paths or files this gate inspects.
+    pub inputs: &'static [&'static str],
     /// Exact workspace-relative artifacts this gate may rewrite.
     pub artifacts: &'static [&'static str],
     /// Prerequisites for executing the gate.
     pub prerequisites: &'static [&'static str],
+    /// Authoritative resource class for scheduling and concurrency.
+    pub resource_class: ResourceClass,
     /// Test symbol that mutation-proves the invariant.
     pub proof: &'static str,
 }
@@ -537,6 +574,61 @@ impl GateDescriptor {
     #[must_use]
     pub fn generates(&self) -> bool {
         !self.artifacts.is_empty()
+    }
+
+    /// Compute a deterministic content-addressed cache key from descriptor metadata and declared input files.
+    #[must_use]
+    pub fn compute_cache_key(&self, root: &Path) -> String {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(self.name.as_bytes());
+        hasher.update(self.package.as_bytes());
+        for area in self.areas {
+            hasher.update(area.as_bytes());
+        }
+        hasher.update(self.subject.as_bytes());
+        for input in self.inputs {
+            hasher.update(input.as_bytes());
+        }
+        for artifact in self.artifacts {
+            hasher.update(artifact.as_bytes());
+        }
+        for prereq in self.prerequisites {
+            hasher.update(prereq.as_bytes());
+        }
+        hasher.update(self.resource_class.as_str().as_bytes());
+        hasher.update(self.proof.as_bytes());
+
+        if self.inputs.is_empty() {
+            let manifest = root.join("Cargo.toml");
+            if let Ok(bytes) = std::fs::read(&manifest) {
+                hasher.update(&bytes);
+            }
+        } else {
+            for input in self.inputs {
+                let p = root.join(input);
+                if p.is_file() {
+                    if let Ok(bytes) = std::fs::read(&p) {
+                        hasher.update(input.as_bytes());
+                        hasher.update(&bytes);
+                    }
+                } else if p.is_dir() {
+                    for entry in walkdir::WalkDir::new(&p)
+                        .sort_by_file_name()
+                        .into_iter()
+                        .filter_map(Result::ok)
+                    {
+                        if entry.file_type().is_file() {
+                            let rel = entry.path().strip_prefix(root).unwrap_or(entry.path());
+                            hasher.update(rel.to_string_lossy().as_bytes());
+                            if let Ok(bytes) = std::fs::read(entry.path()) {
+                                hasher.update(&bytes);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        hasher.finalize().to_hex().to_string()
     }
 
     /// Every defect in a metadata row.
@@ -710,6 +802,42 @@ impl RegisteredGate {
             }
             None => crate::delegate::run_child_gate(self.package(), self.name(), ctx),
         }
+    }
+
+    /// Authoritative metadata descriptor.
+    #[must_use]
+    pub const fn descriptor(&self) -> &'static GateDescriptor {
+        self.descriptor
+    }
+
+    /// Declared workspace-relative input paths.
+    #[must_use]
+    pub fn inputs(&self) -> &'static [&'static str] {
+        self.descriptor.inputs
+    }
+
+    /// Prerequisites for executing the gate.
+    #[must_use]
+    pub fn prerequisites(&self) -> &'static [&'static str] {
+        self.descriptor.prerequisites
+    }
+
+    /// Authoritative resource class.
+    #[must_use]
+    pub fn resource_class(&self) -> ResourceClass {
+        self.descriptor.resource_class
+    }
+
+    /// Test symbol that mutation-proves the invariant.
+    #[must_use]
+    pub fn proof(&self) -> &'static str {
+        self.descriptor.proof
+    }
+
+    /// Compute a deterministic content-addressed cache key.
+    #[must_use]
+    pub fn compute_cache_key(&self, root: &Path) -> String {
+        self.descriptor.compute_cache_key(root)
     }
 }
 

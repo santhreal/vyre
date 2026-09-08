@@ -1,4 +1,5 @@
 mod finalist;
+mod ingestion;
 mod interactive_session;
 mod mesh;
 mod portfolio;
@@ -6,6 +7,10 @@ mod retained;
 mod session;
 mod workspace;
 
+pub use ingestion::{
+    GeneratedDataSource, ResourceDataSource, ResourceIngestionError, ResourceManifest,
+    ResourceManifestEntry, ResourceManifestSource, TypedResource, TypedResourceDataset,
+};
 pub use interactive_session::{
     CancellationOutcome, DeadlineClass, InteractiveAdmissionError, InteractiveCancellationError,
     InteractiveChannelId, InteractiveCompletion, InteractiveRequestId, InteractiveSessionState,
@@ -15,10 +20,9 @@ pub use interactive_session::{
 };
 pub use mesh::{MeshSession, MeshSessionError, MeshSubmission};
 pub use portfolio::{admit_portfolio, AdmittedPortfolio};
-pub use retained::RetainedArtifactSession;
+pub use retained::{RetainedArtifactSession, RetainedSessionPhase, RetainedSessionTransition};
 pub use session::{ArtifactSession, ArtifactSessionError};
 pub use workspace::ArtifactWorkspace;
-
 use thiserror::Error;
 use vyre_megakernel::allocation::DeviceSlot;
 use vyre_megakernel::{

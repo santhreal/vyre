@@ -6,7 +6,7 @@ impl Expr {
     /// Atomic-add builder: `buffer[index] = buffer[index].wrapping_add(value)`.
     #[must_use]
     pub fn atomic_add(buffer: &str, index: Expr, value: Expr) -> Expr {
-        Self::atomic_add_ordered(buffer, index, value, MemoryOrdering::default())
+        Self::atomic_add_ordered(buffer, index, value, MemoryOrdering::SeqCst)
     }
 
     /// Atomic-add builder with explicit memory ordering.
@@ -29,7 +29,7 @@ impl Expr {
             index,
             None,
             value,
-            MemoryOrdering::default(),
+            MemoryOrdering::SeqCst,
         )
     }
 
@@ -42,7 +42,7 @@ impl Expr {
             index,
             None,
             value,
-            MemoryOrdering::default(),
+            MemoryOrdering::SeqCst,
         )
     }
 
@@ -55,7 +55,7 @@ impl Expr {
             index,
             None,
             value,
-            MemoryOrdering::default(),
+            MemoryOrdering::SeqCst,
         )
     }
 
@@ -68,7 +68,7 @@ impl Expr {
             index,
             None,
             value,
-            MemoryOrdering::default(),
+            MemoryOrdering::SeqCst,
         )
     }
 
@@ -81,7 +81,7 @@ impl Expr {
             index,
             None,
             value,
-            MemoryOrdering::default(),
+            MemoryOrdering::SeqCst,
         )
     }
 
@@ -94,7 +94,7 @@ impl Expr {
             index,
             None,
             value,
-            MemoryOrdering::default(),
+            MemoryOrdering::SeqCst,
         )
     }
 
@@ -114,7 +114,7 @@ impl Expr {
             index,
             expected,
             new_value,
-            MemoryOrdering::default(),
+            MemoryOrdering::SeqCst,
         )
     }
 

@@ -847,6 +847,7 @@ fn put_contract(bytes: &mut Vec<u8>, contract: &ValueContract) -> Result<(), Gra
         ValueLifetime::Invocation => 2,
         ValueLifetime::Retained => 3,
         ValueLifetime::Output => 4,
+        ValueLifetime::Stream => 5,
     };
     bytes.push(lifetime_code);
     let rank = u32::try_from(contract.shape.len())
@@ -944,9 +945,10 @@ fn read_contract(bytes: &[u8], cursor: &mut usize) -> Result<ValueContract, Grap
         2 => ValueLifetime::Invocation,
         3 => ValueLifetime::Retained,
         4 => ValueLifetime::Output,
+        5 => ValueLifetime::Stream,
         unknown => {
             return Err(GraphDeltaError::Wire(format!(
-                "value lifetime tag {unknown} is not one of the four `ValueLifetime` tags"
+                "value lifetime tag {unknown} is not one of the valid `ValueLifetime` tags"
             )));
         }
     };
