@@ -94,11 +94,21 @@ impl VyreBackend for SpirvBackendRegistration {
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         if config.float_lowering.blocks_contraction() {
-            return Err(BackendError::UnsupportedFeature {
-                name: format!(
+            let ops = vyre_foundation::fp_parity::approximable_operations(program);
+            let name = if ops.is_empty() {
+                format!(
                     "float lowering mode `{}`",
                     config.float_lowering.cache_label()
-                ),
+                )
+            } else {
+                format!(
+                    "float lowering mode `{}` for operation(s) {}",
+                    config.float_lowering.cache_label(),
+                    ops.join(", ")
+                )
+            };
+            return Err(BackendError::UnsupportedFeature {
+                name,
                 backend: SPIRV_BACKEND_ID.to_string(),
             });
         }

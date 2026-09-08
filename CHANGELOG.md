@@ -234,6 +234,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   review it. The obligations come from `vyre_driver::hostile_input_closure`,
   and the ignore rule that asked for a crate-owned name is now satisfied for
   these two crates.
+- The benchmark harness defines a versioned benchmark receipt schema and
+  content-addressed evidence store capturing workload, semantic graph,
+  resources, binaries, objectives, budgets, target facts, environment,
+  portfolio, samples, uncertainty, and parity.
 - `vyre_test_support::binop_parity::assert_covers_every_synthetic_op` and
   `assert_covers_every_total_op` fail when a backend parity suite has no
   reference arm for an op the shared table declares, or names one the table
@@ -306,6 +310,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   a neighbouring step's package. Nothing is listed in the test: a workflow
   added tomorrow is judged tomorrow, and renaming a target without updating its
   workflow is red locally instead of in CI.
+- The foundation layer now provides a compositional schedule calculus with
+  dependency preservation certificates and cost modeling alongside a
+  proof-producing multi-level optimization framework with typed hardware rules,
+  Pareto extraction, and replayable step proofs.
 - Conformance compares every schedule family a semantic graph reaches against
   the unspecialized baseline under an exact or bounded unit-in-last-place
   contract the operation declares.
@@ -608,6 +616,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   registered propagating pass to fold it. Reintroducing the pre-collapse
   private walk fails it at the async-copy offset, which is the position the two
   copies actually disagreed about.
+- Closes Rows 102, 105, and 104 by introducing orthogonal semantic type
+  components (ScalarType, VectorType, TensorType, RecordType, VariantType,
+  Sparsity, QuantizationMeaning, ResourceCapability, OwnershipMutability,
+  LifetimeEpoch, NumericalContract), an interned symbolic shape engine and
+  affine solver in vyre_foundation::types::shape, nine closed memory and effect
+  types with no defaults in vyre_foundation::memory_model, and a declarative
+  verifier with Verified<SemanticModule> and dynamic invariant certification in
+  vyre_foundation::verifier.
 - Every published FNV-1a64 program builder, the slot-precise `arg_of_slot`
   traversal, and both queued-row CSR traverse delegating forms now have parity
   coverage. The FNV-1a64 and delegating-form member sets are derived from the
@@ -838,6 +854,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   VGR0 wire format embeds existing VIR0 Programs and rejects implicit casts,
   rank drift, alias conflicts, dangling state, malformed framing, and hostile
   counts before mutation.
+- The foundation compiler layer now provides a typed region-based SSA
+  intermediate representation with dominance verification and Program lowering
+  alongside declarative catalog bundle extension schemas with namespace,
+  semver, and digest identity.
 - Artifact admission performs bounded transactional typed external-resource
   ingestion against artifact ABI schemas with rollback on failure.
 - `vyre-foundation` closes `Expr` variant traversal, child operand
@@ -3580,6 +3600,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `ExecutionTopology` and a per-module `TargetArmAssignment`, both covered by
   the bundle digest, and admission rejects a bundle whose arm records are not
   the selected topology's assignment.
+- Tenant registration requires finite resource quotas through
+  TenantQuota::standard or explicit bounded limits; TenantQuota::unbounded is
+  removed, and RetainedArtifactSession manages mutable generations through
+  typed state machine transitions.
 - A test-only IR extension payload is declared through
   `vyre_test_support::test_expr_extension!` or `test_node_extension!` instead
   of six hand-written trait methods. Five of the six are the same in every test
@@ -8099,6 +8123,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `#[error(..)]` derives the full member set instead of an empty one.
 - The WGPU stream-sharding error is now nameable as
   `engine::multi_gpu::StreamShardError` without changing existing signatures.
+- Every registered backend either honors strict-IEEE float lowering or refuses
+  the dispatch with an actionable diagnostic naming the mode and the
+  unexpandable or approximable operations, closing row 142 across CUDA, Metal,
+  SPIR-V, and WGPU drivers. The resident optimizer pipeline benchmark contract
+  and evidence are aligned with the measured floor, and bank conflict strategy
+  resolution contracts are validated across all backends.
 - A dispatch asking for a float lowering mode the selected backend does not
   lower is refused by name at compilation across all backends rather than
   silently producing contracted arithmetic or creating distinct cache entries

@@ -24,13 +24,12 @@ use std::collections::BTreeSet;
 
 use vyre_driver::DispatchConfig;
 use vyre_foundation::fp_parity::FloatLoweringMode;
-use vyre_registry_link::backend::{linked_backend_sources, DECLARED_SOURCES};
+use vyre_registry_link::backend::{linked_backend_sources, live_backend_registry, DECLARED_SOURCES};
 
 use vyre_foundation::ir::UnOp;
 use vyre_test_support::strict_float_programs::f32_multiply_add_program;
 
-use crate::float_lowering::{backends_needing_a_decision, ledger_path, read_ledger};
-
+use crate::float_lowering::{backends_needing_a_decision, f32_bytes, ledger_path, read_ledger};
 /// Every backend states a decision for every mode.
 #[test]
 fn every_backend_records_a_decision_for_every_float_lowering_mode() {
@@ -102,8 +101,101 @@ fn unsupported_backend_refuses_strict_ieee_compilation_and_cache_key_generation(
         );
         let error = result.unwrap_err();
         assert!(
-            error.contains("strict-ieee") && error.contains("Fix:"),
-            "Fix: CUDA PTX codegen refusal must name the mode and corrective action: {error}"
+            error.contains("strict-ieee") && error.contains("Sin") && error.contains("Fix:"),
+            "Fix: CUDA PTX codegen refusal must name the mode, operation, and corrective action: {error}"
         );
     }
+}
+
+/// For every registered backend, strict-IEEE lowering either produces the
+/// expanded form or refuses with a diagnostic naming the operation.
+///
+/// Closure: dynamically enumerates `live_backend_registry()`.
+/// Adding a backend without honoring strict IEEE or refusing with an actionable
+/// diagnostic naming the operation turns this red.
+#[test]
+fn every_registered_backend_strict_ieee_lowering_honored_or_refused_naming_operation() {
+    let program_with_sin = f32_multiply_add_program(4, Some(UnOp::Sin));
+    let program_with_exp2 = f32_multiply_add_program(4, Some(UnOp::Exp2));
+    let inputs = vec![
+        f32_bytes(&[0.5, 1.25, -2.5, 3.75]),
+        f32_bytes(&[1.000_244_2, 0.5, 2.0, -1.5]),
+        f32_bytes(&[-1.0, 0.25, 0.5, -0.125]),
+    ];
+    let mut config = DispatchConfig::default();
+    config.float_lowering = FloatLoweringMode::StrictIeee;
+
+    let registry = live_backend_registry().expect("Fix: backend registry must be readable");
+    let mut findings = Vec::new();
+
+    for registration in registry {
+        let backend = match registration.acquire() {
+            Ok(backend) => backend,
+            Err(_) => continue,
+        };
+
+        // Case 1: Program with expandable operation (Sin)
+        let honors_strict = backend.honors_float_lowering(FloatLoweringMode::StrictIeee);
+        match backend.dispatch(&program_with_sin, &inputs, &config) {
+            Ok(_) => {
+                if !honors_strict {
+                    findings.push(format!(
+                        "  backend `{}` returned Ok for strict-ieee with Sin, but honors_float_lowering returned false",
+                        registration.id
+                    ));
+                }
+            }
+            Err(error) => {
+                if honors_strict {
+                    findings.push(format!(
+                        "  backend `{}` failed strict-ieee dispatch with expandable Sin: {error}",
+                        registration.id
+                    ));
+                } else {
+                    let message = error.to_string();
+                    let names_mode = message.contains(FloatLoweringMode::StrictIeee.cache_label())
+                        || message.contains("strict IEEE");
+                    let names_op = message.contains("Sin");
+                    let names_backend = message.contains(registration.id);
+                    let has_fix = message.contains("Fix:");
+                    if !names_mode || !names_op || !names_backend || !has_fix {
+                        findings.push(format!(
+                            "  backend `{}` refused unhonored strict-ieee without naming mode, operation Sin, backend, and Fix: in error: {message}",
+                            registration.id
+                        ));
+                    }
+                }
+            }
+        }
+
+        // Case 2: Program with unexpandable approximable operation (Exp2)
+        // Every backend must refuse this under StrictIeee with a diagnostic naming "Exp2".
+        match backend.dispatch(&program_with_exp2, &inputs, &config) {
+            Ok(_) => {
+                findings.push(format!(
+                    "  backend `{}` silently accepted unexpandable operation Exp2 under strict-ieee mode",
+                    registration.id
+                ));
+            }
+            Err(error) => {
+                let message = error.to_string();
+                let names_mode = message.contains(FloatLoweringMode::StrictIeee.cache_label())
+                    || message.contains("strict IEEE");
+                let names_op = message.contains("Exp2");
+                let has_fix = message.contains("Fix:");
+                if !names_mode || !names_op || !has_fix {
+                    findings.push(format!(
+                        "  backend `{}` refused unexpandable Exp2 under strict-ieee without naming mode, Exp2, and Fix: in error: {message}",
+                        registration.id
+                    ));
+                }
+            }
+        }
+    }
+
+    assert!(
+        findings.is_empty(),
+        "Fix: every registered backend must either honor strict-IEEE lowering with expanded form or refuse naming the operation:\n{}",
+        findings.join("\n")
+    );
 }

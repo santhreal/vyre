@@ -114,7 +114,7 @@ impl CudaBackend {
         bindings: &BindingPlan,
         config: &DispatchConfig,
     ) -> Result<LaunchPlan, BackendError> {
-        self.enforce_config_caps(config)?;
+        self.enforce_config_caps(program, config)?;
         LaunchPlan::from_bindings(program, &bindings.bindings, config, self.launch_limits())
     }
 
@@ -302,7 +302,11 @@ impl CudaBackend {
         Ok(true)
     }
 
-    fn enforce_config_caps(&self, config: &DispatchConfig) -> Result<(), BackendError> {
+    fn enforce_config_caps(
+        &self,
+        program: &Program,
+        config: &DispatchConfig,
+    ) -> Result<(), BackendError> {
         if matches!(config.speculation, Some(SpeculationMode::Force)) {
             return Err(BackendError::UnsupportedFeature {
                 name: "speculative dispatch".to_string(),
@@ -310,11 +314,21 @@ impl CudaBackend {
             });
         }
         if config.float_lowering.blocks_contraction() {
-            return Err(BackendError::UnsupportedFeature {
-                name: format!(
+            let ops = vyre_foundation::fp_parity::approximable_operations(program);
+            let name = if ops.is_empty() {
+                format!(
                     "float lowering mode `{}`",
                     config.float_lowering.cache_label()
-                ),
+                )
+            } else {
+                format!(
+                    "float lowering mode `{}` for operation(s) {}",
+                    config.float_lowering.cache_label(),
+                    ops.join(", ")
+                )
+            };
+            return Err(BackendError::UnsupportedFeature {
+                name,
                 backend: crate::CUDA_BACKEND_ID.to_string(),
             });
         }

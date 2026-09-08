@@ -33,11 +33,21 @@ pub(super) fn metal_pipeline_cache_key(
     device: &Device,
 ) -> Result<PipelineCacheIdentity, BackendError> {
     if config.float_lowering.blocks_contraction() {
-        return Err(BackendError::UnsupportedFeature {
-            name: format!(
+        let ops = vyre_foundation::fp_parity::approximable_operations(program);
+        let name = if ops.is_empty() {
+            format!(
                 "float lowering mode `{}`",
                 config.float_lowering.cache_label()
-            ),
+            )
+        } else {
+            format!(
+                "float lowering mode `{}` for operation(s) {}",
+                config.float_lowering.cache_label(),
+                ops.join(", ")
+            )
+        };
+        return Err(BackendError::UnsupportedFeature {
+            name,
             backend: METAL_BACKEND_ID.to_string(),
         });
     }
@@ -218,6 +228,7 @@ impl MetalBackend {
     ) -> Result<TimedDispatchResult, BackendError> {
         let started = Instant::now();
         validate_metal_dispatch_config(
+            program,
             config,
             "Metal authenticated cooperative grid dispatch",
             "Metal authenticated repeated dispatch",

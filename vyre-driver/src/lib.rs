@@ -228,7 +228,7 @@ pub mod persistent;
 
 /// The `inventory` crate `register_backend!` submits through. A concrete
 /// driver expands the macro and needs no `inventory` dependency of its own.
-pub use inventory;
+pub use ::inventory;
 
 pub use aot::AotTargetId;
 pub use aot::{

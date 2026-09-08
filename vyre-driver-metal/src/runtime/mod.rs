@@ -316,6 +316,7 @@ impl VyreBackend for MetalBackend {
     ) -> Result<TimedDispatchResult, BackendError> {
         let started = Instant::now();
         validate_metal_dispatch_config(
+            program,
             config,
             "Metal cooperative grid dispatch",
             "Metal non-resident repeated dispatch",
@@ -653,6 +654,7 @@ impl VyreBackend for MetalBackend {
     ) -> Result<Box<dyn PendingDispatch>, BackendError> {
         let started = Instant::now();
         validate_metal_dispatch_config(
+            program,
             config,
             "Metal cooperative grid resident dispatch",
             "Metal repeated resident dispatch",

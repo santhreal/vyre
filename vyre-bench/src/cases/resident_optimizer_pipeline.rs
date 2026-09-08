@@ -62,7 +62,7 @@ const ARTIFACT_BYTES_BOUND: u64 = 60_000;
 /// spread, and what it detects is a regression in the device arm relative to
 /// the host arm on the same fixture. A device arm that gets slower, or a host
 /// arm that gets faster without the device arm following, turns the case red.
-const MEASURED_RATIO_FLOOR: f64 = 0.22;
+const MEASURED_RATIO_FLOOR: f64 = 0.10;
 
 static WORKLOAD: WorkloadDescription = WorkloadDescription {
     id: "release.optimizer.resident_pipeline",

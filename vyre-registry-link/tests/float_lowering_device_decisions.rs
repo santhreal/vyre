@@ -242,10 +242,15 @@ fn every_backend_and_float_lowering_mode_pair_is_honored_or_refused_with_remedia
                         let message = error.to_string();
                         let names_mode = message.contains(mode.cache_label());
                         let names_backend = message.contains(registration.id);
+                        let names_op = if *mode == FloatLoweringMode::StrictIeee {
+                            message.contains("Sin")
+                        } else {
+                            true
+                        };
                         let has_fix = message.contains("Fix:");
-                        if !names_mode || !names_backend || !has_fix {
+                        if !names_mode || !names_backend || !names_op || !has_fix {
                             findings.push(format!(
-                                "  backend `{}` refused unhonored mode `{}` without naming mode, backend, and Fix: in error: {message}",
+                                "  backend `{}` refused unhonored mode `{}` without naming mode, operation, backend, and Fix: in error: {message}",
                                 registration.id,
                                 mode.cache_label()
                             ));
