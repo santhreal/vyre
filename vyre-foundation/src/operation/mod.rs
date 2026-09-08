@@ -181,6 +181,233 @@ impl SemanticOperation {
                 u64::from_le_bytes(bytes)
             })
     }
+
+    /// Extract the production semantic descriptor from this operation.
+    #[must_use]
+    pub fn descriptor(self) -> SemanticDescriptor {
+        SemanticDescriptor {
+            id: self.id,
+            semantic_version: self.semantic_version,
+            signature: self.signature,
+            tier: self.tier,
+            category: self.category,
+            laws: self.laws,
+            numeric: self.numeric,
+            geometry_requirements: self.geometry_requirements,
+            explicit_effects: self.explicit_effects,
+            explicit_capabilities: self.explicit_capabilities,
+        }
+    }
+
+    /// Extract the lowering provider from this operation.
+    #[must_use]
+    pub fn lowering_provider(self) -> LoweringProvider {
+        LoweringProvider {
+            id: self.id,
+            build: self.build,
+        }
+    }
+
+    /// Extract the conformance case provider from this operation.
+    #[must_use]
+    pub fn conformance_provider(self) -> ConformanceProvider {
+        ConformanceProvider {
+            id: self.id,
+            test_inputs: self.test_inputs,
+            expected_output: self.expected_output,
+        }
+    }
+}
+
+/// Production semantic descriptor containing typed identity, signature, tier, laws,
+/// numeric contract, geometry constraints, explicit effects and capabilities.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SemanticDescriptor {
+    /// Stable operation identifier.
+    pub id: &'static str,
+    /// Semantic schema version.
+    pub semantic_version: u32,
+    /// Explicit callable signature when the operation is used through `Expr::Call`.
+    pub signature: Option<&'static Signature>,
+    /// Semantic tier.
+    pub tier: OperationTier,
+    /// Derived dialect/category namespace.
+    pub category: Option<&'static str>,
+    /// Algebraic or semantic law identifiers.
+    pub laws: &'static [&'static str],
+    /// What the result is allowed to be.
+    pub numeric: NumericContract,
+    /// Recorded target-neutral schedule constraints.
+    pub geometry_requirements: crate::geometry::GeometryRequirements,
+    /// Optional explicit closed effects.
+    pub explicit_effects: Option<OperationEffects>,
+    /// Optional explicit closed capabilities.
+    pub explicit_capabilities: Option<RequiredCapabilities>,
+}
+
+/// Implementation constructor and lowering provider.
+#[derive(Clone, Copy, Debug)]
+pub struct LoweringProvider {
+    /// Stable operation identifier matching the semantic descriptor.
+    pub id: &'static str,
+    /// Neutral program builder for lowering/inlining.
+    pub build: Option<fn() -> Program>,
+}
+
+/// Conformance-case provider available only to conformance and tooling packages.
+#[derive(Clone, Copy, Debug)]
+pub struct ConformanceProvider {
+    /// Stable operation identifier matching the semantic descriptor.
+    pub id: &'static str,
+    /// Deterministic fixture inputs.
+    pub test_inputs: Option<OperationFixtures>,
+    /// Deterministic fixture outputs.
+    pub expected_output: Option<OperationFixtures>,
+}
+
+inventory::collect!(SemanticDescriptor);
+inventory::collect!(LoweringProvider);
+inventory::collect!(ConformanceProvider);
+
+/// Explicit immutable catalog bundle whose contents, versions, extension provenance,
+/// and digest are part of request and artifact identity.
+#[derive(Clone, Debug)]
+pub struct CatalogBundle {
+    /// Schema version of the catalog bundle.
+    pub version: u32,
+    /// BLAKE3 256-bit digest of the bundle contents.
+    pub digest: [u8; 32],
+    /// Identity-indexed semantic descriptors.
+    pub descriptors: BTreeMap<&'static str, SemanticDescriptor>,
+    /// Identity-indexed lowering/implementation providers.
+    pub lowering_providers: BTreeMap<&'static str, LoweringProvider>,
+}
+
+impl CatalogBundle {
+    /// Compute the immutable catalog bundle from the global registry.
+    #[must_use]
+    pub fn from_registry() -> Self {
+        let mut descriptors = BTreeMap::new();
+        let mut lowering_providers = BTreeMap::new();
+
+        for desc in inventory::iter::<SemanticDescriptor> {
+            descriptors.insert(desc.id, *desc);
+        }
+        for prov in inventory::iter::<LoweringProvider> {
+            lowering_providers.insert(prov.id, *prov);
+        }
+
+        // Also bridge from OperationRegistration for backwards compatibility
+        for reg in inventory::iter::<OperationRegistration> {
+            descriptors.entry(reg.id).or_insert_with(|| reg.descriptor());
+            lowering_providers.entry(reg.id).or_insert_with(|| reg.lowering_provider());
+        }
+
+        let digest = Self::compute_digest(&descriptors, &lowering_providers);
+        Self {
+            version: 1,
+            digest,
+            descriptors,
+            lowering_providers,
+        }
+    }
+
+    fn compute_digest(
+        descriptors: &BTreeMap<&'static str, SemanticDescriptor>,
+        lowering_providers: &BTreeMap<&'static str, LoweringProvider>,
+    ) -> [u8; 32] {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(b"vyre-foundation::catalog_bundle::v1\n");
+        for (&id, desc) in descriptors {
+            hasher.update(id.as_bytes());
+            hasher.update(&desc.semantic_version.to_le_bytes());
+            hasher.update(&[desc.tier as u8]);
+            if let Some(cat) = desc.category {
+                hasher.update(cat.as_bytes());
+            }
+            for law in desc.laws {
+                hasher.update(law.as_bytes());
+            }
+            if lowering_providers.contains_key(id) {
+                hasher.update(b":lowering:present\n");
+            }
+        }
+        *hasher.finalize().as_bytes()
+    }
+
+    /// Return the 256-bit BLAKE3 digest of the catalog bundle.
+    #[must_use]
+    pub const fn digest(&self) -> &[u8; 32] {
+        &self.digest
+    }
+
+    /// Look up a semantic descriptor by stable operation id.
+    #[must_use]
+    pub fn descriptor(&self, id: &str) -> Option<&SemanticDescriptor> {
+        self.descriptors.get(id)
+    }
+
+    /// Look up a lowering provider by stable operation id.
+    #[must_use]
+    pub fn lowering(&self, id: &str) -> Option<&LoweringProvider> {
+        self.lowering_providers.get(id)
+    }
+
+    /// Check whether an operation id is present in the bundle.
+    #[must_use]
+    pub fn contains(&self, id: &str) -> bool {
+        self.descriptors.contains_key(id)
+    }
+
+    /// Return the number of operations in the bundle.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.descriptors.len()
+    }
+
+    /// Check whether the bundle is empty.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.descriptors.is_empty()
+    }
+}
+
+impl OperationRegistration {
+    /// Extract the production semantic descriptor from this registration.
+    #[must_use]
+    pub fn descriptor(&'static self) -> SemanticDescriptor {
+        SemanticDescriptor {
+            id: self.id,
+            semantic_version: self.semantic_version,
+            signature: self.signature.as_ref(),
+            tier: self.tier,
+            category: self.category,
+            laws: self.laws,
+            numeric: self.numeric,
+            geometry_requirements: self.geometry_requirements,
+            explicit_effects: self.explicit_effects,
+            explicit_capabilities: self.explicit_capabilities,
+        }
+    }
+
+    /// Extract the lowering provider from this registration.
+    #[must_use]
+    pub fn lowering_provider(&self) -> LoweringProvider {
+        LoweringProvider {
+            id: self.id,
+            build: self.build,
+        }
+    }
+
+    /// Extract the conformance case provider from this registration.
+    #[must_use]
+    pub fn conformance_provider(&self) -> ConformanceProvider {
+        ConformanceProvider {
+            id: self.id,
+            test_inputs: self.test_inputs,
+            expected_output: self.expected_output,
+        }
+    }
 }
 
 /// One semantic operation identity and all target-neutral catalog policy.
@@ -888,6 +1115,7 @@ pub struct OperationRegistry {
     ordered: Vec<&'static OperationRegistration>,
     by_id: BTreeMap<&'static str, &'static OperationRegistration>,
     call_graph: CallGraphClosure,
+    catalog_bundle: CatalogBundle,
 }
 
 impl OperationRegistry {
@@ -910,10 +1138,12 @@ impl OperationRegistry {
             }
         }
         let call_graph = CallGraphClosure::solve_from_registrations(ordered.iter().copied());
+        let catalog_bundle = CatalogBundle::from_registry();
         Ok(Self {
             ordered,
             by_id,
             call_graph,
+            catalog_bundle,
         })
     }
 
@@ -978,6 +1208,12 @@ impl OperationRegistry {
     /// Iterate registrations in stable operation-id order.
     pub fn iter(&self) -> impl ExactSizeIterator<Item = SemanticOperation> + '_ {
         self.ordered.iter().copied().map(SemanticOperation::from)
+    }
+
+    /// Return the immutable catalog bundle.
+    #[must_use]
+    pub fn catalog_bundle(&self) -> &CatalogBundle {
+        &self.catalog_bundle
     }
 }
 
