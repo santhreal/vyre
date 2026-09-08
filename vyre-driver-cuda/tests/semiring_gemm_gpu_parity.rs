@@ -130,3 +130,62 @@ fn cuda_semiring_gemm_bool_or_random_8x8() {
     let reference = reference_semiring_gemm(&a, &b, m, n, k, Semiring::BoolOr);
     assert_eq!(gpu, reference, "GPU/reference 8x8 BoolOr GEMM divergence");
 }
+#[test]
+fn cuda_fused_tile_attention_matches_reference() {
+    use vyre_libs::nn::attention::fused_tile_attention;
+    use vyre_reference::reference_eval;
+    use vyre_reference::value::Value;
+    use vyre_driver_cuda::CudaBackend;
+    use vyre_driver::DispatchConfig;
+
+    let seq_len = 2u32;
+    let head_dim = 2u32;
+
+    let q_data: Vec<f32> = vec![1.0, 0.5, 0.2, 0.8];
+    let k_data: Vec<f32> = vec![0.5, 1.0, 0.8, 0.2];
+    let v_data: Vec<f32> = vec![2.0, 1.0, 0.0, 3.0];
+
+    let prog = fused_tile_attention("q", "k", "v", "out", seq_len, head_dim);
+
+    let encode_f32 = |vals: &[f32]| -> Vec<u8> {
+        vals.iter().flat_map(|v| v.to_ne_bytes()).collect()
+    };
+    let decode_f32 = |bytes: &[u8]| -> Vec<f32> {
+        bytes
+            .chunks_exact(4)
+            .map(|chunk| f32::from_ne_bytes(chunk.try_into().unwrap()))
+            .collect()
+    };
+
+    let q_bytes = encode_f32(&q_data);
+    let k_bytes = encode_f32(&k_data);
+    let v_bytes = encode_f32(&v_data);
+
+    let ref_outputs = reference_eval(
+        &prog,
+        &[
+            Value::from(q_bytes.clone()),
+            Value::from(k_bytes.clone()),
+            Value::from(v_bytes.clone()),
+        ],
+    )
+    .expect("reference eval for fused_tile_attention");
+    let expected_f32 = decode_f32(&ref_outputs[0].to_bytes());
+
+    let backend = CudaBackend::acquire().expect("CUDA backend acquire");
+    let gpu_outputs = backend
+        .dispatch(
+            &prog,
+            &[q_bytes, k_bytes, v_bytes],
+            &DispatchConfig::default(),
+        )
+        .expect("CUDA dispatch for fused_tile_attention");
+    let actual_f32 = decode_f32(&gpu_outputs[0]);
+
+    for (a, b) in actual_f32.iter().zip(expected_f32.iter()) {
+        assert!(
+            (a - b).abs() < 1e-4,
+            "CUDA fused tile attention output mismatch: actual={actual_f32:?}, expected={expected_f32:?}"
+        );
+    }
+}

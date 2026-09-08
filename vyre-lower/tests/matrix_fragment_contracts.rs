@@ -314,3 +314,97 @@ fn result_ids_span_the_accumulator_fragment() {
     );
     assert_eq!(mma.result_id_count(), 4);
 }
+#[test]
+fn tile_matmul_lowering_packs_fragment_operands_as_distinct_words() {
+    use vyre_foundation::ir::{
+        BufferAccess, BufferDecl, DataType, Expr, Layout, Node, Program, Residency, Tile,
+    };
+    use vyre_lower::lower;
+
+    let tile_a = Tile::new(
+        DataType::F16,
+        vec![16, 16],
+        Layout::RowMajor,
+        Residency::Subgroup,
+    );
+    let tile_b = Tile::new(
+        DataType::F16,
+        vec![16, 8],
+        Layout::ColumnMajor,
+        Residency::Subgroup,
+    );
+    let tile_c = Tile::new(
+        DataType::F32,
+        vec![16, 8],
+        Layout::RowMajor,
+        Residency::Register,
+    );
+
+    let prog = Program::wrapped(
+        vec![
+            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F16).with_count(256),
+            BufferDecl::storage("b", 1, BufferAccess::ReadOnly, DataType::F16).with_count(128),
+            BufferDecl::output("out", 2, DataType::F32).with_count(128),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::tile_decl("c", tile_c),
+            Node::tile_load(
+                "t_a",
+                tile_a,
+                "a",
+                vec![Expr::u32(0), Expr::u32(0)],
+                Layout::RowMajor,
+            ),
+            Node::tile_load(
+                "t_b",
+                tile_b,
+                "b",
+                vec![Expr::u32(0), Expr::u32(0)],
+                Layout::ColumnMajor,
+            ),
+            Node::tile_matmul("c", "t_a", "t_b"),
+            Node::tile_store("out", vec![Expr::u32(0), Expr::u32(0)], "c"),
+        ],
+    );
+
+    let desc = lower(&prog).expect("tile matmul program must lower to valid descriptor");
+    let mma_op = desc
+        .ops_iter()
+        .find(|op| matches!(op.kind, KernelOpKind::MatrixMma(_)))
+        .expect("descriptor must contain a MatrixMma op");
+    // Must have 10 operand words (4 for A, 2 for B, 4 for Acc)
+    assert_eq!(mma_op.operands.len(), 10, "MatrixMma operand count mismatch");
+
+    // The left tile operands (0..4) must all be distinct packed fragment words,
+    // NOT duplicated scalar IDs.
+    let left_words = &mma_op.operands[0..4];
+    assert_ne!(
+        left_words[0], left_words[1],
+        "Fix: left fragment operand words must be distinct packed registers, not duplicated scalar IDs"
+    );
+    assert_ne!(left_words[1], left_words[2]);
+    assert_ne!(left_words[2], left_words[3]);
+
+    // The right tile operands (4..6) must be distinct packed fragment words.
+    let right_words = &mma_op.operands[4..6];
+    assert_ne!(
+        right_words[0], right_words[1],
+        "Fix: right fragment operand words must be distinct packed registers, not duplicated scalar IDs"
+    );
+
+    // The accumulator operands (6..10) must be distinct packed fragment words.
+    let acc_words = &mma_op.operands[6..10];
+    assert_ne!(
+        acc_words[0], acc_words[1],
+        "Fix: accumulator fragment operand words must be distinct packed registers, not duplicated scalar IDs"
+    );
+    assert_ne!(acc_words[1], acc_words[2]);
+    assert_ne!(acc_words[2], acc_words[3]);
+
+    // Result IDs must be 4 distinct sequential IDs
+    assert_eq!(mma_op.result_id_count(), 4);
+    let results: Vec<u32> = mma_op.result_ids().collect();
+    assert_eq!(results.len(), 4);
+    assert_ne!(results[0], results[1]);
+}

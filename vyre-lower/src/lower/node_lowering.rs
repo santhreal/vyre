@@ -4,7 +4,7 @@ use crate::descriptor::{KernelBody, KernelOp, KernelOpKind, OpaqueNodeData};
 use crate::error::LowerError;
 use rustc_hash::FxHashSet;
 use vyre_foundation::ir::node_op_id;
-use vyre_foundation::ir::{Expr, Ident, Node};
+use vyre_foundation::ir::{DataType, Expr, Ident, Node, Residency, Tile};
 
 use super::body_assembly::{empty_body_for_nodes, push_child};
 use super::carrier_names::collect_carrier_names;
@@ -410,10 +410,6 @@ impl LowerCtx {
                 Ok(())
             }
             Node::TileMatmul { acc, a, b } => {
-                let acc_id = self.scope.get(acc).unwrap_or(0);
-                let a_id = self.scope.get(a).unwrap_or(0);
-                let b_id = self.scope.get(b).unwrap_or(0);
-                let result_id = self.alloc_value()?;
                 let spec = crate::MatrixMmaSpec {
                     tile: crate::MatrixTileShape { m: 16, n: 8, k: 16 },
                     left: crate::FragmentValue::in_registers(
@@ -437,32 +433,90 @@ impl LowerCtx {
                         "tile matmul declares fragments that cannot be carried: {reason}. Fix: state a tile that distributes across its lanes in whole 32-bit words."
                     ))
                 })?;
-                let mut operands = Vec::with_capacity(words.iter().sum::<u32>() as usize);
-                for (word_count, value) in words.into_iter().zip([a_id, b_id, acc_id]) {
-                    operands.extend(std::iter::repeat_n(value, word_count as usize));
+                let [left_words, right_words, acc_words] = words;
+                let a_words = self.scope.get_tile(a).unwrap_or_default();
+                let b_words = self.scope.get_tile(b).unwrap_or_default();
+                let acc_in_words = self.scope.get_tile(acc).unwrap_or_default();
+
+                let mut operands =
+                    Vec::with_capacity((left_words + right_words + acc_words) as usize);
+
+                // Pack A operand words (must be distinct packed fragment words)
+                if a_words.len() >= left_words as usize {
+                    operands.extend_from_slice(&a_words[..left_words as usize]);
+                } else if let Some(scalar_id) = self.scope.get(a) {
+                    operands.extend(std::iter::repeat_n(scalar_id, left_words as usize));
+                } else {
+                    for _ in 0..left_words {
+                        let zero_id = self.literal(body, crate::descriptor::LiteralValue::U32(0))?;
+                        operands.push(zero_id);
+                    }
                 }
+
+                // Pack B operand words (must be distinct packed fragment words)
+                if b_words.len() >= right_words as usize {
+                    operands.extend_from_slice(&b_words[..right_words as usize]);
+                } else if let Some(scalar_id) = self.scope.get(b) {
+                    operands.extend(std::iter::repeat_n(scalar_id, right_words as usize));
+                } else {
+                    for _ in 0..right_words {
+                        let zero_id = self.literal(body, crate::descriptor::LiteralValue::U32(0))?;
+                        operands.push(zero_id);
+                    }
+                }
+
+                // Pack Acc operand words (must be distinct packed accumulator words)
+                if acc_in_words.len() >= acc_words as usize {
+                    operands.extend_from_slice(&acc_in_words[..acc_words as usize]);
+                } else if let Some(scalar_id) = self.scope.get(acc) {
+                    operands.extend(std::iter::repeat_n(scalar_id, acc_words as usize));
+                } else {
+                    for _ in 0..acc_words {
+                        let zero_id = self.literal(body, crate::descriptor::LiteralValue::U32(0))?;
+                        operands.push(zero_id);
+                    }
+                }
+                let result_count = spec.result_count().map_err(|reason| {
+                    LowerError::UnsupportedConstruct(format!(
+                        "tile matmul declares invalid result fragment: {reason}"
+                    ))
+                })?;
+                let base_result_id = self.alloc_values(result_count)?;
+                let result_ids: Vec<u32> = (0..result_count).map(|i| base_result_id + i).collect();
+
                 body.ops.push(KernelOp {
                     kind: KernelOpKind::MatrixMma(Box::new(spec)),
                     operands,
-                    result: Some(result_id),
+                    result: Some(base_result_id),
                 });
-                self.scope.bind(acc.clone(), result_id);
+                self.scope.bind_tile(acc.clone(), result_ids);
                 Ok(())
             }
-            Node::TileLoad { tile, buffer, origin, .. } => {
+            Node::TileLoad {
+                tile,
+                tile_type,
+                buffer,
+                origin,
+                ..
+            } => {
                 let slot = self.buffer_slot(buffer)?;
                 let origin_id = if let Some(first) = origin.first() {
                     self.lower_expr(first, body)?
                 } else {
                     0
                 };
-                let result_id = self.alloc_value()?;
-                body.ops.push(KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![slot, origin_id],
-                    result: Some(result_id),
-                });
-                self.scope.bind(tile.clone(), result_id);
+                let word_count = tile_word_count(tile_type);
+                let mut word_ids = Vec::with_capacity(word_count as usize);
+                for _ in 0..word_count {
+                    let result_id = self.alloc_value()?;
+                    body.ops.push(KernelOp {
+                        kind: KernelOpKind::LoadGlobal,
+                        operands: vec![slot, origin_id],
+                        result: Some(result_id),
+                    });
+                    word_ids.push(result_id);
+                }
+                self.scope.bind_tile(tile.clone(), word_ids);
                 Ok(())
             }
             Node::TileStore { buffer, origin, tile } => {
@@ -472,36 +526,58 @@ impl LowerCtx {
                 } else {
                     0
                 };
-                let tile_id = self.scope.get(tile).unwrap_or(0);
-                body.ops.push(KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![slot, origin_id, tile_id],
-                    result: None,
-                });
+                let tile_words = self.scope.get_tile(tile).unwrap_or_default();
+                if tile_words.is_empty() {
+                    let tile_id = self.scope.get(tile).unwrap_or(0);
+                    body.ops.push(KernelOp {
+                        kind: KernelOpKind::StoreGlobal,
+                        operands: vec![slot, origin_id, tile_id],
+                        result: None,
+                    });
+                } else {
+                    for word_id in tile_words {
+                        body.ops.push(KernelOp {
+                            kind: KernelOpKind::StoreGlobal,
+                            operands: vec![slot, origin_id, word_id],
+                            result: None,
+                        });
+                    }
+                }
                 Ok(())
             }
             Node::TileReduce { out, tile, op, .. } => {
-                let tile_id = self.scope.get(tile).unwrap_or(0);
+                let tile_words = self.scope.get_tile(tile).unwrap_or_default();
+                let operand = tile_words
+                    .first()
+                    .copied()
+                    .unwrap_or_else(|| self.scope.get(tile).unwrap_or(0));
                 let result_id = self.alloc_value()?;
                 body.ops.push(KernelOp {
-                    kind: KernelOpKind::SubgroupReduce {
-                        op: *op,
-                    },
-                    operands: vec![tile_id],
+                    kind: KernelOpKind::SubgroupReduce { op: *op },
+                    operands: vec![operand],
                     result: Some(result_id),
                 });
                 self.scope.bind(out.clone(), result_id);
                 Ok(())
             }
-            Node::TileElementwise { out, inputs: _, body: inner_body } => {
+            Node::TileElementwise {
+                out,
+                inputs: _,
+                body: inner_body,
+            } => {
                 self.lower_child_node(body, depth, inner_body, KernelOpKind::StructuredBlock)?;
                 let res_id = self.alloc_value()?;
                 self.scope.bind(out.clone(), res_id);
                 Ok(())
             }
-            Node::TileDecl { name, .. } => {
-                let res_id = self.alloc_value()?;
-                self.scope.bind(name.clone(), res_id);
+            Node::TileDecl { name, tile } => {
+                let word_count = tile_word_count(tile);
+                let mut word_ids = Vec::with_capacity(word_count as usize);
+                for _ in 0..word_count {
+                    let res_id = self.literal(body, crate::descriptor::LiteralValue::U32(0))?;
+                    word_ids.push(res_id);
+                }
+                self.scope.bind_tile(name.clone(), word_ids);
                 Ok(())
             }
             other => Err(LowerError::UnsupportedConstruct(format!(
@@ -770,4 +846,20 @@ mod tests {
                 .find_map(|child| find_parent_body_containing_op(child, target))
         }
     }
+}
+fn tile_word_count(tile: &Tile) -> u32 {
+    let bits = match tile.element {
+        DataType::F16 | DataType::BF16 => 16u32,
+        _ => 32u32,
+    };
+    let total_elements = tile.element_count() as u32;
+    match tile.residency {
+        Residency::Subgroup => {
+            let lanes = 32u32;
+            let elements_per_lane = (total_elements / lanes).max(1);
+            ((elements_per_lane * bits) + 31) / 32
+        }
+        _ => ((total_elements * bits) + 31) / 32,
+    }
+    .max(1)
 }
