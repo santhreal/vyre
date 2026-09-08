@@ -6074,6 +6074,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   outputs and retained state. Fused security and library compositions demote
   intermediate stage outputs so only terminal graph values are published to the
   runtime semantic boundary.
+- Artifact completion resource projection includes all declared Output lifetime
+  resources regardless of retained predecessors, resolving graph output
+  omission on backends requiring whole-grid synchronization cuts.
 - Artifact decode refuses a mutated launch extent whose recorded grid no longer
   exactly covers the recorded logical points.
 - Artifact materialization now maps target resources to Program inputs by
