@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:3cfaa0ef1ac2f973c5c9b7be833ce2c0d92fbb6a:dirty=true:worktree=c271d273d54fd2dd87e24ee290e8ff3f88faf33e60dedd5c946a0d9415b355a6",
+  "source_fingerprint": "git:585fbeae622524cd57d1c874cfcc1afcd8cfd148:dirty=false",
   "schema_version": 3,
   "cuda_first": true,
   "wgpu_fallback_present": true,
@@ -307,7 +307,7 @@
       "path": "vyre-runtime/src/artifact_admission/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 69528,
+      "source_bytes": 94736,
       "implementation_tokens": [
         "ArtifactSession",
         "materialize"
@@ -378,7 +378,7 @@
       "path": "vyre-driver-wgpu/src/pipeline/persistent.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 29349,
+      "source_bytes": 29541,
       "implementation_tokens": [
         "dispatch_persistent_batched",
         "dispatch_borrowed_persistent_batched",
@@ -393,7 +393,7 @@
       "path": "vyre-driver-wgpu/src/runtime/device/selector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 19604,
+      "source_bytes": 23830,
       "implementation_tokens": [
         "has_real_gpu_adapter",
         "DeviceType::Cpu"

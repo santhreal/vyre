@@ -63,7 +63,7 @@ impl ValueFact {
         self.produced
             && matches!(
                 self.lifetime,
-                ResourceLifetime::Invocation | ResourceLifetime::Retained
+                ResourceLifetime::Invocation | ResourceLifetime::Retained | ResourceLifetime::Stream
             )
     }
 }

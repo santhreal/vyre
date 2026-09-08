@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:a08d4b239de91dd83947eee6147624ce72a1aa3c:dirty=true:worktree=074f0c22fbc1b4971bd983b70e2c0c46db154f9899e6ba58f91c1899cdac7c9c",
+  "source_fingerprint": "git:585fbeae622524cd57d1c874cfcc1afcd8cfd148:dirty=false",
   "schema_version": 4,
   "backend_id": "cpu-ref",
   "command": "cargo_full run -p vyre-conform --release --bin vyre-conform -- dispatch --backend cpu-ref --ops all",

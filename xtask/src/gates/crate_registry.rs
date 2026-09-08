@@ -1312,4 +1312,113 @@ mod tests {
         let findings = direction_findings(&state, &records, &layers);
         assert_eq!(findings.len(), 2, "{findings:?}");
     }
+
+    fn base_records_and_state() -> (Vec<CrateRecord>, WorkspaceState) {
+        let records = vec![
+            CrateRecord {
+                package: "vyre-bench".to_string(),
+                path: "vyre-bench".to_string(),
+                owner: "benchmarks".to_string(),
+                layer: "tooling".to_string(),
+                responsibility: "benchmarks".to_string(),
+                dependencies: vec![DependencyRecord {
+                    package: "vyre-driver-cuda".to_string(),
+                    purpose: "cuda execution".to_string(),
+                    features: vec![],
+                    conditions: vec!["cfg(not(target_os = \"macos\"))".to_string()],
+                    kinds: vec!["normal".to_string()],
+                    optional: false,
+                    default_features: true,
+                    boundary: "private".to_string(),
+                    seam: "cuda-driver".to_string(),
+                }],
+            },
+            CrateRecord {
+                package: "vyre-driver-cuda".to_string(),
+                path: "vyre-driver-cuda".to_string(),
+                owner: "cuda-driver".to_string(),
+                layer: "concrete-backend".to_string(),
+                responsibility: "cuda driver".to_string(),
+                dependencies: vec![],
+            },
+        ];
+        let state = WorkspaceState {
+            members: vec!["vyre-bench".to_string(), "vyre-driver-cuda".to_string()],
+            paths: BTreeMap::from([
+                ("vyre-bench".to_string(), "vyre-bench".to_string()),
+                ("vyre-driver-cuda".to_string(), "vyre-driver-cuda".to_string()),
+            ]),
+            dependencies: BTreeMap::from([
+                (
+                    "vyre-bench".to_string(),
+                    BTreeMap::from([(
+                        "vyre-driver-cuda".to_string(),
+                        DependencyUse {
+                            features: vec![],
+                            conditions: vec!["cfg(not(target_os = \"macos\"))".to_string()],
+                            kinds: vec!["normal".to_string()],
+                            optional: false,
+                            default_features: true,
+                        },
+                    )]),
+                ),
+                ("vyre-driver-cuda".to_string(), BTreeMap::new()),
+            ]),
+        };
+        (records, state)
+    }
+
+    /// WHY: matching manifests and registry produce 0 contract findings.
+    #[test]
+    fn matching_manifest_and_registry_has_no_findings() {
+        let (records, state) = base_records_and_state();
+        let findings = contract_findings(&state, &records);
+        assert!(findings.is_empty(), "{findings:?}");
+    }
+
+    /// WHY: when an edge is in the registry but no manifest resolves it,
+    /// the gate must reject the stale record.
+    #[test]
+    fn stale_dependency_record_in_registry_is_a_finding() {
+        let (records, mut state) = base_records_and_state();
+        state.dependencies.get_mut("vyre-bench").unwrap().clear();
+        let findings = contract_findings(&state, &records);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert!(findings[0].message.contains("declares a record for `vyre-driver-cuda` and no manifest edge resolves to it"));
+    }
+
+    /// WHY: when a manifest adds an internal dependency not in the registry,
+    /// the gate must reject the undeclared edge.
+    #[test]
+    fn undeclared_manifest_dependency_is_a_finding() {
+        let (mut records, state) = base_records_and_state();
+        records[0].dependencies.clear();
+        let findings = contract_findings(&state, &records);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert!(findings[0].message.contains("depends on `vyre-driver-cuda` and declares no record for it"));
+    }
+
+    /// WHY: mismatched dependency attributes (features, conditions, kinds, optional, default_features)
+    /// must each produce a finding.
+    #[test]
+    fn mismatched_dependency_attributes_are_findings() {
+        let (mut records, state) = base_records_and_state();
+        records[0].dependencies[0].conditions = vec!["always".to_string()];
+        records[0].dependencies[0].optional = true;
+        let findings = contract_findings(&state, &records);
+        assert_eq!(findings.len(), 2, "{findings:?}");
+        assert!(findings.iter().any(|f| f.message.contains("declares conditions `always`")));
+        assert!(findings.iter().any(|f| f.message.contains("declares optional `true`")));
+    }
+
+    /// WHY: declaring a seam that does not match the destination crate's owner
+    /// must produce a finding.
+    #[test]
+    fn mismatched_seam_owner_is_a_finding() {
+        let (mut records, state) = base_records_and_state();
+        records[0].dependencies[0].seam = "wrong-seam".to_string();
+        let findings = contract_findings(&state, &records);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert!(findings[0].message.contains("declares seam `wrong-seam` and the destination owner is `cuda-driver`"));
+    }
 }

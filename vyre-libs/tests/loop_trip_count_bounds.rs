@@ -147,6 +147,16 @@ fn state_machine_scan_bodies_bound_their_trip_counts() {
     );
 }
 
+/// The range ordering builder bounds its scan loop against the counts buffer and extent buffers.
+#[test]
+fn range_ordering_scan_body_bounds_its_trip_counts() {
+    let (nodes, _) = vyre_libs::range_ordering::match_order(Expr::u32(0), Expr::u32(1), "test");
+    assert!(
+        findings(&nodes).is_empty(),
+        "match_order: {:?}",
+        findings(&nodes)
+    );
+}
 /// Every registered program bounds its data-derived loops, and every
 /// registration that exposes no program says why it is exempt.
 ///

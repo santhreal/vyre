@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Process-owned caches, staging buffer pools, and tenant registries in `vyre-driver-wgpu` and `vyre-runtime` now discard and clear half-mutated internal state on lock poison recovery instead of reusing unvalidated entries."

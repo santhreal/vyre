@@ -53,9 +53,6 @@ Compiles a program into the backend's target payload.
 ### `ext.rs`
 Extension hooks for vendor-specific intrinsics.
 
-### `spirv_backend.rs`
-SPIR-V emission shortcut for the wgpu backend's Vulkan path.
-
 ### `bin/`
 Standalone binaries (debug helpers, conform probes).
 

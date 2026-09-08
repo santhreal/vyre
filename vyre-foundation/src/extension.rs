@@ -25,8 +25,173 @@ use std::sync::LazyLock;
 use rustc_hash::FxHashMap;
 use vyre_spec::extension::{
     ExtensionAtomicOp, ExtensionAtomicOpId, ExtensionBinOp, ExtensionBinOpId, ExtensionDataType,
-    ExtensionDataTypeId, ExtensionRuleConditionId, ExtensionUnOp, ExtensionUnOpId,
+    ExtensionDataTypeId, ExtensionIdentity, ExtensionRuleConditionId, ExtensionSchema,
+    ExtensionSchemaDigest, ExtensionUnOp, ExtensionUnOpId,
 };
+
+pub use vyre_spec::extension::{
+    ExtensionField as DeclExtensionField, ExtensionFieldType as DeclExtensionFieldType,
+    ExtensionIdentity as DeclExtensionIdentity, ExtensionNamespace as DeclExtensionNamespace,
+    ExtensionNumericalContract as DeclExtensionNumericalContract,
+    ExtensionOperand as DeclExtensionOperand, ExtensionOperandKind as DeclExtensionOperandKind,
+    ExtensionResourceBounds as DeclExtensionResourceBounds, ExtensionSchema as DeclExtensionSchema,
+    ExtensionSchemaDigest as DeclExtensionSchemaDigest, ExtensionSemVer as DeclExtensionSemVer,
+    ExtensionShapeRule as DeclExtensionShapeRule,
+};
+
+/// Error produced when validating or registering in a [`CatalogBundle`].
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum ExtensionCatalogError {
+    /// An extension with identical identity is already registered in the bundle.
+    #[error("Duplicate extension identity in bundle: {0}")]
+    DuplicateIdentity(ExtensionIdentity),
+    /// Computed schema digest does not match the claimed identity digest.
+    #[error("Schema digest mismatch for {identity}: expected {expected:?}, computed {actual:?}")]
+    DigestMismatch {
+        /// Extension identity.
+        identity: ExtensionIdentity,
+        /// Expected digest from identity.
+        expected: ExtensionSchemaDigest,
+        /// Actual digest recomputed from fields.
+        actual: ExtensionSchemaDigest,
+    },
+    /// Extension schema failed validation.
+    #[error("Invalid extension schema for {0}: {1}")]
+    InvalidSchema(String, String),
+}
+
+/// Closed declarative extension catalog bundle.
+///
+/// Replaces process-global opaque callbacks with an explicit, versioned,
+/// serializable bundle of declarative extension schemas.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct CatalogBundle {
+    /// Bundle identifier.
+    pub bundle_id: String,
+    /// Registered extension schemas keyed by collision-resistant identity.
+    pub schemas: FxHashMap<ExtensionIdentity, ExtensionSchema>,
+}
+
+impl CatalogBundle {
+    /// Create a new empty catalog bundle.
+    #[must_use]
+    pub fn new(bundle_id: impl Into<String>) -> Self {
+        Self {
+            bundle_id: bundle_id.into(),
+            schemas: FxHashMap::default(),
+        }
+    }
+
+    /// Register a declarative extension schema into this bundle.
+    ///
+    /// Fails closed if the identity is already registered or if the schema
+    /// digest is inconsistent.
+    pub fn register(&mut self, schema: ExtensionSchema) -> Result<(), ExtensionCatalogError> {
+        let expected_digest = ExtensionSchema::compute_digest(
+            schema.identity.namespace.as_str(),
+            &schema.identity.version,
+            &schema.fields,
+            &schema.operands,
+            &schema.result_types,
+        );
+        if schema.identity.schema_digest != expected_digest {
+            return Err(ExtensionCatalogError::DigestMismatch {
+                identity: schema.identity.clone(),
+                expected: schema.identity.schema_digest,
+                actual: expected_digest,
+            });
+        }
+        if self.schemas.contains_key(&schema.identity) {
+            return Err(ExtensionCatalogError::DuplicateIdentity(schema.identity));
+        }
+        self.schemas.insert(schema.identity.clone(), schema);
+        Ok(())
+    }
+
+    /// Lookup an extension schema by exact identity.
+    #[must_use]
+    pub fn get(&self, identity: &ExtensionIdentity) -> Option<&ExtensionSchema> {
+        self.schemas.get(identity)
+    }
+
+    /// Lookup all extension schemas matching a given namespace.
+    #[must_use]
+    pub fn get_by_namespace(&self, namespace: &str) -> Vec<&ExtensionSchema> {
+        self.schemas
+            .values()
+            .filter(|s| s.identity.namespace.as_str() == namespace)
+            .collect()
+    }
+
+    /// Lookup the latest semantic version of an extension in a namespace.
+    #[must_use]
+    pub fn get_latest(&self, namespace: &str) -> Option<&ExtensionSchema> {
+        self.schemas
+            .values()
+            .filter(|s| s.identity.namespace.as_str() == namespace)
+            .max_by_key(|s| (s.identity.version.major, s.identity.version.minor, s.identity.version.patch))
+    }
+
+    /// Validate all registered schemas within the bundle.
+    pub fn validate(&self) -> Result<(), ExtensionCatalogError> {
+        for (identity, schema) in &self.schemas {
+            if &schema.identity != identity {
+                return Err(ExtensionCatalogError::InvalidSchema(
+                    identity.to_string(),
+                    "Schema identity mismatch with key".to_string(),
+                ));
+            }
+            let expected = ExtensionSchema::compute_digest(
+                identity.namespace.as_str(),
+                &identity.version,
+                &schema.fields,
+                &schema.operands,
+                &schema.result_types,
+            );
+            if identity.schema_digest != expected {
+                return Err(ExtensionCatalogError::DigestMismatch {
+                    identity: identity.clone(),
+                    expected: identity.schema_digest,
+                    actual: expected,
+                });
+            }
+        }
+        Ok(())
+    }
+
+    /// Merge another catalog bundle into this one.
+    pub fn merge(&mut self, other: CatalogBundle) -> Result<(), ExtensionCatalogError> {
+        for (_, schema) in other.schemas {
+            self.register(schema)?;
+        }
+        Ok(())
+    }
+
+    /// Number of registered extensions in this bundle.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.schemas.len()
+    }
+
+    /// Whether this bundle is empty.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.schemas.is_empty()
+    }
+
+    /// Compute a canonical fingerprint over the entire catalog bundle.
+    #[must_use]
+    pub fn canonical_fingerprint(&self) -> [u8; 32] {
+        let mut identities: Vec<_> = self.schemas.keys().map(|id| id.to_canonical_string()).collect();
+        identities.sort();
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(self.bundle_id.as_bytes());
+        for id_str in identities {
+            bytes.extend_from_slice(id_str.as_bytes());
+        }
+        *blake3::hash(&bytes).as_bytes()
+    }
+}
 
 /// Opaque rule condition extension  -  lets third-party rule-engine crates
 /// compose bespoke predicates without editing the facade or foundation model.
@@ -325,6 +490,7 @@ pub fn try_resolve_atomic_op(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_spec::extension::*;
 
     #[test]
     fn per_kind_resolvers_are_empty_by_default() {
@@ -361,5 +527,73 @@ mod tests {
 
         assert!(err.contains("dialect.alpha"));
         assert!(err.contains("dialect.beta"));
+    }
+
+    #[test]
+    fn catalog_bundle_distinguishes_fnv1a_colliding_extensions() {
+        let mut bundle = CatalogBundle::new("test_bundle");
+        let name_a = "d5pj";
+        let name_b = "x.ta";
+
+        // Prove legacy 31-bit FNV-1a collided
+        assert_eq!(
+            ExtensionDataTypeId::from_name(name_a),
+            ExtensionDataTypeId::from_name(name_b)
+        );
+
+        let ns_a = ExtensionNamespace::new(name_a).unwrap();
+        let ns_b = ExtensionNamespace::new(name_b).unwrap();
+        let ver = ExtensionSemVer::new(1, 0, 0);
+
+        let digest_a = ExtensionSchema::compute_digest(name_a, &ver, &[], &[], &[]);
+        let digest_b = ExtensionSchema::compute_digest(name_b, &ver, &[], &[], &[]);
+
+        let id_a = ExtensionIdentity::new(ns_a, ver, digest_a);
+        let id_b = ExtensionIdentity::new(ns_b, ver, digest_b);
+
+        let schema_a = ExtensionSchema {
+            identity: id_a.clone(),
+            display_name: "Extension A".into(),
+            description: "First extension".into(),
+            fields: Vec::new(),
+            operands: Vec::new(),
+            result_types: Vec::new(),
+            side_effects: vyre_spec::SideEffectClass::Pure,
+            shape_rules: Vec::new(),
+            numerical_contract: ExtensionNumericalContract::default(),
+            laws: Vec::new(),
+            resource_bounds: ExtensionResourceBounds::default(),
+            host_shareable: true,
+            is_pure: true,
+            is_divergent: false,
+            terminates: true,
+        };
+
+        let schema_b = ExtensionSchema {
+            identity: id_b.clone(),
+            display_name: "Extension B".into(),
+            description: "Second extension".into(),
+            fields: Vec::new(),
+            operands: Vec::new(),
+            result_types: Vec::new(),
+            side_effects: vyre_spec::SideEffectClass::Pure,
+            shape_rules: Vec::new(),
+            numerical_contract: ExtensionNumericalContract::default(),
+            laws: Vec::new(),
+            resource_bounds: ExtensionResourceBounds::default(),
+            host_shareable: true,
+            is_pure: true,
+            is_divergent: false,
+            terminates: true,
+        };
+
+        // Both register and coexist simultaneously without collision!
+        bundle.register(schema_a).expect("schema A registers cleanly");
+        bundle.register(schema_b).expect("schema B registers cleanly");
+
+        assert_eq!(bundle.len(), 2);
+        assert_eq!(bundle.get(&id_a).unwrap().display_name, "Extension A");
+        assert_eq!(bundle.get(&id_b).unwrap().display_name, "Extension B");
+        bundle.validate().expect("bundle validates cleanly");
     }
 }

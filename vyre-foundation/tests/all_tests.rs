@@ -355,6 +355,22 @@ pub mod memory_ordering;
 #[path = "memory_ordering_adversarial.rs"]
 pub mod memory_ordering_adversarial;
 
+/// Integration tests from `tests/memory_model_contracts.rs`.
+#[path = "memory_model_contracts.rs"]
+pub mod memory_model_contracts;
+
+/// Integration tests from `tests/orthogonal_types.rs`.
+#[path = "orthogonal_types.rs"]
+pub mod orthogonal_types;
+
+/// Integration tests from `tests/symbolic_shape_interner.rs`.
+#[path = "symbolic_shape_interner.rs"]
+pub mod symbolic_shape_interner;
+
+/// Integration tests from `tests/declarative_verifier.rs`.
+#[path = "declarative_verifier.rs"]
+pub mod declarative_verifier;
+
 /// Integration tests from `tests/memory_pass_alias_owner.rs`.
 #[path = "memory_pass_alias_owner.rs"]
 pub mod memory_pass_alias_owner;
@@ -427,6 +443,10 @@ pub mod optimizer_pass_borrow_preservation;
 #[allow(clippy::match_like_matches_macro)]
 #[path = "optimizer_perf_regression.rs"]
 pub mod optimizer_perf_regression;
+
+/// Integration tests from `tests/optimizer_proof_contracts.rs`.
+#[path = "optimizer_proof_contracts.rs"]
+pub mod optimizer_proof_contracts;
 
 /// Integration tests from `tests/optimizer_reference_parity_smoke.rs`.
 #[path = "optimizer_reference_parity_smoke.rs"]
@@ -533,6 +553,10 @@ pub mod region_inline_scope;
 #[path = "region_law_derivation.rs"]
 pub mod region_law_derivation;
 
+/// Integration tests from `tests/region_ssa_contracts.rs`.
+#[path = "region_ssa_contracts.rs"]
+pub mod region_ssa_contracts;
+
 /// Integration tests from `tests/registry_closure.rs`.
 #[path = "registry_closure.rs"]
 pub mod registry_closure;
@@ -556,6 +580,10 @@ pub mod scalar_operator_agreement;
 /// Integration tests from `tests/scan_database_wire_contract.rs`.
 #[path = "scan_database_wire_contract.rs"]
 pub mod scan_database_wire_contract;
+
+/// Integration tests from `tests/schedule_calculus_contracts.rs`.
+#[path = "schedule_calculus_contracts.rs"]
+pub mod schedule_calculus_contracts;
 
 /// Integration tests from `tests/schedule_ir_contracts.rs`.
 #[path = "schedule_ir_contracts.rs"]
@@ -600,6 +628,10 @@ pub mod source_tree_digest;
 /// Integration tests from `tests/store_to_load_forward_value_invalidation.rs`.
 #[path = "store_to_load_forward_value_invalidation.rs"]
 pub mod store_to_load_forward_value_invalidation;
+
+/// Integration tests from `tests/structural_sharing_and_bounded_compilation_contracts.rs`.
+#[path = "structural_sharing_and_bounded_compilation_contracts.rs"]
+pub mod structural_sharing_and_bounded_compilation_contracts;
 
 /// Integration tests from `tests/strength_reduce_shift_fusion_overflow.rs`.
 #[path = "strength_reduce_shift_fusion_overflow.rs"]
@@ -753,3 +785,4 @@ pub mod wire_version_mismatch;
 /// Integration tests from `tests/workspace_naming_footguns.rs`.
 #[path = "workspace_naming_footguns.rs"]
 pub mod workspace_naming_footguns;
+

@@ -1,0 +1,2 @@
+category = "Added"
+text = "The reference interpreter bounds execution by a step ceiling that refuses data-derived unbounded trip counts with a typed `ReferenceError` naming the program and ceiling. Step counts are charged at statement evaluation and invocation boundaries, the ceiling is derived from the heaviest measured fixture in the registered corpus with 64x headroom, and the caller-side timeout workaround in the stress sweep is removed."

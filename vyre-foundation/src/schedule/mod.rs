@@ -5,12 +5,20 @@
 //! storage scopes before physical-kernel lowering. Concrete target names and
 //! instruction choices are not part of this schema.
 
+mod cost;
+mod diff;
 mod error;
 mod legality;
 mod normalize;
 mod preconditions;
+mod tree;
 
+pub use cost::{ScheduleCostModel, ScheduleCostRecord};
+pub use diff::{ScheduleDiff, ScheduleDiffItem};
 pub use error::ScheduleLegalityError;
+pub use tree::{
+    DependencyPreservationCertificate, ScheduleOp, SchedulePlan, ScheduleTree,
+};
 
 use std::collections::BTreeSet;
 

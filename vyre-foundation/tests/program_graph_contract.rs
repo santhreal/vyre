@@ -920,6 +920,41 @@ fn oversized_graph_wire_counts_fail_before_allocation() {
         .contains("external value count is 4294967295; maximum is 1000000"));
 }
 
+/// Prevents hostile node count fields from reserving unbounded memory before decoding.
+#[test]
+fn oversized_graph_wire_node_count_fails_before_allocation() {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(b"VGR0");
+    bytes.extend_from_slice(&2_u16.to_le_bytes());
+    bytes.extend_from_slice(&0_u32.to_le_bytes()); // 0 external values
+    bytes.extend_from_slice(&u32::MAX.to_le_bytes()); // node count exceeds MAX_GRAPH_ITEMS
+    let error = ProgramGraph::from_wire(&bytes)
+        .expect_err("Fix: hostile node count must fail before allocation");
+    assert!(error
+        .to_string()
+        .contains("node count is 4294967295; maximum is 1000000"));
+}
+
+/// Prevents hostile tensor rank from allocating huge vectors during contract decode.
+#[test]
+fn oversized_graph_wire_tensor_rank_fails_before_allocation() {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(b"VGR0");
+    bytes.extend_from_slice(&2_u16.to_le_bytes());
+    bytes.extend_from_slice(&1_u32.to_le_bytes()); // 1 external value
+    bytes.extend_from_slice(&4_u32.to_le_bytes()); // name len
+    bytes.extend_from_slice(b"val0");
+    let dtype_json = serde_json::to_vec(&DataType::F32).expect("dtype json");
+    bytes.extend_from_slice(&(dtype_json.len() as u32).to_le_bytes());
+    bytes.extend_from_slice(&dtype_json);
+    bytes.extend_from_slice(&10_000_u32.to_le_bytes()); // rank exceeds MAX_RANK (256)
+    let error = ProgramGraph::from_wire(&bytes)
+        .expect_err("Fix: hostile tensor rank must fail before allocation");
+    assert!(error
+        .to_string()
+        .contains("tensor rank is 10000; maximum is 256"));
+}
+
 /// Prevents wire data from introducing a retained edge to a nonexistent value.
 #[test]
 fn graph_wire_dangling_retained_identity_fails_validation() {
@@ -1008,5 +1043,126 @@ fn a_replacement_that_drops_a_retained_predecessor_is_refused() {
             .consumers
             .contains(&node),
         "the retained predecessor must still record the node as a consumer"
+    );
+}
+#[test]
+fn whole_graph_builder_and_subgraph_inlining_contracts() {
+    use vyre_foundation::ir::{
+        ControlBounds, DataType, Expr, ExternalEffect, Node, Program, ProgramGraphBuilder, ShapeDim,
+    };
+
+    let mut sub_builder = ProgramGraphBuilder::new();
+    let sub_in = sub_builder
+        .input("sub_in", DataType::F32, vec![ShapeDim::Known(16)])
+        .expect("sub input");
+    let sub_p = Program::wrapped(
+        vec![
+            BufferDecl::read("sub_in", 0, DataType::F32).with_count(16),
+            BufferDecl::output("sub_out", 1, DataType::F32).with_count(16),
+        ],
+        [16, 1, 1],
+        vec![Node::store(
+            "sub_out",
+            Expr::gid_x(),
+            Expr::mul(Expr::load("sub_in", Expr::gid_x()), Expr::f32(2.0)),
+        )],
+    );
+    sub_builder
+        .add_node(
+            "sub_scale",
+            sub_p,
+            vec![GraphInput {
+                buffer: "sub_in".into(),
+                value: sub_in,
+                contract: ValueContract {
+                    dtype: DataType::F32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadOnly,
+                    lifetime: ValueLifetime::Invocation,
+                },
+            }],
+            vec![GraphOutput {
+                buffer: "sub_out".into(),
+                name: "sub_out_val".into(),
+                contract: ValueContract {
+                    dtype: DataType::F32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadOnly,
+                    lifetime: ValueLifetime::Invocation,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .expect("sub node");
+    let subgraph = sub_builder.build().expect("subgraph build");
+    let mut main_builder = ProgramGraphBuilder::new();
+    let main_in = main_builder
+        .input("main_in", DataType::F32, vec![ShapeDim::Known(16)])
+        .expect("main input");
+    let stream_val = main_builder
+        .stream("stream_chan", DataType::F32, vec![ShapeDim::Known(16)])
+        .expect("stream");
+    let retained = main_builder
+        .retained_state("retained_state", DataType::F32, vec![ShapeDim::Known(16)])
+        .expect("retained");
+
+    let mut mapping = std::collections::BTreeMap::new();
+    mapping.insert(sub_in, main_in);
+    let inlined_outs = main_builder
+        .inline_subgraph("step1", &subgraph, &mapping)
+        .expect("inlined subgraph");
+    assert_eq!(inlined_outs.len(), 1);
+
+    let loop_outs = main_builder
+        .add_bounded_loop(
+            "loop_block",
+            &subgraph,
+            &inlined_outs,
+            &[],
+            ControlBounds {
+                max_steps: 3,
+                guaranteed_termination: true,
+            },
+        )
+        .expect("bounded loop");
+    assert_eq!(loop_outs.len(), 1);
+
+    main_builder
+        .add_effect_barrier(
+            "barrier_node",
+            ExternalEffect::StorageBarrier,
+            vec![GraphInput {
+                buffer: "in_buf".into(),
+                value: loop_outs[0],
+                contract: ValueContract {
+                    dtype: DataType::F32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadOnly,
+                    lifetime: ValueLifetime::Invocation,
+                },
+            }],
+            vec![GraphOutput {
+                buffer: "out_buf".into(),
+                name: "final_out".into(),
+                contract: ValueContract {
+                    dtype: DataType::F32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadWrite,
+                    lifetime: ValueLifetime::Output,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .expect("effect barrier");
+
+    let graph = main_builder.build().expect("main graph build");
+    assert!(graph.nodes().len() >= 5);
+    assert_eq!(
+        graph.values()[stream_val.0 as usize].contract.lifetime,
+        ValueLifetime::Stream
+    );
+    assert_eq!(
+        graph.values()[retained.0 as usize].contract.lifetime,
+        ValueLifetime::Retained
     );
 }

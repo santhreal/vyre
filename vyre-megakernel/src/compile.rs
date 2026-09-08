@@ -579,7 +579,6 @@ pub fn compile_measured(
         let reported = evaluator
             .resources(provisional, payload)
             .map_err(|error| finalist_failure(*index, &error))?;
-        reconcile_resident_bytes(provisional, &reported)?;
         let candidate = &context.ranked[*index].candidate;
         let groups = reported_groups(&reported, payload, candidate);
         let ceiling = request.device.hardware_registers_per_invocation();
@@ -615,6 +614,7 @@ pub fn compile_measured(
             position,
             predicted_ns,
             samples: Vec::new(),
+            reconciled: false,
         })
         .collect();
 
@@ -622,7 +622,7 @@ pub fn compile_measured(
     // Warmup is charged against the budget like any counted launch. Its samples
     // are discarded: a first launch measures module load and cold allocation,
     // which is not what distinguishes two schedules.
-    for entry in &session {
+    for entry in &mut session {
         if spent(started) >= budget.max_elapsed_ns {
             break;
         }
@@ -632,6 +632,9 @@ pub fn compile_measured(
                 .measure(provisional, payload)
                 .map_err(|error| finalist_failure(entry.index, &error))?;
             work.measurements = work.measurements.saturating_add(1);
+        }
+        if protocol.warmup_launches > 0 {
+            reconcile_after_launch(evaluator, provisional, payload, entry)?;
         }
     }
 
@@ -657,6 +660,9 @@ pub fn compile_measured(
                 entry.samples.push(sample);
                 round.push(sample);
                 work.measurements = work.measurements.saturating_add(1);
+            }
+            if !entry.reconciled && !entry.samples.is_empty() {
+                reconcile_after_launch(evaluator, provisional, payload, entry)?;
             }
         }
         rounds = rounds.saturating_add(1);
@@ -759,6 +765,8 @@ struct Sampling {
     predicted_ns: u64,
     /// Counted device times in measurement order.
     samples: Vec<u64>,
+    /// Whether the resident-byte figure was reconciled after this finalist ran.
+    reconciled: bool,
 }
 
 /// Whether this candidate's samples are precise enough to stop sampling it.
@@ -812,7 +820,8 @@ fn reported_groups(
     groups
 }
 
-/// Reconciles the planned resident peak against what the device reports holding.
+/// Reconciles the planned resident peak against what the device reports holding
+/// once the finalist has run.
 ///
 /// The allocation plan states the bytes that must be resident at once for the
 /// artifact to run. Every one of those bytes is on the device while an entry
@@ -820,6 +829,13 @@ fn reported_groups(
 /// requires is not running the selected plan, and a measurement taken there
 /// would rank a schedule nobody compiled. A backend with no memory query reports
 /// zero, which leaves the planned figure unreconciled rather than contradicted.
+///
+/// The figure is read after the finalist's first launch and before any sample
+/// ranks it. Reading it at emission asked the device to hold the plan before
+/// anything bound it, and what a backend answered there was whatever the
+/// previous artifact left in its allocator: a measured sweep refused 289 of 349
+/// operations that way, every one of them for bytes no launch had requested
+/// yet.
 fn reconcile_resident_bytes(
     artifact: &Artifact,
     reported: &[EmittedResources],
@@ -841,6 +857,21 @@ fn reconcile_resident_bytes(
         ),
         "bind the allocation plan the artifact records before measuring it",
     ))
+}
+
+/// Reconcile one finalist's resident figure once, after it has run.
+fn reconcile_after_launch(
+    evaluator: &dyn FinalistEvaluator,
+    artifact: &Artifact,
+    payload: &TargetPayload,
+    entry: &mut Sampling,
+) -> Result<(), CompileError> {
+    let reported = evaluator
+        .resources(artifact, payload)
+        .map_err(|error| finalist_failure(entry.index, &error))?;
+    reconcile_resident_bytes(artifact, &reported)?;
+    entry.reconciled = true;
+    Ok(())
 }
 
 /// Record that emission eliminated the family that derived one ranked plan.

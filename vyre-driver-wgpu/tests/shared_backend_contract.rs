@@ -227,7 +227,7 @@ fn only_the_device_acquisition_module_constructs_a_wgpu_instance() {
         .collect::<BTreeSet<_>>();
     assert!(
         foreign.is_empty(),
-        "Fix: {foreign:?} construct a wgpu instance outside {OWNER}. The Vulkan loader cannot start up twice at once; call runtime::device::acquire::new_instance instead."
+        "Fix: {foreign:?} construct a wgpu instance outside {OWNER}. The Vulkan loader cannot start up twice at once, and one instance per acquisition exhausts the static TLS surplus the GPU ICD needs; call runtime::device::acquire::shared_instance instead."
     );
     assert_eq!(
         sites.len(),

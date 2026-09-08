@@ -88,6 +88,19 @@ impl ArtifactMaterializer for SessionFixtureMaterializer {
             .push(resource);
         Ok(())
     }
+
+    fn upload_resident(&self, _resource: &Resource, _bytes: &[u8]) -> Result<(), BackendError> {
+        Ok(())
+    }
+
+    fn upload_resident_at(
+        &self,
+        _resource: &Resource,
+        _offset_bytes: usize,
+        _bytes: &[u8],
+    ) -> Result<(), BackendError> {
+        Ok(())
+    }
 }
 
 /// Backend factory that returns UnsupportedFeature for tests that only admit artifacts.

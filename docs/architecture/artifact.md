@@ -139,9 +139,10 @@ order, and binds every placement to it. It does not pack, resize, merge,
 reorder, or discover reuse.
 
 A backend that reports the device bytes it holds reconciles that figure against
-the planned peak before a measurement is spent. Fewer bytes than the plan
-requires is refused as `MKC041_UNRECONCILED_RESIDENT_BYTES`. A backend with no
-memory query reports zero, which leaves the planned figure unreconciled.
+the planned peak after the finalist's first launch and before a counted
+measurement ranks it. Fewer bytes than the plan requires is refused as
+`MKC041_UNRECONCILED_RESIDENT_BYTES`. A backend with no memory query reports
+zero, which leaves the planned figure unreconciled.
 
 ## One topology covers the mesh
 

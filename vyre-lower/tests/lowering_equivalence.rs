@@ -140,7 +140,7 @@ fn a_read_modify_write_only_the_physical_side_performs_is_reported() {
         vec![op(
             KernelOpKind::Atomic {
                 op: AtomicOp::Add,
-                ordering: MemoryOrdering::default(),
+                ordering: MemoryOrdering::SeqCst,
             },
             [1, 0, 1],
             2,

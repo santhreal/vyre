@@ -3429,6 +3429,7 @@ dependencies = [
  "vyre-conform-spec",
  "vyre-driver",
  "vyre-driver-cuda",
+ "vyre-driver-spirv",
  "vyre-driver-wgpu",
  "vyre-foundation",
  "vyre-libs",
@@ -3535,7 +3536,6 @@ dependencies = [
 name = "vyre-driver-metal"
 version = "0.8.0"
 dependencies = [
- "inventory",
  "metal",
  "serde_json",
  "toml",
@@ -3553,7 +3553,6 @@ dependencies = [
 name = "vyre-driver-reference"
 version = "0.8.0"
 dependencies = [
- "inventory",
  "vyre-driver",
  "vyre-foundation",
  "vyre-megakernel",
@@ -3566,7 +3565,6 @@ name = "vyre-driver-spirv"
 version = "0.8.0"
 dependencies = [
  "ash",
- "inventory",
  "tempfile",
  "vyre-driver",
  "vyre-emit-spirv",
@@ -3589,7 +3587,6 @@ dependencies = [
  "crossbeam-queue",
  "dashmap",
  "fs2",
- "inventory",
  "libc",
  "naga",
  "proptest",
@@ -3887,6 +3884,7 @@ dependencies = [
  "libc",
  "proptest",
  "rustc-hash 2.1.3",
+ "serde",
  "serde_json",
  "smallvec",
  "tempfile",

@@ -198,6 +198,15 @@ pub use data_type::{DataType, QuantizationScale, QuantizationZeroPoint, TypeId};
 /// See [`engine_invariant::EngineInvariant`].
 /// Specification element.
 pub use engine_invariant::{EngineInvariant, InvariantId};
+/// See [`extension`] types.
+/// Specification element.
+pub use extension::{
+    ExtensionDataTypeId, ExtensionField, ExtensionFieldType, ExtensionIdentity,
+    ExtensionNamespace, ExtensionNumericalContract, ExtensionOperand,
+    ExtensionOperandKind, ExtensionResourceBounds, ExtensionRuleConditionId,
+    ExtensionSchema, ExtensionSchemaDigest, ExtensionSemVer, ExtensionShapeRule,
+    ExtensionUnOp, ExtensionUnOpId,
+};
 /// See [`expr_variant::expr_variants`].
 /// Specification element.
 pub use expr_variant::expr_variants;

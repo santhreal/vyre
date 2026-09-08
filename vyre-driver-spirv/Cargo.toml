@@ -45,7 +45,6 @@ vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-lower = { workspace = true }
 vyre-emit-spirv = { workspace = true }
-inventory.workspace = true
 ash.workspace = true
 
 [dev-dependencies]
@@ -53,12 +52,7 @@ vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # integration tests/benches assert against these crates' public APIs
 vyre-reference = { path = "../vyre-reference" }
 tempfile.workspace = true
-# Used through the shared `vyre_test_support::target_compiler_contract` module,
-# which the unused-dependency audit cannot follow into a dev-dependency's modules.
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "driver-artifact-contracts"] }
-
-[package.metadata.cargo-machete]
-ignored = ["vyre-test-support"]
 
 [[test]]
 name = "all_tests"

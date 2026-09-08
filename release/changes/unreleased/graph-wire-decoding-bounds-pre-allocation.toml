@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Graph and delta wire decoding checks bounds on operation, port, rank, and string lengths before allocation and caps capacity pre-reservations by remaining payload bytes."

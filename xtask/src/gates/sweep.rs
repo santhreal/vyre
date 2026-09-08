@@ -766,8 +766,10 @@ mod tests {
             package: "xtask",
             areas: &["prepublish"],
             subject: "workspace manifests",
+            inputs: &[],
             artifacts: &[],
             prerequisites: &[],
+            resource_class: crate::gate::ResourceClass::Cpu,
             proof: "crate::gates::dep_drift::tests::dep_drift_detects_mismatched_dependency_versions_and_ignores_workspace_inheritance",
         };
         let root = crate::checkout::checkout_root();

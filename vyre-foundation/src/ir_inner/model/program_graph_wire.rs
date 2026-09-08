@@ -132,7 +132,7 @@ impl ProgramGraph {
         }
 
         let external_count = reader.bounded_len(MAX_GRAPH_ITEMS, "external value count")?;
-        let mut external = Vec::with_capacity(external_count);
+        let mut external = Vec::with_capacity(external_count.min(reader.remaining()));
         for _ in 0..external_count {
             external.push((reader.string()?, reader.contract()?));
         }
@@ -146,7 +146,7 @@ impl ProgramGraph {
             let program = Program::from_wire(program_bytes)
                 .map_err(|error| wire_error(format!("node `{name}` Program: {error}")))?;
             let input_count = reader.bounded_len(MAX_PORTS_PER_NODE, "input port count")?;
-            let mut inputs = Vec::with_capacity(input_count);
+            let mut inputs = Vec::with_capacity(input_count.min(reader.remaining()));
             for _ in 0..input_count {
                 inputs.push(GraphInput {
                     buffer: reader.string()?,
@@ -155,7 +155,7 @@ impl ProgramGraph {
                 });
             }
             let output_count = reader.bounded_len(MAX_PORTS_PER_NODE, "output port count")?;
-            let mut outputs = Vec::with_capacity(output_count);
+            let mut outputs = Vec::with_capacity(output_count.min(reader.remaining()));
             for _ in 0..output_count {
                 let buffer = reader.string()?;
                 let output_name = reader.string()?;
@@ -217,6 +217,7 @@ fn put_contract(bytes: &mut Vec<u8>, contract: &ValueContract) -> Result<(), Pro
         ValueLifetime::Invocation => 1,
         ValueLifetime::Retained => 2,
         ValueLifetime::Output => 3,
+        ValueLifetime::Stream => 4,
     });
     Ok(())
 }
@@ -334,7 +335,7 @@ impl<'a> Reader<'a> {
         let dtype: DataType = serde_json::from_slice(dtype_bytes)
             .map_err(|error| wire_error(format!("dtype decode failed: {error}")))?;
         let rank = self.bounded_len(MAX_RANK, "tensor rank")?;
-        let mut shape = Vec::with_capacity(rank);
+        let mut shape = Vec::with_capacity(rank.min(self.remaining()));
         for _ in 0..rank {
             shape.push(match self.u8()? {
                 0 => ShapeDim::Known(self.u64()?),
@@ -358,6 +359,7 @@ impl<'a> Reader<'a> {
             1 => ValueLifetime::Invocation,
             2 => ValueLifetime::Retained,
             3 => ValueLifetime::Output,
+            4 => ValueLifetime::Stream,
             tag => return Err(wire_error(format!("unknown value lifetime tag {tag}"))),
         };
         Ok(ValueContract {

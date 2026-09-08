@@ -22,7 +22,6 @@ mod resident_download;
 mod resident_resource;
 mod resident_upload;
 pub mod runtime;
-pub mod spirv_backend;
 mod staging_reserve;
 mod stats;
 mod strict_float;
@@ -211,34 +210,19 @@ pub fn registered_backend_id() -> Option<&'static str> {
     Some(WGPU_BACKEND_ID)
 }
 
-inventory::submit! {
-    vyre_driver::BackendRegistration {
-        id: WGPU_BACKEND_ID,
-        target_id: WGPU_TARGET_ID,
-        payload_format: Some(target_compiler::WGPU_TARGET_FORMAT),
-        reference_oracle: false,
-        factory: || WgpuBackend::acquire().map(|backend| {
-            Box::new(backend) as Box<dyn vyre_driver::VyreBackend>
-        }),
-        supported_ops: vyre_driver::default_supported_ops_with_trap,
-        semantic_operations: vyre_driver::dialect_only_supported_ops,
-        target_compiler: Some(target_compiler::target_compiler_factory),
-        materializer: Some(materializer::materializer_factory),
-    }
-}
-
-inventory::submit! {
-    vyre_driver::BackendPrecedence {
-        id: "wgpu",
-        rank: 30,
-    }
-}
-
-inventory::submit! {
-    vyre_driver::BackendCapability {
-        id: "wgpu",
-        dispatches: true,
-    }
+vyre_driver::register_backend! {
+    id: WGPU_BACKEND_ID,
+    target_id: WGPU_TARGET_ID,
+    payload_format: Some(target_compiler::WGPU_TARGET_FORMAT),
+    reference_oracle: false,
+    factory: || {
+        WgpuBackend::acquire().map(|backend| Box::new(backend) as Box<dyn vyre_driver::VyreBackend>)
+    },
+    supported_ops: vyre_driver::default_supported_ops_with_trap,
+    semantic_operations: vyre_driver::dialect_only_supported_ops,
+    target_compiler: Some(target_compiler::target_compiler_factory),
+    materializer: Some(materializer::materializer_factory),
+    rank: 30,
 }
 
 impl vyre_driver::sealed::Sealed for crate::pipeline::WgpuPipeline {}

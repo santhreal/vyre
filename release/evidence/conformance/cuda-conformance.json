@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:a08d4b239de91dd83947eee6147624ce72a1aa3c:dirty=true:worktree=b9d56968ed4ba1f8080655b0796c053101b1e480a736d9f44c0efc89adaa0cb3",
+  "source_fingerprint": "git:585fbeae622524cd57d1c874cfcc1afcd8cfd148:dirty=false",
   "schema_version": 4,
   "backend_id": "cuda",
   "command": "cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all",
@@ -6659,7 +6659,7 @@
     }
   ],
   "blockers": [
-    "`cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all` exited with exit status: 1; stderr: Compiling vyre-foundation v0.8.0 (vyre-foundation)\n   Compiling vyre-driver-wgpu v0.8.0 (vyre-driver-wgpu)\n   Compiling vyre-emit-ptx v0.8.0 (vyre-emit-ptx)\n   Compiling vyre-emit-naga v0.8.0 (vyre-emit-naga)\n   Compiling vyre-lower v0.8.0 (vyre-lower)\n   Compiling vyre-primitives v0.8.0 (vyre-primitives)\n   Compiling vyre-reference v0.8.0 (vyre-reference)\n   Compiling vyre-megakernel v0.8.0 (vyre-megakernel)\n   Compiling vyre-libs v0.8.0 (vyre-libs)\n   Compiling vyre-driver v0.8.0 (vyre-driver)\n   Compiling vyre-pass-engine v0.8.0 (vyre-pass-engine)\n   Compiling vyre-driver-reference v0.8.0 (vyre-driver-reference)\n   Compiling vyre-runtime v0.8.0 (vyre-runtime)\n   Compiling vyre-driver-cuda v0.8.0 (vyre-driver-cuda)\n   Compiling vyre-driver-metal v0.8.0 (vyre-driver-metal)\n   Compiling vyre v0.8.0 (vyre)\n   Compiling vyre-registry-link v0.8.0 (vyre-registry-link)\n   Compiling vyre-conform v0.8.0 (conform/vyre-conform)\n    Finished `release` profile [optimized] target(s) in 1m 18s\n     Running `/var/santh-cargo-target/release/vyre-conform dispatch --backend cuda --ops all`",
+    "`cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all` exited with exit status: 1; stderr: Compiling vyre-foundation v0.8.0 (vyre-foundation)\n   Compiling vyre-lower v0.8.0 (vyre-lower)\n   Compiling vyre-primitives v0.8.0 (vyre-primitives)\n   Compiling vyre-reference v0.8.0 (vyre-reference)\n   Compiling vyre-emit-naga v0.8.0 (vyre-emit-naga)\n   Compiling vyre-emit-ptx v0.8.0 (vyre-emit-ptx)\n   Compiling vyre-megakernel v0.8.0 (vyre-megakernel)\n   Compiling vyre-libs v0.8.0 (vyre-libs)\n   Compiling vyre-driver v0.8.0 (vyre-driver)\n   Compiling vyre-pass-engine v0.8.0 (vyre-pass-engine)\n   Compiling vyre-driver-wgpu v0.8.0 (vyre-driver-wgpu)\n   Compiling vyre-driver-metal v0.8.0 (vyre-driver-metal)\n   Compiling vyre-driver-reference v0.8.0 (vyre-driver-reference)\n   Compiling vyre-runtime v0.8.0 (vyre-runtime)\n   Compiling vyre-driver-cuda v0.8.0 (vyre-driver-cuda)\n   Compiling vyre v0.8.0 (vyre)\n   Compiling vyre-registry-link v0.8.0 (vyre-registry-link)\n   Compiling vyre-conform v0.8.0 (conform/vyre-conform)\n    Finished `release` profile [optimized] target(s) in 1m 14s\n     Running `/var/santh-cargo-target/release/vyre-conform dispatch --backend cuda --ops all`",
     "cuda conformance reported 289 failed pair(s)"
   ]
 }
