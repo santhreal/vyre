@@ -325,6 +325,7 @@ inventory::submit! {
             ]]
         }),
     )
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 /// One phase adds one to each of the four fine cells.
@@ -369,6 +370,7 @@ inventory::submit! {
         }),
         Some(|| vec![vec![EXPECTED_V_CYCLE_PHASE_BYTES.to_vec()]]),
     )
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 #[cfg(test)]

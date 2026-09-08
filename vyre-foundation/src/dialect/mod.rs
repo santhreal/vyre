@@ -470,6 +470,7 @@ macro_rules! define_dialect {
                         source_file: file!(),
                         explicit_effects: None,
                         explicit_capabilities: None,
+                        opaque_reason: Some("dialect-defined elementwise logical operation"),
                     }
                 }
             )*

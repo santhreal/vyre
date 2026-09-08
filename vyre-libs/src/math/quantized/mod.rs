@@ -147,6 +147,7 @@ inventory::submit! {
             ]]]
         }),
     ).with_category("math")
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 inventory::submit! {
@@ -156,6 +157,7 @@ inventory::submit! {
         Some(|| vec![vec![u32s(&[0x7621_0F98]), u32s(&[0x7621_0F98])]]),
         Some(|| vec![vec![vec![0xcc, 0x00, 0x00, 0x00]]]),
     ).with_category("math")
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 inventory::submit! {
@@ -165,6 +167,7 @@ inventory::submit! {
         Some(|| vec![vec![u32s(&[0x7621_0F98]), u32s(&[0x7621_0F98]), f32s(&[1.0]), f32s(&[1.0])]]),
         Some(|| vec![vec![vec![0x00, 0x00, 0x4c, 0x43]]]),
     ).with_category("math")
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 inventory::submit! {
@@ -185,6 +188,7 @@ inventory::submit! {
             ]]]
         }),
     ).with_category("math")
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 inventory::submit! {
@@ -209,6 +213,7 @@ inventory::submit! {
                 ]]]
             }),
     ).with_category("math")
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 inventory::submit! {
@@ -234,6 +239,7 @@ inventory::submit! {
                 ]]]
             }),
     ).with_category("math")
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 inventory::submit! {
@@ -255,4 +261,5 @@ inventory::submit! {
             ]]]
         }),
     ).with_category("math")
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }

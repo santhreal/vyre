@@ -271,6 +271,7 @@ inventory::submit! {
             EXPECTED_RLE_SYMS_BYTES.to_vec(),
         ]]),
     )
+    .with_opaque("variable-length decoding and decompression stream state")
 }
 
 #[cfg(test)]

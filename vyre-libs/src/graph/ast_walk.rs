@@ -229,6 +229,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_AST_WALK_PREORDER_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("graph")
+    .with_opaque("graph traversal and topological structural analysis")
 }
 
 inventory::submit! {
@@ -239,6 +240,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_AST_WALK_POSTORDER_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("graph")
+    .with_opaque("graph traversal and topological structural analysis")
 }
 
 #[cfg(test)]

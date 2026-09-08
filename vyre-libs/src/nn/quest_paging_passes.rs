@@ -235,6 +235,7 @@ inventory::submit! {
         }),
         Some(|| vec![vec![EXPECTED_QUEST_ZERO_FILL_OUTPUT_BYTES.to_vec()]]),
     )
+    .with_opaque("neural network layer activation or tensor contraction step")
 }
 
 inventory::submit! {
@@ -251,6 +252,7 @@ inventory::submit! {
         }),
         Some(|| vec![vec![EXPECTED_QUEST_SCORE_PAGES_OUTPUT_BYTES.to_vec()]]),
     )
+    .with_opaque("neural network layer activation or tensor contraction step")
 }
 
 inventory::submit! {
@@ -272,4 +274,5 @@ inventory::submit! {
             ]]
         }),
     )
+    .with_opaque("neural network layer activation or tensor contraction step")
 }

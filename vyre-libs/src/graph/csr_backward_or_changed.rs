@@ -66,6 +66,7 @@ inventory::submit! {
             ]]
         }),
     )
+    .with_opaque("graph traversal and topological structural analysis")
 }
 
 #[cfg(test)]

@@ -183,6 +183,7 @@ inventory::submit! {
         }),
         Some(|| vec![vec![EXPECTED_ADLER32_OUTPUT_BYTES.to_vec()]]),
     )
+    .with_opaque("cryptographic or checksum hash state compression round")
 }
 
 #[cfg(test)]

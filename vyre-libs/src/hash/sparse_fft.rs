@@ -125,6 +125,7 @@ inventory::submit! {
             vec![vec![EXPECTED_SPARSE_FFT_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("cryptographic or checksum hash state compression round")
 }
 
 #[cfg(test)]

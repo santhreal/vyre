@@ -20,7 +20,8 @@ macro_rules! bitset_and_entry {
                 }),
             )
             .with_category("security")
-        }
+    .with_opaque("static taint analysis and control-flow dominance check")
+}
     };
 }
 
@@ -41,7 +42,8 @@ macro_rules! bitset_and_not_entry {
                 }),
             )
             .with_category("security")
-        }
+    .with_opaque("static taint analysis and control-flow dominance check")
+}
     };
 }
 
@@ -91,6 +93,7 @@ inventory::submit! {
         ]]),
     )
     .with_category("security")
+    .with_opaque("static taint analysis and control-flow dominance check")
 }
 
 inventory::submit! {
@@ -112,6 +115,7 @@ inventory::submit! {
         ]]),
     )
     .with_category("security")
+    .with_opaque("static taint analysis and control-flow dominance check")
 }
 macro_rules! reach_flow_entry {
     ($op_id:expr, $build:expr, $inputs_fn:expr, $expected_bytes:expr) => {
@@ -123,7 +127,8 @@ macro_rules! reach_flow_entry {
                 Some(|| vec![vec![$expected_bytes.to_vec()]]),
             )
             .with_category("security")
-        }
+    .with_opaque("static taint analysis and control-flow dominance check")
+}
         inventory::submit! {
             crate::operation_catalog::ConvergenceContract {
                 op_id: $op_id,
@@ -191,6 +196,7 @@ inventory::submit! {
         }),
     )
     .with_category("security")
+    .with_opaque("static taint analysis and control-flow dominance check")
 }
 
 inventory::submit! {
@@ -207,6 +213,7 @@ inventory::submit! {
         }),
     )
     .with_category("security")
+    .with_opaque("static taint analysis and control-flow dominance check")
 }
 
 inventory::submit! {
@@ -217,6 +224,7 @@ inventory::submit! {
         Some(|| vec![vec![super::sanitized_by::EXPECTED_SANITIZED_BY_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("security")
+    .with_opaque("static taint analysis and control-flow dominance check")
 }
 
 inventory::submit! {
@@ -242,4 +250,5 @@ inventory::submit! {
         }),
     )
     .with_category("security")
+    .with_opaque("static taint analysis and control-flow dominance check")
 }

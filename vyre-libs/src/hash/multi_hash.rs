@@ -79,6 +79,7 @@ inventory::submit! {
         Some(|| vec![vec![vyre_primitives::wire::pack_bytes_as_u32_slice(b"abc")]]),
         Some(|| vec![vec![EXPECTED_MULTI_HASH_OUTPUT_BYTES.to_vec()]]),
     )
+    .with_opaque("cryptographic or checksum hash state compression round")
 }
 
 #[cfg(test)]

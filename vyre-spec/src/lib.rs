@@ -12,7 +12,7 @@
 mod adversarial_input;
 /// Algebraic law primitives  -  associativity, identity, commutativity declarations.
 /// Specification element.
-mod algebraic_law;
+pub mod algebraic_law;
 /// Canonical catalog of every algebraic law tagged to operations.
 /// Specification element.
 mod all_algebraic_laws;
@@ -156,8 +156,8 @@ mod verification;
 /// Specification element.
 pub use adversarial_input::AdversarialInput;
 /// See [`algebraic_law::AlgebraicLaw`].
-/// Specification element.
-pub use algebraic_law::{AlgebraicLaw, LawCheckFn};
+/// Specification element for algebraic laws.
+pub use algebraic_law::{AlgebraicLaw, LawCheckFn, LawGuard};
 /// See [`all_algebraic_laws::all_algebraic_laws`].
 /// Specification element.
 pub use all_algebraic_laws::all_algebraic_laws;

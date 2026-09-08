@@ -186,6 +186,7 @@ inventory::submit! {
         }),
         Some(|| vec![vec![EXPECTED_BLAKE3_COMPRESS_OUTPUT_BYTES.to_vec()]]),
     )
+    .with_opaque("cryptographic or checksum hash state compression round")
 }
 
 #[cfg(test)]

@@ -256,6 +256,7 @@ inventory::submit! {
         }),
     )
     .with_category("math")
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 inventory::submit! {
@@ -267,6 +268,7 @@ inventory::submit! {
             vec![vec![super::super::MATMUL_BIAS_2X2_EXPECTED_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 #[cfg(test)]

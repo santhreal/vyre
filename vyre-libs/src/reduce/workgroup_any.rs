@@ -92,6 +92,7 @@ inventory::submit! {
         ]]),
         Some(|| vec![vec![vec![0x07, 0x00, 0x00, 0x00]]]),
     )
+    .with_opaque("multi-block parallel reduction and prefix scan kernel")
 }
 
 #[cfg(test)]

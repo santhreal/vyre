@@ -225,6 +225,7 @@ inventory::submit! {
             vec![vec![EXPECTED_HISTOGRAM_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("text encoding classification and character frequency scanning")
 }
 
 #[cfg(test)]

@@ -445,3 +445,52 @@ impl PartialEq for AlgebraicLaw {
         }
     }
 }
+/// Precondition under which an algebraic law holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub enum LawGuard {
+    /// Holds unconditionally across the entire operation domain.
+    Unconditional,
+    /// Holds only for exact (integer or bitwise) numerical types where rounding drift is zero.
+    ExactOnly,
+    /// Holds only when the operand is non-zero.
+    NonZero,
+    /// Holds only for finite numeric values (excluding NaN and infinities).
+    FiniteOnly,
+    /// Holds only when operands are pure and free of side effects.
+    PureOnly,
+    /// Holds within an inclusive integer range `[lo, hi]`.
+    Range {
+        /// Lower inclusive bound.
+        lo: i64,
+        /// Upper inclusive bound.
+        hi: i64,
+    },
+}
+
+impl LawGuard {
+    /// Return the name of the guard for diagnostics and reports.
+    #[must_use]
+    pub const fn name(&self) -> &'static str {
+        match self {
+            Self::Unconditional => "unconditional",
+            Self::ExactOnly => "exact-only",
+            Self::NonZero => "non-zero",
+            Self::FiniteOnly => "finite-only",
+            Self::PureOnly => "pure-only",
+            Self::Range { .. } => "range",
+        }
+    }
+
+    /// Whether this guard imposes no preconditions.
+    #[must_use]
+    pub const fn is_unconditional(&self) -> bool {
+        matches!(self, Self::Unconditional)
+    }
+}
+
+impl Default for LawGuard {
+    fn default() -> Self {
+        Self::Unconditional
+    }
+}

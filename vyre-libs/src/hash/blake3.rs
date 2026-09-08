@@ -210,6 +210,7 @@ inventory::submit! {
             vec![vec![EXPECTED_BLAKE3_ZERO_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("cryptographic or checksum hash state compression round")
 }
 
 inventory::submit! {
@@ -228,6 +229,7 @@ inventory::submit! {
             vec![vec![EXPECTED_BLAKE3_ZERO_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("cryptographic or checksum hash state compression round")
 }
 
 // ---------------------------------------------------------------------------

@@ -45,7 +45,8 @@ macro_rules! submit_intrinsic_operation {
                 numeric: vyre_foundation::numeric::NumericContract::EXACT,
                 geometry_requirements: vyre_foundation::GeometryRequirements::agnostic(),
             }
-        }
+    .with_laws(&["involution"])
+}
     };
 }
 
@@ -77,6 +78,7 @@ macro_rules! submit_hardware_intrinsic {
             )
             .with_explicit_effects($effects)
             .with_explicit_capabilities($caps)
+            .with_opaque("hardware primitive execution and memory intrinsic")
         }
 
         inventory::submit! {

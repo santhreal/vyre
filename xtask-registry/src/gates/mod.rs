@@ -13,5 +13,6 @@ pub mod gate1;
 pub mod handrolled_operations;
 pub mod heuristic_audit;
 pub mod lego_audit;
+pub mod operation_law_decisions;
 pub mod verify_rewrite_proofs;
 pub mod whats_similar;

@@ -330,4 +330,5 @@ inventory::submit! {
             ]]
         }),
     )
+    .with_opaque("lexical and grammar parser state automaton transition")
 }

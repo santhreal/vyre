@@ -202,6 +202,7 @@ inventory::submit! {
             vec![vec![EXPECTED_CHAR_CLASS_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("text encoding classification and character frequency scanning")
 }
 
 #[cfg(test)]

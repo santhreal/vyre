@@ -102,4 +102,5 @@ inventory::submit! {
             vec![vec![vec![0x00, 0x00, 0xb8, 0x41]]] // 23.0
         }),
     )
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }

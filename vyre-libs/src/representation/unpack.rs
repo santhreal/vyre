@@ -42,4 +42,5 @@ inventory::submit! {
             vec![vec![EXPECTED_UNPACK_NIBBLE_U32_F32_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("quantized integer representation unpacking to floating point")
 }

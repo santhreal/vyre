@@ -162,6 +162,7 @@ inventory::submit! {
     )
     .with_category("reduce")
     .with_geometry_requirements(multi_block_prefix_scan_requirements())
+    .with_opaque("multi-block parallel reduction and prefix scan kernel")
 }
 
 /// Element count of the registered inclusive-scan fixture.

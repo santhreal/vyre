@@ -308,6 +308,7 @@ inventory::submit! {
         }),
     )
     .with_numeric(vyre_foundation::numeric::NumericContract::ieee_f32(1))
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 #[cfg(test)]

@@ -552,6 +552,7 @@ inventory::submit! {
             vec![vec![EXPECTED_SUM_PRODUCT_EVALUATE_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("graph traversal and topological structural analysis")
 }
 
 // Cross-backend parity fixture for the DEPTH-LEVELED evaluator. The single-pass
@@ -597,6 +598,7 @@ inventory::submit! {
             vec![vec![EXPECTED_SUM_PRODUCT_ALL_NODES_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("graph traversal and topological structural analysis")
 }
 
 #[cfg(test)]

@@ -141,6 +141,7 @@ inventory::submit! {
         }),
         Some(|| vec![vec![vec![0, 0, 0, 0]]]),
     )
+    .with_opaque("text encoding classification and character frequency scanning")
 }
 
 #[cfg(test)]

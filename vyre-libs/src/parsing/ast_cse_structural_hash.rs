@@ -364,6 +364,7 @@ inventory::submit! {
             ]]
         }),
     )
+    .with_opaque("lexical and grammar parser state automaton transition")
 }
 
 fn fixture_u32(words: &[u32]) -> Vec<u8> {
@@ -398,4 +399,5 @@ inventory::submit! {
             EXPECTED_AST_CSE_STRUCTURAL_HASH_MODIFIED_BYTES.to_vec(),
         ]]),
     )
+    .with_opaque("lexical and grammar parser state automaton transition")
 }

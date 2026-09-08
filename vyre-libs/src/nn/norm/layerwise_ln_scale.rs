@@ -31,4 +31,5 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_LAYERWISE_LN_SCALE_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
+    .with_opaque("neural network layer activation or tensor contraction step")
 }

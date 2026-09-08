@@ -335,6 +335,7 @@ inventory::submit! {
         }),
     )
     .with_category("math")
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 inventory::submit! {
@@ -356,6 +357,7 @@ inventory::submit! {
         }),
     )
     .with_category("math")
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 inventory::submit! {
@@ -391,6 +393,7 @@ inventory::submit! {
     )
     .with_category("math")
     .with_numeric(vyre_foundation::numeric::NumericContract::ieee_f32(4))
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 #[cfg(test)]

@@ -20,9 +20,9 @@
 //! its refusal is written down.
 
 use smallvec::{smallvec, SmallVec};
-use vyre_spec::{AlgebraicLaw, BinOp, CombineKind, RegionLawFamily};
+use vyre_spec::{AlgebraicLaw, BinOp, CombineKind, LawGuard, RegionLawFamily};
 
-use crate::algebraic_law_registry::laws_for_op;
+use crate::algebraic_law_registry::registrations_for_op;
 use crate::optimizer::rewrite_contract::RewriteWitness;
 
 /// The equality one derived rewrite applies to a matched region.
@@ -91,6 +91,8 @@ pub struct DerivedRewrite {
     pub law_id: &'static str,
     /// Equality the rewrite applies.
     pub kind: DerivedRewriteKind,
+    /// Precondition under which the rewrite holds.
+    pub guard: LawGuard,
 }
 
 /// Whether `law` states an equality between region graphs, and which.
@@ -189,8 +191,11 @@ pub fn derived_rewrites(exact: bool) -> Vec<DerivedRewrite> {
     for combine in CombineKind::ALL {
         let law_id = combine.law_id(exact || combine.is_bitwise());
         let op = combine.scalar_binop();
-        for law in laws_for_op(law_id) {
-            if let LawDerivation::Region(kinds) = law_derivation(law) {
+        for reg in registrations_for_op(law_id) {
+            if reg.guard == LawGuard::ExactOnly && !exact {
+                continue;
+            }
+            if let LawDerivation::Region(kinds) = law_derivation(&reg.law) {
                 out.extend(kinds.into_iter().map(|kind| DerivedRewrite {
                     name: rewrite_name(kind),
                     law: RegionLawFamily::Algebraic,
@@ -201,6 +206,7 @@ pub fn derived_rewrites(exact: bool) -> Vec<DerivedRewrite> {
                     op,
                     law_id,
                     kind,
+                    guard: reg.guard,
                 }));
             }
         }

@@ -162,6 +162,7 @@ inventory::submit! {
         }),
     )
     .with_category("scan")
+    .with_opaque("parallel substring scanning and string search DFA")
 }
 
 #[cfg(test)]

@@ -249,6 +249,7 @@ inventory::submit! {
         }),
     )
     .with_category("nn")
+    .with_opaque("neural network layer activation or tensor contraction step")
 }
 
 fn f32_fixture(values: &[f32]) -> Vec<u8> {
@@ -314,6 +315,7 @@ inventory::submit! {
         }),
     )
     .with_category("nn")
+    .with_opaque("neural network layer activation or tensor contraction step")
 }
 
 inventory::submit! {
@@ -330,6 +332,7 @@ inventory::submit! {
         }),
     )
     .with_category("nn")
+    .with_opaque("neural network layer activation or tensor contraction step")
 }
 
 #[cfg(test)]

@@ -50,4 +50,5 @@ inventory::submit! {
     )
     .with_category("nn")
     .with_numeric(vyre_foundation::numeric::NumericContract::ieee_f32(1))
+    .with_opaque("neural network layer activation or tensor contraction step")
 }

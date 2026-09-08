@@ -97,6 +97,7 @@ inventory::submit! {
             vec![vec![EXPECTED_CSR_QUEUE_STRIDED_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("graph traversal and topological structural analysis")
 }
 
 #[cfg(test)]

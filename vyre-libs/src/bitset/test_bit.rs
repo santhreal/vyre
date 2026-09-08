@@ -60,6 +60,7 @@ inventory::submit! {
             vec![vec![EXPECTED_BITSET_TEST_BIT_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("bitset manipulation query or non-symmetric set transformation")
 }
 
 #[cfg(test)]
