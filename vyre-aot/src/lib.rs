@@ -15,12 +15,13 @@ pub(crate) mod manifest;
 pub use artifact::registration;
 pub use artifact::TargetId;
 pub use bundle::{bundle, package_artifact, read_bundle_artifact, BundleError, DeploymentBundle};
-pub use compile::{compile, compile_with_resolver, CompileError};
+pub use compile::{compile, compile_request, compile_with_resolver, CompileError};
 pub use launcher::{emit_launcher_rust, LauncherError, LauncherOpts};
 pub use manifest::Manifest;
 pub use vyre_megakernel::{
     Artifact, ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
     TargetProfile, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    ValidatedCompileRequest,
 };
 
 /// Crate version surfaced into emitted artifacts and manifests.
