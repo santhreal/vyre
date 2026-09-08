@@ -38,8 +38,8 @@ use std::ops::ControlFlow;
 /// # Examples
 ///
 /// ```
-/// use vyre::ir::Program;
-/// use vyre::validate;
+/// use vyre_foundation::ir::Program;
+/// use vyre_foundation::validate;
 ///
 /// let program = Program::wrapped(Vec::new(), [1, 1, 1], Vec::new());
 /// let errors = validate(&program);

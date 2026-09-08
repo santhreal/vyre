@@ -25,7 +25,7 @@ pub use shape_predicate::ShapePredicate;
 /// # Examples
 ///
 /// ```
-/// use vyre::ir::{BufferDecl, BufferAccess, DataType};
+/// use vyre_foundation::ir::{BufferDecl, BufferAccess, DataType};
 ///
 /// let buf = BufferDecl::read("input", 0, DataType::U32);
 /// assert_eq!(buf.name(), "input");
@@ -98,7 +98,7 @@ impl BufferDecl {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{BufferDecl, BufferAccess, DataType};
+    /// use vyre_foundation::ir::{BufferDecl, BufferAccess, DataType};
     /// let _ = BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::U32);
     /// ```
     #[must_use]
@@ -138,7 +138,7 @@ impl BufferDecl {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{BufferAccess, BufferDecl, DataType};
+    /// use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType};
     /// let _ = BufferDecl::written("a", 0, BufferAccess::WriteOnly, DataType::U32);
     /// ```
     #[must_use]
@@ -155,7 +155,7 @@ impl BufferDecl {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{BufferDecl, DataType};
+    /// use vyre_foundation::ir::{BufferDecl, DataType};
     /// let _ = BufferDecl::read("a", 0, DataType::U32);
     /// ```
     #[must_use]
@@ -169,7 +169,7 @@ impl BufferDecl {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{BufferDecl, DataType};
+    /// use vyre_foundation::ir::{BufferDecl, DataType};
     /// let _ = BufferDecl::read_write("a", 0, DataType::U32);
     /// ```
     #[must_use]
@@ -183,7 +183,7 @@ impl BufferDecl {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{BufferDecl, DataType};
+    /// use vyre_foundation::ir::{BufferDecl, DataType};
     /// let _ = BufferDecl::output("a", 0, DataType::U32);
     /// ```
     #[must_use]
@@ -244,7 +244,7 @@ impl BufferDecl {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{BufferDecl, DataType};
+    /// use vyre_foundation::ir::{BufferDecl, DataType};
     /// let _ = BufferDecl::uniform("a", 0, DataType::U32);
     /// ```
     #[must_use]
@@ -261,7 +261,7 @@ impl BufferDecl {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{BufferAccess, BufferDecl, DataType, MemoryKind};
+    /// use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, MemoryKind};
     ///
     /// let scratch = BufferDecl::workgroup("scratch", 64, DataType::U32);
     ///
@@ -532,7 +532,7 @@ impl BufferDecl {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{BufferDecl, DataType};
+    /// use vyre_foundation::ir::{BufferDecl, DataType};
     ///
     /// // No count and backend-allocated: refused, and the message names the remedy.
     /// let error = BufferDecl::output("out", 0, DataType::U32)

@@ -19,7 +19,7 @@ use super::walk::walk_exprs;
 /// # Examples
 ///
 /// ```
-/// use vyre::ir::Program;
+/// use vyre_foundation::ir::Program;
 /// use vyre_foundation::visit::referenced_buffers;
 ///
 /// let program = Program::empty();
@@ -51,7 +51,7 @@ pub fn referenced_buffers(program: &Program) -> HashSet<Ident> {
 /// # Examples
 ///
 /// ```
-/// use vyre::ir::{Expr, Node, Program};
+/// use vyre_foundation::ir::{Expr, Node, Program};
 /// use vyre_foundation::visit::collect_call_op_ids;
 ///
 /// let program = Program::wrapped(

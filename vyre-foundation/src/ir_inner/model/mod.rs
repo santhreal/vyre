@@ -43,3 +43,4 @@ pub(crate) mod op_signature;
 
 /// Tile values and layouts.
 pub(crate) mod tile;
+pub(crate) mod resource_abi;

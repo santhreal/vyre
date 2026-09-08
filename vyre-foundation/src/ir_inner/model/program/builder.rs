@@ -39,7 +39,7 @@ impl Program {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
+    /// use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
     ///
     /// let program = Program::wrapped(
     ///     vec![BufferDecl::storage(
@@ -242,7 +242,7 @@ impl Program {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::Program;
+    /// use vyre_foundation::ir::Program;
     ///
     /// let program = Program::empty();
     ///

@@ -41,7 +41,7 @@ pub const PORTABLE_WORKGROUP_INVOCATIONS: u32 = 256;
 /// A program that XORs two input buffers element-wise:
 ///
 /// ```rust
-/// use vyre::ir::{Program, BufferDecl, BufferAccess, DataType, Node, Expr, BinOp};
+/// use vyre_foundation::ir::{Program, BufferDecl, BufferAccess, DataType, Node, Expr, BinOp};
 ///
 /// let program = Program::wrapped(
 ///     vec![

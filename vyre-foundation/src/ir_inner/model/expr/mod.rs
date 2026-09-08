@@ -16,7 +16,7 @@ pub use ident::Ident;
 /// # Examples
 ///
 /// ```
-/// use vyre::ir::Expr;
+/// use vyre_foundation::ir::Expr;
 ///
 /// let lit = Expr::u32(42);
 /// let var = Expr::var("x");
@@ -88,7 +88,7 @@ impl Expr {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::Expr;
+    /// use vyre_foundation::ir::Expr;
     /// let _ = Expr::load("a", Expr::u32(0));
     /// ```
     #[must_use]
@@ -105,7 +105,7 @@ impl Expr {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::Expr;
+    /// use vyre_foundation::ir::Expr;
     /// let _ = Expr::buf_len("a");
     /// ```
     #[must_use]
@@ -125,7 +125,7 @@ impl Expr {
     /// [`Expr::load`].
     ///
     /// ```
-    /// use vyre::ir::Expr;
+    /// use vyre_foundation::ir::Expr;
     /// let _ = Expr::call("dialect::lookup", vec![Expr::buffer_ref("table"), Expr::u32(3)]);
     /// ```
     #[must_use]

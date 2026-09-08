@@ -753,3 +753,11 @@ pub mod wire_version_mismatch;
 /// Integration tests from `tests/workspace_naming_footguns.rs`.
 #[path = "workspace_naming_footguns.rs"]
 pub mod workspace_naming_footguns;
+
+/// Integration tests from `tests/resource_abi_contract.rs`.
+#[path = "resource_abi_contract.rs"]
+pub mod resource_abi_contract;
+
+/// Integration tests from `tests/schema_authority_contract.rs`.
+#[path = "schema_authority_contract.rs"]
+pub mod schema_authority_contract;
