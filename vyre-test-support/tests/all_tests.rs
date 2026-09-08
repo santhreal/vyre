@@ -8,3 +8,7 @@
 /// Integration tests from `tests/path_modules_stay_inside_their_package.rs`.
 #[path = "path_modules_stay_inside_their_package.rs"]
 pub mod path_modules_stay_inside_their_package;
+
+/// Integration tests from `tests/source_variant_derivation.rs`.
+#[path = "source_variant_derivation.rs"]
+pub mod source_variant_derivation;

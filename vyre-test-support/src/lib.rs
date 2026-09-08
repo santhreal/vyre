@@ -343,7 +343,33 @@ pub fn top_level_variant_names(body: &str) -> BTreeSet<String> {
                     }
                 }
             }
-            '#' if depth == 0 => at_item_start = false,
+            // An attribute belongs to the item after it, so skipping one must
+            // leave the item-start state alone. Clearing it made every variant
+            // of an enum whose variants carry `#[error(..)]` invisible, and an
+            // empty derived set certifies nothing it claims to close over.
+            '#' if depth == 0 => {
+                let mut bracket_depth = 0usize;
+                let mut in_string = false;
+                let mut escaped = false;
+                for (_, skipped) in chars.by_ref() {
+                    if escaped {
+                        escaped = false;
+                        continue;
+                    }
+                    match skipped {
+                        '\\' if in_string => escaped = true,
+                        '"' => in_string = !in_string,
+                        '[' if !in_string => bracket_depth += 1,
+                        ']' if !in_string => {
+                            bracket_depth -= 1;
+                            if bracket_depth == 0 {
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
             c if c.is_whitespace() => {}
             c if depth == 0 && at_item_start && c.is_ascii_uppercase() => {
                 let end = body[offset..]
