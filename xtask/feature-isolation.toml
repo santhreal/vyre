@@ -52,6 +52,14 @@ member = "vyre"
 feature = "wgpu"
 
 [[pair]]
+member = "vyre-alloc-probe"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-alloc-probe"
+feature = "(none)"
+
+[[pair]]
 member = "vyre-aot"
 feature = "(default)"
 

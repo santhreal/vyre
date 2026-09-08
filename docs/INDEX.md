@@ -25,7 +25,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 ## Lifecycle counts
 
 - current: 20.
-- generated: 37.
+- generated: 38.
 - superseded: 0.
 - archived: 33.
 
@@ -90,6 +90,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `current` | `user` | `public-facade` | `reference` | `reference/wire-format.md` | self | manual |
 | `current` | `release` | `release-tooling` | `release` | `release/process.md` | self | manual |
 | `generated` | `contributor` | `testing` | `testing` | `testing/structure-gate.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-alloc-probe.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-aot.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-bench.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-conform-spec.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |

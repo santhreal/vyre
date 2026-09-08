@@ -195,6 +195,15 @@ Not here: production code, and a fixture that exists in a crate that
 already owns it. Fixture duplication is how two suites end up testing two
 different programs under one name.
 
+### vyre-alloc-probe
+
+A `GlobalAlloc` wrapper that counts per-thread heap traffic, so a harness
+binary or a test binary asserts an allocation budget on the path it just
+ran.
+
+Not here: anything a measurement consumer needs. The crate has no
+dependencies, so a product binary links a counter and not a test tree.
+
 ### vyre-conform and vyre-conform-spec
 
 The conformance engine and its witness sets. See

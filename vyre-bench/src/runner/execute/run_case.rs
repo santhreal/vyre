@@ -85,15 +85,20 @@ pub(super) fn run_case(
         let mut d_samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
         for sample_index in 0..target_samples {
             let started = Instant::now();
-            let alloc_before = crate::probes::AllocationSnapshot::capture();
+            let alloc_region = vyre_alloc_probe::Region::new();
             ctx.include_baseline_outputs = sample_index == 0;
             let mut run_result = case
                 .run(ctx, prepared)
                 .map_err(|error| format!("Run error on sample {sample_index}: {error}"))?;
-            let (alloc_bytes, alloc_count) =
-                crate::probes::AllocationSnapshot::capture().delta_since(alloc_before);
-            run_result.metrics.alloc_bytes.get_or_insert(alloc_bytes);
-            run_result.metrics.alloc_count.get_or_insert(alloc_count);
+            let allocated = alloc_region.change();
+            run_result
+                .metrics
+                .alloc_bytes
+                .get_or_insert(allocated.bytes_allocated as u64);
+            run_result
+                .metrics
+                .alloc_count
+                .get_or_insert(allocated.allocations as u64);
 
             let (read, written) = case.bytes_touched(prepared);
             if read > 0 || written > 0 {

@@ -44,6 +44,10 @@ members = [
     "vyre-safetensors",
     "vyre-libs",
     "vyre-aot",
+    # Per-thread heap counters behind a GlobalAlloc wrapper. Depends on no vyre
+    # crate so a harness binary links it at run time and a driver test links it
+    # as a dev-dependency, without either reaching test-only crates.
+    "vyre-alloc-probe",
     "vyre-bench",
     "vyre-lints",
     "vyre-lower",
@@ -259,6 +263,9 @@ vyre-primitives = { version = "0.8.0", path = "vyre-primitives", default-feature
 # Dev-only shared harness (publish = false). PATH-ONLY (no version): cargo strips
 # path-only dev-deps at publish, so this never joins/blocks the publish train.
 vyre-test-support = { path = "vyre-test-support" }
+# publish = false, so path-only: a version requirement here is one a registry
+# would have to resolve for a crate that never reaches one.
+vyre-alloc-probe = { path = "vyre-alloc-probe" }
 vyre-runtime = { version = "0.8.0", path = "vyre-runtime" }
 vyre-safetensors = { version = "0.8.0", path = "vyre-safetensors" }
 vyre-libs = { version = "0.8.0", path = "vyre-libs" }

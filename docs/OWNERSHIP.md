@@ -39,6 +39,15 @@ Public facade. Re-export IR, driver, runtime, and the artifact compiler. Own no 
 | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | `private` | `runtime` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `private` | `specification` |
 
+### `vyre-alloc-probe`
+
+Count heap traffic per thread behind a GlobalAlloc wrapper, so an allocation budget measures the code under test rather than the test schedule. Depends on no vyre crate, so a harness binary links it at run time and a driver suite links it as a dev-dependency.
+
+- Path: `vyre-alloc-probe`
+- Owner: `benchmarks`
+- Layer: `standalone-tooling`
+- Internal production dependencies: None
+
 ### `vyre-aot`
 
 Package the same megakernel artifact class ahead of time. Not a second compile path. No workspace crate currently depends on this one.
@@ -61,11 +70,12 @@ Own reproducible workload benchmarks against the best available native baseline 
 - Path: `vyre-bench`
 - Owner: `benchmarks`
 - Layer: `tooling`
-- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`, `xtask`
+- Internal production dependencies: `vyre`, `vyre-alloc-probe`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`, `xtask`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre` | public lifecycle facade | `private` | `public-facade` |
+| `vyre-alloc-probe` | per-thread heap counters the runner installs as the global allocator | `private` | `benchmarks` |
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `private` | `backend-contract` |
 | `vyre-driver-cuda` | native accelerator backend execution | `private` | `cuda-driver` |
 | `vyre-driver-reference` | reference backend adaptation | `private` | `reference-driver` |

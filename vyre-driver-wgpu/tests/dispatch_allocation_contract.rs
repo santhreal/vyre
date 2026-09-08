@@ -15,145 +15,17 @@
 use crate::harness;
 use harness::{acquire_live_backend as live_backend, add_one_program};
 
-use std::alloc::{GlobalAlloc, Layout, System};
-use std::cell::Cell;
 use std::time::{Duration, Instant};
+
+// The counting allocator is thread-local and shared: a process-wide counter
+// charges this budget for every other test case running beside it.
+use vyre_alloc_probe::{Region, ThreadAlloc};
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{CompiledPipeline, DispatchConfig, VyreBackend};
 
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub struct AllocStats {
-    pub allocations: usize,
-    pub deallocations: usize,
-    pub reallocations: usize,
-    pub bytes_allocated: usize,
-    pub bytes_deallocated: usize,
-}
-
-thread_local! {
-    static THREAD_STATS: Cell<AllocStats> = const { Cell::new(AllocStats {
-        allocations: 0,
-        deallocations: 0,
-        reallocations: 0,
-        bytes_allocated: 0,
-        bytes_deallocated: 0,
-    }) };
-}
-
-/// Global allocator tracking per-thread allocation and deallocation statistics.
-pub struct ThreadAlloc;
-
-impl ThreadAlloc {
-    pub const fn new() -> Self {
-        Self
-    }
-}
-
-unsafe impl GlobalAlloc for ThreadAlloc {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = System.alloc(layout);
-        if !ptr.is_null() {
-            let _ = THREAD_STATS.try_with(|cell| {
-                let mut stats = cell.get();
-                stats.allocations += 1;
-                stats.bytes_allocated += layout.size();
-                cell.set(stats);
-            });
-        }
-        ptr
-    }
-
-    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
-        let ptr = System.alloc_zeroed(layout);
-        if !ptr.is_null() {
-            let _ = THREAD_STATS.try_with(|cell| {
-                let mut stats = cell.get();
-                stats.allocations += 1;
-                stats.bytes_allocated += layout.size();
-                cell.set(stats);
-            });
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        System.dealloc(ptr, layout);
-        let _ = THREAD_STATS.try_with(|cell| {
-            let mut stats = cell.get();
-            stats.deallocations += 1;
-            stats.bytes_deallocated += layout.size();
-            cell.set(stats);
-        });
-    }
-
-    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
-        let new_ptr = System.realloc(ptr, layout, new_size);
-        if !new_ptr.is_null() {
-            let _ = THREAD_STATS.try_with(|cell| {
-                let mut stats = cell.get();
-                stats.reallocations += 1;
-                stats.allocations += 1;
-                stats.deallocations += 1;
-                stats.bytes_allocated += new_size;
-                stats.bytes_deallocated += layout.size();
-                cell.set(stats);
-            });
-        }
-        new_ptr
-    }
-}
-
 #[global_allocator]
-static GLOBAL: ThreadAlloc = ThreadAlloc::new();
-
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub struct RegionChange {
-    pub allocations: usize,
-    pub deallocations: usize,
-    pub reallocations: usize,
-    pub bytes_allocated: usize,
-    pub bytes_deallocated: usize,
-}
-
-impl RegionChange {
-    pub fn net_bytes(&self) -> isize {
-        self.bytes_allocated as isize - self.bytes_deallocated as isize
-    }
-
-    pub fn net_allocations(&self) -> isize {
-        self.allocations as isize - self.deallocations as isize
-    }
-}
-
-/// Measurement region snapshotting and diffing thread-local allocator statistics.
-pub struct Region {
-    start: AllocStats,
-}
-
-impl Region {
-    pub fn new() -> Self {
-        let start = THREAD_STATS.try_with(|cell| cell.get()).unwrap_or_default();
-        Self { start }
-    }
-
-    pub fn change(&self) -> RegionChange {
-        let current = THREAD_STATS.try_with(|cell| cell.get()).unwrap_or_default();
-        RegionChange {
-            allocations: current.allocations.saturating_sub(self.start.allocations),
-            deallocations: current.deallocations.saturating_sub(self.start.deallocations),
-            reallocations: current.reallocations.saturating_sub(self.start.reallocations),
-            bytes_allocated: current.bytes_allocated.saturating_sub(self.start.bytes_allocated),
-            bytes_deallocated: current.bytes_deallocated.saturating_sub(self.start.bytes_deallocated),
-        }
-    }
-}
-
-impl Default for Region {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+static GLOBAL: ThreadAlloc = ThreadAlloc;
 
 /// Build a Program with `inputs` separate read buffers and one output. The
 /// summed program exceeds the dispatch-local `SmallVec` inline cap of 8 used

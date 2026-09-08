@@ -39,6 +39,7 @@
 
 - [Conformance](conformance/program.md)
 - [Testing `structure-gate`](testing/structure-gate.md)
+- [Testing `vyre-alloc-probe`](testing/vyre-alloc-probe.md)
 - [Testing `vyre-aot`](testing/vyre-aot.md)
 - [Testing `vyre-bench`](testing/vyre-bench.md)
 - [Testing `vyre-conform-spec`](testing/vyre-conform-spec.md)

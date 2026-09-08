@@ -227,6 +227,10 @@ package = "vyre-test-support"
 reason = "Shared test fixtures. It ships in no artifact and decides no contract."
 
 [[open]]
+package = "vyre-alloc-probe"
+reason = "Thread-local allocation counter for measurement harnesses. It ships in no artifact and decides no contract."
+
+[[open]]
 package = "vyre-safetensors"
 reason = "Format adapter. Its bounds are proved by its own fuzz and property suites."
 

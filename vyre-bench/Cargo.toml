@@ -43,6 +43,9 @@ vyre-pass-engine = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-emit-ptx = { workspace = true }
 vyre-spec = { workspace = true }
+# The per-thread allocation probe the runner installs. It is a runtime
+# dependency because `main.rs` declares the global allocator.
+vyre-alloc-probe = { workspace = true }
 # The source fingerprint every recorded artifact names its tree with has one
 # producer, and it is the crate that links no vyre crate so it still identifies a
 # checkout while the workspace does not compile.
@@ -87,13 +90,14 @@ cli = ["dep:clap", "dep:env_logger"]
 device-tests = []
 
 [dev-dependencies]
-vyre-test-support.workspace = true
 criterion = { workspace = true }
 proptest = { workspace = true }
 vyre-emit-naga = { path = "../vyre-emit-naga" }
 vyre-emit-spirv = { path = "../vyre-emit-spirv" }
 syn.workspace = true
 tempfile.workspace = true
+# The registry-closure gate and the shared fixture readers the suites read.
+vyre-test-support = { workspace = true }
 
 [[bin]]
 name = "vyre-bench"

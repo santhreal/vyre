@@ -793,6 +793,19 @@ generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
+path = "testing/vyre-alloc-probe.md"
+title = "Testing `vyre-alloc-probe`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
 path = "testing/vyre-aot.md"
 title = "Testing `vyre-aot`"
 status = "generated"
