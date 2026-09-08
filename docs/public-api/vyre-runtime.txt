@@ -38,6 +38,7 @@ impl core::default::Default for vyre_runtime::resident_work_queue::planner::Resi
 impl core::default::Default for vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy
 impl core::default::Default for vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy
 impl core::default::Default for vyre_runtime::safetensors_transfer::DeviceTransferCapabilities
+impl core::default::Default for vyre_runtime::tenant::TenantQuota
 impl core::default::Default for vyre_runtime::tenant::TenantRegistry
 impl core::error::Error for vyre_runtime::pipeline_cache::PipelineCacheMetricError
 impl core::fmt::Debug for vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler
@@ -258,7 +259,8 @@ pub const fn vyre_runtime::resident_work_queue::workspace_layout::first_workspac
 pub const fn vyre_runtime::resident_work_queue::workspace_layout::workspace_record_words(record_words: u32, capacity_records: u32) -> core::option::Option<u32>
 pub const fn vyre_runtime::resource_residency::ArtifactInstanceBinding::byte_len(&self) -> u64
 pub const fn vyre_runtime::tenant::TenantQuota::bounded(max_outstanding_slots: u64, max_staging_bytes: u64, max_resident_handles: u64) -> Self
-pub const fn vyre_runtime::tenant::TenantQuota::unbounded() -> Self
+pub const fn vyre_runtime::tenant::TenantQuota::is_finite(&self) -> bool
+pub const fn vyre_runtime::tenant::TenantQuota::standard() -> Self
 pub const fn vyre_runtime::tenant::TenantSelectionScratch::new() -> Self
 pub const vyre_runtime::CounterArithmetic::ALL: [Self; 2]
 pub const vyre_runtime::RequestFault::ALL: [Self; 3]
@@ -383,6 +385,9 @@ pub const vyre_runtime::resident_work_queue::telemetry::TELEMETRY_DECODE_CAPACIT
 pub const vyre_runtime::tenant::OPCODE_RANGE_PER_TENANT: u32
 pub const vyre_runtime::tenant::TENANT_ID_MAX: u32
 pub const vyre_runtime::tenant::TENANT_OPCODE_BASE: u32
+pub const vyre_runtime::tenant::TenantQuota::DEFAULT_MAX_OUTSTANDING_SLOTS: u64
+pub const vyre_runtime::tenant::TenantQuota::DEFAULT_MAX_RESIDENT_HANDLES: u64
+pub const vyre_runtime::tenant::TenantQuota::DEFAULT_MAX_STAGING_BYTES: u64
 pub const vyre_runtime::uring::NVME_CMD_READ: u8
 pub enum vyre_runtime::CounterArithmetic
 pub enum vyre_runtime::CounterScope
@@ -398,6 +403,8 @@ pub enum vyre_runtime::artifact_admission::InteractiveCompletion
 pub enum vyre_runtime::artifact_admission::InteractiveSessionState
 pub enum vyre_runtime::artifact_admission::MeshSessionError
 pub enum vyre_runtime::artifact_admission::PriorityClass
+pub enum vyre_runtime::artifact_admission::RetainedSessionPhase
+pub enum vyre_runtime::artifact_admission::RetainedSessionTransition
 pub enum vyre_runtime::expert_scheduling::ExpertSchedulingError
 pub enum vyre_runtime::mtp::MtpError
 pub enum vyre_runtime::mtp::MtpStorageCandidate
@@ -510,10 +517,13 @@ pub fn vyre_runtime::artifact_admission::MeshSubmission::wait(self) -> core::res
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::artifact(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::bindings(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::device(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::generation(&self) -> core::result::Result<u64, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::new(session: vyre_runtime::artifact_admission::ArtifactSession, initial: alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::phase(&self) -> core::result::Result<vyre_runtime::artifact_admission::RetainedSessionPhase, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::rematerialize(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::replace_retained(&self, values: alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::submit_and_wait(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::transition(&self, transition: vyre_runtime::artifact_admission::RetainedSessionTransition) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::admit_artifact(envelope_bytes: &[u8], required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_cached_artifact(store: &dyn vyre_runtime::pipeline_cache::PipelineCacheStore, fingerprint: &vyre_runtime::pipeline_cache::PipelineFingerprint, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::AdmittedArtifact>, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_envelope(envelope: vyre_megakernel::envelope::ArtifactEnvelope, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
@@ -999,6 +1009,7 @@ pub fn vyre_runtime::tenant::TenantHandle::release_staging_bytes(&self, byte_cou
 pub fn vyre_runtime::tenant::TenantHandle::reserve_resident_handles(&self, handle_count: u64) -> core::result::Result<(), vyre_runtime::tenant::TenantError>
 pub fn vyre_runtime::tenant::TenantHandle::reserve_staging_bytes(&self, byte_count: u64) -> core::result::Result<(), vyre_runtime::tenant::TenantError>
 pub fn vyre_runtime::tenant::TenantHandle::runtime_counters(&self) -> vyre_runtime::tenant::TenantRuntimeCounters
+pub fn vyre_runtime::tenant::TenantQuota::default() -> Self
 pub fn vyre_runtime::tenant::TenantRegistry::active_tenants(&self) -> alloc::vec::Vec<vyre_runtime::tenant::TenantHandle>
 pub fn vyre_runtime::tenant::TenantRegistry::active_tenants_into(&self, out: &mut alloc::vec::Vec<vyre_runtime::tenant::TenantHandle>)
 pub fn vyre_runtime::tenant::TenantRegistry::default() -> Self
@@ -1459,6 +1470,16 @@ pub vyre_runtime::artifact_admission::PriorityClass::High = 2
 pub vyre_runtime::artifact_admission::PriorityClass::Low = 0
 pub vyre_runtime::artifact_admission::PriorityClass::Normal = 1
 pub vyre_runtime::artifact_admission::PriorityClass::Urgent = 3
+pub vyre_runtime::artifact_admission::RetainedSessionPhase::InFlight
+pub vyre_runtime::artifact_admission::RetainedSessionPhase::Quarantined
+pub vyre_runtime::artifact_admission::RetainedSessionPhase::Ready
+pub vyre_runtime::artifact_admission::RetainedSessionTransition::BeginSubmission
+pub vyre_runtime::artifact_admission::RetainedSessionTransition::CompleteSubmission
+pub vyre_runtime::artifact_admission::RetainedSessionTransition::CompleteSubmission::new_generation: u64
+pub vyre_runtime::artifact_admission::RetainedSessionTransition::Quarantine
+pub vyre_runtime::artifact_admission::RetainedSessionTransition::Quarantine::reason: alloc::string::String
+pub vyre_runtime::artifact_admission::RetainedSessionTransition::ReplaceState
+pub vyre_runtime::artifact_admission::RetainedSessionTransition::ReplaceState::expected_generation: u64
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExchangeError(alloc::string::String)
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds::expert_id: u32
@@ -2329,6 +2350,10 @@ pub vyre_runtime::tenant::TenantError::Backpressure::outstanding: u64
 pub vyre_runtime::tenant::TenantError::Backpressure::tenant_id: u32
 pub vyre_runtime::tenant::TenantError::CapacityExceeded
 pub vyre_runtime::tenant::TenantError::CapacityExceeded::cap: u32
+pub vyre_runtime::tenant::TenantError::NonFiniteQuota
+pub vyre_runtime::tenant::TenantError::NonFiniteQuota::field: &'static str
+pub vyre_runtime::tenant::TenantError::NonFiniteQuota::fix: &'static str
+pub vyre_runtime::tenant::TenantError::NonFiniteQuota::value: u64
 pub vyre_runtime::tenant::TenantError::NotFound
 pub vyre_runtime::tenant::TenantError::NotFound::fix: &'static str
 pub vyre_runtime::tenant::TenantError::NotFound::tenant_id: u32

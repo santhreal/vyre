@@ -1,0 +1,2 @@
+category = "Added"
+text = "The benchmark harness defines a versioned benchmark receipt schema and content-addressed evidence store capturing workload, semantic graph, resources, binaries, objectives, budgets, target facts, environment, portfolio, samples, uncertainty, and parity."
