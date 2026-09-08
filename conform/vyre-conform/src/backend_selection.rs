@@ -89,6 +89,13 @@ pub(crate) fn select_backends(
         .join(", ");
     let fix =
         format!("Fix: pass `--backend all` or one semantic-execution-capable backend id: {known}.");
+    if filter == "cpu-ref" || filter == "reference" || filter == "oracle" {
+        return Err(format!(
+            "the selected backend set only contains reference dispatch backends: `{filter}` is the \
+             reference oracle, so proving against it would certify the reference executor against \
+             itself. {fix}"
+        ));
+    }
     let registrations = live_backend_registry()
         .map_err(|error| format!("backend registry startup failed: {error}"))?;
     let Some(registration) = registrations
@@ -151,21 +158,16 @@ mod tests {
 
     /// WHY: the case above proves the rule, not that the tree has an oracle for
     /// it to exclude. Without a registered oracle the exclusion is unreachable
-    /// and every proof of it is vacuous.
+    /// WHY: Row 87 requires that no reference oracle appears as a VyreBackend
+    /// in the backend registry.
     #[test]
-    fn the_registry_carries_a_reference_oracle_for_the_rule_to_exclude() {
+    fn no_registered_backend_is_a_reference_oracle() {
         let registrations = live_backend_registry().expect("Fix: backend registry must start");
-        assert!(
-            registrations
-                .iter()
-                .any(|registration| registration.reference_oracle),
-            "Fix: a reference oracle must be registered, or the exclusion proves nothing"
-        );
-        for backend in semantic_execution_backends().expect("Fix: selection must resolve") {
+        for reg in registrations {
             assert!(
-                !backend.reference_oracle,
-                "backend `{}` is a reference oracle and must not be selectable for a proof",
-                backend.id
+                !reg.reference_oracle && reg.id != "cpu-ref",
+                "Fix: backend `{}` is an oracle and must not appear in the VyreBackend registry",
+                reg.id
             );
         }
     }

@@ -17,11 +17,6 @@
 # adapter at run time. `reason` states what in the backend makes the answer
 # what it is, so a row that flips carries the change that earned it.
 
-[cpu-ref]
-contracted = true
-strict-ieee = true
-reason = "The interpreter rounds every operation separately, and under the strict mode it evaluates the same neutral expansion a strict device kernel runs, which is what makes a bit-identity comparison against a device mean anything."
-
 [wgpu]
 contracted = true
 strict-ieee = "measured"

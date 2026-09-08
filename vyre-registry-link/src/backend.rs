@@ -16,12 +16,9 @@ use vyre_driver::{
 /// Every driver crate this owner knows how to link, independent of features.
 ///
 /// The cargo features select which of these a build links, and
-/// [`linked_backend_sources`] reports that subset. This is the list a new driver
-/// crate joins; the rules read the tree to prove it did.
 pub const DECLARED_SOURCES: &[&str] = &[
     "vyre-driver-cuda",
     "vyre-driver-metal",
-    "vyre-driver-reference",
     "vyre-driver-spirv",
     "vyre-driver-wgpu",
 ];
@@ -54,12 +51,6 @@ static SOURCES: LazyLock<Vec<BackendSource>> = LazyLock::new(|| {
             crate_name: "vyre-driver-metal",
             backend_id: vyre_driver_metal::METAL_BACKEND_ID,
             registered_here: vyre_driver_metal::registered_backend_id(),
-        },
-        #[cfg(feature = "reference")]
-        BackendSource {
-            crate_name: "vyre-driver-reference",
-            backend_id: vyre_driver_reference::CPU_REF_BACKEND_ID,
-            registered_here: vyre_driver_reference::registered_backend_id(),
         },
         #[cfg(feature = "spirv")]
         BackendSource {

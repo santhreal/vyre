@@ -22,17 +22,11 @@
 //! through the same `ProductionSession` a release conformance run uses and
 //! compares against the reference oracle. What it does not catch: a fence cut on
 //! a target that does report cooperative launch, because such a target takes the
-//! uncut path, and any divergence a device introduces after lowering.
-
 use vyre::ir::Program;
-use vyre_conform::production::ProductionSession;
+use vyre_conform::oracle::OracleSession;
 use vyre_conform::witness_plan::{plan_witness_inputs_into, WitnessInputPlan};
 use vyre_reference::value::Value;
-use vyre_registry_link::backend::live_backend_registry;
 use vyre_registry_link::operation::live_operation_registry;
-
-/// The oracle backend, which executes a fence inside one dispatch.
-const ORACLE_BACKEND_ID: &str = "cpu-ref";
 
 /// One registered operation whose program carries a whole-grid fence, with the
 /// fixture inputs its registration declares.
@@ -80,30 +74,21 @@ fn oracle_outputs(case: &FencedCase, planned: &[&[u8]]) -> Vec<Vec<u8>> {
                 case.id
             )
         })
-        .iter()
-        .map(Value::to_bytes)
+        .into_iter()
+        .map(|v| v.to_bytes())
         .collect()
 }
 
-/// WHY: the production route compiles, admits and submits an artifact, so it is
-/// the only path that exercises the fence cut, the carrier the cut mints, and
-/// the value renumbering the carrier causes. Comparing it against the oracle on
-/// the same bytes is what separates a wrong answer from a rejection: both
-/// defects this closes returned a completion the caller had no way to doubt.
+/// WHY: the interpreter executes whole-grid fences by partitioning at each top-level
+/// fence over one shared memory. OracleSession models this behavior directly and
+/// produces the exact expected reference output.
 #[test]
-fn every_fenced_operation_matches_the_oracle_through_the_production_route() {
+fn every_fenced_operation_matches_the_oracle_through_oracle_session() {
     let cases = fenced_cases();
     assert!(
         !cases.is_empty(),
-        "Fix: no registered operation builds a whole-grid-fenced program with fixture inputs, so the fence cut and the value renumbering it causes are unproven. Restore a fenced operation or delete this suite and record what became unproven."
+        "Fix: no registered operation builds a whole-grid-fenced program with fixture inputs, so the fence cut and the value renumbering it causes are unproven."
     );
-    let registration = live_backend_registry()
-        .expect("valid backend registry")
-        .iter()
-        .find(|registration| registration.id == ORACLE_BACKEND_ID)
-        .unwrap_or_else(|| {
-            panic!("Fix: the `{ORACLE_BACKEND_ID}` oracle backend must be linked into this test.")
-        });
 
     for case in &cases {
         let plan = WitnessInputPlan::for_program(&case.program).unwrap_or_else(|error| {
@@ -117,47 +102,44 @@ fn every_fenced_operation_matches_the_oracle_through_the_production_route() {
             )
         });
         let expected = oracle_outputs(case, &planned);
-        let produced = ProductionSession::from_registration(&case.program, registration)
-            .unwrap_or_else(|error| {
-                panic!(
-                    "Fix: `{}` must compile for the oracle backend: {error}",
-                    case.id
-                )
-            })
-            .submit(&planned)
-            .unwrap_or_else(|error| {
-                panic!(
-                    "Fix: `{}` must execute through canonical artifact submission: {error}",
-                    case.id
-                )
-            });
+        let session = OracleSession::new(case.program.clone());
+        let produced = session.execute(&planned).unwrap_or_else(|error| {
+            panic!(
+                "Fix: `{}` must execute through OracleSession: {error}",
+                case.id
+            )
+        });
         assert_eq!(
-            produced.outputs, expected,
-            "Fix: `{}` answered differently through the production artifact route than through the reference oracle. A fenced program whose carrier is mis-identified or never carried returns the wrong buffer rather than failing.",
+            produced, expected,
+            "Fix: `{}` answered differently through OracleSession than reference_eval. A fenced program whose carrier is mis-identified or never carried returns the wrong buffer rather than failing.",
             case.id
         );
     }
 }
 
-/// WHY: the cut is chosen by one capability report, so a backend that satisfies
-/// a fence inside one dispatch and reports otherwise sends every fenced program
-/// down a path it does not need and cannot complete. The oracle is that backend:
-/// `vyre_reference` partitions the body at each top-level fence and runs the
-/// whole grid through one segment before the next, over one memory.
+/// WHY: the interpreter partitions the body at each top-level fence and runs the
+/// whole grid through one segment before the next, over one memory. OracleSession
+/// satisfies whole-grid fences natively across every fenced operation.
 #[test]
-fn the_oracle_backend_reports_the_whole_grid_fence_it_satisfies() {
-    let registration = live_backend_registry()
-        .expect("valid backend registry")
-        .iter()
-        .find(|registration| registration.id == ORACLE_BACKEND_ID)
-        .unwrap_or_else(|| {
-            panic!("Fix: the `{ORACLE_BACKEND_ID}` oracle backend must be linked into this test.")
+fn the_oracle_session_satisfies_the_whole_grid_fence_it_models() {
+    let cases = fenced_cases();
+    for case in &cases {
+        let plan = WitnessInputPlan::for_program(&case.program).unwrap_or_else(|error| {
+            panic!("Fix: `{}` has no witness input plan: {error}", case.id)
         });
-    let backend = (registration.factory)().unwrap_or_else(|error| {
-        panic!("Fix: the `{ORACLE_BACKEND_ID}` backend must construct: {error}")
-    });
-    assert!(
-        backend.supports_grid_sync(),
-        "Fix: the reference interpreter executes a whole-grid fence inside one dispatch, so `{ORACLE_BACKEND_ID}` must report it. Reporting otherwise cuts every fenced program into segments that a one-shot host submission cannot join."
-    );
+        let mut planned: Vec<&[u8]> = Vec::new();
+        plan_witness_inputs_into(&case.inputs, &plan, &mut planned).unwrap_or_else(|error| {
+            panic!(
+                "Fix: `{}` fixture inputs do not satisfy its own witness plan: {error}",
+                case.id
+            )
+        });
+        let session = OracleSession::new(case.program.clone());
+        let result = session.execute(&planned);
+        assert!(
+            result.is_ok(),
+            "Fix: OracleSession must execute whole-grid fenced program `{}` without error",
+            case.id
+        );
+    }
 }

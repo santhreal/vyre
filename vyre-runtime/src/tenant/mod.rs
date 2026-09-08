@@ -234,6 +234,16 @@ mod tests {
         assert_eq!(t.published_count(), 2);
         assert_eq!(t.runtime_counters().outstanding_slots, 1);
     }
+    #[test]
+    fn default_tenant_quota_is_finite_and_bounded() {
+        let default_quota = TenantQuota::default();
+        assert!(default_quota.max_outstanding_slots > 0);
+        assert!(default_quota.max_outstanding_slots < u64::MAX);
+        assert!(default_quota.max_staging_bytes > 0);
+        assert!(default_quota.max_staging_bytes < u64::MAX);
+        assert!(default_quota.max_resident_handles > 0);
+        assert!(default_quota.max_resident_handles < u64::MAX);
+    }
 
     #[test]
     fn tenant_resource_quotas_reject_overcommit_and_cleanup_on_unregister() {

@@ -34,11 +34,9 @@ vyre-driver.workspace = true
 vyre-registry-link = { workspace = true, features = [
     "operations",
     "cuda",
-    "reference",
     "spirv",
     "wgpu",
 ] }
-vyre-reference.workspace = true
 vyre-spec.workspace = true
 # `lego-audit` is the release catalog gate. It must link every shipped Tier-3
 # consumer so primitive coverage is measured against the real composition

@@ -501,10 +501,6 @@ fn conform_manifest_disables_registry_link_default_features() {
         feature_strs.contains(&"operations"),
         "vyre-registry-link dependency must enable operations feature in baseline dependencies"
     );
-    assert!(
-        feature_strs.contains(&"reference"),
-        "vyre-registry-link dependency must enable reference feature in baseline dependencies"
-    );
 
     let gpu_feature = manifest
         .get("features")
@@ -602,10 +598,6 @@ fn registry_link_features_enabled_by_conform() -> std::collections::BTreeSet<Str
 #[test]
 fn linked_backend_sources_honor_feature_boundary() {
     let sources = vyre_registry_link::backend::linked_backend_source_names();
-    assert!(
-        sources.contains(&"vyre-driver-reference"),
-        "reference backend is always linked"
-    );
 
     let drivers = registry_link_driver_features();
     let enabled = registry_link_features_enabled_by_conform();
@@ -682,10 +674,10 @@ fn conform_manifest_records_every_driver_feature_decision() {
     );
 }
 
-/// WHY: Operations and reference backend must remain accessible and functional
+/// WHY: Operations and OracleSession must remain accessible and functional
 /// under all feature selections, including `--no-default-features`.
 #[test]
-fn operations_and_reference_available_in_all_configurations() {
+fn operations_and_oracle_available_in_all_configurations() {
     let ops = vyre_registry_link::operation::live_operation_registry();
     assert!(
         ops.iter().len() > 0,
@@ -695,9 +687,9 @@ fn operations_and_reference_available_in_all_configurations() {
     let backends = vyre_registry_link::backend::live_backend_registry()
         .expect("backend registry must initialize in all feature configurations");
     assert!(
-        backends
+        !backends
             .iter()
             .any(|reg| reg.id == "cpu-ref" || reg.reference_oracle),
-        "reference backend (cpu-ref) must be present in live_backend_registry in all configurations"
+        "reference backend (cpu-ref) must not be in live_backend_registry (Row 87: OracleSession is separate)"
     );
 }

@@ -6,8 +6,7 @@
 //! through the `VyreBackend` trait surface, and asserts byte-exact output.
 
 use vyre_driver::DispatchConfig;
-use vyre_driver::VyreBackend;
-use vyre_driver_reference::CpuRefBackend;
+use vyre_driver_reference::CpuRefEvaluator;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::dispatch_fixtures;
@@ -124,8 +123,8 @@ fn missing_input_buffer_is_rejected_rather_than_synthesized() {
             Node::store("out", Expr::u32(0), Expr::var("val")),
         ],
     );
-    let error = CpuRefBackend
-        .dispatch(&program, &[], &DispatchConfig::default())
+    let error = CpuRefEvaluator
+        .evaluate(&program, &[], &DispatchConfig::default())
         .expect_err("a missing reference input must be rejected");
     assert!(
         error
@@ -145,10 +144,10 @@ fn backend_allocated_output_initializer_is_rejected() {
         vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
     );
 
-    let error = CpuRefBackend
-        .dispatch(
+    let error = CpuRefEvaluator
+        .evaluate(
             &program,
-            &[0_u32.to_le_bytes().to_vec()],
+            &[&0_u32.to_le_bytes()[..]],
             &DispatchConfig::default(),
         )
         .expect_err("backend-allocated output initializers must be rejected");
@@ -214,12 +213,12 @@ fn conditional_if_false() {
 }
 
 // ---------------------------------------------------------------
-// Backend trait surface: dispatch_borrowed
+// Evaluator determinism: same program twice = same bytes
 // ---------------------------------------------------------------
 
 #[test]
-fn dispatch_borrowed_matches_owned() {
-    let backend = CpuRefBackend;
+fn evaluators_produce_identical_bytes_on_same_inputs() {
+    let evaluator = CpuRefEvaluator;
     let program = Program::wrapped(
         vec![
             BufferDecl::read("a", 0, DataType::U32),
@@ -233,61 +232,34 @@ fn dispatch_borrowed_matches_owned() {
     );
     let input_bytes = 77u32.to_le_bytes();
 
-    let owned_out = backend
-        .dispatch(
+    let out1 = evaluator
+        .evaluate(
             &program,
-            &[input_bytes.to_vec()],
+            &[&input_bytes[..]],
             &DispatchConfig::default(),
         )
-        .expect("owned dispatch");
-    let borrowed_out = backend
-        .dispatch_borrowed(&program, &[&input_bytes[..]], &DispatchConfig::default())
-        .expect("borrowed dispatch");
+        .expect("eval 1");
+    let out2 = evaluator
+        .evaluate(&program, &[&input_bytes[..]], &DispatchConfig::default())
+        .expect("eval 2");
 
     assert_eq!(
-        owned_out, borrowed_out,
-        "Fix: dispatch and dispatch_borrowed must produce identical bytes."
+        out1, out2,
+        "Fix: evaluate must produce deterministic bytes."
     );
 }
-
-// ---------------------------------------------------------------
-// Backend trait surface: dispatch_borrowed_timed
-// ---------------------------------------------------------------
-
-#[test]
-fn dispatch_borrowed_timed_returns_wall_time() {
-    let backend = CpuRefBackend;
-    let program = Program::wrapped(
-        vec![u32_out_buffer("out", 0)],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
-    );
-    let result = backend
-        .dispatch_borrowed_timed(&program, &[], &DispatchConfig::default())
-        .expect("timed dispatch");
-    assert_eq!(result.outputs, vec![1u32.to_le_bytes().to_vec()]);
-    // wall_ns should be non-zero (program does actual work)
-    // device_ns should be None (CPU backend has no device timer)
-    assert!(result.device_ns.is_none());
-}
-
-// ---------------------------------------------------------------
-// Error paths
-// ---------------------------------------------------------------
 
 #[test]
 fn extra_input_buffers_rejected() {
-    let backend = CpuRefBackend;
-    // Program has exactly 1 non-output ReadWrite buffer  -  it consumes 1 input.
-    // Passing 2 inputs means 1 extra trailing input → rejected.
+    let evaluator = CpuRefEvaluator;
     let program = Program::wrapped(
         vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
     );
-    let result = backend.dispatch(
+    let result = evaluator.evaluate(
         &program,
-        &[vec![0; 4], vec![0; 4]],
+        &[&[0; 4], &[0; 4]],
         &DispatchConfig::default(),
     );
     assert!(
@@ -296,63 +268,14 @@ fn extra_input_buffers_rejected() {
     );
     let err_msg = result.unwrap_err().to_string();
     assert!(
-        err_msg.contains("Fix:"),
-        "Fix: error must carry Fix: hint, got: {err_msg}"
+        err_msg.contains("extra input buffer"),
+        "Fix: error must name extra input buffer, got: {err_msg}"
     );
 }
-
-// ---------------------------------------------------------------
-// Capability queries
-// ---------------------------------------------------------------
-
-/// WHY: this asserted the oracle reported no subgroup support, which was the
-/// opposite of what it executes: `vyre_reference` carries a subgroup simulator
-/// and evaluates workgroup-scoped scratch, and the false report refused 47
-/// conformance witnesses before compilation. A capability query is a promise
-/// the oracle executes the construct, so each one below is pinned to the
-/// figure the interpreter is built with.
-#[test]
-fn capability_queries_state_what_the_interpreter_executes() {
-    let backend = CpuRefBackend;
-    assert_eq!(backend.id(), "cpu-ref");
-    assert_eq!(backend.max_workgroup_size(), [1024, 1, 1]);
-    assert_eq!(backend.max_compute_workgroups_per_dimension(), u32::MAX);
-    assert!(backend.supports_subgroup_ops());
-    assert_eq!(
-        backend.subgroup_size(),
-        Some(
-            u32::try_from(vyre_reference::subgroup::SubgroupSimulator::default().width())
-                .expect("the simulator width must fit a u32")
-        ),
-        "a ballot the oracle returns is comparable to a device answer only when \
-         the reported width is the width the simulator models"
-    );
-    assert_eq!(
-        backend.max_shared_memory_bytes(),
-        vyre_driver_reference::REFERENCE_SHARED_SCRATCH_BYTES
-    );
-    let profile = backend.device_profile();
-    assert!(
-        profile.has_shared_memory,
-        "the neutral profile reads the scratch flag from the budget, so a \
-         reported budget must set it"
-    );
-    assert_eq!(
-        profile.max_shared_memory_bytes,
-        vyre_driver_reference::REFERENCE_SHARED_SCRATCH_BYTES
-    );
-    assert!(!backend.supports_f16());
-    assert!(!backend.supports_tensor_cores());
-    assert!(!backend.supports_async_compute());
-}
-
-// ---------------------------------------------------------------
-// Determinism: same program twice = same bytes
-// ---------------------------------------------------------------
 
 #[test]
 fn determinism_guarantee() {
-    let backend = CpuRefBackend;
+    let evaluator = CpuRefEvaluator;
     let program = Program::wrapped(
         vec![
             BufferDecl::read("a", 0, DataType::U32),
@@ -364,13 +287,13 @@ fn determinism_guarantee() {
             Node::store("out", Expr::u32(0), Expr::var("v")),
         ],
     );
-    let input = 100u32.to_le_bytes().to_vec();
+    let input = 100u32.to_le_bytes();
     let config = DispatchConfig::default();
 
-    let out1 = backend
-        .dispatch(&program, &[input.clone()], &config)
+    let out1 = evaluator
+        .evaluate(&program, &[&input[..]], &config)
         .unwrap();
-    let out2 = backend.dispatch(&program, &[input], &config).unwrap();
+    let out2 = evaluator.evaluate(&program, &[&input[..]], &config).unwrap();
     assert_eq!(
         out1, out2,
         "Fix: cpu-ref must be deterministic  -  identical inputs must produce identical outputs."

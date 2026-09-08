@@ -3390,7 +3390,6 @@ dependencies = [
  "vyre-alloc-probe",
  "vyre-driver",
  "vyre-driver-cuda",
- "vyre-driver-reference",
  "vyre-driver-wgpu",
  "vyre-emit-naga",
  "vyre-emit-ptx",
@@ -3862,7 +3861,6 @@ dependencies = [
  "vyre-driver",
  "vyre-driver-cuda",
  "vyre-driver-metal",
- "vyre-driver-reference",
  "vyre-driver-spirv",
  "vyre-driver-wgpu",
  "vyre-foundation",
@@ -4626,7 +4624,6 @@ dependencies = [
 name = "xtask-evidence"
 version = "0.1.0"
 dependencies = [
- "serde",
  "serde_json",
  "tempfile",
  "toml",
@@ -4655,7 +4652,6 @@ dependencies = [
  "vyre-libs",
  "vyre-megakernel",
  "vyre-primitives",
- "vyre-reference",
  "vyre-registry-link",
  "vyre-spec",
  "walkdir",

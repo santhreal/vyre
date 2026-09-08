@@ -1,15 +1,12 @@
-//! Registry adapter for the reference parity backend and semantic executor.
+//! Reference-only semantic executor and reference target compilation dialect.
 
-mod materializer;
 mod program_dispatch;
 
-pub use program_dispatch::ReferenceSemanticExecutor;
+pub use program_dispatch::{target_profile, ReferenceSemanticExecutor};
 
 use std::sync::Arc;
 
-use vyre_driver::sealed;
-use vyre_driver::{core_supported_ops, BackendError};
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_driver::{BackendError, DispatchConfig};
 use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_reference::value::Value;
 
@@ -34,41 +31,13 @@ pub const REFERENCE_SUBGROUP_WIDTH: u32 = 32;
 /// any shipped target offers, which is 227 KiB of opt-in shared memory on the
 /// widest CUDA part.
 pub const REFERENCE_SHARED_SCRATCH_BYTES: u32 = 256 * 1024;
-
-/// Dispatch backend backed by `vyre_reference::reference_eval`.
+/// Pure evaluation helper backed by `vyre_reference::reference_eval`.
 #[derive(Debug, Default, Clone, Copy)]
-pub struct CpuRefBackend;
+pub struct CpuRefEvaluator;
 
-impl sealed::Sealed for CpuRefBackend {}
-
-impl VyreBackend for CpuRefBackend {
-    fn id(&self) -> &'static str {
-        CPU_REF_BACKEND_ID
-    }
-
-    fn version(&self) -> &'static str {
-        env!("CARGO_PKG_VERSION")
-    }
-
-    /// Both modes are lowered here.
-    ///
-    /// The interpreter rounds every operation separately, so the contracted
-    /// mode is already satisfied. The strict mode additionally replaces each
-    /// approximable f32 operation with its exact expansion, which is the
-    /// program a strict device kernel executes: the oracle has to run the same
-    /// IR for a bit-identity comparison to mean anything.
-    fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
-        matches!(
-            mode,
-            vyre_foundation::fp_parity::FloatLoweringMode::Contracted
-                | vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee
-        )
-    }
-
-    /// A cooperative request selects a launch, not a semantics. The interpreter
-    /// satisfies a whole-grid fence either way, so both requests reach the same
-    /// evaluation.
-    fn dispatch_borrowed(
+impl CpuRefEvaluator {
+    /// Execute a program on input byte buffers using reference semantics.
+    pub fn evaluate(
         &self,
         program: &Program,
         inputs: &[&[u8]],
@@ -76,58 +45,8 @@ impl VyreBackend for CpuRefBackend {
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         interpret(program, inputs, config)
     }
-
-    fn supported_ops(&self) -> &std::collections::HashSet<vyre_foundation::ir::OpId> {
-        core_supported_ops()
-    }
-
-    fn max_workgroup_size(&self) -> [u32; 3] {
-        [1024, 1, 1]
-    }
-
-    fn max_compute_workgroups_per_dimension(&self) -> u32 {
-        u32::MAX
-    }
-
-    /// The interpreter evaluates subgroup expressions through
-    /// [`vyre_reference::subgroup::SubgroupSimulator`], so a program that uses
-    /// them reaches the oracle instead of being refused before compilation.
-    fn supports_subgroup_ops(&self) -> bool {
-        true
-    }
-
-    fn subgroup_size(&self) -> Option<u32> {
-        Some(REFERENCE_SUBGROUP_WIDTH)
-    }
-
-    fn max_shared_memory_bytes(&self) -> u32 {
-        REFERENCE_SHARED_SCRATCH_BYTES
-    }
-
-    /// The interpreter satisfies a whole-grid fence inside one dispatch.
-    ///
-    /// `vyre_reference` flattens every fence-carrying scope, partitions the body
-    /// at each top-level fence, and runs the whole grid through one segment
-    /// before the next over one shared memory. That is what a cooperative launch
-    /// buys on a device, so the oracle has the capability and reports it.
-    ///
-    /// Reporting `false` is not conservative here. It sends a fenced program
-    /// through the launch-boundary cut, which mints a retained carrier the
-    /// segments hand to each other through device-resident storage. A one-shot
-    /// host submission has no resident storage, so the later segment read a
-    /// zeroed carrier and the oracle answered with the wrong bytes.
-    fn supports_grid_sync(&self) -> bool {
-        true
-    }
 }
 
-/// Run one Program through the interpreter under a dispatch configuration.
-///
-/// The dispatch backend and the artifact materializer both reach the oracle
-/// here, so a program submitted as an artifact and the same program dispatched
-/// directly evaluate under one grid rule and one strict-mode expansion. Two
-/// copies of this would let the artifact route and the direct route disagree
-/// about the answer the oracle gives.
 fn interpret(
     program: &Program,
     inputs: &[&[u8]],
@@ -218,30 +137,3 @@ fn reference_values(program: &Program, inputs: &[&[u8]]) -> Result<Vec<Value>, B
     Ok(values)
 }
 
-fn acquire_cpu_ref() -> Result<Box<dyn VyreBackend>, BackendError> {
-    Ok(Box::new(CpuRefBackend))
-}
-
-/// Backend id this crate submits into the backend registry on this target.
-///
-/// WHY: the registration below lives in this crate's object file, and a linker
-/// keeps that object only when a symbol inside it is referenced. Naming the
-/// crate with `use vyre_driver_reference as _;` references nothing, and reading
-/// [`CPU_REF_BACKEND_ID`] is a `const` that inlines at the use site, so neither
-/// keeps the registration. Calling this function does, which is why the backend
-/// registry owner calls it instead of importing the crate for effect.
-#[must_use]
-pub fn registered_backend_id() -> Option<&'static str> {
-    Some(CPU_REF_BACKEND_ID)
-}
-
-vyre_driver::register_backend! {
-    id: CPU_REF_BACKEND_ID,
-    target_id: CPU_REF_TARGET_ID,
-    payload_format: Some(program_dispatch::REFERENCE_TARGET_FORMAT),
-    reference_oracle: true,
-    factory: acquire_cpu_ref,
-    target_compiler: Some(program_dispatch::target_compiler_factory),
-    materializer: Some(materializer::materializer_factory),
-    rank: 900,
-}
