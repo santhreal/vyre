@@ -362,51 +362,12 @@ fn fuse_nodes_with_counts(
                 replacements.flush_all(&mut fused);
                 fused.push(Node::logical_barrier(*ordering));
             }
-            Node::IndirectDispatch {
-                count_buffer,
-                count_offset,
-            } => {
+            Node::IndirectDispatch { .. }
+            | Node::AsyncLoad { .. }
+            | Node::AsyncStore { .. }
+            | Node::AsyncWait { .. } => {
                 replacements.flush_all(&mut fused);
-                fused.push(Node::IndirectDispatch {
-                    count_buffer: count_buffer.clone(),
-                    count_offset: *count_offset,
-                });
-            }
-            Node::AsyncLoad {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => {
-                replacements.flush_all(&mut fused);
-                fused.push(Node::async_load_gpu_driven(
-                    source.clone(),
-                    destination.clone(),
-                    (**offset).clone(),
-                    (**size).clone(),
-                    tag.clone(),
-                ));
-            }
-            Node::AsyncStore {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => {
-                replacements.flush_all(&mut fused);
-                fused.push(Node::async_store(
-                    source.clone(),
-                    destination.clone(),
-                    (**offset).clone(),
-                    (**size).clone(),
-                    tag.clone(),
-                ));
-            }
-            Node::AsyncWait { tag } => {
-                replacements.flush_all(&mut fused);
-                fused.push(Node::async_wait(tag));
+                fused.push(node.clone());
             }
             Node::Trap { .. }
             | Node::Resume { .. }
@@ -574,29 +535,7 @@ fn is_fusable_expr(expr: &Expr) -> bool {
         } => is_pure_expr(cond) && is_pure_expr(true_val) && is_pure_expr(false_val),
         Expr::Cast { value, .. } => is_pure_expr(value),
         Expr::Fma { a, b, c } => is_pure_expr(a) && is_pure_expr(b) && is_pure_expr(c),
-        // Side-effectful or opaque  -  never fusable.
-        Expr::Call { .. }
-        | Expr::Atomic { .. }
-        | Expr::Opaque(_)
-        | Expr::SubgroupBallot { .. }
-        | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupReduce { .. }
-        // Trivial leaves  -  not worth a dedicated let binding.
-        | Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::LogicalIndex { .. }
-        | Expr::LogicalTileId { .. }
-        | Expr::LogicalWithinTileId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => false,
+        _ => false,
     }
 }
 

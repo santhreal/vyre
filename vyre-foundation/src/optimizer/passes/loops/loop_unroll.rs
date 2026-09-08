@@ -131,9 +131,8 @@ fn rewrite_node(node: &Node) -> Cow<'_, [Node]> {
 }
 
 fn rebuild_loop_if_needed(node: &Node, body: Cow<'_, [Node]>) -> Option<Node> {
-    let Node::Loop { var, from, to, .. } = node else {
-        return None;
-    };
+    let loop_ref = super::loop_bounds::match_loop(node)?;
+    let (var, from, to) = (loop_ref.var, loop_ref.from, loop_ref.to);
     match body {
         Cow::Borrowed(_) => None,
         Cow::Owned(body) => Some(Node::loop_for(var, from.clone(), to.clone(), body)),
@@ -141,8 +140,7 @@ fn rebuild_loop_if_needed(node: &Node, body: Cow<'_, [Node]>) -> Option<Node> {
 }
 
 fn unroll_values(from: &Expr, to: &Expr, body: &[Node]) -> Option<Range<u32>> {
-    let from = literal_u32(from)?;
-    let to = literal_u32(to)?;
+    let (from, to) = super::loop_bounds::literal_bounds(from, to)?;
     let trip_count = to.checked_sub(from)?;
     if trip_count == 0 || trip_count > MAX_UNROLL_TRIP_COUNT {
         return None;
@@ -164,14 +162,6 @@ fn unroll_values(from: &Expr, to: &Expr, body: &[Node]) -> Option<Range<u32>> {
         return None;
     }
     Some(from..to)
-}
-
-fn literal_u32(expr: &Expr) -> Option<u32> {
-    match expr {
-        Expr::LitU32(value) => Some(*value),
-        Expr::LitI32(value) => u32::try_from(*value).ok(),
-        _ => None,
-    }
 }
 
 // `body_writes_loop_var` lives in `super::substitution` (one canonical copy

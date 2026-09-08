@@ -78,22 +78,15 @@ impl LoopBoundTighten {
 }
 
 fn tighten_if_eligible(node: &Node) -> Option<Vec<Node>> {
-    let Node::Loop {
-        var,
-        from,
-        to,
-        body,
-    } = node
-    else {
-        return None;
-    };
-    let (upper_lit, predicate_lit, real_body) = match_tighten_pattern(var, from, to, body)?;
+    let loop_ref = super::loop_bounds::match_loop(node)?;
+    let (upper_lit, predicate_lit, real_body) =
+        match_tighten_pattern(loop_ref.var, loop_ref.from, loop_ref.to, loop_ref.body)?;
     if predicate_lit >= upper_lit {
         return None;
     }
     Some(vec![Node::Loop {
-        var: var.clone(),
-        from: from.clone(),
+        var: loop_ref.var.clone(),
+        from: loop_ref.from.clone(),
         to: Expr::u32(predicate_lit),
         body: real_body,
     }])
@@ -144,16 +137,12 @@ fn match_tighten_pattern(
 }
 
 fn is_tighten_eligible(node: &Node) -> bool {
-    let Node::Loop {
-        var,
-        from,
-        to,
-        body,
-    } = node
-    else {
+    let Some(loop_ref) = super::loop_bounds::match_loop(node) else {
         return false;
     };
-    let Some((upper, n, _)) = match_tighten_pattern(var, from, to, body) else {
+    let Some((upper, n, _)) =
+        match_tighten_pattern(loop_ref.var, loop_ref.from, loop_ref.to, loop_ref.body)
+    else {
         return false;
     };
     n < upper

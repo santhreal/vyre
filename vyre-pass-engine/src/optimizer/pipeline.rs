@@ -82,14 +82,9 @@ pub fn gpu_optimize(
     let program = if arena.expr_count == 0 {
         program
     } else {
-        let program = gpu_algebraic_identities_with_canonicals(
-            program,
-            &arena,
-            &canonical,
-            executor,
-            policy,
-        )
-        .map_err(GpuOptimizeError::AlgebraicIdentities)?;
+        let program =
+            gpu_algebraic_identities_with_canonicals(program, &arena, &canonical, executor, policy)
+                .map_err(GpuOptimizeError::AlgebraicIdentities)?;
         let program = apply_cse_let_dedupe(&program, &arena, &canonical);
         apply_cross_scope_cse(&program, &arena, &canonical)
     };

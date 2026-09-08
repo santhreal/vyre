@@ -60,22 +60,15 @@ impl LoopPeelPass {
 
 /// The peeled first iteration followed by the loop over the remaining range.
 fn peel_node(node: &Node) -> Option<Vec<Node>> {
-    let Node::Loop {
-        var,
-        from,
-        to,
-        body,
-    } = node
-    else {
-        return None;
-    };
-    let (peeled_body, rest_body) = try_peel(var, from, to, body)?;
+    let loop_ref = super::loop_bounds::match_loop(node)?;
+    let (peeled_body, rest_body) =
+        try_peel(loop_ref.var, loop_ref.from, loop_ref.to, loop_ref.body)?;
     Some(vec![
         Node::Block(peeled_body),
         Node::Loop {
-            var: var.clone(),
+            var: loop_ref.var.clone(),
             from: Expr::u32(1),
-            to: to.clone(),
+            to: loop_ref.to.clone(),
             body: rest_body,
         },
     ])

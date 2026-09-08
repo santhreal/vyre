@@ -933,3 +933,80 @@ fn graph_wire_dangling_retained_identity_fails_validation() {
         ProgramGraphError::MissingValue(GraphValueId(99))
     );
 }
+
+/// Proves a replacement cannot orphan the predecessor a retained output reads.
+///
+/// `add_node` refuses an output declaring `retained_successor_of` when the prior
+/// value is not among the node's inputs. A replacement swaps the inputs, so the
+/// same invariant has to hold there or the retained chain would break with the
+/// graph reporting success.
+#[test]
+fn a_replacement_that_drops_a_retained_predecessor_is_refused() {
+    let mut graph = stateful_wire_graph();
+    let node = graph.nodes()[0].id;
+    let ports = graph.nodes()[node.0 as usize].output_ports.clone();
+    let retained_prior = ports[0]
+        .retained_successor_of
+        .expect("Fix: the fixture output must declare a retained predecessor");
+
+    let error = graph
+        .replace_node(
+            node,
+            Program::wrapped(
+                vec![BufferDecl::storage(
+                    "cache",
+                    0,
+                    BufferAccess::ReadWrite,
+                    DataType::F32,
+                )],
+                [64, 1, 1],
+                Vec::new(),
+            ),
+            Vec::new(),
+            ports.clone(),
+        )
+        .expect_err("Fix: dropping the retained predecessor must be refused");
+    assert_eq!(
+        error,
+        ProgramGraphError::MissingRetainedInput {
+            output: "cache.1".to_string(),
+            prior: retained_prior,
+        }
+    );
+    assert_eq!(
+        graph.nodes()[node.0 as usize].inputs.len(),
+        1,
+        "the refused replacement must leave the node's inputs in place"
+    );
+
+    // Keeping the predecessor bound is accepted, and the retained chain survives.
+    let inputs = graph.nodes()[node.0 as usize].inputs.clone();
+    graph
+        .replace_node(
+            node,
+            Program::wrapped(
+                vec![BufferDecl::storage(
+                    "cache",
+                    0,
+                    BufferAccess::ReadWrite,
+                    DataType::F32,
+                )],
+                [64, 1, 1],
+                Vec::new(),
+            ),
+            inputs,
+            ports,
+        )
+        .expect("Fix: a replacement keeping the retained predecessor must apply");
+    assert_eq!(
+        graph.nodes()[node.0 as usize].program.workgroup_size(),
+        [64, 1, 1],
+        "the replacement program must be installed"
+    );
+    assert!(
+        graph.values()[retained_prior.0 as usize]
+            .consumers
+            .contains(&node),
+        "the retained predecessor must still record the node as a consumer"
+    );
+}

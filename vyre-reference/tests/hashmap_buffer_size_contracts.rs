@@ -161,11 +161,8 @@ fn an_empty_input_is_an_error() {
 /// long-list refusal states rather than a second sentence describing it.
 #[test]
 fn a_list_one_value_short_is_refused_by_name() {
-    let error = reference_eval(
-        &elementwise_program(4),
-        &[Value::from(vec![0xFFu8; 16])],
-    )
-    .expect_err("a list one Value short must be refused");
+    let error = reference_eval(&elementwise_program(4), &[Value::from(vec![0xFFu8; 16])])
+        .expect_err("a list one Value short must be refused");
     let message = error.to_string();
     assert!(
         message.contains("`b`"),

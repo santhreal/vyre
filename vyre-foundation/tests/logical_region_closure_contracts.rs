@@ -13,8 +13,8 @@ use vyre_foundation::ir::{
     ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_foundation::logical::{
-    LogicalDependenceKind, LogicalExchangeKind, LogicalExtent, LogicalPartitionAxisKind,
-    LogicalProgramGraph, LogicalRegionKind, LOGICAL_ALGORITHM_VERSION,
+    LogicalDependenceKind, LogicalExchangeKind, LogicalPartitionAxisKind, LogicalProgramGraph,
+    LogicalRegionKind,
 };
 
 #[test]
@@ -84,15 +84,7 @@ fn logical_partition_axis_kind_exhaustive_closure() {
 
 #[test]
 fn logical_exchange_kind_exhaustive_closure() {
-    let kinds = [
-        LogicalExchangeKind::AllReduce,
-        LogicalExchangeKind::AllGather,
-        LogicalExchangeKind::ReduceScatter,
-        LogicalExchangeKind::Broadcast,
-        LogicalExchangeKind::PointToPoint,
-    ];
-
-    for kind in kinds {
+    for kind in LogicalExchangeKind::ALL {
         match kind {
             LogicalExchangeKind::AllReduce => {
                 assert!(kind.combines());
@@ -188,13 +180,17 @@ fn logical_stage_validates_parallel_reduction_and_retained_regions() {
             Program::wrapped(
                 vec![
                     BufferDecl::read("mapped", 0, DataType::F32).with_count(64),
-                    BufferDecl::storage("state", 1, BufferAccess::ReadWrite, DataType::F32).with_count(64),
+                    BufferDecl::storage("state", 1, BufferAccess::ReadWrite, DataType::F32)
+                        .with_count(64),
                 ],
                 [64, 1, 1],
                 vec![Node::store(
                     "state",
                     Expr::gid_x(),
-                    Expr::add(Expr::load("state", Expr::gid_x()), Expr::load("mapped", Expr::gid_x())),
+                    Expr::add(
+                        Expr::load("state", Expr::gid_x()),
+                        Expr::load("mapped", Expr::gid_x()),
+                    ),
                 )],
             ),
             vec![
@@ -236,7 +232,10 @@ fn logical_stage_validates_parallel_reduction_and_retained_regions() {
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .expect("logical program graph must validate");
 
-    assert_eq!(logical.version(), LOGICAL_ALGORITHM_VERSION);
     assert_eq!(logical.regions().len(), 2);
+    assert_eq!(logical.regions()[0].kind, LogicalRegionKind::Parallel);
     assert!(logical.regions()[0].partition.replicable);
+    assert_eq!(logical.regions()[1].kind, LogicalRegionKind::RetainedState);
+    assert!(!logical.regions()[1].partition.replicable);
+    assert!(!logical.semantic_wire().is_empty());
 }

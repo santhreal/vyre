@@ -31,20 +31,8 @@ fn lit_int(expr: &Expr) -> Option<()> {
 /// is `NaN` and the rule yields `x` unchanged.
 pub(super) fn is_simple_pure(expr: &Expr) -> bool {
     matches!(
-        expr,
-        Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitF32(_)
-            | Expr::LitBool(_)
-            | Expr::Var(_)
-            | Expr::InvocationId { .. }
-            | Expr::LogicalIndex { .. }
-            | Expr::LogicalTileId { .. }
-            | Expr::LogicalWithinTileId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
+        crate::visit::expr_magnitude(expr),
+        crate::visit::ExprMagnitude::HostFact | crate::visit::ExprMagnitude::Binding(_)
     )
 }
 
@@ -78,19 +66,9 @@ pub(super) fn is_simple_pure(expr: &Expr) -> bool {
 /// soundness-over-reach contract.
 fn is_reflexive_cmp_safe(expr: &Expr) -> bool {
     matches!(
-        expr,
-        Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitBool(_)
-            | Expr::InvocationId { .. }
-            | Expr::LogicalIndex { .. }
-            | Expr::LogicalTileId { .. }
-            | Expr::LogicalWithinTileId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-    )
+        crate::visit::expr_magnitude(expr),
+        crate::visit::ExprMagnitude::HostFact
+    ) && !matches!(expr, Expr::LitF32(_))
 }
 
 /// Algebraic identity simplifications for binary operators.

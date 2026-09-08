@@ -10,6 +10,8 @@ mod legality;
 /// Tighten a `Node::Loop` upper bound when its body is a single
 /// `If(Lt(Var(loop_var), Lit(n)), ...)` with `n < to`.
 pub mod loop_bound_tighten;
+/// Shared loop-bound matching and extraction helpers.
+mod loop_bounds;
 /// Fission a single `Node::Loop` body into two sibling loops sharing
 /// the same iteration space when the body partitions cleanly into
 /// buffer-disjoint, name-flow-isolated halves.

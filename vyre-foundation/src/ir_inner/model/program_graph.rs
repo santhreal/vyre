@@ -132,6 +132,17 @@ pub enum ProgramGraphError {
     /// A port references a value that does not exist.
     #[error("graph value {0:?} does not exist")]
     MissingValue(GraphValueId),
+    /// A replacement or lookup references a node that does not exist.
+    #[error("graph node {0:?} does not exist")]
+    MissingNode(GraphNodeId),
+    /// A replacement stated output ports other than the node's current ones.
+    #[error(
+        "graph node {node:?} cannot be replaced with different output ports; its outputs are graph values other nodes consume by id, so changing them is a delete and an insert"
+    )]
+    InvalidReplacementOutputs {
+        /// Node whose replacement was refused.
+        node: GraphNodeId,
+    },
     /// A Program does not declare the named port buffer.
     #[error("program node `{node}` has no buffer `{buffer}`")]
     MissingBuffer {
@@ -513,6 +524,124 @@ impl ProgramGraph {
             output_ports,
         });
         Ok((node_id, output_ids))
+    }
+
+    /// Swap one node's executable program and input ports, keeping its output
+    /// values.
+    ///
+    /// A node's outputs are graph values other nodes consume by id, so changing
+    /// them is a delete and an insert rather than a replacement. What this
+    /// changes is the body that computes them and the values it reads, which is
+    /// what a recompiled node needs. `output_ports` are required to match the
+    /// node's current ports exactly, so a caller that means to change the
+    /// dataflow shape is refused here instead of leaving consumers pointing at
+    /// values the new program never writes.
+    ///
+    /// Consumer lists are rewired for the inputs that changed: the node is
+    /// dropped from every value it no longer reads and added to every value it
+    /// now reads.
+    pub fn replace_node(
+        &mut self,
+        node_id: GraphNodeId,
+        program: Program,
+        inputs: Vec<GraphInput>,
+        outputs: Vec<GraphOutput>,
+    ) -> Result<(), ProgramGraphError> {
+        let index = node_id.0 as usize;
+        let name = self
+            .nodes
+            .get(index)
+            .ok_or(ProgramGraphError::MissingNode(node_id))?
+            .name
+            .clone();
+
+        if outputs != self.nodes[index].output_ports {
+            return Err(ProgramGraphError::InvalidReplacementOutputs { node: node_id });
+        }
+
+        let mut bound = BTreeSet::new();
+        let mut bound_values = BTreeSet::new();
+        for input in &inputs {
+            if !bound.insert(input.buffer.as_str()) {
+                return Err(ProgramGraphError::DuplicatePort {
+                    node: name,
+                    buffer: input.buffer.clone(),
+                });
+            }
+            if !bound_values.insert(input.value) {
+                return Err(ProgramGraphError::DuplicateValueInput {
+                    node: name,
+                    value: input.value,
+                });
+            }
+            let value = self
+                .values
+                .get(input.value.0 as usize)
+                .ok_or(ProgramGraphError::MissingValue(input.value))?;
+            if value.contract.dtype != input.contract.dtype
+                || value.contract.shape != input.contract.shape
+                || value.contract.lifetime != input.contract.lifetime
+            {
+                return Err(ProgramGraphError::InputContract {
+                    node: name,
+                    buffer: input.buffer.clone(),
+                    value: input.value,
+                    actual: value.contract.clone(),
+                    expected: input.contract.clone(),
+                });
+            }
+            validate_buffer(
+                &name,
+                &program,
+                &input.buffer,
+                &input.contract,
+                PortRole::Input,
+            )?;
+        }
+        for output in &outputs {
+            validate_buffer(
+                &name,
+                &program,
+                &output.buffer,
+                &output.contract,
+                PortRole::Output,
+            )?;
+        }
+        // A retained output reads its predecessor through this node's inputs.
+        // Changing the inputs can drop that predecessor, which `add_node`
+        // refuses at insertion and which must stay refused on replacement.
+        for output in &outputs {
+            if let Some(prior) = output.retained_successor_of {
+                if !inputs.iter().any(|input| input.value == prior) {
+                    return Err(ProgramGraphError::MissingRetainedInput {
+                        output: output.name.clone(),
+                        prior,
+                    });
+                }
+            }
+        }
+
+        // Nothing above this line has mutated the graph, so a refusal leaves the
+        // node exactly as it was.
+        let previous: BTreeSet<GraphValueId> = self.nodes[index]
+            .inputs
+            .iter()
+            .map(|input| input.value)
+            .collect();
+        let next: BTreeSet<GraphValueId> = inputs.iter().map(|input| input.value).collect();
+        for dropped in previous.difference(&next) {
+            self.values[dropped.0 as usize]
+                .consumers
+                .retain(|consumer| *consumer != node_id);
+        }
+        for added in next.difference(&previous) {
+            self.values[added.0 as usize].consumers.push(node_id);
+        }
+
+        let node = &mut self.nodes[index];
+        node.program = program;
+        node.inputs = inputs;
+        Ok(())
     }
 
     /// Nodes in their validated topological execution order.

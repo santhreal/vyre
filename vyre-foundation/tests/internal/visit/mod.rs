@@ -85,10 +85,6 @@ impl ExprVisitor for CountingExprVisitor {
         self.count += 1;
         Continue(())
     }
-    fn visit_sequence(&mut self, _parts: &[Expr]) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
     fn visit_fma(
         &mut self,
         _expr: &Expr,

@@ -121,15 +121,6 @@ pub trait ExprVisitor {
     ) -> ControlFlow<Self::Break> {
         ControlFlow::Continue(())
     }
-    /// Sequence-valued extension hook.
-    ///
-    /// Core IR does not currently emit a dedicated `Expr::Sequence`
-    /// variant, but downstream visitor implementations must still opt in
-    /// explicitly so a sequence node cannot compile behind a silent
-    /// default body.
-    fn visit_sequence(&mut self, _parts: &[Expr]) -> ControlFlow<Self::Break> {
-        ControlFlow::Continue(())
-    }
     /// Fused multiply-add (`a * b + c`).
     fn visit_fma(
         &mut self,

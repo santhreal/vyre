@@ -329,14 +329,7 @@ fn a_mesh_axis_of_extent_zero_is_rejected() {
 
 #[test]
 fn every_exchange_kind_states_whether_the_mesh_carries_it() {
-    let kinds = [
-        LogicalExchangeKind::AllReduce,
-        LogicalExchangeKind::AllGather,
-        LogicalExchangeKind::ReduceScatter,
-        LogicalExchangeKind::Broadcast,
-        LogicalExchangeKind::PointToPoint,
-    ];
-    for kind in kinds {
+    for kind in LogicalExchangeKind::ALL {
         assert!(
             CollectiveSupport::ALL.carries(kind),
             "a mesh that carries every exchange must carry {kind:?}"

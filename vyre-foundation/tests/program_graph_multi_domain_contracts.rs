@@ -6,11 +6,9 @@
 
 #![forbid(unsafe_code)]
 
-use std::collections::BTreeMap;
-
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, GraphValueId, Node, Program,
-    ProgramGraph, ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
+    ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
 };
 
 fn contract(
@@ -82,7 +80,10 @@ fn build_dense_numerical_domain_graph() -> Result<ProgramGraph, ProgramGraphErro
         vec![Node::store(
             "h1",
             Expr::gid_x(),
-            Expr::mul(Expr::load("x", Expr::gid_x()), Expr::load("w1", Expr::gid_x())),
+            Expr::mul(
+                Expr::load("x", Expr::gid_x()),
+                Expr::load("w1", Expr::gid_x()),
+            ),
         )],
     );
     let (_, h1_outs) = graph.add_node(
@@ -134,7 +135,10 @@ fn build_dense_numerical_domain_graph() -> Result<ProgramGraph, ProgramGraphErro
         vec![Node::store(
             "h2",
             Expr::gid_x(),
-            Expr::add(Expr::load("h1", Expr::gid_x()), Expr::load("b1", Expr::gid_x())),
+            Expr::add(
+                Expr::load("h1", Expr::gid_x()),
+                Expr::load("b1", Expr::gid_x()),
+            ),
         )],
     );
     let (_, h2_outs) = graph.add_node(
@@ -186,7 +190,10 @@ fn build_dense_numerical_domain_graph() -> Result<ProgramGraph, ProgramGraphErro
         vec![Node::store(
             "out",
             Expr::gid_x(),
-            Expr::mul(Expr::load("h2", Expr::gid_x()), Expr::load("w2", Expr::gid_x())),
+            Expr::mul(
+                Expr::load("h2", Expr::gid_x()),
+                Expr::load("w2", Expr::gid_x()),
+            ),
         )],
     );
     graph.add_node(
@@ -278,7 +285,8 @@ fn build_graph_csr_domain_graph() -> Result<ProgramGraph, ProgramGraphError> {
         vec![
             BufferDecl::read("row_offsets", 0, DataType::U32).with_count(257),
             BufferDecl::read("col_indices", 1, DataType::U32).with_count(1024),
-            BufferDecl::read("frontier", 2, DataType::U32).with_count(8),
+            BufferDecl::storage("frontier", 2, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(8),
             BufferDecl::output("next_frontier", 3, DataType::U32).with_count(8),
         ],
         [64, 1, 1],
@@ -340,7 +348,8 @@ fn build_graph_csr_domain_graph() -> Result<ProgramGraph, ProgramGraphError> {
     let p_update = Program::wrapped(
         vec![
             BufferDecl::storage("visited", 0, BufferAccess::ReadWrite, DataType::U32).with_count(8),
-            BufferDecl::read("next_frontier", 1, DataType::U32).with_count(8),
+            BufferDecl::storage("next_frontier", 1, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(8),
             BufferDecl::output("active_count", 2, DataType::U32).with_count(1),
         ],
         [64, 1, 1],
@@ -449,7 +458,8 @@ fn build_parser_streaming_domain_graph() -> Result<ProgramGraph, ProgramGraphErr
         vec![
             BufferDecl::read("stream_bytes", 0, DataType::U8),
             BufferDecl::read("dfa_table", 1, DataType::U16).with_count(65536),
-            BufferDecl::storage("lexer_state", 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+            BufferDecl::storage("lexer_state", 2, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(1),
             BufferDecl::output("match_indices", 3, DataType::U32).with_count(1024),
         ],
         [64, 1, 1],
@@ -568,18 +578,36 @@ fn three_unrelated_domains_validate_and_analyze_identically() {
     let parser_graph = build_parser_streaming_domain_graph().expect("parser graph must construct");
 
     // All graphs pass the identical analysis pipeline
-    let dense_analysis = dense_graph.analyze().expect("dense graph analysis must succeed");
-    let csr_analysis = csr_graph.analyze().expect("csr graph analysis must succeed");
-    let parser_analysis = parser_graph.analyze().expect("parser graph analysis must succeed");
+    let dense_analysis = dense_graph
+        .analyze()
+        .expect("dense graph analysis must succeed");
+    let csr_analysis = csr_graph
+        .analyze()
+        .expect("csr graph analysis must succeed");
+    let parser_analysis = parser_graph
+        .analyze()
+        .expect("parser graph analysis must succeed");
 
     assert_eq!(dense_analysis.schedule.len(), 3);
     assert_eq!(csr_analysis.schedule.len(), 2);
     assert_eq!(parser_analysis.schedule.len(), 2);
 
     // Liveness intervals must cover all values
-    assert_eq!(dense_analysis.liveness.len(), dense_graph.values().len());
-    assert_eq!(csr_analysis.liveness.len(), csr_graph.values().len());
-    assert_eq!(parser_analysis.liveness.len(), parser_graph.values().len());
+    assert_eq!(dense_analysis.allocations.len(), dense_graph.values().len());
+    assert_eq!(csr_analysis.allocations.len(), csr_graph.values().len());
+    assert_eq!(
+        parser_analysis.allocations.len(),
+        parser_graph.values().len()
+    );
+    for (idx, alloc) in dense_analysis.allocations.iter().enumerate() {
+        assert_eq!(alloc.value.0 as usize, idx);
+    }
+    for (idx, alloc) in csr_analysis.allocations.iter().enumerate() {
+        assert_eq!(alloc.value.0 as usize, idx);
+    }
+    for (idx, alloc) in parser_analysis.allocations.iter().enumerate() {
+        assert_eq!(alloc.value.0 as usize, idx);
+    }
 }
 
 #[test]
@@ -590,8 +618,11 @@ fn multi_domain_wire_round_trip_is_lossless() {
         ("parser", build_parser_streaming_domain_graph()),
     ] {
         let graph = graph_res.expect("graph must build");
-        let wire = graph.to_wire().unwrap_or_else(|e| panic!("Fix: {name} must encode: {e}"));
-        let decoded = ProgramGraph::from_wire(&wire).unwrap_or_else(|e| panic!("Fix: {name} must decode: {e}"));
+        let wire = graph
+            .to_wire()
+            .unwrap_or_else(|e| panic!("Fix: {name} must encode: {e}"));
+        let decoded = ProgramGraph::from_wire(&wire)
+            .unwrap_or_else(|e| panic!("Fix: {name} must decode: {e}"));
         assert_eq!(
             decoded.to_wire().unwrap(),
             wire,
@@ -630,18 +661,14 @@ fn lifetime_and_shape_enum_exhaustive_closure() {
     }
 
     // Compile-time closure over BufferAccess
-    let accesses = [
-        BufferAccess::ReadOnly,
-        BufferAccess::WriteOnly,
-        BufferAccess::ReadWrite,
-        BufferAccess::Workgroup,
-    ];
-    for access in accesses {
+    for access in BufferAccess::ALL {
         match access {
-            BufferAccess::ReadOnly => assert!(access.is_read()),
-            BufferAccess::WriteOnly => assert!(!access.is_read()),
-            BufferAccess::ReadWrite => assert!(access.is_read() && access.is_write()),
-            BufferAccess::Workgroup => assert!(access.is_read() && access.is_write()),
+            BufferAccess::ReadOnly => assert_eq!(access, BufferAccess::ReadOnly),
+            BufferAccess::WriteOnly => assert_eq!(access, BufferAccess::WriteOnly),
+            BufferAccess::ReadWrite => assert_eq!(access, BufferAccess::ReadWrite),
+            BufferAccess::Uniform => assert_eq!(access, BufferAccess::Uniform),
+            BufferAccess::Workgroup => assert_eq!(access, BufferAccess::Workgroup),
+            _ => panic!("unhandled BufferAccess variant: {access:?}"),
         }
     }
 }

@@ -138,10 +138,7 @@ fn synthetic_fixtures_fail_closed_on_invalid_fields_and_resources() {
     let err_dup = validate_node_fields(
         "test::dialect",
         "conv",
-        &[
-            ("stride".into(), "2".into()),
-            ("stride".into(), "4".into()),
-        ],
+        &[("stride".into(), "2".into()), ("stride".into(), "4".into())],
         &declared_fields,
     )
     .expect_err("duplicate field must fail");
@@ -192,13 +189,8 @@ fn synthetic_fixtures_fail_closed_on_invalid_fields_and_resources() {
     )
     .is_ok());
 
-    let err_res = validate_node_resources(
-        "test::dialect",
-        "conv",
-        &["input".into()],
-        &abi,
-    )
-    .expect_err("incomplete resources must fail");
+    let err_res = validate_node_resources("test::dialect", "conv", &["input".into()], &abi)
+        .expect_err("incomplete resources must fail");
     assert!(matches!(
         err_res,
         SchemaTranslationError::IncompleteResourceRoster { .. }

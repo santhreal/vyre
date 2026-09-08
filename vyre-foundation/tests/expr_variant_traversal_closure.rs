@@ -63,9 +63,18 @@ fn expr_magnitude_classifies_every_declared_variant() {
     for sample in expr_variant_samples() {
         let mag = expr_magnitude(&sample.expr);
         match sample.variant {
-            "LitU32" | "LitI32" | "LitF32" | "LitBool" | "InvocationId" | "LogicalIndex"
-            | "LogicalTileId" | "LogicalWithinTileId" | "WorkgroupId" | "LocalId"
-            | "SubgroupLocalId" | "SubgroupSize" => {
+            "LitU32"
+            | "LitI32"
+            | "LitF32"
+            | "LitBool"
+            | "InvocationId"
+            | "LogicalIndex"
+            | "LogicalTileId"
+            | "LogicalWithinTileId"
+            | "WorkgroupId"
+            | "LocalId"
+            | "SubgroupLocalId"
+            | "SubgroupSize" => {
                 assert!(
                     matches!(mag, ExprMagnitude::HostFact),
                     "{}: expected HostFact, got {mag:?}",
@@ -198,7 +207,9 @@ fn subexpr_walks_reach_every_child_operand_slot() {
     let operand_samples = expr_operand_slot_samples(&marker);
     for sample in &operand_samples {
         let mut found_any = false;
-        any_subexpr(&sample.expr, &mut |e| {
+        // The return value is the contract: the flag proves the closure ran,
+        // the bool proves the walk reports the hit to its caller.
+        let reported = any_subexpr(&sample.expr, &mut |e| {
             if *e == marker {
                 found_any = true;
                 true
@@ -209,6 +220,11 @@ fn subexpr_walks_reach_every_child_operand_slot() {
         assert!(
             found_any,
             "{}: any_subexpr must reach the planted operand marker",
+            sample.label()
+        );
+        assert!(
+            reported,
+            "{}: any_subexpr reached the marker but reported no match",
             sample.label()
         );
 

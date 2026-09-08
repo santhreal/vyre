@@ -33,10 +33,10 @@ pub(crate) mod program;
 pub(crate) mod program_graph;
 /// Whole-composition validation, liveness, and allocation analysis.
 pub(crate) mod program_graph_analysis;
+pub(crate) mod program_graph_delta;
 /// Versioned content identity for connected Program compositions.
 pub(crate) mod program_graph_identity;
 mod program_graph_wire;
-pub(crate) mod program_graph_delta;
 
 /// The frozen IR vocabulary re-exported from `vyre-spec`.
 pub(crate) mod op_signature;
