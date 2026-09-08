@@ -20,19 +20,17 @@ pub struct TenantQuota {
     pub max_resident_handles: u64,
 }
 
-impl TenantQuota {
-    /// Unbounded tenant quota for compatibility with the legacy registration
-    /// API. Individual fields are still normalized to at least one resource
-    /// slot during registration.
-    #[must_use]
-    pub const fn unbounded() -> Self {
+impl Default for TenantQuota {
+    fn default() -> Self {
         Self {
-            max_outstanding_slots: u64::MAX,
-            max_staging_bytes: u64::MAX,
-            max_resident_handles: u64::MAX,
+            max_outstanding_slots: 65_536,
+            max_staging_bytes: 1024 * 1024 * 1024,
+            max_resident_handles: 16_384,
         }
     }
+}
 
+impl TenantQuota {
     /// Build a bounded tenant quota.
     #[must_use]
     pub const fn bounded(

@@ -72,7 +72,7 @@ impl TenantRegistry {
             label,
             TenantQuota {
                 max_outstanding_slots,
-                ..TenantQuota::unbounded()
+                ..TenantQuota::default()
             },
         )
     }

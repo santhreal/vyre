@@ -38,6 +38,7 @@ impl core::default::Default for vyre_runtime::resident_work_queue::planner::Resi
 impl core::default::Default for vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy
 impl core::default::Default for vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy
 impl core::default::Default for vyre_runtime::safetensors_transfer::DeviceTransferCapabilities
+impl core::default::Default for vyre_runtime::tenant::TenantQuota
 impl core::default::Default for vyre_runtime::tenant::TenantRegistry
 impl core::error::Error for vyre_runtime::pipeline_cache::PipelineCacheMetricError
 impl core::fmt::Debug for vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler
@@ -258,7 +259,6 @@ pub const fn vyre_runtime::resident_work_queue::workspace_layout::first_workspac
 pub const fn vyre_runtime::resident_work_queue::workspace_layout::workspace_record_words(record_words: u32, capacity_records: u32) -> core::option::Option<u32>
 pub const fn vyre_runtime::resource_residency::ArtifactInstanceBinding::byte_len(&self) -> u64
 pub const fn vyre_runtime::tenant::TenantQuota::bounded(max_outstanding_slots: u64, max_staging_bytes: u64, max_resident_handles: u64) -> Self
-pub const fn vyre_runtime::tenant::TenantQuota::unbounded() -> Self
 pub const fn vyre_runtime::tenant::TenantSelectionScratch::new() -> Self
 pub const vyre_runtime::CounterArithmetic::ALL: [Self; 2]
 pub const vyre_runtime::RequestFault::ALL: [Self; 3]
@@ -999,6 +999,7 @@ pub fn vyre_runtime::tenant::TenantHandle::release_staging_bytes(&self, byte_cou
 pub fn vyre_runtime::tenant::TenantHandle::reserve_resident_handles(&self, handle_count: u64) -> core::result::Result<(), vyre_runtime::tenant::TenantError>
 pub fn vyre_runtime::tenant::TenantHandle::reserve_staging_bytes(&self, byte_count: u64) -> core::result::Result<(), vyre_runtime::tenant::TenantError>
 pub fn vyre_runtime::tenant::TenantHandle::runtime_counters(&self) -> vyre_runtime::tenant::TenantRuntimeCounters
+pub fn vyre_runtime::tenant::TenantQuota::default() -> Self
 pub fn vyre_runtime::tenant::TenantRegistry::active_tenants(&self) -> alloc::vec::Vec<vyre_runtime::tenant::TenantHandle>
 pub fn vyre_runtime::tenant::TenantRegistry::active_tenants_into(&self, out: &mut alloc::vec::Vec<vyre_runtime::tenant::TenantHandle>)
 pub fn vyre_runtime::tenant::TenantRegistry::default() -> Self
