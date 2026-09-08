@@ -2,8 +2,17 @@
 
 use crate::fixture_target;
 
-use vyre_aot::{compile, emit_launcher_rust, CompileError, LauncherError, LauncherOpts, TargetId};
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use std::collections::BTreeMap;
+
+use vyre_aot::{
+    compile, compile_request, emit_launcher_rust, CompileError, LauncherError, LauncherOpts,
+    TargetId, ValidatedCompileRequest,
+};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
+use vyre_megakernel::{
+    CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
+    SearchBudget,
+};
 use vyre_test_support::pass_programs::workgroup_scratch_program;
 
 fn trivial_xor_program() -> Program {
@@ -85,5 +94,44 @@ fn the_neutral_stage_admits_workgroup_scratch_before_any_target_is_resolved() {
     assert!(
         matches!(&error, CompileError::TargetNotEnabled(id) if id == &target),
         "Fix: the neutral artifact must be built before the target is resolved, got {error:?}."
+    );
+}
+
+fn validated_xor_request() -> ValidatedCompileRequest {
+    let p = trivial_xor_program();
+    let graph = ProgramGraph::from_program("main", p).expect("program to graph");
+    CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
+        CompileObjective::minimize_latency()
+            .with_bound(ObjectiveMetric::ArtifactBytes, 64 * 1024 * 1024),
+    )
+    .validate()
+    .expect("validated request")
+}
+
+#[test]
+fn compile_request_produces_artifact_envelope_with_linked_target() {
+    let request = validated_xor_request();
+    let envelope = compile_request(&request, fixture_target::fixture_target())
+        .expect("compile_request must produce envelope with linked target");
+    assert_eq!(envelope.target_payloads().len(), 1);
+    assert_eq!(
+        envelope.target_payloads()[0].neutral_artifact(),
+        envelope.neutral().digest()
+    );
+}
+
+#[test]
+fn compile_request_fails_with_unlinked_target() {
+    let request = validated_xor_request();
+    let target = TargetId::expect_valid("unlinked-fixture-target");
+    let err = compile_request(&request, target.clone())
+        .expect_err("unlinked target compiler must fail");
+    assert!(
+        matches!(&err, CompileError::TargetNotEnabled(id) if id == &target),
+        "Fix: missing target compiler must report target-not-enabled, got {err:?}."
     );
 }

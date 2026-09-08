@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:a08d4b239de91dd83947eee6147624ce72a1aa3c:dirty=true:worktree=b9d56968ed4ba1f8080655b0796c053101b1e480a736d9f44c0efc89adaa0cb3",
+  "source_fingerprint": "git:585fbeae622524cd57d1c874cfcc1afcd8cfd148:dirty=false",
   "schema_version": 4,
   "backend_id": "wgpu",
   "command": "cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all",
@@ -6659,7 +6659,7 @@
     }
   ],
   "blockers": [
-    "`cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all` exited with exit status: 1; stderr: Finished `release` profile [optimized] target(s) in 0.44s\n     Running `/var/santh-cargo-target/release/vyre-conform dispatch --backend wgpu --ops all`",
+    "`cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all` exited with exit status: 1; stderr: Finished `release` profile [optimized] target(s) in 0.93s\n     Running `/var/santh-cargo-target/release/vyre-conform dispatch --backend wgpu --ops all`",
     "wgpu conformance reported 340 failed pair(s)"
   ]
 }

@@ -66,6 +66,11 @@ enum Reported {
     ResidentBelowPlan,
     /// It holds exactly the bytes the plan requires.
     ResidentAtPlan,
+    /// It holds one byte less than the plan requires until the artifact has
+    /// launched, then exactly what the plan requires. This is what a real
+    /// allocator answers: before anything binds the plan it reports whatever
+    /// the previous artifact left behind.
+    ResidentBelowPlanUntilLaunched,
 }
 
 /// Local-memory bytes per invocation the fixture reports for a spilling plan.
@@ -279,6 +284,22 @@ impl FinalistEvaluator for LadderEvaluator {
                 resident_device_bytes: artifact.allocation().aggregate_peak_bytes,
                 ..EmittedResources::default()
             },
+            Reported::ResidentBelowPlanUntilLaunched => {
+                let launched = !self
+                    .measured
+                    .lock()
+                    .expect("fixture state is not poisoned")
+                    .is_empty();
+                let planned = artifact.allocation().aggregate_peak_bytes;
+                EmittedResources {
+                    resident_device_bytes: if launched {
+                        planned
+                    } else {
+                        planned.saturating_sub(1)
+                    },
+                    ..EmittedResources::default()
+                }
+            }
             Reported::SpillOnRankedFirst | Reported::OverCeilingOnRankedFirst => {
                 EmittedResources::default()
             }
@@ -807,6 +828,28 @@ fn a_device_holding_fewer_bytes_than_the_plan_requires_refuses_the_compile() {
         figures[0] + 1,
         figures[1],
         "the refused pair must be the pair the device reported: {error}"
+    );
+}
+
+/// WHY: the plan's bytes are on the device while the artifact runs and not
+/// before, so the figure has to be read after the first launch. Reading it at
+/// emission asked a backend what it held before anything bound the plan, and
+/// what it answered was the previous artifact's residue: a measured sweep
+/// refused 289 of 349 operations that way. This fixture reports below the plan
+/// until it has launched, which is what a real allocator does, and it must
+/// compile.
+#[test]
+fn a_resident_figure_below_the_plan_before_the_first_launch_still_compiles() {
+    let evaluator = LadderEvaluator::reporting(Reported::ResidentBelowPlanUntilLaunched);
+    let artifact = measured_compile(priced_device(), budget(LAUNCHES), &evaluator)
+        .expect("a figure read before the first launch describes no plan and refuses nothing");
+    assert!(
+        artifact.allocation().aggregate_peak_bytes > 0,
+        "the fixture plan must require bytes for the reconciliation to have a subject"
+    );
+    assert!(
+        !evaluator.measured().is_empty(),
+        "the finalist must have launched for the reconciled figure to describe it"
     );
 }
 

@@ -68,9 +68,14 @@ fn trip_inputs(trip: u32) -> Vec<Value> {
 #[test]
 fn a_data_derived_trip_count_is_refused_by_name() {
     let program = data_derived_trip_count();
+    let start = std::time::Instant::now();
     let error = reference_eval_with_step_ceiling(&program, &trip_inputs(u32::MAX), 4_096)
         .expect_err("Fix: a trip count no declared extent bounds must reach the work ceiling");
-
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(2),
+        "Fix: the interpreter must refuse an unbounded trip count promptly; elapsed {:?}",
+        start.elapsed()
+    );
     let source = error.step_ceiling_source().expect(
         "Fix: a work-ceiling refusal must carry the ceiling it exceeded, not only a message",
     );
@@ -236,5 +241,78 @@ fn a_declared_extent_inside_a_data_derived_loop_declares_nothing() {
             .expect("Fix: a work-ceiling refusal carries its source")
             .ceiling,
         2_048
+    );
+}
+#[test]
+fn a_single_invocation_with_an_unbounded_inner_loop_is_refused_by_the_statement_driver() {
+    let program = data_derived_trip_count();
+    assert_eq!(program.workgroup_size(), [1, 1, 1]);
+    let start = std::time::Instant::now();
+    let error = reference_eval_with_step_ceiling(&program, &trip_inputs(u32::MAX), 512)
+        .expect_err("Fix: a single invocation with an unbounded inner loop must be refused by the statement driver");
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(2),
+        "Fix: statement driver step ceiling must terminate promptly; elapsed {:?}",
+        start.elapsed()
+    );
+    let source = error
+        .step_ceiling_source()
+        .expect("Fix: refusal carries step ceiling source");
+    assert_eq!(source.ceiling, 512);
+}
+
+#[test]
+fn an_unbounded_invocation_loop_is_refused_by_the_invocation_driver() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("trip", 0, DataType::U32).with_count(1),
+            BufferDecl::output("out", 1, DataType::U32).with_count(100),
+        ],
+        [1, 1, 1],
+        vec![Node::loop_(
+            "i",
+            Expr::u32(0),
+            Expr::load("trip", Expr::u32(0)),
+            vec![Node::store("out", Expr::gid_x(), Expr::u32(1))],
+        )],
+    );
+    let start = std::time::Instant::now();
+    let error = reference_eval_with_step_ceiling(&program, &trip_inputs(1), 10)
+        .expect_err("Fix: multi-invocation program exceeding step ceiling must be refused");
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(2),
+        "Fix: invocation driver ceiling must terminate promptly; elapsed {:?}",
+        start.elapsed()
+    );
+    let source = error
+        .step_ceiling_source()
+        .expect("Fix: refusal carries step ceiling source");
+    assert_eq!(source.ceiling, 10);
+}
+
+#[test]
+fn the_heaviest_legitimate_corpus_work_completes_under_the_ceiling_with_margin() {
+    assert!(
+        vyre_reference::step_budget::MEASURED_HEAVIEST_CORPUS_STEPS > 0,
+        "Fix: measured heaviest corpus steps must be non-zero"
+    );
+    assert_eq!(
+        vyre_reference::step_budget::MAX_REFERENCE_STEPS,
+        vyre_reference::step_budget::MEASURED_HEAVIEST_CORPUS_STEPS
+            * vyre_reference::step_budget::STEP_CEILING_HEADROOM,
+        "Fix: step ceiling must maintain the measured headroom multiple"
+    );
+    assert!(
+        vyre_reference::step_budget::STEP_CEILING_HEADROOM >= 16,
+        "Fix: headroom multiple must be generous enough to admit legitimate workloads with margin"
+    );
+    let trips = 10_000u32;
+    let program = declared_trip_count(trips);
+    let (outputs, steps) = reference_eval_step_count(&program, &[])
+        .expect("Fix: legitimate program must complete under shipped ceiling");
+    assert_eq!(outputs[0].to_bytes(), (trips - 1).to_le_bytes().to_vec());
+    assert!(
+        steps < MAX_REFERENCE_STEPS,
+        "Fix: legitimate workload must complete under ceiling with margin, charged {steps} against ceiling {MAX_REFERENCE_STEPS}"
     );
 }

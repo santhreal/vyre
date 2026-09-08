@@ -224,6 +224,11 @@ pub mod gap_transcendentals_parity;
 #[path = "host_input_contracts.rs"]
 pub mod host_input_contracts;
 
+/// Integration tests from `tests/input_abi_contracts.rs`.
+#[cfg(feature = "device-tests")]
+#[path = "input_abi_contracts.rs"]
+pub mod input_abi_contracts;
+
 /// Integration tests from `tests/hit_buffer.rs`.
 #[cfg(feature = "device-tests")]
 #[allow(deprecated)]
@@ -245,6 +250,11 @@ pub mod limits_from_adapter_device;
 #[allow(clippy::assertions_on_constants)]
 #[path = "live_capability_honesty.rs"]
 pub mod live_capability_honesty;
+
+/// Integration tests from `tests/loader_instance_reuse.rs`.
+#[cfg(feature = "device-tests")]
+#[path = "loader_instance_reuse.rs"]
+pub mod loader_instance_reuse;
 
 /// Integration tests from `tests/loop_carrier_three_level_if_real_dispatch.rs`.
 #[cfg(feature = "device-tests")]

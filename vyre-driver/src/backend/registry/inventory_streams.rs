@@ -232,7 +232,7 @@ macro_rules! register_backend {
         materializer: $materializer:expr,
         rank: $rank:expr $(,)?
     ) => {
-        ::inventory::submit! {
+        $crate::inventory::submit! {
             $crate::BackendRegistration {
                 id: $id,
                 target_id: $target_id,
@@ -246,14 +246,14 @@ macro_rules! register_backend {
             }
         }
 
-        ::inventory::submit! {
+        $crate::inventory::submit! {
             $crate::BackendPrecedence {
                 id: $id,
                 rank: $rank,
             }
         }
 
-        ::inventory::submit! {
+        $crate::inventory::submit! {
             $crate::BackendCapability {
                 id: $id,
                 dispatches: true,

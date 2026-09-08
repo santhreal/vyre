@@ -16,9 +16,11 @@ fn poisoned_bind_group_cache_lock_recovers_without_aborting_dispatch_path() {
     .join();
 
     std::panic::catch_unwind(|| {
-        let _ = cache.stats();
+        let inner = cache.lock_cache();
+        assert!(inner.entries.is_empty(), "recovered cache entries must be empty after poison");
+        assert!(inner.lru.is_empty(), "recovered cache LRU must be empty after poison");
     })
-    .expect("Fix: poisoned bind-group cache must recover so GPU dispatch does not abort");
+    .expect("Fix: poisoned bind-group cache must recover cleanly so GPU dispatch does not abort");
 }
 
 #[cfg(feature = "device-tests")]

@@ -174,7 +174,7 @@ pub mod saturating_binops_contract;
 #[path = "single_rank_collective_reference.rs"]
 pub mod single_rank_collective_reference;
 
-/// Integration tests from `tests/step_ceiling_contract.rs`.
+/// Integration tests from `tests/step_ceiling_contract.rs` (work ceiling contract).
 #[path = "step_ceiling_contract.rs"]
 pub mod step_ceiling_contract;
 

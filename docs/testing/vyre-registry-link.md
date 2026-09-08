@@ -24,7 +24,7 @@ The crate lives at `vyre-registry-link`. The `registry-link` owner maintains its
 ## Feature sets
 
 - Default feature members: `operations`, `cuda`, `metal`, `reference`, `spirv`, `wgpu`
-- Available manifest features: `cuda`, `default`, `metal`, `operations`, `reference`, `spirv`, `wgpu`
+- Available manifest features: `cuda`, `default`, `device-tests`, `metal`, `operations`, `reference`, `spirv`, `wgpu`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
@@ -33,6 +33,7 @@ The crate lives at `vyre-registry-link`. The `registry-link` owner maintains its
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_registry_link` | `vyre-registry-link/src/lib.rs` | None | `./cargo_full test -p vyre-registry-link` |
 | `test` | `all_tests` | `vyre-registry-link/tests/all_tests.rs` | None | `./cargo_full test -p vyre-registry-link --test all_tests` |
+| `test` | `all_tests_device` | `vyre-registry-link/tests/all_tests_device.rs` | `device-tests` | `./cargo_full test -p vyre-registry-link --test all_tests_device` |
 | `test` | `all_tests_operations` | `vyre-registry-link/tests/all_tests_operations.rs` | `operations` | `./cargo_full test -p vyre-registry-link --test all_tests_operations` |
 
 ## Test classes

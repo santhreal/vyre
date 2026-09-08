@@ -155,7 +155,7 @@ fn generation_based_supersession_replaces_stale_frames() {
         .expect_err("Fix: submitting superseded frame must fail");
     assert!(matches!(
         submit_err,
-        vyre_driver::BackendError::ExecutionAborted { .. }
+        vyre_driver::BackendError::DispatchFailed { .. }
     ));
 
     // Frame 2 proceeds normally

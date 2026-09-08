@@ -176,7 +176,6 @@ fn typed_resource_ingestion_validates_abi_and_workspace_bindings() {
     let mut envelope = ArtifactEnvelope::new(artifact.clone());
     envelope.attach_target_payload(payload).expect("payload");
     let materializer = SessionFixtureMaterializer::new("ingest-backend", "ingest-device", FORMAT);
-
     let session = ArtifactSession::from_envelope_with_materializer(
         &INGEST_REGISTRATION,
         envelope,

@@ -405,13 +405,13 @@ impl InteractiveSessionStateMachine {
                 record.state = InteractiveSessionState::Prepared;
                 Ok(())
             }
-            InteractiveSessionState::Superseded => Err(BackendError::ExecutionAborted {
-                stage: "prepare",
-                reason: "request was superseded by a newer frame generation".into(),
+            InteractiveSessionState::Superseded => Err(BackendError::DispatchFailed {
+                code: None,
+                message: format!("Fix: request {request_id:?} was superseded by a newer frame generation during prepare."),
             }),
-            InteractiveSessionState::Cancelled => Err(BackendError::ExecutionAborted {
-                stage: "prepare",
-                reason: "request was cancelled".into(),
+            InteractiveSessionState::Cancelled => Err(BackendError::DispatchFailed {
+                code: None,
+                message: format!("Fix: request {request_id:?} was cancelled during prepare."),
             }),
             other => Err(BackendError::InvalidProgram {
                 fix: format!("Fix: cannot prepare request in state {other:?}."),
@@ -437,13 +437,13 @@ impl InteractiveSessionStateMachine {
                 queue.retain(|id| id != &request_id);
                 Ok(())
             }
-            InteractiveSessionState::Superseded => Err(BackendError::ExecutionAborted {
-                stage: "submit",
-                reason: "request was superseded before submission".into(),
+            InteractiveSessionState::Superseded => Err(BackendError::DispatchFailed {
+                code: None,
+                message: format!("Fix: request {request_id:?} was superseded before submission."),
             }),
-            InteractiveSessionState::Cancelled => Err(BackendError::ExecutionAborted {
-                stage: "submit",
-                reason: "request was cancelled before submission".into(),
+            InteractiveSessionState::Cancelled => Err(BackendError::DispatchFailed {
+                code: None,
+                message: format!("Fix: request {request_id:?} was cancelled before submission."),
             }),
             other => Err(BackendError::InvalidProgram {
                 fix: format!("Fix: cannot submit request in state {other:?}."),
