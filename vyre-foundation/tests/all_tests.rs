@@ -774,3 +774,10 @@ pub mod wire_version_mismatch;
 #[path = "workspace_naming_footguns.rs"]
 pub mod workspace_naming_footguns;
 
+/// Integration tests from `tests/declarative_schema_registry_contracts.rs`.
+#[path = "declarative_schema_registry_contracts.rs"]
+pub mod declarative_schema_registry_contracts;
+
+/// Integration tests from `tests/typed_configuration_schema_contracts.rs`.
+#[path = "typed_configuration_schema_contracts.rs"]
+pub mod typed_configuration_schema_contracts;

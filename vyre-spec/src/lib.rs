@@ -7,6 +7,8 @@
 //! for conformance proofs. Example: a conformance runner can read an
 //! [`OpSignature`] and verify the byte width expected by a backend primitive.
 
+extern crate alloc;
+
 /// Adversarial input descriptors  -  hostile payloads every op must reject or handle.
 /// Specification element.
 mod adversarial_input;
@@ -46,6 +48,8 @@ pub mod c11_token;
 mod catalog_is_complete;
 mod catalog_slices;
 /// Category enum (A/B/C) + backend-availability predicates.
+/// Compatibility and rollout matrix contracts.
+pub mod compatibility;
 /// Specification element.
 mod category;
 /// Collective communication operators and communicator handles.
@@ -88,6 +92,8 @@ mod invariant;
 /// Specification element.
 mod invariant_category;
 /// Catalog of invariants every registered op is checked against.
+/// Declarative schema registry for all persisted and wire formats.
+pub mod schema_registry;
 /// Specification element.
 mod invariants;
 /// Compiler level a declaration owns.
@@ -296,3 +302,11 @@ pub use verification::Verification;
 mod intrinsic_descriptor;
 /// See [`intrinsic_descriptor::IntrinsicDescriptor`] and its identifying types.
 pub use intrinsic_descriptor::{Backend, BackendId, CpuFn, IntrinsicDescriptor};
+pub use compatibility::{
+    CompatibilityCell, CompatibilityDisposition, CompatibilityMatrix, NegotiatedContract,
+    NegotiationError, ProtocolDomain, ProtocolVersion, CANONICAL_COMPATIBILITY_CELLS,
+};
+pub use schema_registry::{
+    CanonicalField, DefaultsPolicy, FieldType, SchemaBounds, SchemaDefinition, SchemaId,
+    SchemaRegistry, CANONICAL_SCHEMA_REGISTRY,
+};

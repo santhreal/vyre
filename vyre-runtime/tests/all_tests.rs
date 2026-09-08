@@ -272,3 +272,10 @@ pub mod uring_ingest_telemetry_invariants;
 #[cfg(target_os = "linux")]
 #[path = "uring_smoke.rs"]
 pub mod uring_smoke;
+/// Integration tests from `tests/failure_domains_and_recovery_contracts.rs`.
+#[path = "failure_domains_and_recovery_contracts.rs"]
+pub mod failure_domains_and_recovery_contracts;
+
+/// Integration tests from `tests/rolling_upgrade_compatibility_contracts.rs`.
+#[path = "rolling_upgrade_compatibility_contracts.rs"]
+pub mod rolling_upgrade_compatibility_contracts;

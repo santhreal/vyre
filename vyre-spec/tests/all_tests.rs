@@ -192,3 +192,6 @@ pub mod token_ids_have_one_owner;
 /// Integration tests from `tests/wire_tag_surface.rs`.
 #[path = "wire_tag_surface.rs"]
 pub mod wire_tag_surface;
+/// Integration tests from `tests/protocol_compatibility_matrix.rs`.
+#[path = "protocol_compatibility_matrix.rs"]
+pub mod protocol_compatibility_matrix;

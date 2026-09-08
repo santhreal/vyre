@@ -1,0 +1,407 @@
+//! Declarative schema registry for all persisted, transmitted, cached, signed, and evidence records.
+//!
+//! WHY: closes the class "schema authority is fragmented and version constants drift".
+//! Every persisted record, wire frame, proof certificate, and cache entry declares
+//! fixed-width types, canonical field numbers, bounds, identity fields, and signature domain separators
+//! in one central declarative registry.
+
+
+use core::fmt;
+
+use crate::compatibility::ProtocolVersion;
+
+/// Globally unique schema identifier for every persisted, signed, cached, and transmitted record.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[non_exhaustive]
+#[repr(u32)]
+pub enum SchemaId {
+    /// Conformance test execution certificate.
+    ConformanceCertificate = 1,
+    /// Megakernel compiled artifact payload.
+    ArtifactPayload = 2,
+    /// Selected schedule and transform record.
+    ScheduleRecord = 3,
+    /// Proof and verification receipt.
+    ProofReceipt = 4,
+    /// Hardware performance measurement record.
+    MeasurementRecord = 5,
+    /// Causal execution trace event.
+    TraceEvent = 6,
+    /// Intermediate compilation and lowering cache entry.
+    CacheEntry = 7,
+    /// Canonical runtime and compiler configuration receipt.
+    ConfigReceipt = 8,
+    /// Serialized operation wire metadata.
+    WireOpMetadata = 9,
+    /// Engine invariant digest and verification descriptor.
+    InvariantDigest = 10,
+    /// Cross-engine structural analysis fact record.
+    AnalysisFact = 11,
+    /// Dialect extension schema declaration.
+    ExtensionSchema = 12,
+}
+
+impl SchemaId {
+    /// All schema identifiers in the registry.
+    pub const ALL: &'static [Self] = &[
+        Self::ConformanceCertificate,
+        Self::ArtifactPayload,
+        Self::ScheduleRecord,
+        Self::ProofReceipt,
+        Self::MeasurementRecord,
+        Self::TraceEvent,
+        Self::CacheEntry,
+        Self::ConfigReceipt,
+        Self::WireOpMetadata,
+        Self::InvariantDigest,
+        Self::AnalysisFact,
+        Self::ExtensionSchema,
+    ];
+
+    /// Canonical string identifier for this schema.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::ConformanceCertificate => "conformance_certificate",
+            Self::ArtifactPayload => "artifact_payload",
+            Self::ScheduleRecord => "schedule_record",
+            Self::ProofReceipt => "proof_receipt",
+            Self::MeasurementRecord => "measurement_record",
+            Self::TraceEvent => "trace_event",
+            Self::CacheEntry => "cache_entry",
+            Self::ConfigReceipt => "config_receipt",
+            Self::WireOpMetadata => "wire_op_metadata",
+            Self::InvariantDigest => "invariant_digest",
+            Self::AnalysisFact => "analysis_fact",
+            Self::ExtensionSchema => "extension_schema",
+        }
+    }
+}
+
+impl fmt::Display for SchemaId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+/// Primitive and composite field types in canonical schemas.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum FieldType {
+    /// Unsigned 8-bit integer.
+    U8,
+    /// Unsigned 16-bit integer (little-endian).
+    U16,
+    /// Unsigned 32-bit integer (little-endian).
+    U32,
+    /// Unsigned 64-bit integer (little-endian).
+    U64,
+    /// Signed 32-bit integer (little-endian).
+    I32,
+    /// Signed 64-bit integer (little-endian).
+    I64,
+    /// IEEE-754 32-bit float.
+    F32,
+    /// IEEE-754 64-bit float.
+    F64,
+    /// Boolean (encoded as 0 or 1 single byte).
+    Bool,
+    /// Fixed-length byte array of N bytes.
+    FixedBytes(usize),
+    /// Length-prefixed variable byte slice.
+    VarBytes,
+    /// UTF-8 encoded string.
+    Utf8String,
+    /// Repeated element list with max bound.
+    List(&'static FieldType),
+}
+
+/// A canonical field definition in a schema entry.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CanonicalField {
+    /// 1-based canonical field number (must be strictly monotonically increasing).
+    pub number: u32,
+    /// Canonical field name.
+    pub name: &'static str,
+    /// Fixed-width field type.
+    pub field_type: FieldType,
+    /// Whether this field is included in the record's cryptographic identity digest.
+    pub is_identity: bool,
+    /// Whether this field is strictly required.
+    pub required: bool,
+}
+
+/// Policy for handling absent fields.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DefaultsPolicy {
+    /// No implicit or absent fields allowed; all declared fields must be explicitly encoded.
+    NoDefaults,
+    /// Strict explicit default only; missing optional fields must encode an explicit None tag.
+    ExplicitDefaultOnly,
+}
+
+/// Resource and depth bounds enforced during decoding and validation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SchemaBounds {
+    /// Maximum payload size in bytes.
+    pub max_bytes: usize,
+    /// Maximum structural nesting depth.
+    pub max_depth: usize,
+    /// Maximum number of list elements.
+    pub max_elements: usize,
+}
+
+/// Declarative schema definition for one registered schema id.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SchemaDefinition {
+    /// Schema unique identifier.
+    pub id: SchemaId,
+    /// Semantic version of this schema format.
+    pub semver: ProtocolVersion,
+    /// Canonical field definitions in exact ascending order.
+    pub fields: &'static [CanonicalField],
+    /// Defaults policy.
+    pub defaults_policy: DefaultsPolicy,
+    /// Hard bounds on size, depth, and element counts.
+    pub bounds: SchemaBounds,
+    /// Signature domain separator preventing cross-schema cryptographic confusion.
+    pub domain_separator: &'static str,
+    /// Crate owning this schema definition.
+    pub owning_package: &'static str,
+}
+
+impl SchemaDefinition {
+    /// Validate structural invariants of this schema definition.
+    #[must_use]
+    pub fn validate_invariants(&self) -> bool {
+        let mut last_num = 0;
+        for field in self.fields {
+            if field.number <= last_num {
+                return false; // Field numbers must be strictly increasing
+            }
+            last_num = field.number;
+            if field.name.is_empty() {
+                return false;
+            }
+        }
+        !self.domain_separator.is_empty() && self.bounds.max_bytes > 0
+    }
+}
+
+// Canonical field definitions for the 12 schema records
+
+static CONFORMANCE_CERT_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "certificate_id", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "backend_id", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "pass_count", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField { number: 5, name: "fail_count", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField { number: 6, name: "timestamp_utc", field_type: FieldType::U64, is_identity: false, required: true },
+];
+
+static ARTIFACT_PAYLOAD_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "artifact_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "target_backend", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "bytecode", field_type: FieldType::VarBytes, is_identity: true, required: true },
+    CanonicalField { number: 5, name: "entrypoint", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 6, name: "required_workgroup_size", field_type: FieldType::FixedBytes(12), is_identity: true, required: true },
+];
+
+static SCHEDULE_RECORD_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "schedule_id", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "fusion_plan", field_type: FieldType::VarBytes, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "tiling_x", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 5, name: "tiling_y", field_type: FieldType::U32, is_identity: true, required: true },
+];
+
+static PROOF_RECEIPT_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "proof_digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "checker_identity", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "verified_claims", field_type: FieldType::U32, is_identity: true, required: true },
+];
+
+static MEASUREMENT_RECORD_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "workload_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "duration_nanos", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "warm_iterations", field_type: FieldType::U32, is_identity: true, required: true },
+];
+
+static TRACE_EVENT_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "event_id", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField { number: 3, name: "phase_tag", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "timestamp_ns", field_type: FieldType::U64, is_identity: false, required: true },
+];
+
+static CACHE_ENTRY_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "key_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "value_payload", field_type: FieldType::VarBytes, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "generation_id", field_type: FieldType::U64, is_identity: true, required: true },
+];
+
+static CONFIG_RECEIPT_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "config_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "behavior_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 4, name: "resolved_keys", field_type: FieldType::U32, is_identity: true, required: true },
+];
+
+static WIRE_OP_METADATA_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "op_id", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 3, name: "category", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "input_count", field_type: FieldType::U32, is_identity: true, required: true },
+];
+
+static INVARIANT_DIGEST_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "invariant_id", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 3, name: "digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+];
+
+static ANALYSIS_FACT_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "fact_kind", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 3, name: "provenance_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+];
+
+static EXTENSION_SCHEMA_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "extension_id", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "extension_name", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "op_count", field_type: FieldType::U32, is_identity: true, required: true },
+];
+
+/// The complete declarative schema registry.
+pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
+    SchemaDefinition {
+        id: SchemaId::ConformanceCertificate,
+        semver: ProtocolVersion::V1_0_0,
+        fields: CONFORMANCE_CERT_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        domain_separator: "VYRE_CONFORMANCE_CERT_V1",
+        owning_package: "conform/vyre-conform",
+    },
+    SchemaDefinition {
+        id: SchemaId::ArtifactPayload,
+        semver: ProtocolVersion::V1_0_0,
+        fields: ARTIFACT_PAYLOAD_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 67108864, max_depth: 4, max_elements: 65536 },
+        domain_separator: "VYRE_ARTIFACT_PAYLOAD_V1",
+        owning_package: "vyre-megakernel",
+    },
+    SchemaDefinition {
+        id: SchemaId::ScheduleRecord,
+        semver: ProtocolVersion::V1_0_0,
+        fields: SCHEDULE_RECORD_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 1048576, max_depth: 4, max_elements: 4096 },
+        domain_separator: "VYRE_SCHEDULE_RECORD_V1",
+        owning_package: "vyre-foundation",
+    },
+    SchemaDefinition {
+        id: SchemaId::ProofReceipt,
+        semver: ProtocolVersion::V1_0_0,
+        fields: PROOF_RECEIPT_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        domain_separator: "VYRE_PROOF_RECEIPT_V1",
+        owning_package: "vyre-spec",
+    },
+    SchemaDefinition {
+        id: SchemaId::MeasurementRecord,
+        semver: ProtocolVersion::V1_0_0,
+        fields: MEASUREMENT_RECORD_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        domain_separator: "VYRE_MEASUREMENT_RECORD_V1",
+        owning_package: "vyre-bench",
+    },
+    SchemaDefinition {
+        id: SchemaId::TraceEvent,
+        semver: ProtocolVersion::V1_0_0,
+        fields: TRACE_EVENT_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        domain_separator: "VYRE_TRACE_EVENT_V1",
+        owning_package: "vyre-runtime",
+    },
+    SchemaDefinition {
+        id: SchemaId::CacheEntry,
+        semver: ProtocolVersion::V1_0_0,
+        fields: CACHE_ENTRY_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 67108864, max_depth: 4, max_elements: 65536 },
+        domain_separator: "VYRE_CACHE_ENTRY_V1",
+        owning_package: "vyre-runtime",
+    },
+    SchemaDefinition {
+        id: SchemaId::ConfigReceipt,
+        semver: ProtocolVersion::V1_0_0,
+        fields: CONFIG_RECEIPT_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        domain_separator: "VYRE_CONFIG_RECEIPT_V1",
+        owning_package: "vyre-foundation",
+    },
+    SchemaDefinition {
+        id: SchemaId::WireOpMetadata,
+        semver: ProtocolVersion::V1_0_0,
+        fields: WIRE_OP_METADATA_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        domain_separator: "VYRE_WIRE_OP_METADATA_V1",
+        owning_package: "vyre-spec",
+    },
+    SchemaDefinition {
+        id: SchemaId::InvariantDigest,
+        semver: ProtocolVersion::V1_0_0,
+        fields: INVARIANT_DIGEST_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        domain_separator: "VYRE_INVARIANT_DIGEST_V1",
+        owning_package: "vyre-spec",
+    },
+    SchemaDefinition {
+        id: SchemaId::AnalysisFact,
+        semver: ProtocolVersion::V1_0_0,
+        fields: ANALYSIS_FACT_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        domain_separator: "VYRE_ANALYSIS_FACT_V1",
+        owning_package: "vyre-spec",
+    },
+    SchemaDefinition {
+        id: SchemaId::ExtensionSchema,
+        semver: ProtocolVersion::V1_0_0,
+        fields: EXTENSION_SCHEMA_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 1048576, max_depth: 4, max_elements: 4096 },
+        domain_separator: "VYRE_EXTENSION_SCHEMA_V1",
+        owning_package: "vyre-spec",
+    },
+];
+
+/// Declarative schema registry manager.
+pub struct SchemaRegistry;
+
+impl SchemaRegistry {
+    /// Retrieve schema definition by unique schema id.
+    #[must_use]
+    pub fn lookup(id: SchemaId) -> Option<&'static SchemaDefinition> {
+        CANONICAL_SCHEMA_REGISTRY.iter().find(|def| def.id == id)
+    }
+
+    /// Return all registered schema definitions.
+    #[must_use]
+    pub const fn all() -> &'static [SchemaDefinition] {
+        CANONICAL_SCHEMA_REGISTRY
+    }
+}

@@ -571,6 +571,10 @@ pub mod pipeline_cache;
 
 /// Structured artifact-session recovery without message parsing or recompilation.
 pub mod recovery;
+/// Generation-scoped cache namespaces and rolling upgrade coordination (Row 120).
+pub mod generation_namespace;
+/// Atomic guarded state machines, prepare/commit journals, and restart budgets (Row 122).
+pub mod atomic_recovery;
 /// Differential megakernel replay log  -  captures every published
 /// ring slot so a later cert run can diff epoch-by-epoch execution
 /// against a live backend.
@@ -765,3 +769,5 @@ impl<'a> UringCompletionPump<'a> {
         Err(PipelineError::NotLinux)
     }
 }
+pub use generation_namespace::{GenerationScopedNamespace, RollingUpgradeCoordinator, UpgradePhase};
+pub use atomic_recovery::{AtomicGuardedState, GuardedState, PrepareCommitJournal, PrepareTicket, SupervisedRestartBudget};
