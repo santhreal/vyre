@@ -72,6 +72,12 @@ pub fn run_suite(registry: &BenchRegistry, suite: &SuiteKind, format: &str) {
         eprintln!("Warning: failed to write chrome trace report: {error}");
     }
 
+    // Write content-addressed evidence store receipts
+    let evidence_dir = std::path::Path::new("release/evidence/benchmarks");
+    if let Err(error) = crate::evidence::record_suite_evidence(&report, Some(evidence_dir)) {
+        eprintln!("Warning: failed to write content-addressed evidence receipts: {error}");
+    }
+
     if let Err(error) = print_report(&report, format, false) {
         eprintln!("failed to render benchmark report: {error}");
         std::process::exit(1);
