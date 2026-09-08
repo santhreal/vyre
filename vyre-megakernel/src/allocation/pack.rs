@@ -59,12 +59,20 @@ impl ValueFact {
     ///
     /// A caller binds every other value, so the plan states its bytes and layout
     /// and reserves nothing for it.
+    ///
+    /// Exhaustive on purpose: a new lifetime class must state whether the
+    /// artifact owns its storage before the packer reserves bytes for it, and a
+    /// wildcard arm would file it under whichever answer happened to be first.
     fn owned_by_artifact(&self) -> bool {
-        self.produced
-            && matches!(
-                self.lifetime,
-                ResourceLifetime::Invocation | ResourceLifetime::Retained | ResourceLifetime::Stream
-            )
+        if !self.produced {
+            return false;
+        }
+        match self.lifetime {
+            ResourceLifetime::Invocation
+            | ResourceLifetime::Retained
+            | ResourceLifetime::Stream => true,
+            ResourceLifetime::Constant | ResourceLifetime::Output => false,
+        }
     }
 }
 

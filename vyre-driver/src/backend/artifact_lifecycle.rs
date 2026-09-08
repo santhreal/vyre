@@ -119,6 +119,20 @@ pub trait ArtifactInstance: Send + Sync {
     ///
     /// Returns an error when the device rejects the query.
     fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError>;
+    /// Device bytes this instance's allocators hold while it is alive, or
+    /// `None` when the backend has no memory query.
+    ///
+    /// The selected allocation plan states the bytes the artifact requires to
+    /// be resident at once, and those bytes are on the device while this
+    /// instance holds its storage. Asking a materializer for a fresh instance
+    /// and querying that instead reports whatever the allocator happened to
+    /// hold, which refused 278 of 349 operations for bytes no launch had
+    /// requested. The figure has to come from the instance that ran.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the device rejects the query.
+    fn resident_device_bytes(&self) -> Result<Option<u64>, BackendError>;
 }
 
 /// Device-specific admission and native-handle construction.

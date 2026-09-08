@@ -377,6 +377,7 @@ pub fn vyre_driver::ArtifactInstance::artifact(&self) -> vyre_megakernel::identi
 pub fn vyre_driver::ArtifactInstance::device(&self) -> &vyre_driver::DeviceIdentity
 pub fn vyre_driver::ArtifactInstance::emitted_resources(&self) -> core::result::Result<alloc::vec::Vec<vyre_megakernel::compile::EmittedResources>, vyre_driver::BackendError>
 pub fn vyre_driver::ArtifactInstance::payload(&self) -> vyre_megakernel::identity::Digest
+pub fn vyre_driver::ArtifactInstance::resident_device_bytes(&self) -> core::result::Result<core::option::Option<u64>, vyre_driver::BackendError>
 pub fn vyre_driver::ArtifactInstance::submit(&self, bindings: vyre_driver::BindingSet) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::Submission>, vyre_driver::BackendError>
 pub fn vyre_driver::ArtifactMaterializer::allocate_resident(&self, _byte_len: usize) -> core::result::Result<vyre_driver::Resource, vyre_driver::BackendError>
 pub fn vyre_driver::ArtifactMaterializer::device(&self) -> &dyn vyre_driver::Device

@@ -16,8 +16,9 @@ use std::sync::Mutex;
 use vyre_megakernel::measure::{DeviceState, MeasurementProtocol, MeasurementRecord};
 use vyre_megakernel::{
     compile_measured, compile_selected_modules, Artifact, DeviceFacts, EmittedResources,
-    EmittedTargetModule, FinalistEvaluator, PlanMeasurement, PruneReason, SearchBudget,
-    TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat, TargetProfile,
+    EmittedTargetModule, FinalistEvaluator, LaunchObservation, PlanMeasurement, PruneReason,
+    SearchBudget, TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat,
+    TargetProfile,
 };
 
 #[path = "support/search_fixtures.rs"]
@@ -50,27 +51,28 @@ enum Unbuildable {
     Every,
 }
 
-/// What the fixture device reports the analytically first-ranked finalist
-/// allocated once its entry points were emitted and loaded.
+/// What the fixture device reports about its finalists.
+///
+/// The register and spill variants describe the analytically first-ranked
+/// finalist's emitted entry points. The resident variants describe what a
+/// launched instance holds, which is a separate question answered by a separate
+/// call: `EmittedResources` carries no resident figure, so a fixture cannot
+/// report one from a query that never launched anything.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Reported {
-    /// The device reports nothing, so every finalist keeps its estimate.
+    /// The device reports nothing, so every finalist keeps its estimate and no
+    /// launch states a resident figure.
     Nothing,
     /// It spills, which is legal and costs traffic the estimate never saw.
     SpillOnRankedFirst,
     /// It allocates more registers than the device has, which no launch can
     /// run.
     OverCeilingOnRankedFirst,
-    /// It holds one byte less than the plan requires, which is a device that is
-    /// not running the plan the compiler selected.
+    /// A launch holds one byte less than the plan requires, which is an
+    /// instance that is not running the plan the compiler selected.
     ResidentBelowPlan,
-    /// It holds exactly the bytes the plan requires.
+    /// A launch holds exactly the bytes the plan requires.
     ResidentAtPlan,
-    /// It holds one byte less than the plan requires until the artifact has
-    /// launched, then exactly what the plan requires. This is what a real
-    /// allocator answers: before anything binds the plan it reports whatever
-    /// the previous artifact left behind.
-    ResidentBelowPlanUntilLaunched,
 }
 
 /// Local-memory bytes per invocation the fixture reports for a spilling plan.
@@ -267,7 +269,6 @@ impl FinalistEvaluator for LadderEvaluator {
         let ranked_first = inspected.is_empty();
         inspected.push(groups);
         let record = match self.reported {
-            Reported::Nothing => EmittedResources::default(),
             Reported::SpillOnRankedFirst if ranked_first => EmittedResources {
                 spill_bytes_per_invocation: SPILL_BYTES_PER_INVOCATION,
                 ..EmittedResources::default()
@@ -276,33 +277,11 @@ impl FinalistEvaluator for LadderEvaluator {
                 registers_per_invocation: OVER_CEILING_REGISTERS,
                 ..EmittedResources::default()
             },
-            Reported::ResidentBelowPlan => EmittedResources {
-                resident_device_bytes: artifact.allocation().aggregate_peak_bytes.saturating_sub(1),
-                ..EmittedResources::default()
-            },
-            Reported::ResidentAtPlan => EmittedResources {
-                resident_device_bytes: artifact.allocation().aggregate_peak_bytes,
-                ..EmittedResources::default()
-            },
-            Reported::ResidentBelowPlanUntilLaunched => {
-                let launched = !self
-                    .measured
-                    .lock()
-                    .expect("fixture state is not poisoned")
-                    .is_empty();
-                let planned = artifact.allocation().aggregate_peak_bytes;
-                EmittedResources {
-                    resident_device_bytes: if launched {
-                        planned
-                    } else {
-                        planned.saturating_sub(1)
-                    },
-                    ..EmittedResources::default()
-                }
-            }
-            Reported::SpillOnRankedFirst | Reported::OverCeilingOnRankedFirst => {
-                EmittedResources::default()
-            }
+            Reported::Nothing
+            | Reported::ResidentBelowPlan
+            | Reported::ResidentAtPlan
+            | Reported::SpillOnRankedFirst
+            | Reported::OverCeilingOnRankedFirst => EmittedResources::default(),
         };
         Ok(vec![record; payload.entries().len()])
     }
@@ -317,7 +296,7 @@ impl FinalistEvaluator for LadderEvaluator {
         &self,
         artifact: &Artifact,
         payload: &TargetPayload,
-    ) -> Result<u64, TargetCompileError> {
+    ) -> Result<LaunchObservation, TargetCompileError> {
         assert_eq!(
             payload.neutral_artifact(),
             artifact.digest(),
@@ -328,7 +307,18 @@ impl FinalistEvaluator for LadderEvaluator {
             .lock()
             .expect("fixture state is not poisoned")
             .push(groups);
-        Ok((self.timing)(groups))
+        let planned = artifact.allocation().aggregate_peak_bytes;
+        let resident_device_bytes = match self.reported {
+            Reported::ResidentBelowPlan => Some(planned.saturating_sub(1)),
+            Reported::ResidentAtPlan => Some(planned),
+            Reported::Nothing
+            | Reported::SpillOnRankedFirst
+            | Reported::OverCeilingOnRankedFirst => None,
+        };
+        Ok(LaunchObservation {
+            device_ns: (self.timing)(groups),
+            resident_device_bytes,
+        })
     }
 }
 
@@ -776,18 +766,18 @@ fn distinct(order: &[usize]) -> Vec<usize> {
 
 /// WHY: the allocation plan states the bytes that must be resident for the
 /// artifact to run, and a measurement is only evidence about the plan that ran.
-/// A device reporting fewer bytes than the plan requires is holding something
+/// An instance holding fewer bytes than the plan requires is holding something
 /// else, so timing it would rank a schedule nobody compiled. The reconciliation
 /// is one-directional on purpose: a device holds the caller's buffers and other
 /// work besides, so more bytes than planned is normal and fewer is impossible.
 #[test]
-fn a_device_holding_fewer_bytes_than_the_plan_requires_refuses_the_compile() {
+fn a_launch_holding_fewer_bytes_than_the_plan_requires_refuses_the_compile() {
     let planned = measured_compile(
         priced_device(),
         budget(LAUNCHES),
         &LadderEvaluator::reporting(Reported::ResidentAtPlan),
     )
-    .expect("a device holding the planned bytes compiles")
+    .expect("a launch holding the planned bytes compiles")
     .allocation()
     .aggregate_peak_bytes;
     assert!(
@@ -800,7 +790,7 @@ fn a_device_holding_fewer_bytes_than_the_plan_requires_refuses_the_compile() {
         budget(LAUNCHES),
         &LadderEvaluator::reporting(Reported::ResidentBelowPlan),
     )
-    .expect_err("a device holding fewer bytes than the plan requires must not be measured");
+    .expect_err("a launch holding fewer bytes than the plan requires must not be measured");
     assert_eq!(
         error.diagnostic.code.as_str(),
         "MKC041_UNRECONCILED_RESIDENT_BYTES"
@@ -827,35 +817,41 @@ fn a_device_holding_fewer_bytes_than_the_plan_requires_refuses_the_compile() {
     assert_eq!(
         figures[0] + 1,
         figures[1],
-        "the refused pair must be the pair the device reported: {error}"
+        "the refused pair must be the pair the launch reported: {error}"
     );
 }
 
 /// WHY: the plan's bytes are on the device while the artifact runs and not
-/// before, so the figure has to be read after the first launch. Reading it at
-/// emission asked a backend what it held before anything bound the plan, and
-/// what it answered was the previous artifact's residue: a measured sweep
-/// refused 289 of 349 operations that way. This fixture reports below the plan
-/// until it has launched, which is what a real allocator does, and it must
-/// compile.
+/// before, so the only figure that describes the plan comes from a launch.
+/// Reading it from a resource query asked a freshly materialized instance what
+/// it held before anything bound the plan, and the answer was the previous
+/// artifact's residue: a measured sweep refused 278 of 349 operations that way.
+/// `EmittedResources` now carries no resident figure at all, so a query cannot
+/// state one, and this pins the remaining half: every reconciliation follows a
+/// launch that this evaluator counted.
 #[test]
-fn a_resident_figure_below_the_plan_before_the_first_launch_still_compiles() {
-    let evaluator = LadderEvaluator::reporting(Reported::ResidentBelowPlanUntilLaunched);
-    let artifact = measured_compile(priced_device(), budget(LAUNCHES), &evaluator)
-        .expect("a figure read before the first launch describes no plan and refuses nothing");
+fn every_reconciled_resident_figure_comes_from_a_counted_launch() {
+    let accepted = LadderEvaluator::reporting(Reported::ResidentAtPlan);
+    measured_compile(priced_device(), budget(LAUNCHES), &accepted)
+        .expect("a launch holding the planned bytes compiles");
     assert!(
-        artifact.allocation().aggregate_peak_bytes > 0,
-        "the fixture plan must require bytes for the reconciliation to have a subject"
+        !accepted.measured().is_empty(),
+        "an accepted resident figure must describe a finalist that launched"
     );
+
+    let refused = LadderEvaluator::reporting(Reported::ResidentBelowPlan);
+    measured_compile(priced_device(), budget(LAUNCHES), &refused)
+        .expect_err("a launch below the plan refuses the compile");
     assert!(
-        !evaluator.measured().is_empty(),
-        "the finalist must have launched for the reconciled figure to describe it"
+        !refused.measured().is_empty(),
+        "a refused resident figure must describe a finalist that launched, not an \
+         allocator queried before anything bound the plan"
     );
 }
 
-/// WHY: a backend with no memory query reports zero, and zero is an absent fact
-/// rather than a device holding nothing. Refusing it would make the measured
-/// path unusable on every backend that cannot answer the question.
+/// WHY: a backend with no memory query reports no figure, which is an absent
+/// fact rather than a device holding nothing. Refusing it would make the
+/// measured path unusable on every backend that cannot answer the question.
 #[test]
 fn a_backend_that_reports_no_resident_bytes_still_measures() {
     let artifact = measured_compile(

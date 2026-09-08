@@ -77,6 +77,12 @@ impl ArtifactInstance for FixtureInstance {
     fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError> {
         Ok(vec![EmittedResources::default()])
     }
+
+    /// A fixture backend has no memory query, so nothing is reconciled against
+    /// the allocation plan.
+    fn resident_device_bytes(&self) -> Result<Option<u64>, BackendError> {
+        Ok(None)
+    }
 }
 
 /// An empty completion against `artifact`, ready to be extended per fixture.

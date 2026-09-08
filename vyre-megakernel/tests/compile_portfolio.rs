@@ -20,9 +20,10 @@
 use vyre_megakernel::{
     compile, compile_measured, compile_portfolio, compile_portfolio_measured, Artifact,
     ArtifactPortfolio, CompileObjective, CoveragePolicy, DeclaredConstraints, EmittedResources,
-    FinalistEvaluator, ObjectiveMetric, PortfolioPolicy, PruneReason, RequiredSchedule,
-    SearchBudget, TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat,
-    TargetProfile, ValidatedCompileRequest, WorkloadAggregation, WorkloadClass, WorkloadProfile,
+    FinalistEvaluator, LaunchObservation, ObjectiveMetric, PortfolioPolicy, PruneReason,
+    RequiredSchedule, SearchBudget, TargetCompileError, TargetCompiler, TargetPayload,
+    TargetPayloadFormat, TargetProfile, ValidatedCompileRequest, WorkloadAggregation,
+    WorkloadClass, WorkloadProfile,
 };
 
 #[path = "support/search_fixtures.rs"]
@@ -143,7 +144,7 @@ impl FinalistEvaluator for RefusingEvaluator {
         &self,
         _artifact: &Artifact,
         _payload: &TargetPayload,
-    ) -> Result<u64, TargetCompileError> {
+    ) -> Result<LaunchObservation, TargetCompileError> {
         Err(TargetCompileError::Unsupported(
             "the fixture target times nothing".into(),
         ))

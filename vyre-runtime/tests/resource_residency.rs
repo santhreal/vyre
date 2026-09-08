@@ -212,6 +212,10 @@ impl ArtifactInstance for FixtureInstance {
     fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError> {
         Ok(vec![EmittedResources::default()])
     }
+
+    fn resident_device_bytes(&self) -> Result<Option<u64>, BackendError> {
+        Ok(None)
+    }
 }
 
 fn artifact_fixture(generation: u64) -> Arc<dyn ArtifactInstance> {

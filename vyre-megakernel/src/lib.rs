@@ -83,7 +83,9 @@ pub use candidate::{
 pub use certificate::{
     DerivedFamily, LawCitation, PruneReason, PrunedFamily, PrunedLaw, SearchCertificate,
 };
-pub use compile::{compile, compile_measured, EmittedResources, FinalistEvaluator};
+pub use compile::{
+    compile, compile_measured, EmittedResources, FinalistEvaluator, LaunchObservation,
+};
 pub use device_facts::DeviceFacts;
 pub use envelope::{
     ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,

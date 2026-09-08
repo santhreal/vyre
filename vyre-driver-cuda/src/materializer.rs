@@ -112,6 +112,18 @@ impl ArtifactInstance for CudaArtifactInstance {
             .map(|module| module.pipeline.emitted_resources())
             .collect()
     }
+
+    /// Device bytes this instance's allocators hold while it is alive.
+    ///
+    /// Every module in an instance shares one backend, so the first module's
+    /// backend reports the whole figure. An instance with no module holds no
+    /// device storage and reports nothing to reconcile against.
+    fn resident_device_bytes(&self) -> Result<Option<u64>, BackendError> {
+        self.modules
+            .first()
+            .map(|module| module.pipeline.resident_device_bytes())
+            .transpose()
+    }
 }
 
 impl MaterializedInstance for CudaArtifactInstance {

@@ -414,15 +414,19 @@ pub struct EmittedResources {
     pub spill_bytes_per_invocation: u32,
     /// Statically declared workgroup-scoped bytes.
     pub shared_memory_bytes: u32,
-    /// Device bytes the loaded module and its bound storage hold while this
-    /// entry point runs.
-    ///
-    /// The selected allocation plan states the bytes the artifact requires to be
-    /// resident at once. A device holding fewer than that is not running the plan
-    /// the compiler selected, so the figure is reconciled before a measurement
-    /// decides anything. Zero means the backend has no memory query and the
-    /// planned figure stands unreconciled.
-    pub resident_device_bytes: u64,
+}
+
+/// What one counted launch reported about itself.
+///
+/// A launch is the only moment the artifact's storage is bound, so both figures
+/// come from the instance that ran and neither can be read from anywhere else.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LaunchObservation {
+    /// Device time of the launch, in nanoseconds, from the device clock.
+    pub device_ns: u64,
+    /// Device bytes the launched instance held resident, or `None` when the
+    /// backend has no memory query.
+    pub resident_device_bytes: Option<u64>,
 }
 
 /// Device access the compiler borrows to time its finalists.
@@ -454,13 +458,19 @@ pub trait FinalistEvaluator {
         payload: &TargetPayload,
     ) -> Result<Vec<EmittedResources>, TargetCompileError>;
 
-    /// Launch `payload` once and return the device time of that launch in
-    /// nanoseconds. The time must come from the device, not the host clock.
+    /// Launch `payload` once and report the device time of that launch and what
+    /// the launched instance held resident. The time must come from the device,
+    /// not the host clock.
     ///
     /// The launch must be complete before this returns. The protocol counts one
     /// sample per call and compares samples across candidates, so a call that
     /// returned while the device was still running would attribute one
     /// candidate's work to whichever candidate the round measured next.
+    ///
+    /// The resident figure is read from the instance this call launched, while
+    /// that instance still holds its storage. It cannot be recovered afterwards:
+    /// once the instance is dropped the bytes are released, and a fresh instance
+    /// reports whatever the allocator holds for something else.
     ///
     /// # Errors
     ///
@@ -470,7 +480,7 @@ pub trait FinalistEvaluator {
         &self,
         artifact: &Artifact,
         payload: &TargetPayload,
-    ) -> Result<u64, TargetCompileError>;
+    ) -> Result<LaunchObservation, TargetCompileError>;
 
     /// Clock, thermal and power state the device reports as the session starts.
     ///
@@ -628,13 +638,11 @@ pub fn compile_measured(
         }
         let (_, provisional, payload) = &emitted[entry.position];
         for _ in 0..protocol.warmup_launches {
-            evaluator
+            let observation = evaluator
                 .measure(provisional, payload)
                 .map_err(|error| finalist_failure(entry.index, &error))?;
             work.measurements = work.measurements.saturating_add(1);
-        }
-        if protocol.warmup_launches > 0 {
-            reconcile_after_launch(evaluator, provisional, payload, entry)?;
+            reconcile_launch(provisional, &observation, entry)?;
         }
     }
 
@@ -654,15 +662,13 @@ pub fn compile_measured(
             let entry = &mut session[slot];
             let (_, provisional, payload) = &emitted[entry.position];
             for _ in 0..protocol.repetitions_per_round {
-                let sample = evaluator
+                let observation = evaluator
                     .measure(provisional, payload)
                     .map_err(|error| finalist_failure(entry.index, &error))?;
-                entry.samples.push(sample);
-                round.push(sample);
+                entry.samples.push(observation.device_ns);
+                round.push(observation.device_ns);
                 work.measurements = work.measurements.saturating_add(1);
-            }
-            if !entry.reconciled && !entry.samples.is_empty() {
-                reconcile_after_launch(evaluator, provisional, payload, entry)?;
+                reconcile_launch(provisional, &observation, entry)?;
             }
         }
         rounds = rounds.saturating_add(1);
@@ -820,56 +826,50 @@ fn reported_groups(
     groups
 }
 
-/// Reconciles the planned resident peak against what the device reports holding
-/// once the finalist has run.
+/// Reconciles the planned resident peak against what the launched instance held.
 ///
 /// The allocation plan states the bytes that must be resident at once for the
 /// artifact to run. Every one of those bytes is on the device while an entry
-/// point of that artifact runs, so a device reporting fewer bytes than the plan
+/// point of that artifact runs, so an instance holding fewer bytes than the plan
 /// requires is not running the selected plan, and a measurement taken there
 /// would rank a schedule nobody compiled. A backend with no memory query reports
-/// zero, which leaves the planned figure unreconciled rather than contradicted.
+/// `None`, which leaves the planned figure unreconciled rather than
+/// contradicted.
 ///
-/// The figure is read after the finalist's first launch and before any sample
-/// ranks it. Reading it at emission asked the device to hold the plan before
-/// anything bound it, and what a backend answered there was whatever the
-/// previous artifact left in its allocator: a measured sweep refused 289 of 349
-/// operations that way, every one of them for bytes no launch had requested
-/// yet.
-fn reconcile_resident_bytes(
-    artifact: &Artifact,
-    reported: &[EmittedResources],
-) -> Result<(), CompileError> {
-    let observed = reported
-        .iter()
-        .map(|entry| entry.resident_device_bytes)
-        .max()
-        .unwrap_or(0);
+/// The figure comes from the launch itself, because that is the only moment the
+/// artifact's storage is bound. Reading it from a separate resource query asked
+/// a freshly materialized instance what it held before anything bound it, and
+/// the answer was whatever the previous artifact had left in the allocator: a
+/// measured sweep refused 278 of 349 operations that way, every one of them for
+/// bytes no launch had requested.
+fn reconcile_resident_bytes(artifact: &Artifact, observed: u64) -> Result<(), CompileError> {
     let planned = artifact.allocation().aggregate_peak_bytes;
-    if observed == 0 || observed >= planned {
+    if observed >= planned {
         return Ok(());
     }
     Err(failure(
         CompilerFailureKind::UnreconciledResidentBytes,
         "measurement.resident_device_bytes",
         format!(
-            "the device holds {observed} bytes while the selected allocation plan requires {planned}"
+            "the launched instance held {observed} bytes while the selected allocation plan requires {planned}"
         ),
         "bind the allocation plan the artifact records before measuring it",
     ))
 }
 
-/// Reconcile one finalist's resident figure once, after it has run.
-fn reconcile_after_launch(
-    evaluator: &dyn FinalistEvaluator,
+/// Reconcile one finalist's resident figure once, from a launch that ran it.
+fn reconcile_launch(
     artifact: &Artifact,
-    payload: &TargetPayload,
+    observation: &LaunchObservation,
     entry: &mut Sampling,
 ) -> Result<(), CompileError> {
-    let reported = evaluator
-        .resources(artifact, payload)
-        .map_err(|error| finalist_failure(entry.index, &error))?;
-    reconcile_resident_bytes(artifact, &reported)?;
+    if entry.reconciled {
+        return Ok(());
+    }
+    let Some(observed) = observation.resident_device_bytes else {
+        return Ok(());
+    };
+    reconcile_resident_bytes(artifact, observed)?;
     entry.reconciled = true;
     Ok(())
 }

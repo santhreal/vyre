@@ -6,8 +6,8 @@ use vyre_driver::{
 use vyre_foundation::ir::GraphValueId;
 use vyre_megakernel::measure::DeviceState;
 use vyre_megakernel::{
-    AbiAccess, Artifact, ArtifactValueId, EmittedResources, FinalistEvaluator, ResourceAbiRecord,
-    ResourceRecord, TargetCompileError, TargetCompiler, TargetPayload,
+    AbiAccess, Artifact, ArtifactValueId, EmittedResources, FinalistEvaluator, LaunchObservation,
+    ResourceAbiRecord, ResourceRecord, TargetCompileError, TargetCompiler, TargetPayload,
 };
 
 use super::AdmittedArtifact;
@@ -138,7 +138,7 @@ impl FinalistEvaluator for DeviceFinalists<'_> {
         &self,
         artifact: &Artifact,
         payload: &TargetPayload,
-    ) -> Result<u64, TargetCompileError> {
+    ) -> Result<LaunchObservation, TargetCompileError> {
         let instance = self
             .materializer
             .materialize(artifact, payload)
@@ -173,10 +173,19 @@ impl FinalistEvaluator for DeviceFinalists<'_> {
             .submit(bindings)
             .and_then(|submission| submission.wait())
             .map_err(measurement_failure)?;
-        completion.device_ns.ok_or_else(|| {
+        let device_ns = completion.device_ns.ok_or_else(|| {
             TargetCompileError::Unsupported(
                 "device reported no launch duration for a finalist measurement".to_string(),
             )
+        })?;
+        // Read while the instance that ran still holds its storage. Dropping it
+        // first releases the bytes the allocation plan is reconciled against.
+        let resident_device_bytes = instance
+            .resident_device_bytes()
+            .map_err(measurement_failure)?;
+        Ok(LaunchObservation {
+            device_ns,
+            resident_device_bytes,
         })
     }
 }

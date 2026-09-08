@@ -616,13 +616,18 @@ macro_rules! artifact_instance_identity {
 }
 
 /// Answer [`crate::ArtifactInstance::emitted_resources`] with one unreported
-/// record per module.
+/// record per module, and
+/// [`crate::ArtifactInstance::resident_device_bytes`] with no figure.
 ///
 /// A backend whose API exposes no register, spill or static shared figure for a
 /// loaded entry point answers this way. The record count still has to match the
 /// module count, because the compiler pairs the records with payload entries by
 /// position, and zero in every field is what leaves the analytic estimate in
 /// force for that entry.
+///
+/// A backend with no memory query reports no resident figure, which leaves the
+/// planned allocation unreconciled rather than contradicted. A backend that can
+/// answer states its own body instead of expanding this macro.
 #[macro_export]
 macro_rules! artifact_instance_unreported_resources {
     () => {
@@ -636,6 +641,12 @@ macro_rules! artifact_instance_unreported_resources {
                 ::vyre_megakernel::EmittedResources::default();
                 $crate::materialize::MaterializedInstance::modules(self).len()
             ])
+        }
+
+        fn resident_device_bytes(
+            &self,
+        ) -> ::std::result::Result<::std::option::Option<u64>, $crate::BackendError> {
+            ::std::result::Result::Ok(::std::option::Option::None)
         }
     };
 }

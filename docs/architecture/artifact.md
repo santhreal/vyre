@@ -138,11 +138,12 @@ constant-space placement bound writable are rejected before emission.
 order, and binds every placement to it. It does not pack, resize, merge,
 reorder, or discover reuse.
 
-A backend that reports the device bytes it holds reconciles that figure against
-the planned peak after the finalist's first launch and before a counted
-measurement ranks it. Fewer bytes than the plan requires is refused as
-`MKC041_UNRECONCILED_RESIDENT_BYTES`. A backend with no memory query reports
-zero, which leaves the planned figure unreconciled.
+A backend that reports the device bytes it holds reports them from the launch
+itself, because the plan's storage is bound only while the launched instance is
+alive. The compiler reconciles that figure against the planned peak before a
+counted measurement ranks the finalist. Fewer bytes than the plan requires is
+refused as `MKC041_UNRECONCILED_RESIDENT_BYTES`. A backend with no memory query
+reports no figure, which leaves the planned peak unreconciled.
 
 ## One topology covers the mesh
 

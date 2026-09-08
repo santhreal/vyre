@@ -190,6 +190,11 @@ impl CudaCompiledPipeline {
         self.backend
             .module_resources_with_key(&self.ptx_src, self.module_key)
     }
+
+    /// Device bytes the backend behind this pipeline holds resident.
+    pub(crate) fn resident_device_bytes(&self) -> Result<u64, BackendError> {
+        self.backend.resident_device_bytes()
+    }
 }
 
 impl Drop for CudaCompiledPipeline {
