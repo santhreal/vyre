@@ -376,7 +376,7 @@ fn committed_objects(root: &Path, objects: &[String]) -> Vec<Option<Content>> {
 /// What each requested `<commit>:<path>` object holds, as text, in order.
 ///
 /// `None` names an object git does not resolve. Committed text is read whole:
-/// the size cap on [`committed_objects`] bounds what a source digest reads, and
+/// the size cap on `committed_objects` bounds what a source digest reads, and
 /// a caller judging one artifact needs all of it.
 #[must_use]
 pub fn committed_texts(root: &Path, objects: &[String]) -> Vec<Option<String>> {

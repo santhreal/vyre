@@ -27,7 +27,7 @@ jobs:
           components: clippy
       # `check` runs the full rustc analysis phase, which is where every
       # warning is produced, and stops before codegen. `build --all-targets`
-      # additionally links this workspace's 1219 integration test binaries at
+      # additionally links this workspace's 101 integration test binaries at
       # roughly 56 MiB each, which exhausts a hosted runner's disk mid-compile
       # and reports only that the runner received a shutdown signal. Linking is
       # proved by the test lanes; this lane owns warnings.
