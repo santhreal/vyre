@@ -25,6 +25,9 @@ fn atomic_guarded_state_transitions_to_poisoned_terminal_on_panic() {
         RecoveryClass::RestartableFromCanonicalInput,
     ));
 
+    // Initial state is observable as Ready
+    assert_eq!(state.current_state(), GuardedState::Ready(vec![1, 2, 3]));
+
     let state_clone = Arc::clone(&state);
     let handle = thread::spawn(move || {
         let _ = state_clone.with_state(|_vec| -> Result<(), String> {
@@ -50,8 +53,26 @@ fn atomic_guarded_state_transitions_to_poisoned_terminal_on_panic() {
     assert_eq!(err.disposition, RecoveryDisposition::RequiresRebuild);
     assert!(err.fix.contains("Fix:"));
 
+    // Lifecycle state is observable as PoisonedTerminal
+    match state.current_state() {
+        GuardedState::PoisonedTerminal {
+            domain,
+            recovery_class,
+            reason,
+        } => {
+            assert_eq!(domain, FailureDomain::MemoryState);
+            assert_eq!(
+                recovery_class,
+                RecoveryClass::RestartableFromCanonicalInput
+            );
+            assert!(reason.contains("poisoned"));
+        }
+        other => panic!("Expected PoisonedTerminal variant, got {other:?}"),
+    }
+
     // Explicit recovery restores state to Ready
     state.recover(vec![10, 20]);
+    assert_eq!(state.current_state(), GuardedState::Ready(vec![10, 20]));
     let len = state
         .with_state(|vec| Ok(vec.len()))
         .expect("Fix: recovered state must accept operations normally.");

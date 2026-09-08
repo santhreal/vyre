@@ -7,7 +7,7 @@
 //! - Unknown keys and type mismatches fail with actionable corrective diagnostics.
 
 use vyre_foundation::config_schema::{
-    ConfigLayer, ConfigPartition, ConfigSecrecy, ConfigValue, ResolvedConfiguration,
+    ConfigLayer, ConfigPartition, ConfigValue, ResolvedConfiguration,
     CANONICAL_CONFIG_FIELDS,
 };
 

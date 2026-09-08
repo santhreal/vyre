@@ -43,22 +43,38 @@ impl FieldType {
     /// Returns a string describing the parse or bounds failure.
     pub fn parse_and_validate(&self, raw: &str) -> Result<(), String> {
         match self {
-            Self::U32 => raw
-                .parse::<u32>()
-                .map(|_| ())
-                .map_err(|e| format!("invalid u32 value `{raw}`: {e}")),
-            Self::I32 => raw
-                .parse::<i32>()
-                .map(|_| ())
-                .map_err(|e| format!("invalid i32 value `{raw}`: {e}")),
-            Self::U64 => raw
-                .parse::<u64>()
-                .map(|_| ())
-                .map_err(|e| format!("invalid u64 value `{raw}`: {e}")),
-            Self::I64 => raw
-                .parse::<i64>()
-                .map(|_| ())
-                .map_err(|e| format!("invalid i64 value `{raw}`: {e}")),
+            Self::U32 => {
+                let res = if let Some(hex) = raw.strip_prefix("0x").or_else(|| raw.strip_prefix("0X")) {
+                    u32::from_str_radix(hex, 16)
+                } else {
+                    raw.parse::<u32>()
+                };
+                res.map(|_| ()).map_err(|e| format!("invalid u32 value `{raw}`: {e}"))
+            }
+            Self::I32 => {
+                let res = if let Some(hex) = raw.strip_prefix("0x").or_else(|| raw.strip_prefix("0X")) {
+                    i32::from_str_radix(hex, 16)
+                } else {
+                    raw.parse::<i32>()
+                };
+                res.map(|_| ()).map_err(|e| format!("invalid i32 value `{raw}`: {e}"))
+            }
+            Self::U64 => {
+                let res = if let Some(hex) = raw.strip_prefix("0x").or_else(|| raw.strip_prefix("0X")) {
+                    u64::from_str_radix(hex, 16)
+                } else {
+                    raw.parse::<u64>()
+                };
+                res.map(|_| ()).map_err(|e| format!("invalid u64 value `{raw}`: {e}"))
+            }
+            Self::I64 => {
+                let res = if let Some(hex) = raw.strip_prefix("0x").or_else(|| raw.strip_prefix("0X")) {
+                    i64::from_str_radix(hex, 16)
+                } else {
+                    raw.parse::<i64>()
+                };
+                res.map(|_| ()).map_err(|e| format!("invalid i64 value `{raw}`: {e}"))
+            }
             Self::F32 => raw
                 .parse::<f32>()
                 .map_err(|e| format!("invalid f32 value `{raw}`: {e}"))
